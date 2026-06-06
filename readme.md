@@ -3,6 +3,33 @@
 `life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, and notes in a single human-readable file.
 Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the detailed grammar of the `life.txt`.
 
+## Documentation
+
+- [English documentation](./docs/en/readme.md)
+- [Japanese documentation](./docs/ja/readme.md)
+- [English format specification](./docs/en/life_txt_format_spec.md)
+- [Japanese format specification](./docs/ja/life_txt_format_spec.md)
+
+## Minimal life.txt
+
+```txt
+[ ] T Write_Report due:2026-06-12 project:university
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[N] N Research_Memo project:research
+```
+
+More sample files are available in [examples/](./examples/):
+
+- [minimal_life.txt](./examples/minimal_life.txt): a compact starter file
+- [tasks_life.txt](./examples/tasks_life.txt): tasks, deadlines, and notes
+- [events_life.txt](./examples/events_life.txt): calendar-style event records
+- [habits_reminders_life.txt](./examples/habits_reminders_life.txt): habits and reminders
+- [status_presence.txt](./examples/status_presence.txt): personal presence records
+- [team_status_life.txt](./examples/team_status_life.txt): multi-person status records
+- [agenda_life.txt](./examples/agenda_life.txt): data for the `agenda` command
+- [json_roundtrip_life.txt](./examples/json_roundtrip_life.txt): repeated keys and quoted values
+
 ## Tools
 
 This repository includes a dependency-free Python CLI:

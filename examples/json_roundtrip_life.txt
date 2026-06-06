@@ -1,0 +1,6 @@
+# JSON and JSONL round-trip examples
+
+[ ] T Create_Slides project:research tag:important tag:thesis tag:presentation due:2026-06-12
+[ ] E "Research Meeting" from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" note:"Use \"life.txt\" examples"
+[/] S "Deep Work" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
+[N] N "Presentation Memo" project:research note:"Use figures before detailed explanation" url:https://example.com/notes

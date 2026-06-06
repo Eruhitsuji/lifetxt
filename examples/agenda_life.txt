@@ -1,0 +1,8 @@
+# Agenda examples
+
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
+[ ] R Turn_Off_Air_Conditioner at:2026-06-06T23:30 project:life
+[ ] H English_Study repeat:daily at:18:00 project:english
+[/] S Working from:2026-06-06T14:00 state:busy person:self

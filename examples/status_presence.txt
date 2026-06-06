@@ -1,0 +1,7 @@
+# Status / presence examples
+
+[/] S Available from:2026-06-06T09:00 state:available person:self service:teams visibility:team
+[/] S Working from:2026-06-06T14:00 state:busy person:self project:research
+[/] S Away from:2026-06-06T15:30 state:away person:self
+[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self

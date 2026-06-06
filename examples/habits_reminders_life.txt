@@ -1,0 +1,8 @@
+# Habit and reminder examples
+
+[ ] H English_Study repeat:daily at:18:00 project:english tag:vocabulary
+[ ] H Weekly_Review repeat:weekly at:20:00 project:life note:"Review tasks and calendar"
+[ ] H Exercise repeat:"RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR" at:07:00 project:health
+[ ] R Take_Medicine at:2026-06-06T21:00 project:health priority:A
+[ ] R Pay_Rent on:2026-06-25 at:09:00 project:life
+[ ] R Call_Library at:2026-06-10T15:30 project:life context:phone

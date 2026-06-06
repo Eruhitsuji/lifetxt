@@ -446,13 +446,32 @@ Example:
 
 ### 14.7 Status / Presence Status (`S`)
 
-`S` represents a current state or presence status, similar to status values in chat tools such as Teams, Discord, Slack, or similar systems.
+`S` represents a current state or presence status, similar to status values in
+chat tools such as Teams, Discord, Slack, or similar systems.
+
+#### 14.7.1 Purpose
+
+Use `S` to record the current state of a person or target. It can represent
+availability, focus, away status, sleep, meetings, commuting, or another
+chat-style presence state.
+
+#### 14.7.2 Required Keys
 
 Required keys:
 
 ```txt
 from state
 ```
+
+`from:` is the status start datetime. `state:` is the status value.
+
+Example:
+
+```txt
+[/] S Working from:2026-06-06T14:00 state:busy
+```
+
+#### 14.7.3 Recommended Optional Keys
 
 Recommended optional keys:
 
@@ -474,6 +493,10 @@ Meanings:
 | `note` | Additional note | `note:"Reply may be slow"` |
 | `visibility` | Visibility scope | `visibility:team` |
 
+If `person:` is omitted, implementations may interpret it as `self`.
+
+#### 14.7.4 Active Status and Status Logs
+
 If `to:` is absent, the status may be treated as currently active.
 
 ```txt
@@ -488,18 +511,7 @@ If `to:` is present, the status may be treated as a past status log.
 
 For consistency, `[/]` is recommended for currently active status items, and `[x]` is recommended for completed status logs. This is a type-specific recommendation; the parser still uses the normal status syntax rules.
 
-Tools may summarize the latest presence state by selecting the `S` item with the
-newest `from:` datetime for each `person:`. If `person:` is omitted, summary
-tools may treat it as `self`.
-
-Examples:
-
-```txt
-[/] S Working from:2026-06-06T14:00 state:busy person:self
-[/] S Away from:2026-06-06T15:30 state:away person:self
-[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
-[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
-```
+#### 14.7.5 Recommended State Values
 
 Recommended `state:` values:
 
@@ -517,6 +529,30 @@ Recommended `state:` values:
 | `studying` | Studying |
 | `meeting` | In a meeting |
 | `custom` | Custom status |
+
+Other state values may be preserved by parsers, but tools should warn when the
+value is outside the recommended set.
+
+#### 14.7.6 Summary Tool Behavior
+
+Tools may summarize the latest presence state by selecting the `S` item with the
+newest `from:` datetime for each `person:`. If `person:` is omitted, summary
+tools may treat it as `self`.
+
+If `to:` is absent, range-based tools may treat the status as ongoing from
+`from:` onward. If `to:` is present, range-based tools may treat `from/to` as the
+status interval.
+
+#### 14.7.7 Examples
+
+Examples:
+
+```txt
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[/] S Away from:2026-06-06T15:30 state:away person:self
+[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+```
 
 ---
 

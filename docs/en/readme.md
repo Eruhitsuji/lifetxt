@@ -1,0 +1,96 @@
+# life.txt
+
+`life.txt` is a plain-text format for managing tasks, events, deadlines,
+reminders, habits, status / presence records, and notes in one human-readable
+file.
+
+See [life_txt_format_spec.md](./life_txt_format_spec.md) for the format
+specification.
+
+## Minimal life.txt
+
+```txt
+[ ] T Write_Report due:2026-06-12 project:university
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[N] N Research_Memo project:research
+```
+
+## Examples
+
+Sample files are available in [../../examples/](../../examples/):
+
+- [minimal_life.txt](../../examples/minimal_life.txt): a compact starter file
+- [tasks_life.txt](../../examples/tasks_life.txt): tasks, deadlines, and notes
+- [events_life.txt](../../examples/events_life.txt): calendar-style event records
+- [habits_reminders_life.txt](../../examples/habits_reminders_life.txt): habits and reminders
+- [status_presence.txt](../../examples/status_presence.txt): personal presence records
+- [team_status_life.txt](../../examples/team_status_life.txt): multi-person status records
+- [agenda_life.txt](../../examples/agenda_life.txt): data for the `agenda` command
+- [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): repeated keys and quoted values
+
+## CLI
+
+This repository includes a dependency-free Python CLI:
+
+```sh
+python -m lifetxt check life.txt
+python -m lifetxt to-json life.txt --pretty
+python -m lifetxt to-jsonl life.txt -o life.jsonl
+python -m lifetxt status life.txt
+python -m lifetxt status life.txt --format json --pretty
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --around now --window 2h
+python -m lifetxt from-json life.json -o life.txt
+python -m lifetxt from-jsonl life.jsonl -o life.txt
+```
+
+## Assist
+
+Input assistance is available in both non-interactive and interactive modes:
+
+```sh
+python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university --tag report
+python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
+python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --output new_life.txt
+python -m lifetxt assist --interactive --append life.txt
+```
+
+In create mode, `assist --output FILE` appends the generated line to `FILE`.
+Existing data can be updated by line number or by `id:`.
+
+```sh
+python -m lifetxt assist --update life.txt --match-id task_001 --status done --done 2026-06-06
+python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-detail tag=important
+```
+
+## Status And Agenda Views
+
+The `status` command prints the latest `S` status / presence item for each
+`person:`. If `person:` is omitted, it is treated as `self` for this summary.
+
+The `agenda` command prints items related to a datetime range. `from/to` and
+`on` are treated as intervals, while `due`, `do`, `at`, and `moved_to` are
+treated as points or all-day spans.
+
+## JSON Shape
+
+Details are always represented as arrays so repeated keys round-trip safely:
+
+```json
+{
+  "status": "[ ]",
+  "type": "T",
+  "title": "Create_Slides",
+  "details": {
+    "project": ["research"],
+    "tag": ["important", "thesis"]
+  }
+}
+```
+
+## Tests
+
+```sh
+python -m unittest discover
+```

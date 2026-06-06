@@ -1,8 +1,15 @@
 import json
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from lifetxt.parser import parse_text
 from lifetxt.serializer import item_to_line, items_from_jsonl_text, items_to_jsonl
+
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class LifeTxtParserTests(unittest.TestCase):
@@ -46,6 +53,203 @@ class LifeTxtParserTests(unittest.TestCase):
             [json.loads(line) for line in jsonl.splitlines()],
             [item.to_dict() for item in decoded],
         )
+
+
+class LifeTxtAssistCliTests(unittest.TestCase):
+    def test_assist_output_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--type",
+                "task",
+                "--title",
+                "Write Report",
+                "--id",
+                "task_001",
+                "--due",
+                "2026-06-12",
+                "--output",
+                path,
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            expected = '[ ] T "Write Report" id:task_001 due:2026-06-12\n'
+            self.assertEqual(
+                '[ ] T "Write Report" id:task_001 due:2026-06-12\n',
+                normalize_newlines(stdout),
+            )
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(expected, handle.read())
+
+    def test_assist_update_by_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("# life\n")
+                handle.write("[ ] T Old_Title id:task_001 tag:old\n")
+                handle.write("[ ] T Other id:task_002\n")
+
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--update",
+                path,
+                "--match-id",
+                "task_001",
+                "--status",
+                "done",
+                "--title",
+                "New Title",
+                "--done",
+                "2026-06-06",
+                "--tag",
+                "new",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertEqual(
+                '[x] T "New Title" id:task_001 tag:new done:2026-06-06\n',
+                normalize_newlines(stdout),
+            )
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "# life\n"
+                    '[x] T "New Title" id:task_001 tag:new done:2026-06-06\n'
+                    "[ ] T Other id:task_002\n",
+                    handle.read(),
+                )
+
+    def test_assist_interactive_help_commands(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "?\n"
+                "T\n"
+                "?status\n"
+                "[ ]\n"
+                "Write_Report\n"
+                "?detail\n"
+                "project:research\n"
+                "\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Type values:", normalized)
+        self.assertIn("Status values:", normalized)
+        self.assertIn("Recommended detail keys for type T:", normalized)
+        self.assertIn("| Key | Meaning | Example |", normalized)
+        self.assertIn("| due | Deadline date or datetime. | `due:2026-06-12` |", normalized)
+        self.assertIn("-" * 56, normalized)
+        self.assertIn("-" * 32, normalized)
+        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report project:research"))
+
+    def test_assist_interactive_title_help_is_title_specific(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "T\n"
+                "[ ]\n"
+                "?\n"
+                "Write_Report\n"
+                "\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        title_help_index = normalized.index("Title: main item text.")
+        details_index = normalized.index("Details:")
+        self.assertLess(title_help_index, details_index)
+        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report"))
+
+    def test_assist_interactive_note_status_accepts_n(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "N\n"
+                "N\n"
+                "Memo\n"
+                "\n"
+            ),
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertTrue(normalize_newlines(stdout).rstrip().endswith("[N] N Memo"))
+
+    def test_assist_interactive_detail_key_help(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "T\n"
+                "[ ]\n"
+                "Write_Report\n"
+                "?due\n"
+                "due:2026-06-12\n"
+                "\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("due: Deadline date or datetime.", normalized)
+        self.assertIn("Example: due:2026-06-12", normalized)
+        self.assertIn("-" * 32, normalized)
+        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report due:2026-06-12"))
+
+    def test_field_completer_common_prefix(self):
+        from lifetxt.interactive import FieldCompleter
+
+        completer = FieldCompleter(["project:", "priority:", "tag:"])
+
+        completed, matches = completer.complete_value("pr")
+
+        self.assertEqual("pr", completed)
+        self.assertEqual(["project:", "priority:"], matches)
+
+        completed, matches = completer.complete_value("proj")
+
+        self.assertEqual("project:", completed)
+        self.assertEqual(["project:"], matches)
+
+
+def run_cli(*args, **kwargs):
+    input_text = kwargs.get("input_text")
+    process = subprocess.Popen(
+        [sys.executable, "-m", "lifetxt"] + list(args),
+        cwd=ROOT_DIR,
+        stdin=subprocess.PIPE if input_text is not None else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    input_bytes = None
+    if input_text is not None:
+        input_bytes = input_text.encode("utf-8")
+    stdout, stderr = process.communicate(input_bytes)
+    return (
+        stdout.decode("utf-8"),
+        stderr.decode("utf-8"),
+        process.returncode,
+    )
+
+
+def normalize_newlines(text):
+    return text.replace("\r\n", "\n")
 
 
 if __name__ == "__main__":

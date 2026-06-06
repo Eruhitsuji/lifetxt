@@ -22,7 +22,13 @@ STATUS_ALIASES = {
     "moved": "[>]",
     "pending": "[?]",
     "unknown": "[?]",
+    "n": "[N]",
     "note": "[N]",
+    "x": "[x]",
+    "/": "[/]",
+    "-": "[-]",
+    ">": "[>]",
+    "?": "[?]",
 }
 
 TYPE_ALIASES = {

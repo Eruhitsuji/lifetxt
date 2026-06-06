@@ -19,7 +19,24 @@ Input assistance is available in both non-interactive and interactive modes:
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university --tag report
+python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --output new_life.txt
+python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --append life.txt
 python -m lifetxt assist --interactive --append life.txt
+```
+
+In interactive mode, enter `?`, `?type`, `?status`, or `?detail` at a prompt
+to show contextual help. At the detail prompt, use `?due` or another `?key`
+form for key-specific help. When the terminal supports it, Tab completes type,
+status, and detail-key candidates, and Up/Down recall previous inputs. Use
+`--no-completion` to disable the line editing helpers.
+
+Existing data can be updated by line number or by `id:`. Updates are written
+in-place unless `--output` is specified.
+
+```sh
+python -m lifetxt assist --update life.txt --match-id task_001 --status done --done 2026-06-06
+python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-detail tag=important
+python -m lifetxt assist --update life.txt --match-id task_001 --remove-detail tag --output updated_life.txt
 ```
 
 The `check` command reports syntax errors and semantic warnings such as invalid status/type values, malformed `key:value` details, note status/type mismatches, date/time format issues, unusual key style, and event ranges where `to:` is earlier than `from:`.

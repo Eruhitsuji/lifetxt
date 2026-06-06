@@ -2,7 +2,14 @@ import argparse
 import json
 import sys
 
-from .assist import DETAIL_FLAGS, build_item_from_args, item_to_assisted_line, prompt_item
+from .assist import (
+    DETAIL_FLAGS,
+    build_item_from_args,
+    has_update_fields,
+    item_to_assisted_line,
+    prompt_item,
+    update_text,
+)
 from .model import Diagnostic
 from .parser import parse_text
 from .serializer import (
@@ -90,11 +97,35 @@ def build_parser():
         default=[],
         help="Detail as key=value or key:value. Can be repeated.",
     )
+    assist.add_argument("-o", "--output", help="Write generated or updated data to a file.")
     assist.add_argument("--append", help="Append the generated line to a file.")
+    assist.add_argument(
+        "--update",
+        help="Update an existing life.txt file in-place, unless --output is also set.",
+    )
+    assist.add_argument("--line", type=int, help="Line number to update with --update.")
+    assist.add_argument("--match-id", help="Update the item whose id: contains this value.")
+    assist.add_argument(
+        "--add-detail",
+        action="append",
+        default=[],
+        help="Append detail as key=value or key:value when updating. Can be repeated.",
+    )
+    assist.add_argument(
+        "--remove-detail",
+        action="append",
+        default=[],
+        help="Remove all values for a detail key when updating. Can be repeated.",
+    )
     assist.add_argument(
         "--no-check",
         action="store_true",
         help="Do not validate the generated line before output.",
+    )
+    assist.add_argument(
+        "--no-completion",
+        action="store_true",
+        help="Disable interactive completion and line editing helpers.",
     )
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
@@ -159,6 +190,12 @@ def command_from_jsonl(args):
 
 
 def command_assist(args):
+    if args.update:
+        return command_assist_update(args)
+
+    if args.output and args.append:
+        raise ValueError("Use either --output or --append, not both.")
+
     if args.interactive or not args.title:
         item = prompt_item(args)
     else:
@@ -178,7 +215,31 @@ def command_assist(args):
 
     if args.append:
         append_line(args.append, line)
+    if args.output:
+        write_text(args.output, line + "\n")
     write_text(None, line + "\n")
+    return 0
+
+
+def command_assist_update(args):
+    if args.interactive:
+        raise ValueError("--interactive is not supported with --update.")
+    if args.append:
+        raise ValueError("--append is only for creating new items. Use --output for update copies.")
+    if not has_update_fields(args):
+        raise ValueError("No update fields were specified.")
+
+    text = read_text(args.update)
+    updated_text, updated_line, diagnostics = update_text(text, args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+    if not args.no_check:
+        _print_warnings(diagnostics)
+
+    output = args.output if args.output else args.update
+    write_text(output, updated_text)
+    write_text(None, updated_line + "\n")
     return 0
 
 

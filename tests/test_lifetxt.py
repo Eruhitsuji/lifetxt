@@ -232,6 +232,130 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual(text, normalize_newlines(stdout))
 
+    def test_agenda_cli_open_filter(self):
+        text = (
+            "[ ] T Open_Task due:2026-06-06 project:work\n"
+            "[/] T Doing_Task due:2026-06-06 project:work\n"
+            "[x] T Done_Task due:2026-06-06 done:2026-06-06 project:work\n"
+            "[-] E Canceled_Event from:2026-06-06T13:00 "
+            "to:2026-06-06T14:00 reason:canceled\n"
+            "[N] N Dated_Note due:2026-06-06 project:work\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--open",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Open_Task", normalized)
+        self.assertIn("Doing_Task", normalized)
+        self.assertNotIn("Done_Task", normalized)
+        self.assertNotIn("Canceled_Event", normalized)
+        self.assertNotIn("Dated_Note", normalized)
+
+    def test_agenda_cli_status_type_and_project_filters(self):
+        text = (
+            "[ ] T Research_Task due:2026-06-06 project:research\n"
+            "[ ] T Life_Task due:2026-06-06 project:life\n"
+            "[ ] E Research_Event from:2026-06-06T13:00 "
+            "to:2026-06-06T14:00 project:research\n"
+            "[x] T Done_Research due:2026-06-06 done:2026-06-06 project:research\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--status",
+            "todo",
+            "--type",
+            "task",
+            "--project",
+            "research",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Research_Task", normalized)
+        self.assertNotIn("Life_Task", normalized)
+        self.assertNotIn("Research_Event", normalized)
+        self.assertNotIn("Done_Research", normalized)
+
+    def test_agenda_cli_detail_person_and_text_filters(self):
+        text = (
+            "[ ] T Create_Slides due:2026-06-06 tag:urgent project:research\n"
+            "[ ] T Buy_Milk due:2026-06-06 tag:urgent project:life\n"
+            "[/] S Alice_Focus from:2026-06-06T13:00 state:focus person:alice\n"
+            "[/] S Bob_Focus from:2026-06-06T13:00 state:focus person:bob\n"
+            "[/] S Self_Away from:2026-06-06T14:00 state:away\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--detail",
+            "tag=urgent",
+            "--text",
+            "slides",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Create_Slides", normalized)
+        self.assertNotIn("Buy_Milk", normalized)
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--person",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Alice_Focus", normalized)
+        self.assertNotIn("Bob_Focus", normalized)
+        self.assertNotIn("Self_Away", normalized)
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--person",
+            "self",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Self_Away", normalized)
+        self.assertNotIn("Alice_Focus", normalized)
+
 
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):

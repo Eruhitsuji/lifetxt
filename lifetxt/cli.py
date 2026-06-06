@@ -7,6 +7,7 @@ from .agenda import (
     agenda_records_to_json,
     agenda_records_to_jsonl,
     agenda_records_to_life,
+    filter_agenda_records,
     format_agenda_table,
     parse_agenda_range,
 )
@@ -129,6 +130,47 @@ def build_parser():
         choices=("text", "life", "json", "jsonl"),
         default="text",
         help="Output format.",
+    )
+    agenda.add_argument(
+        "--open",
+        action="store_true",
+        help="Show unfinished workflow items only: [ ], [/], [>], or [?].",
+    )
+    agenda.add_argument(
+        "--status",
+        action="append",
+        help="Filter by status or alias. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--type",
+        dest="kinds",
+        action="append",
+        help="Filter by type or alias. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--project",
+        action="append",
+        help="Filter by project: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--tag",
+        action="append",
+        help="Filter by tag: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--person",
+        action="append",
+        help="Filter by person: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--detail",
+        action="append",
+        default=[],
+        help="Filter by detail key or key=value. Repeated filters are ANDed.",
+    )
+    agenda.add_argument(
+        "--text",
+        help="Case-insensitive substring filter across title, line, and detail values.",
     )
     agenda.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     agenda.set_defaults(func=command_agenda)
@@ -276,6 +318,17 @@ def command_agenda(args):
         window_text=args.window,
     )
     records = agenda_records(items, range_start, range_end)
+    records = filter_agenda_records(
+        records,
+        open_only=args.open,
+        statuses=args.status,
+        kinds=args.kinds,
+        projects=args.project,
+        tags=args.tag,
+        persons=args.person,
+        detail_filters=args.detail,
+        text=args.text,
+    )
 
     if args.format == "json":
         output = agenda_records_to_json(records, pretty=args.pretty)

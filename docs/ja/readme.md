@@ -30,6 +30,7 @@
 ## CLI
 
 このリポジトリには、外部依存のない Python CLI が含まれます。
+詳細なコマンドの使い方とオプション一覧は [cli.md](./cli.md) を参照してください。
 
 ```sh
 python -m lifetxt check life.txt
@@ -39,6 +40,8 @@ python -m lifetxt status life.txt
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 2h
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 ```
@@ -70,6 +73,18 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 `agenda` コマンドは、指定した日時範囲に関連する item を表示します。
 `from/to` と `on` は期間として扱い、`due`、`do`、`at`、`moved_to` は
 時点または終日範囲として扱います。
+
+agenda filter は組み合わせて使えます。
+
+```sh
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
+```
+
+`--open` は未完了の workflow item のみを表示します。対象は `[ ]`、`[/]`、
+`[>]`、`[?]` です。複数の `--detail key=value` は AND 条件です。
 
 ## JSON 形状
 

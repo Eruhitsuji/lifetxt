@@ -7,6 +7,8 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 
 - [English documentation](./docs/en/readme.md)
 - [Japanese documentation](./docs/ja/readme.md)
+- [English CLI guide](./docs/en/cli.md)
+- [Japanese CLI guide](./docs/ja/cli.md)
 - [English format specification](./docs/en/life_txt_format_spec.md)
 - [Japanese format specification](./docs/ja/life_txt_format_spec.md)
 
@@ -42,6 +44,8 @@ python -m lifetxt status life.txt
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 2h
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 ```
@@ -56,6 +60,9 @@ The `agenda` command prints items related to a datetime range. `from/to` and
 `on` are treated as intervals, while `due`, `do`, `at`, and `moved_to` are
 treated as points or all-day spans. Use `--around now --window 2h` for a
 near-current-time view, or `--format life`, `json`, or `jsonl` for other output.
+Use `--open` for unfinished workflow items only, or combine filters such as
+`--status`, `--type`, `--project`, `--tag`, `--person`, `--detail key=value`,
+and `--text`.
 
 Input assistance is available in both non-interactive and interactive modes:
 

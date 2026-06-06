@@ -32,6 +32,7 @@ Sample files are available in [../../examples/](../../examples/):
 ## CLI
 
 This repository includes a dependency-free Python CLI:
+See [cli.md](./cli.md) for detailed command usage and option reference.
 
 ```sh
 python -m lifetxt check life.txt
@@ -41,6 +42,8 @@ python -m lifetxt status life.txt
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 2h
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 ```
@@ -72,6 +75,18 @@ The `status` command prints the latest `S` status / presence item for each
 The `agenda` command prints items related to a datetime range. `from/to` and
 `on` are treated as intervals, while `due`, `do`, `at`, and `moved_to` are
 treated as points or all-day spans.
+
+Agenda filters can be combined:
+
+```sh
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
+```
+
+`--open` means unfinished workflow items only: `[ ]`, `[/]`, `[>]`, and `[?]`.
+Repeated `--detail key=value` filters are ANDed.
 
 ## JSON Shape
 

@@ -3,9 +3,16 @@ import re
 from collections import OrderedDict
 from datetime import date, datetime, time, timedelta
 
+from .model import (
+    VALID_STATUSES,
+    VALID_TYPES,
+    normalize_status,
+    normalize_type,
+)
 from .serializer import item_to_line
 
 
+OPEN_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
 _DATE_FORMAT = "%Y-%m-%d"
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
 _TIME_FORMAT = "%H:%M"
@@ -91,6 +98,47 @@ def agenda_records(items, range_start, range_end):
         records.append(record)
     records.sort(key=_record_sort_key)
     return records
+
+
+def filter_agenda_records(
+    records,
+    open_only=False,
+    statuses=None,
+    kinds=None,
+    projects=None,
+    tags=None,
+    persons=None,
+    detail_filters=None,
+    text=None,
+):
+    statuses = _normalize_status_filter(statuses)
+    kinds = _normalize_type_filter(kinds)
+    projects = _normalize_filter_values(projects)
+    tags = _normalize_filter_values(tags)
+    persons = _normalize_filter_values(persons)
+    details = _parse_detail_filters(detail_filters)
+    text = text.lower() if text else None
+
+    filtered = []
+    for record in records:
+        if open_only and record["status"] not in OPEN_STATUSES:
+            continue
+        if statuses and record["status"] not in statuses:
+            continue
+        if kinds and record["type"] not in kinds:
+            continue
+        if projects and not _record_has_any_detail(record, "project", projects):
+            continue
+        if tags and not _record_has_any_detail(record, "tag", tags):
+            continue
+        if persons and not _record_has_any_detail(record, "person", persons):
+            continue
+        if details and not _record_matches_detail_filters(record, details):
+            continue
+        if text and text not in _record_search_text(record).lower():
+            continue
+        filtered.append(record)
+    return filtered
 
 
 def item_time_matches(item, range_start, range_end):
@@ -367,3 +415,87 @@ def _table_cell(value):
     if value is None:
         return ""
     return str(value).replace("|", "\\|")
+
+
+def _normalize_filter_values(values):
+    normalized = []
+    for raw in values or []:
+        for value in str(raw).split(","):
+            value = value.strip()
+            if value and value not in normalized:
+                normalized.append(value)
+    return tuple(normalized)
+
+
+def _normalize_status_filter(values):
+    normalized = []
+    for value in _normalize_filter_values(values):
+        status = normalize_status(value)
+        if status not in VALID_STATUSES:
+            raise ValueError("Invalid agenda status filter %r." % value)
+        if status not in normalized:
+            normalized.append(status)
+    return tuple(normalized)
+
+
+def _normalize_type_filter(values):
+    normalized = []
+    for value in _normalize_filter_values(values):
+        kind = normalize_type(value)
+        if kind not in VALID_TYPES:
+            raise ValueError("Invalid agenda type filter %r." % value)
+        if kind not in normalized:
+            normalized.append(kind)
+    return tuple(normalized)
+
+
+def _parse_detail_filters(values):
+    filters = []
+    for raw in values or []:
+        text = str(raw).strip()
+        if not text:
+            continue
+        if "=" in text:
+            key, value = text.split("=", 1)
+            filters.append((key.strip(), value.strip()))
+        elif ":" in text:
+            key, value = text.split(":", 1)
+            filters.append((key.strip(), value.strip()))
+        else:
+            filters.append((text, None))
+    return tuple(filters)
+
+
+def _record_has_any_detail(record, key, values):
+    details = record.get("details", {})
+    record_values = details.get(key, [])
+    if key == "person" and not record_values and record.get("type") == "S":
+        record_values = ["self"]
+    for value in values:
+        if value in record_values:
+            return True
+    return False
+
+
+def _record_matches_detail_filters(record, filters):
+    details = record.get("details", {})
+    for key, value in filters:
+        if not key:
+            return False
+        if key not in details:
+            return False
+        if value is not None and value not in details.get(key, []):
+            return False
+    return True
+
+
+def _record_search_text(record):
+    parts = [
+        record.get("status", ""),
+        record.get("type", ""),
+        record.get("title", ""),
+        record.get("text", ""),
+    ]
+    for values in record.get("details", {}).values():
+        parts.extend(values)
+    return " ".join(parts)

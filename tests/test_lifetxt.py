@@ -54,11 +54,101 @@ class LifeTxtParserTests(unittest.TestCase):
             [item.to_dict() for item in decoded],
         )
 
+    def test_parse_status_item(self):
+        text = (
+            "[/] S Working from:2026-06-06T14:00 state:busy person:self\n"
+            '[x] S "Sleeping" from:2026-06-05T01:00 '
+            "to:2026-06-05T08:30 state:sleeping person:self\n"
+        )
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(2, len(items))
+        self.assertEqual("S", items[0].kind)
+        self.assertEqual(["busy"], items[0].details["state"])
+        self.assertEqual(["self"], items[0].details["person"])
+
+    def test_status_item_requires_from_and_state(self):
+        _items, diagnostics = parse_text("[/] S Working from:13:00\n")
+
+        self.assertTrue(any(d.code == "E202" for d in diagnostics))
+        self.assertTrue(any(d.code == "E203" for d in diagnostics))
+
+    def test_status_item_recommends_status_by_to_presence(self):
+        _items, diagnostics = parse_text(
+            "[/] S Working from:2026-06-06T14:00 "
+            "to:2026-06-06T16:00 state:busy\n"
+            "[x] S Working from:2026-06-06T16:00 state:busy\n"
+        )
+
+        self.assertTrue(any(d.code == "W208" for d in diagnostics))
+        self.assertTrue(any(d.code == "W209" for d in diagnostics))
+
+
+class LifeTxtStatusCliTests(unittest.TestCase):
+    def test_status_cli_outputs_latest_status_for_each_person(self):
+        text = (
+            "[/] S Working from:2026-06-06T14:00 state:busy person:alice\n"
+            "[/] S Focus from:2026-06-06T16:00 state:focus person:alice service:teams\n"
+            "[x] S Sleeping from:2026-06-05T01:00 "
+            "to:2026-06-05T08:30 state:sleeping person:bob\n"
+            "[/] S Away from:2026-06-06T15:30 state:away\n"
+        )
+
+        stdout, stderr, code = run_cli("status", input_text=text)
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("| person | state", normalized)
+        self.assertIn("| alice  | focus", normalized)
+        self.assertIn("2026-06-06T16:00", normalized)
+        self.assertNotIn("2026-06-06T14:00", normalized)
+        self.assertIn("| bob    | sleeping", normalized)
+        self.assertIn("| self   | away", normalized)
+
+    def test_status_cli_json_output(self):
+        text = (
+            "[/] S Working from:2026-06-06T14:00 state:busy person:alice\n"
+            "[/] S Focus from:2026-06-06T16:00 state:focus person:alice service:teams\n"
+            "[/] S Away from:2026-06-06T15:30 state:away\n"
+        )
+
+        stdout, stderr, code = run_cli("status", "--format", "json", input_text=text)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["alice", "self"], [entry["person"] for entry in data])
+        self.assertEqual("focus", data[0]["state"])
+        self.assertEqual("teams", data[0]["service"])
+        self.assertTrue(data[0]["active"])
+        self.assertEqual("self", data[1]["person"])
+        self.assertEqual("away", data[1]["state"])
+
+    def test_status_cli_filters_by_person(self):
+        text = (
+            "[/] S Working from:2026-06-06T14:00 state:busy person:alice\n"
+            "[/] S Away from:2026-06-06T15:30 state:away\n"
+        )
+
+        stdout, stderr, code = run_cli("status", "--person", "self", input_text=text)
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertNotIn("alice", normalized)
+        self.assertIn("self", normalized)
+        self.assertIn("away", normalized)
+
 
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("# existing\n")
+
             stdout, stderr, code = run_cli(
                 "assist",
                 "--type",
@@ -81,7 +171,54 @@ class LifeTxtAssistCliTests(unittest.TestCase):
                 normalize_newlines(stdout),
             )
             with open(path, "r", encoding="utf-8") as handle:
-                self.assertEqual(expected, handle.read())
+                self.assertEqual("# existing\n" + expected, handle.read())
+
+    def test_assist_status_item_non_interactive(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--type",
+            "status",
+            "--title",
+            "Working",
+            "--from",
+            "2026-06-06T14:00",
+            "--state",
+            "busy",
+            "--person",
+            "self",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[/] S Working from:2026-06-06T14:00 state:busy person:self\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_assist_status_item_with_to_defaults_done(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--type",
+            "S",
+            "--title",
+            "Sleeping",
+            "--from",
+            "2026-06-05T01:00",
+            "--to",
+            "2026-06-05T08:30",
+            "--state",
+            "sleeping",
+            "--person",
+            "self",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[x] S Sleeping from:2026-06-05T01:00 "
+            "to:2026-06-05T08:30 state:sleeping person:self\n",
+            normalize_newlines(stdout),
+        )
 
     def test_assist_update_by_id(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -230,9 +367,12 @@ class LifeTxtAssistCliTests(unittest.TestCase):
 
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
     process = subprocess.Popen(
         [sys.executable, "-m", "lifetxt"] + list(args),
         cwd=ROOT_DIR,
+        env=env,
         stdin=subprocess.PIPE if input_text is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -110,7 +110,7 @@ def parse_line(line, line_no=1):
             Diagnostic(
                 "error",
                 "E005",
-                "Invalid type %r. Use T, E, D, R, H, or N." % kind,
+                "Invalid type %r. Use T, E, D, R, H, N, or S." % kind,
                 line_no,
                 pos + 1,
             )

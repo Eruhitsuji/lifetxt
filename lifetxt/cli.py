@@ -19,6 +19,12 @@ from .serializer import (
     items_to_json,
     items_to_jsonl,
 )
+from .status_summary import (
+    format_status_table,
+    latest_status_records,
+    status_records_to_json,
+    status_records_to_jsonl,
+)
 from .validator import validate_item
 
 
@@ -68,6 +74,24 @@ def build_parser():
     to_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     to_jsonl.set_defaults(func=command_to_jsonl)
 
+    status = subparsers.add_parser(
+        "status",
+        help="Show the latest status / presence item for each person.",
+    )
+    status.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    status.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    status.add_argument(
+        "--person",
+        help="Only show the latest status for this person. Missing person: defaults to self.",
+    )
+    status.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    status.set_defaults(func=command_status)
+
     from_json = subparsers.add_parser("from-json", help="Convert JSON to life.txt.")
     from_json.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
     from_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
@@ -97,7 +121,11 @@ def build_parser():
         default=[],
         help="Detail as key=value or key:value. Can be repeated.",
     )
-    assist.add_argument("-o", "--output", help="Write generated or updated data to a file.")
+    assist.add_argument(
+        "-o",
+        "--output",
+        help="Append generated line to a file. With --update, write the updated file.",
+    )
     assist.add_argument("--append", help="Append the generated line to a file.")
     assist.add_argument(
         "--update",
@@ -179,6 +207,25 @@ def command_to_jsonl(args):
     return 0
 
 
+def command_status(args):
+    items, diagnostics = _parse_or_exit(args.path)
+    records = latest_status_records(items, person=args.person)
+
+    if args.format == "json":
+        output = status_records_to_json(records, pretty=args.pretty)
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        output = status_records_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_status_table(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
 def command_from_json(args):
     items = items_from_json_text(read_text(args.path))
     return _write_life_items(items, args.output)
@@ -216,7 +263,7 @@ def command_assist(args):
     if args.append:
         append_line(args.append, line)
     if args.output:
-        write_text(args.output, line + "\n")
+        append_line(args.output, line)
     write_text(None, line + "\n")
     return 0
 

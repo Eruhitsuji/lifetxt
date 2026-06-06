@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 
 VALID_STATUSES = ("[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]")
-VALID_TYPES = ("T", "E", "D", "R", "H", "N")
+VALID_TYPES = ("T", "E", "D", "R", "H", "N", "S")
 
 STATUS_ALIASES = {
     "todo": "[ ]",
@@ -44,6 +44,10 @@ TYPE_ALIASES = {
     "recurring": "H",
     "note": "N",
     "memo": "N",
+    "presence": "S",
+    "presence_status": "S",
+    "status": "S",
+    "state": "S",
 }
 
 RECOMMENDED_KEYS = (
@@ -56,6 +60,10 @@ RECOMMENDED_KEYS = (
     "do",
     "from",
     "to",
+    "state",
+    "person",
+    "service",
+    "visibility",
     "on",
     "at",
     "repeat",
@@ -152,6 +160,17 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "created",
         "updated",
     ),
+    "S": (
+        "from",
+        "state",
+        "to",
+        "person",
+        "service",
+        "loc",
+        "project",
+        "note",
+        "visibility",
+    ),
 }
 
 DATE_KEYS = ("on",)
@@ -167,6 +186,20 @@ DATE_OR_DATETIME_KEYS = (
 )
 TIME_OR_DATETIME_KEYS = ("at",)
 SIMPLE_REPEAT_VALUES = ("daily", "weekly", "monthly", "yearly")
+STATUS_STATE_VALUES = (
+    "available",
+    "busy",
+    "away",
+    "offline",
+    "dnd",
+    "focus",
+    "sleeping",
+    "commuting",
+    "working",
+    "studying",
+    "meeting",
+    "custom",
+)
 
 
 class Diagnostic(object):

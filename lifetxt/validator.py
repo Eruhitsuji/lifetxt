@@ -9,6 +9,7 @@ from .model import (
     Diagnostic,
     RECOMMENDED_KEYS_BY_TYPE,
     SIMPLE_REPEAT_VALUES,
+    STATUS_STATE_VALUES,
     TIME_OR_DATETIME_KEYS,
     VALID_STATUSES,
     VALID_TYPES,
@@ -65,7 +66,7 @@ def validate_item(item):
             )
         )
 
-    if item.status == "[x]" and "done" not in item.details:
+    if item.status == "[x]" and "done" not in item.details and item.kind != "S":
         diagnostics.append(
             Diagnostic(
                 "warning",
@@ -121,6 +122,7 @@ def validate_item(item):
             diagnostics.extend(_validate_value(item, key, value))
 
     diagnostics.extend(_validate_event_range(item))
+    diagnostics.extend(_validate_status_item(item))
     return diagnostics
 
 
@@ -176,6 +178,17 @@ def _validate_value(item, key, value):
                     item.line,
                 )
             )
+    elif key == "state":
+        if value not in STATUS_STATE_VALUES:
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W207",
+                    "state: should usually be one of: %s."
+                    % ", ".join(STATUS_STATE_VALUES),
+                    item.line,
+                )
+            )
     return diagnostics
 
 
@@ -198,6 +211,80 @@ def _validate_event_range(item):
             )
         ]
     return []
+
+
+def _validate_status_item(item):
+    if item.kind != "S":
+        return []
+
+    diagnostics = []
+    has_from = "from" in item.details
+    has_to = "to" in item.details
+
+    if not has_from:
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                "E201",
+                "Status items require from:YYYY-MM-DDTHH:MM.",
+                item.line,
+            )
+        )
+    else:
+        for value in item.details["from"]:
+            if not _is_datetime(value):
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        "E202",
+                        "Status item from: must use YYYY-MM-DDTHH:MM.",
+                        item.line,
+                    )
+                )
+
+    if "state" not in item.details:
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                "E203",
+                "Status items require state:VALUE.",
+                item.line,
+            )
+        )
+
+    if has_to:
+        for value in item.details["to"]:
+            if not _is_datetime(value):
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        "E204",
+                        "Status item to: must use YYYY-MM-DDTHH:MM.",
+                        item.line,
+                    )
+                )
+
+    if has_to and item.status != "[x]":
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W208",
+                "Status items with to: are recommended to use completed status [x].",
+                item.line,
+            )
+        )
+
+    if not has_to and item.status != "[/]":
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W209",
+                "Current status items without to: are recommended to use in-progress status [/].",
+                item.line,
+            )
+        )
+
+    return diagnostics
 
 
 def _is_date(value):

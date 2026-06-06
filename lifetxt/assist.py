@@ -25,6 +25,10 @@ DETAIL_FLAGS = (
     "do",
     "from",
     "to",
+    "state",
+    "person",
+    "service",
+    "visibility",
     "on",
     "at",
     "repeat",
@@ -46,11 +50,11 @@ def build_item_from_args(args):
     if kind is None:
         kind = "T"
 
+    details = collect_details_from_args(args)
+
     status = normalize_status(args.status)
     if status is None:
-        status = "[N]" if kind == "N" else "[ ]"
-
-    details = collect_details_from_args(args)
+        status = _default_status(kind, details)
 
     return Item(status, kind, args.title, details)
 
@@ -91,7 +95,7 @@ def prompt_item(args):
     print_section("Status")
     status_default = normalize_status(args.status)
     if status_default is None:
-        status_default = "[N]" if kind == "N" else "[ ]"
+        status_default = _default_status(kind, None)
     status = (
         normalize_status(
             session.read(
@@ -131,6 +135,16 @@ def prompt_item(args):
         print_short_rule(after_prompt=True)
 
     return Item(status, kind, title, details)
+
+
+def _default_status(kind, details):
+    if kind == "N":
+        return "[N]"
+    if kind == "S":
+        if details and "to" in details:
+            return "[x]"
+        return "[/]"
+    return "[ ]"
 
 
 def item_to_assisted_line(item):

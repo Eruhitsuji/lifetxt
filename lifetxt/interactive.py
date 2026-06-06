@@ -17,6 +17,7 @@ TYPE_DESCRIPTIONS = (
     ("R", "Reminder", "A reminder at a date/time or time."),
     ("H", "Habit", "A recurring habit, usually with repeat:."),
     ("N", "Note", "A note or memo. Usually uses status [N]."),
+    ("S", "Status", "A chat-style presence/current-state record."),
 )
 
 STATUS_DESCRIPTIONS = (
@@ -47,8 +48,12 @@ DETAIL_DESCRIPTIONS = {
     "done": ("Completion date or datetime.", "done:2026-06-05"),
     "due": ("Deadline date or datetime.", "due:2026-06-12"),
     "do": ("Planned execution date or datetime.", "do:2026-06-10"),
-    "from": ("Event start datetime.", "from:2026-06-08T13:00"),
-    "to": ("Event end datetime.", "to:2026-06-08T14:30"),
+    "from": ("Start datetime.", "from:2026-06-08T13:00"),
+    "to": ("End datetime.", "to:2026-06-08T14:30"),
+    "state": ("Status / presence state such as busy, away, focus, or sleeping.", "state:busy"),
+    "person": ("Person or target whose status is recorded.", "person:self"),
+    "service": ("Source or target service.", "service:teams"),
+    "visibility": ("Visibility scope.", "visibility:team"),
     "on": ("All-day date.", "on:2026-06-08"),
     "at": ("Reminder or execution time.", "at:18:00"),
     "repeat": ("Recurrence value.", "repeat:daily"),
@@ -340,6 +345,8 @@ def _print_key_help(topic):
     description, example = entry
     print("%s: %s" % (key, description))
     print("Example: " + example)
+    if key == "state":
+        print("Recommended values: available, busy, away, offline, dnd, focus, sleeping, commuting, working, studying, meeting, custom")
 
 
 def _print_key_table(keys):
@@ -398,6 +405,8 @@ def _help_topic_from_request(value, fallback):
     if value in ("type", "types", "t"):
         return "type"
     if value in ("status", "statuses", "state"):
+        if fallback and fallback.startswith("detail:") and value == "state":
+            return "key:" + fallback.split(":", 1)[1] + ":" + value.rstrip(":")
         return "status"
     if value in ("detail", "details", "key", "keys"):
         if fallback and fallback.startswith("detail:"):

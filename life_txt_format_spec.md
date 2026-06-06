@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-`life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, and notes in a single human-readable file.
+`life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, and notes in a single human-readable file.
 
 The format is designed to be:
 
@@ -33,7 +33,7 @@ The line consists of the following parts:
 
 | Component | Description |
 |---|---|
-| `status` | The current state of the item |
+| `status` | The workflow state of the item |
 | `type` | The kind of item |
 | `title` | The main title or content of the item |
 | `detail` | Optional metadata written as `key:value` |
@@ -70,7 +70,7 @@ Example:
 
 ## 4. Type Values
 
-Only the following six item types are allowed.
+Only the following seven item types are allowed.
 
 | Type | Name | Meaning |
 |---|---|---|
@@ -80,6 +80,7 @@ Only the following six item types are allowed.
 | `R` | Reminder | A reminder |
 | `H` | Habit | A habit or recurring item |
 | `N` | Note | A note or memo |
+| `S` | Status / Presence status | A current state or presence-state record |
 
 Example:
 
@@ -90,6 +91,7 @@ Example:
 [ ] R Turn_Off_Air_Conditioner at:2026-06-06T23:30
 [ ] H English_Study repeat:daily at:18:00
 [N] N Presentation_Memo project:research
+[/] S Working from:2026-06-06T14:00 state:busy person:self
 ```
 
 ---
@@ -263,6 +265,9 @@ The following keys are recommended, but implementations may allow custom keys.
 | `on` | All-day date | `on:2026-06-08` |
 | `at` | Reminder or execution time | `at:18:00` |
 | `repeat` | Recurrence rule | `repeat:daily` |
+| `state` | Status or presence state | `state:busy` |
+| `person` | Person or target whose status is recorded | `person:self` |
+| `service` | Source or target service | `service:teams` |
 | `project` | Project name | `project:research` |
 | `context` | Context or situation | `context:home` |
 | `loc` | Location | `loc:"Meeting Room A"` |
@@ -273,6 +278,7 @@ The following keys are recommended, but implementations may allow custom keys.
 | `url` | Related URL | `url:https://example.com` |
 | `reason` | Reason | `reason:"Schedule changed"` |
 | `moved_to` | New date or item after deferral | `moved_to:2026-06-10` |
+| `visibility` | Visibility scope | `visibility:team` |
 
 ---
 
@@ -430,6 +436,80 @@ Example:
 [N] N Presentation_Memo project:research note:"Use figures before detailed explanation"
 ```
 
+### 14.7 Status / Presence Status (`S`)
+
+`S` represents a current state or presence status, similar to status values in chat tools such as Teams, Discord, Slack, or similar systems.
+
+Required keys:
+
+```txt
+from state
+```
+
+Recommended optional keys:
+
+```txt
+to person service loc project note visibility
+```
+
+Meanings:
+
+| Key | Meaning | Example |
+|---|---|---|
+| `from` | Start datetime of the status | `from:2026-06-06T14:00` |
+| `state` | Status or presence state | `state:busy` |
+| `to` | End datetime of the status | `to:2026-06-06T16:00` |
+| `person` | Person or target of the status. If omitted, implementations may interpret it as `self` | `person:self` |
+| `service` | Source or target service | `service:teams` |
+| `loc` | Location | `loc:home` |
+| `project` | Related project | `project:research` |
+| `note` | Additional note | `note:"Reply may be slow"` |
+| `visibility` | Visibility scope | `visibility:team` |
+
+If `to:` is absent, the status may be treated as currently active.
+
+```txt
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+```
+
+If `to:` is present, the status may be treated as a past status log.
+
+```txt
+[x] S Working from:2026-06-06T14:00 to:2026-06-06T16:00 state:busy person:self
+```
+
+For consistency, `[/]` is recommended for currently active status items, and `[x]` is recommended for completed status logs. This is a type-specific recommendation; the parser still uses the normal status syntax rules.
+
+Tools may summarize the latest presence state by selecting the `S` item with the
+newest `from:` datetime for each `person:`. If `person:` is omitted, summary
+tools may treat it as `self`.
+
+Examples:
+
+```txt
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[/] S Away from:2026-06-06T15:30 state:away person:self
+[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+```
+
+Recommended `state:` values:
+
+| State | Meaning |
+|---|---|
+| `available` | Available |
+| `busy` | Busy |
+| `away` | Away |
+| `offline` | Offline |
+| `dnd` | Do not disturb |
+| `focus` | Focus |
+| `sleeping` | Sleeping |
+| `commuting` | Commuting |
+| `working` | Working |
+| `studying` | Studying |
+| `meeting` | In a meeting |
+| `custom` | Custom status |
+
 ---
 
 ## 15. Recommended Status-Type Rule for Notes
@@ -478,7 +558,7 @@ item_line     = status, space, type, space, string, { space, detail } ;
 
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
 
-type          = "T" | "E" | "D" | "R" | "H" | "N" ;
+type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" ;
 
 detail        = key, ":", string ;
 
@@ -508,6 +588,7 @@ comment_line  = "#", { any_character } ;
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A tag:report tag:important
 [ ] E Research_Meeting from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" project:research
+[/] S Working from:2026-06-06T14:00 state:busy person:self
 [N] N Presentation_Memo project:research note:"Use figures before detailed explanation"
 ```
 
@@ -516,6 +597,7 @@ comment_line  = "#", { any_character } ;
 ```jsonl
 {"status":"[ ]","type":"T","title":"Write_Report","details":{"do":["2026-06-10"],"due":["2026-06-12"],"project":["university"],"priority":["A"],"tag":["report","important"]}}
 {"status":"[ ]","type":"E","title":"Research_Meeting","details":{"from":["2026-06-08T13:00"],"to":["2026-06-08T14:30"],"loc":["Meeting Room A"],"project":["research"]}}
+{"status":"[/]","type":"S","title":"Working","details":{"from":["2026-06-06T14:00"],"state":["busy"],"person":["self"]}}
 {"status":"[N]","type":"N","title":"Presentation_Memo","details":{"project":["research"],"note":["Use figures before detailed explanation"]}}
 ```
 
@@ -534,7 +616,20 @@ comment_line  = "#", { any_character } ;
 [ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
 [ ] R Turn_Off_Air_Conditioner at:2026-06-06T23:30 project:life
 [ ] H English_Study repeat:daily at:18:00 project:english tag:TOEIC tag:vocabulary
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
 [N] N Presentation_Memo project:research note:"Use figures before detailed explanation"
+```
+
+Status / presence records can be mixed with other item types.
+
+```txt
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research
+[/] S Working from:2026-06-06T14:00 state:busy person:self
+[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+[N] N "Use more figures in the next presentation" project:research
 ```
 
 ---

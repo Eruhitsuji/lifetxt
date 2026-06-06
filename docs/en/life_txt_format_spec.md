@@ -70,40 +70,61 @@ Multiple values are represented by repeating the same key.
 [ ] T Create_Slides project:research tag:important tag:thesis tag:presentation
 ```
 
-Parsers should preserve unknown custom keys when possible.
+Custom keys are allowed. Parsers should preserve unknown keys when possible.
 
-## 6. Recommended Detail Keys
+## 6. Detail Key Policy
+
+The format distinguishes known keys from recommended keys.
+
+- Known keys are recognized by tools for validation, completion, and help.
+- Recommended keys are the smaller set that should be shown first for a type or status.
+- Custom keys are still valid syntax and should be preserved.
+
+This keeps the format extensible while making interactive help shorter.
+
+## 7. Core Key Groups
+
+These groups explain the common vocabulary. They are not a requirement for every
+item.
+
+### 7.1 Common Keys
 
 | Key | Meaning | Example |
 |---|---|---|
-| `id` | Item ID | `id:task_001` |
+| `id` | Stable item ID | `id:task_001` |
 | `parent` | Parent item ID | `parent:task_001` |
-| `created` | Creation date or datetime | `created:2026-06-06` |
-| `updated` | Last updated date or datetime | `updated:2026-06-06T16:30` |
-| `done` | Completion date or datetime | `done:2026-06-05` |
-| `due` | Deadline date or datetime | `due:2026-06-12` |
-| `do` | Planned execution date or datetime | `do:2026-06-10` |
-| `from` | Start datetime | `from:2026-06-08T13:00` |
-| `to` | End datetime | `to:2026-06-08T14:30` |
+| `project` | Project or larger work area | `project:research` |
+| `tag` | Free tag; repeat for multiple tags | `tag:important` |
+| `note` | Short human note | `note:"Check later"` |
+| `url` | Related URL | `url:https://example.com` |
+
+### 7.2 Time Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `from` | Start datetime for an interval | `from:2026-06-08T13:00` |
+| `to` | End datetime for an interval | `to:2026-06-08T14:30` |
 | `on` | All-day date | `on:2026-06-08` |
 | `at` | Reminder or execution time | `at:18:00` |
-| `repeat` | Recurrence rule | `repeat:daily` |
-| `state` | Status or presence state | `state:busy` |
-| `person` | Person or target whose status is recorded | `person:self` |
-| `service` | Source or target service | `service:teams` |
-| `project` | Project name | `project:research` |
-| `context` | Context or situation | `context:home` |
-| `loc` | Location | `loc:"Meeting Room A"` |
-| `priority` | Priority | `priority:A` |
-| `est` | Estimated duration | `est:90m` |
-| `tag` | Tag | `tag:important` |
-| `note` | Short note | `note:"Check later"` |
-| `url` | Related URL | `url:https://example.com` |
-| `reason` | Reason | `reason:"Schedule changed"` |
-| `moved_to` | New date or item after deferral | `moved_to:2026-06-10` |
-| `visibility` | Visibility scope | `visibility:team` |
+| `due` | Deadline date or datetime | `due:2026-06-12` |
+| `do` | Planned execution date or datetime | `do:2026-06-10` |
+| `done` | Completion date or datetime | `done:2026-06-05` |
 
-## 7. Date And Time Values
+### 7.3 Workflow Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
+| `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
+
+### 7.4 System Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `created` | Creation date or datetime | `created:2026-06-06` |
+| `updated` | Last updated date or datetime | `updated:2026-06-06T16:30` |
+
+## 8. Date And Time Values
 
 | Form | Meaning | Example |
 |---|---|---|
@@ -114,68 +135,258 @@ Parsers should preserve unknown custom keys when possible.
 Range-based tools may treat `from/to` and `on` as intervals. They may treat
 `due`, `do`, `at`, and `moved_to` as point times or all-day spans.
 
-## 8. Type-Specific Keys
+## 9. Type-Specific Recommended Keys
 
-| Type | Recommended keys |
+### 9.1 Task (`T`)
+
+Use `T` for work that can be completed.
+
+Recommended keys:
+
+```txt
+do due priority est project tag note id parent
+```
+
+| Key | Why it is recommended |
 |---|---|
-| `T` | `do due project context priority est tag note url id parent created updated done` |
-| `E` | `from to on loc project tag note url id created updated` |
-| `D` | `due project priority tag note url id created updated done` |
-| `R` | `at on project context priority tag note url id created updated done` |
-| `H` | `repeat at on project context priority tag note id created updated done` |
-| `N` | `project context tag note url id parent created updated` |
-| `S` | `from state to person service loc project note visibility` |
+| `do` | When the task should be worked on |
+| `due` | When the task must be finished |
+| `priority` | Relative importance |
+| `est` | Estimated effort |
+| `project`, `tag`, `note`, `id`, `parent` | Organization and context |
 
-## 9. Status / Presence Status (`S`)
+Example:
 
-### 9.1 Purpose
+```txt
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+```
 
-Use `S` to record the current state of a person or target, similar to presence
-states in Teams, Discord, Slack, or similar tools.
+### 9.2 Event (`E`)
 
-### 9.2 Required Keys
+Use `E` for calendar-like events.
 
-`S` requires:
+Recommended keys:
+
+```txt
+from to on loc project tag note
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `from`, `to` | Timed event interval |
+| `on` | All-day event date |
+| `loc` | Event location |
+| `project`, `tag`, `note` | Organization and context |
+
+Example:
+
+```txt
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+```
+
+### 9.3 Deadline (`D`)
+
+Use `D` for important deadlines that are not themselves events.
+
+Recommended keys:
+
+```txt
+due priority project tag note
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `due` | Required deadline |
+| `priority` | Relative importance |
+| `project`, `tag`, `note` | Organization and context |
+
+Example:
+
+```txt
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
+```
+
+### 9.4 Reminder (`R`)
+
+Use `R` for a reminder at a date, time, or datetime.
+
+Recommended keys:
+
+```txt
+at on project context note
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `at` | Reminder time or datetime |
+| `on` | Reminder date when `at:` is time-only |
+| `project`, `context`, `note` | Organization and context |
+
+Example:
+
+```txt
+[ ] R Take_Medicine at:2026-06-06T21:00 project:health
+```
+
+### 9.5 Habit (`H`)
+
+Use `H` for recurring actions.
+
+Recommended keys:
+
+```txt
+repeat at on project tag note
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `repeat` | Recurrence rule |
+| `at`, `on` | Time or date anchor |
+| `project`, `tag`, `note` | Organization and context |
+
+Example:
+
+```txt
+[ ] H English_Study repeat:daily at:18:00 project:english
+```
+
+### 9.6 Note (`N`)
+
+Use `N` for notes and memos.
+
+Recommended keys:
+
+```txt
+project context tag note url id parent
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `project`, `context`, `tag` | Organization and retrieval |
+| `note` | Extra note text when the title is short |
+| `url` | Related reference |
+| `id`, `parent` | Linking notes to other items |
+
+Example:
+
+```txt
+[N] N Research_Memo project:research note:"Use figures before detailed explanation"
+```
+
+### 9.7 Status / Presence Status (`S`)
+
+Use `S` for chat-style current state or presence status.
+
+Required keys:
 
 ```txt
 from state
 ```
 
-`from:` is the status start datetime. `state:` is the status value.
+Recommended keys:
 
 ```txt
-[/] S Working from:2026-06-06T14:00 state:busy
+from state to person service loc project note visibility
 ```
 
-### 9.3 Optional Keys
+| Key | Why it is recommended |
+|---|---|
+| `from` | Status start datetime |
+| `state` | Presence state |
+| `to` | Status end datetime for finished logs |
+| `person` | Person or target whose state is recorded |
+| `service` | Source or target service |
+| `loc`, `project`, `note`, `visibility` | Context and visibility |
 
-Recommended optional keys:
-
-```txt
-to person service loc project note visibility
-```
-
-If `person:` is omitted, tools may interpret it as `self`.
-
-### 9.4 Active Status And Logs
-
-If `to:` is absent, the status may be treated as currently active.
+Example:
 
 ```txt
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 ```
 
-If `to:` is present, the status may be treated as a past status log.
+## 10. Status-Specific Recommended Keys
+
+These recommendations depend on the workflow status value. They are secondary to
+type-specific recommendations.
+
+### 10.1 Not Completed (`[ ]`)
+
+Recommended keys:
 
 ```txt
-[x] S Working from:2026-06-06T14:00 to:2026-06-06T16:00 state:busy person:self
+do due priority project tag note
 ```
 
-`[/]` is recommended for currently active status items. `[x]` is recommended
-for completed status logs. These are recommendations; the parser still uses the
-normal status syntax rules.
+Use these to plan open work.
 
-### 9.5 Recommended State Values
+### 10.2 In Progress (`[/]`)
+
+Recommended keys:
+
+```txt
+do due project context note updated
+```
+
+Use these to show what is currently being worked on and when it was last
+updated.
+
+For `S`, `[/]` is recommended when `to:` is absent.
+
+### 10.3 Completed (`[x]`)
+
+Recommended keys:
+
+```txt
+done project tag note
+```
+
+Use `done:` to record completion time.
+
+For `S`, `[x]` is recommended when `to:` is present.
+
+### 10.4 Canceled (`[-]`)
+
+Recommended keys:
+
+```txt
+reason updated note
+```
+
+Use `reason:` to explain why the item was canceled.
+
+### 10.5 Deferred Or Moved (`[>]`)
+
+Recommended keys:
+
+```txt
+moved_to reason updated note
+```
+
+Use `moved_to:` for the new date or replacement item.
+
+### 10.6 Pending Or Uncertain (`[?]`)
+
+Recommended keys:
+
+```txt
+note updated
+```
+
+Use `note:` for what is uncertain or what is waiting for confirmation.
+
+### 10.7 Note Status (`[N]`)
+
+Recommended keys:
+
+```txt
+project context tag note url
+```
+
+`[N]` should normally be used with type `N`.
+
+## 11. Status / Presence State Values
+
+Recommended `state:` values for type `S`:
 
 | State | Meaning |
 |---|---|
@@ -192,7 +403,7 @@ normal status syntax rules.
 | `meeting` | In a meeting |
 | `custom` | Custom status |
 
-### 9.6 Summary Tool Behavior
+If `person:` is omitted, tools may interpret it as `self`.
 
 Tools may summarize the latest presence state by selecting the `S` item with the
 newest `from:` datetime for each `person:`.
@@ -201,16 +412,7 @@ If `to:` is absent, range-based tools may treat the status as ongoing from
 `from:` onward. If `to:` is present, range-based tools may treat `from/to` as the
 status interval.
 
-### 9.7 Examples
-
-```txt
-[/] S Working from:2026-06-06T14:00 state:busy person:self
-[/] S Away from:2026-06-06T15:30 state:away person:self
-[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
-[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
-```
-
-## 10. Note Rule
+## 12. Note Rule
 
 The note status `[N]` should normally be used only with note type `N`.
 
@@ -218,7 +420,7 @@ The note status `[N]` should normally be used only with note type `N`.
 [N] N Research_Memo project:research
 ```
 
-## 11. Formal Grammar
+## 13. Formal Grammar
 
 ```ebnf
 life_file     = { blank_line | comment_line | item_line } ;
@@ -231,7 +433,7 @@ string        = bare_string | quoted_string ;
 space         = " " ;
 ```
 
-## 12. Complete Example
+## 14. Complete Example
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A

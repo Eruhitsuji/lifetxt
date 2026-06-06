@@ -4,9 +4,9 @@ from datetime import datetime
 from .model import (
     DATE_KEYS,
     DATE_OR_DATETIME_KEYS,
-    RECOMMENDED_KEYS,
     DATETIME_KEYS,
     Diagnostic,
+    KNOWN_KEYS,
     RECOMMENDED_KEYS_BY_TYPE,
     SIMPLE_REPEAT_VALUES,
     STATUS_STATE_VALUES,
@@ -86,7 +86,7 @@ def validate_item(item):
             )
         )
 
-    global_recommended = set(RECOMMENDED_KEYS)
+    known_keys = set(KNOWN_KEYS)
     if item.kind in RECOMMENDED_KEYS_BY_TYPE:
         recommended = set(RECOMMENDED_KEYS_BY_TYPE[item.kind])
     else:
@@ -106,7 +106,7 @@ def validate_item(item):
         if (
             item.kind in RECOMMENDED_KEYS_BY_TYPE
             and key not in recommended
-            and key not in global_recommended
+            and key not in known_keys
         ):
             diagnostics.append(
                 Diagnostic(

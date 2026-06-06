@@ -1,8 +1,10 @@
 import sys
 
 from .model import (
-    RECOMMENDED_KEYS,
+    KNOWN_KEYS,
+    RECOMMENDED_KEY_GROUPS,
     RECOMMENDED_KEYS_BY_TYPE,
+    RECOMMENDED_KEYS_BY_STATUS,
     STATUS_ALIASES,
     TYPE_ALIASES,
     VALID_STATUSES,
@@ -239,15 +241,10 @@ def status_candidates():
 
 
 def detail_candidates(kind=None):
-    keys = []
-    if kind in RECOMMENDED_KEYS_BY_TYPE:
-        keys.extend(RECOMMENDED_KEYS_BY_TYPE[kind])
-    for key in RECOMMENDED_KEYS:
-        if key not in keys:
-            keys.append(key)
+    keys = _detail_candidate_keys(kind)
     return [key + ":" for key in keys] + ["?", "help", "?detail"] + [
         "?" + key for key in keys
-    ]
+    ] + ["?all"]
 
 
 def print_help(topic=None):
@@ -282,7 +279,7 @@ def print_detail_help(kind):
 
 def print_detail_summary(kind):
     print("Details: key:value or key=value. Empty finishes.")
-    print("Help: ?detail lists keys; ?due shows help for a key; Tab completes keys.")
+    print("Help: ?detail lists suggested keys; ?all lists known keys; ?due shows key help.")
     if kind in RECOMMENDED_KEYS_BY_TYPE:
         keys = ", ".join(RECOMMENDED_KEYS_BY_TYPE[kind])
         print("Suggested keys for %s: %s" % (kind, keys))
@@ -312,6 +309,9 @@ def _print_status_help():
     for code, name, description in STATUS_DESCRIPTIONS:
         aliases = _aliases_for(STATUS_ALIASES, code)
         print("  %-3s %-9s %s%s" % (code, name + ":", description, _alias_suffix(aliases)))
+    print("Suggested detail keys by status:")
+    for code, keys in RECOMMENDED_KEYS_BY_STATUS.items():
+        print("  %-3s %s" % (code, ", ".join(keys)))
 
 
 def _print_title_help():
@@ -319,13 +319,25 @@ def _print_title_help():
 
 
 def _print_detail_help(kind):
+    if kind == "all":
+        print("Known detail keys by category:")
+        _print_all_key_tables()
+        print("Type-specific and status-specific help lists the shorter recommended set.")
+        print("Detail format:")
+        print("  key:value or key=value")
+        return
     if kind in RECOMMENDED_KEYS_BY_TYPE:
         print("Recommended detail keys for type %s:" % kind)
         keys = RECOMMENDED_KEYS_BY_TYPE[kind]
     else:
-        print("Recommended detail keys:")
-        keys = RECOMMENDED_KEYS
+        print("Recommended detail key groups:")
+        _print_grouped_key_tables(RECOMMENDED_KEY_GROUPS)
+        print("Use ?all for every known key. Custom keys are preserved.")
+        print("Detail format:")
+        print("  key:value or key=value")
+        return
     _print_key_table(keys)
+    print("Use ?all for every known key. Custom keys are preserved.")
     print("Detail format:")
     print("  key:value or key=value")
 
@@ -365,6 +377,40 @@ def _print_key_table(keys):
                 _escape_table_cell(example),
             )
         )
+
+
+def _print_grouped_key_tables(groups):
+    for label, keys in groups:
+        print("")
+        print("%s keys:" % label)
+        _print_key_table(keys)
+
+
+def _print_all_key_tables():
+    _print_grouped_key_tables(RECOMMENDED_KEY_GROUPS)
+    grouped = set()
+    for _label, keys in RECOMMENDED_KEY_GROUPS:
+        grouped.update(keys)
+    remaining = [key for key in KNOWN_KEYS if key not in grouped]
+    if remaining:
+        print("")
+        print("Type-specific keys:")
+        _print_key_table(remaining)
+
+
+def _detail_candidate_keys(kind=None):
+    keys = []
+    if kind in RECOMMENDED_KEYS_BY_TYPE:
+        keys.extend(RECOMMENDED_KEYS_BY_TYPE[kind])
+    elif kind == "all" or kind is None:
+        for label, group_keys in RECOMMENDED_KEY_GROUPS:
+            for key in group_keys:
+                if key not in keys:
+                    keys.append(key)
+    for key in KNOWN_KEYS:
+        if key not in keys and kind == "all":
+            keys.append(key)
+    return keys
 
 
 def _escape_table_cell(value):
@@ -412,6 +458,8 @@ def _help_topic_from_request(value, fallback):
         if fallback and fallback.startswith("detail:"):
             return fallback
         return "detail"
+    if value in ("all", "known", "known_keys"):
+        return "detail:all"
     if fallback and fallback.startswith("detail:"):
         return "key:" + fallback.split(":", 1)[1] + ":" + value.rstrip(":")
     return fallback

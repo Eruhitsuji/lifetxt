@@ -50,7 +50,7 @@ TYPE_ALIASES = {
     "state": "S",
 }
 
-RECOMMENDED_KEYS = (
+KNOWN_KEYS = (
     "id",
     "parent",
     "created",
@@ -79,22 +79,32 @@ RECOMMENDED_KEYS = (
     "moved_to",
 )
 
+COMMON_RECOMMENDED_KEYS = ("id", "parent", "project", "tag", "note", "url")
+TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
+WORKFLOW_RECOMMENDED_KEYS = ("reason", "moved_to")
+SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
+
+RECOMMENDED_KEY_GROUPS = (
+    ("Common", COMMON_RECOMMENDED_KEYS),
+    ("Time", TIME_RECOMMENDED_KEYS),
+    ("Workflow", WORKFLOW_RECOMMENDED_KEYS),
+    ("System", SYSTEM_RECOMMENDED_KEYS),
+)
+
+# Backward-compatible alias for callers that expect the full known-key list.
+RECOMMENDED_KEYS = KNOWN_KEYS
+
 RECOMMENDED_KEYS_BY_TYPE = {
     "T": (
         "do",
         "due",
-        "project",
-        "context",
         "priority",
         "est",
+        "project",
         "tag",
         "note",
-        "url",
         "id",
         "parent",
-        "created",
-        "updated",
-        "done",
     ),
     "E": (
         "from",
@@ -104,50 +114,28 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
-        "url",
-        "id",
-        "created",
-        "updated",
     ),
     "D": (
         "due",
-        "project",
         "priority",
+        "project",
         "tag",
         "note",
-        "url",
-        "id",
-        "created",
-        "updated",
-        "done",
     ),
     "R": (
         "at",
         "on",
         "project",
         "context",
-        "priority",
-        "tag",
         "note",
-        "url",
-        "id",
-        "created",
-        "updated",
-        "done",
     ),
     "H": (
         "repeat",
         "at",
         "on",
         "project",
-        "context",
-        "priority",
         "tag",
         "note",
-        "id",
-        "created",
-        "updated",
-        "done",
     ),
     "N": (
         "project",
@@ -157,8 +145,6 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "url",
         "id",
         "parent",
-        "created",
-        "updated",
     ),
     "S": (
         "from",
@@ -171,6 +157,16 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "note",
         "visibility",
     ),
+}
+
+RECOMMENDED_KEYS_BY_STATUS = {
+    "[ ]": ("do", "due", "priority", "project", "tag", "note"),
+    "[/]": ("do", "due", "project", "context", "note", "updated"),
+    "[x]": ("done", "project", "tag", "note"),
+    "[-]": ("reason", "updated", "note"),
+    "[>]": ("moved_to", "reason", "updated", "note"),
+    "[?]": ("note", "updated"),
+    "[N]": ("project", "context", "tag", "note", "url"),
 }
 
 DATE_KEYS = ("on",)

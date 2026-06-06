@@ -440,6 +440,32 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertIn("-" * 32, normalized)
         self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report due:2026-06-12"))
 
+    def test_assist_interactive_all_key_help_and_status_key_suggestions(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "T\n"
+                "?\n"
+                "[ ]\n"
+                "Write_Report\n"
+                "?all\n"
+                "\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Suggested detail keys by status:", normalized)
+        self.assertIn("[ ] do, due, priority, project, tag, note", normalized)
+        self.assertIn("Known detail keys by category:", normalized)
+        self.assertIn("Common keys:", normalized)
+        self.assertIn("Type-specific keys:", normalized)
+        self.assertIn("| state | Status / presence state", normalized)
+        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report"))
+
     def test_field_completer_common_prefix(self):
         from lifetxt.interactive import FieldCompleter
 

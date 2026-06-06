@@ -69,40 +69,60 @@ loc:"Meeting Room A"
 [ ] T Create_Slides project:research tag:important tag:thesis tag:presentation
 ```
 
-パーサは未知の custom key を可能な限り保持するべきです。
+custom key は許可されます。パーサは未知の key を可能な限り保持するべきです。
 
-## 6. 推奨 detail key
+## 6. detail key の考え方
+
+この形式では、known key と recommended key を分けて考えます。
+
+- known key は、ツールが検証、補完、ヘルプで認識する key です。
+- recommended key は、type や status ごとに最初に提示すべき短い推奨 key です。
+- custom key も構文上は有効で、保持されるべきです。
+
+この分離により、形式の拡張性を保ちながら対話ヘルプを短くできます。
+
+## 7. 基本 key group
+
+以下は共通語彙の説明です。すべての item に必須という意味ではありません。
+
+### 7.1 Common keys
 
 | Key | 意味 | 例 |
 |---|---|---|
-| `id` | item ID | `id:task_001` |
+| `id` | 安定した item ID | `id:task_001` |
 | `parent` | 親 item ID | `parent:task_001` |
-| `created` | 作成日または作成日時 | `created:2026-06-06` |
-| `updated` | 更新日または更新日時 | `updated:2026-06-06T16:30` |
-| `done` | 完了日または完了日時 | `done:2026-06-05` |
-| `due` | 締切日または締切日時 | `due:2026-06-12` |
-| `do` | 実行予定日または実行予定日時 | `do:2026-06-10` |
-| `from` | 開始日時 | `from:2026-06-08T13:00` |
-| `to` | 終了日時 | `to:2026-06-08T14:30` |
+| `project` | プロジェクトまたは作業領域 | `project:research` |
+| `tag` | 自由タグ。複数回指定可能 | `tag:important` |
+| `note` | 短い補足メモ | `note:"Check later"` |
+| `url` | 関連 URL | `url:https://example.com` |
+
+### 7.2 Time keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `from` | 期間の開始日時 | `from:2026-06-08T13:00` |
+| `to` | 期間の終了日時 | `to:2026-06-08T14:30` |
 | `on` | 終日の日付 | `on:2026-06-08` |
 | `at` | リマインドまたは実行時刻 | `at:18:00` |
-| `repeat` | 繰り返し規則 | `repeat:daily` |
-| `state` | 在席状態、現在状態 | `state:busy` |
-| `person` | 状態の対象者 | `person:self` |
-| `service` | 由来または対象サービス | `service:teams` |
-| `project` | プロジェクト名 | `project:research` |
-| `context` | コンテキスト、状況 | `context:home` |
-| `loc` | 場所 | `loc:"Meeting Room A"` |
-| `priority` | 優先度 | `priority:A` |
-| `est` | 見積時間 | `est:90m` |
-| `tag` | タグ | `tag:important` |
-| `note` | 補足メモ | `note:"Check later"` |
-| `url` | 関連 URL | `url:https://example.com` |
-| `reason` | 理由 | `reason:"Schedule changed"` |
-| `moved_to` | 延期先の日付または item | `moved_to:2026-06-10` |
-| `visibility` | 公開範囲 | `visibility:team` |
+| `due` | 締切日または締切日時 | `due:2026-06-12` |
+| `do` | 実行予定日または実行予定日時 | `do:2026-06-10` |
+| `done` | 完了日または完了日時 | `done:2026-06-05` |
 
-## 7. 日付と時刻
+### 7.3 Workflow keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
+| `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
+
+### 7.4 System keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `created` | 作成日または作成日時 | `created:2026-06-06` |
+| `updated` | 最終更新日または最終更新日時 | `updated:2026-06-06T16:30` |
+
+## 8. 日付と時刻
 
 | 形式 | 意味 | 例 |
 |---|---|---|
@@ -113,67 +133,256 @@ loc:"Meeting Room A"
 範囲ベースのツールでは、`from/to` と `on` を期間として扱えます。
 `due`、`do`、`at`、`moved_to` は時点または終日範囲として扱えます。
 
-## 8. type 別推奨 key
+## 9. type 別 recommended keys
 
-| Type | 推奨 key |
+### 9.1 Task (`T`)
+
+`T` は完了できる作業に使います。
+
+推奨 key:
+
+```txt
+do due priority est project tag note id parent
+```
+
+| Key | 推奨理由 |
 |---|---|
-| `T` | `do due project context priority est tag note url id parent created updated done` |
-| `E` | `from to on loc project tag note url id created updated` |
-| `D` | `due project priority tag note url id created updated done` |
-| `R` | `at on project context priority tag note url id created updated done` |
-| `H` | `repeat at on project context priority tag note id created updated done` |
-| `N` | `project context tag note url id parent created updated` |
-| `S` | `from state to person service loc project note visibility` |
+| `do` | いつ作業するか |
+| `due` | いつまでに終えるか |
+| `priority` | 相対的な重要度 |
+| `est` | 見積作業量 |
+| `project`, `tag`, `note`, `id`, `parent` | 整理と文脈付け |
 
-## 9. Status / Presence status (`S`)
+例:
 
-### 9.1 目的
+```txt
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+```
 
-`S` は Teams、Discord、Slack などのチャットツールにある在席状態に近い、
-人または対象の現在状態を記録するために使います。
+### 9.2 Event (`E`)
 
-### 9.2 必須 key
+`E` はカレンダー予定に使います。
 
-`S` では以下が必須です。
+推奨 key:
+
+```txt
+from to on loc project tag note
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `from`, `to` | 時刻付き予定の期間 |
+| `on` | 終日予定の日付 |
+| `loc` | 場所 |
+| `project`, `tag`, `note` | 整理と文脈付け |
+
+例:
+
+```txt
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+```
+
+### 9.3 Deadline (`D`)
+
+`D` は予定そのものではない重要な締切に使います。
+
+推奨 key:
+
+```txt
+due priority project tag note
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `due` | 必須の締切 |
+| `priority` | 相対的な重要度 |
+| `project`, `tag`, `note` | 整理と文脈付け |
+
+例:
+
+```txt
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
+```
+
+### 9.4 Reminder (`R`)
+
+`R` は特定の日付、時刻、日時でのリマインダーに使います。
+
+推奨 key:
+
+```txt
+at on project context note
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `at` | リマインド時刻または日時 |
+| `on` | `at:` が時刻のみの場合の日付 |
+| `project`, `context`, `note` | 整理と文脈付け |
+
+例:
+
+```txt
+[ ] R Take_Medicine at:2026-06-06T21:00 project:health
+```
+
+### 9.5 Habit (`H`)
+
+`H` は繰り返し行う行動に使います。
+
+推奨 key:
+
+```txt
+repeat at on project tag note
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `repeat` | 繰り返し規則 |
+| `at`, `on` | 時刻または日付の基準 |
+| `project`, `tag`, `note` | 整理と文脈付け |
+
+例:
+
+```txt
+[ ] H English_Study repeat:daily at:18:00 project:english
+```
+
+### 9.6 Note (`N`)
+
+`N` はメモや覚え書きに使います。
+
+推奨 key:
+
+```txt
+project context tag note url id parent
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `project`, `context`, `tag` | 整理と検索 |
+| `note` | title が短い場合の補足本文 |
+| `url` | 関連資料 |
+| `id`, `parent` | 他 item との関連付け |
+
+例:
+
+```txt
+[N] N Research_Memo project:research note:"Use figures before detailed explanation"
+```
+
+### 9.7 Status / Presence status (`S`)
+
+`S` はチャットツール風の現在状態や在席状態に使います。
+
+必須 key:
 
 ```txt
 from state
 ```
 
-`from:` は状態の開始日時、`state:` は状態値です。
+推奨 key:
 
 ```txt
-[/] S Working from:2026-06-06T14:00 state:busy
+from state to person service loc project note visibility
 ```
 
-### 9.3 任意 key
+| Key | 推奨理由 |
+|---|---|
+| `from` | 状態の開始日時 |
+| `state` | 在席状態 |
+| `to` | 終了済みログの終了日時 |
+| `person` | 状態の対象者 |
+| `service` | 由来または対象サービス |
+| `loc`, `project`, `note`, `visibility` | 文脈と公開範囲 |
 
-推奨される任意 key は以下です。
-
-```txt
-to person service loc project note visibility
-```
-
-`person:` が省略された場合、ツールは `self` と解釈してよいです。
-
-### 9.4 有効状態とログ
-
-`to:` がない場合、その status は現在有効な状態として扱えます。
+例:
 
 ```txt
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 ```
 
-`to:` がある場合、過去の状態ログとして扱えます。
+## 10. status 別 recommended keys
+
+以下は workflow status 値ごとの推奨です。type 別推奨 key を補助するものです。
+
+### 10.1 Not Completed (`[ ]`)
+
+推奨 key:
 
 ```txt
-[x] S Working from:2026-06-06T14:00 to:2026-06-06T16:00 state:busy person:self
+do due priority project tag note
 ```
 
-現在有効な status item には `[/]`、終了済みログには `[x]` を推奨します。
-これは推奨ルールであり、パーサは通常の status 構文規則を使います。
+未完了の作業を計画するために使います。
 
-### 9.5 推奨 state 値
+### 10.2 In Progress (`[/]`)
+
+推奨 key:
+
+```txt
+do due project context note updated
+```
+
+現在作業中の内容と最終更新を示すために使います。
+
+`S` では、`to:` がない現在有効な状態に `[/]` を推奨します。
+
+### 10.3 Completed (`[x]`)
+
+推奨 key:
+
+```txt
+done project tag note
+```
+
+`done:` で完了時刻を記録します。
+
+`S` では、`to:` がある終了済みログに `[x]` を推奨します。
+
+### 10.4 Canceled (`[-]`)
+
+推奨 key:
+
+```txt
+reason updated note
+```
+
+`reason:` でキャンセル理由を記録します。
+
+### 10.5 Deferred Or Moved (`[>]`)
+
+推奨 key:
+
+```txt
+moved_to reason updated note
+```
+
+`moved_to:` で新しい日付や置き換え item を記録します。
+
+### 10.6 Pending Or Uncertain (`[?]`)
+
+推奨 key:
+
+```txt
+note updated
+```
+
+不確定な点や確認待ちの内容を `note:` に書きます。
+
+### 10.7 Note Status (`[N]`)
+
+推奨 key:
+
+```txt
+project context tag note url
+```
+
+`[N]` は通常 type `N` と組み合わせます。
+
+## 11. Status / Presence state 値
+
+type `S` の `state:` 推奨値:
 
 | State | 意味 |
 |---|---|
@@ -190,7 +399,7 @@ to person service loc project note visibility
 | `meeting` | 会議中 |
 | `custom` | カスタム状態 |
 
-### 9.6 集約ツールでの扱い
+`person:` が省略された場合、ツールは `self` と解釈してよいです。
 
 ツールは `person:` ごとに `from:` が最も新しい `S` item を選び、最新の
 在席状態として集約できます。
@@ -198,16 +407,7 @@ to person service loc project note visibility
 `to:` がない場合、範囲ベースのツールは `from:` 以降継続中として扱えます。
 `to:` がある場合、`from/to` を状態の期間として扱えます。
 
-### 9.7 例
-
-```txt
-[/] S Working from:2026-06-06T14:00 state:busy person:self
-[/] S Away from:2026-06-06T15:30 state:away person:self
-[/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
-[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
-```
-
-## 10. Note ルール
+## 12. Note ルール
 
 note status `[N]` は通常 note type `N` と組み合わせます。
 
@@ -215,7 +415,7 @@ note status `[N]` は通常 note type `N` と組み合わせます。
 [N] N Research_Memo project:research
 ```
 
-## 11. 簡易文法
+## 13. 簡易文法
 
 ```ebnf
 life_file     = { blank_line | comment_line | item_line } ;
@@ -228,7 +428,7 @@ string        = bare_string | quoted_string ;
 space         = " " ;
 ```
 
-## 12. 完全な例
+## 14. 完全な例
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A

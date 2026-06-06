@@ -2,6 +2,14 @@ import argparse
 import json
 import sys
 
+from .agenda import (
+    agenda_records,
+    agenda_records_to_json,
+    agenda_records_to_jsonl,
+    agenda_records_to_life,
+    format_agenda_table,
+    parse_agenda_range,
+)
 from .assist import (
     DETAIL_FLAGS,
     build_item_from_args,
@@ -91,6 +99,39 @@ def build_parser():
     )
     status.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     status.set_defaults(func=command_status)
+
+    agenda = subparsers.add_parser(
+        "agenda",
+        help="Show items related to a datetime range.",
+    )
+    agenda.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    agenda.add_argument(
+        "--from",
+        dest="start",
+        help="Range start: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+    )
+    agenda.add_argument(
+        "--to",
+        dest="end",
+        help="Range end: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+    )
+    agenda.add_argument(
+        "--around",
+        help="Center of a range: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM. Defaults to now.",
+    )
+    agenda.add_argument(
+        "--window",
+        default="1h",
+        help="Half-width for --around, e.g. 30m, 2h, or 1d. Defaults to 1h.",
+    )
+    agenda.add_argument(
+        "--format",
+        choices=("text", "life", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    agenda.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    agenda.set_defaults(func=command_agenda)
 
     from_json = subparsers.add_parser("from-json", help="Convert JSON to life.txt.")
     from_json.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
@@ -221,6 +262,36 @@ def command_status(args):
         write_text(None, output)
     else:
         write_text(None, format_status_table(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_agenda(args):
+    items, diagnostics = _parse_or_exit(args.path)
+    range_start, range_end = parse_agenda_range(
+        start_text=args.start,
+        end_text=args.end,
+        around_text=args.around,
+        window_text=args.window,
+    )
+    records = agenda_records(items, range_start, range_end)
+
+    if args.format == "json":
+        output = agenda_records_to_json(records, pretty=args.pretty)
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        output = agenda_records_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    elif args.format == "life":
+        output = agenda_records_to_life(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_agenda_table(records))
 
     _print_warnings(diagnostics)
     return 0

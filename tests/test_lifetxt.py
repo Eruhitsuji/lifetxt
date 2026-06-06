@@ -142,6 +142,97 @@ class LifeTxtStatusCliTests(unittest.TestCase):
         self.assertIn("away", normalized)
 
 
+class LifeTxtAgendaCliTests(unittest.TestCase):
+    def test_agenda_cli_outputs_items_in_datetime_range(self):
+        text = (
+            "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n"
+            "[ ] D Form due:2026-06-06T17:00\n"
+            "[ ] T Future due:2026-06-07\n"
+            "[/] S Working from:2026-06-06T12:00 state:busy person:self\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06T13:30",
+            "--to",
+            "2026-06-06T18:00",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("| when", normalized)
+        self.assertIn("Seminar", normalized)
+        self.assertIn("Form", normalized)
+        self.assertIn("Working", normalized)
+        self.assertNotIn("Future", normalized)
+
+    def test_agenda_cli_around_window(self):
+        text = (
+            "[ ] R Break at:2026-06-06T14:15\n"
+            "[ ] T Morning due:2026-06-06T10:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--around",
+            "2026-06-06T14:00",
+            "--window",
+            "30m",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Break", normalized)
+        self.assertNotIn("Morning", normalized)
+
+    def test_agenda_cli_json_output(self):
+        text = (
+            "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n"
+            "[ ] D Form due:2026-06-06T17:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["Seminar", "Form"], [entry["title"] for entry in data])
+        self.assertEqual("from/to", data[0]["key"])
+        self.assertEqual("due", data[1]["key"])
+
+    def test_agenda_cli_time_only_at_matches_range_day(self):
+        text = "[ ] H Practice repeat:daily at:18:00\n"
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06T17:30",
+            "--to",
+            "2026-06-06T18:30",
+            "--format",
+            "life",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(text, normalize_newlines(stdout))
+
+
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

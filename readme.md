@@ -13,6 +13,8 @@ python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt -o life.jsonl
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --format json --pretty
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 ```
@@ -22,6 +24,11 @@ The `status` command prints the latest `S` status / presence item for each
 The latest item is selected by the newest `from:` datetime. Use `--person NAME`
 to filter one person, or `--format json` / `--format jsonl` for machine-readable
 output.
+
+The `agenda` command prints items related to a datetime range. `from/to` and
+`on` are treated as intervals, while `due`, `do`, `at`, and `moved_to` are
+treated as points or all-day spans. Use `--around now --window 2h` for a
+near-current-time view, or `--format life`, `json`, or `jsonl` for other output.
 
 Input assistance is available in both non-interactive and interactive modes:
 

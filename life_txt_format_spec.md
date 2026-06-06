@@ -322,6 +322,14 @@ Example:
 at:18:00
 ```
 
+### 12.1 Range-Based Tool Behavior
+
+Tools may provide range-based views such as an agenda or near-current-time
+pickup. Such tools should treat `from/to` and `on` as intervals. They may treat
+`due`, `do`, `at`, and `moved_to` as point times or all-day spans. If `at:` is a
+time-only value such as `18:00`, tools may combine it with `on:` when present or
+with each date in the requested range.
+
 ---
 
 ## 13. Recurrence Values

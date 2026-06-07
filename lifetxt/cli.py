@@ -1,6 +1,10 @@
 import argparse
+import hashlib
 import json
+import os
 import sys
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from .agenda import (
     agenda_records,
@@ -21,6 +25,7 @@ from .assist import (
     prompt_item,
     update_text,
 )
+from .ics import items_from_ics_text
 from .model import Diagnostic
 from .parser import parse_text
 from .serializer import (
@@ -86,6 +91,78 @@ def build_parser():
     to_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     _add_item_filter_arguments(to_jsonl)
     to_jsonl.set_defaults(func=command_to_jsonl)
+
+    import_ics = subparsers.add_parser(
+        "import-ics",
+        help="Convert iCalendar .ics VEVENT entries to life.txt event items.",
+    )
+    _add_input_paths(import_ics)
+    import_ics.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    import_ics.add_argument(
+        "--append",
+        action="store_true",
+        help="Append to --output instead of overwriting it.",
+    )
+    import_ics.add_argument(
+        "--project",
+        help="Add this project: detail to every imported event.",
+    )
+    import_ics.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        help="Add this tag: detail to every imported event. Can be repeated.",
+    )
+    import_ics.set_defaults(func=command_import_ics)
+
+    sync_ics = subparsers.add_parser(
+        "sync-ics",
+        help="Fetch iCalendar .ics URLs and write generated life.txt event items.",
+    )
+    sync_ics.add_argument(
+        "--url",
+        action="append",
+        default=[],
+        help="iCalendar URL to fetch. Can be repeated.",
+    )
+    sync_ics.add_argument(
+        "--url-env",
+        action="append",
+        default=[],
+        help="Environment variable containing an iCalendar URL. Can be repeated.",
+    )
+    sync_ics.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    sync_ics.add_argument(
+        "--cache-dir",
+        help="Directory for raw downloaded .ics snapshots.",
+    )
+    sync_ics.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Fetch and print generated life.txt without writing output or cache files.",
+    )
+    sync_ics.add_argument(
+        "--project",
+        help="Add this project: detail to every synced event.",
+    )
+    sync_ics.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        help="Add this tag: detail to every synced event. Can be repeated.",
+    )
+    sync_ics.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="Fetch timeout in seconds. Defaults to 30.",
+    )
+    sync_ics.add_argument(
+        "--user-agent",
+        default="lifetxt/ics-sync",
+        help="HTTP User-Agent header.",
+    )
+    sync_ics.set_defaults(func=command_sync_ics)
 
     filter_command = subparsers.add_parser(
         "filter",
@@ -417,6 +494,64 @@ def command_to_jsonl(args):
     return 0
 
 
+def command_import_ics(args):
+    if args.append and not args.output:
+        raise ValueError("--append requires --output.")
+
+    items = []
+    for path in _normalize_paths(args.paths):
+        items.extend(
+            items_from_ics_text(
+                read_text(path),
+                project=args.project,
+                tags=args.tag,
+            )
+        )
+
+    diagnostics = []
+    for item in items:
+        diagnostics.extend(validate_item(item))
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+    _print_warnings(diagnostics)
+
+    output = _items_to_life_text(items, canonical=True)
+    if args.append:
+        append_text(args.output, output)
+    else:
+        write_text(args.output, output)
+    return 0
+
+
+def command_sync_ics(args):
+    sources = _ics_sync_sources(args)
+    items = []
+    for index, source in enumerate(sources, 1):
+        data = fetch_url(source["url"], args.timeout, args.user_agent, index)
+        if args.cache_dir and not args.dry_run:
+            cache_name = _ics_cache_name(source, index)
+            write_bytes(os.path.join(args.cache_dir, cache_name), data)
+        items.extend(
+            items_from_ics_text(
+                decode_ics_bytes(data),
+                project=args.project,
+                tags=args.tag,
+            )
+        )
+
+    output = _validated_life_text_or_exit(items)
+    if output is None:
+        return 1
+    if args.dry_run:
+        write_text(None, output)
+    else:
+        if args.output:
+            ensure_parent_dir(args.output)
+        write_text(args.output, output)
+    return 0
+
+
 def command_filter(args):
     items, diagnostics = _parse_or_exit(args.paths)
     items = _filter_items_from_args(items, args)
@@ -564,6 +699,14 @@ def command_assist_update(args):
 
 
 def _write_life_items(items, output):
+    text = _validated_life_text_or_exit(items)
+    if text is None:
+        return 1
+    write_text(output, text)
+    return 0
+
+
+def _validated_life_text_or_exit(items):
     diagnostics = []
     lines = []
     for item in items:
@@ -571,13 +714,12 @@ def _write_life_items(items, output):
         lines.append(item_to_line(item))
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
-        return 1
+        return None
     _print_warnings(diagnostics)
     text = "\n".join(lines)
     if text:
         text += "\n"
-    write_text(output, text)
-    return 0
+    return text
 
 
 def _items_to_life_text(items, canonical=False):
@@ -687,9 +829,98 @@ def write_text(path, text):
         handle.write(text)
 
 
+def write_bytes(path, data):
+    ensure_parent_dir(path)
+    with open(path, "wb") as handle:
+        handle.write(data)
+
+
+def ensure_parent_dir(path):
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+
 def append_line(path, line):
     with open(path, "a", encoding="utf-8", newline="\n") as handle:
         handle.write(line + "\n")
+
+
+def append_text(path, text):
+    if not text:
+        return
+    needs_newline = False
+    try:
+        with open(path, "rb") as handle:
+            handle.seek(0, 2)
+            if handle.tell() > 0:
+                handle.seek(-1, 2)
+                needs_newline = handle.read(1) not in (b"\n", b"\r")
+    except FileNotFoundError:
+        pass
+    with open(path, "a", encoding="utf-8", newline="\n") as handle:
+        if needs_newline:
+            handle.write("\n")
+        handle.write(text)
+
+
+def fetch_url(url, timeout, user_agent, index):
+    request = Request(url, headers={"User-Agent": user_agent})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except HTTPError as exc:
+        raise ValueError(
+            "Failed to fetch iCalendar source #%d: HTTP %s." % (index, exc.code)
+        )
+    except URLError as exc:
+        raise ValueError(
+            "Failed to fetch iCalendar source #%d: %s." % (index, exc.reason)
+        )
+    except OSError as exc:
+        raise ValueError(
+            "Failed to fetch iCalendar source #%d: %s." % (index, exc)
+        )
+
+
+def decode_ics_bytes(data):
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("utf-8", errors="replace")
+
+
+def _ics_sync_sources(args):
+    sources = []
+    for url in args.url:
+        sources.append({"kind": "url", "name": "url", "url": url})
+    for env_name in args.url_env:
+        url = os.environ.get(env_name)
+        if not url:
+            raise ValueError("Environment variable %s is not set or empty." % env_name)
+        sources.append({"kind": "env", "name": env_name, "url": url})
+    if not sources:
+        raise ValueError("Specify at least one --url or --url-env.")
+    return sources
+
+
+def _ics_cache_name(source, index):
+    digest = hashlib.sha256(source["url"].encode("utf-8")).hexdigest()[:12]
+    if source["kind"] == "env":
+        base = _safe_cache_part(source["name"])
+    else:
+        base = "source_%d" % index
+    return "%s_%s.ics" % (base, digest)
+
+
+def _safe_cache_part(value):
+    chars = []
+    for char in value:
+        if char.isalnum() or char in ("-", "_"):
+            chars.append(char)
+        else:
+            chars.append("_")
+    return "".join(chars) or "source"
 
 
 def _exit_code(diagnostics, warnings_as_errors):

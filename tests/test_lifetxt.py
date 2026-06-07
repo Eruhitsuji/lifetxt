@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 from lifetxt.parser import parse_text
 from lifetxt.serializer import item_to_line, items_from_jsonl_text, items_to_jsonl
@@ -807,6 +808,241 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual("[ ] T First\n[N] N Second\n", normalize_newlines(stdout))
 
 
+class LifeTxtIcsImportCliTests(unittest.TestCase):
+    def test_import_ics_cli_converts_google_event(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:event-1@example.com\n"
+            "SUMMARY:Research Meeting\n"
+            "DTSTART;TZID=Asia/Tokyo:20260608T130000\n"
+            "DTEND;TZID=Asia/Tokyo:20260608T143000\n"
+            "LOCATION:Meeting Room A\n"
+            "DESCRIPTION:Bring outline\n"
+            "ORGANIZER;CN=Prof. Smith:mailto:prof@example.com\n"
+            "ATTENDEE;CN=Alice:mailto:alice@example.com\n"
+            "ATTENDEE:mailto:bob@example.com\n"
+            "URL:https://example.com/meet\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "import-ics",
+            "--project",
+            "research",
+            "--tag",
+            "imported",
+            input_text=ics,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[ ] E "Research Meeting" id:event-1@example.com '
+            "from:2026-06-08T13:00 to:2026-06-08T14:30 "
+            'loc:"Meeting Room A" note:"Bring outline" '
+            "url:https://example.com/meet "
+            'owner:"Prof. Smith" attendee:Alice attendee:bob@example.com '
+            "project:research tag:imported\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_cli_converts_multi_day_all_day_event(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:all-day@example.com\n"
+            "SUMMARY:Conference\n"
+            "DTSTART;VALUE=DATE:20260608\n"
+            "DTEND;VALUE=DATE:20260610\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+
+        stdout, stderr, code = run_cli("import-ics", input_text=ics)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] E Conference id:all-day@example.com "
+            "on:2026-06-08 on:2026-06-09\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_cli_preserves_cancelled_recurring_categories(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:cancel@example.com\n"
+            "SUMMARY:Canceled\n"
+            "STATUS:CANCELLED\n"
+            "DTSTART:20260608T130000\n"
+            "RRULE:FREQ=WEEKLY;INTERVAL=1\n"
+            "CATEGORIES:work,important\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+
+        stdout, stderr, code = run_cli("import-ics", input_text=ics)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[-] E Canceled id:cancel@example.com from:2026-06-08T13:00 "
+            "repeat:RRULE:FREQ=WEEKLY;INTERVAL=1 "
+            "tag:work tag:important reason:canceled\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_cli_maps_tentative_status(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:tentative@example.com\n"
+            "SUMMARY:Tentative\n"
+            "STATUS:TENTATIVE\n"
+            "DTSTART:20260608T130000\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+
+        stdout, stderr, code = run_cli("import-ics", input_text=ics)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[?] E Tentative id:tentative@example.com from:2026-06-08T13:00\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_cli_appends_to_output_file(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:event@example.com\n"
+            "SUMMARY:Review\n"
+            "DTSTART:20260608T100000\n"
+            "DTEND:20260608T103000\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "calendar.ics")
+            output_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(ics)
+            with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("# existing")
+
+            stdout, stderr, code = run_cli(
+                "import-ics",
+                input_path,
+                "-o",
+                output_path,
+                "--append",
+            )
+
+            self.assertEqual("", stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "# existing\n"
+                    "[ ] E Review id:event@example.com "
+                    "from:2026-06-08T10:00 to:2026-06-08T10:30\n",
+                    handle.read(),
+                )
+
+
+class LifeTxtIcsSyncCliTests(unittest.TestCase):
+    def test_sync_ics_cli_reads_url_env_and_writes_generated_file(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:sync-event@example.com\n"
+            "SUMMARY:Synced Event\n"
+            "DTSTART:20260608T100000\n"
+            "DTEND:20260608T103000\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "calendar.ics")
+            output_path = os.path.join(temp_dir, "generated", "generated.life.txt")
+            cache_dir = os.path.join(temp_dir, "cache")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(ics)
+
+            stdout, stderr, code = run_cli(
+                "sync-ics",
+                "--url-env",
+                "LIFETXT_TEST_ICS",
+                "-o",
+                output_path,
+                "--cache-dir",
+                cache_dir,
+                "--tag",
+                "google",
+                env_update={"LIFETXT_TEST_ICS": Path(input_path).as_uri()},
+            )
+
+            self.assertEqual("", stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    '[ ] E "Synced Event" id:sync-event@example.com '
+                    "from:2026-06-08T10:00 to:2026-06-08T10:30 tag:google\n",
+                    handle.read(),
+                )
+            self.assertEqual(1, len(os.listdir(cache_dir)))
+
+    def test_sync_ics_cli_dry_run_does_not_write_output_or_cache(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:dry-run@example.com\n"
+            "SUMMARY:Dry Run\n"
+            "DTSTART:20260608T100000\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "calendar.ics")
+            output_path = os.path.join(temp_dir, "generated.life.txt")
+            cache_dir = os.path.join(temp_dir, "cache")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(ics)
+
+            stdout, stderr, code = run_cli(
+                "sync-ics",
+                "--url",
+                Path(input_path).as_uri(),
+                "-o",
+                output_path,
+                "--cache-dir",
+                cache_dir,
+                "--dry-run",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertEqual(
+                '[ ] E "Dry Run" id:dry-run@example.com from:2026-06-08T10:00\n',
+                normalize_newlines(stdout),
+            )
+            self.assertFalse(os.path.exists(output_path))
+            self.assertFalse(os.path.exists(cache_dir))
+
+    def test_sync_ics_cli_requires_source(self):
+        stdout, stderr, code = run_cli("sync-ics")
+
+        self.assertEqual("", stdout)
+        self.assertEqual(1, code)
+        self.assertIn("Specify at least one --url or --url-env.", stderr)
+
+
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1078,8 +1314,11 @@ class LifeTxtAssistCliTests(unittest.TestCase):
 
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
+    env_update = kwargs.get("env_update")
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    if env_update:
+        env.update(env_update)
     process = subprocess.Popen(
         [sys.executable, "-m", "lifetxt"] + list(args),
         cwd=ROOT_DIR,

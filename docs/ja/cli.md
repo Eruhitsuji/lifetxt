@@ -16,6 +16,8 @@ path を省略すると標準入力から読み込みます。
 python -m lifetxt check [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
+python -m lifetxt import-ics [path ...]
+python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
 python -m lifetxt from-jsonl [path ...]
@@ -29,6 +31,8 @@ python -m lifetxt assist [options]
 | `check` | life.txt の構文と意味的な警告を検査 |
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
+| `import-ics` | iCalendar `.ics` の予定を life.txt event item に変換 |
+| `sync-ics` | iCalendar URL を取得して life.txt event item を再生成 |
 | `filter` | item を絞り込み、life.txt / JSON / JSONL で出力 |
 | `from-json` | JSON を life.txt へ変換 |
 | `from-jsonl` | JSONL を life.txt へ変換 |
@@ -177,7 +181,110 @@ python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
-## 5. `filter`
+## 5. iCalendar import / sync
+
+### 5.1 `import-ics`
+
+Google Calendar の export などで得られる iCalendar `.ics` ファイルを、
+life.txt の event item に変換します。
+
+```sh
+python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJECT] [--tag TAG]
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 `.ics` ファイル。`-` なら標準入力 |
+| `-o`, `--output` | 出力ファイル。省略時は標準出力 |
+| `--append` | `--output` を上書きせず追記 |
+| `--project PROJECT` | すべての取り込み予定に `project:PROJECT` を追加 |
+| `--tag TAG` | すべての取り込み予定に `tag:TAG` を追加。複数回指定可能 |
+
+変換対応:
+
+| iCalendar field | life.txt output |
+|---|---|
+| `VEVENT` | `E` item |
+| `SUMMARY` | title |
+| `UID` | `id:` |
+| `DTSTART` / `DTEND` | 時刻付き予定では `from:` / `to:` |
+| `DTSTART;VALUE=DATE` | 終日予定では `on:` |
+| `LOCATION` | `loc:` |
+| `DESCRIPTION` | `note:` |
+| `URL` | `url:` |
+| `ORGANIZER` | `owner:` |
+| `ATTENDEE` | 複数の `attendee:` |
+| `CATEGORIES` | 複数の `tag:` |
+| `RRULE` | `repeat:RRULE:...` |
+| `STATUS:CANCELLED` | `[-]` と `reason:canceled` |
+| `STATUS:TENTATIVE` | `[?]` |
+
+注意:
+
+- `VEVENT` component のみを取り込みます。
+- Google Calendar の終日 `DTEND` は排他的です。複数日の終日予定は複数の
+  `on:` に変換します。
+- `TZID` 付きのローカル時刻は書かれている壁時計時刻をそのまま使います。
+  UTC の `Z` 付き日時は、実行環境のローカルタイムゾーンへ変換して
+  `YYYY-MM-DDTHH:MM` で出力します。
+- `RRULE` は保持しますが、個別の予定へ展開しません。
+
+例:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics
+python -m lifetxt import-ics google_calendar.ics -o imported_events.life.txt
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+python -m lifetxt import-ics work.ics personal.ics --project calendar
+```
+
+出力例:
+
+```txt
+[ ] E "Research Meeting" id:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
+```
+
+### 5.2 `sync-ics`
+
+1 つ以上の iCalendar URL を取得し、生成用 life.txt ファイルを再生成します。
+定期同期ではこの方式を推奨します。出力ファイルを上書きするため、実行するたびに
+同じ予定が重複追記されません。
+
+```sh
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
+```
+
+| Option | 意味 |
+|---|---|
+| `--url URL` | 取得する iCalendar URL。複数回指定可能 |
+| `--url-env ENVVAR` | iCalendar URL を入れた環境変数。複数回指定可能 |
+| `-o`, `--output` | 生成する life.txt 出力。省略時は標準出力 |
+| `--cache-dir DIR` | 取得した生の `.ics` snapshot を保存する directory |
+| `--dry-run` | 取得して生成結果を表示するが、出力ファイルと cache は書かない |
+| `--project PROJECT` | すべての同期予定に `project:PROJECT` を追加 |
+| `--tag TAG` | すべての同期予定に `tag:TAG` を追加。複数回指定可能 |
+| `--timeout SECONDS` | 取得 timeout。既定値は 30 |
+| `--user-agent VALUE` | HTTP User-Agent header |
+
+秘密 iCalendar URL は、shell history、script、document に残さないために
+`--url-env` で渡すことを推奨します。
+
+PowerShell 例:
+
+```powershell
+$env:LIFETXT_GOOGLE_CAL_ICS = "https://calendar.google.com/calendar/ical/..."
+New-Item -ItemType Directory -Force .generated, .cache/lifetxt
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
+python -m lifetxt check life.txt .generated/google_calendar.life.txt
+python -m lifetxt agenda life.txt .generated/google_calendar.life.txt --around now --window 1d
+```
+
+定期同期する場合は、同じ内容を `.ps1` にして Windows Task Scheduler で実行します。
+手書きの item はメインの `life.txt` に残し、ICS 由来の item は
+`.generated/*.life.txt` に分離してください。`agenda`、`filter`、`to-json`、
+`check` などは両方のファイルを同時に渡せます。
+
+## 6. `filter`
 
 解析済みの life.txt item を絞り込み、結果を life.txt、JSON、JSONL で出力します。
 条件に合う部分集合を別の `life.txt` として保存したい場合に使います。
@@ -211,7 +318,7 @@ python -m lifetxt filter life.txt --type status --person self -o my_status.life.
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
 ```
 
-## 6. `status`
+## 7. `status`
 
 `person:` ごとの最新 `S` status / presence record を表示します。
 
@@ -246,7 +353,7 @@ python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
 
-## 7. `agenda`
+## 8. `agenda`
 
 日時範囲に関連する item を表示します。
 
@@ -262,7 +369,7 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 - type `S` で `to:` がない item は、`from:` 以降継続中として扱います。
 - `at:HH:MM` は `on:` があればその日付と組み合わせ、なければ指定範囲内の各日付と組み合わせます。
 
-### 7.1 範囲オプション
+### 8.1 範囲オプション
 
 | Option | 意味 |
 |---|---|
@@ -296,7 +403,7 @@ python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
 ```
 
-### 7.2 フィルタオプション
+### 8.2 フィルタオプション
 
 | Option | 意味 |
 |---|---|
@@ -326,7 +433,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 `--detail key` は key の存在を確認します。`--detail key=value` は detail value の完全一致です。
 複数の `--detail` は AND 条件です。
 
-### 7.3 出力オプション
+### 8.3 出力オプション
 
 | Option | 意味 |
 |---|---|
@@ -345,7 +452,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format jso
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 ```
 
-## 8. `assist`
+## 9. `assist`
 
 フラグまたは対話入力で life.txt item を作成・更新します。
 
@@ -353,7 +460,7 @@ python -m lifetxt agenda life.txt --around now --window 1w --format life -o agen
 python -m lifetxt assist [options]
 ```
 
-### 8.1 非対話で作成
+### 9.1 非対話で作成
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
@@ -381,7 +488,7 @@ known detail key には直接フラグもあります。各フラグは複数回
 --reason --moved_to
 ```
 
-### 8.2 対話で作成
+### 9.2 対話で作成
 
 ```sh
 python -m lifetxt assist --interactive
@@ -402,7 +509,7 @@ python -m lifetxt assist --interactive --append life.txt
 対応 terminal では、Tab で type、status、detail-key 候補を補完できます。
 Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と line editing を無効化できます。
 
-### 8.3 既存 item の更新
+### 9.3 既存 item の更新
 
 行番号または完全一致の `id:` で item を選択して更新します。
 
@@ -427,7 +534,7 @@ python -m lifetxt assist --update life.txt --match-id task_001 --output updated_
 
 `--output` がない場合、update mode は入力ファイルへ書き戻します。
 
-## 9. alias
+## 10. alias
 
 status alias:
 
@@ -453,7 +560,7 @@ type alias:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 
-## 10. 実用例
+## 11. 実用例
 
 検査と変換:
 
@@ -469,6 +576,18 @@ python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
+```
+
+カレンダー予定を取り込む:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+```
+
+秘密 iCalendar URL からカレンダー予定を同期する:
+
+```sh
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 ```
 
 現在時刻付近の未完了 item を表示:

@@ -26,6 +26,7 @@
 - [team_status_life.txt](../../examples/team_status_life.txt): 複数人の在席状態
 - [agenda_life.txt](../../examples/agenda_life.txt): `agenda` コマンド用データ
 - [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): 繰り返し key と引用値
+- [calendar_import.ics](../../examples/calendar_import.ics): `import-ics` 用の iCalendar 入力例
 
 ## CLI
 
@@ -36,6 +37,8 @@
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
@@ -59,6 +62,15 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 一致した item の元行を既定で保持します。正規化した life.txt 行を再生成したい場合は
 `--canonical` を使います。`person:` は status / presence の対象者、`assignee:` は
 担当者、`owner:` は責任者、`attendee:` は予定参加者に使います。
+
+`import-ics` コマンドは、Google Calendar の export などの iCalendar `.ics` を
+`E` event item に変換します。時刻付き予定は `from:` / `to:`、終日予定は `on:`、
+参加者は `attendee:` になり、`--append` で既存の `life.txt` に追記できます。
+
+定期的なカレンダー同期では、秘密 iCalendar URL を環境変数に入れて `sync-ics`
+を使います。手書きの item は `life.txt` に残し、ICS 由来の item は
+`.generated/google_calendar.life.txt` のような生成ファイルに分離し、`agenda` や
+`check` には両方のファイルを渡します。
 
 ## assist
 

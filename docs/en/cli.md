@@ -16,6 +16,8 @@ read from standard input.
 python -m lifetxt check [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
+python -m lifetxt import-ics [path ...]
+python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
 python -m lifetxt from-jsonl [path ...]
@@ -29,6 +31,8 @@ python -m lifetxt assist [options]
 | `check` | Validate life.txt syntax and semantic warnings |
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
+| `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
+| `sync-ics` | Fetch iCalendar URLs and regenerate life.txt event items |
 | `filter` | Filter items and output life.txt, JSON, or JSONL |
 | `from-json` | Convert JSON to life.txt |
 | `from-jsonl` | Convert JSONL to life.txt |
@@ -185,7 +189,113 @@ python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
-## 5. `filter`
+## 5. iCalendar Import And Sync
+
+### 5.1 `import-ics`
+
+Convert iCalendar `.ics` files, such as Google Calendar exports, to life.txt
+event items.
+
+```sh
+python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJECT] [--tag TAG]
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input `.ics` file(s), or `-` for stdin |
+| `-o`, `--output` | Output file; defaults to stdout |
+| `--append` | Append to `--output` instead of overwriting it |
+| `--project PROJECT` | Add `project:PROJECT` to every imported event |
+| `--tag TAG` | Add `tag:TAG` to every imported event; repeatable |
+
+Mapping:
+
+| iCalendar field | life.txt output |
+|---|---|
+| `VEVENT` | `E` item |
+| `SUMMARY` | title |
+| `UID` | `id:` |
+| `DTSTART` / `DTEND` | `from:` / `to:` for timed events |
+| `DTSTART;VALUE=DATE` | `on:` for all-day events |
+| `LOCATION` | `loc:` |
+| `DESCRIPTION` | `note:` |
+| `URL` | `url:` |
+| `ORGANIZER` | `owner:` |
+| `ATTENDEE` | repeated `attendee:` |
+| `CATEGORIES` | repeated `tag:` |
+| `RRULE` | `repeat:RRULE:...` |
+| `STATUS:CANCELLED` | `[-]` with `reason:canceled` |
+| `STATUS:TENTATIVE` | `[?]` |
+
+Notes:
+
+- Only `VEVENT` components are imported.
+- Google Calendar all-day `DTEND` values are exclusive. Multi-day all-day
+  events become repeated `on:` values.
+- `TZID` local wall times are kept as written. UTC `Z` datetimes are converted
+  to the machine's local timezone before writing `YYYY-MM-DDTHH:MM`.
+- `RRULE` values are preserved but not expanded into individual events.
+
+Examples:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics
+python -m lifetxt import-ics google_calendar.ics -o imported_events.life.txt
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+python -m lifetxt import-ics work.ics personal.ics --project calendar
+```
+
+Example output:
+
+```txt
+[ ] E "Research Meeting" id:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
+```
+
+### 5.2 `sync-ics`
+
+Fetch one or more iCalendar URLs and regenerate a generated life.txt file.
+This is the recommended mode for periodic sync because the output file is
+overwritten, so events are not duplicated on each run.
+
+```sh
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--url URL` | iCalendar URL to fetch; repeatable |
+| `--url-env ENVVAR` | Environment variable containing an iCalendar URL; repeatable |
+| `-o`, `--output` | Generated life.txt output; defaults to stdout |
+| `--cache-dir DIR` | Save raw downloaded `.ics` snapshots in this directory |
+| `--dry-run` | Fetch and print generated life.txt without writing output or cache files |
+| `--project PROJECT` | Add `project:PROJECT` to every synced event |
+| `--tag TAG` | Add `tag:TAG` to every synced event; repeatable |
+| `--timeout SECONDS` | Fetch timeout; defaults to 30 |
+| `--user-agent VALUE` | HTTP User-Agent header |
+
+Use `--url-env` for secret iCalendar URLs so the URL is not stored in shell
+history, scripts, or documentation.
+
+PowerShell example:
+
+```powershell
+$env:LIFETXT_GOOGLE_CAL_ICS = "https://calendar.google.com/calendar/ical/..."
+New-Item -ItemType Directory -Force .generated, .cache/lifetxt
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
+python -m lifetxt check life.txt .generated/google_calendar.life.txt
+python -m lifetxt agenda life.txt .generated/google_calendar.life.txt --around now --window 1d
+```
+
+For periodic sync, put the same commands in a `.ps1` file and run it with
+Windows Task Scheduler. Keep manually edited items in your main `life.txt` and
+ICS-derived items in `.generated/*.life.txt`; pass both files to commands such
+as `agenda`, `filter`, `to-json`, and `check`.
+
+## 6. `filter`
 
 Filter parsed life.txt items and output the result as life.txt, JSON, or JSONL.
 This is useful when you want to materialize a subset as another `life.txt`
@@ -222,7 +332,7 @@ python -m lifetxt filter life.txt --type status --person self -o my_status.life.
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
 ```
 
-## 6. `status`
+## 7. `status`
 
 Show the latest `S` status / presence record for each person.
 
@@ -259,7 +369,7 @@ python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
 
-## 7. `agenda`
+## 8. `agenda`
 
 Show items related to a datetime range.
 
@@ -275,7 +385,7 @@ Range matching rules:
 - Type `S` records without `to:` are treated as ongoing from `from:`.
 - `at:HH:MM` is combined with `on:` when present, otherwise with each date in the requested range.
 
-### 7.1 Range Options
+### 8.1 Range Options
 
 | Option | Meaning |
 |---|---|
@@ -309,7 +419,7 @@ python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
 ```
 
-### 7.2 Filter Options
+### 8.2 Filter Options
 
 | Option | Meaning |
 |---|---|
@@ -339,7 +449,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 `--detail key` checks that the key exists. `--detail key=value` checks for an
 exact detail value. Multiple `--detail` filters are ANDed.
 
-### 7.3 Output Options
+### 8.3 Output Options
 
 | Option | Meaning |
 |---|---|
@@ -358,7 +468,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format jso
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 ```
 
-## 8. `assist`
+## 9. `assist`
 
 Create or update life.txt items from flags or prompts.
 
@@ -366,7 +476,7 @@ Create or update life.txt items from flags or prompts.
 python -m lifetxt assist [options]
 ```
 
-### 8.1 Create Non-Interactively
+### 9.1 Create Non-Interactively
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
@@ -394,7 +504,7 @@ Known detail keys also have direct flags. Each can be repeated:
 --reason --moved_to
 ```
 
-### 8.2 Interactive Create
+### 9.2 Interactive Create
 
 ```sh
 python -m lifetxt assist --interactive
@@ -416,7 +526,7 @@ When the terminal supports it, Tab completes type, status, and detail-key
 candidates. Up/Down recall previous inputs. Use `--no-completion` to disable
 line editing helpers.
 
-### 8.3 Update Existing Items
+### 9.3 Update Existing Items
 
 Update an item by line number or by exact `id:` value.
 
@@ -441,7 +551,7 @@ Update options:
 
 Without `--output`, update mode writes back to the input file.
 
-## 9. Aliases
+## 10. Aliases
 
 Status aliases include:
 
@@ -467,7 +577,7 @@ Type aliases include:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 
-## 10. Practical Workflows
+## 11. Practical Workflows
 
 Validate and convert:
 
@@ -483,6 +593,18 @@ Create filtered life.txt files:
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
+```
+
+Import calendar events:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+```
+
+Sync calendar events from a secret iCalendar URL:
+
+```sh
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 ```
 
 Show near-current items:

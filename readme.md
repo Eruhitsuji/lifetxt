@@ -31,6 +31,7 @@ More sample files are available in [examples/](./examples/):
 - [team_status_life.txt](./examples/team_status_life.txt): multi-person status records
 - [agenda_life.txt](./examples/agenda_life.txt): data for the `agenda` command
 - [json_roundtrip_life.txt](./examples/json_roundtrip_life.txt): repeated keys and quoted values
+- [calendar_import.ics](./examples/calendar_import.ics): sample iCalendar input for `import-ics`
 
 ## Tools
 
@@ -40,6 +41,8 @@ This repository includes a dependency-free Python CLI:
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
@@ -64,6 +67,16 @@ Most file-reading commands accept multiple input paths. The `filter`,
 `--canonical` to regenerate normalized life.txt lines. Use `person:` for
 status / presence targets, `assignee:` for assigned work, `owner:` for
 accountability, and `attendee:` for event participants.
+
+The `import-ics` command converts iCalendar `.ics` files, such as Google
+Calendar exports, to `E` event items. Timed events become `from:` / `to:`,
+all-day events become `on:`, participants become `attendee:`, and `--append`
+can add imported events to an existing `life.txt`.
+
+For periodic calendar sync, use `sync-ics` with a secret iCalendar URL stored in
+an environment variable. Keep manually edited items in `life.txt`, write
+ICS-derived items to a generated file such as `.generated/google_calendar.life.txt`,
+and pass both files to commands such as `agenda` or `check`.
 
 The `status` command prints the latest `S` status / presence item for each
 `person:`. If `person:` is omitted, it is treated as `self` for this summary.

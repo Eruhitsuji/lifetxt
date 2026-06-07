@@ -8,8 +8,10 @@ from .agenda import (
     agenda_records_to_jsonl,
     agenda_records_to_life,
     filter_agenda_records,
+    filter_items,
     format_agenda_table,
     parse_agenda_range,
+    parse_optional_time_range,
 )
 from .assist import (
     DETAIL_FLAGS,
@@ -58,7 +60,7 @@ def build_parser():
     subparsers = parser.add_subparsers(dest="command")
 
     check = subparsers.add_parser("check", help="Check life.txt syntax and warnings.")
-    check.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(check)
     check.add_argument(
         "--format",
         choices=("text", "json"),
@@ -73,21 +75,43 @@ def build_parser():
     check.set_defaults(func=command_check)
 
     to_json = subparsers.add_parser("to-json", help="Convert life.txt to JSON array.")
-    to_json.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(to_json)
     to_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     to_json.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
+    _add_item_filter_arguments(to_json)
     to_json.set_defaults(func=command_to_json)
 
     to_jsonl = subparsers.add_parser("to-jsonl", help="Convert life.txt to JSONL.")
-    to_jsonl.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(to_jsonl)
     to_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    _add_item_filter_arguments(to_jsonl)
     to_jsonl.set_defaults(func=command_to_jsonl)
+
+    filter_command = subparsers.add_parser(
+        "filter",
+        help="Filter life.txt items and output life.txt, JSON, or JSONL.",
+    )
+    _add_input_paths(filter_command)
+    _add_item_filter_arguments(filter_command)
+    filter_command.add_argument(
+        "--format",
+        choices=("life", "json", "jsonl"),
+        default="life",
+        help="Output format. Defaults to life.",
+    )
+    filter_command.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    filter_command.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output.",
+    )
+    filter_command.set_defaults(func=command_filter)
 
     status = subparsers.add_parser(
         "status",
         help="Show the latest status / presence item for each person.",
     )
-    status.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(status)
     status.add_argument(
         "--format",
         choices=("text", "json", "jsonl"),
@@ -105,7 +129,7 @@ def build_parser():
         "agenda",
         help="Show items related to a datetime range.",
     )
-    agenda.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(agenda)
     agenda.add_argument(
         "--from",
         dest="start",
@@ -123,7 +147,7 @@ def build_parser():
     agenda.add_argument(
         "--window",
         default="1h",
-        help="Half-width for --around, e.g. 30m, 2h, or 1d. Defaults to 1h.",
+        help="Half-width for --around, e.g. 30m, 2h, 1d, 1w, 1mo, or 1y.",
     )
     agenda.add_argument(
         "--format",
@@ -131,6 +155,7 @@ def build_parser():
         default="text",
         help="Output format.",
     )
+    agenda.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     agenda.add_argument(
         "--open",
         action="store_true",
@@ -176,12 +201,12 @@ def build_parser():
     agenda.set_defaults(func=command_agenda)
 
     from_json = subparsers.add_parser("from-json", help="Convert JSON to life.txt.")
-    from_json.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(from_json)
     from_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     from_json.set_defaults(func=command_from_json)
 
     from_jsonl = subparsers.add_parser("from-jsonl", help="Convert JSONL to life.txt.")
-    from_jsonl.add_argument("path", nargs="?", default="-", help="Input file, or - for stdin.")
+    _add_input_paths(from_jsonl)
     from_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     from_jsonl.set_defaults(func=command_from_jsonl)
 
@@ -251,8 +276,69 @@ def build_parser():
     return parser
 
 
+def _add_input_paths(parser):
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="Input file(s), or - for stdin. Reads stdin when omitted.",
+    )
+
+
+def _add_item_filter_arguments(parser):
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Keep unfinished workflow items only: [ ], [/], [>], or [?].",
+    )
+    parser.add_argument(
+        "--status",
+        action="append",
+        help="Filter by status or alias. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--type",
+        dest="kinds",
+        action="append",
+        help="Filter by type or alias. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--project",
+        action="append",
+        help="Filter by project detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--tag",
+        action="append",
+        help="Filter by tag detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--person",
+        action="append",
+        help="Filter by person detail. Missing person on S items defaults to self.",
+    )
+    parser.add_argument(
+        "--detail",
+        action="append",
+        default=[],
+        help="Filter by detail key or key=value. Repeated filters are ANDed.",
+    )
+    parser.add_argument(
+        "--text",
+        help="Case-insensitive substring filter across title, line, and detail values.",
+    )
+    parser.add_argument(
+        "--after",
+        help="Keep items related to this time or later: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+    )
+    parser.add_argument(
+        "--before",
+        help="Keep items related to this time or earlier: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+    )
+
+
 def command_check(args):
-    text = read_text(args.path)
+    text = _read_life_texts(args.paths)
     items, diagnostics = parse_text(text)
 
     if args.format == "json":
@@ -273,7 +359,8 @@ def command_check(args):
 
 
 def command_to_json(args):
-    items, diagnostics = _parse_or_exit(args.path)
+    items, diagnostics = _parse_or_exit(args.paths)
+    items = _filter_items_from_args(items, args)
     output = items_to_json(items, pretty=args.pretty)
     write_text(args.output, output + "\n")
     _print_warnings(diagnostics)
@@ -281,7 +368,8 @@ def command_to_json(args):
 
 
 def command_to_jsonl(args):
-    items, diagnostics = _parse_or_exit(args.path)
+    items, diagnostics = _parse_or_exit(args.paths)
+    items = _filter_items_from_args(items, args)
     output = items_to_jsonl(items)
     if output:
         output += "\n"
@@ -290,8 +378,27 @@ def command_to_jsonl(args):
     return 0
 
 
+def command_filter(args):
+    items, diagnostics = _parse_or_exit(args.paths)
+    items = _filter_items_from_args(items, args)
+
+    if args.format == "json":
+        output = items_to_json(items, pretty=args.pretty)
+        write_text(args.output, output + "\n")
+    elif args.format == "jsonl":
+        output = items_to_jsonl(items)
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    else:
+        write_text(args.output, _items_to_life_text(items))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
 def command_status(args):
-    items, diagnostics = _parse_or_exit(args.path)
+    items, diagnostics = _parse_or_exit(args.paths)
     records = latest_status_records(items, person=args.person)
 
     if args.format == "json":
@@ -310,7 +417,7 @@ def command_status(args):
 
 
 def command_agenda(args):
-    items, diagnostics = _parse_or_exit(args.path)
+    items, diagnostics = _parse_or_exit(args.paths)
     range_start, range_end = parse_agenda_range(
         start_text=args.start,
         end_text=args.end,
@@ -332,31 +439,31 @@ def command_agenda(args):
 
     if args.format == "json":
         output = agenda_records_to_json(records, pretty=args.pretty)
-        write_text(None, output + "\n")
+        write_text(args.output, output + "\n")
     elif args.format == "jsonl":
         output = agenda_records_to_jsonl(records)
         if output:
             output += "\n"
-        write_text(None, output)
+        write_text(args.output, output)
     elif args.format == "life":
         output = agenda_records_to_life(records)
         if output:
             output += "\n"
-        write_text(None, output)
+        write_text(args.output, output)
     else:
-        write_text(None, format_agenda_table(records))
+        write_text(args.output, format_agenda_table(records))
 
     _print_warnings(diagnostics)
     return 0
 
 
 def command_from_json(args):
-    items = items_from_json_text(read_text(args.path))
+    items = _items_from_json_paths(args.paths)
     return _write_life_items(items, args.output)
 
 
 def command_from_jsonl(args):
-    items = items_from_jsonl_text(read_text(args.path))
+    items = _items_from_jsonl_paths(args.paths)
     return _write_life_items(items, args.output)
 
 
@@ -431,13 +538,76 @@ def _write_life_items(items, output):
     return 0
 
 
-def _parse_or_exit(path):
-    text = read_text(path)
+def _items_to_life_text(items):
+    lines = [item_to_line(item) for item in items]
+    text = "\n".join(lines)
+    if text:
+        text += "\n"
+    return text
+
+
+def _parse_or_exit(paths):
+    text = _read_life_texts(paths)
     items, diagnostics = parse_text(text)
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
         raise SystemExit(1)
     return items, diagnostics
+
+
+def _filter_items_from_args(items, args):
+    range_start, range_end = parse_optional_time_range(
+        after_text=getattr(args, "after", None),
+        before_text=getattr(args, "before", None),
+    )
+    return filter_items(
+        items,
+        open_only=getattr(args, "open", False),
+        statuses=getattr(args, "status", None),
+        kinds=getattr(args, "kinds", None),
+        projects=getattr(args, "project", None),
+        tags=getattr(args, "tag", None),
+        persons=getattr(args, "person", None),
+        detail_filters=getattr(args, "detail", None),
+        text=getattr(args, "text", None),
+        range_start=range_start,
+        range_end=range_end,
+    )
+
+
+def _items_from_json_paths(paths):
+    items = []
+    for path in _normalize_paths(paths):
+        items.extend(items_from_json_text(read_text(path)))
+    return items
+
+
+def _items_from_jsonl_paths(paths):
+    items = []
+    for path in _normalize_paths(paths):
+        items.extend(items_from_jsonl_text(read_text(path)))
+    return items
+
+
+def _read_life_texts(paths):
+    parts = []
+    for path in _normalize_paths(paths):
+        text = read_text(path)
+        if text and not text.endswith(("\n", "\r")):
+            text += "\n"
+        parts.append(text)
+    return "".join(parts)
+
+
+def _normalize_paths(paths):
+    if paths is None:
+        return ["-"]
+    if isinstance(paths, str):
+        return [paths]
+    paths = list(paths)
+    if not paths:
+        return ["-"]
+    return paths
 
 
 def read_text(path):

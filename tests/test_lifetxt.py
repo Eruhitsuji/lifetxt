@@ -356,6 +356,210 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertIn("Self_Away", normalized)
         self.assertNotIn("Alice_Focus", normalized)
 
+    def test_agenda_cli_output_file(self):
+        text = (
+            "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n"
+            "[ ] D Form due:2026-06-07\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            output_path = os.path.join(temp_dir, "agenda.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+
+            stdout, stderr, code = run_cli(
+                "agenda",
+                input_path,
+                "--from",
+                "2026-06-06",
+                "--to",
+                "2026-06-06",
+                "--format",
+                "life",
+                "-o",
+                output_path,
+            )
+
+            self.assertEqual("", stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n",
+                    handle.read(),
+                )
+
+    def test_agenda_cli_week_window(self):
+        text = (
+            "[ ] D Soon due:2026-06-12\n"
+            "[ ] D Later due:2026-06-15\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--around",
+            "2026-06-07T00:00",
+            "--window",
+            "1w",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Soon", normalized)
+        self.assertNotIn("Later", normalized)
+
+
+class LifeTxtFilterCliTests(unittest.TestCase):
+    def test_filter_cli_writes_open_tasks_to_life_file(self):
+        text = (
+            "[ ] T Open_Task due:2026-06-08 project:work\n"
+            "[x] T Done_Task due:2026-06-08 done:2026-06-08 project:work\n"
+            "[ ] E Meeting from:2026-06-08T10:00 to:2026-06-08T11:00\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            output_path = os.path.join(temp_dir, "open_tasks.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+
+            stdout, stderr, code = run_cli(
+                "filter",
+                input_path,
+                "--open",
+                "--type",
+                "task",
+                "-o",
+                output_path,
+            )
+
+            self.assertEqual("", stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "[ ] T Open_Task due:2026-06-08 project:work\n",
+                    handle.read(),
+                )
+
+    def test_filter_cli_future_and_person_filters(self):
+        text = (
+            "[ ] E Past from:2026-06-05T10:00 to:2026-06-05T11:00\n"
+            "[ ] E Future from:2026-06-08T10:00 to:2026-06-08T11:00\n"
+            "[/] S Self_Away from:2026-06-06T15:30 state:away\n"
+            "[/] S Alice_Focus from:2026-06-06T16:00 state:focus person:alice\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--type",
+            "event",
+            "--after",
+            "2026-06-07",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Future", normalized)
+        self.assertNotIn("Past", normalized)
+        self.assertNotIn("Self_Away", normalized)
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--type",
+            "status",
+            "--person",
+            "self",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Self_Away", normalized)
+        self.assertNotIn("Alice_Focus", normalized)
+
+    def test_to_json_and_to_jsonl_filters(self):
+        text = (
+            "[ ] T Open_Task due:2026-06-08 project:research\n"
+            "[x] T Done_Task due:2026-06-08 done:2026-06-08 project:research\n"
+            "[ ] T Other_Task due:2026-06-08 project:life\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "to-json",
+            "--open",
+            "--type",
+            "task",
+            "--project",
+            "research",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["Open_Task"], [entry["title"] for entry in data])
+
+        stdout, stderr, code = run_cli(
+            "to-jsonl",
+            "--project",
+            "life",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        rows = [json.loads(line) for line in stdout.splitlines()]
+        self.assertEqual(["Other_Task"], [entry["title"] for entry in rows])
+
+    def test_multiple_life_input_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First due:2026-06-08")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Second due:2026-06-09\n")
+
+            stdout, stderr, code = run_cli(
+                "filter",
+                first_path,
+                second_path,
+                "--open",
+                "--format",
+                "json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(["First", "Second"], [entry["title"] for entry in data])
+
+    def test_multiple_json_input_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.json")
+            second_path = os.path.join(temp_dir, "second.json")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(
+                    {"status": "[ ]", "type": "T", "title": "First", "details": {}},
+                    handle,
+                )
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(
+                    {"status": "[N]", "type": "N", "title": "Second", "details": {}},
+                    handle,
+                )
+
+            stdout, stderr, code = run_cli("from-json", first_path, second_path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertEqual("[ ] T First\n[N] N Second\n", normalize_newlines(stdout))
+
 
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):

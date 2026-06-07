@@ -35,16 +35,24 @@
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
-python -m lifetxt to-jsonl life.txt -o life.jsonl
+python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
+python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
+python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
-python -m lifetxt agenda life.txt --around now --window 2h
+python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 ```
+
+多くの読み込み系コマンドは複数の入力 path を受け取れます。`filter`、`to-json`、
+`to-jsonl` は `--open`、`--status`、`--type`、`--project`、`--tag`、
+`--person`、`--detail`、`--text`、`--after`、`--before` などの item filter に
+対応します。
 
 ## assist
 
@@ -85,6 +93,8 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail pri
 
 `--open` は未完了の workflow item のみを表示します。対象は `[ ]`、`[/]`、
 `[>]`、`[?]` です。複数の `--detail key=value` は AND 条件です。
+`--window` は秒、分、時間、日、週、30 日として近似した月、365 日として
+近似した年を受け付けます。
 
 ## JSON 形状
 

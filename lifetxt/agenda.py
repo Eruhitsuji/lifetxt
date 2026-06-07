@@ -19,7 +19,7 @@ _TIME_FORMAT = "%H:%M"
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$")
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
-_DURATION_RE = re.compile(r"^(\d+)([mhd]?)$")
+_DURATION_RE = re.compile(r"^(\d+)([a-z]*)$")
 
 _POINT_KEYS = ("due", "do", "moved_to")
 _TABLE_COLUMNS = (
@@ -65,16 +65,38 @@ def parse_duration(value):
     text = str(value or "").strip().lower()
     match = _DURATION_RE.match(text)
     if not match:
-        raise ValueError("Duration must look like 30m, 2h, or 1d.")
+        raise ValueError("Duration must look like 30m, 2h, 1d, 1w, 1mo, or 1y.")
     amount = int(match.group(1))
     unit = match.group(2) or "m"
-    if unit == "m":
+    if unit in ("s", "sec", "secs", "second", "seconds"):
+        return timedelta(seconds=amount)
+    if unit in ("m", "min", "mins", "minute", "minutes"):
         return timedelta(minutes=amount)
-    if unit == "h":
+    if unit in ("h", "hr", "hrs", "hour", "hours"):
         return timedelta(hours=amount)
-    if unit == "d":
+    if unit in ("d", "day", "days"):
         return timedelta(days=amount)
+    if unit in ("w", "week", "weeks"):
+        return timedelta(weeks=amount)
+    if unit in ("mo", "mon", "month", "months"):
+        return timedelta(days=30 * amount)
+    if unit in ("y", "yr", "yrs", "year", "years"):
+        return timedelta(days=365 * amount)
     raise ValueError("Unsupported duration unit %r." % unit)
+
+
+def parse_optional_time_range(after_text=None, before_text=None, now=None):
+    if now is None:
+        now = datetime.now().replace(second=0, microsecond=0)
+    range_start = None
+    range_end = None
+    if after_text:
+        range_start = _parse_range_boundary(after_text, is_end=False, now=now)
+    if before_text:
+        range_end = _parse_range_boundary(before_text, is_end=True, now=now)
+    if range_start and range_end and range_end < range_start:
+        raise ValueError("Time filter end must not be earlier than start.")
+    return range_start, range_end
 
 
 def agenda_records(items, range_start, range_end):
@@ -98,6 +120,56 @@ def agenda_records(items, range_start, range_end):
         records.append(record)
     records.sort(key=_record_sort_key)
     return records
+
+
+def filter_items(
+    items,
+    open_only=False,
+    statuses=None,
+    kinds=None,
+    projects=None,
+    tags=None,
+    persons=None,
+    detail_filters=None,
+    text=None,
+    range_start=None,
+    range_end=None,
+):
+    statuses = _normalize_status_filter(statuses)
+    kinds = _normalize_type_filter(kinds)
+    projects = _normalize_filter_values(projects)
+    tags = _normalize_filter_values(tags)
+    persons = _normalize_filter_values(persons)
+    details = _parse_detail_filters(detail_filters)
+    text = text.lower() if text else None
+
+    if range_start is None and range_end is not None:
+        range_start = datetime.min
+    if range_start is not None and range_end is None:
+        range_end = datetime.max
+
+    filtered = []
+    for item in items:
+        if open_only and item.status not in OPEN_STATUSES:
+            continue
+        if statuses and item.status not in statuses:
+            continue
+        if kinds and item.kind not in kinds:
+            continue
+        if projects and not _item_has_any_detail(item, "project", projects):
+            continue
+        if tags and not _item_has_any_detail(item, "tag", tags):
+            continue
+        if persons and not _item_has_any_detail(item, "person", persons):
+            continue
+        if details and not _item_matches_detail_filters(item, details):
+            continue
+        if text and text not in _item_search_text(item).lower():
+            continue
+        if range_start is not None and not item_time_matches(item, range_start, range_end):
+            continue
+        filtered.append(item)
+    return filtered
 
 
 def filter_agenda_records(
@@ -260,7 +332,12 @@ def _add_at_matches(matches, item, range_start, range_end):
         at_time = _parse_time_value(value)
         if at_time is None:
             continue
-        candidate_dates = on_dates if on_dates else _range_dates(range_start, range_end)
+        if on_dates:
+            candidate_dates = on_dates
+        elif (range_end.date() - range_start.date()).days > 366:
+            candidate_dates = [_first_matching_date_for_time(range_start, at_time)]
+        else:
+            candidate_dates = _range_dates(range_start, range_end)
         for candidate_date in candidate_dates:
             point = datetime.combine(candidate_date, at_time)
             _add_match(matches, "at", point, point, range_start, range_end)
@@ -365,6 +442,14 @@ def _item_on_dates(item):
     return dates
 
 
+def _first_matching_date_for_time(range_start, at_time):
+    candidate_date = range_start.date()
+    point = datetime.combine(candidate_date, at_time)
+    if point < range_start:
+        candidate_date = candidate_date + timedelta(days=1)
+    return candidate_date
+
+
 def _range_dates(range_start, range_end):
     current = range_start.date()
     last = range_end.date()
@@ -432,7 +517,7 @@ def _normalize_status_filter(values):
     for value in _normalize_filter_values(values):
         status = normalize_status(value)
         if status not in VALID_STATUSES:
-            raise ValueError("Invalid agenda status filter %r." % value)
+            raise ValueError("Invalid status filter %r." % value)
         if status not in normalized:
             normalized.append(status)
     return tuple(normalized)
@@ -443,7 +528,7 @@ def _normalize_type_filter(values):
     for value in _normalize_filter_values(values):
         kind = normalize_type(value)
         if kind not in VALID_TYPES:
-            raise ValueError("Invalid agenda type filter %r." % value)
+            raise ValueError("Invalid type filter %r." % value)
         if kind not in normalized:
             normalized.append(kind)
     return tuple(normalized)
@@ -477,6 +562,16 @@ def _record_has_any_detail(record, key, values):
     return False
 
 
+def _item_has_any_detail(item, key, values):
+    item_values = item.details.get(key, [])
+    if key == "person" and not item_values and item.kind == "S":
+        item_values = ["self"]
+    for value in values:
+        if value in item_values:
+            return True
+    return False
+
+
 def _record_matches_detail_filters(record, filters):
     details = record.get("details", {})
     for key, value in filters:
@@ -489,6 +584,17 @@ def _record_matches_detail_filters(record, filters):
     return True
 
 
+def _item_matches_detail_filters(item, filters):
+    for key, value in filters:
+        if not key:
+            return False
+        if key not in item.details:
+            return False
+        if value is not None and value not in item.details.get(key, []):
+            return False
+    return True
+
+
 def _record_search_text(record):
     parts = [
         record.get("status", ""),
@@ -497,5 +603,17 @@ def _record_search_text(record):
         record.get("text", ""),
     ]
     for values in record.get("details", {}).values():
+        parts.extend(values)
+    return " ".join(parts)
+
+
+def _item_search_text(item):
+    parts = [
+        item.status,
+        item.kind,
+        item.title,
+        item_to_line(item),
+    ]
+    for values in item.details.values():
         parts.extend(values)
     return " ".join(parts)

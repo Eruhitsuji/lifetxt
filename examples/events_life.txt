@@ -1,7 +1,7 @@
 # Event examples
 
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research tag:seminar
-[ ] E "Research Meeting" from:2026-06-09T10:00 to:2026-06-09T11:00 loc:"Meeting Room A" project:research note:"Bring printed outline"
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research attendee:alice tag:seminar
+[ ] E "Research Meeting" from:2026-06-09T10:00 to:2026-06-09T11:00 loc:"Meeting Room A" project:research attendee:alice attendee:bob note:"Bring printed outline"
 [ ] E Conference_Day on:2026-06-15 loc:tokyo project:research tag:conference
 [?] E Advisor_Call from:2026-06-10T16:00 to:2026-06-10T16:30 project:research note:"Time not confirmed"
 [-] E Dinner_Plan from:2026-06-07T19:00 to:2026-06-07T21:00 reason:canceled

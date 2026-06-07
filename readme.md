@@ -15,8 +15,8 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 ## Minimal life.txt
 
 ```txt
-[ ] T Write_Report due:2026-06-12 project:university
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+[ ] T Write_Report due:2026-06-12 project:university assignee:alice
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [N] N Research_Memo project:research
 ```
@@ -42,6 +42,7 @@ python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
+python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt status life.txt
@@ -57,10 +58,12 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 
 Most file-reading commands accept multiple input paths. The `filter`,
 `to-json`, and `to-jsonl` commands support item filters such as `--open`,
-`--status`, `--type`, `--project`, `--tag`, `--person`, `--detail`,
-`--text`, `--after`, and `--before`. `filter --format life` preserves original
-matching item lines by default; use `--canonical` to regenerate normalized
-life.txt lines.
+`--status`, `--type`, `--project`, `--tag`, `--person`, `--owner`,
+`--assignee`, `--attendee`, `--detail`, `--text`, `--after`, and `--before`.
+`filter --format life` preserves original matching item lines by default; use
+`--canonical` to regenerate normalized life.txt lines. Use `person:` for
+status / presence targets, `assignee:` for assigned work, `owner:` for
+accountability, and `attendee:` for event participants.
 
 The `status` command prints the latest `S` status / presence item for each
 `person:`. If `person:` is omitted, it is treated as `self` for this summary.

@@ -130,6 +130,9 @@ def filter_items(
     projects=None,
     tags=None,
     persons=None,
+    owners=None,
+    assignees=None,
+    attendees=None,
     detail_filters=None,
     text=None,
     range_start=None,
@@ -140,6 +143,9 @@ def filter_items(
     projects = _normalize_filter_values(projects)
     tags = _normalize_filter_values(tags)
     persons = _normalize_filter_values(persons)
+    owners = _normalize_filter_values(owners)
+    assignees = _normalize_filter_values(assignees)
+    attendees = _normalize_filter_values(attendees)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -162,6 +168,12 @@ def filter_items(
             continue
         if persons and not _item_has_any_detail(item, "person", persons):
             continue
+        if owners and not _item_has_any_detail(item, "owner", owners):
+            continue
+        if assignees and not _item_has_any_detail(item, "assignee", assignees):
+            continue
+        if attendees and not _item_has_any_detail(item, "attendee", attendees):
+            continue
         if details and not _item_matches_detail_filters(item, details):
             continue
         if text and text not in _item_search_text(item).lower():
@@ -180,6 +192,9 @@ def filter_agenda_records(
     projects=None,
     tags=None,
     persons=None,
+    owners=None,
+    assignees=None,
+    attendees=None,
     detail_filters=None,
     text=None,
 ):
@@ -188,6 +203,9 @@ def filter_agenda_records(
     projects = _normalize_filter_values(projects)
     tags = _normalize_filter_values(tags)
     persons = _normalize_filter_values(persons)
+    owners = _normalize_filter_values(owners)
+    assignees = _normalize_filter_values(assignees)
+    attendees = _normalize_filter_values(attendees)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -204,6 +222,12 @@ def filter_agenda_records(
         if tags and not _record_has_any_detail(record, "tag", tags):
             continue
         if persons and not _record_has_any_detail(record, "person", persons):
+            continue
+        if owners and not _record_has_any_detail(record, "owner", owners):
+            continue
+        if assignees and not _record_has_any_detail(record, "assignee", assignees):
+            continue
+        if attendees and not _record_has_any_detail(record, "attendee", attendees):
             continue
         if details and not _record_matches_detail_filters(record, details):
             continue

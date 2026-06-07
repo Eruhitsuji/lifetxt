@@ -96,7 +96,19 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `note` | 短い補足メモ | `note:"Check later"` |
 | `url` | 関連 URL | `url:https://example.com` |
 
-### 7.2 Time keys
+### 7.2 People keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `owner` | item に責任を持つ人 | `owner:alice` |
+| `assignee` | 作業を担当する人 | `assignee:alice` |
+| `attendee` | 予定の参加者。複数回指定可能 | `attendee:alice` |
+| `person` | status / presence の対象者。主に type `S` 用 | `person:self` |
+
+`person` は在席状態を記録する対象者に使います。`S` 以外では、より具体的な
+`owner`、`assignee`、`attendee` を優先してください。
+
+### 7.3 Time keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -108,14 +120,14 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `do` | 実行予定日または実行予定日時 | `do:2026-06-10` |
 | `done` | 完了日または完了日時 | `done:2026-06-05` |
 
-### 7.3 Workflow keys
+### 7.4 Workflow keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
 | `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
 
-### 7.4 System keys
+### 7.5 System keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -142,7 +154,7 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 推奨 key:
 
 ```txt
-do due priority est project tag note id parent
+do due priority assignee owner est project tag note id parent
 ```
 
 | Key | 推奨理由 |
@@ -150,13 +162,15 @@ do due priority est project tag note id parent
 | `do` | いつ作業するか |
 | `due` | いつまでに終えるか |
 | `priority` | 相対的な重要度 |
+| `assignee` | task を担当する人 |
+| `owner` | task に責任を持つ人 |
 | `est` | 見積作業量 |
 | `project`, `tag`, `note`, `id`, `parent` | 整理と文脈付け |
 
 例:
 
 ```txt
-[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice
 ```
 
 ### 9.2 Event (`E`)
@@ -166,7 +180,7 @@ do due priority est project tag note id parent
 推奨 key:
 
 ```txt
-from to on loc project tag note
+from to on loc attendee owner project tag note
 ```
 
 | Key | 推奨理由 |
@@ -174,12 +188,14 @@ from to on loc project tag note
 | `from`, `to` | 時刻付き予定の期間 |
 | `on` | 終日予定の日付 |
 | `loc` | 場所 |
+| `attendee` | 予定の参加者。複数回指定可能 |
+| `owner` | 予定 record に責任を持つ人 |
 | `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
 
 ```txt
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 ```
 
 ### 9.3 Deadline (`D`)
@@ -189,19 +205,21 @@ from to on loc project tag note
 推奨 key:
 
 ```txt
-due priority project tag note
+due priority owner assignee project tag note
 ```
 
 | Key | 推奨理由 |
 |---|---|
 | `due` | 必須の締切 |
 | `priority` | 相対的な重要度 |
+| `owner` | 締切に責任を持つ人 |
+| `assignee` | 関連作業を担当する人 |
 | `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
 
 ```txt
-[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A owner:alice
 ```
 
 ### 9.4 Reminder (`R`)
@@ -211,13 +229,14 @@ due priority project tag note
 推奨 key:
 
 ```txt
-at on project context note
+at on owner project context note
 ```
 
 | Key | 推奨理由 |
 |---|---|
 | `at` | リマインド時刻または日時 |
 | `on` | `at:` が時刻のみの場合の日付 |
+| `owner` | reminder に責任を持つ人 |
 | `project`, `context`, `note` | 整理と文脈付け |
 
 例:
@@ -233,13 +252,14 @@ at on project context note
 推奨 key:
 
 ```txt
-repeat at on project tag note
+repeat at on owner project tag note
 ```
 
 | Key | 推奨理由 |
 |---|---|
 | `repeat` | 繰り返し規則 |
 | `at`, `on` | 時刻または日付の基準 |
+| `owner` | habit に責任を持つ人 |
 | `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
@@ -431,8 +451,8 @@ space         = " " ;
 ## 14. 完全な例
 
 ```txt
-[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
 [x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self

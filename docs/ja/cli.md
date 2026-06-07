@@ -155,6 +155,9 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--project VALUE` | `project:` で絞り込み。複数回指定または comma-separated |
 | `--tag VALUE` | `tag:` で絞り込み。複数回指定または comma-separated |
 | `--person VALUE` | `person:` で絞り込み。`S` で `person:` がない場合は `self` |
+| `--owner VALUE` | `owner:` で絞り込み。複数回指定または comma-separated |
+| `--assignee VALUE` | `assignee:` で絞り込み。複数回指定または comma-separated |
+| `--attendee VALUE` | `attendee:` で絞り込み。複数回指定または comma-separated |
 | `--detail FILTER` | detail key または `key=value` で絞り込み。複数指定は AND |
 | `--text TEXT` | title、元行、detail 値に対する大文字小文字を区別しない部分一致 |
 | `--after VALUE` | この時刻以降に関連する item のみ |
@@ -170,6 +173,7 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 ```sh
 python -m lifetxt to-json life.txt --open --type task --pretty
 python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
+python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
@@ -201,6 +205,7 @@ filter option は 4.5 の export filter option と同じです。
 ```sh
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
+python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
@@ -301,6 +306,9 @@ python -m lifetxt agenda life.txt --around now --window 1w
 | `--project VALUE` | `project:` で絞り込み。複数回指定または comma-separated |
 | `--tag VALUE` | `tag:` で絞り込み。複数回指定または comma-separated |
 | `--person VALUE` | `person:` で絞り込み。複数回指定または comma-separated |
+| `--owner VALUE` | `owner:` で絞り込み。複数回指定または comma-separated |
+| `--assignee VALUE` | `assignee:` で絞り込み。複数回指定または comma-separated |
+| `--attendee VALUE` | `attendee:` で絞り込み。複数回指定または comma-separated |
 | `--detail FILTER` | detail key または `key=value` で絞り込み。複数指定は AND |
 | `--text TEXT` | title、元行、detail 値に対する大文字小文字を区別しない部分一致 |
 
@@ -310,6 +318,7 @@ python -m lifetxt agenda life.txt --around now --window 1w
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
 ```
@@ -367,7 +376,7 @@ known detail key には直接フラグもあります。各フラグは複数回
 
 ```txt
 --id --parent --created --updated --done --due --do --from --to
---state --person --service --visibility --on --at --repeat
+--state --person --owner --assignee --attendee --service --visibility --on --at --repeat
 --project --context --loc --priority --est --tag --note --url
 --reason --moved_to
 ```

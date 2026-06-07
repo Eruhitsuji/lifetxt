@@ -198,6 +198,21 @@ def build_parser():
         help="Filter by person: value. Can be repeated or comma-separated.",
     )
     agenda.add_argument(
+        "--owner",
+        action="append",
+        help="Filter by owner: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--assignee",
+        action="append",
+        help="Filter by assignee: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--attendee",
+        action="append",
+        help="Filter by attendee: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
         "--detail",
         action="append",
         default=[],
@@ -328,6 +343,21 @@ def _add_item_filter_arguments(parser):
         help="Filter by person detail. Missing person on S items defaults to self.",
     )
     parser.add_argument(
+        "--owner",
+        action="append",
+        help="Filter by owner detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--assignee",
+        action="append",
+        help="Filter by assignee detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--attendee",
+        action="append",
+        help="Filter by attendee detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
         "--detail",
         action="append",
         default=[],
@@ -442,6 +472,9 @@ def command_agenda(args):
         projects=args.project,
         tags=args.tag,
         persons=args.person,
+        owners=args.owner,
+        assignees=args.assignee,
+        attendees=args.attendee,
         detail_filters=args.detail,
         text=args.text,
     )
@@ -604,6 +637,9 @@ def _filter_items_from_args(items, args):
         projects=getattr(args, "project", None),
         tags=getattr(args, "tag", None),
         persons=getattr(args, "person", None),
+        owners=getattr(args, "owner", None),
+        assignees=getattr(args, "assignee", None),
+        attendees=getattr(args, "attendee", None),
         detail_filters=getattr(args, "detail", None),
         text=getattr(args, "text", None),
         range_start=range_start,

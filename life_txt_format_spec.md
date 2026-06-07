@@ -98,7 +98,19 @@ item.
 | `note` | Short human note | `note:"Check later"` |
 | `url` | Related URL | `url:https://example.com` |
 
-### 7.2 Time Keys
+### 7.2 People Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `owner` | Person accountable for the item | `owner:alice` |
+| `assignee` | Person assigned to do the work | `assignee:alice` |
+| `attendee` | Event participant; repeat for multiple attendees | `attendee:alice` |
+| `person` | Status / presence target; mainly for type `S` | `person:self` |
+
+Use `person` for the target whose presence state is recorded. For non-status
+items, prefer the more specific `owner`, `assignee`, or `attendee`.
+
+### 7.3 Time Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -110,14 +122,14 @@ item.
 | `do` | Planned execution date or datetime | `do:2026-06-10` |
 | `done` | Completion date or datetime | `done:2026-06-05` |
 
-### 7.3 Workflow Keys
+### 7.4 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.4 System Keys
+### 7.5 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -144,7 +156,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority est project tag note id parent
+do due priority assignee owner est project tag note id parent
 ```
 
 | Key | Why it is recommended |
@@ -152,13 +164,15 @@ do due priority est project tag note id parent
 | `do` | When the task should be worked on |
 | `due` | When the task must be finished |
 | `priority` | Relative importance |
+| `assignee` | Person assigned to do the task |
+| `owner` | Person accountable for the task |
 | `est` | Estimated effort |
 | `project`, `tag`, `note`, `id`, `parent` | Organization and context |
 
 Example:
 
 ```txt
-[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice
 ```
 
 ### 9.2 Event (`E`)
@@ -168,7 +182,7 @@ Use `E` for calendar-like events.
 Recommended keys:
 
 ```txt
-from to on loc project tag note
+from to on loc attendee owner project tag note
 ```
 
 | Key | Why it is recommended |
@@ -176,12 +190,14 @@ from to on loc project tag note
 | `from`, `to` | Timed event interval |
 | `on` | All-day event date |
 | `loc` | Event location |
+| `attendee` | Event participant; repeat for multiple attendees |
+| `owner` | Person accountable for the event record |
 | `project`, `tag`, `note` | Organization and context |
 
 Example:
 
 ```txt
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 ```
 
 ### 9.3 Deadline (`D`)
@@ -191,19 +207,21 @@ Use `D` for important deadlines that are not themselves events.
 Recommended keys:
 
 ```txt
-due priority project tag note
+due priority owner assignee project tag note
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `due` | Required deadline |
 | `priority` | Relative importance |
+| `owner` | Person accountable for the deadline |
+| `assignee` | Person assigned to complete related work |
 | `project`, `tag`, `note` | Organization and context |
 
 Example:
 
 ```txt
-[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A owner:alice
 ```
 
 ### 9.4 Reminder (`R`)
@@ -213,13 +231,14 @@ Use `R` for a reminder at a date, time, or datetime.
 Recommended keys:
 
 ```txt
-at on project context note
+at on owner project context note
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `at` | Reminder time or datetime |
 | `on` | Reminder date when `at:` is time-only |
+| `owner` | Person accountable for the reminder |
 | `project`, `context`, `note` | Organization and context |
 
 Example:
@@ -235,13 +254,14 @@ Use `H` for recurring actions.
 Recommended keys:
 
 ```txt
-repeat at on project tag note
+repeat at on owner project tag note
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `repeat` | Recurrence rule |
 | `at`, `on` | Time or date anchor |
+| `owner` | Person accountable for the habit |
 | `project`, `tag`, `note` | Organization and context |
 
 Example:
@@ -436,8 +456,8 @@ space         = " " ;
 ## 14. Complete Example
 
 ```txt
-[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A
-[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research
+[ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice
+[ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university project:research attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
 [x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self

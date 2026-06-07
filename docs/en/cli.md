@@ -163,6 +163,9 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--project VALUE` | Filter by `project:`; repeatable or comma-separated |
 | `--tag VALUE` | Filter by `tag:`; repeatable or comma-separated |
 | `--person VALUE` | Filter by `person:`; missing `person:` on `S` items means `self` |
+| `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
+| `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
+| `--attendee VALUE` | Filter by `attendee:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
 | `--after VALUE` | Keep items related to this time or later |
@@ -178,6 +181,7 @@ Examples:
 ```sh
 python -m lifetxt to-json life.txt --open --type task --pretty
 python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
+python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
@@ -212,6 +216,7 @@ Examples:
 ```sh
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
+python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
@@ -314,6 +319,9 @@ python -m lifetxt agenda life.txt --around now --window 1w
 | `--project VALUE` | Filter by `project:`; repeatable or comma-separated |
 | `--tag VALUE` | Filter by `tag:`; repeatable or comma-separated |
 | `--person VALUE` | Filter by `person:`; repeatable or comma-separated |
+| `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
+| `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
+| `--attendee VALUE` | Filter by `attendee:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
 
@@ -323,6 +331,7 @@ Examples:
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
 ```
@@ -380,7 +389,7 @@ Known detail keys also have direct flags. Each can be repeated:
 
 ```txt
 --id --parent --created --updated --done --due --do --from --to
---state --person --service --visibility --on --at --repeat
+--state --person --owner --assignee --attendee --service --visibility --on --at --repeat
 --project --context --loc --priority --est --tag --note --url
 --reason --moved_to
 ```

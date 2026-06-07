@@ -62,6 +62,9 @@ KNOWN_KEYS = (
     "to",
     "state",
     "person",
+    "owner",
+    "assignee",
+    "attendee",
     "service",
     "visibility",
     "on",
@@ -80,12 +83,14 @@ KNOWN_KEYS = (
 )
 
 COMMON_RECOMMENDED_KEYS = ("id", "parent", "project", "tag", "note", "url")
+PEOPLE_RECOMMENDED_KEYS = ("owner", "assignee", "attendee", "person")
 TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
 WORKFLOW_RECOMMENDED_KEYS = ("reason", "moved_to")
 SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
 
 RECOMMENDED_KEY_GROUPS = (
     ("Common", COMMON_RECOMMENDED_KEYS),
+    ("People", PEOPLE_RECOMMENDED_KEYS),
     ("Time", TIME_RECOMMENDED_KEYS),
     ("Workflow", WORKFLOW_RECOMMENDED_KEYS),
     ("System", SYSTEM_RECOMMENDED_KEYS),
@@ -99,6 +104,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "do",
         "due",
         "priority",
+        "assignee",
+        "owner",
         "est",
         "project",
         "tag",
@@ -111,6 +118,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "to",
         "on",
         "loc",
+        "attendee",
+        "owner",
         "project",
         "tag",
         "note",
@@ -118,6 +127,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
     "D": (
         "due",
         "priority",
+        "owner",
+        "assignee",
         "project",
         "tag",
         "note",
@@ -125,6 +136,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
     "R": (
         "at",
         "on",
+        "owner",
         "project",
         "context",
         "note",
@@ -133,6 +145,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "repeat",
         "at",
         "on",
+        "owner",
         "project",
         "tag",
         "note",

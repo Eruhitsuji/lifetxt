@@ -1,9 +1,9 @@
 # Task and deadline examples
 
-[ ] T Write_Report id:task_report do:2026-06-10 due:2026-06-12 project:university priority:A tag:writing tag:report
-[/] T Review_References id:task_refs parent:task_report do:2026-06-08 project:university context:library priority:B
+[ ] T Write_Report id:task_report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice tag:writing tag:report
+[/] T Review_References id:task_refs parent:task_report do:2026-06-08 project:university context:library priority:B owner:alice
 [ ] T Submit_Form due:2026-06-20T17:00 project:university priority:A url:https://example.com/form
 [x] T Clean_Desk done:2026-06-05 project:life tag:cleanup
 [>] T Renew_Library_Books moved_to:2026-06-11 project:life note:"Waiting for renewal window"
-[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A note:"Submit before office closes"
+[ ] D Scholarship_Form due:2026-06-20T17:00 project:university priority:A owner:alice note:"Submit before office closes"
 [N] N Report_Idea project:university note:"Compare two prior studies"

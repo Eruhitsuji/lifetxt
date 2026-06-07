@@ -84,6 +84,17 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W208" for d in diagnostics))
         self.assertTrue(any(d.code == "W209" for d in diagnostics))
 
+    def test_people_keys_are_known_and_recommended_for_matching_types(self):
+        _items, diagnostics = parse_text(
+            "[ ] T Write_Report due:2026-06-12 assignee:alice owner:bob\n"
+            "[ ] E Seminar from:2026-06-08T13:00 "
+            "to:2026-06-08T14:00 attendee:alice owner:bob\n"
+            "[ ] D Form due:2026-06-20 owner:alice assignee:bob\n"
+        )
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertFalse(any(d.code == "W106" for d in diagnostics))
+
     def test_tab_only_blank_line_reports_blank_warning(self):
         items, diagnostics = parse_text("\t\n")
 
@@ -396,6 +407,67 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertIn("Self_Away", normalized)
         self.assertNotIn("Alice_Focus", normalized)
 
+    def test_agenda_cli_people_filters(self):
+        text = (
+            "[ ] T Alice_Task due:2026-06-06 assignee:alice\n"
+            "[ ] T Bob_Task due:2026-06-06 assignee:bob\n"
+            "[ ] E Alice_Event from:2026-06-06T13:00 "
+            "to:2026-06-06T14:00 attendee:alice\n"
+            "[ ] D Owned_Deadline due:2026-06-06 owner:alice\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--assignee",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Alice_Task", normalized)
+        self.assertNotIn("Bob_Task", normalized)
+        self.assertNotIn("Alice_Event", normalized)
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--attendee",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Alice_Event", normalized)
+        self.assertNotIn("Alice_Task", normalized)
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--owner",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Owned_Deadline", normalized)
+        self.assertNotIn("Alice_Task", normalized)
+
     def test_agenda_cli_output_file(self):
         text = (
             "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n"
@@ -579,6 +651,52 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("Past", normalized)
         self.assertNotIn("Daily", normalized)
         self.assertNotIn("Future", normalized)
+
+    def test_filter_cli_people_filters(self):
+        text = (
+            "[ ] T Alice_Task due:2026-06-08 assignee:alice owner:team_a\n"
+            "[ ] T Bob_Task due:2026-06-08 assignee:bob owner:team_b\n"
+            "[ ] E Review from:2026-06-08T10:00 to:2026-06-08T11:00 attendee:alice\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--assignee",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Alice_Task", normalized)
+        self.assertNotIn("Bob_Task", normalized)
+        self.assertNotIn("Review", normalized)
+
+        stdout, stderr, code = run_cli(
+            "to-json",
+            "--owner",
+            "team_b",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["Bob_Task"], [entry["title"] for entry in data])
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--attendee",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Review", normalized)
+        self.assertNotIn("Alice_Task", normalized)
 
     def test_to_json_and_to_jsonl_filters(self):
         text = (
@@ -764,6 +882,26 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertEqual(
             "[x] S Sleeping from:2026-06-05T01:00 "
             "to:2026-06-05T08:30 state:sleeping person:self\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_assist_people_detail_flags(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--type",
+            "task",
+            "--title",
+            "Review PR",
+            "--assignee",
+            "alice",
+            "--owner",
+            "team_a",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[ ] T "Review PR" owner:team_a assignee:alice\n',
             normalize_newlines(stdout),
         )
 

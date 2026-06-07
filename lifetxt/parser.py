@@ -30,7 +30,7 @@ def parse_line(line, line_no=1):
     text = line.rstrip("\r\n")
     diagnostics = []
 
-    if text.strip(" ") == "":
+    if text.strip(" \t") == "":
         if "\t" in text:
             diagnostics.append(
                 Diagnostic(
@@ -154,7 +154,7 @@ def parse_line(line, line_no=1):
         if key is not None:
             details.setdefault(key, []).append(value)
 
-    return Item(status, kind, title, details, line_no), diagnostics
+    return Item(status, kind, title, details, line_no, source_text=text), diagnostics
 
 
 def _consume_required_space(text, pos, line_no, diagnostics, context):

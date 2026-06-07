@@ -84,6 +84,13 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W208" for d in diagnostics))
         self.assertTrue(any(d.code == "W209" for d in diagnostics))
 
+    def test_tab_only_blank_line_reports_blank_warning(self):
+        items, diagnostics = parse_text("\t\n")
+
+        self.assertEqual([], items)
+        self.assertTrue(any(d.code == "W001" for d in diagnostics))
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
 
 class LifeTxtStatusCliTests(unittest.TestCase):
     def test_status_cli_outputs_latest_status_for_each_person(self):
@@ -140,6 +147,21 @@ class LifeTxtStatusCliTests(unittest.TestCase):
         self.assertNotIn("alice", normalized)
         self.assertIn("self", normalized)
         self.assertIn("away", normalized)
+
+    def test_status_cli_active_only_ignores_finished_latest_log(self):
+        text = (
+            "[/] S Working from:2026-06-07T09:00 state:working person:self\n"
+            "[x] S Meeting from:2026-06-07T10:00 "
+            "to:2026-06-07T11:00 state:meeting person:self\n"
+        )
+
+        stdout, stderr, code = run_cli("status", "--active", input_text=text)
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("working", normalized)
+        self.assertNotIn("meeting", normalized)
 
 
 class LifeTxtAgendaCliTests(unittest.TestCase):
@@ -223,6 +245,24 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
             "2026-06-06T17:30",
             "--to",
             "2026-06-06T18:30",
+            "--format",
+            "life",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(text, normalize_newlines(stdout))
+
+    def test_agenda_life_output_preserves_original_line(self):
+        text = '[ ] R "Break" at:2026-06-06T14:15\n'
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--around",
+            "2026-06-06T14:00",
+            "--window",
+            "30m",
             "--format",
             "life",
             input_text=text,
@@ -482,6 +522,64 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("Self_Away", normalized)
         self.assertNotIn("Alice_Focus", normalized)
 
+    def test_filter_life_output_preserves_original_line_unless_canonical(self):
+        text = (
+            '[ ] T "Open_Task" due:2026-06-08 project:research\n'
+            '[x] T "Done_Task" due:2026-06-08 done:2026-06-08\n'
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--open",
+            "--type",
+            "task",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[ ] T "Open_Task" due:2026-06-08 project:research\n',
+            normalize_newlines(stdout),
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--open",
+            "--type",
+            "task",
+            "--canonical",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] T Open_Task due:2026-06-08 project:research\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_filter_one_sided_time_filter_ignores_floating_at(self):
+        text = (
+            "[ ] H Daily repeat:daily at:18:00\n"
+            "[ ] D Past due:2026-06-06\n"
+            "[ ] D Future due:2026-06-08\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--before",
+            "2026-06-07",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Past", normalized)
+        self.assertNotIn("Daily", normalized)
+        self.assertNotIn("Future", normalized)
+
     def test_to_json_and_to_jsonl_filters(self):
         text = (
             "[ ] T Open_Task due:2026-06-08 project:research\n"
@@ -538,6 +636,36 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual(0, code)
             data = json.loads(stdout)
             self.assertEqual(["First", "Second"], [entry["title"] for entry in data])
+
+    def test_multiple_life_input_diagnostics_include_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First due:2026-06-08\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Broken Title due:2026-06-09\n")
+
+            stdout, stderr, code = run_cli("check", first_path, second_path)
+
+            normalized = normalize_newlines(stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(1, code)
+            self.assertIn(os.path.basename(second_path), normalized)
+            self.assertIn(":1:", normalized)
+            self.assertIn("E010", normalized)
+
+    def test_utf8_bom_life_file_is_accepted(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "bom.life.txt")
+            with open(path, "w", encoding="utf-8-sig", newline="\n") as handle:
+                handle.write("[ ] T First due:2026-06-08\n")
+
+            stdout, stderr, code = run_cli("check", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("OK: 1 item(s)", normalize_newlines(stdout))
 
     def test_multiple_json_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:

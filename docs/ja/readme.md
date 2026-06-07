@@ -37,9 +37,11 @@ python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
+python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
@@ -52,7 +54,8 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 多くの読み込み系コマンドは複数の入力 path を受け取れます。`filter`、`to-json`、
 `to-jsonl` は `--open`、`--status`、`--type`、`--project`、`--tag`、
 `--person`、`--detail`、`--text`、`--after`、`--before` などの item filter に
-対応します。
+対応します。`filter --format life` は一致した item の元行を既定で保持します。
+正規化した life.txt 行を再生成したい場合は `--canonical` を使います。
 
 ## assist
 
@@ -77,6 +80,7 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 
 `status` コマンドは、`person:` ごとに最新の `S` item を表示します。
 `person:` が省略された場合、この集約では `self` として扱います。
+`--active` を指定すると、`to:` を持つ終了済み status log は除外します。
 
 `agenda` コマンドは、指定した日時範囲に関連する item を表示します。
 `from/to` と `on` は期間として扱い、`due`、`do`、`at`、`moved_to` は

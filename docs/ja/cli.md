@@ -51,6 +51,7 @@ type life.txt | python -m lifetxt check
 ```
 
 path を省略するか `-` を指定した場合、標準入力から読み込みます。
+複数の入力 path を指定した場合、診断には line / column の前に source path が付きます。
 
 ### 2.2 出力 path
 
@@ -161,6 +162,8 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 
 `--after` と `--before` は `now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM` を受け付けます。
 時刻判定は `agenda` と同じルールを使います。
+`on:` のない `at:HH:MM` は日付アンカーを持たないため、片側条件の `--after` /
+`--before` では一致対象にしません。
 
 例:
 
@@ -187,13 +190,17 @@ python -m lifetxt filter [path ...] [filter options] [--format life|json|jsonl] 
 | `--format jsonl` | JSONL で出力 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
+| `--canonical` | 元行ではなく正規化した life.txt 行を再生成 |
 
 filter option は 4.5 の export filter option と同じです。
+`--format life` では、一致した item の元行を既定で保持します。
+引用や空白を正規化したい場合は `--canonical` を使います。
 
 例:
 
 ```sh
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
+python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
@@ -204,7 +211,7 @@ python -m lifetxt filter work.life.txt home.life.txt --project research --format
 `person:` ごとの最新 `S` status / presence record を表示します。
 
 ```sh
-python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON] [--pretty]
+python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON] [--active] [--pretty]
 ```
 
 選択ルール:
@@ -213,6 +220,7 @@ python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON]
 - `person:` ごとに group 化します。
 - `person:` がない場合は `self` として扱います。
 - `from:` が最も新しい item を最新として選びます。
+- `--active` を指定すると、`to:` を持つ終了済み log は除外します。
 
 | Option | 意味 |
 |---|---|
@@ -221,12 +229,14 @@ python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON]
 | `--format json` | JSON 配列で表示 |
 | `--format jsonl` | JSONL で表示 |
 | `--person PERSON` | 特定 person のみ表示 |
+| `--active` | `to:` のない現在有効な status item のみ対象 |
 | `--pretty` | JSON を整形して出力 |
 
 例:
 
 ```sh
 python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
@@ -312,7 +322,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 | Option | 意味 |
 |---|---|
 | `--format text` | 表で表示 |
-| `--format life` | 一致した life.txt 行を表示 |
+| `--format life` | 一致した元の life.txt item 行を表示 |
 | `--format json` | JSON 配列で表示 |
 | `--format jsonl` | JSONL で表示 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
@@ -467,5 +477,5 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open --typ
 チームの現在状態を表示:
 
 ```sh
-python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 ```

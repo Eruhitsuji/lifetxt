@@ -105,6 +105,11 @@ def build_parser():
         action="store_true",
         help="Pretty-print JSON output.",
     )
+    filter_command.add_argument(
+        "--canonical",
+        action="store_true",
+        help="Regenerate life.txt lines instead of preserving original item lines.",
+    )
     filter_command.set_defaults(func=command_filter)
 
     status = subparsers.add_parser(
@@ -121,6 +126,11 @@ def build_parser():
     status.add_argument(
         "--person",
         help="Only show the latest status for this person. Missing person: defaults to self.",
+    )
+    status.add_argument(
+        "--active",
+        action="store_true",
+        help="Only consider active status items without to:.",
     )
     status.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     status.set_defaults(func=command_status)
@@ -338,8 +348,7 @@ def _add_item_filter_arguments(parser):
 
 
 def command_check(args):
-    text = _read_life_texts(args.paths)
-    items, diagnostics = parse_text(text)
+    items, diagnostics = _parse_life_inputs(args.paths)
 
     if args.format == "json":
         output = json.dumps(
@@ -391,7 +400,7 @@ def command_filter(args):
             output += "\n"
         write_text(args.output, output)
     else:
-        write_text(args.output, _items_to_life_text(items))
+        write_text(args.output, _items_to_life_text(items, canonical=args.canonical))
 
     _print_warnings(diagnostics)
     return 0
@@ -399,7 +408,7 @@ def command_filter(args):
 
 def command_status(args):
     items, diagnostics = _parse_or_exit(args.paths)
-    records = latest_status_records(items, person=args.person)
+    records = latest_status_records(items, person=args.person, active_only=args.active)
 
     if args.format == "json":
         output = status_records_to_json(records, pretty=args.pretty)
@@ -538,8 +547,13 @@ def _write_life_items(items, output):
     return 0
 
 
-def _items_to_life_text(items):
-    lines = [item_to_line(item) for item in items]
+def _items_to_life_text(items, canonical=False):
+    lines = []
+    for item in items:
+        if canonical:
+            lines.append(item_to_line(item))
+        else:
+            lines.append(getattr(item, "source_text", None) or item_to_line(item))
     text = "\n".join(lines)
     if text:
         text += "\n"
@@ -547,12 +561,34 @@ def _items_to_life_text(items):
 
 
 def _parse_or_exit(paths):
-    text = _read_life_texts(paths)
-    items, diagnostics = parse_text(text)
+    items, diagnostics = _parse_life_inputs(paths)
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
         raise SystemExit(1)
     return items, diagnostics
+
+
+def _parse_life_inputs(paths):
+    normalized = _normalize_paths(paths)
+    include_source = len(normalized) > 1
+    items = []
+    diagnostics = []
+    for path in normalized:
+        text = read_text(path)
+        path_items, path_diagnostics = parse_text(text)
+        if include_source:
+            source = "stdin" if path == "-" else path
+            _set_source(path_items, path_diagnostics, source)
+        items.extend(path_items)
+        diagnostics.extend(path_diagnostics)
+    return items, diagnostics
+
+
+def _set_source(items, diagnostics, source):
+    for item in items:
+        item.source = source
+    for diagnostic in diagnostics:
+        diagnostic.source = source
 
 
 def _filter_items_from_args(items, args):
@@ -589,16 +625,6 @@ def _items_from_jsonl_paths(paths):
     return items
 
 
-def _read_life_texts(paths):
-    parts = []
-    for path in _normalize_paths(paths):
-        text = read_text(path)
-        if text and not text.endswith(("\n", "\r")):
-            text += "\n"
-        parts.append(text)
-    return "".join(parts)
-
-
 def _normalize_paths(paths):
     if paths is None:
         return ["-"]
@@ -613,7 +639,7 @@ def _normalize_paths(paths):
 def read_text(path):
     if path is None or path == "-":
         return sys.stdin.read()
-    with open(path, "r", encoding="utf-8") as handle:
+    with open(path, "r", encoding="utf-8-sig") as handle:
         return handle.read()
 
 

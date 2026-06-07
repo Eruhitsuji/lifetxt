@@ -51,6 +51,8 @@ type life.txt | python -m lifetxt check
 ```
 
 If paths are omitted or the path is `-`, the command reads from stdin.
+When multiple input paths are used, diagnostics include the source path before
+the line and column number.
 
 ### 2.2 Output Paths
 
@@ -168,6 +170,8 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 
 `--after` and `--before` accept `now`, `YYYY-MM-DD`, or
 `YYYY-MM-DDTHH:MM`. They use the same time matching rules as `agenda`.
+Time-only `at:HH:MM` values without an `on:` date are not matched by one-sided
+`--after` or `--before` filters, because they have no date anchor.
 
 Examples:
 
@@ -197,13 +201,17 @@ Options:
 | `--format jsonl` | Output JSONL |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON output |
+| `--canonical` | Regenerate normalized life.txt lines instead of preserving original item lines |
 
 Filter options are the same as the export filter options in section 4.5.
+With `--format life`, original matching item lines are preserved by default.
+Use `--canonical` when you want normalized quoting and spacing.
 
 Examples:
 
 ```sh
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
+python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
@@ -214,7 +222,7 @@ python -m lifetxt filter work.life.txt home.life.txt --project research --format
 Show the latest `S` status / presence record for each person.
 
 ```sh
-python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON] [--pretty]
+python -m lifetxt status [path ...] [--format text|json|jsonl] [--person PERSON] [--active] [--pretty]
 ```
 
 Selection rules:
@@ -223,6 +231,7 @@ Selection rules:
 - Records are grouped by `person:`.
 - Missing `person:` is treated as `self`.
 - The latest record is the item with the newest `from:` datetime.
+- With `--active`, finished logs with `to:` are ignored.
 
 Options:
 
@@ -233,12 +242,14 @@ Options:
 | `--format json` | Print a JSON array |
 | `--format jsonl` | Print JSONL |
 | `--person PERSON` | Show only one person |
+| `--active` | Only consider active status items without `to:` |
 | `--pretty` | Pretty-print JSON output |
 
 Examples:
 
 ```sh
 python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
@@ -324,7 +335,7 @@ exact detail value. Multiple `--detail` filters are ANDed.
 | Option | Meaning |
 |---|---|
 | `--format text` | Print a table |
-| `--format life` | Print matching life.txt lines |
+| `--format life` | Print matching original life.txt item lines |
 | `--format json` | Print a JSON array |
 | `--format jsonl` | Print JSONL |
 | `-o`, `--output` | Output file; defaults to stdout |
@@ -480,5 +491,5 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open --typ
 Show current team presence:
 
 ```sh
-python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 ```

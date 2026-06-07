@@ -1,7 +1,7 @@
 import json
 import re
 from collections import OrderedDict
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 
 from .model import (
     VALID_STATUSES,
@@ -116,7 +116,7 @@ def agenda_records(items, range_start, range_end):
         record["title"] = item.title
         record["matches"] = matches
         record["details"] = _copy_details(item.details)
-        record["text"] = item_to_line(item)
+        record["text"] = _item_line_text(item)
         records.append(record)
     records.sort(key=_record_sort_key)
     return records
@@ -334,6 +334,8 @@ def _add_at_matches(matches, item, range_start, range_end):
             continue
         if on_dates:
             candidate_dates = on_dates
+        elif _is_unbounded_range(range_start, range_end):
+            continue
         elif (range_end.date() - range_start.date()).days > 366:
             candidate_dates = [_first_matching_date_for_time(range_start, at_time)]
         else:
@@ -368,6 +370,10 @@ def _overlaps(start, end, range_start, range_end):
     if end is None:
         return start <= range_end
     return start <= range_end and end >= range_start
+
+
+def _is_unbounded_range(range_start, range_end):
+    return range_start == datetime.min or range_end == datetime.max
 
 
 def _parse_range_boundary(value, is_end, now):
@@ -612,8 +618,15 @@ def _item_search_text(item):
         item.status,
         item.kind,
         item.title,
+        _item_line_text(item),
         item_to_line(item),
     ]
     for values in item.details.values():
         parts.extend(values)
     return " ".join(parts)
+
+
+def _item_line_text(item):
+    if getattr(item, "source_text", None):
+        return item.source_text
+    return item_to_line(item)

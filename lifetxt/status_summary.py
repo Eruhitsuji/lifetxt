@@ -16,13 +16,15 @@ _TABLE_COLUMNS = (
 )
 
 
-def latest_status_records(items, person=None):
+def latest_status_records(items, person=None, active_only=False):
     """Return the latest status / presence record for each person."""
     latest = {}
     for index, item in enumerate(items):
         if item.kind != "S":
             continue
         record = status_record(item)
+        if active_only and not record["active"]:
+            continue
         if person is not None and record["person"] != person:
             continue
         started_at = _parse_status_datetime(record["from"])

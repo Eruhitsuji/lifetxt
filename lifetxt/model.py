@@ -201,18 +201,21 @@ STATUS_STATE_VALUES = (
 class Diagnostic(object):
     """A parser or validator message."""
 
-    def __init__(self, severity, code, message, line=None, column=None):
+    def __init__(self, severity, code, message, line=None, column=None, source=None):
         self.severity = severity
         self.code = code
         self.message = message
         self.line = line
         self.column = column
+        self.source = source
 
     def to_dict(self):
         data = OrderedDict()
         data["severity"] = self.severity
         data["code"] = self.code
         data["message"] = self.message
+        if self.source is not None:
+            data["source"] = self.source
         if self.line is not None:
             data["line"] = self.line
         if self.column is not None:
@@ -221,7 +224,13 @@ class Diagnostic(object):
 
     def format(self):
         location = ""
-        if self.line is not None and self.column is not None:
+        if self.source is not None and self.line is not None and self.column is not None:
+            location = "%s:%s:%s: " % (self.source, self.line, self.column)
+        elif self.source is not None and self.line is not None:
+            location = "%s:%s: " % (self.source, self.line)
+        elif self.source is not None:
+            location = "%s: " % self.source
+        elif self.line is not None and self.column is not None:
             location = "%s:%s: " % (self.line, self.column)
         elif self.line is not None:
             location = "%s: " % self.line
@@ -236,12 +245,14 @@ class Diagnostic(object):
 class Item(object):
     """A parsed life.txt item."""
 
-    def __init__(self, status, kind, title, details=None, line=None):
+    def __init__(self, status, kind, title, details=None, line=None, source_text=None, source=None):
         self.status = status
         self.kind = kind
         self.title = title
         self.details = OrderedDict()
         self.line = line
+        self.source_text = source_text
+        self.source = source
         if details:
             for key, values in details.items():
                 if isinstance(values, list):

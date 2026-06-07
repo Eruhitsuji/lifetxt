@@ -39,9 +39,11 @@ python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
+python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt status life.txt
+python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
@@ -54,7 +56,9 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 Most file-reading commands accept multiple input paths. The `filter`,
 `to-json`, and `to-jsonl` commands support item filters such as `--open`,
 `--status`, `--type`, `--project`, `--tag`, `--person`, `--detail`,
-`--text`, `--after`, and `--before`.
+`--text`, `--after`, and `--before`. `filter --format life` preserves original
+matching item lines by default; use `--canonical` to regenerate normalized
+life.txt lines.
 
 ## Assist
 
@@ -79,6 +83,7 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 
 The `status` command prints the latest `S` status / presence item for each
 `person:`. If `person:` is omitted, it is treated as `self` for this summary.
+Use `--active` to ignore finished status logs with `to:`.
 
 The `agenda` command prints items related to a datetime range. `from/to` and
 `on` are treated as intervals, while `due`, `do`, `at`, and `moved_to` are

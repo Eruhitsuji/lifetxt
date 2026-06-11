@@ -34,6 +34,7 @@ Sample files are available in [../../examples/](../../examples/):
 
 This repository includes a dependency-free Python CLI:
 See [cli.md](./cli.md) for detailed command usage and option reference.
+See [web.md](./web.md) for the optional FastAPI REST API and browser GUI.
 
 ```sh
 python -m lifetxt check life.txt
@@ -55,6 +56,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
+python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 ```
 
 Most file-reading commands accept multiple input paths. The `filter`,
@@ -75,6 +77,13 @@ For periodic calendar sync, use `sync-ics` with a secret iCalendar URL stored in
 an environment variable. Keep manually edited items in `life.txt`, write
 ICS-derived items to a generated file such as `.generated/google_calendar.life.txt`,
 and pass both files to commands such as `agenda` or `check`.
+
+The optional web interface is installed separately:
+
+```sh
+pip install -r requirements-web.txt
+python -m lifetxt serve life.txt
+```
 
 ## Assist
 

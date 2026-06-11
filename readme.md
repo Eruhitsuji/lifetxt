@@ -9,6 +9,8 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 - [Japanese documentation](./docs/ja/readme.md)
 - [English CLI guide](./docs/en/cli.md)
 - [Japanese CLI guide](./docs/ja/cli.md)
+- [English Web API / GUI guide](./docs/en/web.md)
+- [Japanese Web API / GUI guide](./docs/ja/web.md)
 - [English format specification](./docs/en/life_txt_format_spec.md)
 - [Japanese format specification](./docs/ja/life_txt_format_spec.md)
 
@@ -57,6 +59,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
+python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 ```
 
 Most file-reading commands accept multiple input paths. The `filter`,
@@ -77,6 +80,13 @@ For periodic calendar sync, use `sync-ics` with a secret iCalendar URL stored in
 an environment variable. Keep manually edited items in `life.txt`, write
 ICS-derived items to a generated file such as `.generated/google_calendar.life.txt`,
 and pass both files to commands such as `agenda` or `check`.
+
+An optional FastAPI REST API and browser GUI are available with:
+
+```sh
+pip install -r requirements-web.txt
+python -m lifetxt serve life.txt
+```
 
 The `status` command prints the latest `S` status / presence item for each
 `person:`. If `person:` is omitted, it is treated as `self` for this summary.

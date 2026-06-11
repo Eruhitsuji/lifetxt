@@ -1043,6 +1043,92 @@ class LifeTxtIcsSyncCliTests(unittest.TestCase):
         self.assertIn("Specify at least one --url or --url-env.", stderr)
 
 
+class LifeTxtWebAppTests(unittest.TestCase):
+    def test_webapp_file_helpers_append_update_and_delete_item(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("# life\n[ ] T First\n")
+
+            item = webapp.item_from_payload(
+                {
+                    "status": "[ ]",
+                    "type": "T",
+                    "title": "Second",
+                    "details": {"due": ["2026-06-12"]},
+                }
+            )
+            line = webapp.append_item_to_file(path, item)
+            self.assertEqual(3, line)
+
+            updated = webapp.update_item_in_file(
+                path,
+                2,
+                {
+                    "title": "First Updated",
+                    "details": {"project": ["life"]},
+                },
+            )
+            self.assertEqual("First Updated", updated.title)
+
+            deleted = webapp.delete_item_from_file(path, 3)
+            self.assertEqual("[ ] T Second due:2026-06-12", deleted)
+
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "# life\n"
+                    '[ ] T "First Updated" project:life\n',
+                    handle.read(),
+                )
+
+    def test_webapp_items_response_marks_writable_source_editable(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First\n")
+
+            items, diagnostics = webapp.read_life_inputs([path])
+            response = webapp.items_response(items, diagnostics, path)
+
+            self.assertEqual(1, response["count"])
+            self.assertTrue(response["items"][0]["editable"])
+            self.assertEqual("[ ] T First", response["items"][0]["text"])
+
+    def test_webapp_sort_items_by_title_and_time(self):
+        from lifetxt import webapp
+
+        text = (
+            "[ ] T Zebra due:2026-06-12\n"
+            "[ ] T Alpha due:2026-06-10\n"
+            "[ ] T Middle\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        by_title = webapp.sort_items(items, "title", "asc")
+        self.assertEqual(["Alpha", "Middle", "Zebra"], [item.title for item in by_title])
+
+        by_time = webapp.sort_items(items, "time", "asc")
+        self.assertEqual(["Alpha", "Zebra", "Middle"], [item.title for item in by_time])
+
+        by_time_desc = webapp.sort_items(items, "time", "desc")
+        self.assertEqual(
+            ["Zebra", "Alpha", "Middle"],
+            [item.title for item in by_time_desc],
+        )
+
+    def test_serve_help_does_not_require_web_dependencies(self):
+        stdout, stderr, code = run_cli("serve", "--help")
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Run the optional FastAPI REST API", stdout)
+
+
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

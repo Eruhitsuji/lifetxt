@@ -164,6 +164,25 @@ def build_parser():
     )
     sync_ics.set_defaults(func=command_sync_ics)
 
+    serve = subparsers.add_parser(
+        "serve",
+        help="Run the optional FastAPI REST API and browser GUI.",
+        description="Run the optional FastAPI REST API and browser GUI.",
+    )
+    serve.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to read. Defaults to life.txt.",
+    )
+    serve.add_argument(
+        "--write-file",
+        help="File used for create, update, and delete operations. Defaults to the first path.",
+    )
+    serve.add_argument("--host", default="127.0.0.1", help="Bind host.")
+    serve.add_argument("--port", type=int, default=8000, help="Bind port.")
+    serve.set_defaults(func=command_serve)
+
     filter_command = subparsers.add_parser(
         "filter",
         help="Filter life.txt items and output life.txt, JSON, or JSONL.",
@@ -549,6 +568,23 @@ def command_sync_ics(args):
         if args.output:
             ensure_parent_dir(args.output)
         write_text(args.output, output)
+    return 0
+
+
+def command_serve(args):
+    try:
+        import uvicorn
+
+        from .webapp import create_app
+    except ImportError as exc:
+        raise ValueError(
+            "Web dependencies are not installed. Run: pip install -r requirements-web.txt"
+        ) from exc
+
+    paths = list(args.paths) if args.paths else ["life.txt"]
+    writable_path = args.write_file or paths[0]
+    app = create_app(paths=paths, writable_path=writable_path)
+    uvicorn.run(app, host=args.host, port=args.port)
     return 0
 
 

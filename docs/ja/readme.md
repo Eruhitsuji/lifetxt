@@ -32,6 +32,7 @@
 
 このリポジトリには、外部依存のない Python CLI が含まれます。
 詳細なコマンドの使い方とオプション一覧は [cli.md](./cli.md) を参照してください。
+任意機能の FastAPI REST API とブラウザGUIについては [web.md](./web.md) を参照してください。
 
 ```sh
 python -m lifetxt check life.txt
@@ -53,6 +54,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
+python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 ```
 
 多くの読み込み系コマンドは複数の入力 path を受け取れます。`filter`、`to-json`、
@@ -71,6 +73,13 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 を使います。手書きの item は `life.txt` に残し、ICS 由来の item は
 `.generated/google_calendar.life.txt` のような生成ファイルに分離し、`agenda` や
 `check` には両方のファイルを渡します。
+
+任意のWeb interfaceは別途依存を入れて起動します。
+
+```sh
+pip install -r requirements-web.txt
+python -m lifetxt serve life.txt
+```
 
 ## assist
 

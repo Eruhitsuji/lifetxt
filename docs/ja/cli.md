@@ -24,6 +24,7 @@ python -m lifetxt from-jsonl [path ...]
 python -m lifetxt status [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
+python -m lifetxt serve [path ...]
 ```
 
 | Command | 目的 |
@@ -39,6 +40,7 @@ python -m lifetxt assist [options]
 | `status` | `person:` ごとの最新 `S` status / presence を表示 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
+| `serve` | 任意機能の FastAPI REST API とブラウザGUIを起動 |
 
 ## 2. 共通仕様
 
@@ -534,7 +536,35 @@ python -m lifetxt assist --update life.txt --match-id task_001 --output updated_
 
 `--output` がない場合、update mode は入力ファイルへ書き戻します。
 
-## 10. alias
+## 10. `serve`
+
+任意機能の FastAPI REST API とブラウザGUIを起動します。
+
+先にWeb依存を入れます。
+
+```sh
+pip install -r requirements-web.txt
+```
+
+server を起動します。
+
+```sh
+python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+```
+
+ブラウザで `http://127.0.0.1:8000/` を開きます。
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 読み込む life.txt ファイル。省略時は `life.txt` |
+| `--write-file FILE` | 作成、更新、削除に使うファイル |
+| `--host HOST` | bind host。既定値は `127.0.0.1` |
+| `--port PORT` | bind port。既定値は `8000` |
+
+REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
+詳細は [web.md](./web.md) を参照してください。
+
+## 11. alias
 
 status alias:
 
@@ -560,7 +590,7 @@ type alias:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 
-## 11. 実用例
+## 12. 実用例
 
 検査と変換:
 
@@ -606,4 +636,11 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open --typ
 
 ```sh
 python -m lifetxt status life.txt --active
+```
+
+ブラウザGUIを起動:
+
+```sh
+pip install -r requirements-web.txt
+python -m lifetxt serve life.txt
 ```

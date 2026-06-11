@@ -24,6 +24,7 @@ python -m lifetxt from-jsonl [path ...]
 python -m lifetxt status [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
+python -m lifetxt serve [path ...]
 ```
 
 | Command | Purpose |
@@ -39,6 +40,7 @@ python -m lifetxt assist [options]
 | `status` | Show the latest `S` status / presence record for each person |
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
+| `serve` | Run the optional FastAPI REST API and browser GUI |
 
 ## 2. Common Conventions
 
@@ -551,7 +553,37 @@ Update options:
 
 Without `--output`, update mode writes back to the input file.
 
-## 10. Aliases
+## 10. `serve`
+
+Run the optional FastAPI REST API and browser GUI.
+
+Install web dependencies first:
+
+```sh
+pip install -r requirements-web.txt
+```
+
+Start the server:
+
+```sh
+python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000/` in a browser.
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | life.txt file(s) to read; defaults to `life.txt` |
+| `--write-file FILE` | File used for create, update, and delete operations |
+| `--host HOST` | Bind host; defaults to `127.0.0.1` |
+| `--port PORT` | Bind port; defaults to `8000` |
+
+The REST API includes `/api/items`, `/api/agenda`, `/api/status`, and
+`/api/health`. See [web.md](./web.md) for the full API and GUI guide.
+
+## 11. Aliases
 
 Status aliases include:
 
@@ -577,7 +609,7 @@ Type aliases include:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 
-## 11. Practical Workflows
+## 12. Practical Workflows
 
 Validate and convert:
 
@@ -623,4 +655,11 @@ Show current team presence:
 
 ```sh
 python -m lifetxt status life.txt --active
+```
+
+Run the browser GUI:
+
+```sh
+pip install -r requirements-web.txt
+python -m lifetxt serve life.txt
 ```

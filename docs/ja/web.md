@@ -68,6 +68,7 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
+- URL parameter による filter、順序、件数、表示mode指定
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
 - item 作成
@@ -80,3 +81,48 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 
 layout は responsive です。広い画面では item 一覧と editor を横並びにし、狭い
 ブラウザウィンドウでは縦並びに切り替えます。
+
+## URL parameter
+
+GUI は読み込み時に query parameter を読みます。bookmark、常時表示ディスプレイ、
+固定viewの共有に使えます。
+
+例:
+
+```txt
+http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
+http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
+http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
+```
+
+対応parameter:
+
+| Parameter | 意味 |
+|---|---|
+| `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
+| `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
+| `kind=E` または `type=E` | life.txt type で filter |
+| `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
+| `open_only=true` または `open=true` | 未完了 workflow item のみ |
+| `status=todo` | status または status alias で filter |
+| `project=VALUE`、`tag=VALUE`、`person=VALUE` | detail で filter |
+| `owner=VALUE`、`assignee=VALUE`、`attendee=VALUE` | people detail で filter |
+| `sort=line|time|title|type|status|source` | item 並び替え key |
+| `order=asc|desc` | item 並び順 |
+| `limit=N` | item と agenda の表示件数上限 |
+| `around=now`、`window=1d` | agenda 範囲 |
+| `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
+| `after=VALUE`、`before=VALUE` | item の時刻filter |
+
+## Display mode
+
+Display mode は常時表示ディスプレイ向けです。read-only 表示にし、文字を大きくし、
+editor と filter controls を隠し、自動更新します。
+
+推奨例:
+
+```txt
+/?mode=display&around=now&window=8h&sort=time&order=asc&limit=20
+/?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
+/?mode=display&type=S&active=true&refresh=30
+```

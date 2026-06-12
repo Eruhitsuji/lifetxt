@@ -1121,6 +1121,16 @@ class LifeTxtWebAppTests(unittest.TestCase):
             [item.title for item in by_time_desc],
         )
 
+    def test_webapp_limit_items(self):
+        from lifetxt import webapp
+
+        items, diagnostics = parse_text("[ ] T One\n[ ] T Two\n[ ] T Three\n")
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        self.assertEqual(["One", "Two"], [item.title for item in webapp.limit_items(items, 2)])
+        self.assertEqual(["One", "Two", "Three"], [item.title for item in webapp.limit_items(items, "")])
+        self.assertEqual(["One", "Two", "Three"], [item.title for item in webapp.limit_items(items, "bad")])
+
     def test_serve_help_does_not_require_web_dependencies(self):
         stdout, stderr, code = run_cli("serve", "--help")
 

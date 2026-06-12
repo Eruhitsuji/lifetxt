@@ -51,6 +51,7 @@ def create_app(paths=None, writable_path=None):
         open_only=False,
         status=None,
         kind=None,
+        type_value=Query(None, alias="type"),
         project=None,
         tag=None,
         person=None,
@@ -58,10 +59,12 @@ def create_app(paths=None, writable_path=None):
         assignee=None,
         attendee=None,
         text=None,
+        q=None,
         after=None,
         before=None,
         sort="line",
         order="asc",
+        limit=None,
     ):
         items, diagnostics = read_life_inputs(app.state.paths)
         range_start, range_end = parse_optional_time_range(after, before)
@@ -69,18 +72,19 @@ def create_app(paths=None, writable_path=None):
             items,
             open_only=open_only,
             statuses=_csv_values(status),
-            kinds=_csv_values(kind),
+            kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
             tags=_csv_values(tag),
             persons=_csv_values(person),
             owners=_csv_values(owner),
             assignees=_csv_values(assignee),
             attendees=_csv_values(attendee),
-            text=text,
+            text=text or q,
             range_start=range_start,
             range_end=range_end,
         )
         filtered = sort_items(filtered, sort, order)
+        filtered = limit_items(filtered, limit)
         return items_response(filtered, diagnostics, app.state.writable_path)
 
     @app.get("/api/agenda")
@@ -92,10 +96,13 @@ def create_app(paths=None, writable_path=None):
         open_only=False,
         status=None,
         kind=None,
+        type_value=Query(None, alias="type"),
         project=None,
         tag=None,
         person=None,
         text=None,
+        q=None,
+        limit=None,
     ):
         items, diagnostics = read_life_inputs(app.state.paths)
         raise_for_errors(diagnostics)
@@ -117,16 +124,17 @@ def create_app(paths=None, writable_path=None):
             [entry[1] for entry in record_items],
             open_only=open_only,
             statuses=_csv_values(status),
-            kinds=_csv_values(kind),
+            kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
             tags=_csv_values(tag),
             persons=_csv_values(person),
-            text=text,
+            text=text or q,
         )
         filtered_ids = set(id(item) for item in filtered_items)
         filtered_records = [
             record for record, item in record_items if id(item) in filtered_ids
         ]
+        filtered_records = limit_items(filtered_records, limit)
         return {"count": len(filtered_records), "records": filtered_records}
 
     @app.get("/api/status")
@@ -225,6 +233,18 @@ def sort_items(items, sort_key="line", order="asc"):
     present.sort(key=lambda entry: entry[0], reverse=reverse)
     missing.sort(key=lambda entry: entry[0])
     return [entry[1] for entry in present + missing]
+
+
+def limit_items(items, limit):
+    if limit in (None, ""):
+        return items
+    try:
+        amount = int(limit)
+    except (TypeError, ValueError):
+        return items
+    if amount < 0:
+        return items
+    return items[:amount]
 
 
 def sort_key_for_item(item, key_name):
@@ -527,6 +547,15 @@ HTML_PAGE = r"""<!doctype html>
     form.stack { grid-template-columns: 1fr 1fr; }
     form.stack label, form.stack textarea, form.stack .actions, .wide { grid-column: 1 / -1; }
     label { display: grid; gap: .3rem; color: var(--muted); font-size: .82rem; }
+    label.inline {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      min-height: 2.35rem;
+      color: var(--ink);
+      font-size: .95rem;
+    }
+    label.inline input { width: auto; }
     label > input, label > select { color: var(--ink); font-size: .95rem; }
     .empty, .note { color: var(--muted); }
     .diagnostic {
@@ -539,10 +568,44 @@ HTML_PAGE = r"""<!doctype html>
       font-family: Consolas, "Courier New", monospace;
       font-size: .86rem;
     }
+    .display-mode {
+      background: #0f1412;
+      color: #edf4ef;
+      font-size: clamp(18px, 1.4vw, 28px);
+    }
+    .display-mode header {
+      max-width: none;
+      padding: 1.2rem 2rem;
+    }
+    .display-mode h1 { font-size: clamp(2.6rem, 6vw, 5rem); }
+    .display-mode .subtitle { color: #aebbb4; }
+    .display-mode main {
+      max-width: none;
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+      padding: 0 2rem 2rem;
+    }
+    .display-mode section,
+    .display-mode .item {
+      background: #151c19;
+      border-color: #31413b;
+    }
+    .display-mode .section-head { border-color: #31413b; }
+    .display-mode .toolbar,
+    .display-mode .editor-section,
+    .display-mode header button { display: none; }
+    .display-mode .pill {
+      background: #23322d;
+      color: #edf4ef;
+    }
+    .display-mode .meta,
+    .display-mode .source,
+    .display-mode .empty,
+    .display-mode .note { color: #aebbb4; }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
       .side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
       .side section:first-child { grid-column: 1 / -1; }
+      .display-mode main { grid-template-columns: 1fr; }
     }
     @media (max-width: 680px) {
       header { align-items: start; }
@@ -570,6 +633,7 @@ HTML_PAGE = r"""<!doctype html>
         <h2>Items</h2>
         <div class="toolbar">
           <input id="search" placeholder="Search">
+          <label class="inline"><input id="open-only" type="checkbox"> Open</label>
           <select id="kind">
             <option value="">All types</option>
             <option value="T">Task</option>
@@ -592,6 +656,7 @@ HTML_PAGE = r"""<!doctype html>
             <option value="asc">Asc</option>
             <option value="desc">Desc</option>
           </select>
+          <input id="limit" inputmode="numeric" placeholder="Limit">
           <button onclick="loadItems()">Apply</button>
         </div>
       </div>
@@ -599,7 +664,7 @@ HTML_PAGE = r"""<!doctype html>
       <div id="items" class="content"></div>
     </section>
     <div class="side">
-      <section>
+      <section class="editor-section">
         <div class="section-head">
           <h2 id="editor-heading">New Item</h2>
           <button class="secondary" onclick="newItem()">New</button>
@@ -643,6 +708,7 @@ HTML_PAGE = r"""<!doctype html>
   <script>
     let currentItems = [];
     let selectedItem = null;
+    let refreshTimer = null;
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -676,14 +742,89 @@ HTML_PAGE = r"""<!doctype html>
       }
       return details;
     }
-    async function loadItems() {
-      const params = new URLSearchParams();
-      const kind = document.getElementById("kind").value;
+    function query() {
+      return new URLSearchParams(window.location.search);
+    }
+    function firstParam(params, names, fallback = "") {
+      for (const name of names) {
+        const value = params.get(name);
+        if (value !== null && value !== "") return value;
+      }
+      return fallback;
+    }
+    function boolParam(params, names) {
+      const value = firstParam(params, names, "");
+      return ["1", "true", "yes", "on", "open"].includes(value.toLowerCase());
+    }
+    function isDisplayMode() {
+      const params = query();
+      return firstParam(params, ["mode", "view"], "").toLowerCase() === "display";
+    }
+    function applyUrlToControls() {
+      const params = query();
+      document.body.classList.toggle("display-mode", isDisplayMode());
+      document.getElementById("search").value = firstParam(params, ["text", "q"], "");
+      document.getElementById("kind").value = firstParam(params, ["kind", "type"], "");
+      document.getElementById("sort").value = firstParam(params, ["sort"], "line");
+      document.getElementById("order").value = firstParam(params, ["order"], "asc");
+      document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]);
+      document.getElementById("limit").value = firstParam(params, ["limit"], "");
+      configureAutoRefresh();
+    }
+    function configureAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      const seconds = Number(firstParam(query(), ["refresh"], isDisplayMode() ? "60" : ""));
+      if (Number.isFinite(seconds) && seconds > 0) {
+        refreshTimer = setInterval(refreshAll, seconds * 1000);
+      }
+    }
+    function itemQueryParams() {
+      const params = query();
+      const result = new URLSearchParams();
+      const passthrough = [
+        "status", "project", "tag", "person", "owner", "assignee", "attendee",
+        "after", "before"
+      ];
+      for (const key of passthrough) {
+        if (params.has(key)) result.set(key, params.get(key));
+      }
+      const kind = document.getElementById("kind").value || firstParam(params, ["kind", "type"], "");
+      const text = document.getElementById("search").value || firstParam(params, ["text", "q"], "");
+      const limit = document.getElementById("limit").value || firstParam(params, ["limit"], "");
+      result.set("sort", document.getElementById("sort").value || firstParam(params, ["sort"], "line"));
+      result.set("order", document.getElementById("order").value || firstParam(params, ["order"], "asc"));
+      if (kind) result.set("kind", kind);
+      if (text) result.set("text", text);
+      if (limit) result.set("limit", limit);
+      if (document.getElementById("open-only").checked || boolParam(params, ["open", "open_only"])) {
+        result.set("open_only", "true");
+      }
+      return result;
+    }
+    function updateUrlFromControls() {
+      const current = query();
+      const next = new URLSearchParams();
+      for (const key of [
+        "mode", "view", "refresh", "around", "window", "from", "to",
+        "status", "project", "tag", "person", "owner", "assignee", "attendee",
+        "after", "before"
+      ]) {
+        if (current.has(key)) next.set(key, current.get(key));
+      }
       const text = document.getElementById("search").value;
-      params.set("sort", document.getElementById("sort").value);
-      params.set("order", document.getElementById("order").value);
-      if (kind) params.set("kind", kind);
-      if (text) params.set("text", text);
+      const kind = document.getElementById("kind").value;
+      const limit = document.getElementById("limit").value;
+      if (text) next.set("text", text);
+      if (kind) next.set("kind", kind);
+      if (document.getElementById("open-only").checked) next.set("open_only", "true");
+      if (limit) next.set("limit", limit);
+      next.set("sort", document.getElementById("sort").value);
+      next.set("order", document.getElementById("order").value);
+      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+    }
+    async function loadItems() {
+      updateUrlFromControls();
+      const params = itemQueryParams();
       const data = await api(`/api/items?${params}`);
       currentItems = data.items;
       renderDiagnostics(data.diagnostics);
@@ -722,6 +863,7 @@ HTML_PAGE = r"""<!doctype html>
       }
     }
     function selectItem(item) {
+      if (isDisplayMode()) return;
       selectedItem = item;
       document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only item";
       document.getElementById("edit-status").value = item.status;
@@ -789,10 +931,21 @@ HTML_PAGE = r"""<!doctype html>
       await refreshAll();
     }
     async function loadAgenda() {
-      const data = await api("/api/agenda?around=now&window=1d");
+      const params = query();
+      const agendaParams = new URLSearchParams();
+      for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "person", "text", "q", "limit"]) {
+        if (params.has(key)) agendaParams.set(key, params.get(key));
+      }
+      if (!agendaParams.has("around") && !agendaParams.has("from")) agendaParams.set("around", "now");
+      if (!agendaParams.has("window")) agendaParams.set("window", "1d");
+      if (document.getElementById("open-only").checked || boolParam(params, ["open", "open_only"])) {
+        agendaParams.set("open_only", "true");
+      }
+      const data = await api(`/api/agenda?${agendaParams}`);
       const node = document.getElementById("agenda");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No agenda items.</div>`;
-      for (const record of data.records.slice(0, 8)) {
+      const maxAgenda = Number(firstParam(query(), ["agenda_limit"], "8"));
+      for (const record of data.records.slice(0, Number.isFinite(maxAgenda) ? maxAgenda : 8)) {
         node.insertAdjacentHTML(
           "beforeend",
           `<div><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
@@ -800,7 +953,11 @@ HTML_PAGE = r"""<!doctype html>
       }
     }
     async function loadStatus() {
-      const data = await api("/api/status?active=true");
+      const params = query();
+      const statusParams = new URLSearchParams();
+      statusParams.set("active", firstParam(params, ["active"], "true"));
+      if (params.has("person")) statusParams.set("person", params.get("person"));
+      const data = await api(`/api/status?${statusParams}`);
       const node = document.getElementById("status");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No active status.</div>`;
       for (const record of data.records) {
@@ -818,6 +975,7 @@ HTML_PAGE = r"""<!doctype html>
     async function refreshAll() {
       await Promise.all([loadItems(), loadAgenda(), loadStatus()]);
     }
+    applyUrlToControls();
     refreshAll().catch(error => {
       document.body.insertAdjacentHTML("beforeend", `<pre class="diagnostic">${escapeHtml(error.message)}</pre>`);
     });

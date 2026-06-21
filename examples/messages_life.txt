@@ -1,0 +1,7 @@
+# Message and notification examples
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams project:research
+[ ] M "Send agenda" sender:self recipient:team recipient:bob notify_at:2026-06-07T08:30 channel:slack tag:meeting
+[/] M "Daily standup reminder" sender:lifetxt recipient:self notify_from:2026-06-08T09:00 notify_to:2026-06-08T09:15 channel:desktop repeat:daily
+[>] M "Postpone review request" sender:self recipient:alice moved_to:2026-06-09 reason:"Slides not ready"
+[x] M "Sent review request" sender:self recipient:alice done:2026-06-06T09:05 channel:teams
+[-] M "Cancel outdated reminder" sender:lifetxt recipient:self reason:"No longer needed"

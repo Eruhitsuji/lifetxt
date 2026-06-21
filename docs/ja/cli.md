@@ -644,3 +644,53 @@ python -m lifetxt status life.txt --active
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+## 追加: Message type と external config
+
+### Message type (`M`)
+
+`M` は人から人へのメッセージ、通知予約、配信依頼を記録する type です。
+
+必須 detail:
+
+```txt
+sender recipient
+```
+
+主な推奨 detail:
+
+```txt
+sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+```
+
+例:
+
+```sh
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
+python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
+python -m lifetxt to-json life.txt --type message --sender self --pretty
+```
+
+Message の日時判定では、`notify_at` は時点、`notify_from/notify_to` は通知期間として扱われます。
+
+### external config
+
+任意のコマンドで `--config FILE` を指定できます。省略時は `LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` の順で探索します。
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json config show
+python -m lifetxt agenda --config .lifetxt.json --around now --window 1d
+```
+
+主な config key:
+
+| Key | 意味 |
+|---|---|
+| `paths` | life.txt 読み込み系コマンドの default input files |
+| `write_file` | `serve` の default writable file |
+| `message.default_sender` | type `M` 作成時の default `sender:` |
+| `message.default_channel` | type `M` 作成時の default `channel:` |
+| `web.host`, `web.port` | `serve` の default bind 設定 |
+| `sync_ics.sources` | `sync-ics` の default iCalendar sources |

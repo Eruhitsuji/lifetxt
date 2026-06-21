@@ -3,4 +3,5 @@
 [ ] T Write_Report due:2026-06-12 project:university assignee:alice
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] N Research_Memo project:research

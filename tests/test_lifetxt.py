@@ -85,6 +85,33 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W208" for d in diagnostics))
         self.assertTrue(any(d.code == "W209" for d in diagnostics))
 
+    def test_parse_message_item(self):
+        text = (
+            '[ ] M "Review slides" sender:self recipient:alice '
+            "notify_at:2026-06-06T09:00 channel:teams\n"
+        )
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(1, len(items))
+        self.assertEqual("M", items[0].kind)
+        self.assertEqual(["self"], items[0].details["sender"])
+        self.assertEqual(["alice"], items[0].details["recipient"])
+
+    def test_message_item_requires_sender_and_recipient(self):
+        _items, diagnostics = parse_text("[ ] M Ping notify_at:2026-06-06T09:00\n")
+
+        self.assertTrue(any(d.code == "E205" for d in diagnostics))
+        self.assertTrue(any(d.code == "E206" for d in diagnostics))
+
+    def test_message_notification_period_warns_when_reversed(self):
+        _items, diagnostics = parse_text(
+            "[ ] M Ping sender:self recipient:alice "
+            "notify_from:2026-06-06T17:00 notify_to:2026-06-06T09:00\n"
+        )
+
+        self.assertTrue(any(d.code == "W211" for d in diagnostics))
+
     def test_people_keys_are_known_and_recommended_for_matching_types(self):
         _items, diagnostics = parse_text(
             "[ ] T Write_Report due:2026-06-12 assignee:alice owner:bob\n"
@@ -223,6 +250,29 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertIn("Break", normalized)
         self.assertNotIn("Morning", normalized)
+
+    def test_agenda_cli_message_notification_time(self):
+        text = (
+            "[ ] M Ping sender:self recipient:alice notify_at:2026-06-06T14:15\n"
+            "[ ] M Later sender:self recipient:bob notify_at:2026-06-07T14:15\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--around",
+            "2026-06-06T14:00",
+            "--window",
+            "30m",
+            "--recipient",
+            "alice",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Ping", normalized)
+        self.assertNotIn("Later", normalized)
 
     def test_agenda_cli_json_output(self):
         text = (
@@ -1043,6 +1093,32 @@ class LifeTxtIcsSyncCliTests(unittest.TestCase):
         self.assertIn("Specify at least one --url or --url-env.", stderr)
 
 
+class LifeTxtConfigCliTests(unittest.TestCase):
+    def test_config_init_and_show(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, ".lifetxt.json")
+
+            stdout, stderr, code = run_cli("config", "init", "-o", config_path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Wrote", stdout)
+            self.assertTrue(os.path.exists(config_path))
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "config",
+                "show",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual("life.txt", data["write_file"])
+            self.assertEqual("self", data["message"]["default_sender"])
+
+
 class LifeTxtWebAppTests(unittest.TestCase):
     def test_webapp_file_helpers_append_update_and_delete_item(self):
         from lifetxt import webapp
@@ -1097,6 +1173,24 @@ class LifeTxtWebAppTests(unittest.TestCase):
             self.assertEqual(1, response["count"])
             self.assertTrue(response["items"][0]["editable"])
             self.assertEqual("[ ] T First", response["items"][0]["text"])
+
+    def test_webapp_message_payload_helper(self):
+        from lifetxt import webapp
+
+        item = webapp.message_item_from_payload(
+            {
+                "body": "Review slides",
+                "sender": "self",
+                "recipients": ["alice", "bob"],
+                "notify_at": "2026-06-06T09:00",
+                "channel": "teams",
+            }
+        )
+
+        self.assertEqual("M", item.kind)
+        self.assertEqual("Review slides", item.title)
+        self.assertEqual(["self"], item.details["sender"])
+        self.assertEqual(["alice", "bob"], item.details["recipient"])
 
     def test_webapp_sort_items_by_title_and_time(self):
         from lifetxt import webapp
@@ -1216,6 +1310,54 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             "to:2026-06-05T08:30 state:sleeping person:self\n",
             normalize_newlines(stdout),
         )
+
+    def test_assist_message_item_non_interactive(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--type",
+            "message",
+            "--title",
+            "Review Slides",
+            "--sender",
+            "self",
+            "--recipient",
+            "alice",
+            "--notify_at",
+            "2026-06-06T09:00",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[ ] M "Review Slides" sender:self recipient:alice '
+            "notify_at:2026-06-06T09:00\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_assist_message_uses_config_default_sender(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "lifetxt.json")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write('{"message":{"default_sender":"bot"}}')
+
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--config",
+                config_path,
+                "--type",
+                "message",
+                "--title",
+                "Ping",
+                "--recipient",
+                "alice",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertEqual(
+                "[ ] M Ping recipient:alice sender:bot\n",
+                normalize_newlines(stdout),
+            )
 
     def test_assist_people_detail_flags(self):
         stdout, stderr, code = run_cli(

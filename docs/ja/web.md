@@ -126,3 +126,32 @@ editor と filter controls を隠し、自動更新します。
 /?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
 /?mode=display&type=S&active=true&refresh=30
 ```
+
+## 追加: Message API
+
+Message type (`M`) 用に以下の API も提供します。
+
+| Method | Path | 目的 |
+|---|---|---|
+| `GET` | `/api/messages` | type `M` message item を一覧表示 |
+| `POST` | `/api/messages` | message-oriented payload から type `M` item を追記 |
+
+例:
+
+```sh
+curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
+```
+
+payload 例:
+
+```json
+{
+  "title": "Review slides",
+  "sender": "self",
+  "recipients": ["alice", "bob"],
+  "notify_at": "2026-06-06T09:00",
+  "channel": "teams"
+}
+```
+
+GUI と `/api/items`、`/api/agenda` では `sender=VALUE` と `recipient=VALUE` の URL parameter でも絞り込めます。

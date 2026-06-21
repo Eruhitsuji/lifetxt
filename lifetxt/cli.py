@@ -6,6 +6,13 @@ import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .config import (
+    config_paths,
+    config_section,
+    config_template_text,
+    config_write_file,
+    load_config,
+)
 from .agenda import (
     agenda_records,
     agenda_records_to_json,
@@ -45,8 +52,19 @@ from .validator import validate_item
 
 
 def main(argv=None):
+    try:
+        argv, config_path = _extract_config_arg(argv)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.config = config_path
+    try:
+        args.config_data = load_config(config_path)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
     if not hasattr(args, "func"):
         parser.print_help()
         return 2
@@ -57,10 +75,40 @@ def main(argv=None):
         return 1
 
 
+def _extract_config_arg(argv):
+    if argv is None:
+        raw = list(sys.argv[1:])
+    else:
+        raw = list(argv)
+
+    config_path = None
+    cleaned = []
+    index = 0
+    while index < len(raw):
+        value = raw[index]
+        if value == "--config":
+            if index + 1 >= len(raw):
+                raise ValueError("--config requires a path.")
+            config_path = raw[index + 1]
+            index += 2
+            continue
+        if value.startswith("--config="):
+            config_path = value.split("=", 1)[1]
+            index += 1
+            continue
+        cleaned.append(value)
+        index += 1
+    return cleaned, config_path
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="python -m lifetxt",
         description="Parser, validator, converter, and input helper for life.txt.",
+    )
+    parser.add_argument(
+        "--config",
+        help="External JSON config file. May also be set with LIFETXT_CONFIG.",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -179,9 +227,36 @@ def build_parser():
         "--write-file",
         help="File used for create, update, and delete operations. Defaults to the first path.",
     )
-    serve.add_argument("--host", default="127.0.0.1", help="Bind host.")
-    serve.add_argument("--port", type=int, default=8000, help="Bind port.")
+    serve.add_argument("--host", help="Bind host.")
+    serve.add_argument("--port", type=int, help="Bind port.")
     serve.set_defaults(func=command_serve)
+
+    config_command = subparsers.add_parser(
+        "config",
+        help="Create or inspect an external JSON config file.",
+    )
+    config_subparsers = config_command.add_subparsers(dest="config_command")
+    config_init = config_subparsers.add_parser(
+        "init",
+        help="Write a starter config file.",
+    )
+    config_init.add_argument(
+        "-o",
+        "--output",
+        default=".lifetxt.json",
+        help="Config file to write. Defaults to .lifetxt.json.",
+    )
+    config_init.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite the output file if it already exists.",
+    )
+    config_init.set_defaults(func=command_config_init)
+    config_show = config_subparsers.add_parser(
+        "show",
+        help="Print the loaded config as JSON.",
+    )
+    config_show.set_defaults(func=command_config_show)
 
     filter_command = subparsers.add_parser(
         "filter",
@@ -307,6 +382,16 @@ def build_parser():
         "--attendee",
         action="append",
         help="Filter by attendee: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--sender",
+        action="append",
+        help="Filter by sender: value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--recipient",
+        action="append",
+        help="Filter by recipient: value. Can be repeated or comma-separated.",
     )
     agenda.add_argument(
         "--detail",
@@ -454,6 +539,16 @@ def _add_item_filter_arguments(parser):
         help="Filter by attendee detail. Can be repeated or comma-separated.",
     )
     parser.add_argument(
+        "--sender",
+        action="append",
+        help="Filter by sender detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--recipient",
+        action="append",
+        help="Filter by recipient detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
         "--detail",
         action="append",
         default=[],
@@ -474,7 +569,7 @@ def _add_item_filter_arguments(parser):
 
 
 def command_check(args):
-    items, diagnostics = _parse_life_inputs(args.paths)
+    items, diagnostics = _parse_life_inputs(args.paths, _config(args))
 
     if args.format == "json":
         output = json.dumps(
@@ -494,7 +589,7 @@ def command_check(args):
 
 
 def command_to_json(args):
-    items, diagnostics = _parse_or_exit(args.paths)
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
     output = items_to_json(items, pretty=args.pretty)
     write_text(args.output, output + "\n")
@@ -503,7 +598,7 @@ def command_to_json(args):
 
 
 def command_to_jsonl(args):
-    items, diagnostics = _parse_or_exit(args.paths)
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
     output = items_to_jsonl(items)
     if output:
@@ -548,14 +643,21 @@ def command_sync_ics(args):
     items = []
     for index, source in enumerate(sources, 1):
         data = fetch_url(source["url"], args.timeout, args.user_agent, index)
-        if args.cache_dir and not args.dry_run:
+        cache_dir = args.cache_dir or _sync_config(args).get("cache_dir")
+        if cache_dir and not args.dry_run:
             cache_name = _ics_cache_name(source, index)
-            write_bytes(os.path.join(args.cache_dir, cache_name), data)
+            write_bytes(os.path.join(cache_dir, cache_name), data)
+        project = args.project if args.project is not None else source.get("project")
+        if project is None:
+            project = _sync_config(args).get("project")
+        tags = list(args.tag) if args.tag else list(source.get("tags", []))
+        if not tags:
+            tags = list(_sync_config(args).get("tags", []))
         items.extend(
             items_from_ics_text(
                 decode_ics_bytes(data),
-                project=args.project,
-                tags=args.tag,
+                project=project,
+                tags=tags,
             )
         )
 
@@ -565,9 +667,10 @@ def command_sync_ics(args):
     if args.dry_run:
         write_text(None, output)
     else:
-        if args.output:
-            ensure_parent_dir(args.output)
-        write_text(args.output, output)
+        output_path = args.output or _sync_config(args).get("output")
+        if output_path:
+            ensure_parent_dir(output_path)
+        write_text(output_path, output)
     return 0
 
 
@@ -581,15 +684,18 @@ def command_serve(args):
             "Web dependencies are not installed. Run: pip install -r requirements-web.txt"
         ) from exc
 
-    paths = list(args.paths) if args.paths else ["life.txt"]
-    writable_path = args.write_file or paths[0]
-    app = create_app(paths=paths, writable_path=writable_path)
-    uvicorn.run(app, host=args.host, port=args.port)
+    web_config = config_section(_config(args), "web")
+    paths = list(args.paths) if args.paths else config_paths(_config(args)) or ["life.txt"]
+    writable_path = args.write_file or config_write_file(_config(args)) or paths[0]
+    host = args.host or web_config.get("host") or "127.0.0.1"
+    port = args.port or int(web_config.get("port") or 8000)
+    app = create_app(paths=paths, writable_path=writable_path, config=_config(args))
+    uvicorn.run(app, host=host, port=port)
     return 0
 
 
 def command_filter(args):
-    items, diagnostics = _parse_or_exit(args.paths)
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
 
     if args.format == "json":
@@ -608,7 +714,7 @@ def command_filter(args):
 
 
 def command_status(args):
-    items, diagnostics = _parse_or_exit(args.paths)
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
     records = latest_status_records(items, person=args.person, active_only=args.active)
 
     if args.format == "json":
@@ -627,7 +733,7 @@ def command_status(args):
 
 
 def command_agenda(args):
-    items, diagnostics = _parse_or_exit(args.paths)
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
     range_start, range_end = parse_agenda_range(
         start_text=args.start,
         end_text=args.end,
@@ -646,6 +752,8 @@ def command_agenda(args):
         owners=args.owner,
         assignees=args.assignee,
         attendees=args.attendee,
+        senders=args.sender,
+        recipients=args.recipient,
         detail_filters=args.detail,
         text=args.text,
     )
@@ -691,6 +799,7 @@ def command_assist(args):
         item = prompt_item(args)
     else:
         item = build_item_from_args(args)
+    apply_config_defaults_to_item(item, args)
     line = item_to_assisted_line(item)
 
     if not args.no_check:
@@ -709,6 +818,20 @@ def command_assist(args):
     if args.output:
         append_line(args.output, line)
     write_text(None, line + "\n")
+    return 0
+
+
+def command_config_init(args):
+    if os.path.exists(args.output) and not args.force:
+        raise ValueError("Config file already exists. Use --force to overwrite: %s" % args.output)
+    write_text(args.output, config_template_text())
+    write_text(None, "Wrote %s\n" % args.output)
+    return 0
+
+
+def command_config_show(args):
+    output = json.dumps(_public_config(_config(args)), ensure_ascii=False, indent=2)
+    write_text(None, output + "\n")
     return 0
 
 
@@ -771,16 +894,16 @@ def _items_to_life_text(items, canonical=False):
     return text
 
 
-def _parse_or_exit(paths):
-    items, diagnostics = _parse_life_inputs(paths)
+def _parse_or_exit(paths, config=None):
+    items, diagnostics = _parse_life_inputs(paths, config)
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
         raise SystemExit(1)
     return items, diagnostics
 
 
-def _parse_life_inputs(paths):
-    normalized = _normalize_paths(paths)
+def _parse_life_inputs(paths, config=None):
+    normalized = _normalize_paths(paths, config)
     include_source = len(normalized) > 1
     items = []
     diagnostics = []
@@ -818,11 +941,53 @@ def _filter_items_from_args(items, args):
         owners=getattr(args, "owner", None),
         assignees=getattr(args, "assignee", None),
         attendees=getattr(args, "attendee", None),
+        senders=getattr(args, "sender", None),
+        recipients=getattr(args, "recipient", None),
         detail_filters=getattr(args, "detail", None),
         text=getattr(args, "text", None),
         range_start=range_start,
         range_end=range_end,
     )
+
+
+def apply_config_defaults_to_item(item, args):
+    config = _config(args)
+    defaults = config_section(config, "defaults")
+
+    if item.kind == "M":
+        message = config_section(config, "message")
+        sender = message.get("default_sender") or defaults.get("person")
+        if sender and "sender" not in item.details:
+            item.details["sender"] = [str(sender)]
+
+        channel = message.get("default_channel")
+        if channel and "channel" not in item.details:
+            item.details["channel"] = [str(channel)]
+
+        service = message.get("default_service")
+        if service and "service" not in item.details:
+            item.details["service"] = [str(service)]
+
+
+def _config(args):
+    return getattr(args, "config_data", None) or {}
+
+
+def _sync_config(args):
+    return config_section(_config(args), "sync_ics")
+
+
+def _public_config(config):
+    if isinstance(config, dict):
+        data = {}
+        for key, value in config.items():
+            if key == "_path":
+                continue
+            data[key] = _public_config(value)
+        return data
+    if isinstance(config, list):
+        return [_public_config(value) for value in config]
+    return config
 
 
 def _items_from_json_paths(paths):
@@ -839,13 +1004,19 @@ def _items_from_jsonl_paths(paths):
     return items
 
 
-def _normalize_paths(paths):
+def _normalize_paths(paths, config=None):
     if paths is None:
+        configured = config_paths(config)
+        if configured:
+            return configured
         return ["-"]
     if isinstance(paths, str):
         return [paths]
     paths = list(paths)
     if not paths:
+        configured = config_paths(config)
+        if configured:
+            return configured
         return ["-"]
     return paths
 
@@ -935,6 +1106,33 @@ def _ics_sync_sources(args):
         if not url:
             raise ValueError("Environment variable %s is not set or empty." % env_name)
         sources.append({"kind": "env", "name": env_name, "url": url})
+    for source in _sync_config(args).get("sources", []) or []:
+        if not isinstance(source, dict):
+            raise ValueError("sync_ics.sources entries must be objects.")
+        url = source.get("url")
+        kind = "url"
+        name = source.get("name") or "config"
+        if not url and source.get("url_env"):
+            env_name = source.get("url_env")
+            url = os.environ.get(env_name)
+            kind = "env"
+            name = env_name
+            if not url:
+                raise ValueError("Environment variable %s is not set or empty." % env_name)
+        if not url:
+            raise ValueError("sync_ics.sources entry requires url or url_env.")
+        tags = source.get("tags", source.get("tag", []))
+        if isinstance(tags, str):
+            tags = [tags]
+        sources.append(
+            {
+                "kind": kind,
+                "name": name,
+                "url": url,
+                "project": source.get("project"),
+                "tags": tags,
+            }
+        )
     if not sources:
         raise ValueError("Specify at least one --url or --url-env.")
     return sources

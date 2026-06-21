@@ -21,7 +21,7 @@ _DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$")
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _DURATION_RE = re.compile(r"^(\d+)([a-z]*)$")
 
-_POINT_KEYS = ("due", "do", "moved_to")
+_POINT_KEYS = ("due", "do", "moved_to", "notify_at")
 _TABLE_COLUMNS = (
     ("when", "when"),
     ("key", "key"),
@@ -133,6 +133,8 @@ def filter_items(
     owners=None,
     assignees=None,
     attendees=None,
+    senders=None,
+    recipients=None,
     detail_filters=None,
     text=None,
     range_start=None,
@@ -146,6 +148,8 @@ def filter_items(
     owners = _normalize_filter_values(owners)
     assignees = _normalize_filter_values(assignees)
     attendees = _normalize_filter_values(attendees)
+    senders = _normalize_filter_values(senders)
+    recipients = _normalize_filter_values(recipients)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -174,6 +178,10 @@ def filter_items(
             continue
         if attendees and not _item_has_any_detail(item, "attendee", attendees):
             continue
+        if senders and not _item_has_any_detail(item, "sender", senders):
+            continue
+        if recipients and not _item_has_any_detail(item, "recipient", recipients):
+            continue
         if details and not _item_matches_detail_filters(item, details):
             continue
         if text and text not in _item_search_text(item).lower():
@@ -195,6 +203,8 @@ def filter_agenda_records(
     owners=None,
     assignees=None,
     attendees=None,
+    senders=None,
+    recipients=None,
     detail_filters=None,
     text=None,
 ):
@@ -206,6 +216,8 @@ def filter_agenda_records(
     owners = _normalize_filter_values(owners)
     assignees = _normalize_filter_values(assignees)
     attendees = _normalize_filter_values(attendees)
+    senders = _normalize_filter_values(senders)
+    recipients = _normalize_filter_values(recipients)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -229,6 +241,10 @@ def filter_agenda_records(
             continue
         if attendees and not _record_has_any_detail(record, "attendee", attendees):
             continue
+        if senders and not _record_has_any_detail(record, "sender", senders):
+            continue
+        if recipients and not _record_has_any_detail(record, "recipient", recipients):
+            continue
         if details and not _record_matches_detail_filters(record, details):
             continue
         if text and text not in _record_search_text(record).lower():
@@ -240,6 +256,15 @@ def filter_agenda_records(
 def item_time_matches(item, range_start, range_end):
     matches = []
     _add_from_to_matches(matches, item, range_start, range_end)
+    _add_detail_range_matches(
+        matches,
+        item,
+        "notify_from",
+        "notify_to",
+        "notify_from/to",
+        range_start,
+        range_end,
+    )
     _add_point_key_matches(matches, item, range_start, range_end)
     _add_at_matches(matches, item, range_start, range_end)
     _add_on_matches(matches, item, range_start, range_end)
@@ -331,6 +356,43 @@ def _add_from_to_matches(matches, item, range_start, range_end):
         end = _parse_datetime_value(end_text)
         if end is not None:
             _add_match(matches, "to", end, end, range_start, range_end)
+
+
+def _add_detail_range_matches(
+    matches,
+    item,
+    start_key,
+    end_key,
+    range_key,
+    range_start,
+    range_end,
+):
+    starts = item.details.get(start_key, [])
+    ends = item.details.get(end_key, [])
+    for index, start_text in enumerate(starts):
+        start_span = _parse_date_or_datetime_span(start_text)
+        if start_span is None:
+            continue
+        start = start_span[0]
+        end = None
+        if index < len(ends):
+            end_span = _parse_date_or_datetime_span(ends[index])
+            if end_span is not None:
+                end = end_span[1]
+        elif len(ends) == 1:
+            end_span = _parse_date_or_datetime_span(ends[0])
+            if end_span is not None:
+                end = end_span[1]
+        key = range_key if end and end != start else start_key
+        _add_match(matches, key, start, end, range_start, range_end)
+
+    if starts:
+        return
+
+    for end_text in ends:
+        end_span = _parse_date_or_datetime_span(end_text)
+        if end_span is not None:
+            _add_match(matches, end_key, end_span[0], end_span[1], range_start, range_end)
 
 
 def _add_point_key_matches(matches, item, range_start, range_end):

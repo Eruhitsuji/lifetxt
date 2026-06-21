@@ -123,6 +123,7 @@ def validate_item(item):
 
     diagnostics.extend(_validate_event_range(item))
     diagnostics.extend(_validate_status_item(item))
+    diagnostics.extend(_validate_message_item(item))
     return diagnostics
 
 
@@ -287,6 +288,71 @@ def _validate_status_item(item):
     return diagnostics
 
 
+def _validate_message_item(item):
+    if item.kind != "M":
+        return []
+
+    diagnostics = []
+    if "sender" not in item.details:
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                "E205",
+                "Message items require sender:PERSON.",
+                item.line,
+            )
+        )
+
+    if "recipient" not in item.details:
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                "E206",
+                "Message items require recipient:PERSON. Repeat recipient: for multiple recipients.",
+                item.line,
+            )
+        )
+
+    has_notify_from = "notify_from" in item.details
+    has_notify_to = "notify_to" in item.details
+    if has_notify_from != has_notify_to:
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W210",
+                "Notification periods should usually include both notify_from: and notify_to:.",
+                item.line,
+            )
+        )
+
+    if has_notify_from and has_notify_to:
+        start = item.details["notify_from"][0]
+        end = item.details["notify_to"][0]
+        parsed_start = _parse_date_or_datetime(start, is_end=False)
+        parsed_end = _parse_date_or_datetime(end, is_end=True)
+        if parsed_start is not None and parsed_end is not None and parsed_end < parsed_start:
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W211",
+                    "Message notify_to: is earlier than notify_from:.",
+                    item.line,
+                )
+            )
+
+    if item.status == "[N]":
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W212",
+                "Message type M is recommended to use workflow statuses, not [N].",
+                item.line,
+            )
+        )
+
+    return diagnostics
+
+
 def _is_date(value):
     if not _DATE_RE.match(value):
         return False
@@ -319,3 +385,14 @@ def _is_time(value):
 
 def _parse_datetime(value):
     return datetime.strptime(value, "%Y-%m-%dT%H:%M")
+
+
+def _parse_date_or_datetime(value, is_end=False):
+    if _is_datetime(value):
+        return _parse_datetime(value)
+    if _is_date(value):
+        parsed = datetime.strptime(value, "%Y-%m-%d")
+        if is_end:
+            return parsed.replace(hour=23, minute=59)
+        return parsed
+    return None

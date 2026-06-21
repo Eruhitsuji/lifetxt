@@ -145,3 +145,22 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail pri
 ```sh
 python -m unittest discover
 ```
+
+## 追加: Message type と external config
+
+Message records use type `M`. `sender:` と `recipient:` が必須で、`notify_at:` で単一通知時刻、`notify_from:` / `notify_to:` で通知期間を指定できます。
+
+```sh
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
+python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
+```
+
+`agenda` では `notify_at` を時点、`notify_from/notify_to` を通知期間として扱います。Web API では `/api/messages` で Message item の一覧と作成ができます。
+
+External JSON config は `--config FILE`、`LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` で利用できます。
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json config show
+```

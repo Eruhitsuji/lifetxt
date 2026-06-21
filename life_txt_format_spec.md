@@ -3,7 +3,7 @@
 ## 1. Overview
 
 `life.txt` is a one-line-per-item plain-text format for tasks, events,
-deadlines, reminders, habits, status / presence records, and notes.
+deadlines, reminders, habits, status / presence records, messages, and notes.
 
 ```txt
 [status] type title key:value key:value ...
@@ -34,6 +34,7 @@ Blank lines are ignored. Lines beginning with `#` are comments.
 | `H` | Habit | A habit or recurring item |
 | `N` | Note | A note or memo |
 | `S` | Status / Presence status | A current state or presence-state record |
+| `M` | Message | A person-to-person message or notification request |
 
 ## 4. Title And Value Rules
 
@@ -106,9 +107,12 @@ item.
 | `assignee` | Person assigned to do the work | `assignee:alice` |
 | `attendee` | Event participant; repeat for multiple attendees | `attendee:alice` |
 | `person` | Status / presence target; mainly for type `S` | `person:self` |
+| `sender` | Message sender; mainly for type `M` | `sender:self` |
+| `recipient` | Message recipient; repeat for multiple recipients | `recipient:alice` |
 
 Use `person` for the target whose presence state is recorded. For non-status
 items, prefer the more specific `owner`, `assignee`, or `attendee`.
+Use `sender` and `recipient` for message delivery records.
 
 ### 7.3 Time Keys
 
@@ -121,15 +125,28 @@ items, prefer the more specific `owner`, `assignee`, or `attendee`.
 | `due` | Deadline date or datetime | `due:2026-06-12` |
 | `do` | Planned execution date or datetime | `do:2026-06-10` |
 | `done` | Completion date or datetime | `done:2026-06-05` |
+| `notify_at` | Message notification date or datetime | `notify_at:2026-06-06T09:00` |
+| `notify_from` | Notification period start | `notify_from:2026-06-06T09:00` |
+| `notify_to` | Notification period end | `notify_to:2026-06-06T17:00` |
 
-### 7.4 Workflow Keys
+### 7.4 Message Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `sender` | Message sender | `sender:self` |
+| `recipient` | Message recipient; repeat for multiple recipients | `recipient:alice` |
+| `notify_at` | One notification time | `notify_at:2026-06-06T09:00` |
+| `notify_from`, `notify_to` | Notification period | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
+| `channel` | Delivery channel or route | `channel:teams` |
+
+### 7.5 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.5 System Keys
+### 7.6 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -144,8 +161,9 @@ items, prefer the more specific `owner`, `assignee`, or `attendee`.
 | `YYYY-MM-DDTHH:MM` | Local datetime | `from:2026-06-08T13:00` |
 | `HH:MM` | Time only | `at:18:00` |
 
-Range-based tools may treat `from/to` and `on` as intervals. They may treat
-`due`, `do`, `at`, and `moved_to` as point times or all-day spans.
+Range-based tools may treat `from/to`, `notify_from/notify_to`, and `on` as
+intervals. They may treat `due`, `do`, `at`, `moved_to`, and `notify_at` as
+point times or all-day spans.
 
 ## 9. Type-Specific Recommended Keys
 
@@ -324,6 +342,42 @@ Example:
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 ```
 
+### 9.8 Message (`M`)
+
+Use `M` for a person-to-person message, a queued notification, or a delivery
+request. `M` records are not an external messaging API by themselves; they are
+a structured life.txt record that tools can show, filter, or send later.
+
+Required keys:
+
+```txt
+sender recipient
+```
+
+Recommended keys:
+
+```txt
+sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `sender` | Person or agent sending the message |
+| `recipient` | Person receiving the message; repeat for multiple recipients |
+| `notify_at` | Single notification or delivery time |
+| `notify_from`, `notify_to` | Notification window or delivery period |
+| `channel` | Delivery route such as `teams`, `discord`, `slack`, or `email` |
+| `service` | Source or target service |
+| `priority`, `project`, `tag`, `note`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |
+
+Examples:
+
+```txt
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[/] M "Daily reminder" sender:lifetxt recipient:self notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00 channel:desktop
+[x] M "Sent review request" sender:self recipient:alice done:2026-06-06T09:05
+```
+
 ## 10. Status-Specific Recommended Keys
 
 These recommendations depend on the workflow status value. They are secondary to
@@ -351,6 +405,7 @@ Use these to show what is currently being worked on and when it was last
 updated.
 
 For `S`, `[/]` is recommended when `to:` is absent.
+For `M`, `[/]` can mean the notification is active or delivery is in progress.
 
 ### 10.3 Completed (`[x]`)
 
@@ -363,6 +418,7 @@ done project tag note
 Use `done:` to record completion time.
 
 For `S`, `[x]` is recommended when `to:` is present.
+For `M`, `[x]` can mean the message was sent, delivered, or otherwise completed.
 
 ### 10.4 Canceled (`[-]`)
 
@@ -373,6 +429,7 @@ reason updated note
 ```
 
 Use `reason:` to explain why the item was canceled.
+For `M`, `[-]` can mean the message or notification was canceled.
 
 ### 10.5 Deferred Or Moved (`[>]`)
 
@@ -383,6 +440,7 @@ moved_to reason updated note
 ```
 
 Use `moved_to:` for the new date or replacement item.
+For `M`, `[>]` can mean delivery was postponed.
 
 ### 10.6 Pending Or Uncertain (`[?]`)
 
@@ -393,6 +451,7 @@ note updated
 ```
 
 Use `note:` for what is uncertain or what is waiting for confirmation.
+For `M`, `[?]` can mean delivery state or recipient response is unknown.
 
 ### 10.7 Note Status (`[N]`)
 
@@ -446,7 +505,7 @@ The note status `[N]` should normally be used only with note type `N`.
 life_file     = { blank_line | comment_line | item_line } ;
 item_line     = status, space, type, space, string, { space, detail } ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" ;
+type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" ;
 detail        = key, ":", string ;
 key           = bare_key ;
 string        = bare_string | quoted_string ;
@@ -461,5 +520,6 @@ space         = " " ;
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
 [x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] N "Use more figures in the next presentation" project:research
 ```

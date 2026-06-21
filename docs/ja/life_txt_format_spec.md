@@ -1,9 +1,8 @@
-# life.txt 形式仕様
+# life.txt フォーマット仕様
 
 ## 1. 概要
 
-`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状態、メモを
-1 item 1 行で記録するプレーンテキスト形式です。
+`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状況、メッセージ、メモを 1 item 1 行で記録するプレーンテキスト形式です。
 
 ```txt
 [status] type title key:value key:value ...
@@ -21,7 +20,7 @@
 | `[-]` | キャンセル |
 | `[>]` | 延期または移動 |
 | `[?]` | 保留または不確定 |
-| `[N]` | ノート |
+| `[N]` | Note |
 
 ## 3. type 値
 
@@ -34,16 +33,17 @@
 | `H` | Habit | 習慣、繰り返し item |
 | `N` | Note | メモ |
 | `S` | Status / Presence status | 現在状態、在席状態 |
+| `M` | Message | 人から人へのメッセージ、通知依頼 |
 
 ## 4. title と value の規則
 
-title と detail value は、空白やダブルクォートを含まない場合は裸の文字列として書けます。
+title と detail value は、空白やダブルクォートを含まない場合は bare string として書けます。
 
 ```txt
 [ ] T Write_Report due:2026-06-12
 ```
 
-空白を含む場合はダブルクォートで囲みます。
+空白を含む場合は `"` で囲みます。
 
 ```txt
 [ ] E "Research Meeting" from:2026-06-08T13:00 to:2026-06-08T14:30
@@ -69,21 +69,15 @@ loc:"Meeting Room A"
 [ ] T Create_Slides project:research tag:important tag:thesis tag:presentation
 ```
 
-custom key は許可されます。パーサは未知の key を可能な限り保持するべきです。
+custom key は許可されます。パーサは未知の key を可能な限り保持します。
 
 ## 6. detail key の考え方
 
-この形式では、known key と recommended key を分けて考えます。
-
 - known key は、ツールが検証、補完、ヘルプで認識する key です。
-- recommended key は、type や status ごとに最初に提示すべき短い推奨 key です。
-- custom key も構文上は有効で、保持されるべきです。
-
-この分離により、形式の拡張性を保ちながら対話ヘルプを短くできます。
+- recommended key は、type や status ごとに最初に提示する短い推奨 key です。
+- custom key も構文上は有効で、保持されます。
 
 ## 7. 基本 key group
-
-以下は共通語彙の説明です。すべての item に必須という意味ではありません。
 
 ### 7.1 Common keys
 
@@ -91,8 +85,8 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 |---|---|---|
 | `id` | 安定した item ID | `id:task_001` |
 | `parent` | 親 item ID | `parent:task_001` |
-| `project` | プロジェクトまたは作業領域 | `project:research` |
-| `tag` | 自由タグ。複数回指定可能 | `tag:important` |
+| `project` | プロジェクト、作業領域 | `project:research` |
+| `tag` | 自由タグ。複数指定可 | `tag:important` |
 | `note` | 短い補足メモ | `note:"Check later"` |
 | `url` | 関連 URL | `url:https://example.com` |
 
@@ -102,11 +96,12 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 |---|---|---|
 | `owner` | item に責任を持つ人 | `owner:alice` |
 | `assignee` | 作業を担当する人 | `assignee:alice` |
-| `attendee` | 予定の参加者。複数回指定可能 | `attendee:alice` |
+| `attendee` | 予定の参加者。複数指定可 | `attendee:alice` |
 | `person` | status / presence の対象者。主に type `S` 用 | `person:self` |
+| `sender` | メッセージ送信元。主に type `M` 用 | `sender:self` |
+| `recipient` | メッセージ送信先。複数指定可 | `recipient:alice` |
 
-`person` は在席状態を記録する対象者に使います。`S` 以外では、より具体的な
-`owner`、`assignee`、`attendee` を優先してください。
+`person` は在席状態を記録する対象者に使います。type `S` 以外では、`owner`、`assignee`、`attendee` のような具体的な key を優先します。Message では `sender` と `recipient` を使います。
 
 ### 7.3 Time keys
 
@@ -115,19 +110,32 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `from` | 期間の開始日時 | `from:2026-06-08T13:00` |
 | `to` | 期間の終了日時 | `to:2026-06-08T14:30` |
 | `on` | 終日の日付 | `on:2026-06-08` |
-| `at` | リマインドまたは実行時刻 | `at:18:00` |
+| `at` | リマインダーまたは実行時刻 | `at:18:00` |
 | `due` | 締切日または締切日時 | `due:2026-06-12` |
 | `do` | 実行予定日または実行予定日時 | `do:2026-06-10` |
 | `done` | 完了日または完了日時 | `done:2026-06-05` |
+| `notify_at` | メッセージ通知日または通知日時 | `notify_at:2026-06-06T09:00` |
+| `notify_from` | 通知期間の開始 | `notify_from:2026-06-06T09:00` |
+| `notify_to` | 通知期間の終了 | `notify_to:2026-06-06T17:00` |
 
-### 7.4 Workflow keys
+### 7.4 Message keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `sender` | メッセージ送信元 | `sender:self` |
+| `recipient` | メッセージ送信先。複数指定可 | `recipient:alice` |
+| `notify_at` | 単一の通知時刻 | `notify_at:2026-06-06T09:00` |
+| `notify_from`, `notify_to` | 通知期間 | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
+| `channel` | 配信経路 | `channel:teams` |
+
+### 7.5 Workflow keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
 | `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
 
-### 7.5 System keys
+### 7.6 System keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -142,30 +150,15 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `YYYY-MM-DDTHH:MM` | ローカル日時 | `from:2026-06-08T13:00` |
 | `HH:MM` | 時刻のみ | `at:18:00` |
 
-範囲ベースのツールでは、`from/to` と `on` を期間として扱えます。
-`due`、`do`、`at`、`moved_to` は時点または終日範囲として扱えます。
+範囲ベースのツールでは、`from/to`、`notify_from/notify_to`、`on` を期間として扱えます。`due`、`do`、`at`、`moved_to`、`notify_at` は時点または終日範囲として扱えます。
 
 ## 9. type 別 recommended keys
 
 ### 9.1 Task (`T`)
 
-`T` は完了できる作業に使います。
-
-推奨 key:
-
 ```txt
 do due priority assignee owner est project tag note id parent
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `do` | いつ作業するか |
-| `due` | いつまでに終えるか |
-| `priority` | 相対的な重要度 |
-| `assignee` | task を担当する人 |
-| `owner` | task に責任を持つ人 |
-| `est` | 見積作業量 |
-| `project`, `tag`, `note`, `id`, `parent` | 整理と文脈付け |
 
 例:
 
@@ -175,22 +168,9 @@ do due priority assignee owner est project tag note id parent
 
 ### 9.2 Event (`E`)
 
-`E` はカレンダー予定に使います。
-
-推奨 key:
-
 ```txt
 from to on loc attendee owner project tag note
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `from`, `to` | 時刻付き予定の期間 |
-| `on` | 終日予定の日付 |
-| `loc` | 場所 |
-| `attendee` | 予定の参加者。複数回指定可能 |
-| `owner` | 予定 record に責任を持つ人 |
-| `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
 
@@ -200,21 +180,9 @@ from to on loc attendee owner project tag note
 
 ### 9.3 Deadline (`D`)
 
-`D` は予定そのものではない重要な締切に使います。
-
-推奨 key:
-
 ```txt
 due priority owner assignee project tag note
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `due` | 必須の締切 |
-| `priority` | 相対的な重要度 |
-| `owner` | 締切に責任を持つ人 |
-| `assignee` | 関連作業を担当する人 |
-| `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
 
@@ -224,20 +192,9 @@ due priority owner assignee project tag note
 
 ### 9.4 Reminder (`R`)
 
-`R` は特定の日付、時刻、日時でのリマインダーに使います。
-
-推奨 key:
-
 ```txt
 at on owner project context note
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `at` | リマインド時刻または日時 |
-| `on` | `at:` が時刻のみの場合の日付 |
-| `owner` | reminder に責任を持つ人 |
-| `project`, `context`, `note` | 整理と文脈付け |
 
 例:
 
@@ -247,20 +204,9 @@ at on owner project context note
 
 ### 9.5 Habit (`H`)
 
-`H` は繰り返し行う行動に使います。
-
-推奨 key:
-
 ```txt
 repeat at on owner project tag note
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `repeat` | 繰り返し規則 |
-| `at`, `on` | 時刻または日付の基準 |
-| `owner` | habit に責任を持つ人 |
-| `project`, `tag`, `note` | 整理と文脈付け |
 
 例:
 
@@ -270,20 +216,9 @@ repeat at on owner project tag note
 
 ### 9.6 Note (`N`)
 
-`N` はメモや覚え書きに使います。
-
-推奨 key:
-
 ```txt
 project context tag note url id parent
 ```
-
-| Key | 推奨理由 |
-|---|---|
-| `project`, `context`, `tag` | 整理と検索 |
-| `note` | title が短い場合の補足本文 |
-| `url` | 関連資料 |
-| `id`, `parent` | 他 item との関連付け |
 
 例:
 
@@ -307,92 +242,100 @@ from state
 from state to person service loc project note visibility
 ```
 
-| Key | 推奨理由 |
-|---|---|
-| `from` | 状態の開始日時 |
-| `state` | 在席状態 |
-| `to` | 終了済みログの終了日時 |
-| `person` | 状態の対象者 |
-| `service` | 由来または対象サービス |
-| `loc`, `project`, `note`, `visibility` | 文脈と公開範囲 |
+`to:` がない場合は現在有効な状態として扱えます。`to:` がある場合は過去の状態ログとして扱えます。
 
 例:
 
 ```txt
 [/] S Working from:2026-06-06T14:00 state:busy person:self
+[x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+```
+
+### 9.8 Message (`M`)
+
+`M` は人から人へのメッセージ、通知予約、配信依頼を記録するための type です。外部サービスへの送信 API そのものではなく、life.txt 上で構造化して保持し、ツールが表示、絞り込み、後続処理に使える record です。
+
+必須 key:
+
+```txt
+sender recipient
+```
+
+推奨 key:
+
+```txt
+sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+```
+
+| Key | 推奨理由 |
+|---|---|
+| `sender` | 送信元の人または agent |
+| `recipient` | 送信先。複数人には key を繰り返す |
+| `notify_at` | 単一の通知または配信時刻 |
+| `notify_from`, `notify_to` | 通知可能期間、配信期間 |
+| `channel` | `teams`、`discord`、`slack`、`email` などの経路 |
+| `service` | 由来または対象サービス |
+| `priority`, `project`, `tag`, `note`, `url`, `id`, `parent`, `created`, `updated` | 経路、文脈、追跡性 |
+
+例:
+
+```txt
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[/] M "Daily reminder" sender:lifetxt recipient:self notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00 channel:desktop
+[x] M "Sent review request" sender:self recipient:alice done:2026-06-06T09:05
 ```
 
 ## 10. status 別 recommended keys
 
-以下は workflow status 値ごとの推奨です。type 別推奨 key を補助するものです。
-
 ### 10.1 Not Completed (`[ ]`)
-
-推奨 key:
 
 ```txt
 do due priority project tag note
 ```
 
-未完了の作業を計画するために使います。
+未完了の作業や未送信の Message に使います。
 
 ### 10.2 In Progress (`[/]`)
-
-推奨 key:
 
 ```txt
 do due project context note updated
 ```
 
-現在作業中の内容と最終更新を示すために使います。
-
-`S` では、`to:` がない現在有効な状態に `[/]` を推奨します。
+`S` では、`to:` がない現在有効な状態に `[/]` を推奨します。`M` では通知が有効、または配信中であることを表せます。
 
 ### 10.3 Completed (`[x]`)
-
-推奨 key:
 
 ```txt
 done project tag note
 ```
 
-`done:` で完了時刻を記録します。
-
-`S` では、`to:` がある終了済みログに `[x]` を推奨します。
+`S` では、`to:` がある終了済みログに `[x]` を推奨します。`M` では送信済み、配信済み、または完了を表せます。
 
 ### 10.4 Canceled (`[-]`)
-
-推奨 key:
 
 ```txt
 reason updated note
 ```
 
-`reason:` でキャンセル理由を記録します。
+`M` ではメッセージまたは通知のキャンセルを表せます。
 
 ### 10.5 Deferred Or Moved (`[>]`)
-
-推奨 key:
 
 ```txt
 moved_to reason updated note
 ```
 
-`moved_to:` で新しい日付や置き換え item を記録します。
+`M` では配信延期を表せます。
 
 ### 10.6 Pending Or Uncertain (`[?]`)
-
-推奨 key:
 
 ```txt
 note updated
 ```
 
-不確定な点や確認待ちの内容を `note:` に書きます。
+`M` では配信状態や相手の応答が不明な状態を表せます。
 
 ### 10.7 Note Status (`[N]`)
-
-推奨 key:
 
 ```txt
 project context tag note url
@@ -421,12 +364,6 @@ type `S` の `state:` 推奨値:
 
 `person:` が省略された場合、ツールは `self` と解釈してよいです。
 
-ツールは `person:` ごとに `from:` が最も新しい `S` item を選び、最新の
-在席状態として集約できます。
-
-`to:` がない場合、範囲ベースのツールは `from:` 以降継続中として扱えます。
-`to:` がある場合、`from/to` を状態の期間として扱えます。
-
 ## 12. Note ルール
 
 note status `[N]` は通常 note type `N` と組み合わせます。
@@ -441,7 +378,7 @@ note status `[N]` は通常 note type `N` と組み合わせます。
 life_file     = { blank_line | comment_line | item_line } ;
 item_line     = status, space, type, space, string, { space, detail } ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" ;
+type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" ;
 detail        = key, ":", string ;
 key           = bare_key ;
 string        = bare_string | quoted_string ;
@@ -456,5 +393,6 @@ space         = " " ;
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [/] S "Research Focus" from:2026-06-06T16:00 state:focus person:self note:"Replies may be slow"
 [x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] N "Use more figures in the next presentation" project:research
 ```

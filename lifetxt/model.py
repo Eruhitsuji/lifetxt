@@ -2,18 +2,24 @@ from collections import OrderedDict
 
 
 VALID_STATUSES = ("[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]")
-VALID_TYPES = ("T", "E", "D", "R", "H", "N", "S")
+VALID_TYPES = ("T", "E", "D", "R", "H", "N", "S", "M")
 
 STATUS_ALIASES = {
     "todo": "[ ]",
     "open": "[ ]",
     "not_completed": "[ ]",
+    "queued": "[ ]",
+    "scheduled": "[ ]",
     "progress": "[/]",
     "in_progress": "[/]",
     "doing": "[/]",
+    "active": "[/]",
+    "sending": "[/]",
     "done": "[x]",
     "complete": "[x]",
     "completed": "[x]",
+    "sent": "[x]",
+    "delivered": "[x]",
     "cancel": "[-]",
     "canceled": "[-]",
     "cancelled": "[-]",
@@ -48,6 +54,10 @@ TYPE_ALIASES = {
     "presence_status": "S",
     "status": "S",
     "state": "S",
+    "message": "M",
+    "msg": "M",
+    "mail": "M",
+    "notification": "M",
 }
 
 KNOWN_KEYS = (
@@ -65,8 +75,14 @@ KNOWN_KEYS = (
     "owner",
     "assignee",
     "attendee",
+    "sender",
+    "recipient",
     "service",
+    "channel",
     "visibility",
+    "notify_at",
+    "notify_from",
+    "notify_to",
     "on",
     "at",
     "repeat",
@@ -85,6 +101,14 @@ KNOWN_KEYS = (
 COMMON_RECOMMENDED_KEYS = ("id", "parent", "project", "tag", "note", "url")
 PEOPLE_RECOMMENDED_KEYS = ("owner", "assignee", "attendee", "person")
 TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
+MESSAGE_RECOMMENDED_KEYS = (
+    "sender",
+    "recipient",
+    "notify_at",
+    "notify_from",
+    "notify_to",
+    "channel",
+)
 WORKFLOW_RECOMMENDED_KEYS = ("reason", "moved_to")
 SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
 
@@ -92,6 +116,7 @@ RECOMMENDED_KEY_GROUPS = (
     ("Common", COMMON_RECOMMENDED_KEYS),
     ("People", PEOPLE_RECOMMENDED_KEYS),
     ("Time", TIME_RECOMMENDED_KEYS),
+    ("Message", MESSAGE_RECOMMENDED_KEYS),
     ("Workflow", WORKFLOW_RECOMMENDED_KEYS),
     ("System", SYSTEM_RECOMMENDED_KEYS),
 )
@@ -170,6 +195,24 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "note",
         "visibility",
     ),
+    "M": (
+        "sender",
+        "recipient",
+        "notify_at",
+        "notify_from",
+        "notify_to",
+        "channel",
+        "service",
+        "priority",
+        "project",
+        "tag",
+        "note",
+        "url",
+        "id",
+        "parent",
+        "created",
+        "updated",
+    ),
 }
 
 RECOMMENDED_KEYS_BY_STATUS = {
@@ -192,6 +235,9 @@ DATE_OR_DATETIME_KEYS = (
     "due",
     "do",
     "moved_to",
+    "notify_at",
+    "notify_from",
+    "notify_to",
 )
 TIME_OR_DATETIME_KEYS = ("at",)
 SIMPLE_REPEAT_VALUES = ("daily", "weekly", "monthly", "yearly")

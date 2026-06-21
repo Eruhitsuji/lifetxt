@@ -20,6 +20,7 @@ TYPE_DESCRIPTIONS = (
     ("H", "Habit", "A recurring habit, usually with repeat:."),
     ("N", "Note", "A note or memo. Usually uses status [N]."),
     ("S", "Status", "A chat-style presence/current-state record."),
+    ("M", "Message", "A person-to-person message or notification request."),
 )
 
 STATUS_DESCRIPTIONS = (
@@ -57,8 +58,14 @@ DETAIL_DESCRIPTIONS = {
     "owner": ("Person accountable for the item.", "owner:alice"),
     "assignee": ("Person assigned to do the work.", "assignee:alice"),
     "attendee": ("Event participant. Repeat for multiple attendees.", "attendee:alice"),
+    "sender": ("Message sender.", "sender:self"),
+    "recipient": ("Message recipient. Repeat for multiple recipients.", "recipient:alice"),
     "service": ("Source or target service.", "service:teams"),
+    "channel": ("Message channel or delivery route.", "channel:teams"),
     "visibility": ("Visibility scope.", "visibility:team"),
+    "notify_at": ("Notification date or datetime.", "notify_at:2026-06-06T09:00"),
+    "notify_from": ("Notification period start date or datetime.", "notify_from:2026-06-06T09:00"),
+    "notify_to": ("Notification period end date or datetime.", "notify_to:2026-06-06T17:00"),
     "on": ("All-day date.", "on:2026-06-08"),
     "at": ("Reminder or execution time.", "at:18:00"),
     "repeat": ("Recurrence value.", "repeat:daily"),

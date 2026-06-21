@@ -34,6 +34,8 @@ python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-fil
 |---|---|---|
 | `GET` | `/api/health` | Show server paths and writable file |
 | `GET` | `/api/items` | List items with optional filters |
+| `GET` | `/api/messages` | List type `M` message items with message filters |
+| `POST` | `/api/messages` | Append a type `M` message item using a message-oriented payload |
 | `POST` | `/api/items` | Append an item to the writable file |
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
@@ -58,8 +60,21 @@ Examples:
 
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
+curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
+```
+
+Example message payload:
+
+```json
+{
+  "title": "Review slides",
+  "sender": "self",
+  "recipients": ["alice", "bob"],
+  "notify_at": "2026-06-06T09:00",
+  "channel": "teams"
+}
 ```
 
 ## GUI
@@ -106,6 +121,7 @@ Supported parameters:
 | `status=todo` | Filter by status or status alias |
 | `project=VALUE`, `tag=VALUE`, `person=VALUE` | Filter by details |
 | `owner=VALUE`, `assignee=VALUE`, `attendee=VALUE` | Filter by people details |
+| `sender=VALUE`, `recipient=VALUE` | Filter by message details |
 | `sort=line|time|title|type|status|source` | Item sort key |
 | `order=asc|desc` | Item sort order |
 | `limit=N` | Limit item and agenda results |

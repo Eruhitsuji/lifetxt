@@ -25,6 +25,7 @@ python -m lifetxt status [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
 python -m lifetxt serve [path ...]
+python -m lifetxt config init
 ```
 
 | Command | Purpose |
@@ -41,8 +42,26 @@ python -m lifetxt serve [path ...]
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
 | `serve` | Run the optional FastAPI REST API and browser GUI |
+| `config` | Create or inspect an external JSON config file |
 
 ## 2. Common Conventions
+
+### 2.0 External Config
+
+Any command may receive `--config FILE` before or after the subcommand. If it is
+omitted, the CLI checks `LIFETXT_CONFIG`, `.lifetxt.json`, and
+`lifetxt.config.json` in that order.
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json check
+python -m lifetxt agenda --config .lifetxt.json --around now --window 1d
+```
+
+`paths` supplies default input files for life.txt-reading commands, `write_file`
+supplies the default writable file for `serve`, `web` supplies server defaults,
+`message` supplies assist defaults for type `M`, and `sync_ics` supplies default
+calendar sync sources and output.
 
 ### 2.1 Input Paths
 
@@ -172,6 +191,8 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
 | `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
 | `--attendee VALUE` | Filter by `attendee:`; repeatable or comma-separated |
+| `--sender VALUE` | Filter by `sender:`; repeatable or comma-separated |
+| `--recipient VALUE` | Filter by `recipient:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
 | `--after VALUE` | Keep items related to this time or later |
@@ -188,6 +209,7 @@ Examples:
 python -m lifetxt to-json life.txt --open --type task --pretty
 python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
 python -m lifetxt to-json life.txt --assignee alice --pretty
+python -m lifetxt to-json life.txt --recipient alice --type message --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
@@ -329,6 +351,7 @@ Examples:
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
+python -m lifetxt filter life.txt --recipient alice --type message -o alice_messages.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
@@ -382,8 +405,9 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 Range matching rules:
 
 - `from/to` is treated as an interval.
+- `notify_from/notify_to` is treated as a message notification interval.
 - `on` is treated as an all-day interval.
-- `due`, `do`, `at`, and `moved_to` are treated as point times or all-day spans.
+- `due`, `do`, `at`, `moved_to`, and `notify_at` are treated as point times or all-day spans.
 - Type `S` records without `to:` are treated as ongoing from `from:`.
 - `at:HH:MM` is combined with `on:` when present, otherwise with each date in the requested range.
 
@@ -434,6 +458,8 @@ python -m lifetxt agenda life.txt --around now --window 1w
 | `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
 | `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
 | `--attendee VALUE` | Filter by `attendee:`; repeatable or comma-separated |
+| `--sender VALUE` | Filter by `sender:`; repeatable or comma-separated |
+| `--recipient VALUE` | Filter by `recipient:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
 
@@ -444,6 +470,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
 ```
@@ -483,6 +510,7 @@ python -m lifetxt assist [options]
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
 ```
 
 Core options:
@@ -501,7 +529,8 @@ Known detail keys also have direct flags. Each can be repeated:
 
 ```txt
 --id --parent --created --updated --done --due --do --from --to
---state --person --owner --assignee --attendee --service --visibility --on --at --repeat
+--state --person --owner --assignee --attendee --sender --recipient --service --channel
+--visibility --notify_at --notify_from --notify_to --on --at --repeat
 --project --context --loc --priority --est --tag --note --url
 --reason --moved_to
 ```
@@ -580,18 +609,60 @@ Options:
 | `--host HOST` | Bind host; defaults to `127.0.0.1` |
 | `--port PORT` | Bind port; defaults to `8000` |
 
-The REST API includes `/api/items`, `/api/agenda`, `/api/status`, and
+The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.
 
-## 11. Aliases
+## 11. `config`
+
+Create or inspect an external JSON config file.
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json config show
+```
+
+Example config:
+
+```json
+{
+  "paths": ["life.txt", ".generated/google_calendar.life.txt"],
+  "write_file": "life.txt",
+  "defaults": {
+    "person": "self",
+    "timezone": "Asia/Tokyo"
+  },
+  "message": {
+    "default_sender": "self",
+    "default_channel": "lifetxt"
+  },
+  "web": {
+    "host": "127.0.0.1",
+    "port": 8000,
+    "display_refresh": 60
+  },
+  "sync_ics": {
+    "output": ".generated/google_calendar.life.txt",
+    "cache_dir": ".cache/lifetxt",
+    "sources": [
+      {
+        "name": "google",
+        "url_env": "LIFETXT_GOOGLE_CAL_ICS",
+        "tags": ["google"]
+      }
+    ]
+  }
+}
+```
+
+## 12. Aliases
 
 Status aliases include:
 
 | Alias | Status |
 |---|---|
-| `todo`, `open` | `[ ]` |
-| `progress`, `doing`, `in_progress` | `[/]` |
-| `done`, `complete`, `completed` | `[x]` |
+| `todo`, `open`, `queued`, `scheduled` | `[ ]` |
+| `progress`, `doing`, `in_progress`, `active`, `sending` | `[/]` |
+| `done`, `complete`, `completed`, `sent`, `delivered` | `[x]` |
 | `cancel`, `canceled`, `cancelled` | `[-]` |
 | `defer`, `deferred`, `moved` | `[>]` |
 | `pending`, `unknown` | `[?]` |
@@ -608,8 +679,9 @@ Type aliases include:
 | `habit`, `recurring` | `H` |
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
+| `message`, `msg`, `mail`, `notification` | `M` |
 
-## 12. Practical Workflows
+## 13. Practical Workflows
 
 Validate and convert:
 
@@ -625,6 +697,7 @@ Create filtered life.txt files:
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
+python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
 ```
 
 Import calendar events:

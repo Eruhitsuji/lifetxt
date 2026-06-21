@@ -14,7 +14,7 @@ from .status_summary import latest_status_records
 from .validator import validate_item
 
 
-def create_app(paths=None, writable_path=None):
+def create_app(paths=None, writable_path=None, config=None):
     try:
         from fastapi import Body, FastAPI, HTTPException, Query
         from fastapi.responses import HTMLResponse
@@ -26,6 +26,7 @@ def create_app(paths=None, writable_path=None):
     app = FastAPI(title="life.txt API", version="0.1.0")
     app.state.paths = normalize_server_paths(paths)
     app.state.writable_path = writable_path or app.state.paths[0]
+    app.state.config = config or {}
 
     def raise_for_errors(diagnostics):
         if _has_error(diagnostics):
@@ -44,6 +45,7 @@ def create_app(paths=None, writable_path=None):
             "ok": True,
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,
+            "config_path": app.state.config.get("_path"),
         }
 
     @app.get("/api/items")
@@ -58,6 +60,8 @@ def create_app(paths=None, writable_path=None):
         owner=None,
         assignee=None,
         attendee=None,
+        sender=None,
+        recipient=None,
         text=None,
         q=None,
         after=None,
@@ -79,6 +83,8 @@ def create_app(paths=None, writable_path=None):
             owners=_csv_values(owner),
             assignees=_csv_values(assignee),
             attendees=_csv_values(attendee),
+            senders=_csv_values(sender),
+            recipients=_csv_values(recipient),
             text=text or q,
             range_start=range_start,
             range_end=range_end,
@@ -100,6 +106,8 @@ def create_app(paths=None, writable_path=None):
         project=None,
         tag=None,
         person=None,
+        sender=None,
+        recipient=None,
         text=None,
         q=None,
         limit=None,
@@ -128,6 +136,8 @@ def create_app(paths=None, writable_path=None):
             projects=_csv_values(project),
             tags=_csv_values(tag),
             persons=_csv_values(person),
+            senders=_csv_values(sender),
+            recipients=_csv_values(recipient),
             text=text or q,
         )
         filtered_ids = set(id(item) for item in filtered_items)
@@ -143,6 +153,50 @@ def create_app(paths=None, writable_path=None):
         raise_for_errors(diagnostics)
         records = latest_status_records(items, person=person, active_only=active)
         return {"count": len(records), "records": records}
+
+    @app.get("/api/messages")
+    def get_messages(
+        open_only=False,
+        status=None,
+        sender=None,
+        recipient=None,
+        project=None,
+        tag=None,
+        text=None,
+        q=None,
+        after=None,
+        before=None,
+        sort="time",
+        order="asc",
+        limit=None,
+    ):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        range_start, range_end = parse_optional_time_range(after, before)
+        filtered = filter_items(
+            items,
+            open_only=open_only,
+            statuses=_csv_values(status),
+            kinds=("M",),
+            projects=_csv_values(project),
+            tags=_csv_values(tag),
+            senders=_csv_values(sender),
+            recipients=_csv_values(recipient),
+            text=text or q,
+            range_start=range_start,
+            range_end=range_end,
+        )
+        filtered = sort_items(filtered, sort, order)
+        filtered = limit_items(filtered, limit)
+        return items_response(filtered, diagnostics, app.state.writable_path)
+
+    @app.post("/api/messages", status_code=201)
+    def create_message(payload=Body(...)):
+        try:
+            item = message_item_from_payload(payload)
+            line = append_item_to_file(app.state.writable_path, item)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"line": line, "item": api_item(item, app.state.writable_path)}
 
     @app.post("/api/items", status_code=201)
     def create_item(payload=Body(...)):
@@ -221,6 +275,9 @@ def sort_items(items, sort_key="line", order="asc"):
         "due",
         "from",
         "to",
+        "notify_at",
+        "notify_from",
+        "notify_to",
         "on",
         "updated",
         "created",
@@ -261,7 +318,19 @@ def sort_key_for_item(item, key_name):
     if key_name == "time":
         return _detail_sort_key(
             item,
-            ("from", "due", "do", "on", "at", "to", "updated", "created"),
+            (
+                "from",
+                "notify_at",
+                "notify_from",
+                "due",
+                "do",
+                "on",
+                "at",
+                "to",
+                "notify_to",
+                "updated",
+                "created",
+            ),
         )
     return _detail_sort_key(item, (key_name,))
 
@@ -300,6 +369,61 @@ def item_from_payload(payload):
     if _has_error(diagnostics):
         raise ValueError([diagnostic.to_dict() for diagnostic in diagnostics])
     return item
+
+
+def message_item_from_payload(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("Message payload must be an object.")
+
+    details = OrderedDict()
+    for key, values in (payload.get("details") or {}).items():
+        if isinstance(values, list):
+            details[key] = list(values)
+        else:
+            details[key] = [values]
+
+    for key in (
+        "sender",
+        "recipient",
+        "notify_at",
+        "notify_from",
+        "notify_to",
+        "channel",
+        "service",
+        "priority",
+        "project",
+        "tag",
+        "note",
+        "url",
+        "id",
+        "parent",
+    ):
+        if key in payload:
+            _append_payload_values(details, key, payload[key])
+
+    if "recipients" in payload:
+        _append_payload_values(details, "recipient", payload["recipients"])
+
+    title = payload.get("title", payload.get("body"))
+    data = {
+        "status": payload.get("status", "[ ]"),
+        "type": "M",
+        "title": title,
+        "details": details,
+    }
+    return item_from_payload(data)
+
+
+def _append_payload_values(details, key, raw_value):
+    if raw_value is None:
+        return
+    if isinstance(raw_value, (list, tuple)):
+        values = raw_value
+    else:
+        values = [raw_value]
+    for value in values:
+        if value is not None and value != "":
+            details.setdefault(key, []).append(value)
 
 
 def append_item_to_file(path, item):
@@ -643,6 +767,7 @@ HTML_PAGE = r"""<!doctype html>
             <option value="H">Habit</option>
             <option value="N">Note</option>
             <option value="S">Status</option>
+            <option value="M">Message</option>
           </select>
           <select id="sort">
             <option value="line">Line</option>
@@ -679,7 +804,7 @@ HTML_PAGE = r"""<!doctype html>
           <label>Type
             <select id="edit-type">
               <option>T</option><option>E</option><option>D</option><option>R</option>
-              <option>H</option><option>N</option><option>S</option>
+              <option>H</option><option>N</option><option>S</option><option>M</option>
             </select>
           </label>
           <label class="wide">Title
@@ -783,7 +908,7 @@ HTML_PAGE = r"""<!doctype html>
       const result = new URLSearchParams();
       const passthrough = [
         "status", "project", "tag", "person", "owner", "assignee", "attendee",
-        "after", "before"
+        "sender", "recipient", "after", "before"
       ];
       for (const key of passthrough) {
         if (params.has(key)) result.set(key, params.get(key));
@@ -807,7 +932,7 @@ HTML_PAGE = r"""<!doctype html>
       for (const key of [
         "mode", "view", "refresh", "around", "window", "from", "to",
         "status", "project", "tag", "person", "owner", "assignee", "attendee",
-        "after", "before"
+        "sender", "recipient", "after", "before"
       ]) {
         if (current.has(key)) next.set(key, current.get(key));
       }
@@ -933,7 +1058,7 @@ HTML_PAGE = r"""<!doctype html>
     async function loadAgenda() {
       const params = query();
       const agendaParams = new URLSearchParams();
-      for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "person", "text", "q", "limit"]) {
+      for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "person", "sender", "recipient", "text", "q", "limit"]) {
         if (params.has(key)) agendaParams.set(key, params.get(key));
       }
       if (!agendaParams.has("around") && !agendaParams.has("from")) agendaParams.set("around", "now");

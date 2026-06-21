@@ -53,6 +53,8 @@ python -m lifetxt filter life.txt --type message --recipient alice -o alice_mess
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
+python -m lifetxt notify life.txt --recipient self
+python -m lifetxt notify life.txt --watch --interval 30
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
@@ -137,12 +139,18 @@ approximated as 365 days.
 Message records use type `M`. They require `sender:` and `recipient:` and can
 use `notify_at:` for one notification time or `notify_from:` / `notify_to:` for
 a notification window. The web API also provides `/api/messages` for convenient
-message listing and creation.
+message listing and creation. `/api/items/id/{id}` and `/api/messages/id/{id}`
+support id-based access, while `/api/messages/thread/{id}` and
+`/api/messages/id/{id}/reply` support message threads via `parent:`.
+
+Use `python -m lifetxt notify life.txt --watch` as a resident notification
+watcher. The browser GUI also has an `Enable Notifications` button that polls
+`/api/notifications` and uses browser notifications after permission is granted.
 
 External JSON config is available with `--config FILE`, `LIFETXT_CONFIG`,
 `.lifetxt.json`, or `lifetxt.config.json`. Use `python -m lifetxt config init`
 to create a starter file with default paths, web settings, message defaults,
-and iCalendar sync sources.
+notification settings, user name, and iCalendar sync sources.
 
 ## JSON Shape
 

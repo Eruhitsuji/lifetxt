@@ -33,14 +33,24 @@ python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-fil
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/health` | Show server paths and writable file |
+| `GET` | `/api/config` | Show public runtime config used by the GUI |
 | `GET` | `/api/items` | List items with optional filters |
+| `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
+| `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
+| `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
+| `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
+| `PUT` | `/api/messages/id/{id}` | Replace a message by exact `id:` in the writable file |
+| `DELETE` | `/api/messages/id/{id}` | Delete a message by exact `id:` in the writable file |
+| `GET` | `/api/messages/thread/{id}` | List messages whose `id:` or `parent:` matches the id |
+| `POST` | `/api/messages/id/{id}/reply` | Append a reply message with `parent:{id}` |
 | `POST` | `/api/messages` | Append a type `M` message item using a message-oriented payload |
 | `POST` | `/api/items` | Append an item to the writable file |
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/status` | Show latest status / presence records |
+| `GET` | `/api/notifications` | Show due message notifications for a recipient |
 
 Example item payload:
 
@@ -60,7 +70,10 @@ Examples:
 
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
+curl "http://127.0.0.1:8000/api/items/id/task_001"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
+curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
+curl "http://127.0.0.1:8000/api/notifications?recipient=self"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
 ```
@@ -86,6 +99,8 @@ The browser GUI supports:
 - URL-driven filters, ordering, limits, and display mode
 - Showing near-current agenda records
 - Showing active status / presence records
+- Showing due message notifications
+- Browser notifications after the user grants permission
 - Creating new items
 - Selecting editable items and saving changes
 - Deleting editable item lines
@@ -128,6 +143,22 @@ Supported parameters:
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
 | `after=VALUE`, `before=VALUE` | Item time filters |
+| `notify_refresh=SECONDS` | Notification polling interval |
+| `notify_lookahead=DURATION` | Future notification lookahead for browser notifications |
+
+## Browser Notifications
+
+The GUI polls `/api/notifications` and shows due type `M` records in the
+Notifications panel. Click `Enable Notifications` to request browser permission
+and receive native browser notifications.
+
+Notification selection uses:
+
+- `recipient=` query parameter, then `person=`, then `notifications.recipient`
+  or `user.name` from config.
+- `notify_at:` for one notification time.
+- `notify_from:` / `notify_to:` for an active notification period.
+- Open workflow statuses only: `[ ]`, `[/]`, `[>]`, and `[?]`.
 
 ## Display Mode
 

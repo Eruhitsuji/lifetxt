@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 from lifetxt.parser import parse_text
@@ -1116,7 +1117,54 @@ class LifeTxtConfigCliTests(unittest.TestCase):
             self.assertEqual(0, code)
             data = json.loads(stdout)
             self.assertEqual("life.txt", data["write_file"])
-            self.assertEqual("self", data["message"]["default_sender"])
+            self.assertEqual("self", data["user"]["name"])
+
+
+class LifeTxtNotifyTests(unittest.TestCase):
+    def test_notification_records_for_recipient(self):
+        from lifetxt.notifier import notification_records
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 note:hello\n"
+            "[ ] M Other id:msg_002 sender:bob recipient:alice "
+            "notify_at:2026-06-06T09:00\n"
+            "[x] M Done id:msg_003 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 done:2026-06-06T09:01\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0),
+        )
+
+        self.assertEqual(1, len(records))
+        self.assertEqual("msg_001", records[0]["id"])
+        self.assertEqual("Ping", records[0]["title"])
+        self.assertEqual("hello", records[0]["body"])
+
+    def test_notify_cli_json_output(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual("msg_001", data[0]["id"])
 
 
 class LifeTxtWebAppTests(unittest.TestCase):
@@ -1191,6 +1239,63 @@ class LifeTxtWebAppTests(unittest.TestCase):
         self.assertEqual("Review slides", item.title)
         self.assertEqual(["self"], item.details["sender"])
         self.assertEqual(["alice", "bob"], item.details["recipient"])
+
+    def test_webapp_message_payload_uses_config_user_name(self):
+        from lifetxt import webapp
+
+        item = webapp.message_item_from_payload(
+            {
+                "title": "Ping",
+                "recipient": "alice",
+            },
+            config={"user": {"name": "me"}},
+        )
+
+        self.assertEqual(["me"], item.details["sender"])
+
+    def test_webapp_update_and_delete_by_id(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_001\n")
+                handle.write("[ ] T Second id:task_002\n")
+
+            updated = webapp.update_item_by_id_in_file(
+                path,
+                "task_001",
+                {"status": "[x]", "details": {"done": ["2026-06-06"]}},
+            )
+            self.assertEqual("[x]", updated.status)
+
+            deleted = webapp.delete_item_by_id_from_file(path, "task_002")
+            self.assertEqual("[ ] T Second id:task_002", deleted)
+
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual("[x] T First done:2026-06-06\n", handle.read())
+
+    def test_webapp_message_reply_payload(self):
+        from lifetxt import webapp
+
+        original = webapp.message_item_from_payload(
+            {
+                "title": "Original",
+                "id": "msg_001",
+                "sender": "alice",
+                "recipient": "self",
+            }
+        )
+        reply = webapp.message_reply_from_payload(
+            original,
+            "msg_001",
+            {"title": "Reply"},
+            {"user": {"name": "self"}},
+        )
+
+        self.assertEqual(["msg_001"], reply.details["parent"])
+        self.assertEqual(["self"], reply.details["sender"])
+        self.assertEqual(["alice"], reply.details["recipient"])
 
     def test_webapp_sort_items_by_title_and_time(self):
         from lifetxt import webapp

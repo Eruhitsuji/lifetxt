@@ -22,6 +22,7 @@ python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
 python -m lifetxt from-jsonl [path ...]
 python -m lifetxt status [path ...]
+python -m lifetxt notify [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
 python -m lifetxt serve [path ...]
@@ -39,6 +40,7 @@ python -m lifetxt config init
 | `from-json` | Convert JSON to life.txt |
 | `from-jsonl` | Convert JSONL to life.txt |
 | `status` | Show the latest `S` status / presence record for each person |
+| `notify` | Show or watch due type `M` message notifications |
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
 | `serve` | Run the optional FastAPI REST API and browser GUI |
@@ -394,7 +396,45 @@ python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
 
-## 8. `agenda`
+## 8. `notify`
+
+Show due type `M` message notifications once, or keep a resident watcher
+running with `--watch`.
+
+```sh
+python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
+```
+
+Selection rules:
+
+- Only type `M` items are considered.
+- Only open workflow statuses are considered: `[ ]`, `[/]`, `[>]`, and `[?]`.
+- `recipient:` must match the selected recipient.
+- `notify_at:` is a one-time notification.
+- `notify_from:` / `notify_to:` is an active notification period.
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input life.txt file(s), or `-` for stdin |
+| `--recipient PERSON` | Recipient; defaults to `notifications.recipient` or `user.name` from config |
+| `--lookahead VALUE` | Future notification window, such as `0m`, `5m`, or `1h` |
+| `--grace VALUE` | Past grace window for missed notifications |
+| `--watch` | Stay running and poll repeatedly |
+| `--interval SECONDS` | Poll interval for `--watch` |
+| `--desktop` | Also show a simple desktop notification when supported |
+| `--format text|json|jsonl` | Output format in one-shot mode |
+
+Examples:
+
+```sh
+python -m lifetxt notify life.txt --recipient self
+python -m lifetxt notify life.txt --recipient self --format json --pretty
+python -m lifetxt notify life.txt --watch --interval 30
+```
+
+## 9. `agenda`
 
 Show items related to a datetime range.
 
@@ -411,7 +451,7 @@ Range matching rules:
 - Type `S` records without `to:` are treated as ongoing from `from:`.
 - `at:HH:MM` is combined with `on:` when present, otherwise with each date in the requested range.
 
-### 8.1 Range Options
+### 9.1 Range Options
 
 | Option | Meaning |
 |---|---|
@@ -445,7 +485,7 @@ python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
 ```
 
-### 8.2 Filter Options
+### 9.2 Filter Options
 
 | Option | Meaning |
 |---|---|
@@ -478,7 +518,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 `--detail key` checks that the key exists. `--detail key=value` checks for an
 exact detail value. Multiple `--detail` filters are ANDed.
 
-### 8.3 Output Options
+### 9.3 Output Options
 
 | Option | Meaning |
 |---|---|
@@ -497,7 +537,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format jso
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 ```
 
-## 9. `assist`
+## 10. `assist`
 
 Create or update life.txt items from flags or prompts.
 
@@ -505,7 +545,7 @@ Create or update life.txt items from flags or prompts.
 python -m lifetxt assist [options]
 ```
 
-### 9.1 Create Non-Interactively
+### 10.1 Create Non-Interactively
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
@@ -535,7 +575,7 @@ Known detail keys also have direct flags. Each can be repeated:
 --reason --moved_to
 ```
 
-### 9.2 Interactive Create
+### 10.2 Interactive Create
 
 ```sh
 python -m lifetxt assist --interactive
@@ -557,7 +597,7 @@ When the terminal supports it, Tab completes type, status, and detail-key
 candidates. Up/Down recall previous inputs. Use `--no-completion` to disable
 line editing helpers.
 
-### 9.3 Update Existing Items
+### 10.3 Update Existing Items
 
 Update an item by line number or by exact `id:` value.
 
@@ -582,7 +622,7 @@ Update options:
 
 Without `--output`, update mode writes back to the input file.
 
-## 10. `serve`
+## 11. `serve`
 
 Run the optional FastAPI REST API and browser GUI.
 
@@ -612,7 +652,7 @@ Options:
 The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.
 
-## 11. `config`
+## 12. `config`
 
 Create or inspect an external JSON config file.
 
@@ -627,18 +667,40 @@ Example config:
 {
   "paths": ["life.txt", ".generated/google_calendar.life.txt"],
   "write_file": "life.txt",
+  "user": {
+    "name": "self",
+    "display_name": "Self"
+  },
   "defaults": {
     "person": "self",
     "timezone": "Asia/Tokyo"
   },
   "message": {
-    "default_sender": "self",
+    "default_sender": "",
     "default_channel": "lifetxt"
+  },
+  "notifications": {
+    "enabled": true,
+    "recipient": "",
+    "lookahead": "0m",
+    "grace": "2m",
+    "poll_seconds": 30,
+    "desktop": false,
+    "web": true
+  },
+  "api": {
+    "id_key": "id",
+    "allow_id_writes": true
   },
   "web": {
     "host": "127.0.0.1",
     "port": 8000,
-    "display_refresh": 60
+    "display_refresh": 60,
+    "notification_poll_seconds": 30,
+    "notification_lookahead": "0m",
+    "default_limit": "",
+    "default_sort": "line",
+    "default_order": "asc"
   },
   "sync_ics": {
     "output": ".generated/google_calendar.life.txt",
@@ -654,7 +716,7 @@ Example config:
 }
 ```
 
-## 12. Aliases
+## 13. Aliases
 
 Status aliases include:
 
@@ -681,7 +743,7 @@ Type aliases include:
 | `status`, `presence`, `presence_status`, `state` | `S` |
 | `message`, `msg`, `mail`, `notification` | `M` |
 
-## 13. Practical Workflows
+## 14. Practical Workflows
 
 Validate and convert:
 

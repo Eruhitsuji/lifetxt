@@ -694,3 +694,35 @@ python -m lifetxt agenda --config .lifetxt.json --around now --window 1d
 | `message.default_channel` | type `M` 作成時の default `channel:` |
 | `web.host`, `web.port` | `serve` の default bind 設定 |
 | `sync_ics.sources` | `sync-ics` の default iCalendar sources |
+## Additional: notify resident app and expanded config
+
+### `notify`
+
+type `M` の通知対象を表示、または `--watch` で常駐 polling します。
+
+```sh
+python -m lifetxt notify life.txt --recipient self
+python -m lifetxt notify life.txt --recipient self --format json --pretty
+python -m lifetxt notify life.txt --watch --interval 30
+```
+
+対象は type `M`、open workflow status (`[ ]`, `[/]`, `[>]`, `[?]`)、`recipient:` が一致する item です。`notify_at:` は単一通知時刻、`notify_from:` / `notify_to:` は通知期間として扱います。
+
+### expanded config
+
+`user.name` で自身のデフォルト名を指定できます。`message.default_sender` が空の場合、Message 作成時の `sender:` は `user.name` になります。
+
+主な追加 config key:
+
+| Key | Meaning |
+|---|---|
+| `user.name` | 自身の標準ユーザ名 |
+| `user.display_name` | UI 表示名 |
+| `notifications.recipient` | 通知対象者。空なら `user.name` |
+| `notifications.lookahead` | 未来方向の通知検出幅 |
+| `notifications.grace` | 過去方向の取りこぼし許容幅 |
+| `notifications.poll_seconds` | 常駐通知と Web 通知の polling 秒数 |
+| `notifications.desktop` | `notify --watch` の簡易 desktop 通知 default |
+| `web.notification_poll_seconds` | Web UI 通知 polling 秒数 |
+| `web.notification_lookahead` | Web UI 通知の未来方向検出幅 |
+| `api.id_key` | id として扱う detail key。現在は `id` |

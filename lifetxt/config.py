@@ -10,6 +10,12 @@ def config_template():
     data = OrderedDict()
     data["paths"] = ["life.txt", ".generated/google_calendar.life.txt"]
     data["write_file"] = "life.txt"
+    data["user"] = OrderedDict(
+        [
+            ("name", "self"),
+            ("display_name", "Self"),
+        ]
+    )
     data["defaults"] = OrderedDict(
         [
             ("person", "self"),
@@ -18,8 +24,25 @@ def config_template():
     )
     data["message"] = OrderedDict(
         [
-            ("default_sender", "self"),
+            ("default_sender", ""),
             ("default_channel", "lifetxt"),
+        ]
+    )
+    data["notifications"] = OrderedDict(
+        [
+            ("enabled", True),
+            ("recipient", ""),
+            ("lookahead", "0m"),
+            ("grace", "2m"),
+            ("poll_seconds", 30),
+            ("desktop", False),
+            ("web", True),
+        ]
+    )
+    data["api"] = OrderedDict(
+        [
+            ("id_key", "id"),
+            ("allow_id_writes", True),
         ]
     )
     data["web"] = OrderedDict(
@@ -27,6 +50,11 @@ def config_template():
             ("host", "127.0.0.1"),
             ("port", 8000),
             ("display_refresh", 60),
+            ("notification_poll_seconds", 30),
+            ("notification_lookahead", "0m"),
+            ("default_limit", ""),
+            ("default_sort", "line"),
+            ("default_order", "asc"),
         ]
     )
     data["sync_ics"] = OrderedDict(
@@ -87,6 +115,26 @@ def config_paths(config):
 def config_write_file(config):
     value = config.get("write_file") if config else None
     return str(value) if value else None
+
+
+def config_user_name(config):
+    user = config_section(config, "user")
+    if user.get("name"):
+        return str(user.get("name"))
+    defaults = config_section(config, "defaults")
+    if defaults.get("person"):
+        return str(defaults.get("person"))
+    message = config_section(config, "message")
+    if message.get("default_sender"):
+        return str(message.get("default_sender"))
+    return "self"
+
+
+def config_notification_recipient(config):
+    notifications = config_section(config, "notifications")
+    if notifications.get("recipient"):
+        return str(notifications.get("recipient"))
+    return config_user_name(config)
 
 
 def config_section(config, name):

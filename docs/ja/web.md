@@ -155,3 +155,21 @@ payload 例:
 ```
 
 GUI と `/api/items`、`/api/agenda` では `sender=VALUE` と `recipient=VALUE` の URL parameter でも絞り込めます。
+## Additional API: id, thread, notifications
+
+以下の endpoint を追加しています。
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/config` | Web UI が使う公開設定を返す |
+| `GET` | `/api/items/id/{id}` | `id:` で item を取得 |
+| `PUT` | `/api/items/id/{id}` | writable file 内の `id:` 一致 item を更新 |
+| `DELETE` | `/api/items/id/{id}` | writable file 内の `id:` 一致 item を削除 |
+| `GET` | `/api/messages/id/{id}` | `id:` で Message を取得 |
+| `PUT` | `/api/messages/id/{id}` | `id:` で Message を更新 |
+| `DELETE` | `/api/messages/id/{id}` | `id:` で Message を削除 |
+| `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を取得 |
+| `POST` | `/api/messages/id/{id}/reply` | `parent:{id}` を持つ返信 Message を作成 |
+| `GET` | `/api/notifications` | `notify_at:` または `notify_from/to:` に基づく通知候補を取得 |
+
+ブラウザでは `Enable Notifications` を押すと Notification API の許可を要求し、許可後に `/api/notifications` を定期 polling して通知します。対象は type `M`、open workflow status、`recipient:` が現在ユーザに一致する item です。

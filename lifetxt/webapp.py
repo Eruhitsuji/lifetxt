@@ -7,7 +7,9 @@ from .agenda import (
     parse_agenda_range,
     parse_optional_time_range,
 )
+from .config import config_notification_recipient, config_section, config_user_name
 from .model import Diagnostic, Item
+from .notifier import notification_records
 from .parser import parse_line, parse_text
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
@@ -46,6 +48,17 @@ def create_app(paths=None, writable_path=None, config=None):
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,
             "config_path": app.state.config.get("_path"),
+            "user": config_user_name(app.state.config),
+        }
+
+    @app.get("/api/config")
+    def get_config():
+        return {
+            "paths": app.state.paths,
+            "writable_path": app.state.writable_path,
+            "user": config_user_name(app.state.config),
+            "notifications": public_notification_config(app.state.config),
+            "web": public_web_config(app.state.config),
         }
 
     @app.get("/api/items")
@@ -154,6 +167,20 @@ def create_app(paths=None, writable_path=None, config=None):
         records = latest_status_records(items, person=person, active_only=active)
         return {"count": len(records), "records": records}
 
+    @app.get("/api/notifications")
+    def get_notifications(recipient=None, lookahead=None, grace=None, limit=None):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        raise_for_errors(diagnostics)
+        notification_config = config_section(app.state.config, "notifications")
+        records = notification_records(
+            items,
+            recipient=recipient or config_notification_recipient(app.state.config),
+            lookahead=lookahead or notification_config.get("lookahead") or "0m",
+            grace=grace or notification_config.get("grace") or "2m",
+        )
+        records = limit_items(records, limit)
+        return {"count": len(records), "records": records}
+
     @app.get("/api/messages")
     def get_messages(
         open_only=False,
@@ -189,10 +216,69 @@ def create_app(paths=None, writable_path=None, config=None):
         filtered = limit_items(filtered, limit)
         return items_response(filtered, diagnostics, app.state.writable_path)
 
+    @app.get("/api/messages/id/{message_id}")
+    def get_message_by_id(message_id):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        raise_for_errors(diagnostics)
+        try:
+            item = find_item_by_id(items, message_id, kind="M")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if item is None:
+            raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
+        return {"item": api_item(item, app.state.writable_path)}
+
+    @app.put("/api/messages/id/{message_id}")
+    def update_message_by_id(message_id, payload=Body(...)):
+        try:
+            item = update_item_by_id_in_file(app.state.writable_path, message_id, payload, kind="M")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+
+    @app.delete("/api/messages/id/{message_id}")
+    def delete_message_by_id(message_id):
+        try:
+            deleted = delete_item_by_id_from_file(app.state.writable_path, message_id, kind="M")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": message_id, "deleted": deleted}
+
+    @app.get("/api/messages/thread/{thread_id}")
+    def get_message_thread(thread_id, limit=None):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        raise_for_errors(diagnostics)
+        thread = []
+        for item in items:
+            if item.kind != "M":
+                continue
+            if thread_id in item.details.get("id", []) or thread_id in item.details.get("parent", []):
+                thread.append(item)
+        thread = sort_items(thread, "time", "asc")
+        thread = limit_items(thread, limit)
+        return items_response(thread, diagnostics, app.state.writable_path)
+
+    @app.post("/api/messages/id/{message_id}/reply", status_code=201)
+    def reply_to_message(message_id, payload=Body(...)):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        raise_for_errors(diagnostics)
+        try:
+            original = find_item_by_id(items, message_id, kind="M")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if original is None:
+            raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
+        try:
+            item = message_reply_from_payload(original, message_id, payload, app.state.config)
+            line = append_item_to_file(app.state.writable_path, item)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"line": line, "item": api_item(item, app.state.writable_path)}
+
     @app.post("/api/messages", status_code=201)
     def create_message(payload=Body(...)):
         try:
-            item = message_item_from_payload(payload)
+            item = message_item_from_payload(payload, app.state.config)
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
@@ -206,6 +292,34 @@ def create_app(paths=None, writable_path=None, config=None):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"line": line, "item": api_item(item, app.state.writable_path)}
+
+    @app.get("/api/items/id/{item_id}")
+    def get_item_by_id(item_id):
+        items, diagnostics = read_life_inputs(app.state.paths)
+        raise_for_errors(diagnostics)
+        try:
+            item = find_item_by_id(items, item_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if item is None:
+            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+        return {"item": api_item(item, app.state.writable_path)}
+
+    @app.put("/api/items/id/{item_id}")
+    def update_item_by_id(item_id, payload=Body(...)):
+        try:
+            item = update_item_by_id_in_file(app.state.writable_path, item_id, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": item_id, "item": api_item(item, app.state.writable_path)}
+
+    @app.delete("/api/items/id/{item_id}")
+    def delete_item_by_id(item_id):
+        try:
+            deleted = delete_item_by_id_from_file(app.state.writable_path, item_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": item_id, "deleted": deleted}
 
     @app.put("/api/items/{line_no}")
     def update_item(line_no, payload=Body(...)):
@@ -258,6 +372,30 @@ def items_response(items, diagnostics, writable_path):
         "count": len(items),
         "items": [api_item(item, writable_path) for item in items],
         "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+    }
+
+
+def public_notification_config(config):
+    notifications = config_section(config, "notifications")
+    return {
+        "enabled": bool(notifications.get("enabled", True)),
+        "recipient": config_notification_recipient(config),
+        "lookahead": notifications.get("lookahead", "0m"),
+        "grace": notifications.get("grace", "2m"),
+        "poll_seconds": int(notifications.get("poll_seconds") or 30),
+        "web": bool(notifications.get("web", True)),
+    }
+
+
+def public_web_config(config):
+    web = config_section(config, "web")
+    return {
+        "display_refresh": int(web.get("display_refresh") or 60),
+        "notification_poll_seconds": int(web.get("notification_poll_seconds") or 30),
+        "notification_lookahead": web.get("notification_lookahead", "0m"),
+        "default_limit": web.get("default_limit", ""),
+        "default_sort": web.get("default_sort", "line"),
+        "default_order": web.get("default_order", "asc"),
     }
 
 
@@ -345,6 +483,8 @@ def _detail_sort_key(item, keys):
 
 def api_item(item, writable_path=None):
     data = item.to_dict()
+    if item.details.get("id"):
+        data["id"] = item.details["id"][0]
     data["line"] = item.line
     data["source"] = getattr(item, "source", None)
     data["text"] = getattr(item, "source_text", None) or item_to_line(item)
@@ -371,7 +511,7 @@ def item_from_payload(payload):
     return item
 
 
-def message_item_from_payload(payload):
+def message_item_from_payload(payload, config=None):
     if not isinstance(payload, dict):
         raise ValueError("Message payload must be an object.")
 
@@ -404,6 +544,18 @@ def message_item_from_payload(payload):
     if "recipients" in payload:
         _append_payload_values(details, "recipient", payload["recipients"])
 
+    if "sender" not in details:
+        sender = config_section(config or {}, "message").get("default_sender")
+        if not sender:
+            sender = config_user_name(config or {})
+        if sender:
+            details["sender"] = [str(sender)]
+
+    if "channel" not in details:
+        channel = config_section(config or {}, "message").get("default_channel")
+        if channel:
+            details["channel"] = [str(channel)]
+
     title = payload.get("title", payload.get("body"))
     data = {
         "status": payload.get("status", "[ ]"),
@@ -412,6 +564,24 @@ def message_item_from_payload(payload):
         "details": details,
     }
     return item_from_payload(data)
+
+
+def message_reply_from_payload(original, original_id, payload, config=None):
+    if not isinstance(payload, dict):
+        raise ValueError("Message reply payload must be an object.")
+    data = dict(payload)
+    details = OrderedDict()
+    for key, values in (payload.get("details") or {}).items():
+        details[key] = list(values) if isinstance(values, list) else [values]
+    details.setdefault("parent", []).append(original_id)
+
+    if "recipient" not in data and "recipients" not in data and "recipient" not in details:
+        sender = original.details.get("sender", [])
+        if sender:
+            details["recipient"] = [sender[0]]
+
+    data["details"] = details
+    return message_item_from_payload(data, config=config)
 
 
 def _append_payload_values(details, key, raw_value):
@@ -424,6 +594,20 @@ def _append_payload_values(details, key, raw_value):
     for value in values:
         if value is not None and value != "":
             details.setdefault(key, []).append(value)
+
+
+def find_item_by_id(items, item_id, kind=None):
+    matches = []
+    for item in items:
+        if kind is not None and item.kind != kind:
+            continue
+        if item_id in item.details.get("id", []):
+            matches.append(item)
+    if not matches:
+        return None
+    if len(matches) > 1:
+        raise ValueError("Multiple items found with id:%s." % item_id)
+    return matches[0]
 
 
 def append_item_to_file(path, item):
@@ -457,6 +641,11 @@ def update_item_in_file(path, line_no, payload):
     return updated
 
 
+def update_item_by_id_in_file(path, item_id, payload, kind=None):
+    line_no, _item = find_item_line_by_id(path, item_id, kind=kind)
+    return update_item_in_file(path, line_no, payload)
+
+
 def delete_item_from_file(path, line_no):
     raw_lines = read_text(path).splitlines(True)
     if line_no < 1 or line_no > len(raw_lines):
@@ -468,6 +657,30 @@ def delete_item_from_file(path, line_no):
     del raw_lines[line_no - 1]
     write_text(path, "".join(raw_lines))
     return item_to_line(item)
+
+
+def delete_item_by_id_from_file(path, item_id, kind=None):
+    line_no, _item = find_item_line_by_id(path, item_id, kind=kind)
+    return delete_item_from_file(path, line_no)
+
+
+def find_item_line_by_id(path, item_id, kind=None):
+    raw_lines = read_text(path).splitlines(True)
+    matches = []
+    for line_no, raw_line in enumerate(raw_lines, 1):
+        body, _ending = split_line_ending(raw_line)
+        item, diagnostics = parse_line(body, line_no)
+        if item is None or _has_error(diagnostics):
+            continue
+        if kind is not None and item.kind != kind:
+            continue
+        if item_id in item.details.get("id", []):
+            matches.append((line_no, item))
+    if not matches:
+        raise ValueError("No writable item found with id:%s." % item_id)
+    if len(matches) > 1:
+        raise ValueError("Multiple writable items found with id:%s." % item_id)
+    return matches[0]
 
 
 def merge_item_payload(item, payload):
@@ -692,6 +905,12 @@ HTML_PAGE = r"""<!doctype html>
       font-family: Consolas, "Courier New", monospace;
       font-size: .86rem;
     }
+    .notification-row {
+      padding: .65rem;
+      border: 1px solid var(--line);
+      border-radius: .55rem;
+      background: #fff;
+    }
     .display-mode {
       background: #0f1412;
       color: #edf4ef;
@@ -749,7 +968,10 @@ HTML_PAGE = r"""<!doctype html>
       <h1>life.txt</h1>
       <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
     </div>
-    <button class="secondary" onclick="refreshAll()">Refresh</button>
+    <div class="toolbar">
+      <button class="secondary" onclick="enableBrowserNotifications()">Enable Notifications</button>
+      <button class="secondary" onclick="refreshAll()">Refresh</button>
+    </div>
   </header>
   <main>
     <section>
@@ -828,12 +1050,20 @@ HTML_PAGE = r"""<!doctype html>
         <div class="section-head"><h2>Status</h2></div>
         <div id="status" class="stack"></div>
       </section>
+      <section>
+        <div class="section-head"><h2>Notifications</h2></div>
+        <div id="notifications" class="stack"></div>
+      </section>
     </div>
   </main>
   <script>
     let currentItems = [];
     let selectedItem = null;
     let refreshTimer = null;
+    let notificationTimer = null;
+    let browserNotificationsEnabled = false;
+    let seenNotifications = new Set();
+    let appConfig = {};
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -890,17 +1120,27 @@ HTML_PAGE = r"""<!doctype html>
       document.body.classList.toggle("display-mode", isDisplayMode());
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       document.getElementById("kind").value = firstParam(params, ["kind", "type"], "");
-      document.getElementById("sort").value = firstParam(params, ["sort"], "line");
-      document.getElementById("order").value = firstParam(params, ["order"], "asc");
+      document.getElementById("sort").value = firstParam(params, ["sort"], appConfig?.web?.default_sort || "line");
+      document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]);
-      document.getElementById("limit").value = firstParam(params, ["limit"], "");
+      document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
       configureAutoRefresh();
+      configureNotificationPolling();
     }
     function configureAutoRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
       const seconds = Number(firstParam(query(), ["refresh"], isDisplayMode() ? "60" : ""));
       if (Number.isFinite(seconds) && seconds > 0) {
         refreshTimer = setInterval(refreshAll, seconds * 1000);
+      }
+    }
+    function configureNotificationPolling() {
+      if (notificationTimer) clearInterval(notificationTimer);
+      if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) return;
+      const fallback = appConfig?.web?.notification_poll_seconds || appConfig?.notifications?.poll_seconds || 30;
+      const seconds = Number(firstParam(query(), ["notify_refresh"], String(fallback)));
+      if (Number.isFinite(seconds) && seconds > 0) {
+        notificationTimer = setInterval(loadNotifications, seconds * 1000);
       }
     }
     function itemQueryParams() {
@@ -1092,16 +1332,66 @@ HTML_PAGE = r"""<!doctype html>
         );
       }
     }
+    async function loadConfig() {
+      appConfig = await api("/api/config");
+    }
+    async function loadNotifications() {
+      if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
+        document.getElementById("notifications").innerHTML = `<div class="empty">Notifications disabled.</div>`;
+        return;
+      }
+      const params = query();
+      const notificationParams = new URLSearchParams();
+      if (params.has("recipient")) notificationParams.set("recipient", params.get("recipient"));
+      else if (params.has("person")) notificationParams.set("recipient", params.get("person"));
+      const lookahead = firstParam(
+        params,
+        ["notify_lookahead"],
+        appConfig?.web?.notification_lookahead || appConfig?.notifications?.lookahead || "0m"
+      );
+      if (lookahead) notificationParams.set("lookahead", lookahead);
+      const data = await api(`/api/notifications?${notificationParams}`);
+      const node = document.getElementById("notifications");
+      node.innerHTML = data.records.length ? "" : `<div class="empty">No notifications.</div>`;
+      for (const record of data.records) {
+        node.insertAdjacentHTML(
+          "beforeend",
+          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} -> ${escapeHtml((record.recipients || []).join(", "))}</div></div>`
+        );
+        showBrowserNotification(record);
+      }
+    }
+    async function enableBrowserNotifications() {
+      if (!("Notification" in window)) {
+        alert("This browser does not support notifications.");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      browserNotificationsEnabled = permission === "granted";
+      if (browserNotificationsEnabled) await loadNotifications();
+    }
+    function showBrowserNotification(record) {
+      if (!browserNotificationsEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
+      const key = record.notification_id || record.id || record.text;
+      if (seenNotifications.has(key)) return;
+      seenNotifications.add(key);
+      new Notification(record.title || "life.txt message", {
+        body: `${record.sender || ""} -> ${(record.recipients || []).join(", ")}`,
+        tag: key,
+      });
+    }
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       }[ch]));
     }
     async function refreshAll() {
-      await Promise.all([loadItems(), loadAgenda(), loadStatus()]);
+      await Promise.all([loadItems(), loadAgenda(), loadStatus(), loadNotifications()]);
     }
-    applyUrlToControls();
-    refreshAll().catch(error => {
+    loadConfig().then(() => {
+      applyUrlToControls();
+      return refreshAll();
+    }).catch(error => {
       document.body.insertAdjacentHTML("beforeend", `<pre class="diagnostic">${escapeHtml(error.message)}</pre>`);
     });
   </script>

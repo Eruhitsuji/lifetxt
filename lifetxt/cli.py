@@ -7,9 +7,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .config import (
+    config_notification_recipient,
     config_paths,
     config_section,
     config_template_text,
+    config_user_name,
     config_write_file,
     load_config,
 )
@@ -34,6 +36,13 @@ from .assist import (
 )
 from .ics import items_from_ics_text
 from .model import Diagnostic
+from .notifier import (
+    format_notification_table,
+    notification_records,
+    records_to_json as notifications_to_json,
+    records_to_jsonl as notifications_to_jsonl,
+    watch_notifications,
+)
 from .parser import parse_text
 from .serializer import (
     item_to_line,
@@ -305,6 +314,47 @@ def build_parser():
     )
     status.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     status.set_defaults(func=command_status)
+
+    notify = subparsers.add_parser(
+        "notify",
+        help="Show or watch due message notifications.",
+    )
+    _add_input_paths(notify)
+    notify.add_argument(
+        "--recipient",
+        help="Notification recipient. Defaults to notifications.recipient or user.name.",
+    )
+    notify.add_argument(
+        "--lookahead",
+        help="Future notification window, e.g. 0m, 5m, or 1h.",
+    )
+    notify.add_argument(
+        "--grace",
+        help="Past grace window for missed notifications, e.g. 2m.",
+    )
+    notify.add_argument(
+        "--watch",
+        action="store_true",
+        help="Stay running and poll for notifications.",
+    )
+    notify.add_argument(
+        "--interval",
+        type=int,
+        help="Watch poll interval in seconds.",
+    )
+    notify.add_argument(
+        "--desktop",
+        action="store_true",
+        help="Also show a simple desktop notification when supported.",
+    )
+    notify.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format for one-shot mode.",
+    )
+    notify.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    notify.set_defaults(func=command_notify)
 
     agenda = subparsers.add_parser(
         "agenda",
@@ -732,6 +782,45 @@ def command_status(args):
     return 0
 
 
+def command_notify(args):
+    notification_config = config_section(_config(args), "notifications")
+    recipient = args.recipient or config_notification_recipient(_config(args))
+    lookahead = args.lookahead or notification_config.get("lookahead") or "0m"
+    grace = args.grace or notification_config.get("grace") or "2m"
+    interval = args.interval or int(notification_config.get("poll_seconds") or 30)
+    desktop = args.desktop or bool(notification_config.get("desktop"))
+
+    def load_records():
+        items, diagnostics = _parse_or_exit(args.paths, _config(args))
+        _print_warnings(diagnostics)
+        return notification_records(
+            items,
+            recipient=recipient,
+            lookahead=lookahead,
+            grace=grace,
+        )
+
+    if args.watch:
+        return watch_notifications(
+            load_records,
+            interval_seconds=interval,
+            desktop=desktop,
+            once=False,
+        )
+
+    records = load_records()
+    if args.format == "json":
+        write_text(None, notifications_to_json(records, pretty=args.pretty) + "\n")
+    elif args.format == "jsonl":
+        output = notifications_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_notification_table(records))
+    return 0
+
+
 def command_agenda(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     range_start, range_end = parse_agenda_range(
@@ -952,11 +1041,10 @@ def _filter_items_from_args(items, args):
 
 def apply_config_defaults_to_item(item, args):
     config = _config(args)
-    defaults = config_section(config, "defaults")
 
     if item.kind == "M":
         message = config_section(config, "message")
-        sender = message.get("default_sender") or defaults.get("person")
+        sender = message.get("default_sender") or config_user_name(config)
         if sender and "sender" not in item.details:
             item.details["sender"] = [str(sender)]
 

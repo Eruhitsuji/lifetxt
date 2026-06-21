@@ -42,6 +42,8 @@ python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-fil
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
 | `PUT` | `/api/messages/id/{id}` | Replace a message by exact `id:` in the writable file |
 | `DELETE` | `/api/messages/id/{id}` | Delete a message by exact `id:` in the writable file |
+| `POST` | `/api/messages/id/{id}/ack` | Mark a writable message as acknowledged with `ack:` |
+| `POST` | `/api/messages/id/{id}/snooze` | Set `snooze_until:` on a writable message |
 | `GET` | `/api/messages/thread/{id}` | List messages whose `id:` or `parent:` matches the id |
 | `POST` | `/api/messages/id/{id}/reply` | Append a reply message with `parent:{id}` |
 | `POST` | `/api/messages` | Append a type `M` message item using a message-oriented payload |
@@ -51,6 +53,13 @@ python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-fil
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/status` | Show latest status / presence records |
 | `GET` | `/api/notifications` | Show due message notifications for a recipient |
+
+If config has `ids.auto: true`, `POST /api/items`, `POST /api/messages`, and
+`POST /api/messages/id/{id}/reply` assign an `id:` when the payload does not
+include one. The API scans all loaded input files and the writable file before
+writing, so the generated ID avoids collisions across multiple `life.txt` files.
+Duplicate IDs are reported as diagnostic warning `W213` in item list responses;
+id-based operations reject ambiguous IDs.
 
 Example item payload:
 
@@ -129,6 +138,9 @@ Supported parameters:
 | Parameter | Meaning |
 |---|---|
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
+| `view=messages` | Message-focused layout with type `M` as the default item filter |
+| `view=status` | Status-focused layout with active status records emphasized |
+| `preset=NAME` | Apply URL parameters from config `views.NAME` |
 | `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
 | `kind=E` or `type=E` | Filter by life.txt type |
 | `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
@@ -159,6 +171,12 @@ Notification selection uses:
 - `notify_at:` for one notification time.
 - `notify_from:` / `notify_to:` for an active notification period.
 - Open workflow statuses only: `[ ]`, `[/]`, `[>]`, and `[?]`.
+- `ack:` suppresses future notifications for that message.
+- Future `snooze_until:` suppresses notifications until that timestamp.
+
+The notification panel shows `Ack` and `Snooze ...` actions for records with an
+`id:`. The snooze duration defaults to `notifications.snooze_default`; these
+actions write to the configured writable file.
 
 ## Display Mode
 
@@ -172,4 +190,10 @@ Recommended examples:
 /?mode=display&around=now&window=8h&sort=time&order=asc&limit=20
 /?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
 /?mode=display&type=S&active=true&refresh=30
+/?view=messages&recipient=self&open_only=true
+/?view=status&active=true
+/?preset=my_messages
 ```
+
+Files listed in config `sync_ics.generated_paths` or `sync_ics.output` are
+marked as generated in API responses and are treated as read-only in the GUI.

@@ -99,6 +99,10 @@ item.
 | `note` | Short human note | `note:"Check later"` |
 | `url` | Related URL | `url:https://example.com` |
 
+`id:` values should be unique across the loaded life.txt files. Validators
+report duplicate IDs as warning `W213`; id-based API and update operations may
+reject ambiguous IDs.
+
 ### 7.2 People Keys
 
 | Key | Meaning | Example |
@@ -128,6 +132,8 @@ Use `sender` and `recipient` for message delivery records.
 | `notify_at` | Message notification date or datetime | `notify_at:2026-06-06T09:00` |
 | `notify_from` | Notification period start | `notify_from:2026-06-06T09:00` |
 | `notify_to` | Notification period end | `notify_to:2026-06-06T17:00` |
+| `ack` | Notification acknowledgement date or datetime | `ack:2026-06-06T09:05` |
+| `snooze_until` | Suppress notification until this date or datetime | `snooze_until:2026-06-06T09:30` |
 
 ### 7.4 Message Keys
 
@@ -137,6 +143,8 @@ Use `sender` and `recipient` for message delivery records.
 | `recipient` | Message recipient; repeat for multiple recipients | `recipient:alice` |
 | `notify_at` | One notification time | `notify_at:2026-06-06T09:00` |
 | `notify_from`, `notify_to` | Notification period | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
+| `ack` | Acknowledged notification | `ack:2026-06-06T09:05` |
+| `snooze_until` | Notification snooze end | `snooze_until:2026-06-06T09:30` |
 | `channel` | Delivery channel or route | `channel:teams` |
 
 ### 7.5 Workflow Keys
@@ -357,7 +365,7 @@ sender recipient
 Recommended keys:
 
 ```txt
-sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent created updated
 ```
 
 | Key | Why it is recommended |
@@ -366,6 +374,8 @@ sender recipient notify_at notify_from notify_to channel service priority projec
 | `recipient` | Person receiving the message; repeat for multiple recipients |
 | `notify_at` | Single notification or delivery time |
 | `notify_from`, `notify_to` | Notification window or delivery period |
+| `ack` | Acknowledged notification; tools should not notify again |
+| `snooze_until` | Suppress notification until this date or datetime |
 | `channel` | Delivery route such as `teams`, `discord`, `slack`, or `email` |
 | `service` | Source or target service |
 | `priority`, `project`, `tag`, `note`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |

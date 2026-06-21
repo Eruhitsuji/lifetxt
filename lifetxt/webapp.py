@@ -1,13 +1,24 @@
 import os
+import tempfile
 from collections import OrderedDict
+from datetime import datetime
 
 from .agenda import (
     agenda_records,
     filter_items,
+    parse_duration,
     parse_agenda_range,
     parse_optional_time_range,
 )
 from .config import config_notification_recipient, config_section, config_user_name
+from .ids import (
+    auto_ids_enabled,
+    collect_item_ids,
+    duplicate_id_diagnostics,
+    ensure_item_id,
+    id_key_from_config,
+    id_prefix_for_item,
+)
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_line, parse_text
@@ -58,7 +69,9 @@ def create_app(paths=None, writable_path=None, config=None):
             "writable_path": app.state.writable_path,
             "user": config_user_name(app.state.config),
             "notifications": public_notification_config(app.state.config),
+            "ids": public_id_config(app.state.config),
             "web": public_web_config(app.state.config),
+            "views": public_views_config(app.state.config),
         }
 
     @app.get("/api/items")
@@ -83,7 +96,7 @@ def create_app(paths=None, writable_path=None, config=None):
         order="asc",
         limit=None,
     ):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         range_start, range_end = parse_optional_time_range(after, before)
         filtered = filter_items(
             items,
@@ -125,7 +138,7 @@ def create_app(paths=None, writable_path=None, config=None):
         q=None,
         limit=None,
     ):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         range_start, range_end = parse_agenda_range(start, end, around, window)
         records = agenda_records(items, range_start, range_end)
@@ -162,14 +175,14 @@ def create_app(paths=None, writable_path=None, config=None):
 
     @app.get("/api/status")
     def get_status(person=None, active=False):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         records = latest_status_records(items, person=person, active_only=active)
         return {"count": len(records), "records": records}
 
     @app.get("/api/notifications")
     def get_notifications(recipient=None, lookahead=None, grace=None, limit=None):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         notification_config = config_section(app.state.config, "notifications")
         records = notification_records(
@@ -197,7 +210,7 @@ def create_app(paths=None, writable_path=None, config=None):
         order="asc",
         limit=None,
     ):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         range_start, range_end = parse_optional_time_range(after, before)
         filtered = filter_items(
             items,
@@ -218,7 +231,7 @@ def create_app(paths=None, writable_path=None, config=None):
 
     @app.get("/api/messages/id/{message_id}")
     def get_message_by_id(message_id):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
             item = find_item_by_id(items, message_id, kind="M")
@@ -244,9 +257,30 @@ def create_app(paths=None, writable_path=None, config=None):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"id": message_id, "deleted": deleted}
 
+    @app.post("/api/messages/id/{message_id}/ack")
+    def ack_message_by_id(message_id, payload=Body(None)):
+        try:
+            item = ack_message_in_file(app.state.writable_path, message_id, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+
+    @app.post("/api/messages/id/{message_id}/snooze")
+    def snooze_message_by_id(message_id, payload=Body(None)):
+        try:
+            item = snooze_message_in_file(
+                app.state.writable_path,
+                message_id,
+                payload,
+                app.state.config,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+
     @app.get("/api/messages/thread/{thread_id}")
     def get_message_thread(thread_id, limit=None):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         thread = []
         for item in items:
@@ -260,7 +294,7 @@ def create_app(paths=None, writable_path=None, config=None):
 
     @app.post("/api/messages/id/{message_id}/reply", status_code=201)
     def reply_to_message(message_id, payload=Body(...)):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
             original = find_item_by_id(items, message_id, kind="M")
@@ -270,6 +304,11 @@ def create_app(paths=None, writable_path=None, config=None):
             raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
         try:
             item = message_reply_from_payload(original, message_id, payload, app.state.config)
+            assign_auto_id_from_paths(
+                item,
+                app.state.config,
+                auto_id_paths(app.state.paths, app.state.writable_path),
+            )
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
@@ -279,6 +318,11 @@ def create_app(paths=None, writable_path=None, config=None):
     def create_message(payload=Body(...)):
         try:
             item = message_item_from_payload(payload, app.state.config)
+            assign_auto_id_from_paths(
+                item,
+                app.state.config,
+                auto_id_paths(app.state.paths, app.state.writable_path),
+            )
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
@@ -288,6 +332,11 @@ def create_app(paths=None, writable_path=None, config=None):
     def create_item(payload=Body(...)):
         try:
             item = item_from_payload(payload)
+            assign_auto_id_from_paths(
+                item,
+                app.state.config,
+                auto_id_paths(app.state.paths, app.state.writable_path),
+            )
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
@@ -295,7 +344,7 @@ def create_app(paths=None, writable_path=None, config=None):
 
     @app.get("/api/items/id/{item_id}")
     def get_item_by_id(item_id):
-        items, diagnostics = read_life_inputs(app.state.paths)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
             item = find_item_by_id(items, item_id)
@@ -349,7 +398,23 @@ def normalize_server_paths(paths):
     return paths or ["life.txt"]
 
 
-def read_life_inputs(paths):
+def auto_id_paths(paths, writable_path=None):
+    candidates = normalize_server_paths(paths)
+    if writable_path:
+        candidates.append(writable_path)
+
+    normalized = []
+    seen = set()
+    for path in candidates:
+        key = os.path.abspath(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(path)
+    return normalized
+
+
+def read_life_inputs(paths, config=None):
     normalized = normalize_server_paths(paths)
     include_source = len(normalized) > 1
     items = []
@@ -357,6 +422,9 @@ def read_life_inputs(paths):
     for path in normalized:
         text = read_text(path)
         path_items, path_diagnostics = parse_text(text)
+        generated = is_generated_path(path, config)
+        for item in path_items:
+            item.generated = generated
         if include_source:
             for item in path_items:
                 item.source = path
@@ -364,7 +432,33 @@ def read_life_inputs(paths):
                 diagnostic.source = path
         items.extend(path_items)
         diagnostics.extend(path_diagnostics)
+    if include_source:
+        diagnostics.extend(
+            duplicate_id_diagnostics(
+                items,
+                key=id_key_from_config(config or {}),
+                cross_source_only=True,
+            )
+        )
     return items, diagnostics
+
+
+def is_generated_path(path, config=None):
+    if not path:
+        return False
+    targets = []
+    sync = config_section(config or {}, "sync_ics")
+    output = sync.get("output")
+    if output:
+        targets.append(output)
+    generated_paths = sync.get("generated_paths") or []
+    if isinstance(generated_paths, str):
+        generated_paths = [generated_paths]
+    for value in generated_paths:
+        if value:
+            targets.append(value)
+    abs_path = os.path.abspath(path)
+    return any(os.path.abspath(target) == abs_path for target in targets)
 
 
 def items_response(items, diagnostics, writable_path):
@@ -383,7 +477,16 @@ def public_notification_config(config):
         "lookahead": notifications.get("lookahead", "0m"),
         "grace": notifications.get("grace", "2m"),
         "poll_seconds": int(notifications.get("poll_seconds") or 30),
+        "state_file": notifications.get("state_file", ""),
+        "snooze_default": notifications.get("snooze_default", "10m"),
         "web": bool(notifications.get("web", True)),
+    }
+
+
+def public_id_config(config):
+    return {
+        "auto": auto_ids_enabled(config),
+        "key": id_key_from_config(config),
     }
 
 
@@ -397,6 +500,15 @@ def public_web_config(config):
         "default_sort": web.get("default_sort", "line"),
         "default_order": web.get("default_order", "asc"),
     }
+
+
+def public_views_config(config):
+    views = config_section(config, "views")
+    data = OrderedDict()
+    for name, values in views.items():
+        if isinstance(values, dict):
+            data[str(name)] = OrderedDict((str(key), str(value)) for key, value in values.items())
+    return data
 
 
 def sort_items(items, sort_key="line", order="asc"):
@@ -488,11 +600,14 @@ def api_item(item, writable_path=None):
     data["line"] = item.line
     data["source"] = getattr(item, "source", None)
     data["text"] = getattr(item, "source_text", None) or item_to_line(item)
+    data["generated"] = bool(getattr(item, "generated", False))
     data["editable"] = is_editable(item, writable_path)
     return data
 
 
 def is_editable(item, writable_path):
+    if getattr(item, "generated", False):
+        return False
     if item.line is None:
         return False
     source = getattr(item, "source", None)
@@ -509,6 +624,30 @@ def item_from_payload(payload):
     if _has_error(diagnostics):
         raise ValueError([diagnostic.to_dict() for diagnostic in diagnostics])
     return item
+
+
+def assign_auto_id_from_paths(item, config=None, paths=None, now=None):
+    if not auto_ids_enabled(config or {}):
+        return None
+    items, _diagnostics = read_life_inputs(paths, config)
+    return assign_auto_id(item, config=config, existing_items=items, now=now)
+
+
+def assign_auto_id(item, config=None, existing_items=None, now=None):
+    config = config or {}
+    if not auto_ids_enabled(config):
+        return None
+    key = id_key_from_config(config)
+    if item.details.get(key):
+        return item.details[key][0]
+    existing = collect_item_ids(existing_items or [], key=key)
+    return ensure_item_id(
+        item,
+        existing_ids=existing,
+        key=key,
+        prefix=id_prefix_for_item(item, config),
+        now=now,
+    )
 
 
 def message_item_from_payload(payload, config=None):
@@ -528,6 +667,8 @@ def message_item_from_payload(payload, config=None):
         "notify_at",
         "notify_from",
         "notify_to",
+        "ack",
+        "snooze_until",
         "channel",
         "service",
         "priority",
@@ -617,8 +758,7 @@ def append_item_to_file(path, item):
     if os.path.exists(path):
         existing = read_text(path)
     prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
-    with open(path, "a", encoding="utf-8", newline="\n") as handle:
-        handle.write(prefix + line + "\n")
+    write_text(path, existing + prefix + line + "\n")
     return len(existing.splitlines()) + 1
 
 
@@ -644,6 +784,67 @@ def update_item_in_file(path, line_no, payload):
 def update_item_by_id_in_file(path, item_id, payload, kind=None):
     line_no, _item = find_item_line_by_id(path, item_id, kind=kind)
     return update_item_in_file(path, line_no, payload)
+
+
+def ack_message_in_file(path, message_id, payload=None, now=None):
+    payload = payload if isinstance(payload, dict) else {}
+    value = payload.get("ack") or payload.get("at") or _format_now(now)
+    return patch_item_details_by_id_in_file(
+        path,
+        message_id,
+        {
+            "ack": [value],
+            "snooze_until": None,
+            "updated": [value],
+        },
+        kind="M",
+    )
+
+
+def snooze_message_in_file(path, message_id, payload=None, config=None, now=None):
+    payload = payload if isinstance(payload, dict) else {}
+    until = payload.get("snooze_until") or payload.get("until")
+    if not until:
+        duration = payload.get("duration")
+        if not duration:
+            duration = config_section(config or {}, "notifications").get("snooze_default")
+        duration = duration or "10m"
+        until = _format_datetime(_now(now) + parse_duration(duration))
+    return patch_item_details_by_id_in_file(
+        path,
+        message_id,
+        {
+            "ack": None,
+            "snooze_until": [until],
+            "updated": [_format_now(now)],
+        },
+        kind="M",
+    )
+
+
+def patch_item_details_by_id_in_file(path, item_id, detail_updates, kind=None):
+    line_no, item = find_item_line_by_id(path, item_id, kind=kind)
+    details = OrderedDict()
+    for key, values in item.details.items():
+        details[key] = list(values)
+    for key, values in detail_updates.items():
+        if values is None:
+            details.pop(key, None)
+            continue
+        if isinstance(values, (list, tuple)):
+            details[key] = [str(value) for value in values]
+        else:
+            details[key] = [str(values)]
+    return update_item_in_file(
+        path,
+        line_no,
+        {
+            "status": item.status,
+            "type": item.kind,
+            "title": item.title,
+            "details": details,
+        },
+    )
 
 
 def delete_item_from_file(path, line_no):
@@ -704,8 +905,31 @@ def read_text(path):
 
 def write_text(path, text):
     ensure_parent_dir(path)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    handle = None
+    temp_path = None
+    try:
+        handle = tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="\n",
+            delete=False,
+            dir=directory,
+            prefix=".lifetxt-",
+            suffix=".tmp",
+        )
+        temp_path = handle.name
         handle.write(text)
+        handle.close()
+        os.replace(temp_path, path)
+    finally:
+        if handle is not None and not handle.closed:
+            handle.close()
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
 
 
 def ensure_parent_dir(path):
@@ -722,6 +946,20 @@ def split_line_ending(line):
     if line.endswith("\r"):
         return line[:-1], "\r"
     return line, ""
+
+
+def _now(value=None):
+    if value is None:
+        value = datetime.now()
+    return value.replace(second=0, microsecond=0)
+
+
+def _format_now(value=None):
+    return _format_datetime(_now(value))
+
+
+def _format_datetime(value):
+    return value.strftime("%Y-%m-%dT%H:%M")
 
 
 def _csv_values(value):
@@ -911,6 +1149,28 @@ HTML_PAGE = r"""<!doctype html>
       border-radius: .55rem;
       background: #fff;
     }
+    .messages-mode main,
+    .status-mode main {
+      grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
+    }
+    .messages-mode .status-section,
+    .messages-mode .agenda-section,
+    .status-mode .item-section,
+    .status-mode .editor-section,
+    .status-mode .agenda-section,
+    .status-mode .notifications-section {
+      display: none;
+    }
+    .status-mode main {
+      grid-template-columns: minmax(0, 42rem);
+      justify-content: center;
+    }
+    .status-mode .side {
+      display: block;
+    }
+    .status-mode .status-section {
+      display: block;
+    }
     .display-mode {
       background: #0f1412;
       color: #edf4ef;
@@ -974,7 +1234,7 @@ HTML_PAGE = r"""<!doctype html>
     </div>
   </header>
   <main>
-    <section>
+    <section class="item-section">
       <div class="section-head">
         <h2>Items</h2>
         <div class="toolbar">
@@ -1042,15 +1302,15 @@ HTML_PAGE = r"""<!doctype html>
           </div>
         </form>
       </section>
-      <section>
+      <section class="agenda-section">
         <div class="section-head"><h2>Agenda</h2></div>
         <div id="agenda" class="stack"></div>
       </section>
-      <section>
+      <section class="status-section">
         <div class="section-head"><h2>Status</h2></div>
         <div id="status" class="stack"></div>
       </section>
-      <section>
+      <section class="notifications-section">
         <div class="section-head"><h2>Notifications</h2></div>
         <div id="notifications" class="stack"></div>
       </section>
@@ -1115,12 +1375,35 @@ HTML_PAGE = r"""<!doctype html>
       const params = query();
       return firstParam(params, ["mode", "view"], "").toLowerCase() === "display";
     }
+    function currentView() {
+      const params = query();
+      const value = firstParam(params, ["view", "mode"], "").toLowerCase();
+      if (["messages", "status", "display"].includes(value)) return value;
+      return "";
+    }
+    function applyPresetToUrl() {
+      const params = query();
+      const presetName = params.get("preset");
+      if (!presetName || params.get("_preset_applied") === presetName) return;
+      const preset = appConfig?.views?.[presetName];
+      if (!preset) return;
+      const next = new URLSearchParams(params);
+      for (const [key, value] of Object.entries(preset)) {
+        if (!next.has(key)) next.set(key, value);
+      }
+      next.set("_preset_applied", presetName);
+      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+    }
     function applyUrlToControls() {
       const params = query();
       document.body.classList.toggle("display-mode", isDisplayMode());
+      document.body.classList.toggle("messages-mode", currentView() === "messages");
+      document.body.classList.toggle("status-mode", currentView() === "status");
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
-      document.getElementById("kind").value = firstParam(params, ["kind", "type"], "");
-      document.getElementById("sort").value = firstParam(params, ["sort"], appConfig?.web?.default_sort || "line");
+      const fallbackKind = currentView() === "messages" ? "M" : (currentView() === "status" ? "S" : "");
+      const fallbackSort = currentView() === "messages" || currentView() === "status" ? "time" : (appConfig?.web?.default_sort || "line");
+      document.getElementById("kind").value = firstParam(params, ["kind", "type"], fallbackKind);
+      document.getElementById("sort").value = firstParam(params, ["sort"], fallbackSort);
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]);
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
@@ -1222,7 +1505,7 @@ HTML_PAGE = r"""<!doctype html>
             <div class="title">${escapeHtml(item.title)}</div>
             <div class="meta">${escapeHtml(detailText(item.details))}</div>
           </div>
-          <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.editable ? "" : " / read-only"}</span>
+          <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
         `;
         root.appendChild(node);
       }
@@ -1353,13 +1636,36 @@ HTML_PAGE = r"""<!doctype html>
       const data = await api(`/api/notifications?${notificationParams}`);
       const node = document.getElementById("notifications");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No notifications.</div>`;
+      const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
       for (const record of data.records) {
+        const actions = record.id ? `
+          <div class="actions">
+            <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">Ack</button>
+            <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">Snooze ${escapeHtml(snoozeDefault)}</button>
+          </div>
+        ` : "";
         node.insertAdjacentHTML(
           "beforeend",
-          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} -> ${escapeHtml((record.recipients || []).join(", "))}</div></div>`
+          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} -> ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
         );
         showBrowserNotification(record);
       }
+    }
+    async function ackMessage(id) {
+      await api(`/api/messages/id/${encodeURIComponent(id)}/ack`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: "{}",
+      });
+      await refreshAll();
+    }
+    async function snoozeMessage(id, duration) {
+      await api(`/api/messages/id/${encodeURIComponent(id)}/snooze`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({duration}),
+      });
+      await refreshAll();
     }
     async function enableBrowserNotifications() {
       if (!("Notification" in window)) {
@@ -1385,10 +1691,14 @@ HTML_PAGE = r"""<!doctype html>
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       }[ch]));
     }
+    function jsLiteral(value) {
+      return JSON.stringify(String(value ?? ""));
+    }
     async function refreshAll() {
       await Promise.all([loadItems(), loadAgenda(), loadStatus(), loadNotifications()]);
     }
     loadConfig().then(() => {
+      applyPresetToUrl();
       applyUrlToControls();
       return refreshAll();
     }).catch(error => {

@@ -83,6 +83,8 @@ KNOWN_KEYS = (
     "notify_at",
     "notify_from",
     "notify_to",
+    "ack",
+    "snooze_until",
     "on",
     "at",
     "repeat",
@@ -107,6 +109,8 @@ MESSAGE_RECOMMENDED_KEYS = (
     "notify_at",
     "notify_from",
     "notify_to",
+    "ack",
+    "snooze_until",
     "channel",
 )
 WORKFLOW_RECOMMENDED_KEYS = ("reason", "moved_to")
@@ -201,6 +205,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "notify_at",
         "notify_from",
         "notify_to",
+        "ack",
+        "snooze_until",
         "channel",
         "service",
         "priority",
@@ -238,6 +244,8 @@ DATE_OR_DATETIME_KEYS = (
     "notify_at",
     "notify_from",
     "notify_to",
+    "ack",
+    "snooze_until",
 )
 TIME_OR_DATETIME_KEYS = ("at",)
 SIMPLE_REPEAT_VALUES = ("daily", "weekly", "monthly", "yearly")

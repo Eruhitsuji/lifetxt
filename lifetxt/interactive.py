@@ -66,6 +66,8 @@ DETAIL_DESCRIPTIONS = {
     "notify_at": ("Notification date or datetime.", "notify_at:2026-06-06T09:00"),
     "notify_from": ("Notification period start date or datetime.", "notify_from:2026-06-06T09:00"),
     "notify_to": ("Notification period end date or datetime.", "notify_to:2026-06-06T17:00"),
+    "ack": ("Notification acknowledgement date or datetime.", "ack:2026-06-06T09:05"),
+    "snooze_until": ("Suppress message notification until this date or datetime.", "snooze_until:2026-06-06T09:30"),
     "on": ("All-day date.", "on:2026-06-08"),
     "at": ("Reminder or execution time.", "at:18:00"),
     "repeat": ("Recurrence value.", "repeat:daily"),

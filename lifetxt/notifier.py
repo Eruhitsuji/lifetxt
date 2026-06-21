@@ -1,9 +1,10 @@
 import hashlib
 import json
+import os
 import sys
 import time
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from .agenda import parse_duration
 from .serializer import item_to_line
@@ -35,6 +36,8 @@ def notification_records(
         if item.status not in NOTIFIABLE_STATUSES:
             continue
         if recipient and recipient not in item.details.get("recipient", []):
+            continue
+        if _notification_suppressed(item, now):
             continue
 
         matches = _notification_matches(item, start, now, end)
@@ -117,24 +120,79 @@ def watch_notifications(
     desktop=False,
     once=False,
     output=None,
+    state_file=None,
 ):
     if output is None:
         output = sys.stdout
-    seen = set()
+    state = load_notification_state(state_file)
+    seen = set(state.get("seen", {}).keys())
     while True:
         records = load_records()
+        emitted = []
         for record in records:
             key = record.get("notification_id")
             if key in seen:
                 continue
             seen.add(key)
+            emitted.append(record)
             output.write(_watch_line(record) + "\n")
             output.flush()
             if desktop:
                 notify_desktop(record)
+        if emitted and state_file:
+            mark_notifications_seen(state, emitted)
+            save_notification_state(state_file, state)
         if once:
             return 0
         time.sleep(max(1, int(interval_seconds)))
+
+
+def load_notification_state(path):
+    if not path:
+        return _empty_state()
+    try:
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            data = json.load(handle, object_pairs_hook=OrderedDict)
+    except (OSError, ValueError):
+        return _empty_state()
+    if not isinstance(data, dict):
+        return _empty_state()
+    seen = data.get("seen")
+    if isinstance(seen, list):
+        data["seen"] = OrderedDict((str(value), OrderedDict()) for value in seen)
+    elif not isinstance(seen, dict):
+        data["seen"] = OrderedDict()
+    data.setdefault("version", 1)
+    return data
+
+
+def save_notification_state(path, state):
+    if not path:
+        return
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(state, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+
+def mark_notifications_seen(state, records, now=None):
+    if now is None:
+        now = datetime.now().replace(second=0, microsecond=0)
+    seen = state.setdefault("seen", OrderedDict())
+    for record in records:
+        key = record.get("notification_id")
+        if not key:
+            continue
+        seen[key] = OrderedDict(
+            [
+                ("seen_at", _format_datetime(now)),
+                ("id", record.get("id", "")),
+                ("title", record.get("title", "")),
+                ("when", record.get("when", "")),
+            ]
+        )
 
 
 def _notification_matches(item, start, now, end):
@@ -161,6 +219,16 @@ def _notification_matches(item, start, now, end):
             matches.append(("notify_from/to", period_start, period_end))
 
     return matches
+
+
+def _notification_suppressed(item, now):
+    if item.details.get("ack"):
+        return True
+    for value in item.details.get("snooze_until", []):
+        snooze_until = _parse_date_or_datetime(value)
+        if snooze_until is not None and snooze_until > now:
+            return True
+    return False
 
 
 def _notification_record(item, match):
@@ -210,6 +278,16 @@ def _parse_datetime(value):
         return None
 
 
+def _parse_date_or_datetime(value):
+    parsed = _parse_datetime(value)
+    if parsed is not None:
+        return parsed
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return None
+
+
 def _format_datetime(value):
     return value.strftime(_DATETIME_FORMAT)
 
@@ -239,6 +317,10 @@ def _fallback_id(item, line_text):
         return "line:%s" % item.line
     digest = hashlib.sha256(line_text.encode("utf-8")).hexdigest()[:16]
     return "sha256:%s" % digest
+
+
+def _empty_state():
+    return OrderedDict([("version", 1), ("seen", OrderedDict())])
 
 
 def _format_row(values, widths):

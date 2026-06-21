@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from .ids import duplicate_id_diagnostics
 from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
 
@@ -18,6 +19,7 @@ def parse_text(text):
             items.append(item)
             if not _has_error(line_diagnostics):
                 diagnostics.extend(validate_item(item))
+    diagnostics.extend(duplicate_id_diagnostics(items))
     return items, diagnostics
 
 

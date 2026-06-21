@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
+from collections import OrderedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -35,6 +37,15 @@ from .assist import (
     update_text,
 )
 from .ics import items_from_ics_text
+from .ids import (
+    auto_ids_enabled,
+    collect_item_ids,
+    duplicate_id_diagnostics,
+    ensure_item_id,
+    id_audit,
+    id_key_from_config,
+    id_prefix_for_item,
+)
 from .model import Diagnostic
 from .notifier import (
     format_notification_table,
@@ -43,7 +54,7 @@ from .notifier import (
     records_to_jsonl as notifications_to_jsonl,
     watch_notifications,
 )
-from .parser import parse_text
+from .parser import parse_line, parse_text
 from .serializer import (
     item_to_line,
     items_from_json_text,
@@ -135,6 +146,45 @@ def build_parser():
         help="Exit non-zero when warnings are present.",
     )
     check.set_defaults(func=command_check)
+
+    ids_command = subparsers.add_parser(
+        "ids",
+        help="Audit id details, missing IDs, and duplicate IDs.",
+    )
+    _add_input_paths(ids_command)
+    ids_command.add_argument(
+        "--key",
+        help="Detail key to audit. Defaults to ids.key, api.id_key, or id.",
+    )
+    ids_command.add_argument(
+        "--only",
+        choices=("all", "present", "missing", "duplicates"),
+        default="all",
+        help="Limit the audit output. Defaults to all.",
+    )
+    ids_command.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    ids_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    ids_command.add_argument(
+        "--assign",
+        action="store_true",
+        help="Assign IDs to items missing the selected ID key.",
+    )
+    ids_command.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show planned ID assignments without writing files.",
+    )
+    ids_command.add_argument(
+        "--backup",
+        action="store_true",
+        help="Write a .bak backup before changing files with --assign.",
+    )
+    ids_command.set_defaults(func=command_ids)
 
     to_json = subparsers.add_parser("to-json", help="Convert life.txt to JSON array.")
     _add_input_paths(to_json)
@@ -346,6 +396,15 @@ def build_parser():
         "--desktop",
         action="store_true",
         help="Also show a simple desktop notification when supported.",
+    )
+    notify.add_argument(
+        "--state-file",
+        help="Persist seen notification IDs in this JSON file when watching.",
+    )
+    notify.add_argument(
+        "--no-state",
+        action="store_true",
+        help="Do not persist seen notification IDs when watching.",
     )
     notify.add_argument(
         "--format",
@@ -638,6 +697,63 @@ def command_check(args):
     return _exit_code(diagnostics, args.warnings_as_errors)
 
 
+def command_ids(args):
+    if args.assign:
+        return command_ids_assign(args)
+
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    key = args.key or id_key_from_config(_config(args))
+    audit = id_audit(items, key=key)
+
+    if args.format == "json":
+        output = json.dumps(
+            _id_audit_output(audit, args.only),
+            ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        )
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        records = _id_audit_jsonl_records(audit, args.only)
+        output = "\n".join(
+            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+            for record in records
+        )
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_id_audit(audit, args.only))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_ids_assign(args):
+    key = args.key or id_key_from_config(_config(args))
+    records = assign_missing_ids(args.paths, _config(args), key, args.dry_run, args.backup)
+
+    if args.format == "json":
+        output = json.dumps(
+            records,
+            ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        )
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        output = "\n".join(
+            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+            for record in records
+        )
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_id_assignments(records, args.dry_run))
+    return 0
+
+
 def command_to_json(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
@@ -789,6 +905,9 @@ def command_notify(args):
     grace = args.grace or notification_config.get("grace") or "2m"
     interval = args.interval or int(notification_config.get("poll_seconds") or 30)
     desktop = args.desktop or bool(notification_config.get("desktop"))
+    state_file = None
+    if not args.no_state:
+        state_file = args.state_file or notification_config.get("state_file")
 
     def load_records():
         items, diagnostics = _parse_or_exit(args.paths, _config(args))
@@ -806,6 +925,7 @@ def command_notify(args):
             interval_seconds=interval,
             desktop=desktop,
             once=False,
+            state_file=state_file,
         )
 
     records = load_records()
@@ -889,6 +1009,7 @@ def command_assist(args):
     else:
         item = build_item_from_args(args)
     apply_config_defaults_to_item(item, args)
+    apply_auto_id_to_item(item, args)
     line = item_to_assisted_line(item)
 
     if not args.no_check:
@@ -983,6 +1104,250 @@ def _items_to_life_text(items, canonical=False):
     return text
 
 
+def format_id_audit(audit, only="all"):
+    lines = []
+    lines.append(
+        "ID audit (%s): %d item(s), %d id(s), %d duplicate id(s), %d missing id item(s)"
+        % (
+            audit.get("key", "id"),
+            audit.get("total_items", 0),
+            audit.get("id_count", 0),
+            audit.get("duplicate_count", 0),
+            audit.get("missing_count", 0),
+        )
+    )
+
+    if only in ("all", "duplicates"):
+        lines.append("")
+        lines.extend(_format_id_duplicate_section(audit.get("duplicates", [])))
+
+    if only in ("all", "missing"):
+        lines.append("")
+        lines.extend(_format_id_missing_section(audit.get("missing", [])))
+
+    if only == "present":
+        lines.append("")
+        lines.extend(_format_id_present_section(audit.get("present", [])))
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def assign_missing_ids(paths, config, key, dry_run=False, backup=False):
+    normalized = _normalize_paths(paths, config)
+    if any(path == "-" for path in normalized):
+        raise ValueError("ids --assign requires real file paths, not stdin.")
+
+    existing = set()
+    parsed_by_path = []
+    for path in normalized:
+        text = read_text(path)
+        items, diagnostics = parse_text(text)
+        if _has_error(diagnostics):
+            raise ValueError("Cannot assign IDs because %s has validation errors." % path)
+        parsed_by_path.append((path, text, items))
+        existing.update(collect_item_ids(items, key=key))
+
+    records = []
+    for path, text, _items in parsed_by_path:
+        changed, new_text, path_records = _assign_missing_ids_in_text(
+            path,
+            text,
+            key,
+            existing,
+            config,
+        )
+        records.extend(path_records)
+        if changed and not dry_run:
+            if backup:
+                write_text(path + ".bak", text)
+            write_text(path, new_text)
+    return records
+
+
+def _assign_missing_ids_in_text(path, text, key, existing, config):
+    raw_lines = text.splitlines(True)
+    changed = False
+    records = []
+    new_lines = []
+    for line_no, raw_line in enumerate(raw_lines, 1):
+        body, ending = split_line_ending(raw_line)
+        item, diagnostics = parse_line(body, line_no)
+        if item is None or _has_error(diagnostics) or item.details.get(key):
+            new_lines.append(raw_line)
+            continue
+        assigned = ensure_item_id(
+            item,
+            existing_ids=existing,
+            key=key,
+            prefix=id_prefix_for_item(item, config),
+        )
+        new_line = item_to_line(item) + ending
+        new_lines.append(new_line)
+        changed = True
+        records.append(
+            OrderedDict(
+                [
+                    ("path", path),
+                    ("line", line_no),
+                    ("id", assigned),
+                    ("type", item.kind),
+                    ("status", item.status),
+                    ("title", item.title),
+                    ("text", item_to_line(item)),
+                ]
+            )
+        )
+    if not raw_lines and text:
+        new_lines.append(text)
+    return changed, "".join(new_lines), records
+
+
+def format_id_assignments(records, dry_run=False):
+    heading = "Planned ID assignments" if dry_run else "ID assignments"
+    lines = ["%s: %d item(s)" % (heading, len(records))]
+    if not records:
+        return lines[0] + "\n"
+    rows = []
+    for record in records:
+        rows.append(
+            OrderedDict(
+                [
+                    ("path", record["path"]),
+                    ("line", str(record["line"])),
+                    ("id", record["id"]),
+                    ("type", record["type"]),
+                    ("title", record["title"]),
+                ]
+            )
+        )
+    lines.extend(_format_table(rows, ("path", "line", "id", "type", "title")))
+    return "\n".join(lines) + "\n"
+
+
+def _format_id_duplicate_section(records):
+    lines = ["Duplicate IDs:"]
+    if not records:
+        lines.append("No duplicate IDs.")
+        return lines
+    rows = []
+    for record in records:
+        rows.append(
+            OrderedDict(
+                [
+                    ("id", record["id"]),
+                    ("count", str(record["count"])),
+                    ("locations", "; ".join(item["location"] for item in record["items"])),
+                    ("titles", "; ".join(item["title"] for item in record["items"])),
+                ]
+            )
+        )
+    return lines + _format_table(rows, ("id", "count", "locations", "titles"))
+
+
+def _format_id_missing_section(records):
+    lines = ["Missing IDs:"]
+    if not records:
+        lines.append("No missing IDs.")
+        return lines
+    rows = []
+    for item in records:
+        rows.append(
+            OrderedDict(
+                [
+                    ("location", item["location"]),
+                    ("type", item["type"]),
+                    ("status", item["status"]),
+                    ("title", item["title"]),
+                ]
+            )
+        )
+    return lines + _format_table(rows, ("location", "type", "status", "title"))
+
+
+def _format_id_present_section(records):
+    lines = ["Present IDs:"]
+    if not records:
+        lines.append("No IDs found.")
+        return lines
+    rows = []
+    for record in records:
+        rows.append(
+            OrderedDict(
+                [
+                    ("id", record["id"]),
+                    ("count", str(record["count"])),
+                    ("locations", "; ".join(item["location"] for item in record["items"])),
+                ]
+            )
+        )
+    return lines + _format_table(rows, ("id", "count", "locations"))
+
+
+def _format_table(rows, columns):
+    widths = []
+    for column in columns:
+        width = len(column)
+        for row in rows:
+            width = max(width, len(str(row.get(column, ""))))
+        widths.append(width)
+    lines = []
+    lines.append(_format_table_row(columns, widths))
+    lines.append(_format_table_row(["-" * width for width in widths], widths))
+    for row in rows:
+        lines.append(_format_table_row([row.get(column, "") for column in columns], widths))
+    return lines
+
+
+def _format_table_row(values, widths):
+    cells = []
+    for index, value in enumerate(values):
+        cells.append(str(value).ljust(widths[index]))
+    return "| " + " | ".join(cells) + " |"
+
+
+def _id_audit_output(audit, only):
+    if only == "all":
+        return audit
+    data = OrderedDict()
+    for key in ("key", "total_items", "id_count", "duplicate_count", "missing_count"):
+        data[key] = audit[key]
+    data[only] = audit[only]
+    return data
+
+
+def _id_audit_jsonl_records(audit, only):
+    records = []
+    if only == "all":
+        records.append(
+            OrderedDict(
+                [
+                    ("kind", "summary"),
+                    ("key", audit["key"]),
+                    ("total_items", audit["total_items"]),
+                    ("id_count", audit["id_count"]),
+                    ("duplicate_count", audit["duplicate_count"]),
+                    ("missing_count", audit["missing_count"]),
+                ]
+            )
+        )
+    if only in ("all", "duplicates"):
+        for record in audit["duplicates"]:
+            entry = OrderedDict(record)
+            entry["kind"] = "duplicate"
+            records.append(entry)
+    if only in ("all", "missing"):
+        for item in audit["missing"]:
+            entry = OrderedDict(item)
+            entry["kind"] = "missing"
+            records.append(entry)
+    if only == "present":
+        for record in audit["present"]:
+            entry = OrderedDict(record)
+            entry["kind"] = "present"
+            records.append(entry)
+    return records
+
+
 def _parse_or_exit(paths, config=None):
     items, diagnostics = _parse_life_inputs(paths, config)
     if _has_error(diagnostics):
@@ -1004,6 +1369,14 @@ def _parse_life_inputs(paths, config=None):
             _set_source(path_items, path_diagnostics, source)
         items.extend(path_items)
         diagnostics.extend(path_diagnostics)
+    if include_source:
+        diagnostics.extend(
+            duplicate_id_diagnostics(
+                items,
+                key=id_key_from_config(config or {}),
+                cross_source_only=True,
+            )
+        )
     return items, diagnostics
 
 
@@ -1055,6 +1428,60 @@ def apply_config_defaults_to_item(item, args):
         service = message.get("default_service")
         if service and "service" not in item.details:
             item.details["service"] = [str(service)]
+
+
+def apply_auto_id_to_item(item, args):
+    config = _config(args)
+    if not auto_ids_enabled(config):
+        return None
+
+    key = id_key_from_config(config)
+    if item.details.get(key):
+        return item.details[key][0]
+
+    existing = collect_item_ids(_auto_id_scan_items(args), key=key)
+    return ensure_item_id(
+        item,
+        existing_ids=existing,
+        key=key,
+        prefix=id_prefix_for_item(item, config),
+    )
+
+
+def _auto_id_scan_items(args):
+    items = []
+    for path in _auto_id_scan_paths(args):
+        if not path or path == "-" or not os.path.exists(path):
+            continue
+        path_items, _diagnostics = parse_text(read_text(path))
+        items.extend(path_items)
+    return items
+
+
+def _auto_id_scan_paths(args):
+    config = _config(args)
+    candidates = []
+    for path in config_paths(config) or []:
+        candidates.append(path)
+    write_file = config_write_file(config)
+    if write_file:
+        candidates.append(write_file)
+    output = getattr(args, "output", None)
+    append = getattr(args, "append", None)
+    if output:
+        candidates.append(output)
+    if append:
+        candidates.append(append)
+
+    paths = []
+    seen = set()
+    for path in candidates:
+        key = os.path.abspath(path) if path not in (None, "-") else path
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
 
 
 def _config(args):
@@ -1120,8 +1547,36 @@ def write_text(path, text):
     if path is None:
         sys.stdout.write(text)
         return
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+    atomic_write_text(path, text)
+
+
+def atomic_write_text(path, text):
+    ensure_parent_dir(path)
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    handle = None
+    temp_path = None
+    try:
+        handle = tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="\n",
+            delete=False,
+            dir=directory,
+            prefix=".lifetxt-",
+            suffix=".tmp",
+        )
+        temp_path = handle.name
         handle.write(text)
+        handle.close()
+        os.replace(temp_path, path)
+    finally:
+        if handle is not None and not handle.closed:
+            handle.close()
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
 
 
 def write_bytes(path, data):
@@ -1137,26 +1592,29 @@ def ensure_parent_dir(path):
 
 
 def append_line(path, line):
-    with open(path, "a", encoding="utf-8", newline="\n") as handle:
-        handle.write(line + "\n")
+    append_text(path, line + "\n")
 
 
 def append_text(path, text):
     if not text:
         return
-    needs_newline = False
+    existing = ""
     try:
-        with open(path, "rb") as handle:
-            handle.seek(0, 2)
-            if handle.tell() > 0:
-                handle.seek(-1, 2)
-                needs_newline = handle.read(1) not in (b"\n", b"\r")
+        existing = read_text(path)
     except FileNotFoundError:
         pass
-    with open(path, "a", encoding="utf-8", newline="\n") as handle:
-        if needs_newline:
-            handle.write("\n")
-        handle.write(text)
+    prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
+    atomic_write_text(path, existing + prefix + text)
+
+
+def split_line_ending(line):
+    if line.endswith("\r\n"):
+        return line[:-2], "\r\n"
+    if line.endswith("\n"):
+        return line[:-1], "\n"
+    if line.endswith("\r"):
+        return line[:-1], "\r"
+    return line, ""
 
 
 def fetch_url(url, timeout, user_agent, index):

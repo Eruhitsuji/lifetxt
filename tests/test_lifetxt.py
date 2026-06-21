@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import subprocess
@@ -112,6 +113,35 @@ class LifeTxtParserTests(unittest.TestCase):
         )
 
         self.assertTrue(any(d.code == "W211" for d in diagnostics))
+
+    def test_auto_id_generation_avoids_existing_ids(self):
+        from lifetxt.ids import ensure_item_id
+
+        items, diagnostics = parse_text("[ ] M Ping sender:self recipient:alice\n")
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        existing = {"msg_20260621120000", "msg_20260621120000_2"}
+        assigned = ensure_item_id(
+            items[0],
+            existing_ids=existing,
+            prefix="msg",
+            now=datetime(2026, 6, 21, 12, 0),
+        )
+
+        self.assertEqual("msg_20260621120000_3", assigned)
+        self.assertEqual(["msg_20260621120000_3"], items[0].details["id"])
+        self.assertIn("msg_20260621120000_3", existing)
+
+    def test_duplicate_id_reports_warning(self):
+        _items, diagnostics = parse_text(
+            "[ ] T First id:task_001\n"
+            "[ ] T Second id:task_001\n"
+        )
+
+        duplicate_warnings = [d for d in diagnostics if d.code == "W213"]
+        self.assertEqual(1, len(duplicate_warnings))
+        self.assertEqual(2, duplicate_warnings[0].line)
+        self.assertIn("Duplicate id:task_001", duplicate_warnings[0].message)
 
     def test_people_keys_are_known_and_recommended_for_matching_types(self):
         _items, diagnostics = parse_text(
@@ -1120,6 +1150,117 @@ class LifeTxtConfigCliTests(unittest.TestCase):
             self.assertEqual("self", data["user"]["name"])
 
 
+class LifeTxtIdDiagnosticsTests(unittest.TestCase):
+    def test_ids_cli_text_reports_duplicates_and_missing_ids(self):
+        text = (
+            "[ ] T First id:task_001\n"
+            "[ ] T Second id:task_001\n"
+            "[ ] N Missing\n"
+        )
+
+        stdout, stderr, code = run_cli("ids", input_text=text)
+
+        self.assertEqual(0, code)
+        self.assertIn(
+            "ID audit (id): 3 item(s), 1 id(s), 1 duplicate id(s), 1 missing id item(s)",
+            stdout,
+        )
+        self.assertIn("Duplicate IDs:", stdout)
+        self.assertIn("task_001", stdout)
+        self.assertIn("Missing IDs:", stdout)
+        self.assertIn("Missing", stdout)
+        self.assertIn("WARNING W213", stderr)
+
+    def test_ids_cli_json_missing_only(self):
+        text = (
+            "[ ] T First id:task_001\n"
+            "[ ] T Missing\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "ids",
+            "--only",
+            "missing",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual("id", data["key"])
+        self.assertEqual(1, data["missing_count"])
+        self.assertEqual("Missing", data["missing"][0]["title"])
+
+    def test_ids_assign_dry_run_does_not_modify_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            text = "[ ] T Missing\n"
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+
+            stdout, stderr, code = run_cli("ids", path, "--assign", "--dry-run")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Planned ID assignments: 1 item(s)", stdout)
+            self.assertRegex(stdout, r"task_\d{14}")
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(text, handle.read())
+
+    def test_ids_assign_writes_ids_and_backup(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Missing\n")
+
+            stdout, stderr, code = run_cli("ids", path, "--assign", "--backup")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("ID assignments: 1 item(s)", stdout)
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertRegex(handle.read(), r"^\[ \] T Missing id:task_\d{14}\n$")
+            with open(path + ".bak", "r", encoding="utf-8") as handle:
+                self.assertEqual("[ ] T Missing\n", handle.read())
+
+    def test_check_cli_warns_for_cross_file_duplicate_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_001\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Second id:task_001\n")
+
+            stdout, stderr, code = run_cli("check", first_path, second_path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("WARNING W213", stdout)
+            self.assertIn("Duplicate id:task_001", stdout)
+            self.assertIn("first.life.txt:1", stdout)
+
+    def test_webapp_read_life_inputs_warns_for_cross_file_duplicate_ids(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_001\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Second id:task_001\n")
+
+            _items, diagnostics = webapp.read_life_inputs([first_path, second_path])
+
+            duplicate_warnings = [d for d in diagnostics if d.code == "W213"]
+            self.assertEqual(1, len(duplicate_warnings))
+            self.assertEqual(second_path, duplicate_warnings[0].source)
+            self.assertIn("Duplicate id:task_001", duplicate_warnings[0].message)
+
+
 class LifeTxtNotifyTests(unittest.TestCase):
     def test_notification_records_for_recipient(self):
         from lifetxt.notifier import notification_records
@@ -1145,6 +1286,67 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual("msg_001", records[0]["id"])
         self.assertEqual("Ping", records[0]["title"])
         self.assertEqual("hello", records[0]["body"])
+
+    def test_notification_records_skip_ack_and_future_snooze(self):
+        from lifetxt.notifier import notification_records
+
+        text = (
+            "[ ] M Acked id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 ack:2026-06-06T09:01\n"
+            "[ ] M Snoozed id:msg_002 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 snooze_until:2026-06-06T09:30\n"
+            "[ ] M Ready id:msg_003 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 snooze_until:2026-06-06T08:30\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0),
+        )
+
+        self.assertEqual(["msg_003"], [record["id"] for record in records])
+
+    def test_watch_notifications_persists_seen_state(self):
+        from lifetxt.notifier import notification_records, watch_notifications
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0),
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = os.path.join(temp_dir, "notifications.json")
+            first_output = io.StringIO()
+            second_output = io.StringIO()
+
+            watch_notifications(
+                lambda: records,
+                once=True,
+                output=first_output,
+                state_file=state_path,
+            )
+            watch_notifications(
+                lambda: records,
+                once=True,
+                output=second_output,
+                state_file=state_path,
+            )
+
+            self.assertIn("Ping", first_output.getvalue())
+            self.assertEqual("", second_output.getvalue())
+            with open(state_path, "r", encoding="utf-8") as handle:
+                state = json.load(handle)
+            self.assertIn(records[0]["notification_id"], state["seen"])
 
     def test_notify_cli_json_output(self):
         text = (
@@ -1222,6 +1424,24 @@ class LifeTxtWebAppTests(unittest.TestCase):
             self.assertTrue(response["items"][0]["editable"])
             self.assertEqual("[ ] T First", response["items"][0]["text"])
 
+    def test_webapp_generated_path_is_read_only(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "generated.life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] E Synced id:event_001 from:2026-06-08T10:00\n")
+
+            items, diagnostics = webapp.read_life_inputs(
+                [path],
+                {"sync_ics": {"generated_paths": [path]}},
+            )
+            response = webapp.items_response(items, diagnostics, path)
+
+            self.assertEqual(1, response["count"])
+            self.assertTrue(response["items"][0]["generated"])
+            self.assertFalse(response["items"][0]["editable"])
+
     def test_webapp_message_payload_helper(self):
         from lifetxt import webapp
 
@@ -1253,6 +1473,59 @@ class LifeTxtWebAppTests(unittest.TestCase):
 
         self.assertEqual(["me"], item.details["sender"])
 
+    def test_webapp_auto_id_uses_all_loaded_items(self):
+        from lifetxt import webapp
+
+        file_a_items, diagnostics_a = parse_text(
+            "[ ] M First id:msg_20260621120000 sender:alice recipient:self\n"
+        )
+        file_b_items, diagnostics_b = parse_text(
+            "[ ] T Other id:msg_20260621120000_2\n"
+        )
+        self.assertFalse(any(d.severity == "error" for d in diagnostics_a + diagnostics_b))
+
+        item = webapp.message_item_from_payload(
+            {
+                "title": "Reply",
+                "sender": "self",
+                "recipient": "alice",
+            }
+        )
+        assigned = webapp.assign_auto_id(
+            item,
+            config={"ids": {"auto": True, "key": "id"}},
+            existing_items=file_a_items + file_b_items,
+            now=datetime(2026, 6, 21, 12, 0),
+        )
+
+        self.assertEqual("msg_20260621120000_3", assigned)
+        self.assertEqual(["msg_20260621120000_3"], item.details["id"])
+
+    def test_webapp_auto_id_paths_include_writable_file(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            read_path = os.path.join(temp_dir, "read.life.txt")
+            write_path = os.path.join(temp_dir, "write.life.txt")
+            with open(read_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "[ ] M First id:msg_20260621120000 sender:alice recipient:self\n"
+                )
+            with open(write_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Existing id:msg_20260621120000_2\n")
+
+            item = webapp.message_item_from_payload(
+                {"title": "New", "sender": "self", "recipient": "alice"}
+            )
+            assigned = webapp.assign_auto_id_from_paths(
+                item,
+                config={"ids": {"auto": True, "key": "id"}},
+                paths=webapp.auto_id_paths([read_path], write_path),
+                now=datetime(2026, 6, 21, 12, 0),
+            )
+
+            self.assertEqual("msg_20260621120000_3", assigned)
+
     def test_webapp_update_and_delete_by_id(self):
         from lifetxt import webapp
 
@@ -1274,6 +1547,42 @@ class LifeTxtWebAppTests(unittest.TestCase):
 
             with open(path, "r", encoding="utf-8") as handle:
                 self.assertEqual("[x] T First done:2026-06-06\n", handle.read())
+
+    def test_webapp_ack_and_snooze_message_helpers(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "[ ] M Ping id:msg_001 sender:bob recipient:self "
+                    "notify_at:2026-06-06T09:00\n"
+                )
+
+            acked = webapp.ack_message_in_file(
+                path,
+                "msg_001",
+                {"ack": "2026-06-06T09:01"},
+            )
+            self.assertEqual(["2026-06-06T09:01"], acked.details["ack"])
+            self.assertNotIn("snooze_until", acked.details)
+
+            snoozed = webapp.snooze_message_in_file(
+                path,
+                "msg_001",
+                {"duration": "15m"},
+                now=datetime(2026, 6, 6, 9, 5),
+            )
+            self.assertNotIn("ack", snoozed.details)
+            self.assertEqual(["2026-06-06T09:20"], snoozed.details["snooze_until"])
+
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    "[ ] M Ping id:msg_001 sender:bob recipient:self "
+                    "notify_at:2026-06-06T09:00 updated:2026-06-06T09:05 "
+                    "snooze_until:2026-06-06T09:20\n",
+                    handle.read(),
+                )
 
     def test_webapp_message_reply_payload(self):
         from lifetxt import webapp
@@ -1463,6 +1772,44 @@ class LifeTxtAssistCliTests(unittest.TestCase):
                 "[ ] M Ping recipient:alice sender:bot\n",
                 normalize_newlines(stdout),
             )
+
+    def test_assist_auto_id_with_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            extra_path = os.path.join(temp_dir, "archive.life.txt")
+            config_path = os.path.join(temp_dir, "lifetxt.json")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("# life\n")
+            with open(extra_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Existing id:task_existing\n")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(
+                    {
+                        "paths": [path, extra_path],
+                        "write_file": path,
+                        "ids": {"auto": True, "key": "id"},
+                    },
+                    handle,
+                )
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "assist",
+                "--type",
+                "task",
+                "--title",
+                "New Task",
+                "--output",
+                path,
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            normalized = normalize_newlines(stdout)
+            self.assertRegex(normalized, r'^\[ \] T "New Task" id:task_\d{14}\n$')
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual("# life\n" + normalized, handle.read())
 
     def test_assist_people_detail_flags(self):
         stdout, stderr, code = run_cli(

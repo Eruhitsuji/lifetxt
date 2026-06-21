@@ -14,6 +14,7 @@ read from standard input.
 
 ```sh
 python -m lifetxt check [path ...]
+python -m lifetxt ids [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt import-ics [path ...]
@@ -32,6 +33,7 @@ python -m lifetxt config init
 | Command | Purpose |
 |---|---|
 | `check` | Validate life.txt syntax and semantic warnings |
+| `ids` | Audit present, missing, and duplicate item IDs |
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
@@ -89,6 +91,8 @@ written to stdout.
 For `assist` create mode, `--output FILE` appends the generated line to `FILE`.
 It does not overwrite the file. In `assist --update` mode, `--output FILE`
 writes the updated whole file to `FILE`.
+Whole-file writes use a temporary file and atomic replace. For bulk ID backfill,
+use `ids --assign --backup` to keep a `FILE.bak` copy before writing.
 
 ### 2.3 Output Formats
 
@@ -132,6 +136,40 @@ Examples:
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+```
+
+### 3.1 `ids`
+
+Audit item IDs without changing files.
+
+```sh
+python -m lifetxt ids [path ...] [--only all|present|missing|duplicates]
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input file(s), or `-` for stdin |
+| `--key KEY` | Detail key to audit; defaults to config `ids.key`, `api.id_key`, or `id` |
+| `--only all` | Show summary, duplicate IDs, and missing IDs |
+| `--only present` | Show all present ID values |
+| `--only missing` | Show items without the selected ID key |
+| `--only duplicates` | Show duplicate ID values only |
+| `--format text|json|jsonl` | Output format |
+| `--pretty` | Pretty-print JSON output |
+| `--assign` | Assign IDs to items missing the selected ID key |
+| `--dry-run` | Show planned assignments without writing files |
+| `--backup` | Write `FILE.bak` before modifying a file with `--assign` |
+
+Examples:
+
+```sh
+python -m lifetxt ids life.txt
+python -m lifetxt ids life.txt archive.life.txt --only duplicates
+python -m lifetxt ids life.txt --only missing --format json --pretty
+python -m lifetxt ids life.txt --assign --dry-run
+python -m lifetxt ids life.txt --assign --backup
 ```
 
 ## 4. JSON Conversion
@@ -412,6 +450,8 @@ Selection rules:
 - `recipient:` must match the selected recipient.
 - `notify_at:` is a one-time notification.
 - `notify_from:` / `notify_to:` is an active notification period.
+- Items with `ack:` are treated as acknowledged and are not notified.
+- Items with future `snooze_until:` are temporarily suppressed.
 
 Options:
 
@@ -424,6 +464,8 @@ Options:
 | `--watch` | Stay running and poll repeatedly |
 | `--interval SECONDS` | Poll interval for `--watch` |
 | `--desktop` | Also show a simple desktop notification when supported |
+| `--state-file PATH` | Persist seen notification IDs for `--watch` |
+| `--no-state` | Disable persistent seen-state for `--watch` |
 | `--format text|json|jsonl` | Output format in one-shot mode |
 
 Examples:
@@ -685,12 +727,28 @@ Example config:
     "lookahead": "0m",
     "grace": "2m",
     "poll_seconds": 30,
+    "state_file": ".cache/lifetxt/notifications.json",
+    "snooze_default": "10m",
     "desktop": false,
     "web": true
   },
   "api": {
     "id_key": "id",
     "allow_id_writes": true
+  },
+  "ids": {
+    "auto": true,
+    "key": "id",
+    "prefixes": {
+      "T": "task",
+      "E": "event",
+      "D": "deadline",
+      "R": "reminder",
+      "H": "habit",
+      "N": "note",
+      "S": "status",
+      "M": "msg"
+    }
   },
   "web": {
     "host": "127.0.0.1",
@@ -702,9 +760,31 @@ Example config:
     "default_sort": "line",
     "default_order": "asc"
   },
+  "views": {
+    "today": {
+      "around": "now",
+      "window": "1d",
+      "sort": "time",
+      "order": "asc"
+    },
+    "my_messages": {
+      "view": "messages",
+      "recipient": "self",
+      "open_only": "true",
+      "sort": "time",
+      "order": "asc"
+    },
+    "team_status": {
+      "view": "status",
+      "type": "S",
+      "active": "true",
+      "refresh": "30"
+    }
+  },
   "sync_ics": {
     "output": ".generated/google_calendar.life.txt",
     "cache_dir": ".cache/lifetxt",
+    "generated_paths": [".generated/google_calendar.life.txt"],
     "sources": [
       {
         "name": "google",
@@ -715,6 +795,14 @@ Example config:
   }
 }
 ```
+
+When `ids.auto` is `true`, newly created items from `assist`, `/api/items`,
+`/api/messages`, and message replies receive an `id:` if one was not provided.
+Existing IDs are collected from every configured input file in `paths`, plus the
+configured `write_file` and the command output file when applicable, so generated
+IDs avoid collisions across multiple loaded `life.txt` files.
+`check` reports duplicate IDs as warning `W213`, including duplicates across
+multiple input files.
 
 ## 13. Aliases
 

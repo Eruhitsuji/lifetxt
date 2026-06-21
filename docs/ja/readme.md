@@ -48,6 +48,7 @@ python -m lifetxt filter life.txt --type status --person self -o my_status.life.
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
+python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
@@ -55,6 +56,13 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task 
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+```
+
+Local install:
+
+```sh
+python -m pip install -e .
+lifetxt check examples/minimal_life.txt
 ```
 
 多くの読み込み系コマンドは複数の入力 path を受け取れます。`filter`、`to-json`、
@@ -157,6 +165,14 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 ```
 
 `agenda` では `notify_at` を時点、`notify_from/notify_to` を通知期間として扱います。Web API では `/api/messages` で Message item の一覧と作成ができます。
+
+外部 config の `ids.auto: true` を使うと、新規作成時に `id:` が未指定の item へ自動IDを付与できます。採番前に config の `paths` と `write_file` を走査するため、複数の `life.txt` を読み込む構成でも既存IDとの衝突を避けます。
+重複IDは warning `W213` として報告されます。
+`python -m lifetxt ids life.txt` で存在するID、欠落ID、重複IDを監査できます。
+`ids --assign --dry-run` で既存データへのID付与予定を確認し、`--backup` 付きで安全に反映できます。
+
+Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。
+`notify --watch` は `notifications.state_file` に通知済みIDを保存し、再起動後の重複通知を抑えられます。
 
 External JSON config は `--config FILE`、`LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` で利用できます。
 

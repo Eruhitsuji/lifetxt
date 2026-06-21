@@ -38,6 +38,8 @@ DETAIL_FLAGS = (
     "notify_at",
     "notify_from",
     "notify_to",
+    "ack",
+    "snooze_until",
     "on",
     "at",
     "repeat",

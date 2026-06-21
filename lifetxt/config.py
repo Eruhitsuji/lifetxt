@@ -35,6 +35,8 @@ def config_template():
             ("lookahead", "0m"),
             ("grace", "2m"),
             ("poll_seconds", 30),
+            ("state_file", ".cache/lifetxt/notifications.json"),
+            ("snooze_default", "10m"),
             ("desktop", False),
             ("web", True),
         ]
@@ -43,6 +45,27 @@ def config_template():
         [
             ("id_key", "id"),
             ("allow_id_writes", True),
+        ]
+    )
+    data["ids"] = OrderedDict(
+        [
+            ("auto", True),
+            ("key", "id"),
+            (
+                "prefixes",
+                OrderedDict(
+                    [
+                        ("T", "task"),
+                        ("E", "event"),
+                        ("D", "deadline"),
+                        ("R", "reminder"),
+                        ("H", "habit"),
+                        ("N", "note"),
+                        ("S", "status"),
+                        ("M", "msg"),
+                    ]
+                ),
+            ),
         ]
     )
     data["web"] = OrderedDict(
@@ -57,10 +80,49 @@ def config_template():
             ("default_order", "asc"),
         ]
     )
+    data["views"] = OrderedDict(
+        [
+            (
+                "today",
+                OrderedDict(
+                    [
+                        ("around", "now"),
+                        ("window", "1d"),
+                        ("sort", "time"),
+                        ("order", "asc"),
+                    ]
+                ),
+            ),
+            (
+                "my_messages",
+                OrderedDict(
+                    [
+                        ("view", "messages"),
+                        ("recipient", "self"),
+                        ("open_only", "true"),
+                        ("sort", "time"),
+                        ("order", "asc"),
+                    ]
+                ),
+            ),
+            (
+                "team_status",
+                OrderedDict(
+                    [
+                        ("view", "status"),
+                        ("type", "S"),
+                        ("active", "true"),
+                        ("refresh", "30"),
+                    ]
+                ),
+            ),
+        ]
+    )
     data["sync_ics"] = OrderedDict(
         [
             ("output", ".generated/google_calendar.life.txt"),
             ("cache_dir", ".cache/lifetxt"),
+            ("generated_paths", [".generated/google_calendar.life.txt"]),
             ("sources", [OrderedDict([("name", "google"), ("url_env", "LIFETXT_GOOGLE_CAL_ICS"), ("tags", ["google"])])]),
         ]
     )

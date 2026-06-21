@@ -100,6 +100,9 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | Parameter | 意味 |
 |---|---|
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
+| `view=messages` | Message専用に近いlayout。type `M` をdefault filterにする |
+| `view=status` | Status専用に近いlayout。active status表示を強調する |
+| `preset=NAME` | config `views.NAME` のURL parameterを適用 |
 | `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
 | `kind=E` または `type=E` | life.txt type で filter |
 | `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
@@ -125,7 +128,13 @@ editor と filter controls を隠し、自動更新します。
 /?mode=display&around=now&window=8h&sort=time&order=asc&limit=20
 /?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
 /?mode=display&type=S&active=true&refresh=30
+/?view=messages&recipient=self&open_only=true
+/?view=status&active=true
+/?preset=my_messages
 ```
+
+config の `sync_ics.generated_paths` または `sync_ics.output` に含まれるファイルは
+API response で `generated: true` になり、GUIではread-onlyとして扱われます。
 
 ## 追加: Message API
 
@@ -168,8 +177,19 @@ GUI と `/api/items`、`/api/agenda` では `sender=VALUE` と `recipient=VALUE`
 | `GET` | `/api/messages/id/{id}` | `id:` で Message を取得 |
 | `PUT` | `/api/messages/id/{id}` | `id:` で Message を更新 |
 | `DELETE` | `/api/messages/id/{id}` | `id:` で Message を削除 |
+| `POST` | `/api/messages/id/{id}/ack` | writable file 内の Message に `ack:` を設定 |
+| `POST` | `/api/messages/id/{id}/snooze` | writable file 内の Message に `snooze_until:` を設定 |
 | `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を取得 |
 | `POST` | `/api/messages/id/{id}/reply` | `parent:{id}` を持つ返信 Message を作成 |
 | `GET` | `/api/notifications` | `notify_at:` または `notify_from/to:` に基づく通知候補を取得 |
 
+config で `ids.auto: true` の場合、`POST /api/items`、`POST /api/messages`、
+`POST /api/messages/id/{id}/reply` は payload に `id:` がないとき自動付与します。
+採番前に読み込み対象の全ファイルと writable file を走査するため、複数 `life.txt` 構成でも既存IDとの衝突を避けます。
+重複IDは item list response の diagnostics で warning `W213` として報告されます。
+id-based operation は曖昧なIDを拒否します。
+
 ブラウザでは `Enable Notifications` を押すと Notification API の許可を要求し、許可後に `/api/notifications` を定期 polling して通知します。対象は type `M`、open workflow status、`recipient:` が現在ユーザに一致する item です。
+`ack:` がある Message と、未来の `snooze_until:` がある Message は通知対象から外れます。
+通知パネルの `Ack` / `Snooze ...` は writable file の対象 Message を更新します。
+Snooze duration は `notifications.snooze_default` で指定できます。

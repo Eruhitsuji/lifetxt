@@ -90,6 +90,10 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `note` | 短い補足メモ | `note:"Check later"` |
 | `url` | 関連 URL | `url:https://example.com` |
 
+`id:` は読み込み対象の life.txt ファイル群の中で一意に保つことを推奨します。
+validator は重複IDを warning `W213` として報告します。id-based API や update は
+曖昧なIDを拒否する場合があります。
+
 ### 7.2 People keys
 
 | Key | 意味 | 例 |
@@ -126,6 +130,8 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | `recipient` | メッセージ送信先。複数指定可 | `recipient:alice` |
 | `notify_at` | 単一の通知時刻 | `notify_at:2026-06-06T09:00` |
 | `notify_from`, `notify_to` | 通知期間 | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
+| `ack` | 通知確認日時 | `ack:2026-06-06T09:05` |
+| `snooze_until` | この日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 | `channel` | 配信経路 | `channel:teams` |
 
 ### 7.5 Workflow keys
@@ -264,7 +270,7 @@ sender recipient
 推奨 key:
 
 ```txt
-sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent created updated
 ```
 
 | Key | 推奨理由 |
@@ -273,6 +279,8 @@ sender recipient notify_at notify_from notify_to channel service priority projec
 | `recipient` | 送信先。複数人には key を繰り返す |
 | `notify_at` | 単一の通知または配信時刻 |
 | `notify_from`, `notify_to` | 通知可能期間、配信期間 |
+| `ack` | 通知確認済み。ツールは再通知しない |
+| `snooze_until` | この日時まで通知を抑止 |
 | `channel` | `teams`、`discord`、`slack`、`email` などの経路 |
 | `service` | 由来または対象サービス |
 | `priority`, `project`, `tag`, `note`, `url`, `id`, `parent`, `created`, `updated` | 経路、文脈、追跡性 |

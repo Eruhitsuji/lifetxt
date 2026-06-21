@@ -726,3 +726,51 @@ python -m lifetxt notify life.txt --watch --interval 30
 | `web.notification_poll_seconds` | Web UI 通知 polling 秒数 |
 | `web.notification_lookahead` | Web UI 通知の未来方向検出幅 |
 | `api.id_key` | id として扱う detail key。現在は `id` |
+| `ids.auto` | 新規作成時に `id:` を自動付与するか |
+| `ids.key` | 自動IDを書き込む detail key。通常は `id` |
+| `ids.prefixes` | type ごとの自動ID prefix |
+| `views` | Web UI のURL preset定義 |
+| `sync_ics.generated_paths` | generated/read-only として扱うファイル一覧 |
+
+`ids.auto` が `true` の場合、`assist`、`/api/items`、`/api/messages`、Message
+reply の新規作成時に `id:` が未指定なら自動付与されます。既存IDは config
+の `paths`、`write_file`、必要に応じて `--output` / `--append` の対象から収集されるため、
+複数の `life.txt` を読み込む構成でも衝突を避けます。
+`check` は重複IDを warning `W213` として報告します。複数入力ファイル間の重複も対象です。
+
+### Notification acknowledgement and snooze
+
+`ack:` がある Message は通知済みとして扱われ、`notify` と Web 通知の対象から外れます。
+`snooze_until:` が未来の日時を指す場合、その時刻までは通知を抑止します。
+`notify --watch` は `notifications.state_file` に通知IDを保存し、再起動後も同じ通知を繰り返さないようにできます。
+
+| Key | Meaning |
+|---|---|
+| `notifications.state_file` | `notify --watch` の通知済みIDを保存するJSON file |
+| `notifications.snooze_default` | Web UI / API の default snooze duration |
+
+### `ids`
+
+`ids` は item ID の監査用コマンドです。ファイルは変更しません。
+`ids --assign` は一時ファイル経由でatomicに書き換えます。安全のため、実行前に
+`--dry-run` で確認し、必要なら `--backup` で `FILE.bak` を作成してください。
+
+```sh
+python -m lifetxt ids life.txt
+python -m lifetxt ids life.txt archive.life.txt --only duplicates
+python -m lifetxt ids life.txt --only missing --format json --pretty
+python -m lifetxt ids life.txt --assign --dry-run
+python -m lifetxt ids life.txt --assign --backup
+```
+
+| Option | Meaning |
+|---|---|
+| `--key KEY` | 監査する detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
+| `--only all` | summary、duplicate IDs、missing IDs を表示 |
+| `--only present` | 存在するID一覧を表示 |
+| `--only missing` | IDがないitemだけ表示 |
+| `--only duplicates` | 重複IDだけ表示 |
+| `--format text|json|jsonl` | 出力形式 |
+| `--assign` | IDがないitemへIDを付与 |
+| `--dry-run` | ファイルを書き換えず予定だけ表示 |
+| `--backup` | `--assign` で変更前に `FILE.bak` を作成 |

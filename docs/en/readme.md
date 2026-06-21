@@ -55,6 +55,7 @@ python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --watch --interval 30
+python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
@@ -63,6 +64,13 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 python -m lifetxt config init -o .lifetxt.json
+```
+
+Install locally as a command:
+
+```sh
+python -m pip install -e .
+lifetxt check examples/minimal_life.txt
 ```
 
 Most file-reading commands accept multiple input paths. The `filter`,
@@ -146,11 +154,19 @@ support id-based access, while `/api/messages/thread/{id}` and
 Use `python -m lifetxt notify life.txt --watch` as a resident notification
 watcher. The browser GUI also has an `Enable Notifications` button that polls
 `/api/notifications` and uses browser notifications after permission is granted.
+Message notifications can be acknowledged with `ack:` or snoozed with
+`snooze_until:`. The watcher can persist seen notification IDs with
+`notifications.state_file`.
 
 External JSON config is available with `--config FILE`, `LIFETXT_CONFIG`,
 `.lifetxt.json`, or `lifetxt.config.json`. Use `python -m lifetxt config init`
 to create a starter file with default paths, web settings, message defaults,
-notification settings, user name, and iCalendar sync sources.
+notification settings, user name, automatic ID settings, and iCalendar sync
+sources. With `ids.auto: true`, created items receive an `id:` when omitted;
+existing IDs are checked across configured input files and `write_file` before
+writing. Duplicate IDs are reported as warning `W213`. Use `python -m lifetxt ids
+life.txt` to audit present, missing, and duplicate IDs. Use `ids --assign` with
+`--dry-run` first to backfill IDs safely.
 
 ## JSON Shape
 

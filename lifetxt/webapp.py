@@ -10,7 +10,15 @@ from .agenda import (
     parse_agenda_range,
     parse_optional_time_range,
 )
-from .config import config_notification_recipient, config_section, config_user_name
+from .config import (
+    config_notification_recipient,
+    config_section,
+    config_tag_aliases,
+    config_team_aliases,
+    config_team_members,
+    config_user_aliases,
+    config_user_name,
+)
 from .ids import (
     auto_ids_enabled,
     collect_item_ids,
@@ -22,8 +30,10 @@ from .ids import (
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_line, parse_text
+from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
+from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
 
 
@@ -72,6 +82,9 @@ def create_app(paths=None, writable_path=None, config=None):
             "ids": public_id_config(app.state.config),
             "web": public_web_config(app.state.config),
             "views": public_views_config(app.state.config),
+            "users": public_users_config(app.state.config),
+            "teams": public_teams_config(app.state.config),
+            "tags": public_tags_config(app.state.config),
         }
 
     @app.get("/api/items")
@@ -82,6 +95,10 @@ def create_app(paths=None, writable_path=None, config=None):
         type_value=Query(None, alias="type"),
         project=None,
         tag=None,
+        tag_all=None,
+        exclude_tag=None,
+        user=None,
+        team=None,
         person=None,
         owner=None,
         assignee=None,
@@ -105,19 +122,32 @@ def create_app(paths=None, writable_path=None, config=None):
             kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
             tags=_csv_values(tag),
+            tag_all=_csv_values(tag_all),
+            exclude_tags=_csv_values(exclude_tag),
+            users=_csv_values(user),
             persons=_csv_values(person),
             owners=_csv_values(owner),
             assignees=_csv_values(assignee),
             attendees=_csv_values(attendee),
             senders=_csv_values(sender),
             recipients=_csv_values(recipient),
+            teams=_csv_values(team),
             text=text or q,
             range_start=range_start,
             range_end=range_end,
+            user_aliases=config_user_aliases(app.state.config),
+            team_members=config_team_members(app.state.config),
+            team_aliases=config_team_aliases(app.state.config),
+            tag_aliases=config_tag_aliases(app.state.config),
         )
         filtered = sort_items(filtered, sort, order)
         filtered = limit_items(filtered, limit)
-        return items_response(filtered, diagnostics, app.state.writable_path)
+        return items_response(
+            filtered,
+            diagnostics,
+            app.state.writable_path,
+            id_key_from_config(app.state.config),
+        )
 
     @app.get("/api/agenda")
     def get_agenda(
@@ -131,7 +161,14 @@ def create_app(paths=None, writable_path=None, config=None):
         type_value=Query(None, alias="type"),
         project=None,
         tag=None,
+        tag_all=None,
+        exclude_tag=None,
+        user=None,
+        team=None,
         person=None,
+        owner=None,
+        assignee=None,
+        attendee=None,
         sender=None,
         recipient=None,
         text=None,
@@ -161,10 +198,21 @@ def create_app(paths=None, writable_path=None, config=None):
             kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
             tags=_csv_values(tag),
+            tag_all=_csv_values(tag_all),
+            exclude_tags=_csv_values(exclude_tag),
+            users=_csv_values(user),
             persons=_csv_values(person),
+            owners=_csv_values(owner),
+            assignees=_csv_values(assignee),
+            attendees=_csv_values(attendee),
             senders=_csv_values(sender),
             recipients=_csv_values(recipient),
+            teams=_csv_values(team),
             text=text or q,
+            user_aliases=config_user_aliases(app.state.config),
+            team_members=config_team_members(app.state.config),
+            team_aliases=config_team_aliases(app.state.config),
+            tag_aliases=config_tag_aliases(app.state.config),
         )
         filtered_ids = set(id(item) for item in filtered_items)
         filtered_records = [
@@ -202,6 +250,10 @@ def create_app(paths=None, writable_path=None, config=None):
         recipient=None,
         project=None,
         tag=None,
+        tag_all=None,
+        exclude_tag=None,
+        user=None,
+        team=None,
         text=None,
         q=None,
         after=None,
@@ -219,40 +271,82 @@ def create_app(paths=None, writable_path=None, config=None):
             kinds=("M",),
             projects=_csv_values(project),
             tags=_csv_values(tag),
+            tag_all=_csv_values(tag_all),
+            exclude_tags=_csv_values(exclude_tag),
+            users=_csv_values(user),
             senders=_csv_values(sender),
             recipients=_csv_values(recipient),
+            teams=_csv_values(team),
             text=text or q,
             range_start=range_start,
             range_end=range_end,
+            user_aliases=config_user_aliases(app.state.config),
+            team_members=config_team_members(app.state.config),
+            team_aliases=config_team_aliases(app.state.config),
+            tag_aliases=config_tag_aliases(app.state.config),
         )
         filtered = sort_items(filtered, sort, order)
         filtered = limit_items(filtered, limit)
-        return items_response(filtered, diagnostics, app.state.writable_path)
+        return items_response(
+            filtered,
+            diagnostics,
+            app.state.writable_path,
+            id_key_from_config(app.state.config),
+        )
 
     @app.get("/api/messages/id/{message_id}")
     def get_message_by_id(message_id):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
-            item = find_item_by_id(items, message_id, kind="M")
+            item = find_item_by_id(
+                items,
+                message_id,
+                kind="M",
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
             raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
-        return {"item": api_item(item, app.state.writable_path)}
+        return {
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            )
+        }
 
     @app.put("/api/messages/id/{message_id}")
     def update_message_by_id(message_id, payload=Body(...)):
         try:
-            item = update_item_by_id_in_file(app.state.writable_path, message_id, payload, kind="M")
+            item = update_item_by_id_in_file(
+                app.state.writable_path,
+                message_id,
+                payload,
+                kind="M",
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+        return {
+            "id": message_id,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.delete("/api/messages/id/{message_id}")
     def delete_message_by_id(message_id):
         try:
-            deleted = delete_item_by_id_from_file(app.state.writable_path, message_id, kind="M")
+            deleted = delete_item_by_id_from_file(
+                app.state.writable_path,
+                message_id,
+                kind="M",
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"id": message_id, "deleted": deleted}
@@ -260,10 +354,22 @@ def create_app(paths=None, writable_path=None, config=None):
     @app.post("/api/messages/id/{message_id}/ack")
     def ack_message_by_id(message_id, payload=Body(None)):
         try:
-            item = ack_message_in_file(app.state.writable_path, message_id, payload)
+            item = ack_message_in_file(
+                app.state.writable_path,
+                message_id,
+                payload,
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+        return {
+            "id": message_id,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.post("/api/messages/id/{message_id}/snooze")
     def snooze_message_by_id(message_id, payload=Body(None)):
@@ -273,10 +379,18 @@ def create_app(paths=None, writable_path=None, config=None):
                 message_id,
                 payload,
                 app.state.config,
+                key=id_key_from_config(app.state.config),
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"id": message_id, "item": api_item(item, app.state.writable_path)}
+        return {
+            "id": message_id,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.get("/api/messages/thread/{thread_id}")
     def get_message_thread(thread_id, limit=None):
@@ -286,18 +400,29 @@ def create_app(paths=None, writable_path=None, config=None):
         for item in items:
             if item.kind != "M":
                 continue
-            if thread_id in item.details.get("id", []) or thread_id in item.details.get("parent", []):
+            item_id_key = id_key_from_config(app.state.config)
+            if thread_id in item.details.get(item_id_key, []) or thread_id in item.details.get("parent", []):
                 thread.append(item)
         thread = sort_items(thread, "time", "asc")
         thread = limit_items(thread, limit)
-        return items_response(thread, diagnostics, app.state.writable_path)
+        return items_response(
+            thread,
+            diagnostics,
+            app.state.writable_path,
+            id_key_from_config(app.state.config),
+        )
 
     @app.post("/api/messages/id/{message_id}/reply", status_code=201)
     def reply_to_message(message_id, payload=Body(...)):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
-            original = find_item_by_id(items, message_id, kind="M")
+            original = find_item_by_id(
+                items,
+                message_id,
+                kind="M",
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if original is None:
@@ -312,7 +437,14 @@ def create_app(paths=None, writable_path=None, config=None):
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"line": line, "item": api_item(item, app.state.writable_path)}
+        return {
+            "line": line,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.post("/api/messages", status_code=201)
     def create_message(payload=Body(...)):
@@ -326,7 +458,14 @@ def create_app(paths=None, writable_path=None, config=None):
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"line": line, "item": api_item(item, app.state.writable_path)}
+        return {
+            "line": line,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.post("/api/items", status_code=201)
     def create_item(payload=Body(...)):
@@ -340,32 +479,65 @@ def create_app(paths=None, writable_path=None, config=None):
             line = append_item_to_file(app.state.writable_path, item)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"line": line, "item": api_item(item, app.state.writable_path)}
+        return {
+            "line": line,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.get("/api/items/id/{item_id}")
     def get_item_by_id(item_id):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
-            item = find_item_by_id(items, item_id)
+            item = find_item_by_id(
+                items,
+                item_id,
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
             raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
-        return {"item": api_item(item, app.state.writable_path)}
+        return {
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            )
+        }
 
     @app.put("/api/items/id/{item_id}")
     def update_item_by_id(item_id, payload=Body(...)):
         try:
-            item = update_item_by_id_in_file(app.state.writable_path, item_id, payload)
+            item = update_item_by_id_in_file(
+                app.state.writable_path,
+                item_id,
+                payload,
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"id": item_id, "item": api_item(item, app.state.writable_path)}
+        return {
+            "id": item_id,
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.delete("/api/items/id/{item_id}")
     def delete_item_by_id(item_id):
         try:
-            deleted = delete_item_by_id_from_file(app.state.writable_path, item_id)
+            deleted = delete_item_by_id_from_file(
+                app.state.writable_path,
+                item_id,
+                key=id_key_from_config(app.state.config),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"id": item_id, "deleted": deleted}
@@ -376,7 +548,14 @@ def create_app(paths=None, writable_path=None, config=None):
             item = update_item_in_file(app.state.writable_path, int(line_no), payload)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"line": int(line_no), "item": api_item(item, app.state.writable_path)}
+        return {
+            "line": int(line_no),
+            "item": api_item(
+                item,
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            ),
+        }
 
     @app.delete("/api/items/{line_no}")
     def delete_item(line_no):
@@ -395,7 +574,7 @@ def normalize_server_paths(paths):
     if isinstance(paths, str):
         paths = [paths]
     paths = list(paths)
-    return paths or ["life.txt"]
+    return expand_paths(paths or ["life.txt"], stdin_when_empty=False) or ["life.txt"]
 
 
 def auto_id_paths(paths, writable_path=None):
@@ -461,10 +640,10 @@ def is_generated_path(path, config=None):
     return any(os.path.abspath(target) == abs_path for target in targets)
 
 
-def items_response(items, diagnostics, writable_path):
+def items_response(items, diagnostics, writable_path, id_key="id"):
     return {
         "count": len(items),
-        "items": [api_item(item, writable_path) for item in items],
+        "items": [api_item(item, writable_path, id_key) for item in items],
         "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
     }
 
@@ -508,6 +687,32 @@ def public_views_config(config):
     for name, values in views.items():
         if isinstance(values, dict):
             data[str(name)] = OrderedDict((str(key), str(value)) for key, value in values.items())
+    return data
+
+
+def public_users_config(config):
+    data = OrderedDict()
+    for name, aliases in config_user_aliases(config).items():
+        data[str(name)] = {"aliases": list(aliases)}
+    return data
+
+
+def public_teams_config(config):
+    data = OrderedDict()
+    members = config_team_members(config)
+    aliases = config_team_aliases(config)
+    for name, values in members.items():
+        data[str(name)] = {
+            "members": list(values),
+            "aliases": list(aliases.get(name, [name])),
+        }
+    return data
+
+
+def public_tags_config(config):
+    data = OrderedDict()
+    for name, aliases in config_tag_aliases(config).items():
+        data[str(name)] = list(aliases)
     return data
 
 
@@ -589,14 +794,17 @@ def _detail_sort_key(item, keys):
     for key in keys:
         values = item.details.get(key)
         if values:
+            parsed = parse_date_or_datetime(values[0])
+            if parsed is not None:
+                return (0, format_life_datetime(parsed), item.line or 0)
             return (0, values[0], item.line or 0)
     return (1, "", item.line or 0)
 
 
-def api_item(item, writable_path=None):
+def api_item(item, writable_path=None, id_key="id"):
     data = item.to_dict()
-    if item.details.get("id"):
-        data["id"] = item.details["id"][0]
+    if item.details.get(id_key):
+        data["id"] = item.details[id_key][0]
     data["line"] = item.line
     data["source"] = getattr(item, "source", None)
     data["text"] = getattr(item, "source_text", None) or item_to_line(item)
@@ -664,6 +872,9 @@ def message_item_from_payload(payload, config=None):
     for key in (
         "sender",
         "recipient",
+        "user",
+        "team",
+        "group",
         "notify_at",
         "notify_from",
         "notify_to",
@@ -678,6 +889,8 @@ def message_item_from_payload(payload, config=None):
         "url",
         "id",
         "parent",
+        "created",
+        "updated",
     ):
         if key in payload:
             _append_payload_values(details, key, payload[key])
@@ -737,12 +950,12 @@ def _append_payload_values(details, key, raw_value):
             details.setdefault(key, []).append(value)
 
 
-def find_item_by_id(items, item_id, kind=None):
+def find_item_by_id(items, item_id, kind=None, key="id"):
     matches = []
     for item in items:
         if kind is not None and item.kind != kind:
             continue
-        if item_id in item.details.get("id", []):
+        if item_id in item.details.get(key, []):
             matches.append(item)
     if not matches:
         return None
@@ -781,12 +994,12 @@ def update_item_in_file(path, line_no, payload):
     return updated
 
 
-def update_item_by_id_in_file(path, item_id, payload, kind=None):
-    line_no, _item = find_item_line_by_id(path, item_id, kind=kind)
+def update_item_by_id_in_file(path, item_id, payload, kind=None, key="id"):
+    line_no, _item = find_item_line_by_id(path, item_id, kind=kind, key=key)
     return update_item_in_file(path, line_no, payload)
 
 
-def ack_message_in_file(path, message_id, payload=None, now=None):
+def ack_message_in_file(path, message_id, payload=None, now=None, key="id"):
     payload = payload if isinstance(payload, dict) else {}
     value = payload.get("ack") or payload.get("at") or _format_now(now)
     return patch_item_details_by_id_in_file(
@@ -798,10 +1011,11 @@ def ack_message_in_file(path, message_id, payload=None, now=None):
             "updated": [value],
         },
         kind="M",
+        key=key,
     )
 
 
-def snooze_message_in_file(path, message_id, payload=None, config=None, now=None):
+def snooze_message_in_file(path, message_id, payload=None, config=None, now=None, key="id"):
     payload = payload if isinstance(payload, dict) else {}
     until = payload.get("snooze_until") or payload.get("until")
     if not until:
@@ -819,11 +1033,12 @@ def snooze_message_in_file(path, message_id, payload=None, config=None, now=None
             "updated": [_format_now(now)],
         },
         kind="M",
+        key=key,
     )
 
 
-def patch_item_details_by_id_in_file(path, item_id, detail_updates, kind=None):
-    line_no, item = find_item_line_by_id(path, item_id, kind=kind)
+def patch_item_details_by_id_in_file(path, item_id, detail_updates, kind=None, key="id"):
+    line_no, item = find_item_line_by_id(path, item_id, kind=kind, key=key)
     details = OrderedDict()
     for key, values in item.details.items():
         details[key] = list(values)
@@ -860,12 +1075,12 @@ def delete_item_from_file(path, line_no):
     return item_to_line(item)
 
 
-def delete_item_by_id_from_file(path, item_id, kind=None):
-    line_no, _item = find_item_line_by_id(path, item_id, kind=kind)
+def delete_item_by_id_from_file(path, item_id, kind=None, key="id"):
+    line_no, _item = find_item_line_by_id(path, item_id, kind=kind, key=key)
     return delete_item_from_file(path, line_no)
 
 
-def find_item_line_by_id(path, item_id, kind=None):
+def find_item_line_by_id(path, item_id, kind=None, key="id"):
     raw_lines = read_text(path).splitlines(True)
     matches = []
     for line_no, raw_line in enumerate(raw_lines, 1):
@@ -875,7 +1090,7 @@ def find_item_line_by_id(path, item_id, kind=None):
             continue
         if kind is not None and item.kind != kind:
             continue
-        if item_id in item.details.get("id", []):
+        if item_id in item.details.get(key, []):
             matches.append((line_no, item))
     if not matches:
         raise ValueError("No writable item found with id:%s." % item_id)
@@ -955,11 +1170,11 @@ def _now(value=None):
 
 
 def _format_now(value=None):
-    return _format_datetime(_now(value))
+    return format_life_datetime(_now(value))
 
 
 def _format_datetime(value):
-    return value.strftime("%Y-%m-%dT%H:%M")
+    return format_life_datetime(value)
 
 
 def _csv_values(value):
@@ -1430,7 +1645,8 @@ HTML_PAGE = r"""<!doctype html>
       const params = query();
       const result = new URLSearchParams();
       const passthrough = [
-        "status", "project", "tag", "person", "owner", "assignee", "attendee",
+        "status", "project", "tag", "tag_all", "exclude_tag", "user", "team",
+        "person", "owner", "assignee", "attendee",
         "sender", "recipient", "after", "before"
       ];
       for (const key of passthrough) {
@@ -1454,7 +1670,8 @@ HTML_PAGE = r"""<!doctype html>
       const next = new URLSearchParams();
       for (const key of [
         "mode", "view", "refresh", "around", "window", "from", "to",
-        "status", "project", "tag", "person", "owner", "assignee", "attendee",
+        "status", "project", "tag", "tag_all", "exclude_tag", "user", "team",
+        "person", "owner", "assignee", "attendee",
         "sender", "recipient", "after", "before"
       ]) {
         if (current.has(key)) next.set(key, current.get(key));
@@ -1581,7 +1798,7 @@ HTML_PAGE = r"""<!doctype html>
     async function loadAgenda() {
       const params = query();
       const agendaParams = new URLSearchParams();
-      for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "person", "sender", "recipient", "text", "q", "limit"]) {
+      for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "tag_all", "exclude_tag", "user", "team", "person", "owner", "assignee", "attendee", "sender", "recipient", "text", "q", "limit"]) {
         if (params.has(key)) agendaParams.set(key, params.get(key));
       }
       if (!agendaParams.has("around") && !agendaParams.has("from")) agendaParams.set("around", "now");

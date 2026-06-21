@@ -70,11 +70,15 @@ calendar sync sources and output.
 ### 2.1 Input Paths
 
 For commands that read files, `path ...` is optional and may contain multiple
-files. Multiple inputs are read in order.
+files. Multiple inputs are read in order. Paths may be glob patterns such as
+`*.life.txt` or `projects/**/*.life.txt`. When a directory is passed, the CLI
+reads life.txt-like `.txt` files in that directory.
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check work.life.txt home.life.txt
+python -m lifetxt check "projects/**/*.life.txt"
+python -m lifetxt check examples
 python -m lifetxt check -
 type life.txt | python -m lifetxt check
 ```
@@ -161,6 +165,7 @@ Options:
 | `--assign` | Assign IDs to items missing the selected ID key |
 | `--dry-run` | Show planned assignments without writing files |
 | `--backup` | Write `FILE.bak` before modifying a file with `--assign` |
+| `--prefix PREFIX` | ID prefix for `--assign`; defaults to the configured type prefix |
 
 Examples:
 
@@ -170,6 +175,7 @@ python -m lifetxt ids life.txt archive.life.txt --only duplicates
 python -m lifetxt ids life.txt --only missing --format json --pretty
 python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt ids life.txt --assign --backup
+python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 ```
 
 ## 4. JSON Conversion
@@ -227,6 +233,10 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--type VALUE` | Filter by type or alias; repeatable or comma-separated |
 | `--project VALUE` | Filter by `project:`; repeatable or comma-separated |
 | `--tag VALUE` | Filter by `tag:`; repeatable or comma-separated |
+| `--tag-all VALUE` | Require every listed `tag:` value |
+| `--exclude-tag VALUE` | Exclude items containing any listed `tag:` value |
+| `--user VALUE` | Filter across `user`, `person`, `owner`, `assignee`, `attendee`, `sender`, and `recipient` |
+| `--team VALUE` | Filter by `team:` / `group:` or config-defined team membership |
 | `--person VALUE` | Filter by `person:`; missing `person:` on `S` items means `self` |
 | `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
 | `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
@@ -238,10 +248,14 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--after VALUE` | Keep items related to this time or later |
 | `--before VALUE` | Keep items related to this time or earlier |
 
-`--after` and `--before` accept `now`, `YYYY-MM-DD`, or
-`YYYY-MM-DDTHH:MM`. They use the same time matching rules as `agenda`.
+`--after` and `--before` accept `now`, `YYYY-MM-DD`, or ISO-like datetimes such
+as `YYYY-MM-DDTHH:MM`, `YYYY-MM-DDTHH:MM:SS`, or
+`YYYY-MM-DDTHH:MM+09:00`. They use the same time matching rules as `agenda`.
 Time-only `at:HH:MM` values without an `on:` date are not matched by one-sided
 `--after` or `--before` filters, because they have no date anchor.
+
+`--user`, `--team`, and `--tag` use aliases from config `users`, `teams`, and
+`tags.aliases` / `tags.groups` when available.
 
 Examples:
 
@@ -251,6 +265,7 @@ python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
 python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --recipient alice --type message --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
+python -m lifetxt to-json "projects/**/*.life.txt" --team research --tag-all urgent,review
 ```
 
 ## 5. iCalendar Import And Sync
@@ -395,6 +410,7 @@ python -m lifetxt filter life.txt --recipient alice --type message -o alice_mess
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter work.life.txt home.life.txt --project research --format json --pretty
+python -m lifetxt filter "projects/**/*.life.txt" --team research --tag-all urgent,review --exclude-tag archived
 ```
 
 ## 7. `status`
@@ -497,8 +513,8 @@ Range matching rules:
 
 | Option | Meaning |
 |---|---|
-| `--from VALUE` | Range start: `now`, `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM` |
-| `--to VALUE` | Range end: `now`, `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM` |
+| `--from VALUE` | Range start: `now`, date, or ISO-like datetime |
+| `--to VALUE` | Range end: `now`, date, or ISO-like datetime |
 | `--around VALUE` | Range center; defaults to `now` |
 | `--window VALUE` | Half-width for `--around`; defaults to `1h` |
 
@@ -523,6 +539,7 @@ Examples:
 ```sh
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
 python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
 ```
@@ -536,6 +553,10 @@ python -m lifetxt agenda life.txt --around now --window 1w
 | `--type VALUE` | Filter by type or alias; repeatable or comma-separated |
 | `--project VALUE` | Filter by `project:`; repeatable or comma-separated |
 | `--tag VALUE` | Filter by `tag:`; repeatable or comma-separated |
+| `--tag-all VALUE` | Require every listed `tag:` value |
+| `--exclude-tag VALUE` | Exclude items containing any listed `tag:` value |
+| `--user VALUE` | Filter across user-related details |
+| `--team VALUE` | Filter by `team:` / `group:` or config-defined team membership |
 | `--person VALUE` | Filter by `person:`; repeatable or comma-separated |
 | `--owner VALUE` | Filter by `owner:`; repeatable or comma-separated |
 | `--assignee VALUE` | Filter by `assignee:`; repeatable or comma-separated |
@@ -551,6 +572,7 @@ Examples:
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --team research --tag-all urgent,review
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
@@ -611,7 +633,7 @@ Known detail keys also have direct flags. Each can be repeated:
 
 ```txt
 --id --parent --created --updated --done --due --do --from --to
---state --person --owner --assignee --attendee --sender --recipient --service --channel
+--state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --on --at --repeat
 --project --context --loc --priority --est --tag --note --url
 --reason --moved_to
@@ -711,7 +733,31 @@ Example config:
   "write_file": "life.txt",
   "user": {
     "name": "self",
-    "display_name": "Self"
+    "display_name": "Self",
+    "aliases": ["me"],
+    "teams": []
+  },
+  "users": {
+    "alice": {
+      "display_name": "Alice",
+      "aliases": ["ali"],
+      "teams": ["research"]
+    }
+  },
+  "teams": {
+    "research": {
+      "display_name": "Research Team",
+      "members": ["self", "alice"],
+      "aliases": ["lab"]
+    }
+  },
+  "tags": {
+    "aliases": {
+      "review": ["code-review"]
+    },
+    "groups": {
+      "work": ["research", "writing"]
+    }
   },
   "defaults": {
     "person": "self",
@@ -803,6 +849,10 @@ configured `write_file` and the command output file when applicable, so generate
 IDs avoid collisions across multiple loaded `life.txt` files.
 `check` reports duplicate IDs as warning `W213`, including duplicates across
 multiple input files.
+Set `ids.key` / `api.id_key` to use a custom ID detail key; id-based Web API
+operations and `ids --assign --key KEY` use the selected key. Config `users`,
+`teams`, and `tags` supply aliases and team membership for `--user`, `--team`,
+and tag filters.
 
 ## 13. Aliases
 

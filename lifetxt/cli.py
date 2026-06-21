@@ -12,7 +12,11 @@ from .config import (
     config_notification_recipient,
     config_paths,
     config_section,
+    config_tag_aliases,
     config_template_text,
+    config_team_aliases,
+    config_team_members,
+    config_user_aliases,
     config_user_name,
     config_write_file,
     load_config,
@@ -55,6 +59,7 @@ from .notifier import (
     watch_notifications,
 )
 from .parser import parse_line, parse_text
+from .paths import expand_paths
 from .serializer import (
     item_to_line,
     items_from_json_text,
@@ -183,6 +188,10 @@ def build_parser():
         "--backup",
         action="store_true",
         help="Write a .bak backup before changing files with --assign.",
+    )
+    ids_command.add_argument(
+        "--prefix",
+        help="ID prefix to use with --assign. Defaults to the type-specific configured prefix.",
     )
     ids_command.set_defaults(func=command_ids)
 
@@ -473,6 +482,26 @@ def build_parser():
         help="Filter by tag: value. Can be repeated or comma-separated.",
     )
     agenda.add_argument(
+        "--tag-all",
+        action="append",
+        help="Require every listed tag value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--exclude-tag",
+        action="append",
+        help="Exclude items containing any listed tag value. Can be repeated or comma-separated.",
+    )
+    agenda.add_argument(
+        "--user",
+        action="append",
+        help="Filter by any user-related detail: user, person, owner, assignee, attendee, sender, or recipient.",
+    )
+    agenda.add_argument(
+        "--team",
+        action="append",
+        help="Filter by team/group detail or config-defined team membership.",
+    )
+    agenda.add_argument(
         "--person",
         action="append",
         help="Filter by person: value. Can be repeated or comma-separated.",
@@ -628,6 +657,26 @@ def _add_item_filter_arguments(parser):
         help="Filter by tag detail. Can be repeated or comma-separated.",
     )
     parser.add_argument(
+        "--tag-all",
+        action="append",
+        help="Require every listed tag value. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--exclude-tag",
+        action="append",
+        help="Exclude items containing any listed tag value. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--user",
+        action="append",
+        help="Filter by any user-related detail. Can be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--team",
+        action="append",
+        help="Filter by team/group detail or config-defined team membership.",
+    )
+    parser.add_argument(
         "--person",
         action="append",
         help="Filter by person detail. Missing person on S items defaults to self.",
@@ -731,7 +780,14 @@ def command_ids(args):
 
 def command_ids_assign(args):
     key = args.key or id_key_from_config(_config(args))
-    records = assign_missing_ids(args.paths, _config(args), key, args.dry_run, args.backup)
+    records = assign_missing_ids(
+        args.paths,
+        _config(args),
+        key,
+        args.dry_run,
+        args.backup,
+        prefix=args.prefix,
+    )
 
     if args.format == "json":
         output = json.dumps(
@@ -851,7 +907,11 @@ def command_serve(args):
         ) from exc
 
     web_config = config_section(_config(args), "web")
-    paths = list(args.paths) if args.paths else config_paths(_config(args)) or ["life.txt"]
+    paths = _normalize_paths(
+        list(args.paths) if args.paths else (config_paths(_config(args)) or ["life.txt"]),
+        _config(args),
+        stdin_when_empty=False,
+    )
     writable_path = args.write_file or config_write_file(_config(args)) or paths[0]
     host = args.host or web_config.get("host") or "127.0.0.1"
     port = args.port or int(web_config.get("port") or 8000)
@@ -957,14 +1017,22 @@ def command_agenda(args):
         kinds=args.kinds,
         projects=args.project,
         tags=args.tag,
+        tag_all=args.tag_all,
+        exclude_tags=args.exclude_tag,
+        users=args.user,
         persons=args.person,
         owners=args.owner,
         assignees=args.assignee,
         attendees=args.attendee,
         senders=args.sender,
         recipients=args.recipient,
+        teams=args.team,
         detail_filters=args.detail,
         text=args.text,
+        user_aliases=config_user_aliases(_config(args)),
+        team_members=config_team_members(_config(args)),
+        team_aliases=config_team_aliases(_config(args)),
+        tag_aliases=config_tag_aliases(_config(args)),
     )
 
     if args.format == "json":
@@ -1132,7 +1200,7 @@ def format_id_audit(audit, only="all"):
     return "\n".join(lines).rstrip() + "\n"
 
 
-def assign_missing_ids(paths, config, key, dry_run=False, backup=False):
+def assign_missing_ids(paths, config, key, dry_run=False, backup=False, prefix=None):
     normalized = _normalize_paths(paths, config)
     if any(path == "-" for path in normalized):
         raise ValueError("ids --assign requires real file paths, not stdin.")
@@ -1155,6 +1223,7 @@ def assign_missing_ids(paths, config, key, dry_run=False, backup=False):
             key,
             existing,
             config,
+            prefix,
         )
         records.extend(path_records)
         if changed and not dry_run:
@@ -1164,7 +1233,7 @@ def assign_missing_ids(paths, config, key, dry_run=False, backup=False):
     return records
 
 
-def _assign_missing_ids_in_text(path, text, key, existing, config):
+def _assign_missing_ids_in_text(path, text, key, existing, config, prefix=None):
     raw_lines = text.splitlines(True)
     changed = False
     records = []
@@ -1179,7 +1248,7 @@ def _assign_missing_ids_in_text(path, text, key, existing, config):
             item,
             existing_ids=existing,
             key=key,
-            prefix=id_prefix_for_item(item, config),
+            prefix=prefix or id_prefix_for_item(item, config),
         )
         new_line = item_to_line(item) + ending
         new_lines.append(new_line)
@@ -1392,6 +1461,7 @@ def _filter_items_from_args(items, args):
         after_text=getattr(args, "after", None),
         before_text=getattr(args, "before", None),
     )
+    config = _config(args)
     return filter_items(
         items,
         open_only=getattr(args, "open", False),
@@ -1399,21 +1469,35 @@ def _filter_items_from_args(items, args):
         kinds=getattr(args, "kinds", None),
         projects=getattr(args, "project", None),
         tags=getattr(args, "tag", None),
+        tag_all=getattr(args, "tag_all", None),
+        exclude_tags=getattr(args, "exclude_tag", None),
+        users=getattr(args, "user", None),
         persons=getattr(args, "person", None),
         owners=getattr(args, "owner", None),
         assignees=getattr(args, "assignee", None),
         attendees=getattr(args, "attendee", None),
         senders=getattr(args, "sender", None),
         recipients=getattr(args, "recipient", None),
+        teams=getattr(args, "team", None),
         detail_filters=getattr(args, "detail", None),
         text=getattr(args, "text", None),
         range_start=range_start,
         range_end=range_end,
+        user_aliases=config_user_aliases(config),
+        team_members=config_team_members(config),
+        team_aliases=config_team_aliases(config),
+        tag_aliases=config_tag_aliases(config),
     )
 
 
 def apply_config_defaults_to_item(item, args):
     config = _config(args)
+
+    if item.kind == "S" and "person" not in item.details:
+        defaults = config_section(config, "defaults")
+        person = defaults.get("person") or config_user_name(config)
+        if person:
+            item.details["person"] = [str(person)]
 
     if item.kind == "M":
         message = config_section(config, "message")
@@ -1481,7 +1565,7 @@ def _auto_id_scan_paths(args):
             continue
         seen.add(key)
         paths.append(path)
-    return paths
+    return expand_paths(paths, stdin_when_empty=False)
 
 
 def _config(args):
@@ -1519,21 +1603,21 @@ def _items_from_jsonl_paths(paths):
     return items
 
 
-def _normalize_paths(paths, config=None):
+def _normalize_paths(paths, config=None, stdin_when_empty=True):
     if paths is None:
         configured = config_paths(config)
         if configured:
-            return configured
-        return ["-"]
+            return expand_paths(configured, stdin_when_empty=stdin_when_empty)
+        return ["-"] if stdin_when_empty else []
     if isinstance(paths, str):
-        return [paths]
+        return expand_paths([paths], stdin_when_empty=stdin_when_empty)
     paths = list(paths)
     if not paths:
         configured = config_paths(config)
         if configured:
-            return configured
-        return ["-"]
-    return paths
+            return expand_paths(configured, stdin_when_empty=stdin_when_empty)
+        return ["-"] if stdin_when_empty else []
+    return expand_paths(paths, stdin_when_empty=stdin_when_empty)
 
 
 def read_text(path):

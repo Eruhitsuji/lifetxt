@@ -47,6 +47,7 @@ python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
+python -m lifetxt filter "projects/**/*.life.txt" --team research --tag-all urgent,review --exclude-tag archived
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
@@ -56,7 +57,9 @@ python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --watch --interval 30
 python -m lifetxt ids life.txt --assign --dry-run
+python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
@@ -73,9 +76,11 @@ python -m pip install -e .
 lifetxt check examples/minimal_life.txt
 ```
 
-Most file-reading commands accept multiple input paths. The `filter`,
+Most file-reading commands accept multiple input paths, glob patterns, and
+directories containing life.txt-like `.txt` files. The `filter`,
 `to-json`, and `to-jsonl` commands support item filters such as `--open`,
-`--status`, `--type`, `--project`, `--tag`, `--person`, `--owner`,
+`--status`, `--type`, `--project`, `--tag`, `--tag-all`, `--exclude-tag`,
+`--user`, `--team`, `--person`, `--owner`,
 `--assignee`, `--attendee`, `--sender`, `--recipient`, `--detail`, `--text`,
 `--after`, and `--before`.
 `filter --format life` preserves original matching item lines by default; use
@@ -136,6 +141,7 @@ Agenda filters can be combined:
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --team research --tag-all urgent,review
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 ```
 
@@ -161,12 +167,13 @@ Message notifications can be acknowledged with `ack:` or snoozed with
 External JSON config is available with `--config FILE`, `LIFETXT_CONFIG`,
 `.lifetxt.json`, or `lifetxt.config.json`. Use `python -m lifetxt config init`
 to create a starter file with default paths, web settings, message defaults,
-notification settings, user name, automatic ID settings, and iCalendar sync
+notification settings, user name, user/team/tag aliases, automatic ID settings, and iCalendar sync
 sources. With `ids.auto: true`, created items receive an `id:` when omitted;
 existing IDs are checked across configured input files and `write_file` before
 writing. Duplicate IDs are reported as warning `W213`. Use `python -m lifetxt ids
 life.txt` to audit present, missing, and duplicate IDs. Use `ids --assign` with
-`--dry-run` first to backfill IDs safely.
+`--dry-run` first to backfill IDs safely. Set `ids.key` / `api.id_key` to use a
+custom ID detail key.
 
 ## JSON Shape
 

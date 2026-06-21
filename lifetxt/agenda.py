@@ -10,15 +10,16 @@ from .model import (
     normalize_type,
 )
 from .serializer import item_to_line
+from .timeutil import (
+    parse_date,
+    parse_date_or_datetime,
+    parse_datetime,
+    parse_time,
+    format_datetime as format_life_datetime,
+)
 
 
 OPEN_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
-_DATE_FORMAT = "%Y-%m-%d"
-_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
-_TIME_FORMAT = "%H:%M"
-_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$")
-_TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _DURATION_RE = re.compile(r"^(\d+)([a-z]*)$")
 
 _POINT_KEYS = ("due", "do", "moved_to", "notify_at")
@@ -129,27 +130,39 @@ def filter_items(
     kinds=None,
     projects=None,
     tags=None,
+    tag_all=None,
+    exclude_tags=None,
+    users=None,
     persons=None,
     owners=None,
     assignees=None,
     attendees=None,
     senders=None,
     recipients=None,
+    teams=None,
     detail_filters=None,
     text=None,
     range_start=None,
     range_end=None,
+    user_aliases=None,
+    team_members=None,
+    team_aliases=None,
+    tag_aliases=None,
 ):
     statuses = _normalize_status_filter(statuses)
     kinds = _normalize_type_filter(kinds)
     projects = _normalize_filter_values(projects)
-    tags = _normalize_filter_values(tags)
+    tags = _normalize_filter_values(tags, tag_aliases)
+    tag_all = _normalize_filter_groups(tag_all, tag_aliases)
+    exclude_tags = _normalize_filter_values(exclude_tags, tag_aliases)
+    users = _normalize_filter_values(users, user_aliases)
     persons = _normalize_filter_values(persons)
     owners = _normalize_filter_values(owners)
     assignees = _normalize_filter_values(assignees)
     attendees = _normalize_filter_values(attendees)
     senders = _normalize_filter_values(senders)
     recipients = _normalize_filter_values(recipients)
+    teams = _normalize_filter_values(teams, team_aliases)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -170,6 +183,12 @@ def filter_items(
             continue
         if tags and not _item_has_any_detail(item, "tag", tags):
             continue
+        if tag_all and not _item_matches_all_detail_groups(item, "tag", tag_all):
+            continue
+        if exclude_tags and _item_has_any_detail(item, "tag", exclude_tags):
+            continue
+        if users and not _item_has_any_user(item, users, user_aliases):
+            continue
         if persons and not _item_has_any_detail(item, "person", persons):
             continue
         if owners and not _item_has_any_detail(item, "owner", owners):
@@ -181,6 +200,8 @@ def filter_items(
         if senders and not _item_has_any_detail(item, "sender", senders):
             continue
         if recipients and not _item_has_any_detail(item, "recipient", recipients):
+            continue
+        if teams and not _item_has_any_team(item, teams, team_members):
             continue
         if details and not _item_matches_detail_filters(item, details):
             continue
@@ -199,25 +220,37 @@ def filter_agenda_records(
     kinds=None,
     projects=None,
     tags=None,
+    tag_all=None,
+    exclude_tags=None,
+    users=None,
     persons=None,
     owners=None,
     assignees=None,
     attendees=None,
     senders=None,
     recipients=None,
+    teams=None,
     detail_filters=None,
     text=None,
+    user_aliases=None,
+    team_members=None,
+    team_aliases=None,
+    tag_aliases=None,
 ):
     statuses = _normalize_status_filter(statuses)
     kinds = _normalize_type_filter(kinds)
     projects = _normalize_filter_values(projects)
-    tags = _normalize_filter_values(tags)
+    tags = _normalize_filter_values(tags, tag_aliases)
+    tag_all = _normalize_filter_groups(tag_all, tag_aliases)
+    exclude_tags = _normalize_filter_values(exclude_tags, tag_aliases)
+    users = _normalize_filter_values(users, user_aliases)
     persons = _normalize_filter_values(persons)
     owners = _normalize_filter_values(owners)
     assignees = _normalize_filter_values(assignees)
     attendees = _normalize_filter_values(attendees)
     senders = _normalize_filter_values(senders)
     recipients = _normalize_filter_values(recipients)
+    teams = _normalize_filter_values(teams, team_aliases)
     details = _parse_detail_filters(detail_filters)
     text = text.lower() if text else None
 
@@ -233,6 +266,12 @@ def filter_agenda_records(
             continue
         if tags and not _record_has_any_detail(record, "tag", tags):
             continue
+        if tag_all and not _record_matches_all_detail_groups(record, "tag", tag_all):
+            continue
+        if exclude_tags and _record_has_any_detail(record, "tag", exclude_tags):
+            continue
+        if users and not _record_has_any_user(record, users, user_aliases):
+            continue
         if persons and not _record_has_any_detail(record, "person", persons):
             continue
         if owners and not _record_has_any_detail(record, "owner", owners):
@@ -244,6 +283,8 @@ def filter_agenda_records(
         if senders and not _record_has_any_detail(record, "sender", senders):
             continue
         if recipients and not _record_has_any_detail(record, "recipient", recipients):
+            continue
+        if teams and not _record_has_any_team(record, teams, team_members):
             continue
         if details and not _record_matches_detail_filters(record, details):
             continue
@@ -465,72 +506,63 @@ def _is_unbounded_range(range_start, range_end):
 def _parse_range_boundary(value, is_end, now):
     if str(value).strip().lower() == "now":
         return now
-    if _DATE_RE.match(value):
-        parsed = datetime.strptime(value, _DATE_FORMAT).date()
+    parsed_date = parse_date(value)
+    if parsed_date is not None:
         if is_end:
-            return datetime.combine(parsed, time(23, 59))
-        return datetime.combine(parsed, time(0, 0))
+            return datetime.combine(parsed_date, time(23, 59, 59))
+        return datetime.combine(parsed_date, time(0, 0, 0))
     parsed = _parse_datetime_value(value)
     if parsed is None:
-        raise ValueError("Datetime must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.")
+        raise ValueError(
+            "Datetime must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds/timezone."
+        )
     return parsed
 
 
 def _parse_around_value(value, now):
     if str(value).strip().lower() == "now":
         return now
-    if _DATE_RE.match(value):
-        return datetime.combine(datetime.strptime(value, _DATE_FORMAT).date(), time(12, 0))
+    parsed_date = parse_date(value)
+    if parsed_date is not None:
+        return datetime.combine(parsed_date, time(12, 0))
     parsed = _parse_datetime_value(value)
     if parsed is None:
-        raise ValueError("--around must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.")
+        raise ValueError(
+            "--around must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds/timezone."
+        )
     return parsed
 
 
 def _parse_date_or_datetime_span(value):
-    point = _parse_datetime_value(value)
-    if point is not None:
-        return point, point
-    return _parse_date_span(value)
+    start = parse_date_or_datetime(value, is_end=False)
+    if start is None:
+        return None
+    end = parse_date_or_datetime(value, is_end=True)
+    return start, end
 
 
 def _parse_date_span(value):
-    if not _DATE_RE.match(value):
+    parsed = parse_date(value)
+    if parsed is None:
         return None
-    try:
-        parsed = datetime.strptime(value, _DATE_FORMAT).date()
-    except ValueError:
-        return None
-    return datetime.combine(parsed, time(0, 0)), datetime.combine(parsed, time(23, 59))
+    return datetime.combine(parsed, time(0, 0, 0)), datetime.combine(parsed, time(23, 59, 59))
 
 
 def _parse_datetime_value(value):
-    if not _DATETIME_RE.match(value):
-        return None
-    try:
-        return datetime.strptime(value, _DATETIME_FORMAT)
-    except ValueError:
-        return None
+    return parse_datetime(value)
 
 
 def _parse_time_value(value):
-    if not _TIME_RE.match(value):
-        return None
-    try:
-        return datetime.strptime(value, _TIME_FORMAT).time()
-    except ValueError:
-        return None
+    return parse_time(value)
 
 
 def _item_on_dates(item):
     dates = []
     for value in item.details.get("on", []):
-        if not _DATE_RE.match(value):
+        parsed = parse_date(value)
+        if parsed is None:
             continue
-        try:
-            dates.append(datetime.strptime(value, _DATE_FORMAT).date())
-        except ValueError:
-            pass
+        dates.append(parsed)
     return dates
 
 
@@ -571,7 +603,7 @@ def format_match_time(match):
 
 
 def _format_datetime(value):
-    return value.strftime(_DATETIME_FORMAT)
+    return format_life_datetime(value)
 
 
 def _copy_details(details):
@@ -594,14 +626,47 @@ def _table_cell(value):
     return str(value).replace("|", "\\|")
 
 
-def _normalize_filter_values(values):
+def _normalize_filter_values(values, aliases=None):
     normalized = []
     for raw in values or []:
         for value in str(raw).split(","):
             value = value.strip()
-            if value and value not in normalized:
-                normalized.append(value)
+            if not value:
+                continue
+            for expanded in _expand_filter_value(value, aliases):
+                if expanded and expanded not in normalized:
+                    normalized.append(expanded)
     return tuple(normalized)
+
+
+def _normalize_filter_groups(values, aliases=None):
+    groups = []
+    for raw in values or []:
+        for value in str(raw).split(","):
+            value = value.strip()
+            if not value:
+                continue
+            expanded = []
+            for entry in _expand_filter_value(value, aliases):
+                if entry and entry not in expanded:
+                    expanded.append(entry)
+            if expanded:
+                groups.append(tuple(expanded))
+    return tuple(groups)
+
+
+def _expand_filter_value(value, aliases):
+    values = [value]
+    if isinstance(aliases, dict):
+        if value in aliases:
+            values.extend(aliases.get(value) or [])
+        else:
+            for canonical, alias_values in aliases.items():
+                all_values = [canonical] + list(alias_values or [])
+                if value in all_values:
+                    values.extend(all_values)
+                    break
+    return values
 
 
 def _normalize_status_filter(values):
@@ -654,6 +719,15 @@ def _record_has_any_detail(record, key, values):
     return False
 
 
+def _record_matches_all_detail_groups(record, key, groups):
+    details = record.get("details", {})
+    record_values = details.get(key, [])
+    for group in groups:
+        if not any(value in record_values for value in group):
+            return False
+    return True
+
+
 def _item_has_any_detail(item, key, values):
     item_values = item.details.get(key, [])
     if key == "person" and not item_values and item.kind == "S":
@@ -662,6 +736,78 @@ def _item_has_any_detail(item, key, values):
         if value in item_values:
             return True
     return False
+
+
+def _item_matches_all_detail_groups(item, key, groups):
+    item_values = item.details.get(key, [])
+    for group in groups:
+        if not any(value in item_values for value in group):
+            return False
+    return True
+
+
+def _item_has_any_user(item, values, aliases=None):
+    item_values = _item_user_values(item)
+    expanded = set()
+    for value in item_values:
+        expanded.update(_expand_filter_value(value, aliases))
+    return any(value in expanded for value in values)
+
+
+def _record_has_any_user(record, values, aliases=None):
+    record_values = _record_user_values(record)
+    expanded = set()
+    for value in record_values:
+        expanded.update(_expand_filter_value(value, aliases))
+    return any(value in expanded for value in values)
+
+
+def _item_has_any_team(item, values, team_members=None):
+    item_teams = set(item.details.get("team", []) + item.details.get("group", []))
+    if any(value in item_teams for value in values):
+        return True
+    if not isinstance(team_members, dict):
+        return False
+    item_users = set(_item_user_values(item))
+    for team in values:
+        members = set(team_members.get(team, []))
+        if members and item_users.intersection(members):
+            return True
+    return False
+
+
+def _record_has_any_team(record, values, team_members=None):
+    details = record.get("details", {})
+    record_teams = set(details.get("team", []) + details.get("group", []))
+    if any(value in record_teams for value in values):
+        return True
+    if not isinstance(team_members, dict):
+        return False
+    record_users = set(_record_user_values(record))
+    for team in values:
+        members = set(team_members.get(team, []))
+        if members and record_users.intersection(members):
+            return True
+    return False
+
+
+def _item_user_values(item):
+    values = []
+    for key in ("user", "person", "owner", "assignee", "attendee", "sender", "recipient"):
+        values.extend(item.details.get(key, []))
+    if item.kind == "S" and not item.details.get("person"):
+        values.append("self")
+    return values
+
+
+def _record_user_values(record):
+    details = record.get("details", {})
+    values = []
+    for key in ("user", "person", "owner", "assignee", "attendee", "sender", "recipient"):
+        values.extend(details.get(key, []))
+    if record.get("type") == "S" and not details.get("person"):
+        values.append("self")
+    return values
 
 
 def _record_matches_detail_filters(record, filters):

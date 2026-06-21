@@ -1,8 +1,8 @@
 # Multi-person status examples
 
-[/] S Alice_Working from:2026-06-06T09:00 state:working person:alice service:slack project:research visibility:team
-[/] S Bob_Meeting from:2026-06-06T09:30 state:meeting person:bob service:teams visibility:team
-[/] S Carol_Focus from:2026-06-06T10:00 state:focus person:carol service:discord project:writing note:"No quick replies"
+[/] S Alice_Working from:2026-06-06T09:00:30+09:00 state:working person:alice team:research service:slack project:research visibility:team
+[/] S Bob_Meeting from:2026-06-06T09:30 state:meeting person:bob team:research service:teams visibility:team
+[/] S Carol_Focus from:2026-06-06T10:00 state:focus person:carol group:writing service:discord project:writing note:"No quick replies"
 [x] S Alice_Commuting from:2026-06-06T08:00 to:2026-06-06T08:45 state:commuting person:alice service:slack
 [x] S Bob_Offline from:2026-06-05T22:00 to:2026-06-06T08:30 state:offline person:bob service:teams
 [/] S Self_Away from:2026-06-06T12:00 state:away loc:home

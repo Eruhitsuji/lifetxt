@@ -8,10 +8,10 @@ from datetime import datetime
 
 from .agenda import parse_duration
 from .serializer import item_to_line
+from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime, parse_datetime
 
 
 NOTIFIABLE_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
-_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 def notification_records(
@@ -198,21 +198,21 @@ def mark_notifications_seen(state, records, now=None):
 def _notification_matches(item, start, now, end):
     matches = []
     for value in item.details.get("notify_at", []):
-        point = _parse_datetime(value)
+        point = parse_datetime(value)
         if point is not None and start <= point <= end:
             matches.append(("notify_at", point, point))
 
     starts = item.details.get("notify_from", [])
     ends = item.details.get("notify_to", [])
     for index, raw_start in enumerate(starts):
-        period_start = _parse_datetime(raw_start)
+        period_start = parse_datetime(raw_start)
         if period_start is None:
             continue
         period_end = None
         if index < len(ends):
-            period_end = _parse_datetime(ends[index])
+            period_end = parse_datetime(ends[index])
         elif len(ends) == 1:
-            period_end = _parse_datetime(ends[0])
+            period_end = parse_datetime(ends[0])
         if period_end is None:
             period_end = period_start
         if period_start <= now <= period_end or _overlaps(period_start, period_end, start, end):
@@ -225,7 +225,7 @@ def _notification_suppressed(item, now):
     if item.details.get("ack"):
         return True
     for value in item.details.get("snooze_until", []):
-        snooze_until = _parse_date_or_datetime(value)
+        snooze_until = parse_date_or_datetime(value)
         if snooze_until is not None and snooze_until > now:
             return True
     return False
@@ -271,25 +271,8 @@ def _safe_duration(value, default):
         return parse_duration(default)
 
 
-def _parse_datetime(value):
-    try:
-        return datetime.strptime(value, _DATETIME_FORMAT)
-    except (TypeError, ValueError):
-        return None
-
-
-def _parse_date_or_datetime(value):
-    parsed = _parse_datetime(value)
-    if parsed is not None:
-        return parsed
-    try:
-        return datetime.strptime(value, "%Y-%m-%d")
-    except (TypeError, ValueError):
-        return None
-
-
 def _format_datetime(value):
-    return value.strftime(_DATETIME_FORMAT)
+    return format_life_datetime(value)
 
 
 def _overlaps(start, end, range_start, range_end):

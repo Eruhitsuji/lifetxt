@@ -50,6 +50,40 @@ title と detail value は、空白やダブルクォートを含まない場合
 [N] N "Use more figures in the next presentation" project:research
 ```
 
+## 15. 追加仕様: user / team / tag / time / id
+
+### 15.1 user / team / group
+
+`user:` は、`owner:`、`assignee:`、`attendee:`、`person:`、`sender:`、`recipient:` のどれにも限定しない一般的な user 参照です。
+役割が明確な場合は、より具体的な key を優先してください。
+
+`team:` と `group:` は、team 単位・group 単位の ownership、routing、filter に使います。
+CLI / Web の `--team` / `team=` filter は、item の `team:` / `group:` に加えて、config の `teams` membership も利用できます。
+
+### 15.2 tag filter
+
+`tag:` は従来どおり複数回書けます。
+CLI / Web では `--tag` / `tag=` はいずれかの tag に一致、`--tag-all` / `tag_all=` はすべての tag に一致、`--exclude-tag` / `exclude_tag=` は指定 tag を含む item を除外します。
+config の `tags.aliases` と `tags.groups` は tag filter の展開に使えます。
+
+### 15.3 datetime
+
+日時値は従来の `YYYY-MM-DDTHH:MM` に加えて、秒と timezone offset を含められます。
+
+```txt
+from:2026-06-08T13:00
+from:2026-06-08T13:00:30
+from:2026-06-08T13:00+09:00
+from:2026-06-08T04:00Z
+at:18:00:30
+```
+
+### 15.4 id
+
+`id:` は読み込み対象の複数 life.txt ファイル全体で一意であることを推奨します。
+空白や引用符を含まない短い ASCII token を推奨しますが、iCalendar UID など外部 ID では `@` などの記号を含んでも構いません。
+config の `ids.key` / `api.id_key` により、`id:` 以外の detail key を ID key として使えます。
+
 引用文字列内では `"` を `\"`、`\` を `\\` としてエスケープします。
 
 ## 5. details

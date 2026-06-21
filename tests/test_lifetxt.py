@@ -114,6 +114,23 @@ class LifeTxtParserTests(unittest.TestCase):
 
         self.assertTrue(any(d.code == "W211" for d in diagnostics))
 
+    def test_datetime_seconds_and_timezone_are_valid(self):
+        text = (
+            "[ ] E Call from:2026-06-06T09:00:30+09:00 "
+            "to:2026-06-06T09:30:00+09:00\n"
+            "[ ] R Alarm at:18:00:30\n"
+        )
+
+        _items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertFalse(any(d.code in ("W202", "W204") for d in diagnostics))
+
+    def test_id_style_warning(self):
+        _items, diagnostics = parse_text('[ ] T Bad_ID id:"bad id"\n')
+
+        self.assertTrue(any(d.code == "W214" for d in diagnostics))
+
     def test_auto_id_generation_avoids_existing_ids(self):
         from lifetxt.ids import ensure_item_id
 
@@ -780,6 +797,90 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("Review", normalized)
         self.assertNotIn("Alice_Task", normalized)
 
+    def test_filter_user_team_and_tag_modes_with_config(self):
+        text = (
+            "[ ] T Alice_Task due:2026-06-08 assignee:alice tag:urgent tag:review\n"
+            "[ ] T Bob_Task due:2026-06-08 assignee:bob tag:urgent\n"
+            "[ ] T Team_Direct due:2026-06-08 team:research tag:deep\n"
+            "[ ] T Hidden due:2026-06-08 assignee:carol tag:archive\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "lifetxt.json")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(
+                    {
+                        "users": {"alice": {"aliases": ["a"]}},
+                        "teams": {"research": {"members": ["alice"]}},
+                        "tags": {
+                            "aliases": {"review": ["code-review"]},
+                            "groups": {"review_pack": ["urgent", "review"]},
+                        },
+                    },
+                    handle,
+                )
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "filter",
+                "--user",
+                "a",
+                input_text=text,
+            )
+
+            normalized = normalize_newlines(stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Alice_Task", normalized)
+            self.assertNotIn("Bob_Task", normalized)
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "filter",
+                "--team",
+                "research",
+                input_text=text,
+            )
+
+            normalized = normalize_newlines(stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Alice_Task", normalized)
+            self.assertIn("Team_Direct", normalized)
+            self.assertNotIn("Bob_Task", normalized)
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "filter",
+                "--tag",
+                "code-review",
+                input_text=text,
+            )
+
+            normalized = normalize_newlines(stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Alice_Task", normalized)
+            self.assertNotIn("Bob_Task", normalized)
+
+            stdout, stderr, code = run_cli(
+                "filter",
+                "--tag-all",
+                "urgent,review",
+                "--exclude-tag",
+                "archive",
+                input_text=text,
+            )
+
+            normalized = normalize_newlines(stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Alice_Task", normalized)
+            self.assertNotIn("Bob_Task", normalized)
+            self.assertNotIn("Hidden", normalized)
+
     def test_to_json_and_to_jsonl_filters(self):
         text = (
             "[ ] T Open_Task due:2026-06-08 project:research\n"
@@ -836,6 +937,36 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual(0, code)
             data = json.loads(stdout)
             self.assertEqual(["First", "Second"], [entry["title"] for entry in data])
+
+    def test_glob_and_directory_life_input_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first_life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            ignored_path = os.path.join(temp_dir, "ignored.md")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First due:2026-06-08\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Second due:2026-06-09\n")
+            with open(ignored_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Ignored due:2026-06-10\n")
+
+            stdout, stderr, code = run_cli(
+                "filter",
+                os.path.join(temp_dir, "*life.txt"),
+                "--format",
+                "json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(["First", "Second"], sorted(entry["title"] for entry in data))
+
+            stdout, stderr, code = run_cli("check", temp_dir)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("OK: 2 item(s)", normalize_newlines(stdout))
 
     def test_multiple_life_input_diagnostics_include_source(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1225,6 +1356,34 @@ class LifeTxtIdDiagnosticsTests(unittest.TestCase):
             with open(path + ".bak", "r", encoding="utf-8") as handle:
                 self.assertEqual("[ ] T Missing\n", handle.read())
 
+    def test_ids_assign_custom_key_and_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Missing\n")
+                handle.write("[ ] M Ping sender:self recipient:alice\n")
+
+            stdout, stderr, code = run_cli(
+                "ids",
+                path,
+                "--assign",
+                "--key",
+                "uid",
+                "--prefix",
+                "item",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("ID assignments: 2 item(s)", stdout)
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertRegex(text, r"^\[ \] T Missing uid:item_\d{14}\n")
+            self.assertRegex(
+                text,
+                r"\[ \] M Ping sender:self recipient:alice uid:item_\d{14}_2\n$",
+            )
+
     def test_check_cli_warns_for_cross_file_duplicate_ids(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first.life.txt")
@@ -1308,6 +1467,25 @@ class LifeTxtNotifyTests(unittest.TestCase):
         )
 
         self.assertEqual(["msg_003"], [record["id"] for record in records])
+
+    def test_notification_records_accept_seconds(self):
+        from lifetxt.notifier import notification_records
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00:30\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0, 30),
+        )
+
+        self.assertEqual(1, len(records))
+        self.assertEqual("2026-06-06T09:00:30", records[0]["when"])
 
     def test_watch_notifications_persists_seen_state(self):
         from lifetxt.notifier import notification_records, watch_notifications
@@ -1442,6 +1620,22 @@ class LifeTxtWebAppTests(unittest.TestCase):
             self.assertTrue(response["items"][0]["generated"])
             self.assertFalse(response["items"][0]["editable"])
 
+    def test_webapp_read_life_inputs_expands_globs(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second_life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Second\n")
+
+            items, diagnostics = webapp.read_life_inputs([os.path.join(temp_dir, "*life.txt")])
+
+            self.assertFalse(any(d.severity == "error" for d in diagnostics))
+            self.assertEqual(["First", "Second"], sorted(item.title for item in items))
+
     def test_webapp_message_payload_helper(self):
         from lifetxt import webapp
 
@@ -1547,6 +1741,31 @@ class LifeTxtWebAppTests(unittest.TestCase):
 
             with open(path, "r", encoding="utf-8") as handle:
                 self.assertEqual("[x] T First done:2026-06-06\n", handle.read())
+
+    def test_webapp_custom_id_key_helpers(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First uid:task_001\n")
+
+            items, diagnostics = webapp.read_life_inputs([path], {"ids": {"key": "uid"}})
+            self.assertFalse(any(d.severity == "error" for d in diagnostics))
+            found = webapp.find_item_by_id(items, "task_001", key="uid")
+            self.assertEqual("First", found.title)
+            self.assertEqual("task_001", webapp.api_item(found, path, id_key="uid")["id"])
+
+            updated = webapp.update_item_by_id_in_file(
+                path,
+                "task_001",
+                {"title": "Updated", "details": {"uid": ["task_001"], "tag": ["done"]}},
+                key="uid",
+            )
+
+            self.assertEqual("Updated", updated.title)
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual("[ ] T Updated uid:task_001 tag:done\n", handle.read())
 
     def test_webapp_ack_and_snooze_message_helpers(self):
         from lifetxt import webapp

@@ -71,12 +71,15 @@ KNOWN_KEYS = (
     "from",
     "to",
     "state",
+    "user",
     "person",
     "owner",
     "assignee",
     "attendee",
     "sender",
     "recipient",
+    "team",
+    "group",
     "service",
     "channel",
     "visibility",
@@ -101,7 +104,16 @@ KNOWN_KEYS = (
 )
 
 COMMON_RECOMMENDED_KEYS = ("id", "parent", "project", "tag", "note", "url")
-PEOPLE_RECOMMENDED_KEYS = ("owner", "assignee", "attendee", "person")
+PEOPLE_RECOMMENDED_KEYS = (
+    "user",
+    "person",
+    "owner",
+    "assignee",
+    "attendee",
+    "sender",
+    "recipient",
+)
+TEAM_RECOMMENDED_KEYS = ("team", "group")
 TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
 MESSAGE_RECOMMENDED_KEYS = (
     "sender",
@@ -119,6 +131,7 @@ SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
 RECOMMENDED_KEY_GROUPS = (
     ("Common", COMMON_RECOMMENDED_KEYS),
     ("People", PEOPLE_RECOMMENDED_KEYS),
+    ("Teams", TEAM_RECOMMENDED_KEYS),
     ("Time", TIME_RECOMMENDED_KEYS),
     ("Message", MESSAGE_RECOMMENDED_KEYS),
     ("Workflow", WORKFLOW_RECOMMENDED_KEYS),
@@ -135,6 +148,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "priority",
         "assignee",
         "owner",
+        "team",
         "est",
         "project",
         "tag",
@@ -149,6 +163,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "loc",
         "attendee",
         "owner",
+        "team",
         "project",
         "tag",
         "note",
@@ -158,6 +173,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "priority",
         "owner",
         "assignee",
+        "team",
         "project",
         "tag",
         "note",
@@ -166,6 +182,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "at",
         "on",
         "owner",
+        "team",
         "project",
         "context",
         "note",
@@ -175,6 +192,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "at",
         "on",
         "owner",
+        "team",
         "project",
         "tag",
         "note",
@@ -193,6 +211,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "state",
         "to",
         "person",
+        "team",
+        "group",
         "service",
         "loc",
         "project",
@@ -202,6 +222,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
     "M": (
         "sender",
         "recipient",
+        "team",
+        "group",
         "notify_at",
         "notify_from",
         "notify_to",

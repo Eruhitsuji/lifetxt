@@ -1,6 +1,6 @@
 # Task and deadline examples
 
-[ ] T Write_Report id:task_report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice tag:writing tag:report
+[ ] T Write_Report id:task_report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice team:research tag:writing tag:report
 [/] T Review_References id:task_refs parent:task_report do:2026-06-08 project:university context:library priority:B owner:alice
 [ ] T Submit_Form due:2026-06-20T17:00 project:university priority:A url:https://example.com/form
 [x] T Clean_Desk done:2026-06-05 project:life tag:cleanup

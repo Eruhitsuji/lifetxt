@@ -48,10 +48,14 @@ python -m lifetxt serve [path ...]
 
 ファイルを読むコマンドでは、`path ...` は省略可能で、複数指定できます。
 複数入力は指定順に読み込まれます。
+`*.life.txt` や `projects/**/*.life.txt` のような glob も指定できます。
+ディレクトリを指定した場合は、その直下の life.txt 風 `.txt` ファイルを読み込みます。
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check work.life.txt home.life.txt
+python -m lifetxt check "projects/**/*.life.txt"
+python -m lifetxt check examples
 python -m lifetxt check -
 type life.txt | python -m lifetxt check
 ```
@@ -160,6 +164,10 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--type VALUE` | type または alias で絞り込み。複数回指定または comma-separated |
 | `--project VALUE` | `project:` で絞り込み。複数回指定または comma-separated |
 | `--tag VALUE` | `tag:` で絞り込み。複数回指定または comma-separated |
+| `--tag-all VALUE` | 指定した `tag:` をすべて持つ item のみ |
+| `--exclude-tag VALUE` | 指定した `tag:` を持つ item を除外 |
+| `--user VALUE` | `user/person/owner/assignee/attendee/sender/recipient` を横断して絞り込み |
+| `--team VALUE` | `team:` / `group:` または config の team membership で絞り込み |
 | `--person VALUE` | `person:` で絞り込み。`S` で `person:` がない場合は `self` |
 | `--owner VALUE` | `owner:` で絞り込み。複数回指定または comma-separated |
 | `--assignee VALUE` | `assignee:` で絞り込み。複数回指定または comma-separated |
@@ -169,7 +177,8 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 | `--after VALUE` | この時刻以降に関連する item のみ |
 | `--before VALUE` | この時刻以前に関連する item のみ |
 
-`--after` と `--before` は `now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM` を受け付けます。
+`--after` と `--before` は `now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM`、
+`YYYY-MM-DDTHH:MM:SS`、`YYYY-MM-DDTHH:MM+09:00` などを受け付けます。
 時刻判定は `agenda` と同じルールを使います。
 `on:` のない `at:HH:MM` は日付アンカーを持たないため、片側条件の `--after` /
 `--before` では一致対象にしません。
@@ -180,6 +189,7 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 python -m lifetxt to-json life.txt --open --type task --pretty
 python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
 python -m lifetxt to-json life.txt --assignee alice --pretty
+python -m lifetxt to-json "projects/**/*.life.txt" --team research --tag-all urgent,review
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 ```
 
@@ -414,6 +424,10 @@ python -m lifetxt agenda life.txt --around now --window 1w
 | `--type VALUE` | type または alias で絞り込み。複数回指定または comma-separated |
 | `--project VALUE` | `project:` で絞り込み。複数回指定または comma-separated |
 | `--tag VALUE` | `tag:` で絞り込み。複数回指定または comma-separated |
+| `--tag-all VALUE` | 指定した `tag:` をすべて持つ item のみ |
+| `--exclude-tag VALUE` | 指定した `tag:` を持つ item を除外 |
+| `--user VALUE` | user 関連 detail を横断して絞り込み |
+| `--team VALUE` | `team:` / `group:` または config の team membership で絞り込み |
 | `--person VALUE` | `person:` で絞り込み。複数回指定または comma-separated |
 | `--owner VALUE` | `owner:` で絞り込み。複数回指定または comma-separated |
 | `--assignee VALUE` | `assignee:` で絞り込み。複数回指定または comma-separated |

@@ -99,20 +99,30 @@ item.
 | `note` | Short human note | `note:"Check later"` |
 | `url` | Related URL | `url:https://example.com` |
 
+`id:` values should be unique across the loaded life.txt files. Validators
+report duplicate IDs as warning `W213`; id-based API and update operations may
+reject ambiguous IDs. ID values should be compact ASCII tokens without spaces or
+quotes. External IDs such as iCalendar UIDs may contain symbols like `@`.
+
 ### 7.2 People Keys
 
 | Key | Meaning | Example |
 |---|---|---|
+| `user` | General user reference when no narrower role fits | `user:alice` |
 | `owner` | Person accountable for the item | `owner:alice` |
 | `assignee` | Person assigned to do the work | `assignee:alice` |
 | `attendee` | Event participant; repeat for multiple attendees | `attendee:alice` |
 | `person` | Status / presence target; mainly for type `S` | `person:self` |
 | `sender` | Message sender; mainly for type `M` | `sender:self` |
 | `recipient` | Message recipient; repeat for multiple recipients | `recipient:alice` |
+| `team` | Team related to the item | `team:research` |
+| `group` | User group related to the item | `group:lab` |
 
 Use `person` for the target whose presence state is recorded. For non-status
 items, prefer the more specific `owner`, `assignee`, or `attendee`.
-Use `sender` and `recipient` for message delivery records.
+Use `sender` and `recipient` for message delivery records. Use `user` only when
+the relationship is intentionally generic. Use `team` / `group` for collective
+ownership, filtering, or routing.
 
 ### 7.3 Time Keys
 
@@ -159,7 +169,11 @@ Use `sender` and `recipient` for message delivery records.
 |---|---|---|
 | `YYYY-MM-DD` | Date | `due:2026-06-12` |
 | `YYYY-MM-DDTHH:MM` | Local datetime | `from:2026-06-08T13:00` |
+| `YYYY-MM-DDTHH:MM:SS` | Local datetime with seconds | `from:2026-06-08T13:00:30` |
+| `YYYY-MM-DDTHH:MM+09:00` | Datetime with timezone offset | `from:2026-06-08T13:00+09:00` |
+| `YYYY-MM-DDTHH:MMZ` | UTC datetime | `from:2026-06-08T04:00Z` |
 | `HH:MM` | Time only | `at:18:00` |
+| `HH:MM:SS` | Time only with seconds | `at:18:00:30` |
 
 Range-based tools may treat `from/to`, `notify_from/notify_to`, and `on` as
 intervals. They may treat `due`, `do`, `at`, `moved_to`, and `notify_at` as
@@ -174,7 +188,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner est project tag note id parent
+do due priority assignee owner team est project tag note id parent
 ```
 
 | Key | Why it is recommended |
@@ -200,7 +214,7 @@ Use `E` for calendar-like events.
 Recommended keys:
 
 ```txt
-from to on loc attendee owner project tag note
+from to on loc attendee owner team project tag note
 ```
 
 | Key | Why it is recommended |
@@ -225,7 +239,7 @@ Use `D` for important deadlines that are not themselves events.
 Recommended keys:
 
 ```txt
-due priority owner assignee project tag note
+due priority owner assignee team project tag note
 ```
 
 | Key | Why it is recommended |
@@ -249,7 +263,7 @@ Use `R` for a reminder at a date, time, or datetime.
 Recommended keys:
 
 ```txt
-at on owner project context note
+at on owner team project context note
 ```
 
 | Key | Why it is recommended |
@@ -272,7 +286,7 @@ Use `H` for recurring actions.
 Recommended keys:
 
 ```txt
-repeat at on owner project tag note
+repeat at on owner team project tag note
 ```
 
 | Key | Why it is recommended |
@@ -324,7 +338,7 @@ from state
 Recommended keys:
 
 ```txt
-from state to person service loc project note visibility
+from state to person team group service loc project note visibility
 ```
 
 | Key | Why it is recommended |
@@ -357,7 +371,7 @@ sender recipient
 Recommended keys:
 
 ```txt
-sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+sender recipient team group notify_at notify_from notify_to channel service priority project tag note url id parent created updated
 ```
 
 | Key | Why it is recommended |

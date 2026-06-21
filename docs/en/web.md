@@ -21,11 +21,14 @@ Open:
 http://127.0.0.1:8000/
 ```
 
-Multiple files can be read at once. Create, update, and delete operations use
-the first file unless `--write-file` is specified.
+Multiple files can be read at once. Paths may be glob patterns such as
+`projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
+files. Create, update, and delete operations use the first file unless
+`--write-file` is specified.
 
 ```sh
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 ```
 
 ## REST API
@@ -59,7 +62,9 @@ If config has `ids.auto: true`, `POST /api/items`, `POST /api/messages`, and
 include one. The API scans all loaded input files and the writable file before
 writing, so the generated ID avoids collisions across multiple `life.txt` files.
 Duplicate IDs are reported as diagnostic warning `W213` in item list responses;
-id-based operations reject ambiguous IDs.
+id-based operations reject ambiguous IDs. If config `ids.key` / `api.id_key` is
+changed, id-based endpoints use that configured detail key while still exposing
+the selected value as top-level `id` in API item responses.
 
 Example item payload:
 
@@ -80,6 +85,7 @@ Examples:
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
 curl "http://127.0.0.1:8000/api/items/id/task_001"
+curl "http://127.0.0.1:8000/api/items?team=research&tag_all=urgent,review"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/notifications?recipient=self"
@@ -146,7 +152,8 @@ Supported parameters:
 | `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
 | `open_only=true` or `open=true` | Show unfinished workflow items only |
 | `status=todo` | Filter by status or status alias |
-| `project=VALUE`, `tag=VALUE`, `person=VALUE` | Filter by details |
+| `project=VALUE`, `tag=VALUE`, `tag_all=VALUE`, `exclude_tag=VALUE` | Filter by tags and projects |
+| `user=VALUE`, `team=VALUE`, `person=VALUE` | Filter by users, teams, or presence target |
 | `owner=VALUE`, `assignee=VALUE`, `attendee=VALUE` | Filter by people details |
 | `sender=VALUE`, `recipient=VALUE` | Filter by message details |
 | `sort=line|time|title|type|status|source` | Item sort key |

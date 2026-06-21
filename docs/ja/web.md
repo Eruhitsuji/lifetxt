@@ -23,9 +23,12 @@ http://127.0.0.1:8000/
 
 複数ファイルを同時に読めます。作成、更新、削除は既定では最初のファイルに対して
 行います。変更先を明示したい場合は `--write-file` を使います。
+path には `projects/**/*.life.txt` のような glob も指定できます。ディレクトリを指定した場合は、
+life.txt 風の `.txt` ファイルを読み込みます。
 
 ```sh
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 ```
 
 ## REST API
@@ -108,7 +111,8 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
 | `open_only=true` または `open=true` | 未完了 workflow item のみ |
 | `status=todo` | status または status alias で filter |
-| `project=VALUE`、`tag=VALUE`、`person=VALUE` | detail で filter |
+| `project=VALUE`、`tag=VALUE`、`tag_all=VALUE`、`exclude_tag=VALUE` | project / tag で filter |
+| `user=VALUE`、`team=VALUE`、`person=VALUE` | user / team / presence target で filter |
 | `owner=VALUE`、`assignee=VALUE`、`attendee=VALUE` | people detail で filter |
 | `sort=line|time|title|type|status|source` | item 並び替え key |
 | `order=asc|desc` | item 並び順 |

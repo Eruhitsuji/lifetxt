@@ -43,13 +43,16 @@ python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
 python -m lifetxt filter life.txt --open --type task --canonical -o canonical_tasks.life.txt
 python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
+python -m lifetxt filter "projects/**/*.life.txt" --team research --tag-all urgent,review --exclude-tag archived
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt ids life.txt --assign --dry-run
+python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
@@ -65,9 +68,9 @@ python -m pip install -e .
 lifetxt check examples/minimal_life.txt
 ```
 
-多くの読み込み系コマンドは複数の入力 path を受け取れます。`filter`、`to-json`、
+多くの読み込み系コマンドは複数の入力 path、glob pattern、life.txt 風 `.txt` を含むディレクトリを受け取れます。`filter`、`to-json`、
 `to-jsonl` は `--open`、`--status`、`--type`、`--project`、`--tag`、
-`--person`、`--owner`、`--assignee`、`--attendee`、`--detail`、`--text`、
+`--tag-all`、`--exclude-tag`、`--user`、`--team`、`--person`、`--owner`、`--assignee`、`--attendee`、`--detail`、`--text`、
 `--after`、`--before` などの item filter に対応します。`filter --format life` は
 一致した item の元行を既定で保持します。正規化した life.txt 行を再生成したい場合は
 `--canonical` を使います。`person:` は status / presence の対象者、`assignee:` は
@@ -124,6 +127,7 @@ agenda filter は組み合わせて使えます。
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --team research --tag-all urgent,review
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 ```
 
@@ -170,6 +174,8 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 重複IDは warning `W213` として報告されます。
 `python -m lifetxt ids life.txt` で存在するID、欠落ID、重複IDを監査できます。
 `ids --assign --dry-run` で既存データへのID付与予定を確認し、`--backup` 付きで安全に反映できます。
+`ids.key` / `api.id_key` を設定すると、`id:` 以外の detail key を ID key として使えます。
+`users`、`teams`、`tags.aliases` / `tags.groups` は `--user`、`--team`、tag filter の展開に使われます。
 
 Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。
 `notify --watch` は `notifications.state_file` に通知済みIDを保存し、再起動後の重複通知を抑えられます。

@@ -1,6 +1,6 @@
 import re
-from datetime import datetime
 
+from .ids import id_value_is_safe
 from .model import (
     DATE_KEYS,
     DATE_OR_DATETIME_KEYS,
@@ -14,12 +14,16 @@ from .model import (
     VALID_STATUSES,
     VALID_TYPES,
 )
+from .timeutil import (
+    is_date,
+    is_datetime,
+    is_time,
+    parse_date_or_datetime,
+    parse_datetime,
+)
 
 
 _KEY_STYLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
-_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$")
-_TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 
 
 def validate_item(item):
@@ -130,7 +134,7 @@ def validate_item(item):
 def _validate_value(item, key, value):
     diagnostics = []
     if key in DATE_KEYS:
-        if not _is_date(value):
+        if not is_date(value):
             diagnostics.append(
                 Diagnostic(
                     "warning",
@@ -140,32 +144,42 @@ def _validate_value(item, key, value):
                 )
             )
     elif key in DATETIME_KEYS:
-        if not _is_datetime(value):
+        if not is_datetime(value):
             diagnostics.append(
                 Diagnostic(
                     "warning",
                     "W202",
-                    "%s: should use YYYY-MM-DDTHH:MM." % key,
+                    "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS and timezone." % key,
                     item.line,
                 )
             )
     elif key in DATE_OR_DATETIME_KEYS:
-        if not (_is_date(value) or _is_datetime(value)):
+        if not (is_date(value) or is_datetime(value)):
             diagnostics.append(
                 Diagnostic(
                     "warning",
                     "W203",
-                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM." % key,
+                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS and timezone." % key,
                     item.line,
                 )
             )
     elif key in TIME_OR_DATETIME_KEYS:
-        if not (_is_time(value) or _is_datetime(value)):
+        if not (is_time(value) or is_datetime(value)):
             diagnostics.append(
                 Diagnostic(
                     "warning",
                     "W204",
-                    "%s: should use HH:MM or YYYY-MM-DDTHH:MM." % key,
+                    "%s: should use HH:MM, HH:MM:SS, or YYYY-MM-DDTHH:MM with optional seconds/timezone." % key,
+                    item.line,
+                )
+            )
+    elif key in ("id", "parent"):
+        if not id_value_is_safe(value):
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W214",
+                    "%s: should be a compact ASCII token without spaces or quotes." % key,
                     item.line,
                 )
             )
@@ -200,9 +214,9 @@ def _validate_event_range(item):
         return []
     start = item.details["from"][0]
     end = item.details["to"][0]
-    if not (_is_datetime(start) and _is_datetime(end)):
+    if not (is_datetime(start) and is_datetime(end)):
         return []
-    if _parse_datetime(end) < _parse_datetime(start):
+    if parse_datetime(end) < parse_datetime(start):
         return [
             Diagnostic(
                 "warning",
@@ -233,12 +247,12 @@ def _validate_status_item(item):
         )
     else:
         for value in item.details["from"]:
-            if not _is_datetime(value):
+            if not is_datetime(value):
                 diagnostics.append(
                     Diagnostic(
                         "error",
                         "E202",
-                        "Status item from: must use YYYY-MM-DDTHH:MM.",
+                        "Status item from: must use YYYY-MM-DDTHH:MM with optional seconds/timezone.",
                         item.line,
                     )
                 )
@@ -255,12 +269,12 @@ def _validate_status_item(item):
 
     if has_to:
         for value in item.details["to"]:
-            if not _is_datetime(value):
+            if not is_datetime(value):
                 diagnostics.append(
                     Diagnostic(
                         "error",
                         "E204",
-                        "Status item to: must use YYYY-MM-DDTHH:MM.",
+                        "Status item to: must use YYYY-MM-DDTHH:MM with optional seconds/timezone.",
                         item.line,
                     )
                 )
@@ -328,8 +342,8 @@ def _validate_message_item(item):
     if has_notify_from and has_notify_to:
         start = item.details["notify_from"][0]
         end = item.details["notify_to"][0]
-        parsed_start = _parse_date_or_datetime(start, is_end=False)
-        parsed_end = _parse_date_or_datetime(end, is_end=True)
+        parsed_start = parse_date_or_datetime(start, is_end=False)
+        parsed_end = parse_date_or_datetime(end, is_end=True)
         if parsed_start is not None and parsed_end is not None and parsed_end < parsed_start:
             diagnostics.append(
                 Diagnostic(
@@ -351,48 +365,3 @@ def _validate_message_item(item):
         )
 
     return diagnostics
-
-
-def _is_date(value):
-    if not _DATE_RE.match(value):
-        return False
-    try:
-        datetime.strptime(value, "%Y-%m-%d")
-        return True
-    except ValueError:
-        return False
-
-
-def _is_datetime(value):
-    if not _DATETIME_RE.match(value):
-        return False
-    try:
-        _parse_datetime(value)
-        return True
-    except ValueError:
-        return False
-
-
-def _is_time(value):
-    if not _TIME_RE.match(value):
-        return False
-    try:
-        datetime.strptime(value, "%H:%M")
-        return True
-    except ValueError:
-        return False
-
-
-def _parse_datetime(value):
-    return datetime.strptime(value, "%Y-%m-%dT%H:%M")
-
-
-def _parse_date_or_datetime(value, is_end=False):
-    if _is_datetime(value):
-        return _parse_datetime(value)
-    if _is_date(value):
-        parsed = datetime.strptime(value, "%Y-%m-%d")
-        if is_end:
-            return parsed.replace(hour=23, minute=59)
-        return parsed
-    return None

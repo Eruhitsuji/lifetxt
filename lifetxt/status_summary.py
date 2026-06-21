@@ -1,9 +1,9 @@
 import json
 from collections import OrderedDict
-from datetime import datetime
+
+from .timeutil import parse_datetime
 
 
-_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
 _TABLE_COLUMNS = (
     ("person", "person"),
     ("state", "state"),
@@ -132,10 +132,7 @@ def _copy_details(details):
 
 
 def _parse_status_datetime(value):
-    try:
-        return datetime.strptime(value, _DATETIME_FORMAT)
-    except (TypeError, ValueError):
-        return None
+    return parse_datetime(value)
 
 
 def _format_table_row(values, widths):

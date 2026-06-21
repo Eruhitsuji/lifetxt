@@ -14,6 +14,42 @@ def config_template():
         [
             ("name", "self"),
             ("display_name", "Self"),
+            ("aliases", ["me"]),
+            ("teams", []),
+        ]
+    )
+    data["users"] = OrderedDict(
+        [
+            (
+                "self",
+                OrderedDict(
+                    [
+                        ("display_name", "Self"),
+                        ("aliases", ["me"]),
+                        ("teams", []),
+                    ]
+                ),
+            )
+        ]
+    )
+    data["teams"] = OrderedDict(
+        [
+            (
+                "default",
+                OrderedDict(
+                    [
+                        ("display_name", "Default Team"),
+                        ("members", ["self"]),
+                        ("aliases", []),
+                    ]
+                ),
+            )
+        ]
+    )
+    data["tags"] = OrderedDict(
+        [
+            ("aliases", OrderedDict()),
+            ("groups", OrderedDict()),
         ]
     )
     data["defaults"] = OrderedDict(
@@ -199,8 +235,105 @@ def config_notification_recipient(config):
     return config_user_name(config)
 
 
+def config_user_aliases(config):
+    aliases = OrderedDict()
+    user_name = config_user_name(config)
+    aliases[user_name] = _unique_values([user_name])
+
+    user = config_section(config, "user")
+    user_values = [user_name]
+    for value in _as_list(user.get("aliases")):
+        user_values.append(value)
+    aliases[user_name] = _unique_values(user_values)
+
+    users = config_section(config, "users")
+    for name, values in users.items():
+        if not isinstance(values, dict):
+            continue
+        expanded = [str(name)]
+        for alias in _as_list(values.get("aliases")):
+            expanded.append(alias)
+        aliases[str(name)] = _unique_values(expanded)
+    return aliases
+
+
+def config_team_members(config):
+    teams = OrderedDict()
+    for name, values in config_section(config, "teams").items():
+        if not isinstance(values, dict):
+            continue
+        members = []
+        for member in _as_list(values.get("members")):
+            members.append(member)
+        teams[str(name)] = _unique_values(members)
+
+    user_name = config_user_name(config)
+    user = config_section(config, "user")
+    for team in _as_list(user.get("teams")):
+        teams.setdefault(str(team), [])
+        if user_name not in teams[str(team)]:
+            teams[str(team)].append(user_name)
+
+    for name, values in config_section(config, "users").items():
+        if not isinstance(values, dict):
+            continue
+        for team in _as_list(values.get("teams")):
+            teams.setdefault(str(team), [])
+            if str(name) not in teams[str(team)]:
+                teams[str(team)].append(str(name))
+    return teams
+
+
+def config_team_aliases(config):
+    aliases = OrderedDict()
+    for name, values in config_section(config, "teams").items():
+        expanded = [str(name)]
+        if isinstance(values, dict):
+            for alias in _as_list(values.get("aliases")):
+                expanded.append(alias)
+        aliases[str(name)] = _unique_values(expanded)
+    return aliases
+
+
+def config_tag_aliases(config):
+    tags = config_section(config, "tags")
+    raw_aliases = tags.get("aliases")
+    aliases = OrderedDict()
+    if isinstance(raw_aliases, dict):
+        for name, values in raw_aliases.items():
+            expanded = [str(name)]
+            for value in _as_list(values):
+                expanded.append(value)
+            aliases[str(name)] = _unique_values(expanded)
+    raw_groups = tags.get("groups")
+    if isinstance(raw_groups, dict):
+        for name, values in raw_groups.items():
+            expanded = aliases.setdefault(str(name), [str(name)])
+            for value in _as_list(values):
+                if value not in expanded:
+                    expanded.append(value)
+    return aliases
+
+
 def config_section(config, name):
     value = config.get(name) if config else None
     if isinstance(value, dict):
         return value
     return {}
+
+
+def _as_list(value):
+    if value is None or value == "":
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(entry) for entry in value if str(entry)]
+    return [str(value)]
+
+
+def _unique_values(values):
+    result = []
+    for value in values:
+        value = str(value)
+        if value and value not in result:
+            result.append(value)
+    return result

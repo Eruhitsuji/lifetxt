@@ -19,6 +19,7 @@ DEFAULT_ID_PREFIXES = OrderedDict(
 )
 
 _UNSAFE_ID_PART_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+ID_VALUE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$")
 
 
 def auto_ids_enabled(config):
@@ -151,6 +152,10 @@ def generate_item_id(item, existing_ids=None, prefix=None, now=None):
         candidate = "%s_%d" % (base, index)
         index += 1
     return candidate
+
+
+def id_value_is_safe(value):
+    return bool(ID_VALUE_RE.match(str(value or "")))
 
 
 def _section(config, name):

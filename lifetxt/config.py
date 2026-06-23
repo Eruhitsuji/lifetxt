@@ -99,6 +99,7 @@ def config_template():
                         ("N", "note"),
                         ("S", "status"),
                         ("M", "msg"),
+                        ("J", "journal"),
                     ]
                 ),
             ),

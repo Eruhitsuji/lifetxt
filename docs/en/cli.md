@@ -6,7 +6,7 @@ This document describes the command-line interface provided by:
 python -m lifetxt
 ```
 
-The CLI is dependency-free and reads UTF-8 `life.txt`, JSON, or JSONL files.
+The CLI is dependency-free and reads UTF-8 `life.txt`, JSON, JSONL, or CSV files.
 Most file-reading commands accept one or more paths. Use `-` or omit paths to
 read from standard input.
 
@@ -15,6 +15,7 @@ read from standard input.
 ```sh
 python -m lifetxt check [path ...]
 python -m lifetxt ids [path ...]
+python -m lifetxt links [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt import-ics [path ...]
@@ -34,13 +35,16 @@ python -m lifetxt config init
 |---|---|
 | `check` | Validate life.txt syntax and semantic warnings |
 | `ids` | Audit present, missing, and duplicate item IDs |
+| `links` | Inspect ID-based references between items |
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
+| `to-csv` | Convert life.txt to CSV |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
 | `sync-ics` | Fetch iCalendar URLs and regenerate life.txt event items |
 | `filter` | Filter items and output life.txt, JSON, or JSONL |
 | `from-json` | Convert JSON to life.txt |
 | `from-jsonl` | Convert JSONL to life.txt |
+| `from-csv` | Convert CSV to life.txt |
 | `status` | Show the latest `S` status / presence record for each person |
 | `notify` | Show or watch due type `M` message notifications |
 | `agenda` | Show items related to a datetime range |
@@ -178,6 +182,30 @@ python -m lifetxt ids life.txt --assign --backup
 python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 ```
 
+### 3.2 `links`
+
+Inspect relationships that point to item IDs. The command understands
+`parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:`.
+
+```sh
+python -m lifetxt links [path ...]
+python -m lifetxt links life.txt --id task_report --direction incoming
+python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--id ID` | Show only links connected to this ID |
+| `--direction incoming|outgoing|both` | Direction when `--id` is used |
+| `--key KEY` | ID detail key; defaults to config `ids.key`, `api.id_key`, or `id` |
+| `--format text|json|jsonl` | Output format |
+| `--pretty` | Pretty-print JSON |
+
+`check` reports missing references (`W215`), self references (`W216`),
+`parent:` cycles (`W217`), and ambiguous references (`W218`).
+
 ## 4. JSON Conversion
 
 ### 4.1 `to-json`
@@ -222,9 +250,31 @@ Convert JSONL to life.txt.
 python -m lifetxt from-jsonl [path ...] [-o life.txt]
 ```
 
-### 4.5 Export Filter Options
+### 4.5 `to-csv`
 
-`to-json` and `to-jsonl` can filter items before writing output.
+Convert life.txt to CSV. The CSV contains `status`, `type`, and `title`
+columns plus one column for each detail key found in the selected items.
+Repeated detail values are stored as a JSON array inside the cell. Multiline
+`body:` values are stored as normal quoted CSV cells.
+
+```sh
+python -m lifetxt to-csv [path ...] [-o output.csv] [filter options]
+python -m lifetxt to-csv life.txt --type journal --project research -o journal.csv
+```
+
+### 4.6 `from-csv`
+
+Convert CSV back to life.txt. CSV input requires `status`, `type`, and `title`
+columns. All other non-empty columns become detail keys. Cells containing a JSON
+array become repeated detail values.
+
+```sh
+python -m lifetxt from-csv [path ...] [-o life.txt]
+```
+
+### 4.7 Export Filter Options
+
+`to-json`, `to-jsonl`, and `to-csv` can filter items before writing output.
 
 | Option | Meaning |
 |---|---|
@@ -615,6 +665,7 @@ python -m lifetxt assist [options]
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
 python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
+python -m lifetxt assist --type diary --title "Research day" --on 2026-06-23 --mood good --body "Read papers."
 ```
 
 Core options:
@@ -622,7 +673,7 @@ Core options:
 | Option | Meaning |
 |---|---|
 | `-s`, `--status` | Status or alias, such as `[ ]`, `done`, or `note` |
-| `-t`, `--type` | Type or alias, such as `T`, `task`, or `status` |
+| `-t`, `--type` | Type or alias, such as `T`, `task`, `status`, or `diary` |
 | `--title` | Item title |
 | `-d`, `--detail` | Detail as `key=value` or `key:value`; repeatable |
 | `-o`, `--output` | Append generated line to a file |
@@ -632,10 +683,10 @@ Core options:
 Known detail keys also have direct flags. Each can be repeated:
 
 ```txt
---id --parent --created --updated --done --due --do --from --to
+--id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
---visibility --notify_at --notify_from --notify_to --on --at --repeat
---project --context --loc --priority --est --tag --note --url
+--visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
+--project --context --loc --priority --est --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
 
@@ -880,6 +931,7 @@ Type aliases include:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 | `message`, `msg`, `mail`, `notification` | `M` |
+| `journal`, `diary`, `log`, `entry` | `J` |
 
 ## 14. Practical Workflows
 
@@ -889,6 +941,7 @@ Validate and convert:
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty -o life.json
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt to-csv life.txt --type journal -o journal.csv
 ```
 
 Create filtered life.txt files:

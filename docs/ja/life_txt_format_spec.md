@@ -34,6 +34,7 @@
 | `N` | Note | メモ |
 | `S` | Status / Presence status | 現在状態、在席状態 |
 | `M` | Message | 人から人へのメッセージ、通知依頼 |
+| `J` | Journal / Diary | 日記、日誌、作業ログ |
 
 ## 4. title と value の規則
 
@@ -118,7 +119,6 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 | Key | 意味 | 例 |
 |---|---|---|
 | `id` | 安定した item ID | `id:task_001` |
-| `parent` | 親 item ID | `parent:task_001` |
 | `project` | プロジェクト、作業領域 | `project:research` |
 | `tag` | 自由タグ。複数指定可 | `tag:important` |
 | `note` | 短い補足メモ | `note:"Check later"` |
@@ -127,6 +127,18 @@ custom key は許可されます。パーサは未知の key を可能な限り�
 `id:` は読み込み対象の life.txt ファイル群の中で一意に保つことを推奨します。
 validator は重複IDを warning `W213` として報告します。id-based API や update は
 曖昧なIDを拒否する場合があります。
+
+### 7.2 Link keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `parent` | 親 item、階層、message thread の親 | `parent:task_001` |
+| `ref` | 他 item への汎用参照 | `ref:task_001` |
+| `depends_on` | 先に完了・解決が必要な item | `depends_on:task_001` |
+| `blocks` | この item が block している item | `blocks:task_002` |
+| `related` | 弱い関連 item | `related:note_001` |
+
+参照値は通常 `id:` を指します。config で `ids.key` / `api.id_key` を変更した場合は、その key を ID として扱います。存在しない参照、自己参照、`parent:` cycle は warning として報告されます。
 
 ### 7.2 People keys
 
@@ -197,7 +209,7 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner est project tag note id parent
+do due priority assignee owner est project tag note id parent ref depends_on blocks related
 ```
 
 例:
@@ -257,7 +269,7 @@ repeat at on owner project tag note
 ### 9.6 Note (`N`)
 
 ```txt
-project context tag note url id parent
+project context tag note body url id parent ref related
 ```
 
 例:
@@ -266,7 +278,25 @@ project context tag note url id parent
 [N] N Research_Memo project:research note:"Use figures before detailed explanation"
 ```
 
-### 9.7 Status / Presence status (`S`)
+### 9.7 Journal / Diary (`J`)
+
+`J` は日記、日誌、長めの作業ログを記録する type です。`D` は Deadline として既に使うため、Diary は Journal の `J` を使います。status は `[N]` を推奨します。
+
+推奨 key:
+
+```txt
+on at from to mood weather loc person project tag note body url id parent ref related created updated
+```
+
+例:
+
+```txt
+[N] J "Research day" on:2026-06-23 mood:good tag:lab
+| Read papers in the morning.
+| Wrote parser tests in the afternoon.
+```
+
+### 9.8 Status / Presence status (`S`)
 
 `S` はチャットツール風の現在状態や在席状態に使います。
 
@@ -279,7 +309,7 @@ from state
 推奨 key:
 
 ```txt
-from state to person service loc project note visibility
+from state to person service loc project note ref related visibility
 ```
 
 `to:` がない場合は現在有効な状態として扱えます。`to:` がある場合は過去の状態ログとして扱えます。
@@ -291,7 +321,7 @@ from state to person service loc project note visibility
 [x] S Sleeping from:2026-06-05T01:00 to:2026-06-05T08:30 state:sleeping person:self
 ```
 
-### 9.8 Message (`M`)
+### 9.9 Message (`M`)
 
 `M` は人から人へのメッセージ、通知予約、配信依頼を記録するための type です。外部サービスへの送信 API そのものではなく、life.txt 上で構造化して保持し、ツールが表示、絞り込み、後続処理に使える record です。
 
@@ -304,7 +334,7 @@ sender recipient
 推奨 key:
 
 ```txt
-sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent created updated
+sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent ref related created updated
 ```
 
 | Key | 推奨理由 |
@@ -332,7 +362,7 @@ sender recipient notify_at notify_from notify_to ack snooze_until channel servic
 ### 10.1 Not Completed (`[ ]`)
 
 ```txt
-do due priority project tag note
+do due priority project tag note ref related
 ```
 
 未完了の作業や未送信の Message に使います。
@@ -380,12 +410,25 @@ note updated
 ### 10.7 Note Status (`[N]`)
 
 ```txt
-project context tag note url
+project context tag note body url ref related
 ```
 
-`[N]` は通常 type `N` と組み合わせます。
+`[N]` は通常 type `N` または `J` と組み合わせます。
 
-## 11. Status / Presence state 値
+## 11. 複数行 body
+
+`|` で始まる行は、直前の item の `body:` detail として扱います。`|` の直後の 1 つの空白は区切りであり本文には含めません。空行を本文に入れる場合は `|` だけの行を使います。
+
+```txt
+[N] J "Research day" on:2026-06-23 mood:good
+| First paragraph.
+|
+| Second paragraph.
+```
+
+孤立した `|` 行は構文エラーです。
+
+## 12. Status / Presence state 値
 
 type `S` の `state:` 推奨値:
 
@@ -406,21 +449,23 @@ type `S` の `state:` 推奨値:
 
 `person:` が省略された場合、ツールは `self` と解釈してよいです。
 
-## 12. Note ルール
+## 13. Note / Journal ルール
 
-note status `[N]` は通常 note type `N` と組み合わせます。
+note status `[N]` は通常 note type `N` または journal type `J` と組み合わせます。
 
 ```txt
 [N] N Research_Memo project:research
+[N] J "Research day" on:2026-06-23
 ```
 
 ## 13. 簡易文法
 
 ```ebnf
-life_file     = { blank_line | comment_line | item_line } ;
+life_file     = { blank_line | comment_line | item_line | continuation_line } ;
 item_line     = status, space, type, space, string, { space, detail } ;
+continuation_line = "|", [ space ], text ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" ;
+type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
 detail        = key, ":", string ;
 key           = bare_key ;
 string        = bare_string | quoted_string ;

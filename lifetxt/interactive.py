@@ -21,6 +21,7 @@ TYPE_DESCRIPTIONS = (
     ("N", "Note", "A note or memo. Usually uses status [N]."),
     ("S", "Status", "A chat-style presence/current-state record."),
     ("M", "Message", "A person-to-person message or notification request."),
+    ("J", "Journal", "A diary or journal entry. Usually uses status [N]."),
 )
 
 STATUS_DESCRIPTIONS = (
@@ -30,7 +31,7 @@ STATUS_DESCRIPTIONS = (
     ("[-]", "canceled", "Canceled."),
     ("[>]", "deferred", "Deferred or moved."),
     ("[?]", "pending", "Pending or uncertain."),
-    ("[N]", "note", "Note status, normally only for type N."),
+    ("[N]", "note", "Record/note status, normally for type N or J."),
 )
 
 DETAIL_EXAMPLES = (
@@ -41,11 +42,16 @@ DETAIL_EXAMPLES = (
     "repeat:daily",
     'loc:"Meeting Room A"',
     "tag:important",
+    "mood:good",
 )
 
 DETAIL_DESCRIPTIONS = {
     "id": ("Item ID.", "id:task_001"),
-    "parent": ("Parent item ID.", "parent:task_001"),
+    "parent": ("Parent item ID for hierarchy or message thread.", "parent:task_001"),
+    "ref": ("Generic reference to another item ID. Repeat for multiple references.", "ref:task_001"),
+    "depends_on": ("Item ID that must be completed or resolved first.", "depends_on:task_001"),
+    "blocks": ("Item ID that is blocked by this item.", "blocks:task_002"),
+    "related": ("Looser related item ID.", "related:note_001"),
     "created": ("Creation date or datetime.", "created:2026-06-06"),
     "updated": ("Last updated date or datetime.", "updated:2026-06-06T16:30"),
     "done": ("Completion date or datetime.", "done:2026-06-05"),
@@ -81,6 +87,9 @@ DETAIL_DESCRIPTIONS = {
     "est": ("Estimated duration.", "est:90m"),
     "tag": ("Tag. Repeat the key for multiple tags.", "tag:important"),
     "note": ("Short note.", 'note:"Check later"'),
+    "body": ("Long body text. Multiline life.txt uses continuation lines starting with |.", "body:short_text"),
+    "mood": ("Mood for a diary or journal entry.", "mood:good"),
+    "weather": ("Weather for a diary or journal entry.", "weather:sunny"),
     "url": ("Related URL.", "url:https://example.com"),
     "reason": ("Reason, often for canceled items.", 'reason:"Schedule changed"'),
     "moved_to": ("New date or item after deferral.", "moved_to:2026-06-10"),

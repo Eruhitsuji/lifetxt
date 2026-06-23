@@ -4,4 +4,6 @@
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[N] J "Research day" on:2026-06-23 mood:good tag:lab
+| Read papers in the morning.
 [N] N Research_Memo project:research

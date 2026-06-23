@@ -8,6 +8,7 @@ from .model import (
     Diagnostic,
     KNOWN_KEYS,
     RECOMMENDED_KEYS_BY_TYPE,
+    REFERENCE_KEYS,
     SIMPLE_REPEAT_VALUES,
     STATUS_STATE_VALUES,
     TIME_OR_DATETIME_KEYS,
@@ -50,22 +51,22 @@ def validate_item(item):
             )
         )
 
-    if item.status == "[N]" and item.kind != "N":
+    if item.status == "[N]" and item.kind not in ("N", "J"):
         diagnostics.append(
             Diagnostic(
                 "warning",
                 "W101",
-                "The [N] status is recommended only with note type N.",
+                "The [N] status is recommended only with note type N or journal type J.",
                 item.line,
             )
         )
 
-    if item.kind == "N" and item.status != "[N]":
+    if item.kind in ("N", "J") and item.status != "[N]":
         diagnostics.append(
             Diagnostic(
                 "warning",
                 "W102",
-                "Note type N is recommended to use status [N].",
+                "Note type N and journal type J are recommended to use status [N].",
                 item.line,
             )
         )
@@ -173,7 +174,7 @@ def _validate_value(item, key, value):
                     item.line,
                 )
             )
-    elif key in ("id", "parent"):
+    elif key == "id" or key in REFERENCE_KEYS:
         if not id_value_is_safe(value):
             diagnostics.append(
                 Diagnostic(

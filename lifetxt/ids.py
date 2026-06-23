@@ -15,6 +15,7 @@ DEFAULT_ID_PREFIXES = OrderedDict(
         ("N", "note"),
         ("S", "status"),
         ("M", "msg"),
+        ("J", "journal"),
     ]
 )
 

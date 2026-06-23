@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 
 from lifetxt.parser import parse_text
+from lifetxt.csvio import items_from_csv_text, items_to_csv
+from lifetxt.links import link_records
 from lifetxt.serializer import item_to_line, items_from_jsonl_text, items_to_jsonl
 
 
@@ -114,6 +116,49 @@ class LifeTxtParserTests(unittest.TestCase):
 
         self.assertTrue(any(d.code == "W211" for d in diagnostics))
 
+    def test_parse_journal_item_with_multiline_body(self):
+        text = (
+            '[N] J "Research day" on:2026-06-23 mood:good tag:lab\n'
+            "| Read papers in the morning.\n"
+            "|\n"
+            "| Wrote parser tests in the afternoon.\n"
+        )
+
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(1, len(items))
+        self.assertEqual("J", items[0].kind)
+        self.assertEqual("[N]", items[0].status)
+        self.assertEqual(["good"], items[0].details["mood"])
+        self.assertEqual(
+            ["Read papers in the morning.\n\nWrote parser tests in the afternoon."],
+            items[0].details["body"],
+        )
+        self.assertEqual(4, items[0].end_line)
+        self.assertEqual(text.strip(), item_to_line(items[0]))
+
+    def test_continuation_without_item_reports_error(self):
+        _items, diagnostics = parse_text("| orphan body\n")
+
+        self.assertTrue(any(d.code == "E019" for d in diagnostics))
+
+    def test_csv_round_trip_preserves_details_and_body(self):
+        text = (
+            '[N] J "Research day" on:2026-06-23 tag:lab tag:parser\n'
+            "| First line.\n"
+            "| Second line.\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        csv_text = items_to_csv(items)
+        decoded = items_from_csv_text(csv_text)
+
+        self.assertEqual(["lab", "parser"], decoded[0].details["tag"])
+        self.assertEqual(["First line.\nSecond line."], decoded[0].details["body"])
+        self.assertEqual(item_to_line(items[0]), item_to_line(decoded[0]))
+
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
             "[ ] E Call from:2026-06-06T09:00:30+09:00 "
@@ -130,6 +175,36 @@ class LifeTxtParserTests(unittest.TestCase):
         _items, diagnostics = parse_text('[ ] T Bad_ID id:"bad id"\n')
 
         self.assertTrue(any(d.code == "W214" for d in diagnostics))
+
+    def test_reference_diagnostics_and_link_records(self):
+        text = (
+            "[ ] T Root id:task_root\n"
+            "[ ] T Child id:task_child parent:task_root ref:task_root related:missing_note\n"
+            "[ ] T Self id:task_self ref:task_self\n"
+        )
+
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertTrue(any(d.code == "W215" and d.line == 2 for d in diagnostics))
+        self.assertTrue(any(d.code == "W216" and d.line == 3 for d in diagnostics))
+
+        records = link_records(items)
+        compact = [
+            (record["relation"], record["source_id"], record["target_id"], record["status"])
+            for record in records
+        ]
+        self.assertIn(("parent", "task_child", "task_root", "ok"), compact)
+        self.assertIn(("ref", "task_child", "task_root", "ok"), compact)
+        self.assertIn(("related", "task_child", "missing_note", "missing"), compact)
+        self.assertIn(("ref", "task_self", "task_self", "self"), compact)
+
+    def test_parent_cycle_reports_warning(self):
+        _items, diagnostics = parse_text(
+            "[ ] T First id:a parent:b\n"
+            "[ ] T Second id:b parent:a\n"
+        )
+
+        self.assertTrue(any(d.code == "W217" for d in diagnostics))
 
     def test_auto_id_generation_avoids_existing_ids(self):
         from lifetxt.ids import ensure_item_id
@@ -915,6 +990,72 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         rows = [json.loads(line) for line in stdout.splitlines()]
         self.assertEqual(["Other_Task"], [entry["title"] for entry in rows])
 
+    def test_to_csv_and_from_csv_round_trip_with_filters(self):
+        text = (
+            "[ ] T Open_Task due:2026-06-08 project:research tag:a tag:b\n"
+            "[x] T Done_Task due:2026-06-08 done:2026-06-08 project:research\n"
+            '[N] J "Research day" on:2026-06-08 project:research mood:good\n'
+            "| First line.\n"
+            "| Second line.\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "to-csv",
+            "--type",
+            "journal",
+            "--project",
+            "research",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("status,type,title", stdout.splitlines()[0])
+        self.assertIn("Research day", stdout)
+        self.assertNotIn("Open_Task", stdout)
+
+        life_stdout, stderr, code = run_cli("from-csv", input_text=stdout)
+
+        normalized = normalize_newlines(life_stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn('[N] J "Research day"', normalized)
+        self.assertIn("| First line.", normalized)
+        self.assertIn("| Second line.", normalized)
+
+    def test_links_cli_outputs_reference_records(self):
+        text = (
+            "[ ] T Root id:task_root\n"
+            "[ ] T Child id:task_child parent:task_root depends_on:task_root\n"
+            "[N] N Note id:note_001 related:task_child\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "links",
+            "--id",
+            "task_root",
+            "--direction",
+            "incoming",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        compact = [
+            (record["relation"], record["source_id"], record["target_id"], record["status"])
+            for record in data
+        ]
+        self.assertEqual(
+            [
+                ("parent", "task_child", "task_root", "ok"),
+                ("depends_on", "task_child", "task_root", "ok"),
+            ],
+            compact,
+        )
+
     def test_multiple_life_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first.life.txt")
@@ -1587,6 +1728,43 @@ class LifeTxtWebAppTests(unittest.TestCase):
                     handle.read(),
                 )
 
+    def test_webapp_file_helpers_update_and_delete_multiline_item(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    '# life\n[N] J "Day one" on:2026-06-23\n'
+                    "| Old body\n"
+                    "[ ] T Next\n"
+                )
+
+            updated = webapp.update_item_in_file(
+                path,
+                2,
+                {
+                    "title": "Day one updated",
+                    "details": {"on": ["2026-06-23"], "body": ["New body\nMore"]},
+                },
+            )
+
+            self.assertEqual("Day one updated", updated.title)
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual(
+                    '# life\n[N] J "Day one updated" on:2026-06-23\n'
+                    "| New body\n"
+                    "| More\n"
+                    "[ ] T Next\n",
+                    handle.read(),
+                )
+
+            deleted = webapp.delete_item_from_file(path, 2)
+
+            self.assertIn("| New body", deleted)
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertEqual("# life\n[ ] T Next\n", handle.read())
+
     def test_webapp_items_response_marks_writable_source_editable(self):
         from lifetxt import webapp
 
@@ -1635,6 +1813,26 @@ class LifeTxtWebAppTests(unittest.TestCase):
 
             self.assertFalse(any(d.severity == "error" for d in diagnostics))
             self.assertEqual(["First", "Second"], sorted(item.title for item in items))
+
+    def test_webapp_links_response_uses_all_loaded_files(self):
+        from lifetxt import webapp
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Root id:task_root\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Child id:task_child parent:task_root\n")
+
+            items, diagnostics = webapp.read_life_inputs([first_path, second_path])
+            records = link_records(items, focus_id="task_root", direction="incoming")
+            response = webapp.links_response(records, diagnostics)
+
+            self.assertFalse(any(d["code"] == "W215" for d in response["diagnostics"]))
+            self.assertEqual(1, response["count"])
+            self.assertEqual("task_child", response["records"][0]["source_id"])
+            self.assertEqual("task_root", response["records"][0]["target_id"])
 
     def test_webapp_message_payload_helper(self):
         from lifetxt import webapp

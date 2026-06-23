@@ -2,14 +2,17 @@
 
 ## 1. Overview
 
-`life.txt` is a one-line-per-item plain-text format for tasks, events,
-deadlines, reminders, habits, status / presence records, messages, and notes.
+`life.txt` is a plain-text format for tasks, events, deadlines, reminders,
+habits, status / presence records, messages, notes, and journal / diary
+entries.
 
 ```txt
 [status] type title key:value key:value ...
 ```
 
-Blank lines are ignored. Lines beginning with `#` are comments.
+Blank lines are ignored. Lines beginning with `#` are comments. Most items fit
+on one line; optional continuation lines beginning with `|` attach multiline
+body text to the previous item.
 
 ## 2. Status Values
 
@@ -21,7 +24,7 @@ Blank lines are ignored. Lines beginning with `#` are comments.
 | `[-]` | Canceled |
 | `[>]` | Deferred or moved |
 | `[?]` | Pending or uncertain |
-| `[N]` | Note |
+| `[N]` | Note or journal record |
 
 ## 3. Type Values
 
@@ -35,6 +38,7 @@ Blank lines are ignored. Lines beginning with `#` are comments.
 | `N` | Note | A note or memo |
 | `S` | Status / Presence status | A current state or presence-state record |
 | `M` | Message | A person-to-person message or notification request |
+| `J` | Journal / Diary | A diary, journal, or daily log entry |
 
 ## 4. Title And Value Rules
 
@@ -93,10 +97,10 @@ item.
 | Key | Meaning | Example |
 |---|---|---|
 | `id` | Stable item ID | `id:task_001` |
-| `parent` | Parent item ID | `parent:task_001` |
 | `project` | Project or larger work area | `project:research` |
 | `tag` | Free tag; repeat for multiple tags | `tag:important` |
 | `note` | Short human note | `note:"Check later"` |
+| `body` | Long text body; may use continuation lines | `body:short_text` |
 | `url` | Related URL | `url:https://example.com` |
 
 `id:` values should be unique across the loaded life.txt files. Validators
@@ -104,7 +108,21 @@ report duplicate IDs as warning `W213`; id-based API and update operations may
 reject ambiguous IDs. ID values should be compact ASCII tokens without spaces or
 quotes. External IDs such as iCalendar UIDs may contain symbols like `@`.
 
-### 7.2 People Keys
+### 7.2 Link Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `parent` | Parent item, hierarchy, or message thread parent | `parent:task_001` |
+| `ref` | Generic reference to another item | `ref:task_001` |
+| `depends_on` | Item that must be completed or resolved first | `depends_on:task_001` |
+| `blocks` | Item that is blocked by this item | `blocks:task_002` |
+| `related` | Looser related item | `related:note_001` |
+
+Reference values point to the selected ID key, normally `id:`. Tools should
+warn when a reference has no target, points to the same item, or creates a
+cycle through `parent:`.
+
+### 7.3 People Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -124,7 +142,7 @@ Use `sender` and `recipient` for message delivery records. Use `user` only when
 the relationship is intentionally generic. Use `team` / `group` for collective
 ownership, filtering, or routing.
 
-### 7.3 Time Keys
+### 7.4 Time Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -139,7 +157,7 @@ ownership, filtering, or routing.
 | `notify_from` | Notification period start | `notify_from:2026-06-06T09:00` |
 | `notify_to` | Notification period end | `notify_to:2026-06-06T17:00` |
 
-### 7.4 Message Keys
+### 7.5 Message Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -149,14 +167,26 @@ ownership, filtering, or routing.
 | `notify_from`, `notify_to` | Notification period | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
 | `channel` | Delivery channel or route | `channel:teams` |
 
-### 7.5 Workflow Keys
+### 7.6 Journal Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `on` | Journal date | `on:2026-06-23` |
+| `at` | Journal time | `at:22:30` |
+| `from`, `to` | Time span covered by the entry | `from:2026-06-23T09:00 to:2026-06-23T18:00` |
+| `mood` | Mood label | `mood:good` |
+| `weather` | Weather label | `weather:sunny` |
+| `loc` | Location | `loc:home` |
+| `body` | Long journal text | continuation lines beginning with `|` |
+
+### 7.7 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.6 System Keys
+### 7.8 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -188,7 +218,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner team est project tag note id parent
+do due priority assignee owner team est project tag note id parent ref depends_on blocks related
 ```
 
 | Key | Why it is recommended |
@@ -309,13 +339,14 @@ Use `N` for notes and memos.
 Recommended keys:
 
 ```txt
-project context tag note url id parent
+project context tag note body url id parent ref related
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `project`, `context`, `tag` | Organization and retrieval |
 | `note` | Extra note text when the title is short |
+| `body` | Longer note text, especially with continuation lines |
 | `url` | Related reference |
 | `id`, `parent` | Linking notes to other items |
 
@@ -325,7 +356,35 @@ Example:
 [N] N Research_Memo project:research note:"Use figures before detailed explanation"
 ```
 
-### 9.7 Status / Presence Status (`S`)
+### 9.7 Journal / Diary (`J`)
+
+Use `J` for diary entries, daily logs, and longer personal or work journals.
+Because `D` is already Deadline, diary uses the type letter `J` for Journal.
+`[N]` is the recommended status.
+
+Recommended keys:
+
+```txt
+on at from to mood weather loc person project tag note body url id parent ref related created updated
+```
+
+| Key | Why it is recommended |
+|---|---|
+| `on`, `at`, `from`, `to` | Date/time covered by the entry |
+| `mood`, `weather`, `loc` | Diary context |
+| `person` | Person the entry is about, usually `self` |
+| `project`, `tag`, `note`, `body`, `url` | Retrieval and long-form content |
+| `id`, `parent`, `created`, `updated` | Linking and metadata |
+
+Examples:
+
+```txt
+[N] J "Research day" on:2026-06-23 mood:good tag:lab
+| Read papers in the morning.
+| Wrote parser tests in the afternoon.
+```
+
+### 9.8 Status / Presence Status (`S`)
 
 Use `S` for chat-style current state or presence status.
 
@@ -338,7 +397,7 @@ from state
 Recommended keys:
 
 ```txt
-from state to person team group service loc project note visibility
+from state to person team group service loc project note ref related visibility
 ```
 
 | Key | Why it is recommended |
@@ -356,7 +415,7 @@ Example:
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 ```
 
-### 9.8 Message (`M`)
+### 9.9 Message (`M`)
 
 Use `M` for a person-to-person message, a queued notification, or a delivery
 request. `M` records are not an external messaging API by themselves; they are
@@ -371,7 +430,7 @@ sender recipient
 Recommended keys:
 
 ```txt
-sender recipient team group notify_at notify_from notify_to channel service priority project tag note url id parent created updated
+sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent ref related created updated
 ```
 
 | Key | Why it is recommended |
@@ -402,7 +461,7 @@ type-specific recommendations.
 Recommended keys:
 
 ```txt
-do due priority project tag note
+do due priority project tag note ref related
 ```
 
 Use these to plan open work.
@@ -412,7 +471,7 @@ Use these to plan open work.
 Recommended keys:
 
 ```txt
-do due project context note updated
+do due project context note ref related updated
 ```
 
 Use these to show what is currently being worked on and when it was last
@@ -472,12 +531,29 @@ For `M`, `[?]` can mean delivery state or recipient response is unknown.
 Recommended keys:
 
 ```txt
-project context tag note url
+project context tag note body url ref related
 ```
 
-`[N]` should normally be used with type `N`.
+`[N]` should normally be used with type `N` or `J`.
 
-## 11. Status / Presence State Values
+## 11. Multiline Body Text
+
+A line beginning with `|` continues the previous item as a `body:` detail. A
+single space after `|` is treated as a separator and is not part of the text.
+Use a bare `|` for an empty body line.
+
+```txt
+[N] J "Research day" on:2026-06-23 mood:good
+| First paragraph.
+|
+| Second paragraph.
+```
+
+This is equivalent to a `body:` value containing embedded newlines. Serializers
+should emit multiline `body` values with continuation lines. Continuation lines
+must follow an item; an orphan continuation line is a syntax error.
+
+## 12. Status / Presence State Values
 
 Recommended `state:` values for type `S`:
 
@@ -505,21 +581,24 @@ If `to:` is absent, range-based tools may treat the status as ongoing from
 `from:` onward. If `to:` is present, range-based tools may treat `from/to` as the
 status interval.
 
-## 12. Note Rule
+## 13. Note And Journal Rule
 
-The note status `[N]` should normally be used only with note type `N`.
+The note status `[N]` should normally be used only with note type `N` or journal
+type `J`.
 
 ```txt
 [N] N Research_Memo project:research
+[N] J "Research day" on:2026-06-23
 ```
 
-## 13. Formal Grammar
+## 14. Formal Grammar
 
 ```ebnf
-life_file     = { blank_line | comment_line | item_line } ;
+life_file     = { blank_line | comment_line | item_line | continuation_line } ;
 item_line     = status, space, type, space, string, { space, detail } ;
+continuation_line = "|", [ space ], text ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" ;
+type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
 detail        = key, ":", string ;
 key           = bare_key ;
 string        = bare_string | quoted_string ;

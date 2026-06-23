@@ -11,6 +11,9 @@
 [ ] T Write_Report due:2026-06-12 project:university assignee:alice
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
+[N] J "Research day" on:2026-06-23 mood:good tag:lab
+| Read papers in the morning.
+| Wrote parser tests in the afternoon.
 [N] N Research_Memo project:research
 ```
 
@@ -24,6 +27,8 @@
 - [habits_reminders_life.txt](../../examples/habits_reminders_life.txt): 習慣とリマインダー
 - [status_presence.txt](../../examples/status_presence.txt): 個人の在席状態
 - [team_status_life.txt](../../examples/team_status_life.txt): 複数人の在席状態
+- [diary_life.txt](../../examples/diary_life.txt): 複数行 body を含む日記・日誌
+- [linked_life.txt](../../examples/linked_life.txt): `parent`、`ref`、`depends_on`、`blocks`、`related` による ID 参照
 - [agenda_life.txt](../../examples/agenda_life.txt): `agenda` コマンド用データ
 - [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): 繰り返し key と引用値
 - [calendar_import.ics](../../examples/calendar_import.ics): `import-ics` 用の iCalendar 入力例
@@ -38,6 +43,7 @@
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt to-csv life.txt --type journal -o journal.csv
 python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
 python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
@@ -51,6 +57,7 @@ python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
 python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
+python -m lifetxt links life.txt --id task_report --direction incoming
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
@@ -58,6 +65,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
+python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 ```
 
@@ -99,6 +107,7 @@ python -m lifetxt serve life.txt
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university --tag report
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
+python -m lifetxt assist --type diary --title "Research day" --on 2026-06-23 --mood good --body "Read papers."
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --output new_life.txt
 python -m lifetxt assist --interactive --append life.txt
 ```
@@ -175,6 +184,8 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 `python -m lifetxt ids life.txt` で存在するID、欠落ID、重複IDを監査できます。
 `ids --assign --dry-run` で既存データへのID付与予定を確認し、`--backup` 付きで安全に反映できます。
 `ids.key` / `api.id_key` を設定すると、`id:` 以外の detail key を ID key として使えます。
+
+item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle を warning として報告します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。
 `users`、`teams`、`tags.aliases` / `tags.groups` は `--user`、`--team`、tag filter の展開に使われます。
 
 Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。
@@ -186,3 +197,9 @@ External JSON config は `--config FILE`、`LIFETXT_CONFIG`、`.lifetxt.json`、
 python -m lifetxt config init -o .lifetxt.json
 python -m lifetxt --config .lifetxt.json config show
 ```
+
+## Journal / Diary と CSV
+
+日記・日誌は type `J` を使います。alias は `journal`、`diary`、`log`、`entry` です。status は `[N]` を推奨します。長文は `body:` と、直前 item に続く `|` 継続行で表現できます。
+
+`to-csv` は `to-json` と同じ filter option を使えます。CSV は `status`、`type`、`title` と detail key の列を持ち、同じ key の複数値はセル内 JSON 配列として保存します。

@@ -197,3 +197,20 @@ id-based operation は曖昧なIDを拒否します。
 `ack:` がある Message と、未来の `snooze_until:` がある Message は通知対象から外れます。
 通知パネルの `Ack` / `Snooze ...` は writable file の対象 Message を更新します。
 Snooze duration は `notifications.snooze_default` で指定できます。
+
+## Additional API: links
+
+`GET /api/links` は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` の ID 参照を一覧表示します。
+
+```sh
+curl "http://127.0.0.1:8000/api/links"
+curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
+```
+
+query parameter:
+
+| Parameter | 意味 |
+|---|---|
+| `id` | 指定 ID に接続する link だけを表示 |
+| `direction=incoming|outgoing|both` | `id` 指定時の方向 |
+| `limit` | 最大件数 |

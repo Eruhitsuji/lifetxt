@@ -27,9 +27,10 @@ from .ids import (
     id_key_from_config,
     id_prefix_for_item,
 )
+from .links import link_records, reference_diagnostics
 from .model import Diagnostic, Item
 from .notifier import notification_records
-from .parser import parse_line, parse_text
+from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
@@ -148,6 +149,22 @@ def create_app(paths=None, writable_path=None, config=None):
             app.state.writable_path,
             id_key_from_config(app.state.config),
         )
+
+    @app.get("/api/links")
+    def get_links(
+        item_id=Query(None, alias="id"),
+        direction="both",
+        limit=None,
+    ):
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        records = link_records(
+            items,
+            key=id_key_from_config(app.state.config),
+            focus_id=item_id,
+            direction=direction,
+        )
+        records = limit_items(records, limit)
+        return links_response(records, diagnostics)
 
     @app.get("/api/agenda")
     def get_agenda(
@@ -596,11 +613,17 @@ def auto_id_paths(paths, writable_path=None):
 def read_life_inputs(paths, config=None):
     normalized = normalize_server_paths(paths)
     include_source = len(normalized) > 1
+    id_key = id_key_from_config(config or {})
     items = []
     diagnostics = []
     for path in normalized:
         text = read_text(path)
-        path_items, path_diagnostics = parse_text(text)
+        path_items, path_diagnostics = parse_text(
+            text,
+            id_key=id_key,
+            check_ids=False,
+            check_references=False,
+        )
         generated = is_generated_path(path, config)
         for item in path_items:
             item.generated = generated
@@ -611,14 +634,8 @@ def read_life_inputs(paths, config=None):
                 diagnostic.source = path
         items.extend(path_items)
         diagnostics.extend(path_diagnostics)
-    if include_source:
-        diagnostics.extend(
-            duplicate_id_diagnostics(
-                items,
-                key=id_key_from_config(config or {}),
-                cross_source_only=True,
-            )
-        )
+    diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
+    diagnostics.extend(reference_diagnostics(items, key=id_key))
     return items, diagnostics
 
 
@@ -644,6 +661,14 @@ def items_response(items, diagnostics, writable_path, id_key="id"):
     return {
         "count": len(items),
         "items": [api_item(item, writable_path, id_key) for item in items],
+        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+    }
+
+
+def links_response(records, diagnostics):
+    return {
+        "count": len(records),
+        "records": records,
         "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
     }
 
@@ -976,21 +1001,30 @@ def append_item_to_file(path, item):
 
 
 def update_item_in_file(path, line_no, payload):
-    raw_lines = read_text(path).splitlines(True)
+    text = read_text(path)
+    raw_lines = text.splitlines(True)
     if line_no < 1 or line_no > len(raw_lines):
         raise ValueError("Line %s is out of range." % line_no)
-    original_body, ending = split_line_ending(raw_lines[line_no - 1])
-    original_item, diagnostics = parse_line(original_body, line_no)
-    if original_item is None or _has_error(diagnostics):
+    original_item = _find_item_starting_at_line(text, line_no)
+    if original_item is None:
         raise ValueError("Line %s is not a valid life.txt item." % line_no)
     updated = merge_item_payload(original_item, payload)
     line = item_to_line(updated)
-    parsed, parsed_diagnostics = parse_line(line, line_no)
-    diagnostics = parsed_diagnostics + validate_item(parsed)
+    parsed_items, diagnostics = parse_text(line + "\n")
+    parsed = parsed_items[0] if parsed_items else None
+    if parsed is None:
+        diagnostics.append(Diagnostic("error", "E301", "Updated item did not parse."))
     if _has_error(diagnostics):
         raise ValueError([diagnostic.to_dict() for diagnostic in diagnostics])
-    raw_lines[line_no - 1] = line + ending
+    start = original_item.line - 1
+    end = getattr(original_item, "end_line", original_item.line) or original_item.line
+    _body, ending = split_line_ending(raw_lines[end - 1])
+    replacement = _with_line_ending(line, ending).splitlines(True)
+    raw_lines[start:end] = replacement
     write_text(path, "".join(raw_lines))
+    updated.line = line_no
+    updated.end_line = line_no + len(line.splitlines()) - 1
+    updated.source_text = line
     return updated
 
 
@@ -1063,14 +1097,16 @@ def patch_item_details_by_id_in_file(path, item_id, detail_updates, kind=None, k
 
 
 def delete_item_from_file(path, line_no):
-    raw_lines = read_text(path).splitlines(True)
+    text = read_text(path)
+    raw_lines = text.splitlines(True)
     if line_no < 1 or line_no > len(raw_lines):
         raise ValueError("Line %s is out of range." % line_no)
-    body, _ending = split_line_ending(raw_lines[line_no - 1])
-    item, diagnostics = parse_line(body, line_no)
-    if item is None or _has_error(diagnostics):
+    item = _find_item_starting_at_line(text, line_no)
+    if item is None:
         raise ValueError("Line %s is not a valid life.txt item." % line_no)
-    del raw_lines[line_no - 1]
+    start = item.line - 1
+    end = getattr(item, "end_line", item.line) or item.line
+    del raw_lines[start:end]
     write_text(path, "".join(raw_lines))
     return item_to_line(item)
 
@@ -1081,22 +1117,33 @@ def delete_item_by_id_from_file(path, item_id, kind=None, key="id"):
 
 
 def find_item_line_by_id(path, item_id, kind=None, key="id"):
-    raw_lines = read_text(path).splitlines(True)
+    text = read_text(path)
+    items, _diagnostics = parse_text(text)
     matches = []
-    for line_no, raw_line in enumerate(raw_lines, 1):
-        body, _ending = split_line_ending(raw_line)
-        item, diagnostics = parse_line(body, line_no)
-        if item is None or _has_error(diagnostics):
-            continue
+    for item in items:
         if kind is not None and item.kind != kind:
             continue
         if item_id in item.details.get(key, []):
-            matches.append((line_no, item))
+            matches.append((item.line, item))
     if not matches:
         raise ValueError("No writable item found with id:%s." % item_id)
     if len(matches) > 1:
         raise ValueError("Multiple writable items found with id:%s." % item_id)
     return matches[0]
+
+
+def _find_item_starting_at_line(text, line_no):
+    items, _diagnostics = parse_text(text)
+    for item in items:
+        if item.line == line_no:
+            return item
+    return None
+
+
+def _with_line_ending(text, ending):
+    if text.endswith(("\n", "\r")):
+        return text
+    return text + ending
 
 
 def merge_item_payload(item, payload):
@@ -1465,6 +1512,7 @@ HTML_PAGE = r"""<!doctype html>
             <option value="N">Note</option>
             <option value="S">Status</option>
             <option value="M">Message</option>
+            <option value="J">Journal</option>
           </select>
           <select id="sort">
             <option value="line">Line</option>
@@ -1501,7 +1549,7 @@ HTML_PAGE = r"""<!doctype html>
           <label>Type
             <select id="edit-type">
               <option>T</option><option>E</option><option>D</option><option>R</option>
-              <option>H</option><option>N</option><option>S</option><option>M</option>
+              <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
             </select>
           </label>
           <label class="wide">Title
@@ -1551,13 +1599,30 @@ HTML_PAGE = r"""<!doctype html>
       ).join(" ");
     }
     function detailsToText(details) {
-      return Object.entries(details || {}).flatMap(([key, values]) =>
-        values.map(value => `${key}:${value}`)
-      ).join("\n");
+      const lines = [];
+      for (const [key, values] of Object.entries(details || {})) {
+        for (const value of values) {
+          const text = String(value);
+          if (key === "body" && text.includes("\n")) {
+            const parts = text.split(/\n/);
+            lines.push(`${key}:${parts.shift() || ""}`);
+            for (const part of parts) lines.push(part ? `| ${part}` : "|");
+          } else {
+            lines.push(`${key}:${text}`);
+          }
+        }
+      }
+      return lines.join("\n");
     }
     function parseDetails(text) {
       const details = {};
       for (const line of text.split(/\n/)) {
+        if (line.startsWith("|")) {
+          if (!details.body || !details.body.length) details.body = [""];
+          const value = line.startsWith("| ") ? line.slice(2) : line.slice(1);
+          details.body[0] += `${details.body[0] ? "\n" : ""}${value}`;
+          continue;
+        }
         const trimmed = line.trim();
         if (!trimmed) continue;
         const colon = trimmed.indexOf(":");

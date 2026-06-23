@@ -40,6 +40,7 @@ from .assist import (
     prompt_item,
     update_text,
 )
+from .csvio import items_from_csv_text, items_to_csv
 from .ics import items_from_ics_text
 from .ids import (
     auto_ids_enabled,
@@ -49,6 +50,13 @@ from .ids import (
     id_audit,
     id_key_from_config,
     id_prefix_for_item,
+)
+from .links import (
+    format_link_table,
+    link_records,
+    links_to_json,
+    links_to_jsonl,
+    reference_diagnostics,
 )
 from .model import Diagnostic
 from .notifier import (
@@ -195,6 +203,35 @@ def build_parser():
     )
     ids_command.set_defaults(func=command_ids)
 
+    links_command = subparsers.add_parser(
+        "links",
+        help="Inspect id-based references such as parent:, ref:, depends_on:, blocks:, and related:.",
+    )
+    _add_input_paths(links_command)
+    links_command.add_argument(
+        "--id",
+        dest="item_id",
+        help="Show links connected to this id. Defaults to all links.",
+    )
+    links_command.add_argument(
+        "--direction",
+        choices=("incoming", "outgoing", "both"),
+        default="both",
+        help="Direction when --id is used. Defaults to both.",
+    )
+    links_command.add_argument(
+        "--key",
+        help="Detail key to use as the item ID. Defaults to ids.key, api.id_key, or id.",
+    )
+    links_command.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    links_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    links_command.set_defaults(func=command_links)
+
     to_json = subparsers.add_parser("to-json", help="Convert life.txt to JSON array.")
     _add_input_paths(to_json)
     to_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
@@ -207,6 +244,12 @@ def build_parser():
     to_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     _add_item_filter_arguments(to_jsonl)
     to_jsonl.set_defaults(func=command_to_jsonl)
+
+    to_csv = subparsers.add_parser("to-csv", help="Convert life.txt to CSV.")
+    _add_input_paths(to_csv)
+    to_csv.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    _add_item_filter_arguments(to_csv)
+    to_csv.set_defaults(func=command_to_csv)
 
     import_ics = subparsers.add_parser(
         "import-ics",
@@ -554,6 +597,11 @@ def build_parser():
     from_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     from_jsonl.set_defaults(func=command_from_jsonl)
 
+    from_csv = subparsers.add_parser("from-csv", help="Convert CSV to life.txt.")
+    _add_input_paths(from_csv)
+    from_csv.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    from_csv.set_defaults(func=command_from_csv)
+
     assist = subparsers.add_parser(
         "assist", help="Create a life.txt line interactively or from flags."
     )
@@ -563,7 +611,7 @@ def build_parser():
         "-t",
         "--type",
         dest="kind",
-        help="Type or alias, e.g. T, task, event, note.",
+        help="Type or alias, e.g. T, task, event, note, diary.",
     )
     assist.add_argument("--title", help="Item title.")
     assist.add_argument(
@@ -778,6 +826,30 @@ def command_ids(args):
     return 0
 
 
+def command_links(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    key = args.key or id_key_from_config(_config(args))
+    records = link_records(
+        items,
+        key=key,
+        focus_id=args.item_id,
+        direction=args.direction,
+    )
+
+    if args.format == "json":
+        write_text(None, links_to_json(records, pretty=args.pretty) + "\n")
+    elif args.format == "jsonl":
+        output = links_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_link_table(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
 def command_ids_assign(args):
     key = args.key or id_key_from_config(_config(args))
     records = assign_missing_ids(
@@ -826,6 +898,14 @@ def command_to_jsonl(args):
     if output:
         output += "\n"
     write_text(args.output, output)
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_to_csv(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    write_text(args.output, items_to_csv(items))
     _print_warnings(diagnostics)
     return 0
 
@@ -1062,6 +1142,11 @@ def command_from_json(args):
 
 def command_from_jsonl(args):
     items = _items_from_jsonl_paths(args.paths)
+    return _write_life_items(items, args.output)
+
+
+def command_from_csv(args):
+    items = _items_from_csv_paths(args.paths)
     return _write_life_items(items, args.output)
 
 
@@ -1428,24 +1513,24 @@ def _parse_or_exit(paths, config=None):
 def _parse_life_inputs(paths, config=None):
     normalized = _normalize_paths(paths, config)
     include_source = len(normalized) > 1
+    id_key = id_key_from_config(config or {})
     items = []
     diagnostics = []
     for path in normalized:
         text = read_text(path)
-        path_items, path_diagnostics = parse_text(text)
+        path_items, path_diagnostics = parse_text(
+            text,
+            id_key=id_key,
+            check_ids=False,
+            check_references=False,
+        )
         if include_source:
             source = "stdin" if path == "-" else path
             _set_source(path_items, path_diagnostics, source)
         items.extend(path_items)
         diagnostics.extend(path_diagnostics)
-    if include_source:
-        diagnostics.extend(
-            duplicate_id_diagnostics(
-                items,
-                key=id_key_from_config(config or {}),
-                cross_source_only=True,
-            )
-        )
+    diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
+    diagnostics.extend(reference_diagnostics(items, key=id_key))
     return items, diagnostics
 
 
@@ -1600,6 +1685,13 @@ def _items_from_jsonl_paths(paths):
     items = []
     for path in _normalize_paths(paths):
         items.extend(items_from_jsonl_text(read_text(path)))
+    return items
+
+
+def _items_from_csv_paths(paths):
+    items = []
+    for path in _normalize_paths(paths):
+        items.extend(items_from_csv_text(read_text(path)))
     return items
 
 

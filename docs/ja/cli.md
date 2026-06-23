@@ -6,7 +6,7 @@
 python -m lifetxt
 ```
 
-CLI は外部依存なしで動作し、UTF-8 の `life.txt`、JSON、JSONL を扱います。
+CLI は外部依存なしで動作し、UTF-8 の `life.txt`、JSON、JSONL、CSV を扱います。
 多くの読み込み系コマンドは、1 つ以上の path を受け取れます。path に `-` を指定するか
 path を省略すると標準入力から読み込みます。
 
@@ -14,6 +14,8 @@ path を省略すると標準入力から読み込みます。
 
 ```sh
 python -m lifetxt check [path ...]
+python -m lifetxt ids [path ...]
+python -m lifetxt links [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt import-ics [path ...]
@@ -32,11 +34,13 @@ python -m lifetxt serve [path ...]
 | `check` | life.txt の構文と意味的な警告を検査 |
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
+| `to-csv` | life.txt を CSV へ変換 |
 | `import-ics` | iCalendar `.ics` の予定を life.txt event item に変換 |
 | `sync-ics` | iCalendar URL を取得して life.txt event item を再生成 |
 | `filter` | item を絞り込み、life.txt / JSON / JSONL で出力 |
 | `from-json` | JSON を life.txt へ変換 |
 | `from-jsonl` | JSONL を life.txt へ変換 |
+| `from-csv` | CSV を life.txt へ変換 |
 | `status` | `person:` ごとの最新 `S` status / presence を表示 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
@@ -153,7 +157,26 @@ JSONL を life.txt に変換します。
 python -m lifetxt from-jsonl [path ...] [-o life.txt]
 ```
 
-### 4.5 export filter option
+### 4.5 `to-csv`
+
+life.txt を CSV に変換します。CSV は `status`、`type`、`title` と、選択された item に含まれる detail key の列を持ちます。同じ detail key の複数値はセル内 JSON 配列として保存します。複数行の `body:` は quoted CSV cell として保存します。
+
+```sh
+python -m lifetxt to-csv [path ...] [-o output.csv] [filter options]
+python -m lifetxt to-csv life.txt --type journal --project research -o journal.csv
+```
+
+### 4.6 `from-csv`
+
+CSV を life.txt に戻します。CSV には `status`、`type`、`title` 列が必要です。それ以外の非空列は detail key として扱います。セルが JSON 配列の場合は、同じ key の複数値として読み込みます。
+
+```sh
+python -m lifetxt from-csv [path ...] [-o life.txt]
+```
+
+### 4.7 export filter option
+
+`to-json`、`to-jsonl`、`to-csv` は出力前に item を絞り込めます。
 
 `to-json` と `to-jsonl` は、出力前に item を絞り込めます。
 
@@ -498,7 +521,7 @@ python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00
 known detail key には直接フラグもあります。各フラグは複数回指定できます。
 
 ```txt
---id --parent --created --updated --done --due --do --from --to
+--id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
 --state --person --owner --assignee --attendee --service --visibility --on --at --repeat
 --project --context --loc --priority --est --tag --note --url
 --reason --moved_to
@@ -788,3 +811,21 @@ python -m lifetxt ids life.txt --assign --backup
 | `--assign` | IDがないitemへIDを付与 |
 | `--dry-run` | ファイルを書き換えず予定だけ表示 |
 | `--backup` | `--assign` で変更前に `FILE.bak` を作成 |
+## 追加: links
+
+`links` は item 間の ID 参照を一覧表示するコマンドです。対象 key は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` です。
+
+```sh
+python -m lifetxt links life.txt
+python -m lifetxt links life.txt --id task_report --direction incoming
+python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
+```
+
+| Option | 意味 |
+|---|---|
+| `--id ID` | 指定 ID に接続する link だけを表示 |
+| `--direction incoming|outgoing|both` | `--id` 指定時の方向 |
+| `--key KEY` | ID として扱う detail key |
+| `--format text|json|jsonl` | 出力形式 |
+
+`check` は存在しない参照を `W215`、自己参照を `W216`、`parent:` cycle を `W217`、重複 ID による曖昧な参照を `W218` として報告します。

@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 
 VALID_STATUSES = ("[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]")
-VALID_TYPES = ("T", "E", "D", "R", "H", "N", "S", "M")
+VALID_TYPES = ("T", "E", "D", "R", "H", "N", "S", "M", "J")
 
 STATUS_ALIASES = {
     "todo": "[ ]",
@@ -50,6 +50,10 @@ TYPE_ALIASES = {
     "recurring": "H",
     "note": "N",
     "memo": "N",
+    "journal": "J",
+    "diary": "J",
+    "log": "J",
+    "entry": "J",
     "presence": "S",
     "presence_status": "S",
     "status": "S",
@@ -63,6 +67,10 @@ TYPE_ALIASES = {
 KNOWN_KEYS = (
     "id",
     "parent",
+    "ref",
+    "depends_on",
+    "blocks",
+    "related",
     "created",
     "updated",
     "done",
@@ -98,12 +106,17 @@ KNOWN_KEYS = (
     "est",
     "tag",
     "note",
+    "body",
+    "mood",
+    "weather",
     "url",
     "reason",
     "moved_to",
 )
 
-COMMON_RECOMMENDED_KEYS = ("id", "parent", "project", "tag", "note", "url")
+REFERENCE_KEYS = ("parent", "ref", "depends_on", "blocks", "related")
+COMMON_RECOMMENDED_KEYS = ("id", "project", "tag", "note", "url")
+LINK_RECOMMENDED_KEYS = REFERENCE_KEYS
 PEOPLE_RECOMMENDED_KEYS = (
     "user",
     "person",
@@ -130,6 +143,7 @@ SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
 
 RECOMMENDED_KEY_GROUPS = (
     ("Common", COMMON_RECOMMENDED_KEYS),
+    ("Links", LINK_RECOMMENDED_KEYS),
     ("People", PEOPLE_RECOMMENDED_KEYS),
     ("Teams", TEAM_RECOMMENDED_KEYS),
     ("Time", TIME_RECOMMENDED_KEYS),
@@ -155,6 +169,10 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "note",
         "id",
         "parent",
+        "ref",
+        "depends_on",
+        "blocks",
+        "related",
     ),
     "E": (
         "from",
@@ -167,6 +185,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "ref",
+        "related",
     ),
     "D": (
         "due",
@@ -177,6 +197,9 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "depends_on",
+        "ref",
+        "related",
     ),
     "R": (
         "at",
@@ -186,6 +209,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "context",
         "note",
+        "ref",
+        "related",
     ),
     "H": (
         "repeat",
@@ -196,15 +221,20 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "ref",
+        "related",
     ),
     "N": (
         "project",
         "context",
         "tag",
         "note",
+        "body",
         "url",
         "id",
         "parent",
+        "ref",
+        "related",
     ),
     "S": (
         "from",
@@ -217,6 +247,8 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "loc",
         "project",
         "note",
+        "ref",
+        "related",
         "visibility",
     ),
     "M": (
@@ -238,6 +270,29 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "url",
         "id",
         "parent",
+        "ref",
+        "related",
+        "created",
+        "updated",
+    ),
+    "J": (
+        "on",
+        "at",
+        "from",
+        "to",
+        "mood",
+        "weather",
+        "loc",
+        "person",
+        "project",
+        "tag",
+        "note",
+        "body",
+        "url",
+        "id",
+        "parent",
+        "ref",
+        "related",
         "created",
         "updated",
     ),
@@ -250,7 +305,7 @@ RECOMMENDED_KEYS_BY_STATUS = {
     "[-]": ("reason", "updated", "note"),
     "[>]": ("moved_to", "reason", "updated", "note"),
     "[?]": ("note", "updated"),
-    "[N]": ("project", "context", "tag", "note", "url"),
+    "[N]": ("project", "context", "tag", "note", "body", "url", "ref", "related"),
 }
 
 DATE_KEYS = ("on",)

@@ -10,14 +10,17 @@ from .interactive import (
     status_candidates,
     type_candidates,
 )
-from .parser import parse_line
+from .parser import parse_text
 from .serializer import item_to_line
-from .validator import validate_item
 
 
 DETAIL_FLAGS = (
     "id",
     "parent",
+    "ref",
+    "depends_on",
+    "blocks",
+    "related",
     "created",
     "updated",
     "done",
@@ -53,6 +56,9 @@ DETAIL_FLAGS = (
     "est",
     "tag",
     "note",
+    "body",
+    "mood",
+    "weather",
     "url",
     "reason",
     "moved_to",
@@ -152,7 +158,7 @@ def prompt_item(args):
 
 
 def _default_status(kind, details):
-    if kind == "N":
+    if kind in ("N", "J"):
         return "[N]"
     if kind == "S":
         if details and "to" in details:
@@ -167,7 +173,7 @@ def item_to_assisted_line(item):
 
 def update_text(text, args):
     raw_lines = text.splitlines(True)
-    line_items, diagnostics = _parse_line_items(raw_lines)
+    line_items, diagnostics = _parse_line_items(text)
     if _has_error(diagnostics):
         return text, None, diagnostics
 
@@ -175,18 +181,18 @@ def update_text(text, args):
     updated = apply_updates(item, args)
     updated_line = item_to_line(updated)
 
-    parsed, parsed_diagnostics = parse_line(updated_line, line_no)
+    parsed_items, parsed_diagnostics = parse_text(updated_line + "\n")
     diagnostics.extend(parsed_diagnostics)
+    parsed = parsed_items[0] if parsed_items else None
     if parsed is None:
-        raise ValueError("Updated line did not produce an item.")
-    if not args.no_check:
-        diagnostics.extend(validate_item(parsed))
+        raise ValueError("Updated item did not produce an item.")
     if _has_error(diagnostics):
         return text, None, diagnostics
 
-    index = line_no - 1
-    _body, original_ending = _split_line_ending(raw_lines[index])
-    raw_lines[index] = updated_line + original_ending
+    start = line_no - 1
+    end = getattr(item, "end_line", line_no) or line_no
+    _body, original_ending = _split_line_ending(raw_lines[end - 1])
+    raw_lines[start:end] = _with_line_ending(updated_line, original_ending).splitlines(True)
     return "".join(raw_lines), updated_line, diagnostics
 
 
@@ -232,16 +238,9 @@ def has_update_fields(args):
     return False
 
 
-def _parse_line_items(raw_lines):
-    diagnostics = []
-    line_items = []
-    for line_no, raw_line in enumerate(raw_lines, 1):
-        body, _ending = _split_line_ending(raw_line)
-        item, line_diagnostics = parse_line(body, line_no)
-        diagnostics.extend(line_diagnostics)
-        if item is not None:
-            line_items.append((line_no, item))
-    return line_items, diagnostics
+def _parse_line_items(text):
+    items, diagnostics = parse_text(text)
+    return [(item.line, item) for item in items], diagnostics
 
 
 def _select_update_item(line_items, args):
@@ -295,6 +294,12 @@ def _split_line_ending(raw_line):
     if raw_line.endswith("\r"):
         return raw_line[:-1], "\r"
     return raw_line, ""
+
+
+def _with_line_ending(text, ending):
+    if text.endswith(("\n", "\r")):
+        return text
+    return text + ending
 
 
 def _has_error(diagnostics):

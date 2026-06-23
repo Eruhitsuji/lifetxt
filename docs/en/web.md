@@ -41,6 +41,7 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
+| `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
 | `PUT` | `/api/messages/id/{id}` | Replace a message by exact `id:` in the writable file |
@@ -85,6 +86,7 @@ Examples:
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
 curl "http://127.0.0.1:8000/api/items/id/task_001"
+curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
 curl "http://127.0.0.1:8000/api/items?team=research&tag_all=urgent,review"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"

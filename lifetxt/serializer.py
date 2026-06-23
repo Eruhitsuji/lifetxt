@@ -11,12 +11,20 @@ _BARE_RE = re.compile(r'^[^ "\t\\]+$')
 
 def item_to_line(item):
     parts = [item.status, item.kind, encode_string(item.title)]
+    continuation_lines = []
     for key, values in item.details.items():
         if not _KEY_RE.match(key):
             raise ValueError("Invalid detail key %r." % key)
+        if key == "body" and _has_multiline_value(values):
+            for value in values:
+                continuation_lines.extend(_body_continuation_lines(value))
+            continue
         for value in values:
             parts.append("%s:%s" % (key, encode_string(value)))
-    return " ".join(parts)
+    line = " ".join(parts)
+    if continuation_lines:
+        return "\n".join([line] + continuation_lines)
+    return line
 
 
 def encode_string(value):
@@ -29,6 +37,32 @@ def encode_string(value):
     if value != "" and _BARE_RE.match(value):
         return value
     return '"%s"' % value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _has_multiline_value(values):
+    for value in values:
+        if value is None:
+            continue
+        text = str(value)
+        if "\n" in text or "\r" in text:
+            return True
+    return False
+
+
+def _body_continuation_lines(value):
+    if value is None:
+        value = ""
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    lines = text.split("\n")
+    if not lines:
+        return ["|"]
+    result = []
+    for line in lines:
+        if line == "":
+            result.append("|")
+        else:
+            result.append("| " + line)
+    return result
 
 
 def items_to_json(items, pretty=False):

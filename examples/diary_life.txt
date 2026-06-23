@@ -1,0 +1,12 @@
+# Journal / diary examples with multiline body text
+
+[N] J "Research day" on:2026-06-23 mood:good weather:sunny loc:lab project:lifetxt tag:parser
+| Read papers in the morning.
+| Implemented multiline body parsing and CSV conversion in the afternoon.
+| Next: review the web editor flow with real diary entries.
+
+[N] J "Short evening log" on:2026-06-23 at:22:30 mood:calm tag:daily note:"Kept the entry short"
+
+[N] J "Field notes" from:2026-06-22T09:00 to:2026-06-22T17:30 loc:campus person:self tag:fieldwork
+| Met Alice near the library.
+| Captured follow-up tasks as separate T items.

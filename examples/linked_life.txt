@@ -1,0 +1,7 @@
+# ID reference and link examples
+
+[ ] T Write_Report id:link_task_report due:2026-06-12 project:university tag:report
+[/] T Review_References id:link_task_refs parent:link_task_report depends_on:link_task_report project:university tag:reading
+[N] N Report_Notes id:link_note_report ref:link_task_report related:link_task_refs project:university
+[ ] M "Please review outline" id:link_msg_outline sender:self recipient:alice ref:link_task_report notify_at:2026-06-06T09:00
+[ ] T Update_Outline id:link_task_outline blocks:link_msg_outline related:link_note_report project:university

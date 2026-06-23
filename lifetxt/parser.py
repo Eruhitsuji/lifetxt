@@ -1,25 +1,70 @@
 from collections import OrderedDict
 
 from .ids import duplicate_id_diagnostics
+from .links import reference_diagnostics
 from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
 
 
-def parse_text(text):
+def parse_text(text, id_key="id", check_ids=True, check_references=True):
     """Parse a full life.txt document.
 
     Returns ``(items, diagnostics)``. Blank lines and comment lines are ignored.
+    Lines that start with ``|`` continue the previous item as a multiline
+    ``body:`` detail.
     """
     items = []
     diagnostics = []
+    current_item = None
+    current_has_error = False
+
+    def finish_current():
+        nonlocal current_item, current_has_error
+        if current_item is None:
+            return
+        items.append(current_item)
+        if not current_has_error:
+            diagnostics.extend(validate_item(current_item))
+        current_item = None
+        current_has_error = False
+
     for line_no, line in enumerate(text.splitlines(), 1):
+        if line.startswith("|"):
+            if current_item is None:
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        "E019",
+                        "Continuation lines must follow a life.txt item.",
+                        line_no,
+                        1,
+                    )
+                )
+                continue
+            _append_body_continuation(current_item, line)
+            current_item.end_line = line_no
+            if current_item.source_text is None:
+                current_item.source_text = line
+            else:
+                current_item.source_text += "\n" + line
+            continue
+
+        finish_current()
         item, line_diagnostics = parse_line(line, line_no)
         diagnostics.extend(line_diagnostics)
         if item is not None:
-            items.append(item)
-            if not _has_error(line_diagnostics):
-                diagnostics.extend(validate_item(item))
-    diagnostics.extend(duplicate_id_diagnostics(items))
+            finish_current()
+            item.end_line = line_no
+            current_item = item
+            current_has_error = _has_error(line_diagnostics)
+        elif _has_error(line_diagnostics):
+            current_item = None
+            current_has_error = False
+    finish_current()
+    if check_ids:
+        diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
+    if check_references:
+        diagnostics.extend(reference_diagnostics(items, key=id_key))
     return items, diagnostics
 
 
@@ -112,7 +157,7 @@ def parse_line(line, line_no=1):
             Diagnostic(
                 "error",
                 "E005",
-                "Invalid type %r. Use T, E, D, R, H, N, S, or M." % kind,
+                "Invalid type %r. Use T, E, D, R, H, N, S, M, or J." % kind,
                 line_no,
                 pos + 1,
             )
@@ -157,6 +202,18 @@ def parse_line(line, line_no=1):
             details.setdefault(key, []).append(value)
 
     return Item(status, kind, title, details, line_no, source_text=text), diagnostics
+
+
+def _append_body_continuation(item, line):
+    if line.startswith("| "):
+        value = line[2:]
+    else:
+        value = line[1:]
+    existing = item.details.get("body")
+    if existing:
+        existing[0] = existing[0] + "\n" + value
+    else:
+        item.details["body"] = [value]
 
 
 def _consume_required_space(text, pos, line_no, diagnostics, context):

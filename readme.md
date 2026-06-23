@@ -1,6 +1,6 @@
 # life.txt
 
-`life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, messages, and notes in a single human-readable file.
+`life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, messages, notes, and journal / diary entries in a single human-readable file.
 Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the detailed grammar of the `life.txt`.
 
 ## Documentation
@@ -21,6 +21,9 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
 [ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[N] J "Research day" on:2026-06-23 mood:good tag:lab
+| Read papers in the morning.
+| Wrote parser tests in the afternoon.
 [N] N Research_Memo project:research
 ```
 
@@ -33,6 +36,8 @@ More sample files are available in [examples/](./examples/):
 - [status_presence.txt](./examples/status_presence.txt): personal presence records
 - [team_status_life.txt](./examples/team_status_life.txt): multi-person status records
 - [messages_life.txt](./examples/messages_life.txt): message and notification records
+- [diary_life.txt](./examples/diary_life.txt): journal / diary entries with multiline body text
+- [linked_life.txt](./examples/linked_life.txt): id-based links with `parent`, `ref`, `depends_on`, `blocks`, and `related`
 - [agenda_life.txt](./examples/agenda_life.txt): data for the `agenda` command
 - [json_roundtrip_life.txt](./examples/json_roundtrip_life.txt): repeated keys and quoted values
 - [calendar_import.ics](./examples/calendar_import.ics): sample iCalendar input for `import-ics`
@@ -45,6 +50,7 @@ This repository includes a dependency-free Python CLI:
 python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
+python -m lifetxt to-csv life.txt --type journal -o journal.csv
 python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
 python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt
@@ -61,6 +67,7 @@ python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --watch --interval 30
 python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
+python -m lifetxt links life.txt --id task_report --direction incoming
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
@@ -68,6 +75,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
+python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 python -m lifetxt config init -o .lifetxt.json
 ```
@@ -81,7 +89,7 @@ lifetxt check examples/minimal_life.txt
 
 Most file-reading commands accept multiple input paths, glob patterns, and
 directories containing life.txt-like `.txt` files. The `filter`,
-`to-json`, and `to-jsonl` commands support item filters such as `--open`,
+`to-json`, `to-jsonl`, and `to-csv` commands support item filters such as `--open`,
 `--status`, `--type`, `--project`, `--tag`, `--tag-all`, `--exclude-tag`,
 `--user`, `--team`, `--person`, `--owner`,
 `--assignee`, `--attendee`, `--sender`, `--recipient`, `--detail`, `--text`,
@@ -149,12 +157,18 @@ life.txt` to audit present, missing, and duplicate IDs. Use `ids --assign` with
 `--dry-run` first to backfill IDs safely. Set `ids.key` / `api.id_key` to use a
 custom ID detail key.
 
+Journal / diary records use type `J`; aliases include `journal`, `diary`,
+`log`, and `entry`. `[N]` is the recommended status. Use `body:` for long text;
+when the value spans multiple lines, write continuation lines beginning with
+`|` after the item.
+
 Input assistance is available in both non-interactive and interactive modes:
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university --tag report
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
 python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
+python -m lifetxt assist --type diary --title "Research day" --on 2026-06-23 --mood good --body "Read papers."
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --output new_life.txt
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --append life.txt
 python -m lifetxt assist --interactive --append life.txt
@@ -178,8 +192,14 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 python -m lifetxt assist --update life.txt --match-id task_001 --remove-detail tag --output updated_life.txt
 ```
 
-The `check` command reports syntax errors and semantic warnings such as invalid status/type values, malformed `key:value` details, note status/type mismatches, date/time format issues, unusual key style, and event ranges where `to:` is earlier than `from:`.
+The `check` command reports syntax errors and semantic warnings such as invalid status/type values, malformed `key:value` details, note/journal status/type mismatches, date/time format issues, unusual key style, and event ranges where `to:` is earlier than `from:`.
 For `type:S` status / presence records, `from:` and `state:` are required. `[/]` is recommended when the record has no `to:`, and `[x]` is recommended when `to:` is present.
+
+Items can link to other records by ID. Use `parent:` for hierarchy or message
+threads, `ref:` for a generic reference, `depends_on:` for prerequisites,
+`blocks:` for blocked downstream work, and `related:` for loose links. The
+`check` command warns about missing references, self references, and `parent:`
+cycles. Use `python -m lifetxt links life.txt` to inspect these relationships.
 
 ## JSON Shape
 
@@ -196,6 +216,10 @@ Details are always represented as arrays so repeated keys round-trip safely:
   }
 }
 ```
+
+CSV conversion uses `status`, `type`, and `title` columns plus detail-key
+columns. Repeated detail values are stored as JSON arrays inside cells, and
+multiline `body:` values are stored as quoted CSV cells.
 
 Run tests with:
 

@@ -87,6 +87,7 @@ Examples:
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
 curl "http://127.0.0.1:8000/api/items/id/task_001"
 curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
+curl "http://127.0.0.1:8000/api/links?relation=depends_on,blocks"
 curl "http://127.0.0.1:8000/api/items?team=research&tag_all=urgent,review"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"

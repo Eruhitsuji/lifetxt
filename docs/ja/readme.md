@@ -29,6 +29,7 @@
 - [team_status_life.txt](../../examples/team_status_life.txt): 複数人の在席状態
 - [diary_life.txt](../../examples/diary_life.txt): 複数行 body を含む日記・日誌
 - [linked_life.txt](../../examples/linked_life.txt): `parent`、`ref`、`depends_on`、`blocks`、`related` による ID 参照
+- [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezone、小数秒、simple repeat、body、依存関係の例
 - [agenda_life.txt](../../examples/agenda_life.txt): `agenda` コマンド用データ
 - [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): 繰り返し key と引用値
 - [calendar_import.ics](../../examples/calendar_import.ics): `import-ics` 用の iCalendar 入力例
@@ -129,6 +130,10 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 `agenda` コマンドは、指定した日時範囲に関連する item を表示します。
 `from/to` と `on` は期間として扱い、`due`、`do`、`at`、`moved_to` は
 時点または終日範囲として扱います。
+日時値は `2026-06-06T13:00:30.25+09:00` のように、秒、小数秒、明示的な
+timezone を含められます。simple `repeat:` の `daily`、`weekly`、`monthly`、
+`yearly`、`weekdays` は agenda と時刻 filter で展開され、`interval:`、
+`until:`、`count:` で制限できます。
 
 agenda filter は組み合わせて使えます。
 
@@ -170,6 +175,7 @@ python -m unittest discover
 ## 追加: Message type と external config
 
 Message records use type `M`. `sender:` と `recipient:` が必須で、`notify_at:` で単一通知時刻、`notify_from:` / `notify_to:` で通知期間を指定できます。
+本文が長い場合は、title を短く保ち `body:` に本文を書けます。
 
 ```sh
 python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
@@ -185,7 +191,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 `ids --assign --dry-run` で既存データへのID付与予定を確認し、`--backup` 付きで安全に反映できます。
 `ids.key` / `api.id_key` を設定すると、`id:` 以外の detail key を ID key として使えます。
 
-item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle を warning として報告します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。
+item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle を warning として報告します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。依存関係だけを見たい場合は `python -m lifetxt links life.txt --relation depends_on --relation blocks` を使えます。
 `users`、`teams`、`tags.aliases` / `tags.groups` は `--user`、`--team`、tag filter の展開に使われます。
 
 Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。
@@ -201,5 +207,6 @@ python -m lifetxt --config .lifetxt.json config show
 ## Journal / Diary と CSV
 
 日記・日誌は type `J` を使います。alias は `journal`、`diary`、`log`、`entry` です。status は `[N]` を推奨します。長文は `body:` と、直前 item に続く `|` 継続行で表現できます。
+`body:` は `J` 専用ではなく、詳細な task、event description、message、note にも使えます。短い補足は `note:`、長文は `body:` と使い分けます。
 
 `to-csv` は `to-json` と同じ filter option を使えます。CSV は `status`、`type`、`title` と detail key の列を持ち、同じ key の複数値はセル内 JSON 配列として保存します。

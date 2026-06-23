@@ -4,8 +4,18 @@ from collections import OrderedDict
 from .model import Diagnostic, REFERENCE_KEYS
 
 
-def link_records(items, key="id", focus_id=None, direction="both", reference_keys=None):
+def link_records(
+    items,
+    key="id",
+    focus_id=None,
+    direction="both",
+    reference_keys=None,
+    relations=None,
+):
     reference_keys = tuple(reference_keys or REFERENCE_KEYS)
+    if relations:
+        wanted = set(str(relation) for relation in relations)
+        reference_keys = tuple(relation for relation in reference_keys if relation in wanted)
     direction = _normalize_direction(direction)
     index = build_id_index(items, key)
     records = []

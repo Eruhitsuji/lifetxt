@@ -168,26 +168,40 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 | `notify_from` | 通知期間の開始 | `notify_from:2026-06-06T09:00` |
 | `notify_to` | 通知期間の終了 | `notify_to:2026-06-06T17:00` |
 
-### 7.4 Message keys
+### 7.4 Recurrence keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `repeat` | 繰り返し規則 | `repeat:daily` |
+| `interval` | N 単位ごとに繰り返す | `interval:2` |
+| `until` | 最後の繰り返し日または日時 | `until:2026-12-31` |
+| `count` | 最大 occurrence 数 | `count:10` |
+
+simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays`
+を推奨します。`RRULE:...` は外部互換のため保存できますが、組み込み agenda
+の展開対象は simple repeat です。
+
+### 7.5 Message keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `sender` | メッセージ送信元 | `sender:self` |
 | `recipient` | メッセージ送信先。複数指定可 | `recipient:alice` |
+| `body` | title より長いメッセージ本文 | `body:"Please review the slides"` |
 | `notify_at` | 単一の通知時刻 | `notify_at:2026-06-06T09:00` |
 | `notify_from`, `notify_to` | 通知期間 | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
 | `ack` | 通知確認日時 | `ack:2026-06-06T09:05` |
 | `snooze_until` | この日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 | `channel` | 配信経路 | `channel:teams` |
 
-### 7.5 Workflow keys
+### 7.6 Workflow keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
 | `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
 
-### 7.6 System keys
+### 7.7 System keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -200,16 +214,43 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 |---|---|---|
 | `YYYY-MM-DD` | 日付 | `due:2026-06-12` |
 | `YYYY-MM-DDTHH:MM` | ローカル日時 | `from:2026-06-08T13:00` |
+| `YYYY-MM-DDTHH:MM:SS` | 秒付きローカル日時 | `from:2026-06-08T13:00:30` |
+| `YYYY-MM-DDTHH:MM:SS.sss` | 小数秒付きローカル日時 | `from:2026-06-08T13:00:30.5` |
+| `YYYY-MM-DDTHH:MM+09:00` | timezone offset 付き日時 | `from:2026-06-08T13:00+09:00` |
+| `YYYY-MM-DDTHH:MM:SS.sss+09:00` | 秒・小数秒・timezone 付き日時 | `from:2026-06-08T13:00:30.25+09:00` |
+| `YYYY-MM-DDTHH:MMZ` | UTC 日時 | `from:2026-06-08T04:00Z` |
 | `HH:MM` | 時刻のみ | `at:18:00` |
+| `HH:MM:SS` | 秒付き時刻 | `at:18:00:30` |
+| `HH:MM:SS.sss` | 小数秒付き時刻 | `at:18:00:30.5` |
+| `HH:MM+09:00` | timezone offset 付き時刻 | `at:18:00+09:00` |
 
 範囲ベースのツールでは、`from/to`、`notify_from/notify_to`、`on` を期間として扱えます。`due`、`do`、`at`、`moved_to`、`notify_at` は時点または終日範囲として扱えます。
+
+timezone が明示された値は、比較や表示の前に実行環境の local timezone に正規化される場合があります。小数秒は最大 6 桁まで扱います。
+
+### 8.1 繰り返し semantics
+
+simple recurrence は `repeat:` と、任意の `interval:`、`until:`、`count:` で表します。
+
+```txt
+[ ] H Stretch repeat:daily at:18:00
+[ ] H Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31
+[ ] H Workday_Checkin repeat:weekdays at:09:00 count:10
+```
+
+agenda と time filter は、`from/to`、`at` + `on`、bounded range 内の floating
+`at`、`on`、`due` / `do` / `moved_to` / `notify_at` の順で anchor を選び、
+simple repeat を展開します。`interval:2` は 2 単位ごとの繰り返し、`count:`
+は anchor から数えた最大 occurrence 数、`until:` は inclusive な終了日時です。
+`on:` のない floating `at:` は安定した日付 anchor がないため、片側だけの
+time filter では一致対象にしません。
 
 ## 9. type 別 recommended keys
 
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner est project tag note id parent ref depends_on blocks related
+do due priority assignee owner est project tag note body id parent ref depends_on blocks related
 ```
 
 例:
@@ -257,13 +298,14 @@ at on owner project context note
 ### 9.5 Habit (`H`)
 
 ```txt
-repeat at on owner project tag note
+repeat interval until count at on owner project tag note body ref related
 ```
 
 例:
 
 ```txt
 [ ] H English_Study repeat:daily at:18:00 project:english
+[ ] H Weekly_Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31 project:life
 ```
 
 ### 9.6 Note (`N`)
@@ -309,7 +351,7 @@ from state
 推奨 key:
 
 ```txt
-from state to person service loc project note ref related visibility
+from state to person service loc project note body ref related visibility
 ```
 
 `to:` がない場合は現在有効な状態として扱えます。`to:` がある場合は過去の状態ログとして扱えます。
@@ -334,7 +376,7 @@ sender recipient
 推奨 key:
 
 ```txt
-sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent ref related created updated
+sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
 ```
 
 | Key | 推奨理由 |
@@ -419,7 +461,12 @@ project context tag note body url ref related
 
 `|` で始まる行は、直前の item の `body:` detail として扱います。`|` の直後の 1 つの空白は区切りであり本文には含めません。空行を本文に入れる場合は `|` だけの行を使います。
 
+`body:` は `J` 専用ではありません。短い補足は `note:`、長文は `body:` と使い分け、詳細な task、event description、message、note、journal に利用できます。
+
 ```txt
+[ ] T Write_Report due:2026-06-12 project:university
+| Include the method section and references.
+
 [N] J "Research day" on:2026-06-23 mood:good
 | First paragraph.
 |

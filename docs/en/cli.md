@@ -191,6 +191,7 @@ Inspect relationships that point to item IDs. The command understands
 python -m lifetxt links [path ...]
 python -m lifetxt links life.txt --id task_report --direction incoming
 python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
+python -m lifetxt links life.txt --relation depends_on --relation blocks
 ```
 
 Options:
@@ -199,6 +200,7 @@ Options:
 |---|---|
 | `--id ID` | Show only links connected to this ID |
 | `--direction incoming|outgoing|both` | Direction when `--id` is used |
+| `--relation RELATION` | Limit to a relation key such as `depends_on`; repeatable or comma-separated |
 | `--key KEY` | ID detail key; defaults to config `ids.key`, `api.id_key`, or `id` |
 | `--format text|json|jsonl` | Output format |
 | `--pretty` | Pretty-print JSON |
@@ -299,10 +301,11 @@ python -m lifetxt from-csv [path ...] [-o life.txt]
 | `--before VALUE` | Keep items related to this time or earlier |
 
 `--after` and `--before` accept `now`, `YYYY-MM-DD`, or ISO-like datetimes such
-as `YYYY-MM-DDTHH:MM`, `YYYY-MM-DDTHH:MM:SS`, or
-`YYYY-MM-DDTHH:MM+09:00`. They use the same time matching rules as `agenda`.
-Time-only `at:HH:MM` values without an `on:` date are not matched by one-sided
-`--after` or `--before` filters, because they have no date anchor.
+as `YYYY-MM-DDTHH:MM`, `YYYY-MM-DDTHH:MM:SS`,
+`YYYY-MM-DDTHH:MM:SS.5`, `YYYY-MM-DDTHH:MM+09:00`, or
+`YYYY-MM-DDTHH:MM:SS.25+09:00`. They use the same time matching rules as
+`agenda`. Time-only `at:HH:MM` values without an `on:` date are not matched by
+one-sided `--after` or `--before` filters, because they have no date anchor.
 
 `--user`, `--team`, and `--tag` use aliases from config `users`, `teams`, and
 `tags.aliases` / `tags.groups` when available.
@@ -558,6 +561,9 @@ Range matching rules:
 - `due`, `do`, `at`, `moved_to`, and `notify_at` are treated as point times or all-day spans.
 - Type `S` records without `to:` are treated as ongoing from `from:`.
 - `at:HH:MM` is combined with `on:` when present, otherwise with each date in the requested range.
+- Simple `repeat:` values are expanded for `daily`, `weekly`, `monthly`, `yearly`, and `weekdays`.
+- `interval:`, `until:`, and `count:` constrain simple recurrence expansion.
+- Floating repeated `at:` values without `on:` are expanded only inside bounded agenda ranges.
 
 ### 9.1 Range Options
 
@@ -589,9 +595,10 @@ Examples:
 ```sh
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
-python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-06T18:00:00+09:00
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30.25+09:00 --to 2026-06-06T18:00:00.5+09:00
 python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
+python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 ```
 
 ### 9.2 Filter Options
@@ -685,7 +692,7 @@ Known detail keys also have direct flags. Each can be repeated:
 ```txt
 --id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
---visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
+--visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat --interval --until --count
 --project --context --loc --priority --est --tag --note --body --mood --weather --url
 --reason --moved_to
 ```

@@ -205,6 +205,7 @@ Snooze duration は `notifications.snooze_default` で指定できます。
 ```sh
 curl "http://127.0.0.1:8000/api/links"
 curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
+curl "http://127.0.0.1:8000/api/links?relation=depends_on,blocks"
 ```
 
 query parameter:

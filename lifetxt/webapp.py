@@ -154,6 +154,7 @@ def create_app(paths=None, writable_path=None, config=None):
     def get_links(
         item_id=Query(None, alias="id"),
         direction="both",
+        relation=None,
         limit=None,
     ):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
@@ -162,6 +163,7 @@ def create_app(paths=None, writable_path=None, config=None):
             key=id_key_from_config(app.state.config),
             focus_id=item_id,
             direction=direction,
+            relations=_csv_values(relation),
         )
         records = limit_items(records, limit)
         return links_response(records, diagnostics)
@@ -911,9 +913,14 @@ def message_item_from_payload(payload, config=None):
         "project",
         "tag",
         "note",
+        "body",
         "url",
         "id",
         "parent",
+        "ref",
+        "depends_on",
+        "blocks",
+        "related",
         "created",
         "updated",
     ):

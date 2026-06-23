@@ -33,6 +33,7 @@ Sample files are available in [../../examples/](../../examples/):
 - [messages_life.txt](../../examples/messages_life.txt): message and notification records
 - [diary_life.txt](../../examples/diary_life.txt): journal / diary entries with multiline body text
 - [linked_life.txt](../../examples/linked_life.txt): id-based links with `parent`, `ref`, `depends_on`, `blocks`, and `related`
+- [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezones, fractional seconds, simple recurrence, body, and dependency examples
 - [agenda_life.txt](../../examples/agenda_life.txt): data for the `agenda` command
 - [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): repeated keys and quoted values
 - [calendar_import.ics](../../examples/calendar_import.ics): sample iCalendar input for `import-ics`
@@ -146,6 +147,10 @@ Use `--active` to ignore finished status logs with `to:`.
 The `agenda` command prints items related to a datetime range. `from/to`,
 `notify_from/notify_to`, and `on` are treated as intervals, while `due`, `do`,
 `at`, `moved_to`, and `notify_at` are treated as points or all-day spans.
+Datetime values may include seconds, fractional seconds, and explicit
+timezones, such as `2026-06-06T13:00:30.25+09:00`. Simple `repeat:` values
+(`daily`, `weekly`, `monthly`, `yearly`, `weekdays`) are expanded by agenda and
+time filters, with optional `interval:`, `until:`, and `count:`.
 
 Agenda filters can be combined:
 
@@ -164,9 +169,10 @@ approximated as 365 days.
 
 Message records use type `M`. They require `sender:` and `recipient:` and can
 use `notify_at:` for one notification time or `notify_from:` / `notify_to:` for
-a notification window. The web API also provides `/api/messages` for convenient
-message listing and creation. `/api/items/id/{id}` and `/api/messages/id/{id}`
-support id-based access, while `/api/messages/thread/{id}` and
+a notification window. Use `body:` for longer message text when the title should
+stay short. The web API also provides `/api/messages` for convenient message
+listing and creation. `/api/items/id/{id}` and `/api/messages/id/{id}` support
+id-based access, while `/api/messages/thread/{id}` and
 `/api/messages/id/{id}/reply` support message threads via `parent:`.
 
 Use `python -m lifetxt notify life.txt --watch` as a resident notification
@@ -180,6 +186,9 @@ Journal / diary records use type `J`; aliases include `journal`, `diary`,
 `log`, and `entry`. `[N]` is the recommended status. Use `body:` for long text;
 continuation lines beginning with `|` attach multiline body text to the previous
 item.
+`body:` is also useful outside `J` for detailed tasks, event descriptions,
+messages, and notes. Use `note:` for short side notes and `body:` for long-form
+content.
 
 External JSON config is available with `--config FILE`, `LIFETXT_CONFIG`,
 `.lifetxt.json`, or `lifetxt.config.json`. Use `python -m lifetxt config init`
@@ -197,6 +206,8 @@ threads, `ref:` for a generic reference, `depends_on:` for prerequisites,
 `blocks:` for blocked downstream work, and `related:` for loose links. The
 `check` command warns about missing references, self references, and `parent:`
 cycles. Use `python -m lifetxt links life.txt` to inspect these relationships.
+Use `python -m lifetxt links life.txt --relation depends_on --relation blocks`
+to focus on dependency edges.
 
 ## JSON Shape
 

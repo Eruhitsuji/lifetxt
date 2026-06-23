@@ -99,6 +99,9 @@ KNOWN_KEYS = (
     "on",
     "at",
     "repeat",
+    "interval",
+    "until",
+    "count",
     "project",
     "context",
     "loc",
@@ -128,9 +131,11 @@ PEOPLE_RECOMMENDED_KEYS = (
 )
 TEAM_RECOMMENDED_KEYS = ("team", "group")
 TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
+RECURRENCE_RECOMMENDED_KEYS = ("repeat", "interval", "until", "count")
 MESSAGE_RECOMMENDED_KEYS = (
     "sender",
     "recipient",
+    "body",
     "notify_at",
     "notify_from",
     "notify_to",
@@ -147,6 +152,7 @@ RECOMMENDED_KEY_GROUPS = (
     ("People", PEOPLE_RECOMMENDED_KEYS),
     ("Teams", TEAM_RECOMMENDED_KEYS),
     ("Time", TIME_RECOMMENDED_KEYS),
+    ("Recurrence", RECURRENCE_RECOMMENDED_KEYS),
     ("Message", MESSAGE_RECOMMENDED_KEYS),
     ("Workflow", WORKFLOW_RECOMMENDED_KEYS),
     ("System", SYSTEM_RECOMMENDED_KEYS),
@@ -167,6 +173,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "body",
         "id",
         "parent",
         "ref",
@@ -185,6 +192,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "body",
         "ref",
         "related",
     ),
@@ -197,6 +205,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "body",
         "depends_on",
         "ref",
         "related",
@@ -209,11 +218,15 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "context",
         "note",
+        "body",
         "ref",
         "related",
     ),
     "H": (
         "repeat",
+        "interval",
+        "until",
+        "count",
         "at",
         "on",
         "owner",
@@ -221,6 +234,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "body",
         "ref",
         "related",
     ),
@@ -247,6 +261,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "loc",
         "project",
         "note",
+        "body",
         "ref",
         "related",
         "visibility",
@@ -267,6 +282,7 @@ RECOMMENDED_KEYS_BY_TYPE = {
         "project",
         "tag",
         "note",
+        "body",
         "url",
         "id",
         "parent",
@@ -323,9 +339,10 @@ DATE_OR_DATETIME_KEYS = (
     "notify_to",
     "ack",
     "snooze_until",
+    "until",
 )
 TIME_OR_DATETIME_KEYS = ("at",)
-SIMPLE_REPEAT_VALUES = ("daily", "weekly", "monthly", "yearly")
+SIMPLE_REPEAT_VALUES = ("daily", "weekly", "monthly", "yearly", "weekdays")
 STATUS_STATE_VALUES = (
     "available",
     "busy",

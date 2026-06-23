@@ -150,7 +150,7 @@ def _validate_value(item, key, value):
                 Diagnostic(
                     "warning",
                     "W202",
-                    "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS and timezone." % key,
+                    "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
                     item.line,
                 )
             )
@@ -160,7 +160,7 @@ def _validate_value(item, key, value):
                 Diagnostic(
                     "warning",
                     "W203",
-                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS and timezone." % key,
+                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
                     item.line,
                 )
             )
@@ -170,7 +170,7 @@ def _validate_value(item, key, value):
                 Diagnostic(
                     "warning",
                     "W204",
-                    "%s: should use HH:MM, HH:MM:SS, or YYYY-MM-DDTHH:MM with optional seconds/timezone." % key,
+                    "%s: should use HH:MM, HH:MM:SS, fractional seconds, optional timezone, or YYYY-MM-DDTHH:MM." % key,
                     item.line,
                 )
             )
@@ -190,7 +190,17 @@ def _validate_value(item, key, value):
                 Diagnostic(
                     "warning",
                     "W205",
-                    "repeat: should usually be daily, weekly, monthly, yearly, or RRULE:...",
+                    "repeat: should usually be daily, weekly, monthly, yearly, weekdays, or RRULE:...",
+                    item.line,
+                )
+            )
+    elif key in ("interval", "count"):
+        if not _is_positive_integer(value):
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W219",
+                    "%s: should be a positive integer." % key,
                     item.line,
                 )
             )
@@ -253,7 +263,7 @@ def _validate_status_item(item):
                     Diagnostic(
                         "error",
                         "E202",
-                        "Status item from: must use YYYY-MM-DDTHH:MM with optional seconds/timezone.",
+                        "Status item from: must use YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.",
                         item.line,
                     )
                 )
@@ -275,7 +285,7 @@ def _validate_status_item(item):
                     Diagnostic(
                         "error",
                         "E204",
-                        "Status item to: must use YYYY-MM-DDTHH:MM with optional seconds/timezone.",
+                        "Status item to: must use YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.",
                         item.line,
                     )
                 )
@@ -301,6 +311,13 @@ def _validate_status_item(item):
         )
 
     return diagnostics
+
+
+def _is_positive_integer(value):
+    try:
+        return int(str(value)) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _validate_message_item(item):

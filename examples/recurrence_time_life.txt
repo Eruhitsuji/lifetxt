@@ -1,0 +1,10 @@
+# Time, recurrence, body, and dependency examples
+
+[ ] H Stretch repeat:daily at:18:00:30.5+09:00 project:health tag:daily
+[ ] H Weekly_Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31 count:14 project:life
+[ ] H Workday_Checkin repeat:weekdays at:09:00 count:10 project:work
+[ ] E "Remote meeting" from:2026-06-08T13:00:30.25+09:00 to:2026-06-08T14:30:00.5+09:00 attendee:alice service:meet
+[ ] T Write_Report id:rt_task_report due:2026-06-12 depends_on:rt_task_outline project:university
+| Include the method section and references.
+[x] T Finish_Outline id:rt_task_outline done:2026-06-08 project:university
+[ ] M "Review report" sender:self recipient:alice notify_at:2026-06-09T09:00 body:"Please review the report draft."

@@ -256,7 +256,7 @@ def _notification_record(item, match):
     record["status"] = item.status
     record["type"] = item.kind
     record["title"] = item.title
-    record["body"] = _first(details, "note") or line_text
+    record["body"] = _first(details, "body") or _first(details, "note") or line_text
     record["sender"] = _first(details, "sender") or ""
     record["recipients"] = list(details.get("recipient", []))
     record["details"] = details

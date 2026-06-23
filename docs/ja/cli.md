@@ -201,7 +201,8 @@ python -m lifetxt from-csv [path ...] [-o life.txt]
 | `--before VALUE` | この時刻以前に関連する item のみ |
 
 `--after` と `--before` は `now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM`、
-`YYYY-MM-DDTHH:MM:SS`、`YYYY-MM-DDTHH:MM+09:00` などを受け付けます。
+`YYYY-MM-DDTHH:MM:SS`、`YYYY-MM-DDTHH:MM:SS.5`、
+`YYYY-MM-DDTHH:MM+09:00`、`YYYY-MM-DDTHH:MM:SS.25+09:00` などを受け付けます。
 時刻判定は `agenda` と同じルールを使います。
 `on:` のない `at:HH:MM` は日付アンカーを持たないため、片側条件の `--after` /
 `--before` では一致対象にしません。
@@ -403,6 +404,9 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 - `due`、`do`、`at`、`moved_to` は時点または終日範囲として扱います。
 - type `S` で `to:` がない item は、`from:` 以降継続中として扱います。
 - `at:HH:MM` は `on:` があればその日付と組み合わせ、なければ指定範囲内の各日付と組み合わせます。
+- simple `repeat:` の `daily`、`weekly`、`monthly`、`yearly`、`weekdays` は展開します。
+- `interval:`、`until:`、`count:` は simple repeat の展開を制限します。
+- `on:` のない floating `at:` repeat は、両端がある bounded agenda range の中だけで展開します。
 
 ### 8.1 範囲オプション
 
@@ -434,8 +438,10 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 ```sh
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
+python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30.25+09:00 --to 2026-06-06T18:00:00.5+09:00
 python -m lifetxt agenda life.txt --around now --window 2h
 python -m lifetxt agenda life.txt --around now --window 1w
+python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 ```
 
 ### 8.2 フィルタオプション
@@ -522,8 +528,10 @@ known detail key には直接フラグもあります。各フラグは複数回
 
 ```txt
 --id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
---state --person --owner --assignee --attendee --service --visibility --on --at --repeat
---project --context --loc --priority --est --tag --note --url
+--state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
+--visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
+--interval --until --count
+--project --context --loc --priority --est --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
 
@@ -819,12 +827,14 @@ python -m lifetxt ids life.txt --assign --backup
 python -m lifetxt links life.txt
 python -m lifetxt links life.txt --id task_report --direction incoming
 python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
+python -m lifetxt links life.txt --relation depends_on --relation blocks
 ```
 
 | Option | 意味 |
 |---|---|
 | `--id ID` | 指定 ID に接続する link だけを表示 |
 | `--direction incoming|outgoing|both` | `--id` 指定時の方向 |
+| `--relation RELATION` | `depends_on` などの relation key に絞り込み。複数指定またはカンマ区切り可 |
 | `--key KEY` | ID として扱う detail key |
 | `--format text|json|jsonl` | 出力形式 |
 

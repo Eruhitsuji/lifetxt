@@ -161,15 +161,23 @@ class LifeTxtParserTests(unittest.TestCase):
 
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
-            "[ ] E Call from:2026-06-06T09:00:30+09:00 "
-            "to:2026-06-06T09:30:00+09:00\n"
-            "[ ] R Alarm at:18:00:30\n"
+            "[ ] E Call from:2026-06-06T09:00:30.25+09:00 "
+            "to:2026-06-06T09:30:00.5+09:00\n"
+            "[ ] R Alarm at:18:00:30.125+09:00\n"
         )
 
         _items, diagnostics = parse_text(text)
 
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
         self.assertFalse(any(d.code in ("W202", "W204") for d in diagnostics))
+
+    def test_repeat_helpers_are_validated(self):
+        _items, diagnostics = parse_text(
+            "[ ] H Review repeat:weekdays interval:2 until:2026-06-30 count:5 at:09:00\n"
+        )
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertFalse(any(d.code in ("W203", "W205", "W219") for d in diagnostics))
 
     def test_id_style_warning(self):
         _items, diagnostics = parse_text('[ ] T Bad_ID id:"bad id"\n')
@@ -430,6 +438,48 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
             "2026-06-06T17:30",
             "--to",
             "2026-06-06T18:30",
+            "--format",
+            "life",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(text, normalize_newlines(stdout))
+
+    def test_agenda_cli_repeats_weekly_with_interval_and_until(self):
+        text = (
+            "[ ] H Review repeat:weekly interval:2 on:2026-06-01 "
+            "until:2026-06-30 count:3\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-15",
+            "--to",
+            "2026-06-15",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["Review"], [entry["title"] for entry in data])
+        self.assertEqual("repeat:on", data[0]["key"])
+        self.assertEqual("2026-06-15T00:00..2026-06-15T23:59:59", data[0]["when"])
+
+    def test_agenda_cli_repeats_weekdays_with_count(self):
+        text = "[ ] H Standup repeat:weekdays on:2026-06-05 count:2 at:09:00\n"
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-08T08:30",
+            "--to",
+            "2026-06-08T09:30",
             "--format",
             "life",
             input_text=text,
@@ -1056,6 +1106,27 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             compact,
         )
 
+    def test_links_cli_filters_by_relation(self):
+        text = (
+            "[ ] T Root id:task_root\n"
+            "[ ] T Other id:task_other\n"
+            "[ ] T Child id:task_child parent:task_root depends_on:task_root blocks:task_other\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "links",
+            "--relation",
+            "depends_on,blocks",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["blocks", "depends_on"], sorted(record["relation"] for record in data))
+
     def test_multiple_life_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first.life.txt")
@@ -1670,7 +1741,8 @@ class LifeTxtNotifyTests(unittest.TestCase):
     def test_notify_cli_json_output(self):
         text = (
             "[ ] M Ping id:msg_001 sender:bob recipient:self "
-            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00\n"
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00 "
+            "note:short body:long_message\n"
         )
 
         stdout, stderr, code = run_cli(
@@ -1686,6 +1758,7 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual(0, code)
         data = json.loads(stdout)
         self.assertEqual("msg_001", data[0]["id"])
+        self.assertEqual("long_message", data[0]["body"])
 
 
 class LifeTxtWebAppTests(unittest.TestCase):
@@ -1851,6 +1924,7 @@ class LifeTxtWebAppTests(unittest.TestCase):
         self.assertEqual("Review slides", item.title)
         self.assertEqual(["self"], item.details["sender"])
         self.assertEqual(["alice", "bob"], item.details["recipient"])
+        self.assertEqual(["Review slides"], item.details["body"])
 
     def test_webapp_message_payload_uses_config_user_name(self):
         from lifetxt import webapp

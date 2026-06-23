@@ -220,6 +220,11 @@ def build_parser():
         help="Direction when --id is used. Defaults to both.",
     )
     links_command.add_argument(
+        "--relation",
+        action="append",
+        help="Limit links to a relation key such as depends_on, blocks, parent, ref, or related. Can be repeated or comma-separated.",
+    )
+    links_command.add_argument(
         "--key",
         help="Detail key to use as the item ID. Defaults to ids.key, api.id_key, or id.",
     )
@@ -475,16 +480,16 @@ def build_parser():
     agenda.add_argument(
         "--from",
         dest="start",
-        help="Range start: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+        help="Range start: now, YYYY-MM-DD, or ISO-like datetime with optional seconds, fraction, and timezone.",
     )
     agenda.add_argument(
         "--to",
         dest="end",
-        help="Range end: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+        help="Range end: now, YYYY-MM-DD, or ISO-like datetime with optional seconds, fraction, and timezone.",
     )
     agenda.add_argument(
         "--around",
-        help="Center of a range: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM. Defaults to now.",
+        help="Center of a range: now, YYYY-MM-DD, or ISO-like datetime. Defaults to now.",
     )
     agenda.add_argument(
         "--window",
@@ -766,11 +771,11 @@ def _add_item_filter_arguments(parser):
     )
     parser.add_argument(
         "--after",
-        help="Keep items related to this time or later: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+        help="Keep items related to this time or later: now, YYYY-MM-DD, or ISO-like datetime.",
     )
     parser.add_argument(
         "--before",
-        help="Keep items related to this time or earlier: now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM.",
+        help="Keep items related to this time or earlier: now, YYYY-MM-DD, or ISO-like datetime.",
     )
 
 
@@ -834,6 +839,7 @@ def command_links(args):
         key=key,
         focus_id=args.item_id,
         direction=args.direction,
+        relations=_split_csv_args(args.relation),
     )
 
     if args.format == "json":
@@ -848,6 +854,16 @@ def command_links(args):
 
     _print_warnings(diagnostics)
     return 0
+
+
+def _split_csv_args(values):
+    result = []
+    for raw in values or []:
+        for value in str(raw).split(","):
+            value = value.strip()
+            if value:
+                result.append(value)
+    return result
 
 
 def command_ids_assign(args):

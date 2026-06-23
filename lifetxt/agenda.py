@@ -1,3 +1,4 @@
+import calendar
 import json
 import re
 from collections import OrderedDict
@@ -23,6 +24,7 @@ OPEN_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
 _DURATION_RE = re.compile(r"^(\d+)([a-z]*)$")
 
 _POINT_KEYS = ("due", "do", "moved_to", "notify_at")
+_MAX_REPEAT_MATCHES = 1000
 _TABLE_COLUMNS = (
     ("when", "when"),
     ("key", "key"),
@@ -296,19 +298,22 @@ def filter_agenda_records(
 
 def item_time_matches(item, range_start, range_end):
     matches = []
-    _add_from_to_matches(matches, item, range_start, range_end)
-    _add_detail_range_matches(
-        matches,
-        item,
-        "notify_from",
-        "notify_to",
-        "notify_from/to",
-        range_start,
-        range_end,
-    )
-    _add_point_key_matches(matches, item, range_start, range_end)
-    _add_at_matches(matches, item, range_start, range_end)
-    _add_on_matches(matches, item, range_start, range_end)
+    if item.details.get("repeat"):
+        _add_repeat_matches(matches, item, range_start, range_end)
+    else:
+        _add_from_to_matches(matches, item, range_start, range_end)
+        _add_detail_range_matches(
+            matches,
+            item,
+            "notify_from",
+            "notify_to",
+            "notify_from/to",
+            range_start,
+            range_end,
+        )
+        _add_point_key_matches(matches, item, range_start, range_end)
+        _add_at_matches(matches, item, range_start, range_end)
+        _add_on_matches(matches, item, range_start, range_end)
     matches.sort(key=_match_sort_key)
     return matches
 
@@ -479,6 +484,198 @@ def _add_on_matches(matches, item, range_start, range_end):
             _add_match(matches, "on", span[0], span[1], range_start, range_end)
 
 
+def _add_repeat_matches(matches, item, range_start, range_end):
+    repeat_value = _first_detail_value(item, "repeat")
+    if repeat_value not in ("daily", "weekly", "monthly", "yearly", "weekdays"):
+        return
+
+    anchor = _repeat_anchor(item, range_start, range_end)
+    if anchor is None:
+        return
+
+    key, anchor_start, anchor_end = anchor
+    if anchor_end is None:
+        anchor_end = anchor_start
+    if anchor_end < anchor_start:
+        anchor_end = anchor_start
+
+    interval = _positive_int_detail(item, "interval", 1)
+    count = _positive_int_detail(item, "count", None)
+    until = _repeat_until(item)
+    effective_start = anchor_start if range_start == datetime.min else range_start
+    effective_end = range_end
+    if range_end == datetime.max:
+        effective_end = effective_start + timedelta(days=366)
+    if until is not None and until < effective_end:
+        effective_end = until
+
+    current, occurrence_index = _align_repeat_start(
+        repeat_value,
+        anchor_start,
+        anchor_end,
+        interval,
+        effective_start,
+        count,
+    )
+    emitted = 0
+    while current <= effective_end and emitted < _MAX_REPEAT_MATCHES:
+        if count is not None and occurrence_index > count:
+            break
+        if until is not None and current > until:
+            break
+
+        current_end = current + (anchor_end - anchor_start)
+        _add_match(matches, "repeat:%s" % key, current, current_end, range_start, range_end)
+        emitted += 1
+
+        next_current = _next_repeat_datetime(current, repeat_value, interval)
+        if next_current <= current:
+            break
+        current = next_current
+        occurrence_index += 1
+
+
+def _repeat_anchor(item, range_start, range_end):
+    starts = item.details.get("from", [])
+    ends = item.details.get("to", [])
+    for index, start_text in enumerate(starts):
+        start = _parse_datetime_value(start_text)
+        if start is None:
+            continue
+        end = None
+        if index < len(ends):
+            end = _parse_datetime_value(ends[index])
+        elif len(ends) == 1:
+            end = _parse_datetime_value(ends[0])
+        if end is None:
+            end = start
+        return "from/to" if end != start else "from", start, end
+
+    at_values = item.details.get("at", [])
+    for value in at_values:
+        point = _parse_datetime_value(value)
+        if point is not None:
+            return "at", point, point
+
+        at_time = _parse_time_value(value)
+        if at_time is None:
+            continue
+        on_dates = _item_on_dates(item)
+        if not on_dates and _is_unbounded_range(range_start, range_end):
+            return None
+        anchor_date = on_dates[0] if on_dates else _first_matching_date_for_time(range_start, at_time)
+        point = datetime.combine(anchor_date, at_time)
+        return "at", point, point
+
+    for value in item.details.get("on", []):
+        span = _parse_date_span(value)
+        if span is not None:
+            return "on", span[0], span[1]
+
+    for key in _POINT_KEYS:
+        for value in item.details.get(key, []):
+            span = _parse_date_or_datetime_span(value)
+            if span is not None:
+                return key, span[0], span[1]
+
+    return None
+
+
+def _align_repeat_start(repeat_value, anchor_start, anchor_end, interval, range_start, count):
+    occurrence_index = 1
+    duration = anchor_end - anchor_start
+    target = range_start - duration
+    if target <= anchor_start:
+        return anchor_start, occurrence_index
+
+    if repeat_value == "daily":
+        step_seconds = timedelta(days=interval).total_seconds()
+        skipped = max(0, int((target - anchor_start).total_seconds() // step_seconds) - 1)
+        if count is not None and skipped >= count:
+            return anchor_start + timedelta(days=interval * skipped), skipped + 1
+        return anchor_start + timedelta(days=interval * skipped), skipped + 1
+
+    if repeat_value == "weekly":
+        step_seconds = timedelta(weeks=interval).total_seconds()
+        skipped = max(0, int((target - anchor_start).total_seconds() // step_seconds) - 1)
+        if count is not None and skipped >= count:
+            return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
+        return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
+
+    current = anchor_start
+    while current < target:
+        if count is not None and occurrence_index >= count:
+            break
+        next_current = _next_repeat_datetime(current, repeat_value, interval)
+        if next_current <= current:
+            break
+        current = next_current
+        occurrence_index += 1
+    return current, occurrence_index
+
+
+def _next_repeat_datetime(value, repeat_value, interval):
+    if repeat_value == "daily":
+        return value + timedelta(days=interval)
+    if repeat_value == "weekly":
+        return value + timedelta(weeks=interval)
+    if repeat_value == "monthly":
+        return _add_months(value, interval)
+    if repeat_value == "yearly":
+        return _add_years(value, interval)
+    if repeat_value == "weekdays":
+        current = value
+        advanced = 0
+        while advanced < interval:
+            current = current + timedelta(days=1)
+            if current.weekday() < 5:
+                advanced += 1
+        return current
+    return value
+
+
+def _add_months(value, months):
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
+
+def _add_years(value, years):
+    year = value.year + years
+    day = min(value.day, calendar.monthrange(year, value.month)[1])
+    return value.replace(year=year, day=day)
+
+
+def _repeat_until(item):
+    for value in item.details.get("until", []):
+        parsed = parse_date_or_datetime(value, is_end=True)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _positive_int_detail(item, key, default):
+    value = _first_detail_value(item, key)
+    if value is None:
+        return default
+    try:
+        number = int(str(value))
+    except (TypeError, ValueError):
+        return default
+    if number <= 0:
+        return default
+    return number
+
+
+def _first_detail_value(item, key):
+    values = item.details.get(key)
+    if values:
+        return values[0]
+    return None
+
+
 def _add_match(matches, key, start, end, range_start, range_end):
     if start is None:
         return
@@ -514,7 +711,7 @@ def _parse_range_boundary(value, is_end, now):
     parsed = _parse_datetime_value(value)
     if parsed is None:
         raise ValueError(
-            "Datetime must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds/timezone."
+            "Datetime must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone."
         )
     return parsed
 
@@ -528,7 +725,7 @@ def _parse_around_value(value, now):
     parsed = _parse_datetime_value(value)
     if parsed is None:
         raise ValueError(
-            "--around must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds/timezone."
+            "--around must be now, YYYY-MM-DD, or YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone."
         )
     return parsed
 

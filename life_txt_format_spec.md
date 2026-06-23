@@ -157,17 +157,31 @@ ownership, filtering, or routing.
 | `notify_from` | Notification period start | `notify_from:2026-06-06T09:00` |
 | `notify_to` | Notification period end | `notify_to:2026-06-06T17:00` |
 
-### 7.5 Message Keys
+### 7.5 Recurrence Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `repeat` | Recurrence rule | `repeat:daily` |
+| `interval` | Repeat every N units | `interval:2` |
+| `until` | Last recurrence date or datetime | `until:2026-12-31` |
+| `count` | Maximum number of occurrences | `count:10` |
+
+Supported simple `repeat:` values are `daily`, `weekly`, `monthly`, `yearly`,
+and `weekdays`. `RRULE:...` values may be stored for interoperability; built-in
+agenda expansion currently expands the simple values above.
+
+### 7.6 Message Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `sender` | Message sender | `sender:self` |
 | `recipient` | Message recipient; repeat for multiple recipients | `recipient:alice` |
+| `body` | Message body, especially when longer than the title | `body:"Please review the slides"` |
 | `notify_at` | One notification time | `notify_at:2026-06-06T09:00` |
 | `notify_from`, `notify_to` | Notification period | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
 | `channel` | Delivery channel or route | `channel:teams` |
 
-### 7.6 Journal Keys
+### 7.7 Journal Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -179,14 +193,14 @@ ownership, filtering, or routing.
 | `loc` | Location | `loc:home` |
 | `body` | Long journal text | continuation lines beginning with `|` |
 
-### 7.7 Workflow Keys
+### 7.8 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.8 System Keys
+### 7.9 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -200,14 +214,42 @@ ownership, filtering, or routing.
 | `YYYY-MM-DD` | Date | `due:2026-06-12` |
 | `YYYY-MM-DDTHH:MM` | Local datetime | `from:2026-06-08T13:00` |
 | `YYYY-MM-DDTHH:MM:SS` | Local datetime with seconds | `from:2026-06-08T13:00:30` |
+| `YYYY-MM-DDTHH:MM:SS.sss` | Local datetime with fractional seconds | `from:2026-06-08T13:00:30.5` |
 | `YYYY-MM-DDTHH:MM+09:00` | Datetime with timezone offset | `from:2026-06-08T13:00+09:00` |
+| `YYYY-MM-DDTHH:MM:SS.sss+09:00` | Datetime with seconds, fractional seconds, and timezone | `from:2026-06-08T13:00:30.25+09:00` |
 | `YYYY-MM-DDTHH:MMZ` | UTC datetime | `from:2026-06-08T04:00Z` |
 | `HH:MM` | Time only | `at:18:00` |
 | `HH:MM:SS` | Time only with seconds | `at:18:00:30` |
+| `HH:MM:SS.sss` | Time only with fractional seconds | `at:18:00:30.5` |
+| `HH:MM+09:00` | Time only with timezone offset | `at:18:00+09:00` |
 
 Range-based tools may treat `from/to`, `notify_from/notify_to`, and `on` as
 intervals. They may treat `due`, `do`, `at`, `moved_to`, and `notify_at` as
 point times or all-day spans.
+
+When a timezone is present, tools may normalize the value to the machine's local
+timezone before comparing or displaying it. Fractional seconds support up to six
+digits.
+
+## 8.1 Recurrence Semantics
+
+Simple recurrence is expressed with `repeat:` and optional `interval:`,
+`until:`, and `count:`.
+
+```txt
+[ ] H Stretch repeat:daily at:18:00
+[ ] H Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31
+[ ] H Workday_Checkin repeat:weekdays at:09:00 count:10
+```
+
+Agenda and time filters expand simple recurrences from the first available
+anchor, in this order: `from/to`, `at` with `on`, floating `at` in a bounded
+range, `on`, then `due` / `do` / `moved_to` / `notify_at`.
+
+`interval:2` means every two units of the selected repeat value. `count:` limits
+the number of generated occurrences from the anchor. `until:` is an inclusive
+end date/datetime. One-sided filters intentionally ignore floating `at:` values
+without `on:` because they have no stable date anchor.
 
 ## 9. Type-Specific Recommended Keys
 
@@ -218,7 +260,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner team est project tag note id parent ref depends_on blocks related
+do due priority assignee owner team est project tag note body id parent ref depends_on blocks related
 ```
 
 | Key | Why it is recommended |
@@ -229,7 +271,7 @@ do due priority assignee owner team est project tag note id parent ref depends_o
 | `assignee` | Person assigned to do the task |
 | `owner` | Person accountable for the task |
 | `est` | Estimated effort |
-| `project`, `tag`, `note`, `id`, `parent` | Organization and context |
+| `project`, `tag`, `note`, `body`, `id`, `parent` | Organization and context |
 
 Example:
 
@@ -244,7 +286,7 @@ Use `E` for calendar-like events.
 Recommended keys:
 
 ```txt
-from to on loc attendee owner team project tag note
+from to on loc attendee owner team project tag note body ref related
 ```
 
 | Key | Why it is recommended |
@@ -254,7 +296,7 @@ from to on loc attendee owner team project tag note
 | `loc` | Event location |
 | `attendee` | Event participant; repeat for multiple attendees |
 | `owner` | Person accountable for the event record |
-| `project`, `tag`, `note` | Organization and context |
+| `project`, `tag`, `note`, `body` | Organization and context |
 
 Example:
 
@@ -269,7 +311,7 @@ Use `D` for important deadlines that are not themselves events.
 Recommended keys:
 
 ```txt
-due priority owner assignee team project tag note
+due priority owner assignee team project tag note body depends_on ref related
 ```
 
 | Key | Why it is recommended |
@@ -278,7 +320,7 @@ due priority owner assignee team project tag note
 | `priority` | Relative importance |
 | `owner` | Person accountable for the deadline |
 | `assignee` | Person assigned to complete related work |
-| `project`, `tag`, `note` | Organization and context |
+| `project`, `tag`, `note`, `body` | Organization and context |
 
 Example:
 
@@ -293,7 +335,7 @@ Use `R` for a reminder at a date, time, or datetime.
 Recommended keys:
 
 ```txt
-at on owner team project context note
+at on owner team project context note body ref related
 ```
 
 | Key | Why it is recommended |
@@ -301,7 +343,7 @@ at on owner team project context note
 | `at` | Reminder time or datetime |
 | `on` | Reminder date when `at:` is time-only |
 | `owner` | Person accountable for the reminder |
-| `project`, `context`, `note` | Organization and context |
+| `project`, `context`, `note`, `body` | Organization and context |
 
 Example:
 
@@ -316,20 +358,22 @@ Use `H` for recurring actions.
 Recommended keys:
 
 ```txt
-repeat at on owner team project tag note
+repeat interval until count at on owner team project tag note body ref related
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `repeat` | Recurrence rule |
+| `interval`, `until`, `count` | Recurrence limits |
 | `at`, `on` | Time or date anchor |
 | `owner` | Person accountable for the habit |
-| `project`, `tag`, `note` | Organization and context |
+| `project`, `tag`, `note`, `body` | Organization and context |
 
 Example:
 
 ```txt
 [ ] H English_Study repeat:daily at:18:00 project:english
+[ ] H Weekly_Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31 project:life
 ```
 
 ### 9.6 Note (`N`)
@@ -397,7 +441,7 @@ from state
 Recommended keys:
 
 ```txt
-from state to person team group service loc project note ref related visibility
+from state to person team group service loc project note body ref related visibility
 ```
 
 | Key | Why it is recommended |
@@ -407,7 +451,7 @@ from state to person team group service loc project note ref related visibility
 | `to` | Status end datetime for finished logs |
 | `person` | Person or target whose state is recorded |
 | `service` | Source or target service |
-| `loc`, `project`, `note`, `visibility` | Context and visibility |
+| `loc`, `project`, `note`, `body`, `visibility` | Context and visibility |
 
 Example:
 
@@ -430,7 +474,7 @@ sender recipient
 Recommended keys:
 
 ```txt
-sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note url id parent ref related created updated
+sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
 ```
 
 | Key | Why it is recommended |
@@ -441,12 +485,13 @@ sender recipient team group notify_at notify_from notify_to ack snooze_until cha
 | `notify_from`, `notify_to` | Notification window or delivery period |
 | `channel` | Delivery route such as `teams`, `discord`, `slack`, or `email` |
 | `service` | Source or target service |
-| `priority`, `project`, `tag`, `note`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |
+| `priority`, `project`, `tag`, `note`, `body`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |
 
 Examples:
 
 ```txt
 [ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[ ] M "Detailed request" sender:self recipient:alice body:"Please review sections 2 and 3" notify_at:2026-06-06T09:00
 [/] M "Daily reminder" sender:lifetxt recipient:self notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00 channel:desktop
 [x] M "Sent review request" sender:self recipient:alice done:2026-06-06T09:05
 ```
@@ -542,7 +587,14 @@ A line beginning with `|` continues the previous item as a `body:` detail. A
 single space after `|` is treated as a separator and is not part of the text.
 Use a bare `|` for an empty body line.
 
+`body:` is not limited to `J`. Use `note:` for a short aside and `body:` for
+long-form content on any type, especially detailed tasks, event descriptions,
+messages, notes, and journals.
+
 ```txt
+[ ] T Write_Report due:2026-06-12 project:university
+| Include the method section and references.
+
 [N] J "Research day" on:2026-06-23 mood:good
 | First paragraph.
 |

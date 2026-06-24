@@ -406,7 +406,17 @@ class Diagnostic(object):
 class Item(object):
     """A parsed life.txt item."""
 
-    def __init__(self, status, kind, title, details=None, line=None, source_text=None, source=None):
+    def __init__(
+        self,
+        status,
+        kind,
+        title,
+        details=None,
+        line=None,
+        source_text=None,
+        source=None,
+        indent=0,
+    ):
         self.status = status
         self.kind = kind
         self.title = title
@@ -414,6 +424,7 @@ class Item(object):
         self.line = line
         self.source_text = source_text
         self.source = source
+        self.indent = int(indent or 0)
         if details:
             for key, values in details.items():
                 if isinstance(values, list):
@@ -428,6 +439,8 @@ class Item(object):
         data["status"] = self.status
         data["type"] = self.kind
         data["title"] = self.title
+        if self.indent:
+            data["indent"] = self.indent
         details = OrderedDict()
         for key, values in self.details.items():
             details[key] = list(values)

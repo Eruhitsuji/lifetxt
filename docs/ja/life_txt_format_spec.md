@@ -106,6 +106,28 @@ loc:"Meeting Room A"
 
 custom key は許可されます。パーサは未知の key を可能な限り保持します。
 
+## 5.1 入れ子 / 階層化 record
+
+item 行はスペースでインデントして、視覚的な階層を表せます。1 階層は 2
+スペースを推奨します。
+
+```txt
+[ ] T Research_Project id:proj_research due:2026-07-31
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+    | Summarize the related work section.
+  [ ] E Lab_Meeting from:2026-07-06T13:00 to:2026-07-06T14:00
+```
+
+インデントされた item に `parent:` が明示されていない場合、パーサは nearest
+less-indented ancestor の ID key、通常は `id:`、から `parent:` を推論してよいです。
+上の例では `Literature_Review` と `Lab_Meeting` は `parent:proj_research`、
+`Reading_Memo` は `parent:task_lit` を継承します。
+
+ancestor に ID がない場合、item 自体は有効ですが ID link として階層を表せないため
+warning を出します。`parent:` を明示した場合は、明示値を優先します。
+インデントされた `|` body 継続行も許可され、直前 item の `body:` に結合されます。
+
 ## 6. detail key の考え方
 
 - known key は、ツールが検証、補完、ヘルプで認識する key です。
@@ -509,8 +531,9 @@ note status `[N]` は通常 note type `N` または journal type `J` と組み�
 
 ```ebnf
 life_file     = { blank_line | comment_line | item_line | continuation_line } ;
-item_line     = status, space, type, space, string, { space, detail } ;
-continuation_line = "|", [ space ], text ;
+item_line     = indent, status, space, type, space, string, { space, detail } ;
+continuation_line = indent, "|", [ space ], text ;
+indent        = { " " } ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
 type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
 detail        = key, ":", string ;

@@ -206,6 +206,48 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn(("related", "task_child", "missing_note", "missing"), compact)
         self.assertIn(("ref", "task_self", "task_self", "self"), compact)
 
+    def test_indented_items_infer_parent_from_nearest_id(self):
+        text = (
+            "[ ] T Project id:task_project\n"
+            "  [ ] T Outline id:task_outline\n"
+            "    [N] N Outline_Note\n"
+            "[ ] T Other id:task_other\n"
+            "  [ ] T Explicit parent:task_project\n"
+        )
+
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(["task_project"], items[1].details["parent"])
+        self.assertEqual(["task_outline"], items[2].details["parent"])
+        self.assertEqual(["task_project"], items[4].details["parent"])
+        self.assertEqual(2, items[1].indent)
+        self.assertEqual(4, items[2].indent)
+        self.assertEqual(4, items[2].to_dict()["indent"])
+
+    def test_indented_item_warns_when_parent_has_no_id(self):
+        _items, diagnostics = parse_text(
+            "[ ] T Parent_Without_ID\n"
+            "  [ ] T Child\n"
+        )
+
+        self.assertTrue(any(d.code == "W221" for d in diagnostics))
+
+    def test_indented_body_continuation_round_trip(self):
+        text = (
+            "[ ] T Project id:task_project\n"
+            "  [N] N Child_Note\n"
+            "  | First line.\n"
+            "  | Second line.\n"
+        )
+
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(["task_project"], items[1].details["parent"])
+        self.assertEqual(["First line.\nSecond line."], items[1].details["body"])
+        self.assertIn("  | First line.", item_to_line(items[1]))
+
     def test_parent_cycle_reports_warning(self):
         _items, diagnostics = parse_text(
             "[ ] T First id:a parent:b\n"

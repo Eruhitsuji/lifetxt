@@ -113,7 +113,23 @@ Several commands support machine-readable output.
 | `json` | JSON array |
 | `jsonl` | One JSON object per line |
 
-### 2.4 Exit Codes
+### 2.4 Nested Items
+
+Indented item lines are parsed as nested records. If an indented item does not
+already have `parent:`, the parser infers `parent:` from the nearest
+less-indented ancestor that has the selected ID key, normally `id:`.
+
+```txt
+[ ] T Research_Project id:proj_research
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+```
+
+Machine-readable JSON includes an `indent` field for indented items. Life output
+preserves original lines by default; `--canonical` may expand inferred
+`parent:` details.
+
+### 2.5 Exit Codes
 
 | Code | Meaning |
 |---|---|

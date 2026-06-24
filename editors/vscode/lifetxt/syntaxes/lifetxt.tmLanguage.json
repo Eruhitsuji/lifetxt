@@ -1,0 +1,88 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "life.txt",
+  "scopeName": "source.lifetxt",
+  "patterns": [
+    {"include": "#comment"},
+    {"include": "#body"},
+    {"include": "#itemWithTitle"},
+    {"include": "#itemStart"},
+    {"include": "#detail"},
+    {"include": "#quotedString"},
+    {"include": "#dateTime"},
+    {"include": "#idReference"}
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.lifetxt",
+      "match": "^\\s*#.*$"
+    },
+    "body": {
+      "name": "string.unquoted.body.lifetxt",
+      "match": "^\\s*\\|.*$"
+    },
+    "itemWithTitle": {
+      "name": "meta.item.lifetxt",
+      "match": "^(\\s*)(\\[(?: |/|x|-|>|\\?|N)\\])\\s+([TEDRHNSMJ])\\s+(\"(?:\\\\[\"\\\\]|[^\"\\\\])*\"|\\S+)",
+      "captures": {
+        "1": {"name": "punctuation.whitespace.indent.lifetxt"},
+        "2": {"name": "keyword.operator.status.lifetxt"},
+        "3": {"name": "entity.name.type.lifetxt"},
+        "4": {"name": "entity.name.section.lifetxt"}
+      }
+    },
+    "itemStart": {
+      "name": "meta.item.lifetxt",
+      "match": "^(\\s*)(\\[(?: |/|x|-|>|\\?|N)\\])\\s+([TEDRHNSMJ])\\b",
+      "captures": {
+        "1": {"name": "punctuation.whitespace.indent.lifetxt"},
+        "2": {"name": "keyword.operator.status.lifetxt"},
+        "3": {"name": "entity.name.type.lifetxt"}
+      }
+    },
+    "detail": {
+      "name": "meta.detail.lifetxt",
+      "match": "\\b([a-z][a-z0-9_]*)(:)",
+      "captures": {
+        "1": {"name": "variable.parameter.detail-key.lifetxt"},
+        "2": {"name": "punctuation.separator.key-value.lifetxt"}
+      }
+    },
+    "quotedString": {
+      "name": "string.quoted.double.lifetxt",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.lifetxt",
+          "match": "\\\\[\"\\\\]"
+        }
+      ]
+    },
+    "dateTime": {
+      "patterns": [
+        {
+          "name": "constant.numeric.datetime.lifetxt",
+          "match": "\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,6})?)?(?:Z|[+-]\\d{2}:?\\d{2})?\\b"
+        },
+        {
+          "name": "constant.numeric.date.lifetxt",
+          "match": "\\b\\d{4}-\\d{2}-\\d{2}\\b"
+        },
+        {
+          "name": "constant.numeric.time.lifetxt",
+          "match": "\\b\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,6})?)?(?:Z|[+-]\\d{2}:?\\d{2})?\\b"
+        }
+      ]
+    },
+    "idReference": {
+      "name": "meta.id-reference.lifetxt",
+      "match": "\\b(id|parent|ref|depends_on|blocks|related)(:)([A-Za-z0-9][A-Za-z0-9_.:@/-]*)",
+      "captures": {
+        "1": {"name": "variable.parameter.detail-key.lifetxt"},
+        "2": {"name": "punctuation.separator.key-value.lifetxt"},
+        "3": {"name": "constant.other.id-reference.lifetxt"}
+      }
+    }
+  }
+}

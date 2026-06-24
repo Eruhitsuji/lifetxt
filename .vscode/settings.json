@@ -1,0 +1,21 @@
+{
+  "files.associations": {
+    "life.txt": "lifetxt",
+    "*.life.txt": "lifetxt",
+    "*_life.txt": "lifetxt",
+    ".life.txt": "lifetxt",
+    ".lifetxt": "lifetxt",
+    "*.lifetxt": "lifetxt"
+  },
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "entity.name.section.lifetxt",
+        "settings": {
+          "foreground": "#2f81f7",
+          "fontStyle": "bold"
+        }
+      }
+    ]
+  }
+}

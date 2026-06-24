@@ -30,6 +30,7 @@
 - [diary_life.txt](../../examples/diary_life.txt): 複数行 body を含む日記・日誌
 - [linked_life.txt](../../examples/linked_life.txt): `parent`、`ref`、`depends_on`、`blocks`、`related` による ID 参照
 - [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezone、小数秒、simple repeat、body、依存関係の例
+- [hierarchy_life.txt](../../examples/hierarchy_life.txt): インデントによる入れ子 record と `parent:` 推論の例
 - [agenda_life.txt](../../examples/agenda_life.txt): `agenda` コマンド用データ
 - [json_roundtrip_life.txt](../../examples/json_roundtrip_life.txt): 繰り返し key と引用値
 - [calendar_import.ics](../../examples/calendar_import.ics): `import-ics` 用の iCalendar 入力例
@@ -192,6 +193,15 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 `ids.key` / `api.id_key` を設定すると、`id:` 以外の detail key を ID key として使えます。
 
 item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle を warning として報告します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。依存関係だけを見たい場合は `python -m lifetxt links life.txt --relation depends_on --relation blocks` を使えます。
+インデントされた item 行でも階層を表現できます。子 item に `parent:` がない場合、nearest less-indented ancestor の `id:` から `parent:` を推論します。
+
+```txt
+[ ] T Research_Project id:proj_research
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+```
+
+VS Code 用の基本的な syntax highlight と snippet は [../../editors/vscode/lifetxt](../../editors/vscode/lifetxt) にあります。設定方法と今後の language server 方針は [editor.md](./editor.md) を参照してください。
 `users`、`teams`、`tags.aliases` / `tags.groups` は `--user`、`--team`、tag filter の展開に使われます。
 
 Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。

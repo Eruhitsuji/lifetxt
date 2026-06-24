@@ -1,0 +1,51 @@
+{
+  "name": "lifetxt",
+  "displayName": "life.txt",
+  "description": "Syntax highlighting and snippets for the life.txt plain-text planning format.",
+  "version": "0.1.2",
+  "publisher": "lifetxt",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lifetxt",
+        "aliases": [
+          "life.txt",
+          "Life Text"
+        ],
+        "extensions": [
+          ".lifetxt",
+          ".life.txt"
+        ],
+        "filenames": [
+          "life.txt"
+        ],
+        "filenamePatterns": [
+          "*.life.txt",
+          "*_life.txt"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lifetxt",
+        "scopeName": "source.lifetxt",
+        "path": "./syntaxes/lifetxt.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "lifetxt",
+        "path": "./snippets/lifetxt.code-snippets"
+      }
+    ]
+  }
+}

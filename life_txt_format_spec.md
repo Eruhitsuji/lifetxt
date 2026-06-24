@@ -77,6 +77,30 @@ Multiple values are represented by repeating the same key.
 
 Custom keys are allowed. Parsers should preserve unknown keys when possible.
 
+## 5.1 Nested / Hierarchical Records
+
+Item lines may be indented with spaces to express a visual hierarchy. Two
+spaces per level are recommended.
+
+```txt
+[ ] T Research_Project id:proj_research due:2026-07-31
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+    | Summarize the related work section.
+  [ ] E Lab_Meeting from:2026-07-06T13:00 to:2026-07-06T14:00
+```
+
+When an indented item does not already contain `parent:`, parsers may infer
+`parent:` from the nearest less-indented ancestor's selected ID key, normally
+`id:`. In the example above, `Literature_Review` and `Lab_Meeting` inherit
+`parent:proj_research`, and `Reading_Memo` inherits `parent:task_lit`.
+
+If the ancestor has no ID, the item remains valid but tools should warn because
+the hierarchy cannot be represented as an ID link. You can always write
+`parent:` explicitly, and explicit `parent:` takes precedence over indentation.
+Indented body continuation lines are allowed; they attach to the previous item
+exactly like unindented `|` continuation lines.
+
 ## 6. Detail Key Policy
 
 The format distinguishes known keys from recommended keys.
@@ -647,8 +671,9 @@ type `J`.
 
 ```ebnf
 life_file     = { blank_line | comment_line | item_line | continuation_line } ;
-item_line     = status, space, type, space, string, { space, detail } ;
-continuation_line = "|", [ space ], text ;
+item_line     = indent, status, space, type, space, string, { space, detail } ;
+continuation_line = indent, "|", [ space ], text ;
+indent        = { " " } ;
 status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
 type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
 detail        = key, ":", string ;

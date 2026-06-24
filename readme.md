@@ -11,6 +11,8 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 - [Japanese CLI guide](./docs/ja/cli.md)
 - [English Web API / GUI guide](./docs/en/web.md)
 - [Japanese Web API / GUI guide](./docs/ja/web.md)
+- [English editor support guide](./docs/en/editor.md)
+- [Japanese editor support guide](./docs/ja/editor.md)
 - [English format specification](./docs/en/life_txt_format_spec.md)
 - [Japanese format specification](./docs/ja/life_txt_format_spec.md)
 
@@ -39,6 +41,7 @@ More sample files are available in [examples/](./examples/):
 - [diary_life.txt](./examples/diary_life.txt): journal / diary entries with multiline body text
 - [linked_life.txt](./examples/linked_life.txt): id-based links with `parent`, `ref`, `depends_on`, `blocks`, and `related`
 - [recurrence_time_life.txt](./examples/recurrence_time_life.txt): timezones, fractional seconds, simple recurrence, body, and dependency examples
+- [hierarchy_life.txt](./examples/hierarchy_life.txt): indented nested records that infer `parent:` links
 - [agenda_life.txt](./examples/agenda_life.txt): data for the `agenda` command
 - [json_roundtrip_life.txt](./examples/json_roundtrip_life.txt): repeated keys and quoted values
 - [calendar_import.ics](./examples/calendar_import.ics): sample iCalendar input for `import-ics`
@@ -211,6 +214,21 @@ threads, `ref:` for a generic reference, `depends_on:` for prerequisites,
 cycles. Use `python -m lifetxt links life.txt` to inspect these relationships.
 Use `python -m lifetxt links life.txt --relation depends_on --relation blocks`
 to focus on dependency edges.
+
+Indented item lines can also express hierarchy. If a child line is indented and
+does not already have `parent:`, the parser infers `parent:` from the nearest
+less-indented ancestor that has an `id:`.
+
+```txt
+[ ] T Research_Project id:proj_research
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+```
+
+Basic VS Code syntax highlighting and snippets are available in
+[editors/vscode/lifetxt](./editors/vscode/lifetxt). See
+[docs/en/editor.md](./docs/en/editor.md) for editor setup and the planned
+language-server direction.
 
 ## JSON Shape
 

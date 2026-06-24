@@ -22,8 +22,10 @@ def item_to_line(item):
         for value in values:
             parts.append("%s:%s" % (key, encode_string(value)))
     line = " ".join(parts)
+    indent = " " * int(getattr(item, "indent", 0) or 0)
+    line = indent + line
     if continuation_lines:
-        return "\n".join([line] + continuation_lines)
+        return "\n".join([line] + [indent + value for value in continuation_lines])
     return line
 
 
@@ -113,7 +115,7 @@ def item_from_dict(data, line=None):
         else:
             normalized[key] = [values]
 
-    return Item(status, kind, title, normalized, line)
+    return Item(status, kind, title, normalized, line, indent=data.get("indent", 0))
 
 
 def items_from_json_text(text):

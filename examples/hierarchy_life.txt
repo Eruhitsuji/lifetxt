@@ -1,0 +1,10 @@
+# Hierarchical / nested record examples
+
+[ ] T Research_Project id:hier_project due:2026-07-31 project:research
+  [ ] T Literature_Review id:hier_lit do:2026-06-25 priority:A
+    [N] N Reading_Memo tag:paper
+    | Summarize the related work section.
+  [ ] T Experiment id:hier_experiment depends_on:hier_lit do:2026-07-05
+  [ ] E Lab_Meeting id:hier_meeting from:2026-07-06T13:00 to:2026-07-06T14:00
+
+[ ] M "Review request" id:hier_msg sender:self recipient:alice parent:hier_project notify_at:2026-06-25T09:00

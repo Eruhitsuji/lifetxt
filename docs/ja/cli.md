@@ -85,7 +85,23 @@ path を省略するか `-` を指定した場合、標準入力から読み込�
 | `json` | JSON 配列 |
 | `jsonl` | 1 行 1 JSON object |
 
-### 2.4 終了コード
+### 2.4 入れ子 item
+
+インデントされた item 行は、階層化 record として parse されます。子 item に
+`parent:` がない場合、nearest less-indented ancestor の ID key、通常は `id:`、
+から `parent:` を推論します。
+
+```txt
+[ ] T Research_Project id:proj_research
+  [ ] T Literature_Review id:task_lit
+    [N] N Reading_Memo
+```
+
+JSON / JSONL では、インデントされた item に `indent` field が含まれます。
+life output は既定で元の行を保持します。`--canonical` を使うと、推論された
+`parent:` が detail として展開される場合があります。
+
+### 2.5 終了コード
 
 | Code | 意味 |
 |---|---|

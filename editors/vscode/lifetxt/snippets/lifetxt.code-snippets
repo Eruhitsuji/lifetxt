@@ -1,0 +1,100 @@
+{
+  "Task item": {
+    "prefix": "task",
+    "body": "[ ] T ${1:Title} due:${2:2026-06-12} project:${3:project}",
+    "description": "Create a task item."
+  },
+  "Nested task item": {
+    "prefix": "subtask",
+    "body": "  [ ] T ${1:Subtask} id:${2:task_sub} due:${3:2026-06-12}",
+    "description": "Create an indented subtask item."
+  },
+  "Event item": {
+    "prefix": "event",
+    "body": "[ ] E ${1:Title} from:${2:2026-06-08T13:00} to:${3:2026-06-08T14:30} loc:${4:location}",
+    "description": "Create an event item."
+  },
+  "Status item": {
+    "prefix": "status",
+    "body": "[/] S ${1:Working} from:${2:2026-06-06T14:00} state:${3|available,busy,away,offline,dnd,focus,sleeping,commuting,working,studying,meeting,custom|} person:${4:self}",
+    "description": "Create a status / presence item."
+  },
+  "Message item": {
+    "prefix": "message",
+    "body": "[ ] M ${1:Title} sender:${2:self} recipient:${3:alice} notify_at:${4:2026-06-06T09:00} body:${5:message}",
+    "description": "Create a message item."
+  },
+  "Journal item": {
+    "prefix": "journal",
+    "body": [
+      "[N] J ${1:Title} on:${2:2026-06-24} mood:${3:good}",
+      "| ${4:Body text}"
+    ],
+    "description": "Create a journal item with a body continuation."
+  },
+  "Habit item": {
+    "prefix": "habit",
+    "body": "[ ] H ${1:Habit} repeat:${2|daily,weekly,monthly,yearly,weekdays|} at:${3:18:00} project:${4:project}",
+    "description": "Create a habit item."
+  },
+  "Recurring habit with limits": {
+    "prefix": "repeat-limited",
+    "body": "[ ] H ${1:Habit} repeat:${2|daily,weekly,monthly,yearly,weekdays|} interval:${3:2} on:${4:2026-06-01} until:${5:2026-12-31} count:${6:10}",
+    "description": "Create a recurring item with interval, until, and count."
+  },
+  "Body continuation": {
+    "prefix": "body",
+    "body": "| ${1:Body text}",
+    "description": "Add a body continuation line."
+  },
+  "Indented body continuation": {
+    "prefix": "ibody",
+    "body": "  | ${1:Body text}",
+    "description": "Add an indented body continuation line."
+  },
+  "ID detail": {
+    "prefix": "id",
+    "body": "id:${1:item_001}",
+    "description": "Stable item ID."
+  },
+  "Parent detail": {
+    "prefix": "parent",
+    "body": "parent:${1:item_001}",
+    "description": "Parent item ID."
+  },
+  "Depends on detail": {
+    "prefix": "depends_on",
+    "body": "depends_on:${1:item_001}",
+    "description": "Prerequisite item ID."
+  },
+  "Blocks detail": {
+    "prefix": "blocks",
+    "body": "blocks:${1:item_001}",
+    "description": "Blocked downstream item ID."
+  },
+  "Due detail": {
+    "prefix": "due",
+    "body": "due:${1:2026-06-12}",
+    "description": "Deadline date or datetime."
+  },
+  "From/to details": {
+    "prefix": "fromto",
+    "body": "from:${1:2026-06-08T13:00} to:${2:2026-06-08T14:30}",
+    "description": "Start and end datetime details."
+  },
+  "Timezone datetime": {
+    "prefix": "dtz",
+    "body": "${1:2026-06-08T13:00:30.25+09:00}",
+    "description": "Datetime with fractional seconds and explicit timezone."
+  },
+  "Tag detail": {
+    "prefix": "tag",
+    "body": "tag:${1:tag}",
+    "description": "Tag detail."
+  },
+  "Project detail": {
+    "prefix": "project",
+    "body": "project:${1:project}",
+    "description": "Project detail."
+  }
+}

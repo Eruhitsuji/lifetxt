@@ -191,3 +191,30 @@ class TuiTests(unittest.TestCase):
 
         self.assertIn("TASKS (open)", output)
         self.assertIn("Write_Report", output)
+
+    def test_curses_draw_clips_to_small_screen(self):
+        class FakeScreen:
+            def __init__(self):
+                self.calls = []
+
+            def getmaxyx(self):
+                return (4, 12)
+
+            def addstr(self, row, column, text):
+                if row >= 4 or column + len(text) >= 12:
+                    raise RuntimeError("out of bounds")
+                self.calls.append((row, column, text))
+
+        screen = FakeScreen()
+        tui._draw_curses_text(
+            screen,
+            "lifetxt TUI with a very long title\nTASKS\n  [ ] T Example",
+            "q quit  r reload",
+        )
+
+        self.assertTrue(screen.calls)
+        self.assertTrue(all(len(call[2]) <= 11 for call in screen.calls))
+
+    def test_clip_display_width_handles_wide_characters(self):
+        self.assertEqual("あい", tui._clip_display_width("あいう", 4))
+        self.assertEqual("ab", tui._clip_display_width("abc", 2))

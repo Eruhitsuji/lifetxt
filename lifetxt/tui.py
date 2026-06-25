@@ -1,4 +1,5 @@
 import sys
+import unicodedata
 
 from .agenda import agenda_records, filter_items, parse_agenda_range
 from .parser import parse_text
@@ -46,8 +47,7 @@ def run_curses_or_plain(args):
         stdscr.nodelay(False)
         while True:
             stdscr.erase()
-            stdscr.addstr(0, 0, render_dashboard(args))
-            stdscr.addstr(curses.LINES - 1, 0, "q quit  r reload")
+            _draw_curses_text(stdscr, render_dashboard(args), "q quit  r reload")
             stdscr.refresh()
             key = stdscr.getch()
             if key in (ord("q"), ord("Q")):
@@ -57,6 +57,57 @@ def run_curses_or_plain(args):
 
     curses.wrapper(main)
     return 0
+
+
+def _draw_curses_text(stdscr, text, footer=""):
+    height, width = stdscr.getmaxyx()
+    if height <= 0 or width <= 0:
+        return
+    max_columns = max(0, width - 1)
+    if max_columns <= 0:
+        return
+
+    body_height = max(0, height - 1)
+    for row, line in enumerate(text.splitlines()):
+        if row >= body_height:
+            break
+        _safe_addstr(stdscr, row, 0, _clip_display_width(line, max_columns))
+
+    if footer and height >= 1:
+        _safe_addstr(stdscr, height - 1, 0, _clip_display_width(footer, max_columns))
+
+
+def _safe_addstr(stdscr, row, column, text):
+    if not text:
+        return
+    try:
+        stdscr.addstr(row, column, text)
+    except Exception:
+        # Some curses implementations raise when drawing exactly at the lower
+        # right edge. The dashboard is best-effort; avoid crashing the TUI.
+        pass
+
+
+def _clip_display_width(text, max_columns):
+    if max_columns <= 0:
+        return ""
+    used = 0
+    clipped = []
+    for char in text:
+        width = _char_display_width(char)
+        if used + width > max_columns:
+            break
+        clipped.append(char)
+        used += width
+    return "".join(clipped)
+
+
+def _char_display_width(char):
+    if unicodedata.combining(char):
+        return 0
+    if unicodedata.east_asian_width(char) in ("F", "W"):
+        return 2
+    return 1
 
 
 def render_dashboard(args):

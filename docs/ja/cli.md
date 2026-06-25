@@ -18,20 +18,27 @@ python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
+python -m lifetxt to-csv [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
 python -m lifetxt from-jsonl [path ...]
+python -m lifetxt from-csv [path ...]
 python -m lifetxt status [path ...]
+python -m lifetxt notify [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
 python -m lifetxt serve [path ...]
+python -m lifetxt config init
+python -m lifetxt config show
 ```
 
 | Command | 目的 |
 |---|---|
 | `check` | life.txt の構文と意味的な警告を検査 |
+| `ids` | item ID の存在、欠落、重複を監査 |
+| `links` | item 間の ID 参照を表示 |
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
 | `to-csv` | life.txt を CSV へ変換 |
@@ -42,11 +49,28 @@ python -m lifetxt serve [path ...]
 | `from-jsonl` | JSONL を life.txt へ変換 |
 | `from-csv` | CSV を life.txt へ変換 |
 | `status` | `person:` ごとの最新 `S` status / presence を表示 |
+| `notify` | type `M` の通知対象を表示、または常駐監視 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
 | `serve` | 任意機能の FastAPI REST API とブラウザGUIを起動 |
+| `config` | 外部 JSON config を作成または表示 |
 
 ## 2. 共通仕様
+
+### 2.0 外部 config
+
+任意のコマンドで、subcommand の前に `--config FILE` を指定できます。省略時は
+`LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` の順で探索します。
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json check
+python -m lifetxt agenda --config .lifetxt.json --around now --window 1d
+```
+
+`paths` は life.txt 読み込み系 command の default input files、`write_file` は
+`serve` の writable file、`message` は type `M` の作成 default、`sync_ics` は
+calendar sync の default source / output を指定します。
 
 ### 2.1 入力 path
 
@@ -109,6 +133,35 @@ life output は既定で元の行を保持します。`--canonical` を使うと
 | `1` | 検証エラーまたはコマンドエラー |
 | `2` | サブコマンド不足などの CLI usage error |
 
+### 2.6 フォーマット互換性
+
+CLI は [life_txt_format_spec.md](./life_txt_format_spec.md) のファイル文法に従います。互換性で重要な点は次の通りです。
+
+- life.txt ファイル内の detail は `key:value` のみです。
+- `key=value` は `assist -d`、`assist --add-detail`、対話 detail prompt などの helper 入力だけで使える便宜記法です。
+- JSON / JSONL では、detail は値が 1 つでも常に配列です。
+- CSV 変換では `status`、`type`、`title` 列が必須です。それ以外の非空列は detail になり、JSON 配列セルは同じ key の複数値になります。
+- `filter`、`agenda`、`to-json`、`to-jsonl`、`to-csv` は status、type、project、tag、user、team、detail、text、time filter の実装を共有します。
+- `check`、`ids`、`links`、各 converter は同じ parser を使うため、ある読み込み command が受け付ける構文は他の読み込み command でも受け付けます。
+- 複数入力ファイルは ID 重複と参照検査では 1 つの論理集合として扱われます。
+
+command 対応表:
+
+| Command | life.txt 読み込み | life.txt 書き込み | 構文検証 | item filter |
+|---|---:|---:|---:|---:|
+| `check` | yes | no | yes | no |
+| `ids` | yes | `--assign` 時のみ | yes | no |
+| `links` | yes | no | yes | relation filter |
+| `to-json`, `to-jsonl`, `to-csv` | yes | no | yes | yes |
+| `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rule | no |
+| `filter` | yes | yes | yes | yes |
+| `status` | yes | no | yes | `--person`, `--active` |
+| `notify` | yes | no | yes | notification 固有 |
+| `agenda` | yes | `--format life -o` 時のみ | yes | yes |
+| `assist` | update 時は yes | yes | `--no-check` 以外 yes | no |
+| `import-ics`, `sync-ics` | `.ics` | yes | generated item validation | no |
+| `serve` | yes | API/UI 経由で yes | yes | URL/API filter |
+
 ## 3. `check`
 
 life.txt の構文と意味的なルールを検査します。
@@ -131,6 +184,61 @@ python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
 ```
+
+### 3.1 `ids`
+
+item ID を監査します。既定ではファイルを変更しません。`--assign` を指定した場合だけ、ID がない item に ID を追加できます。
+
+```sh
+python -m lifetxt ids [path ...] [--only all|present|missing|duplicates]
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt。`-` なら標準入力 |
+| `--key KEY` | 監査する detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
+| `--only all` | summary、duplicate IDs、missing IDs を表示 |
+| `--only present` | 存在する ID 一覧を表示 |
+| `--only missing` | ID がない item だけ表示 |
+| `--only duplicates` | 重複 ID だけ表示 |
+| `--format text|json|jsonl` | 出力形式 |
+| `--pretty` | JSON を整形して出力 |
+| `--assign` | ID がない item へ ID を付与 |
+| `--dry-run` | ファイルを書き換えず予定だけ表示 |
+| `--backup` | `--assign` で変更前に `FILE.bak` を作成 |
+| `--prefix PREFIX` | `--assign` で使う ID prefix。省略時は type 別 config prefix |
+
+例:
+
+```sh
+python -m lifetxt ids life.txt
+python -m lifetxt ids life.txt archive.life.txt --only duplicates
+python -m lifetxt ids life.txt --only missing --format json --pretty
+python -m lifetxt ids life.txt --assign --dry-run
+python -m lifetxt ids life.txt --assign --backup
+python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
+```
+
+### 3.2 `links`
+
+`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` など、item ID を指す関係を表示します。
+
+```sh
+python -m lifetxt links [path ...]
+python -m lifetxt links life.txt --id task_report --direction incoming
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt。`-` なら標準入力 |
+| `--id ID` | この ID に接続する link だけ表示 |
+| `--direction incoming|outgoing|both` | `--id` 使用時の向き。既定値は `both` |
+| `--relation RELATION` | `depends_on` などの relation key で絞り込み。複数回指定または comma-separated |
+| `--key KEY` | ID として扱う detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
+| `--format text|json|jsonl` | 出力形式 |
+| `--pretty` | JSON を整形して出力 |
+
+`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`) も報告します。
 
 ## 4. JSON 変換
 
@@ -405,7 +513,47 @@ python -m lifetxt status life.txt --person self
 python -m lifetxt status life.txt --format json --pretty
 ```
 
-## 8. `agenda`
+## 8. `notify`
+
+type `M` の通知対象を 1 回表示するか、`--watch` で常駐 polling します。
+
+```sh
+python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
+```
+
+選択ルール:
+
+- type `M` の item だけを対象にします。
+- open workflow status (`[ ]`、`[/]`、`[>]`、`[?]`) だけを対象にします。
+- `recipient:` が選択 recipient と一致する必要があります。
+- `notify_at:` は単一通知時刻として扱います。
+- `notify_from:` / `notify_to:` は通知期間として扱います。
+- `ack:` がある item は通知済みとして除外します。
+- 未来の `snooze_until:` がある item は、その時刻まで抑止します。
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt。`-` なら標準入力 |
+| `--recipient PERSON` | 通知対象者。省略時は config の `notifications.recipient` または `user.name` |
+| `--lookahead VALUE` | 未来方向の通知検出幅。例: `0m`、`5m`、`1h` |
+| `--grace VALUE` | 過去方向の取りこぼし許容幅 |
+| `--watch` | 終了せず繰り返し polling |
+| `--interval SECONDS` | `--watch` の polling 秒数 |
+| `--desktop` | 対応環境では簡易 desktop 通知も表示 |
+| `--state-file PATH` | `--watch` の通知済み ID を保存する JSON file |
+| `--no-state` | `--watch` で通知済み状態を保存しない |
+| `--format text|json|jsonl` | one-shot mode の出力形式 |
+| `--pretty` | JSON を整形して出力 |
+
+例:
+
+```sh
+python -m lifetxt notify life.txt --recipient self
+python -m lifetxt notify life.txt --recipient self --format json --pretty
+python -m lifetxt notify life.txt --watch --interval 30
+```
+
+## 9. `agenda`
 
 日時範囲に関連する item を表示します。
 
@@ -424,7 +572,7 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 - `interval:`、`until:`、`count:` は simple repeat の展開を制限します。
 - `on:` のない floating `at:` repeat は、両端がある bounded agenda range の中だけで展開します。
 
-### 8.1 範囲オプション
+### 9.1 範囲オプション
 
 | Option | 意味 |
 |---|---|
@@ -460,7 +608,7 @@ python -m lifetxt agenda life.txt --around now --window 1w
 python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 ```
 
-### 8.2 フィルタオプション
+### 9.2 フィルタオプション
 
 | Option | 意味 |
 |---|---|
@@ -494,7 +642,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 `--detail key` は key の存在を確認します。`--detail key=value` は detail value の完全一致です。
 複数の `--detail` は AND 条件です。
 
-### 8.3 出力オプション
+### 9.3 出力オプション
 
 | Option | 意味 |
 |---|---|
@@ -513,7 +661,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format jso
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 ```
 
-## 9. `assist`
+## 10. `assist`
 
 フラグまたは対話入力で life.txt item を作成・更新します。
 
@@ -521,7 +669,7 @@ python -m lifetxt agenda life.txt --around now --window 1w --format life -o agen
 python -m lifetxt assist [options]
 ```
 
-### 9.1 非対話で作成
+### 10.1 非対話で作成
 
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
@@ -551,7 +699,7 @@ known detail key には直接フラグもあります。各フラグは複数回
 --reason --moved_to
 ```
 
-### 9.2 対話で作成
+### 10.2 対話で作成
 
 ```sh
 python -m lifetxt assist --interactive
@@ -572,7 +720,7 @@ python -m lifetxt assist --interactive --append life.txt
 対応 terminal では、Tab で type、status、detail-key 候補を補完できます。
 Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と line editing を無効化できます。
 
-### 9.3 既存 item の更新
+### 10.3 既存 item の更新
 
 行番号または完全一致の `id:` で item を選択して更新します。
 
@@ -597,7 +745,7 @@ python -m lifetxt assist --update life.txt --match-id task_001 --output updated_
 
 `--output` がない場合、update mode は入力ファイルへ書き戻します。
 
-## 10. `serve`
+## 11. `serve`
 
 任意機能の FastAPI REST API とブラウザGUIを起動します。
 
@@ -625,7 +773,37 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
 詳細は [web.md](./web.md) を参照してください。
 
-## 11. alias
+## 12. `config`
+
+外部 JSON config を作成または表示します。
+
+```sh
+python -m lifetxt config init -o .lifetxt.json
+python -m lifetxt --config .lifetxt.json config show
+```
+
+| Option | 意味 |
+|---|---|
+| `config init -o FILE` | starter config を FILE に作成。省略時は `.lifetxt.json` |
+| `config init --force` | 既存 config file を上書き |
+| `config show` | 読み込まれた config を JSON として表示 |
+
+主な config key:
+
+| Key | 意味 |
+|---|---|
+| `paths` | life.txt 読み込み系 command の default input files |
+| `write_file` | `serve` の default writable file |
+| `user.name` | 自身の標準ユーザ名 |
+| `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
+| `message.default_sender` | type `M` 作成時の default `sender:` |
+| `notifications.*` | `notify` と Web 通知の既定値 |
+| `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
+| `api.id_key` | Web API / id-based operation が使う ID key |
+| `web.*` | `serve` と Web UI の既定値 |
+| `sync_ics.*` | `sync-ics` の default source / output / cache |
+
+## 13. alias
 
 status alias:
 
@@ -651,7 +829,7 @@ type alias:
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
 
-## 12. 実用例
+## 14. 実用例
 
 検査と変換:
 

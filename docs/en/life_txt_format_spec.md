@@ -14,6 +14,28 @@ Blank lines are ignored. Lines beginning with `#` are comments. Most items fit
 on one line; optional continuation lines beginning with `|` attach multiline
 body text to the previous item.
 
+### 1.1 CLI-Compatible Profile
+
+The reference CLI (`python -m lifetxt`) implements a strict, round-trippable
+profile of this specification.
+
+| Area | CLI-compatible rule |
+|---|---|
+| Encoding | Input is read as UTF-8, accepting an optional UTF-8 BOM. Output is UTF-8. |
+| Line endings | `LF`, `CRLF`, and `CR` are accepted when reading. Serializers write `LF`. |
+| Item line | `indent [status] type title details...` |
+| Separators | A single space is canonical between status, type, title, and details. Multiple spaces are parsed with warnings. Tabs are errors. |
+| Comments | A comment starts with `#` in column 1. Indented comments are ignored with a warning. |
+| Details in files | Detail syntax is always `key:value`. `key=value` is not file syntax. |
+| Details in CLI helpers | `assist -d`, `assist --add-detail`, and interactive detail prompts accept `key=value` as input convenience, then write canonical `key:value`. |
+| Custom keys | Unknown keys are valid syntax and are preserved. Validators may warn when a key is not known or not recommended for the item type. |
+| Repeated keys | Repeat the same key to represent multiple values. JSON/JSONL stores every detail as an array. CSV stores repeated values as a JSON array cell. |
+| Hierarchy | Leading spaces are preserved as `indent` in JSON. When possible, the parser infers `parent:` for indented items. |
+| Multiline body | Continuation lines beginning with `|` become one `body:` value with embedded newlines. |
+
+For command behavior, filters, and conversion formats, see
+[`docs/en/cli.md`](./cli.md).
+
 ## 2. Status Values
 
 | Status | Meaning |
@@ -690,19 +712,47 @@ type `J`.
 ## 14. Formal Grammar
 
 ```ebnf
-life_file     = { blank_line | comment_line | item_line | continuation_line } ;
-item_line     = indent, status, space, type, space, string, { space, detail } ;
-continuation_line = indent, "|", [ space ], text ;
-indent        = { " " } ;
-status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
-detail        = key, ":", string ;
-key           = bare_key ;
-string        = bare_string | quoted_string ;
-space         = " " ;
+life_file         = { blank_line | comment_line | item_line | continuation_line } ;
+blank_line        = { " " | "\t" } ;
+comment_line      = "#", text ;
+item_line         = indent, status, space, type, space, string, { space, detail } ;
+continuation_line = indent, "|", [ space ], body_text ;
+
+indent            = { " " } ;
+space             = " " ;
+status            = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
+type              = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
+detail            = key, ":", string ;
+
+key               = bare_key ;
+bare_key          = key_char, { key_char } ;
+key_char          = ? any character except space, colon, or double quote ? ;
+
+string            = bare_string | quoted_string ;
+bare_string       = bare_char, { bare_char } ;
+bare_char         = ? any character except space or double quote ? ;
+quoted_string     = '"', { quoted_char | escape }, '"' ;
+quoted_char       = ? any character except double quote or backslash ? ;
+escape            = "\\\"" | "\\\\" ;
+
+body_text         = text ;
+text              = ? any characters until end of line ? ;
 ```
 
-## 14. Complete Example
+Notes:
+
+- The CLI validator recommends lowercase snake_case keys matching
+  `[a-z][a-z0-9_]*`, but the parser preserves other syntactically valid keys.
+- A quoted string must be followed by a space or end of line.
+- A bare string cannot contain spaces or double quotes. The serializer quotes
+  values that contain tabs, backslashes, empty strings, or other non-canonical
+  bare-string characters.
+- Continuation lines must follow an item. They are serialized as `body:` when
+  JSON/JSONL/CSV data is converted back to life.txt.
+- `key=value` appears only in CLI helper input; it is intentionally excluded
+  from the file grammar.
+
+## 15. Complete Example
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

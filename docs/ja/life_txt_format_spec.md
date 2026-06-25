@@ -2,13 +2,33 @@
 
 ## 1. 概要
 
-`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状況、メッセージ、メモを 1 item 1 行で記録するプレーンテキスト形式です。
+`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状況、メッセージ、メモ、日記・日誌を記録するプレーンテキスト形式です。
 
 ```txt
 [status] type title key:value key:value ...
 ```
 
-空行は無視されます。`#` で始まる行はコメントです。
+空行は無視されます。`#` で始まる行はコメントです。多くの item は 1 行で書けますが、`|` で始まる継続行を使うと複数行の `body:` を直前 item に結合できます。
+
+### 1.1 CLI 互換プロファイル
+
+参照実装の CLI (`python -m lifetxt`) は、相互変換しやすい厳密なプロファイルとしてこの仕様を実装します。
+
+| 項目 | CLI 互換ルール |
+|---|---|
+| 文字コード | 入力は UTF-8。UTF-8 BOM も受け付けます。出力は UTF-8 です。 |
+| 改行 | 読み込み時は `LF`、`CRLF`、`CR` を受け付けます。serializer は `LF` を出力します。 |
+| item 行 | `indent [status] type title details...` |
+| 区切り | status、type、title、detail の間は 1 つの space が正規形です。複数 space は warning、tab は error です。 |
+| コメント | `#` が 1 桁目にある行がコメントです。インデントされたコメントは warning 付きで無視されます。 |
+| ファイル内 detail | detail は必ず `key:value` です。`key=value` はファイル構文ではありません。 |
+| CLI helper 入力 | `assist -d`、`assist --add-detail`、対話 detail prompt では便宜上 `key=value` も入力できます。出力時は `key:value` になります。 |
+| custom key | 未知の key も構文上は有効で保持されます。type に推奨されない key には warning が出る場合があります。 |
+| 複数値 | 同じ key を複数回書きます。JSON/JSONL では各 detail は常に配列です。CSV では複数値を JSON 配列セルとして保存します。 |
+| 階層 | 先頭 space は JSON の `indent` として保持されます。可能な場合、インデントから `parent:` を推論します。 |
+| 複数行 body | `|` で始まる継続行は、改行を含む 1 つの `body:` 値になります。 |
+
+command、filter、変換形式の詳細は [CLI ガイド](./cli.md) を参照してください。
 
 ## 2. status 値
 
@@ -51,9 +71,9 @@ title と detail value は、空白やダブルクォートを含まない場合
 [N] N "Use more figures in the next presentation" project:research
 ```
 
-## 15. 追加仕様: user / team / tag / time / id
+### 4.1 user / team / tag / time / id の補足
 
-### 15.1 user / team / group
+#### 4.1.1 user / team / group
 
 `user:` は、`owner:`、`assignee:`、`attendee:`、`person:`、`sender:`、`recipient:` のどれにも限定しない一般的な user 参照です。
 役割が明確な場合は、より具体的な key を優先してください。
@@ -61,13 +81,13 @@ title と detail value は、空白やダブルクォートを含まない場合
 `team:` と `group:` は、team 単位・group 単位の ownership、routing、filter に使います。
 CLI / Web の `--team` / `team=` filter は、item の `team:` / `group:` に加えて、config の `teams` membership も利用できます。
 
-### 15.2 tag filter
+#### 4.1.2 tag filter
 
 `tag:` は従来どおり複数回書けます。
 CLI / Web では `--tag` / `tag=` はいずれかの tag に一致、`--tag-all` / `tag_all=` はすべての tag に一致、`--exclude-tag` / `exclude_tag=` は指定 tag を含む item を除外します。
 config の `tags.aliases` と `tags.groups` は tag filter の展開に使えます。
 
-### 15.3 datetime
+#### 4.1.3 datetime
 
 日時値は従来の `YYYY-MM-DDTHH:MM` に加えて、秒と timezone offset を含められます。
 
@@ -79,7 +99,7 @@ from:2026-06-08T04:00Z
 at:18:00:30
 ```
 
-### 15.4 id
+#### 4.1.4 id
 
 `id:` は読み込み対象の複数 life.txt ファイル全体で一意であることを推奨します。
 空白や引用符を含まない短い ASCII token を推奨しますが、iCalendar UID など外部 ID では `@` などの記号を含んでも構いません。
@@ -144,6 +164,7 @@ warning を出します。`parent:` を明示した場合は、明示値を優�
 | `project` | プロジェクト、作業領域 | `project:research` |
 | `tag` | 自由タグ。複数指定可 | `tag:important` |
 | `note` | 短い補足メモ | `note:"Check later"` |
+| `body` | 長文本文。継続行でも記述可 | `body:short_text` |
 | `url` | 関連 URL | `url:https://example.com` |
 
 `id:` は読み込み対象の life.txt ファイル群の中で一意に保つことを推奨します。
@@ -162,20 +183,23 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 
 参照値は通常 `id:` を指します。config で `ids.key` / `api.id_key` を変更した場合は、その key を ID として扱います。存在しない参照、自己参照、`parent:` cycle は warning として報告されます。
 
-### 7.2 People keys
+### 7.3 People keys
 
 | Key | 意味 | 例 |
 |---|---|---|
+| `user` | より狭い役割を決めない一般的な user 参照 | `user:alice` |
 | `owner` | item に責任を持つ人 | `owner:alice` |
 | `assignee` | 作業を担当する人 | `assignee:alice` |
 | `attendee` | 予定の参加者。複数指定可 | `attendee:alice` |
 | `person` | status / presence の対象者。主に type `S` 用 | `person:self` |
 | `sender` | メッセージ送信元。主に type `M` 用 | `sender:self` |
 | `recipient` | メッセージ送信先。複数指定可 | `recipient:alice` |
+| `team` | item に関連する team | `team:research` |
+| `group` | item に関連する user group | `group:lab` |
 
-`person` は在席状態を記録する対象者に使います。type `S` 以外では、`owner`、`assignee`、`attendee` のような具体的な key を優先します。Message では `sender` と `recipient` を使います。
+`person` は在席状態を記録する対象者に使います。type `S` 以外では、`owner`、`assignee`、`attendee` のような具体的な key を優先します。Message では `sender` と `recipient` を使います。`team` / `group` は team 単位の ownership、routing、filter に使います。
 
-### 7.3 Time keys
+### 7.4 Time keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -189,8 +213,10 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 | `notify_at` | メッセージ通知日または通知日時 | `notify_at:2026-06-06T09:00` |
 | `notify_from` | 通知期間の開始 | `notify_from:2026-06-06T09:00` |
 | `notify_to` | 通知期間の終了 | `notify_to:2026-06-06T17:00` |
+| `ack` | 通知確認日または通知確認日時 | `ack:2026-06-06T09:05` |
+| `snooze_until` | この日付・日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 
-### 7.4 Recurrence keys
+### 7.5 Recurrence keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -203,7 +229,7 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 を推奨します。`RRULE:...` は外部互換のため保存できますが、組み込み agenda
 の展開対象は simple repeat です。
 
-### 7.5 Message keys
+### 7.6 Message keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -216,14 +242,26 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 | `snooze_until` | この日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 | `channel` | 配信経路 | `channel:teams` |
 
-### 7.6 Workflow keys
+### 7.7 Journal keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `on` | 日記の日付 | `on:2026-06-23` |
+| `at` | 日記の時刻 | `at:22:30` |
+| `from`, `to` | entry が扱う時間範囲 | `from:2026-06-23T09:00 to:2026-06-23T18:00` |
+| `mood` | 気分ラベル | `mood:good` |
+| `weather` | 天気ラベル | `weather:sunny` |
+| `loc` | 場所 | `loc:home` |
+| `body` | 長文本文 | `| body line` |
+
+### 7.8 Workflow keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
 | `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
 
-### 7.7 System keys
+### 7.9 System keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -272,7 +310,7 @@ time filter では一致対象にしません。
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner est project tag note body id parent ref depends_on blocks related
+do due priority assignee owner team est project tag note body id parent ref depends_on blocks related
 ```
 
 例:
@@ -284,7 +322,7 @@ do due priority assignee owner est project tag note body id parent ref depends_o
 ### 9.2 Event (`E`)
 
 ```txt
-from to on loc attendee owner project tag note
+from to on loc attendee owner team project tag note body ref related
 ```
 
 例:
@@ -296,7 +334,7 @@ from to on loc attendee owner project tag note
 ### 9.3 Deadline (`D`)
 
 ```txt
-due priority owner assignee project tag note
+due priority owner assignee team project tag note body depends_on ref related
 ```
 
 例:
@@ -308,7 +346,7 @@ due priority owner assignee project tag note
 ### 9.4 Reminder (`R`)
 
 ```txt
-at on owner project context note
+at on owner team project context note body ref related
 ```
 
 例:
@@ -320,7 +358,7 @@ at on owner project context note
 ### 9.5 Habit (`H`)
 
 ```txt
-repeat interval until count at on owner project tag note body ref related
+repeat interval until count at on owner team project tag note body ref related
 ```
 
 例:
@@ -373,7 +411,7 @@ from state
 推奨 key:
 
 ```txt
-from state to person service loc project note body ref related visibility
+from state to person team group service loc project note body ref related visibility
 ```
 
 `to:` がない場合は現在有効な状態として扱えます。`to:` がある場合は過去の状態ログとして扱えます。
@@ -398,7 +436,7 @@ sender recipient
 推奨 key:
 
 ```txt
-sender recipient notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
+sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
 ```
 
 | Key | 推奨理由 |
@@ -527,22 +565,45 @@ note status `[N]` は通常 note type `N` または journal type `J` と組み�
 [N] J "Research day" on:2026-06-23
 ```
 
-## 13. 簡易文法
+## 14. 形式文法
 
 ```ebnf
-life_file     = { blank_line | comment_line | item_line | continuation_line } ;
-item_line     = indent, status, space, type, space, string, { space, detail } ;
-continuation_line = indent, "|", [ space ], text ;
-indent        = { " " } ;
-status        = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
-type          = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
-detail        = key, ":", string ;
-key           = bare_key ;
-string        = bare_string | quoted_string ;
-space         = " " ;
+life_file         = { blank_line | comment_line | item_line | continuation_line } ;
+blank_line        = { " " | "\t" } ;
+comment_line      = "#", text ;
+item_line         = indent, status, space, type, space, string, { space, detail } ;
+continuation_line = indent, "|", [ space ], body_text ;
+
+indent            = { " " } ;
+space             = " " ;
+status            = "[ ]" | "[/]" | "[x]" | "[-]" | "[>]" | "[?]" | "[N]" ;
+type              = "T" | "E" | "D" | "R" | "H" | "N" | "S" | "M" | "J" ;
+detail            = key, ":", string ;
+
+key               = bare_key ;
+bare_key          = key_char, { key_char } ;
+key_char          = ? space、colon、double quote 以外の文字 ? ;
+
+string            = bare_string | quoted_string ;
+bare_string       = bare_char, { bare_char } ;
+bare_char         = ? space または double quote 以外の文字 ? ;
+quoted_string     = '"', { quoted_char | escape }, '"' ;
+quoted_char       = ? double quote または backslash 以外の文字 ? ;
+escape            = "\\\"" | "\\\\" ;
+
+body_text         = text ;
+text              = ? 行末までの任意の文字 ? ;
 ```
 
-## 14. 完全な例
+補足:
+
+- CLI validator は `[a-z][a-z0-9_]*` に合う lowercase snake_case の key を推奨しますが、parser は構文上有効な custom key を保持します。
+- quoted string の閉じ `"` の直後は space または行末である必要があります。
+- bare string には space と double quote を含められません。serializer は tab、backslash、空文字列など、正規の bare string として安全でない値を quoted string にします。
+- continuation line は item の直後に必要です。JSON/JSONL/CSV から life.txt に戻す場合、複数行 `body:` は `|` 継続行として出力されます。
+- `key=value` は CLI helper の入力だけで使える便宜記法です。ファイル構文には含めません。
+
+## 15. 完全な例
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

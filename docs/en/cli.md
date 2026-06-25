@@ -18,17 +18,20 @@ python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
+python -m lifetxt to-csv [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
 python -m lifetxt from-jsonl [path ...]
+python -m lifetxt from-csv [path ...]
 python -m lifetxt status [path ...]
 python -m lifetxt notify [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
 python -m lifetxt serve [path ...]
 python -m lifetxt config init
+python -m lifetxt config show
 ```
 
 | Command | Purpose |
@@ -136,6 +139,44 @@ preserves original lines by default; `--canonical` may expand inferred
 | `0` | Success |
 | `1` | Validation error or command error |
 | `2` | CLI usage error, such as missing subcommand |
+
+### 2.6 Format Compatibility
+
+The CLI follows the file grammar in
+[`life_txt_format_spec.md`](./life_txt_format_spec.md). The important
+compatibility rules are:
+
+- `key:value` is the only detail syntax in a life.txt file.
+- `key=value` is accepted only by helper inputs such as `assist -d`,
+  `assist --add-detail`, and the interactive detail prompt.
+- JSON and JSONL details are always arrays, even when the item has only one
+  value for a key.
+- CSV conversion requires `status`, `type`, and `title` columns. Other non-empty
+  columns become details; JSON array cells become repeated detail values.
+- `filter`, `agenda`, `to-json`, `to-jsonl`, and `to-csv` share the same item
+  filter implementation for status, type, project, tag, user, team, detail,
+  text, and time filters.
+- `check`, `ids`, `links`, and all converters use the same parser, so syntax
+  accepted by one reading command is accepted by the others.
+- Multiple input files are parsed as one logical set for duplicate-ID and
+  reference checks.
+
+CLI command coverage:
+
+| Command | Reads life.txt | Writes life.txt | Validates syntax | Supports item filters |
+|---|---:|---:|---:|---:|
+| `check` | yes | no | yes | no |
+| `ids` | yes | optional with `--assign` | yes | no |
+| `links` | yes | no | yes | relation filters only |
+| `to-json`, `to-jsonl`, `to-csv` | yes | no | yes | yes |
+| `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rules |
+| `filter` | yes | yes | yes | yes |
+| `status` | yes | no | yes | `--person`, `--active` |
+| `notify` | yes | no | yes | notification-specific |
+| `agenda` | yes | optional with `--format life -o` | yes | yes |
+| `assist` | optional for update | yes | yes unless `--no-check` | no |
+| `import-ics`, `sync-ics` | `.ics` | yes | generated item validation |
+| `serve` | yes | yes through API/UI | yes | URL/API filters |
 
 ## 3. `check`
 

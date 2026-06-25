@@ -202,8 +202,20 @@ ownership, filtering, or routing.
 | `notify_at` | Message notification date or datetime | `notify_at:2026-06-06T09:00` |
 | `notify_from` | Notification period start | `notify_from:2026-06-06T09:00` |
 | `notify_to` | Notification period end | `notify_to:2026-06-06T17:00` |
+| `ack` | Notification acknowledgement date or datetime | `ack:2026-06-06T09:05` |
+| `snooze_until` | Suppress notification until this date or datetime | `snooze_until:2026-06-06T09:30` |
 
-### 7.5 Recurrence Keys
+### 7.5 Effort Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `est` | Estimated effort or duration | `est:2h` |
+| `elapsed` | Accumulated actual elapsed time | `elapsed:1h30m` |
+
+`elapsed:` is used by the `timer` CLI command. Compact values such as `25m`,
+`1h`, and `1h30m` are recommended.
+
+### 7.6 Recurrence Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -216,7 +228,7 @@ Supported simple `repeat:` values are `daily`, `weekly`, `monthly`, `yearly`,
 and `weekdays`. `RRULE:...` values may be stored for interoperability; built-in
 agenda expansion currently expands the simple values above.
 
-### 7.6 Message Keys
+### 7.7 Message Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -225,9 +237,11 @@ agenda expansion currently expands the simple values above.
 | `body` | Message body, especially when longer than the title | `body:"Please review the slides"` |
 | `notify_at` | One notification time | `notify_at:2026-06-06T09:00` |
 | `notify_from`, `notify_to` | Notification period | `notify_from:2026-06-06T09:00 notify_to:2026-06-06T17:00` |
+| `ack` | Acknowledged notification | `ack:2026-06-06T09:05` |
+| `snooze_until` | Notification snooze end | `snooze_until:2026-06-06T09:30` |
 | `channel` | Delivery channel or route | `channel:teams` |
 
-### 7.7 Journal Keys
+### 7.8 Journal Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -239,14 +253,14 @@ agenda expansion currently expands the simple values above.
 | `loc` | Location | `loc:home` |
 | `body` | Long journal text | continuation lines beginning with `|` |
 
-### 7.8 Workflow Keys
+### 7.9 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.9 System Keys
+### 7.10 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -289,8 +303,15 @@ Simple recurrence is expressed with `repeat:` and optional `interval:`,
 ```
 
 Agenda and time filters expand simple recurrences from the first available
-anchor, in this order: `from/to`, `at` with `on`, floating `at` in a bounded
-range, `on`, then `due` / `do` / `moved_to` / `notify_at`.
+anchor, in this order:
+
+| Anchor | Meaning |
+|---|---|
+| `from` / `to` | Repeating timed interval |
+| `at` with `on` | Repeating time on the anchored date pattern |
+| `at` without `on` | Floating time expanded only inside a bounded requested range |
+| `on` | Repeating all-day date |
+| `due`, `do`, `moved_to`, `notify_at` | Repeating point date/datetime or all-day span |
 
 `interval:2` means every two units of the selected repeat value. `count:` limits
 the number of generated occurrences from the anchor. `until:` is an inclusive
@@ -306,7 +327,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner team est project tag note body id parent ref depends_on blocks related
+do due priority assignee owner team est elapsed project tag note body id parent ref depends_on blocks related
 ```
 
 | Key | Why it is recommended |
@@ -316,7 +337,9 @@ do due priority assignee owner team est project tag note body id parent ref depe
 | `priority` | Relative importance |
 | `assignee` | Person assigned to do the task |
 | `owner` | Person accountable for the task |
+| `team` | Team related to the task |
 | `est` | Estimated effort |
+| `elapsed` | Actual elapsed time, usually maintained by `timer` |
 | `project`, `tag`, `note`, `body`, `id`, `parent` | Organization and context |
 
 Example:
@@ -496,6 +519,7 @@ from state to person team group service loc project note body ref related visibi
 | `state` | Presence state |
 | `to` | Status end datetime for finished logs |
 | `person` | Person or target whose state is recorded |
+| `team`, `group` | Team or group context for the status |
 | `service` | Source or target service |
 | `loc`, `project`, `note`, `body`, `visibility` | Context and visibility |
 
@@ -527,8 +551,11 @@ sender recipient team group notify_at notify_from notify_to ack snooze_until cha
 |---|---|
 | `sender` | Person or agent sending the message |
 | `recipient` | Person receiving the message; repeat for multiple recipients |
+| `team`, `group` | Team or group routing/context |
 | `notify_at` | Single notification or delivery time |
 | `notify_from`, `notify_to` | Notification window or delivery period |
+| `ack` | Acknowledged notification; tools should not notify again |
+| `snooze_until` | Suppress notification until this date or datetime |
 | `channel` | Delivery route such as `teams`, `discord`, `slack`, or `email` |
 | `service` | Source or target service |
 | `priority`, `project`, `tag`, `note`, `body`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |

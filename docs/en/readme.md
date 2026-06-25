@@ -6,6 +6,8 @@ diary entries in one human-readable file.
 
 See [life_txt_format_spec.md](./life_txt_format_spec.md) for the format
 specification.
+See [cli.md](./cli.md) for command compatibility, filters, output formats, and
+conversion rules.
 
 ## Minimal life.txt
 
@@ -72,6 +74,13 @@ python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
+python -m lifetxt tui life.txt
+python -m lifetxt fzf life.txt --open --type task --action done
+python -m lifetxt timer start life.txt --id task_report
+python -m lifetxt timer stop
+python -m lifetxt stats life.txt --project research
+python -m lifetxt git-hook status
+python -m lifetxt completion bash
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
@@ -117,6 +126,11 @@ The optional web interface is installed separately:
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
+`git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the
+enhanced TUI can use the optional `tui` extra, while a dependency-free fallback
+is available by default.
 
 ## Assist
 

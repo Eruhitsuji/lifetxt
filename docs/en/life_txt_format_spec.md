@@ -205,7 +205,17 @@ ownership, filtering, or routing.
 | `ack` | Notification acknowledgement date or datetime | `ack:2026-06-06T09:05` |
 | `snooze_until` | Suppress notification until this date or datetime | `snooze_until:2026-06-06T09:30` |
 
-### 7.5 Recurrence Keys
+### 7.5 Effort Keys
+
+| Key | Meaning | Example |
+|---|---|---|
+| `est` | Estimated effort or duration | `est:2h` |
+| `elapsed` | Accumulated actual elapsed time | `elapsed:1h30m` |
+
+`elapsed:` is used by the `timer` CLI command. Compact values such as `25m`,
+`1h`, and `1h30m` are recommended.
+
+### 7.6 Recurrence Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -218,7 +228,7 @@ Supported simple `repeat:` values are `daily`, `weekly`, `monthly`, `yearly`,
 and `weekdays`. `RRULE:...` values may be stored for interoperability; built-in
 agenda expansion currently expands the simple values above.
 
-### 7.6 Message Keys
+### 7.7 Message Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -231,7 +241,7 @@ agenda expansion currently expands the simple values above.
 | `snooze_until` | Notification snooze end | `snooze_until:2026-06-06T09:30` |
 | `channel` | Delivery channel or route | `channel:teams` |
 
-### 7.7 Journal Keys
+### 7.8 Journal Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -243,14 +253,14 @@ agenda expansion currently expands the simple values above.
 | `loc` | Location | `loc:home` |
 | `body` | Long journal text | continuation lines beginning with `|` |
 
-### 7.8 Workflow Keys
+### 7.9 Workflow Keys
 
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
 | `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
 
-### 7.9 System Keys
+### 7.10 System Keys
 
 | Key | Meaning | Example |
 |---|---|---|
@@ -317,7 +327,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner team est project tag note body id parent ref depends_on blocks related
+do due priority assignee owner team est elapsed project tag note body id parent ref depends_on blocks related
 ```
 
 | Key | Why it is recommended |
@@ -329,6 +339,7 @@ do due priority assignee owner team est project tag note body id parent ref depe
 | `owner` | Person accountable for the task |
 | `team` | Team related to the task |
 | `est` | Estimated effort |
+| `elapsed` | Actual elapsed time, usually maintained by `timer` |
 | `project`, `tag`, `note`, `body`, `id`, `parent` | Organization and context |
 
 Example:

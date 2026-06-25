@@ -29,6 +29,14 @@ python -m lifetxt status [path ...]
 python -m lifetxt notify [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
+python -m lifetxt tui [path ...]
+python -m lifetxt fzf [path ...]
+python -m lifetxt timer start path --id ID
+python -m lifetxt timer stop
+python -m lifetxt timer summary [path ...]
+python -m lifetxt stats [path ...]
+python -m lifetxt git-hook install
+python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
@@ -52,6 +60,12 @@ python -m lifetxt config show
 | `notify` | type `M` の通知対象を表示、または常駐監視 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
+| `tui` | task、agenda、status を端末ダッシュボードで表示 |
+| `fzf` | `fzf` または `peco` で item を選択し action を実行 |
+| `timer` | item の作業時間を計測し `elapsed:` に記録 |
+| `stats` | task、habit、mood、project の統計を表示 |
+| `git-hook` | life.txt 検査用 Git hook を導入または確認 |
+| `completion` | shell completion script を生成 |
 | `serve` | 任意機能の FastAPI REST API とブラウザGUIを起動 |
 | `config` | 外部 JSON config を作成または表示 |
 
@@ -160,6 +174,12 @@ command 対応表:
 | `agenda` | yes | `--format life -o` 時のみ | yes | yes |
 | `assist` | update 時は yes | yes | `--no-check` 以外 yes | no |
 | `import-ics`, `sync-ics` | `.ics` | yes | generated item validation | no |
+| `tui` | yes | no | yes | dashboard 固有 |
+| `fzf` | yes | `done` と `delete` action | yes | yes |
+| `timer` | yes | `start` と `stop` が 1 item を更新 | yes | summary filter |
+| `stats` | yes | no | yes | type / project filter |
+| `git-hook` | no | Git hook のみ | no | no |
+| `completion` | no | 任意の script output | no | no |
 | `serve` | yes | API/UI 経由で yes | yes | URL/API filter |
 
 ## 3. `check`
@@ -797,25 +817,126 @@ python -m lifetxt --config .lifetxt.json config show
 | `user.name` | 自身の標準ユーザ名 |
 | `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
 | `message.default_sender` | type `M` 作成時の default `sender:` |
+| `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
 | `web.*` | `serve` と Web UI の既定値 |
 | `sync_ics.*` | `sync-ics` の default source / output / cache |
 
-## 13. alias
+## 13. CUI 拡張
+
+### 13.1 `tui`
+
+`tui` は未完了 task、現在時刻付近の agenda、active な `S` status を端末上で表示する dashboard です。
+
+```sh
+python -m lifetxt tui [path ...]
+```
+
+`textual` が利用可能な場合は最小限の Textual UI を使い、未導入の場合は依存なしの端末表示に fallback します。
+
+### 13.2 `fzf`
+
+`fzf` は通常の item filter を適用した後、`fzf` または `peco` で item を選択し、action を実行します。
+
+```sh
+python -m lifetxt fzf life.txt --open --type task --action done
+python -m lifetxt fzf life.txt --project research --action show
+python -m lifetxt fzf "projects/**/*.life.txt" --tool peco --action edit
+```
+
+| Option | 意味 |
+|---|---|
+| `--action done|edit|delete|show` | 選択 item に実行する action。省略時は prompt |
+| `--tool fzf|peco` | 選択 tool。既定では `fzf`、次に `peco` を探索 |
+| `--preview` / `--no-preview` | `fzf` preview の有効/無効 |
+| `--print-query` | `fzf` の query 行だけを出力 |
+
+`done` と `delete` は item ID を必要とします。必要なら先に `ids --assign` で ID を付与してください。
+
+### 13.3 `timer`
+
+`timer` は 1 つの running timer を JSON state file に保存し、停止時に合計時間を `elapsed:` として item に書き戻します。
+
+```sh
+python -m lifetxt timer start life.txt --id task_report
+python -m lifetxt timer status life.txt
+python -m lifetxt timer stop
+python -m lifetxt timer summary life.txt --project research
+```
+
+| Subcommand | 意味 |
+|---|---|
+| `start path --id ID` | `id:ID` の item の計測を開始。`[ ]` は `[/]` に変更 |
+| `stop [path] [--id ID]` | running timer を停止し `elapsed:` を更新 |
+| `status [path ...]` | running timer と経過時間を表示 |
+| `summary path ...` | `elapsed:` を item / project ごとに集計 |
+| `cancel` | item を変更せず state file だけ削除 |
+
+`elapsed:` は `25m`、`1h`、`1h30m` のように記録されます。state file の既定値は
+`~/.lifetxt_timer.json` で、config の `timer.state_file` で変更できます。
+
+### 13.4 `stats`
+
+`stats` は task 完了率、期限超過、habit streak、mood、project 別進捗を表示します。
+
+```sh
+python -m lifetxt stats life.txt
+python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
+python -m lifetxt stats life.txt --project research --format json
+python -m lifetxt stats "projects/**/*.life.txt" --group weekly
+```
+
+| Option | 意味 |
+|---|---|
+| `--from DATE` | 開始日。省略時は `--to` の 29 日前 |
+| `--to DATE` | 終了日。省略時は今日 |
+| `--type TYPE` | type または alias で入力 item を絞り込み |
+| `--project PROJECT` | `project:` で絞り込み |
+| `--group daily|weekly|monthly` | mood trend の集計単位 |
+| `--format text|json` | 出力形式 |
+
+### 13.5 `git-hook`
+
+`git-hook` は現在の repository に local Git hook を導入します。生成される `pre-commit`
+hook は `lifetxt check` を実行し、`commit-msg` hook は利用可能な場合に完了 task の要約を commit message に追記します。
+
+```sh
+python -m lifetxt git-hook status
+python -m lifetxt git-hook install --files life.txt examples/*.txt
+python -m lifetxt git-hook uninstall
+```
+
+既存の非 lifetxt hook は `--force` なしでは上書きしません。検証だけが必要なら `--no-commit-msg` を指定します。
+
+### 13.6 `completion`
+
+`completion` は shell completion script を生成します。
+
+```sh
+python -m lifetxt completion bash
+python -m lifetxt completion zsh -o ~/.zfunc/_lifetxt
+python -m lifetxt completion fish -o ~/.config/fish/completions/lifetxt.fish
+python -m lifetxt completion install --shell bash
+```
+
+`completion install` は導入手順を表示するだけで、shell startup file は自動変更しません。
+
+## 14. alias
 
 status alias:
 
 | Alias | Status |
 |---|---|
-| `todo`, `open` | `[ ]` |
-| `progress`, `doing`, `in_progress` | `[/]` |
-| `done`, `complete`, `completed` | `[x]` |
+| `todo`, `open`, `not_completed`, `queued`, `scheduled` | `[ ]` |
+| `progress`, `doing`, `in_progress`, `active`, `sending` | `[/]` |
+| `done`, `complete`, `completed`, `sent`, `delivered` | `[x]` |
 | `cancel`, `canceled`, `cancelled` | `[-]` |
 | `defer`, `deferred`, `moved` | `[>]` |
 | `pending`, `unknown` | `[?]` |
 | `note`, `n` | `[N]` |
+| `x`, `/`, `-`, `>`, `?` | 対応する記号 status |
 
 type alias:
 
@@ -828,8 +949,10 @@ type alias:
 | `habit`, `recurring` | `H` |
 | `note`, `memo` | `N` |
 | `status`, `presence`, `presence_status`, `state` | `S` |
+| `message`, `msg`, `mail`, `notification` | `M` |
+| `journal`, `diary`, `log`, `entry` | `J` |
 
-## 14. 実用例
+## 15. 実用例
 
 検査と変換:
 
@@ -883,153 +1006,3 @@ python -m lifetxt status life.txt --active
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
-
-## 追加: Message type と external config
-
-### Message type (`M`)
-
-`M` は人から人へのメッセージ、通知予約、配信依頼を記録する type です。
-
-必須 detail:
-
-```txt
-sender recipient
-```
-
-主な推奨 detail:
-
-```txt
-sender recipient notify_at notify_from notify_to channel service priority project tag note url id parent created updated
-```
-
-例:
-
-```sh
-python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
-python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
-python -m lifetxt to-json life.txt --type message --sender self --pretty
-```
-
-Message の日時判定では、`notify_at` は時点、`notify_from/notify_to` は通知期間として扱われます。
-
-### external config
-
-任意のコマンドで `--config FILE` を指定できます。省略時は `LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` の順で探索します。
-
-```sh
-python -m lifetxt config init -o .lifetxt.json
-python -m lifetxt --config .lifetxt.json config show
-python -m lifetxt agenda --config .lifetxt.json --around now --window 1d
-```
-
-主な config key:
-
-| Key | 意味 |
-|---|---|
-| `paths` | life.txt 読み込み系コマンドの default input files |
-| `write_file` | `serve` の default writable file |
-| `message.default_sender` | type `M` 作成時の default `sender:` |
-| `message.default_channel` | type `M` 作成時の default `channel:` |
-| `web.host`, `web.port` | `serve` の default bind 設定 |
-| `sync_ics.sources` | `sync-ics` の default iCalendar sources |
-## Additional: notify resident app and expanded config
-
-### `notify`
-
-type `M` の通知対象を表示、または `--watch` で常駐 polling します。
-
-```sh
-python -m lifetxt notify life.txt --recipient self
-python -m lifetxt notify life.txt --recipient self --format json --pretty
-python -m lifetxt notify life.txt --watch --interval 30
-```
-
-対象は type `M`、open workflow status (`[ ]`, `[/]`, `[>]`, `[?]`)、`recipient:` が一致する item です。`notify_at:` は単一通知時刻、`notify_from:` / `notify_to:` は通知期間として扱います。
-
-### expanded config
-
-`user.name` で自身のデフォルト名を指定できます。`message.default_sender` が空の場合、Message 作成時の `sender:` は `user.name` になります。
-
-主な追加 config key:
-
-| Key | Meaning |
-|---|---|
-| `user.name` | 自身の標準ユーザ名 |
-| `user.display_name` | UI 表示名 |
-| `notifications.recipient` | 通知対象者。空なら `user.name` |
-| `notifications.lookahead` | 未来方向の通知検出幅 |
-| `notifications.grace` | 過去方向の取りこぼし許容幅 |
-| `notifications.poll_seconds` | 常駐通知と Web 通知の polling 秒数 |
-| `notifications.desktop` | `notify --watch` の簡易 desktop 通知 default |
-| `web.notification_poll_seconds` | Web UI 通知 polling 秒数 |
-| `web.notification_lookahead` | Web UI 通知の未来方向検出幅 |
-| `api.id_key` | id として扱う detail key。現在は `id` |
-| `ids.auto` | 新規作成時に `id:` を自動付与するか |
-| `ids.key` | 自動IDを書き込む detail key。通常は `id` |
-| `ids.prefixes` | type ごとの自動ID prefix |
-| `views` | Web UI のURL preset定義 |
-| `sync_ics.generated_paths` | generated/read-only として扱うファイル一覧 |
-
-`ids.auto` が `true` の場合、`assist`、`/api/items`、`/api/messages`、Message
-reply の新規作成時に `id:` が未指定なら自動付与されます。既存IDは config
-の `paths`、`write_file`、必要に応じて `--output` / `--append` の対象から収集されるため、
-複数の `life.txt` を読み込む構成でも衝突を避けます。
-`check` は重複IDを warning `W213` として報告します。複数入力ファイル間の重複も対象です。
-
-### Notification acknowledgement and snooze
-
-`ack:` がある Message は通知済みとして扱われ、`notify` と Web 通知の対象から外れます。
-`snooze_until:` が未来の日時を指す場合、その時刻までは通知を抑止します。
-`notify --watch` は `notifications.state_file` に通知IDを保存し、再起動後も同じ通知を繰り返さないようにできます。
-
-| Key | Meaning |
-|---|---|
-| `notifications.state_file` | `notify --watch` の通知済みIDを保存するJSON file |
-| `notifications.snooze_default` | Web UI / API の default snooze duration |
-
-### `ids`
-
-`ids` は item ID の監査用コマンドです。ファイルは変更しません。
-`ids --assign` は一時ファイル経由でatomicに書き換えます。安全のため、実行前に
-`--dry-run` で確認し、必要なら `--backup` で `FILE.bak` を作成してください。
-
-```sh
-python -m lifetxt ids life.txt
-python -m lifetxt ids life.txt archive.life.txt --only duplicates
-python -m lifetxt ids life.txt --only missing --format json --pretty
-python -m lifetxt ids life.txt --assign --dry-run
-python -m lifetxt ids life.txt --assign --backup
-```
-
-| Option | Meaning |
-|---|---|
-| `--key KEY` | 監査する detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
-| `--only all` | summary、duplicate IDs、missing IDs を表示 |
-| `--only present` | 存在するID一覧を表示 |
-| `--only missing` | IDがないitemだけ表示 |
-| `--only duplicates` | 重複IDだけ表示 |
-| `--format text|json|jsonl` | 出力形式 |
-| `--assign` | IDがないitemへIDを付与 |
-| `--dry-run` | ファイルを書き換えず予定だけ表示 |
-| `--backup` | `--assign` で変更前に `FILE.bak` を作成 |
-## 追加: links
-
-`links` は item 間の ID 参照を一覧表示するコマンドです。対象 key は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` です。
-
-```sh
-python -m lifetxt links life.txt
-python -m lifetxt links life.txt --id task_report --direction incoming
-python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
-python -m lifetxt links life.txt --relation depends_on --relation blocks
-```
-
-| Option | 意味 |
-|---|---|
-| `--id ID` | 指定 ID に接続する link だけを表示 |
-| `--direction incoming|outgoing|both` | `--id` 指定時の方向 |
-| `--relation RELATION` | `depends_on` などの relation key に絞り込み。複数指定またはカンマ区切り可 |
-| `--key KEY` | ID として扱う detail key |
-| `--format text|json|jsonl` | 出力形式 |
-
-`check` は存在しない参照を `W215`、自己参照を `W216`、`parent:` cycle を `W217`、重複 ID による曖昧な参照を `W218` として報告します。

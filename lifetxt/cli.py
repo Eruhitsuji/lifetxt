@@ -374,6 +374,132 @@ def build_parser():
     )
     config_show.set_defaults(func=command_config_show)
 
+    tui = subparsers.add_parser(
+        "tui",
+        help="Run a terminal dashboard for tasks, agenda, and status.",
+    )
+    tui.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to read. Defaults to config paths or life.txt.",
+    )
+    tui.set_defaults(func=command_tui)
+
+    fzf = subparsers.add_parser(
+        "fzf",
+        help="Select filtered items with fzf or peco and run an action.",
+    )
+    _add_input_paths(fzf)
+    _add_item_filter_arguments(fzf)
+    fzf.add_argument(
+        "--action",
+        choices=("done", "edit", "delete", "show"),
+        help="Action to run on selected items. Defaults to an interactive prompt.",
+    )
+    fzf.add_argument(
+        "--tool",
+        choices=("fzf", "peco"),
+        help="Selection tool. Defaults to fzf or peco from PATH.",
+    )
+    fzf.add_argument(
+        "--preview",
+        dest="preview",
+        action="store_true",
+        default=True,
+        help="Enable fzf preview. This is the default.",
+    )
+    fzf.add_argument(
+        "--no-preview",
+        dest="preview",
+        action="store_false",
+        help="Disable fzf preview.",
+    )
+    fzf.add_argument(
+        "--print-query",
+        action="store_true",
+        help="Print only the fzf query string.",
+    )
+    fzf.set_defaults(func=command_fzf)
+
+    timer = subparsers.add_parser(
+        "timer",
+        help="Start, stop, inspect, or summarize a single task timer.",
+    )
+    timer_subparsers = timer.add_subparsers(dest="timer_command")
+    timer_start = timer_subparsers.add_parser("start", help="Start a timer for an item ID.")
+    timer_start.add_argument("path", help="life.txt file containing the item.")
+    timer_start.add_argument("--id", dest="item_id", required=True, help="Item ID to time.")
+    timer_start.add_argument("--note", help="Optional note stored in timer state.")
+    timer_start.set_defaults(func=command_timer)
+    timer_stop = timer_subparsers.add_parser("stop", help="Stop the running timer.")
+    timer_stop.add_argument("path", nargs="?", help="life.txt file. Defaults to the file stored in timer state.")
+    timer_stop.add_argument("--id", dest="item_id", help="Expected running item ID.")
+    timer_stop.set_defaults(func=command_timer)
+    timer_status = timer_subparsers.add_parser("status", help="Show the running timer.")
+    timer_status.add_argument("paths", nargs="*", metavar="path", help="Optional life.txt files used to resolve the title.")
+    timer_status.set_defaults(func=command_timer)
+    timer_summary = timer_subparsers.add_parser("summary", help="Summarize elapsed: details.")
+    timer_summary.add_argument("paths", nargs="+", metavar="path", help="life.txt file(s) to summarize.")
+    timer_summary.add_argument("--from", dest="start", help="Start date or datetime.")
+    timer_summary.add_argument("--to", dest="end", help="End date or datetime.")
+    timer_summary.add_argument("--project", help="Filter by project.")
+    timer_summary.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
+    timer_summary.set_defaults(func=command_timer)
+    timer_cancel = timer_subparsers.add_parser("cancel", help="Cancel the running timer without updating an item.")
+    timer_cancel.set_defaults(func=command_timer)
+
+    stats = subparsers.add_parser(
+        "stats",
+        help="Show task, habit, mood, and project statistics.",
+    )
+    _add_input_paths(stats)
+    stats.add_argument("--from", dest="start", help="Start date. Defaults to 29 days before --to.")
+    stats.add_argument("--to", dest="end", help="End date. Defaults to today.")
+    stats.add_argument("--type", dest="kind", help="Filter by type or alias.")
+    stats.add_argument("--project", help="Filter by project.")
+    stats.add_argument(
+        "--group",
+        choices=("daily", "weekly", "monthly"),
+        default="daily",
+        help="Aggregation bucket size.",
+    )
+    stats.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
+    stats.set_defaults(func=command_stats)
+
+    git_hook = subparsers.add_parser(
+        "git-hook",
+        help="Install, uninstall, or inspect lifetxt Git hooks.",
+    )
+    git_hook_subparsers = git_hook.add_subparsers(dest="git_hook_command")
+    git_hook_install = git_hook_subparsers.add_parser("install", help="Install Git hooks.")
+    git_hook_install.add_argument("--repo-dir", default=".", help="Git repository root. Defaults to current directory.")
+    git_hook_install.add_argument("--files", nargs="*", help="life.txt files checked by hooks.")
+    git_hook_install.add_argument("--no-commit-msg", action="store_true", help="Do not install commit-msg hook.")
+    git_hook_install.add_argument("--force", action="store_true", help="Overwrite non-lifetxt hooks.")
+    git_hook_install.set_defaults(func=command_git_hook)
+    git_hook_uninstall = git_hook_subparsers.add_parser("uninstall", help="Uninstall lifetxt Git hooks.")
+    git_hook_uninstall.add_argument("--repo-dir", default=".", help="Git repository root. Defaults to current directory.")
+    git_hook_uninstall.set_defaults(func=command_git_hook)
+    git_hook_status = git_hook_subparsers.add_parser("status", help="Show Git hook installation status.")
+    git_hook_status.add_argument("--repo-dir", default=".", help="Git repository root. Defaults to current directory.")
+    git_hook_status.add_argument("--files", nargs="*", help="life.txt files checked by hooks.")
+    git_hook_status.set_defaults(func=command_git_hook)
+
+    completion = subparsers.add_parser(
+        "completion",
+        help="Generate shell completion scripts.",
+    )
+    completion_subparsers = completion.add_subparsers(dest="completion_command")
+    for shell in ("bash", "zsh", "fish"):
+        shell_parser = completion_subparsers.add_parser(shell, help="Generate %s completion." % shell)
+        shell_parser.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+        shell_parser.set_defaults(func=command_completion)
+    completion_install = completion_subparsers.add_parser("install", help="Print installation instructions.")
+    completion_install.add_argument("--shell", choices=("bash", "zsh", "fish"), help="Shell to show instructions for.")
+    completion_install.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    completion_install.set_defaults(func=command_completion)
+
     filter_command = subparsers.add_parser(
         "filter",
         help="Filter life.txt items and output life.txt, JSON, or JSONL.",
@@ -1212,6 +1338,44 @@ def command_config_show(args):
     output = json.dumps(_public_config(_config(args)), ensure_ascii=False, indent=2)
     write_text(None, output + "\n")
     return 0
+
+
+def command_tui(args):
+    args.paths = _normalize_paths(args.paths, _config(args), stdin_when_empty=False) or ["life.txt"]
+    from .tui import cmd_tui
+    return cmd_tui(args)
+
+
+def command_fzf(args):
+    args.paths = _normalize_paths(args.paths, _config(args), stdin_when_empty=False) or ["life.txt"]
+    from .fzf_helper import cmd_fzf
+    return cmd_fzf(args)
+
+
+def command_timer(args):
+    config = _config(args)
+    if getattr(args, "timer_command", None) == "summary":
+        args.paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
+    elif getattr(args, "timer_command", None) == "status" and getattr(args, "paths", None):
+        args.paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
+    from .timer import cmd_timer
+    return cmd_timer(args)
+
+
+def command_stats(args):
+    args.paths = _normalize_paths(args.paths, _config(args), stdin_when_empty=False) or ["life.txt"]
+    from .stats import cmd_stats
+    return cmd_stats(args)
+
+
+def command_git_hook(args):
+    from .git_hook import cmd_git_hook
+    return cmd_git_hook(args)
+
+
+def command_completion(args):
+    from .completion import cmd_completion
+    return cmd_completion(args)
 
 
 def command_assist_update(args):

@@ -29,6 +29,14 @@ python -m lifetxt status [path ...]
 python -m lifetxt notify [path ...]
 python -m lifetxt agenda [path ...]
 python -m lifetxt assist [options]
+python -m lifetxt tui [path ...]
+python -m lifetxt fzf [path ...]
+python -m lifetxt timer start path --id ID
+python -m lifetxt timer stop
+python -m lifetxt timer summary [path ...]
+python -m lifetxt stats [path ...]
+python -m lifetxt git-hook install
+python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
@@ -52,6 +60,12 @@ python -m lifetxt config show
 | `notify` | Show or watch due type `M` message notifications |
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
+| `tui` | Show a terminal dashboard for tasks, agenda, and status |
+| `fzf` | Select filtered items with `fzf` or `peco` and run an action |
+| `timer` | Track elapsed time for one task-like item |
+| `stats` | Summarize task, habit, mood, and project activity |
+| `git-hook` | Install or inspect Git hooks that validate life.txt files |
+| `completion` | Generate shell completion scripts |
 | `serve` | Run the optional FastAPI REST API and browser GUI |
 | `config` | Create or inspect an external JSON config file |
 
@@ -176,6 +190,12 @@ CLI command coverage:
 | `agenda` | yes | optional with `--format life -o` | yes | yes |
 | `assist` | optional for update | yes | yes unless `--no-check` | no |
 | `import-ics`, `sync-ics` | `.ics` | yes | generated item validation |
+| `tui` | yes | no | yes | dashboard-specific |
+| `fzf` | yes | `done` and `delete` actions | yes | yes |
+| `timer` | yes | `start` and `stop` update one item | yes | summary filters |
+| `stats` | yes | no | yes | type and project filters |
+| `git-hook` | no | Git hooks only | no | no |
+| `completion` | no | optional script output | no | no |
 | `serve` | yes | yes through API/UI | yes | URL/API filters |
 
 ## 3. `check`
@@ -882,6 +902,9 @@ Example config:
     "default_sender": "",
     "default_channel": "lifetxt"
   },
+  "timer": {
+    "state_file": "~/.lifetxt_timer.json"
+  },
   "notifications": {
     "enabled": true,
     "recipient": "",
@@ -908,7 +931,8 @@ Example config:
       "H": "habit",
       "N": "note",
       "S": "status",
-      "M": "msg"
+      "M": "msg",
+      "J": "journal"
     }
   },
   "web": {
@@ -969,7 +993,123 @@ operations and `ids --assign --key KEY` use the selected key. Config `users`,
 `teams`, and `tags` supply aliases and team membership for `--user`, `--team`,
 and tag filters.
 
-## 13. Aliases
+## 13. CUI Extensions
+
+### 13.1 `tui`
+
+`tui` shows a terminal dashboard for open tasks, near-current agenda items, and
+active `S` status records.
+
+```sh
+python -m lifetxt tui [path ...]
+```
+
+The command reads the same path forms as other life.txt commands. If the
+optional `textual` package is installed, a minimal Textual interface is used.
+Otherwise the command falls back to a dependency-free terminal view.
+
+### 13.2 `fzf`
+
+`fzf` applies the normal item filters, sends matching items to `fzf` or `peco`,
+and then runs an action.
+
+```sh
+python -m lifetxt fzf life.txt --open --type task --action done
+python -m lifetxt fzf life.txt --project research --action show
+python -m lifetxt fzf "projects/**/*.life.txt" --tool peco --action edit
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--action done|edit|delete|show` | Action for selected items; prompts when omitted |
+| `--tool fzf|peco` | Selection tool; auto-detects `fzf` then `peco` by default |
+| `--preview` / `--no-preview` | Enable or disable `fzf` preview |
+| `--print-query` | With `fzf`, print the query line instead of selected items |
+
+`done` and `delete` require an item ID. Use `ids --assign` first if needed.
+`edit` opens the selected source file with `$EDITOR`.
+
+### 13.3 `timer`
+
+`timer` keeps one running timer in a JSON state file and writes accumulated time
+back to the item as `elapsed:`.
+
+```sh
+python -m lifetxt timer start life.txt --id task_report
+python -m lifetxt timer status life.txt
+python -m lifetxt timer stop
+python -m lifetxt timer summary life.txt --project research
+```
+
+Subcommands:
+
+| Subcommand | Meaning |
+|---|---|
+| `start path --id ID` | Start timing the item with `id:ID`; `[ ]` becomes `[/]` |
+| `stop [path] [--id ID]` | Stop the running timer and update `elapsed:` |
+| `status [path ...]` | Show the current timer and elapsed time |
+| `summary path ...` | Sum `elapsed:` values by item and project |
+| `cancel` | Remove the running state without changing any item |
+
+Elapsed values use compact forms such as `25m`, `1h`, or `1h30m`. The state file
+defaults to `~/.lifetxt_timer.json` and can be changed with
+`timer.state_file` in config.
+
+### 13.4 `stats`
+
+`stats` summarizes task completion, overdue tasks, habit streaks, mood entries,
+and project completion rates.
+
+```sh
+python -m lifetxt stats life.txt
+python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
+python -m lifetxt stats life.txt --project research --format json
+python -m lifetxt stats "projects/**/*.life.txt" --group weekly
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--from DATE` | Start date; defaults to 29 days before `--to` |
+| `--to DATE` | End date; defaults to today |
+| `--type TYPE` | Restrict input items by type or alias |
+| `--project PROJECT` | Restrict input items by `project:` |
+| `--group daily|weekly|monthly` | Bucket mood trend output |
+| `--format text|json` | Output format |
+
+### 13.5 `git-hook`
+
+`git-hook` installs local Git hooks for the current repository. The generated
+`pre-commit` hook runs `lifetxt check` for the configured files. The generated
+`commit-msg` hook appends a short list of completed tasks when available.
+
+```sh
+python -m lifetxt git-hook status
+python -m lifetxt git-hook install --files life.txt examples/*.txt
+python -m lifetxt git-hook uninstall
+```
+
+The installer refuses to overwrite non-lifetxt hooks unless `--force` is passed.
+Use `--no-commit-msg` when only validation is desired.
+
+### 13.6 `completion`
+
+`completion` emits shell completion scripts.
+
+```sh
+python -m lifetxt completion bash
+python -m lifetxt completion zsh -o ~/.zfunc/_lifetxt
+python -m lifetxt completion fish -o ~/.config/fish/completions/lifetxt.fish
+python -m lifetxt completion install --shell bash
+```
+
+`completion install` prints commands only. It does not modify shell startup
+files automatically.
+
+## 14. Aliases
 
 Status aliases include:
 
@@ -997,7 +1137,7 @@ Type aliases include:
 | `message`, `msg`, `mail`, `notification` | `M` |
 | `journal`, `diary`, `log`, `entry` | `J` |
 
-## 14. Practical Workflows
+## 15. Practical Workflows
 
 Validate and convert:
 

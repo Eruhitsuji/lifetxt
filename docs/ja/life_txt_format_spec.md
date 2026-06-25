@@ -216,7 +216,16 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 | `ack` | 通知確認日または通知確認日時 | `ack:2026-06-06T09:05` |
 | `snooze_until` | この日付・日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 
-### 7.5 Recurrence keys
+### 7.5 Effort keys
+
+| Key | 意味 | 例 |
+|---|---|---|
+| `est` | 見積もり作業量または見積もり時間 | `est:2h` |
+| `elapsed` | 実際の累積経過時間 | `elapsed:1h30m` |
+
+`elapsed:` は `timer` CLI command が使用します。`25m`、`1h`、`1h30m` のような短い形式を推奨します。
+
+### 7.6 Recurrence keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -229,7 +238,7 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 を推奨します。`RRULE:...` は外部互換のため保存できますが、組み込み agenda
 の展開対象は simple repeat です。
 
-### 7.6 Message keys
+### 7.7 Message keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -242,7 +251,7 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 | `snooze_until` | この日時まで通知を抑止 | `snooze_until:2026-06-06T09:30` |
 | `channel` | 配信経路 | `channel:teams` |
 
-### 7.7 Journal keys
+### 7.8 Journal keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -254,14 +263,14 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 | `loc` | 場所 | `loc:home` |
 | `body` | 長文本文 | `| body line` |
 
-### 7.8 Workflow keys
+### 7.9 Workflow keys
 
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
 | `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
 
-### 7.9 System keys
+### 7.10 System keys
 
 | Key | 意味 | 例 |
 |---|---|---|
@@ -310,7 +319,7 @@ time filter では一致対象にしません。
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner team est project tag note body id parent ref depends_on blocks related
+do due priority assignee owner team est elapsed project tag note body id parent ref depends_on blocks related
 ```
 
 例:

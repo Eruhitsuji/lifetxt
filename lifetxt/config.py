@@ -64,6 +64,11 @@ def config_template():
             ("default_channel", "lifetxt"),
         ]
     )
+    data["timer"] = OrderedDict(
+        [
+            ("state_file", "~/.lifetxt_timer.json"),
+        ]
+    )
     data["notifications"] = OrderedDict(
         [
             ("enabled", True),

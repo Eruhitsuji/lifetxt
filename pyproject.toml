@@ -27,6 +27,10 @@ web = [
   "fastapi",
   "uvicorn[standard]"
 ]
+tui = [
+  "textual>=0.1.0",
+  "watchdog>=2.0.0"
+]
 
 [tool.setuptools]
 packages = ["lifetxt"]

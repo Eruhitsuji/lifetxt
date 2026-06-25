@@ -1,9 +1,10 @@
 # life.txt
 
-`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状態、メモを
+`life.txt` は、タスク、予定、締切、リマインダー、習慣、在席状態、メッセージ、メモ、日記・日誌を
 1 つの読み書きしやすいプレーンテキストファイルで管理するための形式です。
 
 形式の詳細は [life_txt_format_spec.md](./life_txt_format_spec.md) を参照してください。
+command 互換性、filter、出力形式、変換規則は [cli.md](./cli.md) を参照してください。
 
 ## 最小 life.txt
 
@@ -11,6 +12,7 @@
 [ ] T Write_Report due:2026-06-12 project:university assignee:alice
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
+[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] J "Research day" on:2026-06-23 mood:good tag:lab
 | Read papers in the morning.
 | Wrote parser tests in the afternoon.
@@ -27,6 +29,7 @@
 - [habits_reminders_life.txt](../../examples/habits_reminders_life.txt): 習慣とリマインダー
 - [status_presence.txt](../../examples/status_presence.txt): 個人の在席状態
 - [team_status_life.txt](../../examples/team_status_life.txt): 複数人の在席状態
+- [messages_life.txt](../../examples/messages_life.txt): message と通知 record
 - [diary_life.txt](../../examples/diary_life.txt): 複数行 body を含む日記・日誌
 - [linked_life.txt](../../examples/linked_life.txt): `parent`、`ref`、`depends_on`、`blocks`、`related` による ID 参照
 - [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezone、小数秒、simple repeat、body、依存関係の例
@@ -54,9 +57,12 @@ python -m lifetxt filter life.txt --assignee alice -o alice_items.life.txt
 python -m lifetxt filter "projects/**/*.life.txt" --team research --tag-all urgent,review --exclude-tag archived
 python -m lifetxt filter life.txt --after now --type event -o future_schedule.life.txt
 python -m lifetxt filter life.txt --type status --person self -o my_status.life.txt
+python -m lifetxt filter life.txt --type message --recipient alice -o alice_messages.life.txt
 python -m lifetxt status life.txt
 python -m lifetxt status life.txt --active
 python -m lifetxt status life.txt --format json --pretty
+python -m lifetxt notify life.txt --recipient self
+python -m lifetxt notify life.txt --watch --interval 30
 python -m lifetxt ids life.txt --assign --dry-run
 python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 python -m lifetxt links life.txt --id task_report --direction incoming
@@ -65,10 +71,18 @@ python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30+09:00 --to 2026-06-
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --type task --project research
+python -m lifetxt tui life.txt
+python -m lifetxt fzf life.txt --open --type task --action done
+python -m lifetxt timer start life.txt --id task_report
+python -m lifetxt timer stop
+python -m lifetxt stats life.txt --project research
+python -m lifetxt git-hook status
+python -m lifetxt completion bash
 python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+python -m lifetxt config init -o .lifetxt.json
 ```
 
 Local install:
@@ -79,8 +93,8 @@ lifetxt check examples/minimal_life.txt
 ```
 
 多くの読み込み系コマンドは複数の入力 path、glob pattern、life.txt 風 `.txt` を含むディレクトリを受け取れます。`filter`、`to-json`、
-`to-jsonl` は `--open`、`--status`、`--type`、`--project`、`--tag`、
-`--tag-all`、`--exclude-tag`、`--user`、`--team`、`--person`、`--owner`、`--assignee`、`--attendee`、`--detail`、`--text`、
+`to-jsonl`、`to-csv` は `--open`、`--status`、`--type`、`--project`、`--tag`、
+`--tag-all`、`--exclude-tag`、`--user`、`--team`、`--person`、`--owner`、`--assignee`、`--attendee`、`--sender`、`--recipient`、`--detail`、`--text`、
 `--after`、`--before` などの item filter に対応します。`filter --format life` は
 一致した item の元行を既定で保持します。正規化した life.txt 行を再生成したい場合は
 `--canonical` を使います。`person:` は status / presence の対象者、`assignee:` は
@@ -101,6 +115,10 @@ lifetxt check examples/minimal_life.txt
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+端末向け補助機能として `tui`、`fzf`、`timer`、`stats`、`git-hook`、
+`completion` があります。`fzf` は `fzf` または `peco` が PATH に必要です。
+TUI は任意の `tui` extra を使えますが、依存なしの fallback 表示もあります。
 
 ## assist
 

@@ -182,6 +182,77 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertNotIn("<script>", html)
         self.assertEqual("Heading\nbold and site", markdown_to_plain("# Heading\n**bold** and [site](https://example.com)"))
 
+    def test_markdown_table_renders_html(self):
+        from lifetxt.markdown import markdown_to_html, markdown_to_plain
+
+        md = (
+            "| Name | Score |\n"
+            "|------|-------|\n"
+            "| Alice | 10 |\n"
+            "| Bob | 20 |\n"
+        )
+        result = markdown_to_html(md)
+
+        self.assertIn("<table>", result)
+        self.assertIn("<thead>", result)
+        self.assertIn("<th>Name</th>", result)
+        self.assertIn("<th>Score</th>", result)
+        self.assertIn("<tbody>", result)
+        self.assertIn("<td>Alice</td>", result)
+        self.assertIn("<td>Bob</td>", result)
+        self.assertNotIn("|---", result)
+
+    def test_markdown_table_alignment(self):
+        from lifetxt.markdown import markdown_to_html
+
+        md = (
+            "| Left | Center | Right |\n"
+            "|:-----|:------:|------:|\n"
+            "| a | b | c |\n"
+        )
+        result = markdown_to_html(md)
+
+        self.assertIn('style="text-align:left"', result)
+        self.assertIn('style="text-align:center"', result)
+        self.assertIn('style="text-align:right"', result)
+
+    def test_markdown_table_inline_formatting(self):
+        from lifetxt.markdown import markdown_to_html
+
+        md = (
+            "| Task | Status |\n"
+            "|------|--------|\n"
+            "| **Done** | `ok` |\n"
+        )
+        result = markdown_to_html(md)
+
+        self.assertIn("<strong>Done</strong>", result)
+        self.assertIn("<code>ok</code>", result)
+
+    def test_markdown_table_plain_text(self):
+        from lifetxt.markdown import markdown_to_plain
+
+        md = (
+            "| Name | Score |\n"
+            "|------|-------|\n"
+            "| Alice | 10 |\n"
+        )
+        result = markdown_to_plain(md)
+
+        self.assertIn("Name", result)
+        self.assertIn("Alice", result)
+        self.assertNotIn("---", result)
+        self.assertNotIn("|", result)
+
+    def test_markdown_table_header_only_no_sep_renders_as_paragraphs(self):
+        from lifetxt.markdown import markdown_to_html
+
+        md = "| col1 | col2 |\n"
+        result = markdown_to_html(md)
+
+        self.assertNotIn("<table>", result)
+        self.assertIn("<p>", result)
+
     def test_safe_markdown_rejects_unsafe_link_scheme(self):
         from lifetxt.markdown import markdown_to_html
 

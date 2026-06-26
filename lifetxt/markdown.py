@@ -11,6 +11,8 @@ _ITALIC_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _UNORDERED_RE = re.compile(r"^\s*[-*]\s+(.+?)\s*$")
 _ORDERED_RE = re.compile(r"^\s*\d+\.\s+(.+?)\s*$")
 _HEADING_RE = re.compile(r"^(#{1,3})\s+(.+?)\s*$")
+_TABLE_ROW_RE = re.compile(r"^\|")
+_TABLE_SEP_CELL_RE = re.compile(r"^:?-+:?$")
 _SAFE_LINK_SCHEMES = {"http", "https", "mailto"}
 
 
@@ -27,6 +29,7 @@ def markdown_to_plain(text):
     text = "" if text is None else str(text)
     text = _strip_fence_markers(text)
     text = re.sub(r"(?m)^#{1,3}\s+", "", text)
+    text = _strip_table_markers(text)
     text = _LINK_RE.sub(lambda match: match.group(1), text)
     text = _CODE_RE.sub(lambda match: match.group(1), text)
     text = _BOLD_RE.sub(lambda match: match.group(1), text)
@@ -92,6 +95,7 @@ def render_block_markdown(text):
     list_type = None
     in_code = False
     code_lines = []
+    table_lines = []
 
     def close_paragraph():
         if paragraph:
@@ -121,10 +125,16 @@ def render_block_markdown(text):
         else:
             output.append("<pre><code></code></pre>")
 
+    def close_table():
+        if table_lines:
+            output.append(_render_table(table_lines))
+            table_lines[:] = []
+
     for line in lines:
         if line.strip().startswith("```"):
             close_paragraph()
             close_list()
+            close_table()
             if in_code:
                 close_code()
                 in_code = False
@@ -140,12 +150,14 @@ def render_block_markdown(text):
         if not line.strip():
             close_paragraph()
             close_list()
+            close_table()
             continue
 
         heading = _HEADING_RE.match(line)
         if heading:
             close_paragraph()
             close_list()
+            close_table()
             level = len(heading.group(1))
             output.append(
                 "<h%d>%s</h%d>"
@@ -155,23 +167,33 @@ def render_block_markdown(text):
 
         unordered = _UNORDERED_RE.match(line)
         if unordered:
+            close_table()
             ensure_list("ul")
             output.append("<li>%s</li>" % render_inline_markdown(unordered.group(1)))
             continue
 
         ordered = _ORDERED_RE.match(line)
         if ordered:
+            close_table()
             ensure_list("ol")
             output.append("<li>%s</li>" % render_inline_markdown(ordered.group(1)))
             continue
 
+        if _TABLE_ROW_RE.match(line):
+            close_paragraph()
+            close_list()
+            table_lines.append(line)
+            continue
+
         close_list()
+        close_table()
         paragraph.append(line)
 
     if in_code:
         close_code()
     close_paragraph()
     close_list()
+    close_table()
     return "\n".join(output)
 
 
@@ -191,3 +213,67 @@ def _strip_fence_markers(text):
             continue
         lines.append(line)
     return "\n".join(lines)
+
+
+def _strip_table_markers(text):
+    result = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            result.append(line)
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if all(_TABLE_SEP_CELL_RE.match(c) for c in cells if c):
+            continue  # drop separator rows
+        result.append("  ".join(c for c in cells if c))
+    return "\n".join(result)
+
+
+def _is_separator_row(line):
+    cells = [c.strip() for c in line.strip().strip("|").split("|")]
+    return bool(cells) and all(_TABLE_SEP_CELL_RE.match(c) for c in cells if c)
+
+
+def _parse_table_cells(line):
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _render_table(table_lines):
+    if len(table_lines) < 2 or not _is_separator_row(table_lines[1]):
+        return "\n".join(
+            "<p>%s</p>" % render_inline_markdown(line.strip()) for line in table_lines
+        )
+
+    sep_cells = _parse_table_cells(table_lines[1])
+    alignments = []
+    for cell in sep_cells:
+        if cell.startswith(":") and cell.endswith(":"):
+            alignments.append("center")
+        elif cell.endswith(":"):
+            alignments.append("right")
+        elif cell.startswith(":"):
+            alignments.append("left")
+        else:
+            alignments.append(None)
+
+    def cell_style(i):
+        align = alignments[i] if i < len(alignments) else None
+        return ' style="text-align:%s"' % align if align else ""
+
+    parts = ["<table>", "<thead>", "<tr>"]
+    for i, cell in enumerate(_parse_table_cells(table_lines[0])):
+        parts.append("<th%s>%s</th>" % (cell_style(i), render_inline_markdown(cell)))
+    parts += ["</tr>", "</thead>"]
+
+    body_rows = table_lines[2:]
+    if body_rows:
+        parts.append("<tbody>")
+        for row_line in body_rows:
+            parts.append("<tr>")
+            for i, cell in enumerate(_parse_table_cells(row_line)):
+                parts.append("<td%s>%s</td>" % (cell_style(i), render_inline_markdown(cell)))
+            parts.append("</tr>")
+        parts.append("</tbody>")
+
+    parts.append("</table>")
+    return "\n".join(parts)

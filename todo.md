@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-26
+Last updated: 2026-06-26 (updated)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -16,7 +16,6 @@ Priority guide:
 - [ ] Verify `tui` in real terminals: WSL, Windows Terminal, Textual installed/not installed, watchdog installed/not installed, Vim-like keymap, and curses colors.
 - [ ] Verify `lifetxt fzf` with actual `fzf` and `peco` on both Windows and Unix-like shells, including preview command quoting.
 - [ ] Run a cross-platform smoke test for `timer start/pause/resume/status/stop/cancel` with a real state file path.
-- [ ] Fix Markdown table rendering: investigate and resolve broken table display in CLI output and Web UI (misaligned columns, missing separators, or renderer mismatch).
 
 ## P1: Format Semantics
 
@@ -113,7 +112,6 @@ Priority guide:
 - [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
 - [ ] Add tests for cross-file ID conflict detection across glob-expanded file sets.
 - [ ] Add `archive` command tests: `--dry-run` output, `--move` vs `--copy` behavior, and edge cases such as open items mixed with completed items.
-- [ ] Add Markdown table rendering tests to catch regression in CLI and Web UI output.
 
 ## Deferred Ideas
 

@@ -22,6 +22,12 @@
 | print(add(2, 3))  # Output: 5
 | ```
 |
+| ## Table example
+| | Name | Age | Occupation |
+| | --- | --- | --- |
+| | Alice | 30 | Engineer |
+| | Bob | 25 | Designer |
+| 
 
 [ ] M "Review `markdown` support" sender:self recipient:alice notify_at:2026-06-27T09:00
 | Please review:

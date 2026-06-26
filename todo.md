@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x2)
+Last updated: 2026-06-27 (updated x4)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -15,7 +15,6 @@ Priority guide:
 
 - [ ] Verify `tui` in real terminals: WSL, Windows Terminal, Textual installed/not installed, watchdog installed/not installed, Vim-like keymap, and curses colors.
 - [ ] Verify `lifetxt fzf` with actual `fzf` and `peco` on both Windows and Unix-like shells, including preview command quoting.
-- [ ] Run a cross-platform smoke test for `timer start/pause/resume/status/stop/cancel` with a real state file path.
 
 ## P1: Format Semantics
 
@@ -29,6 +28,7 @@ Priority guide:
 - [ ] Decide whether hierarchy should be represented mainly by `parent:` or inferred indentation, and how `--canonical` should output it.
 - [ ] Add line continuation syntax: a trailing `\` at end of line joins the next line as if they were one, following shell convention (bash/zsh style). Define parser behavior for whitespace handling at the join point and error handling for a bare `\` at end of file.
 - [ ] Define cross-file ID reference semantics: allow `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` to resolve IDs across multiple loaded files, not only within a single file. Specify how the file of origin is reported in JSON/JSONL output and error messages.
+- [ ] Define encryption metadata conventions: decide whether encrypted field values are stored inline as a tagged string (e.g., `note:enc:BASE64`) or in a separate sidecar file, and how the parser distinguishes encrypted from plain values without decrypting.
 
 ## P1: CLI / CUI
 
@@ -38,6 +38,8 @@ Priority guide:
 - [ ] Add text output modes for wide/compact terminal widths where tables currently become hard to read.
 - [ ] Improve `assist` support for Markdown body, RRULE, repeat, duration, and links.
 - [ ] Keep CLI help and docs synchronized for `tui`, `fzf`, `timer`, `stats`, `git-hook`, and `completion`.
+- [ ] Add `encrypt` and `decrypt` commands: encrypt selected field values (e.g., `body:`, `note:`, or all fields of `J` and `M` type items) using a passphrase or key file. `encrypt` rewrites matched values as tagged ciphertext in-place; `decrypt` restores them. Support `--field FIELD` to limit scope, `--type TYPE` to target specific item types, `--dry-run` to preview changes, and `--key-env ENVVAR` to avoid passing secrets on the command line. Use only Python standard-library primitives (`hashlib`, `hmac`, `secrets`) for the dependency-free core; document an optional path using the `cryptography` package for stronger algorithms. Define a stable ciphertext tag format (e.g., `enc:AES256GCM:BASE64`) so the parser can detect and skip rendering of encrypted values without decrypting.
+- [ ] Add `plot` command for CLI-native visualization: render task completion trends, habit streaks, mood timelines, elapsed time by project, and deadline density as Unicode bar charts or sparklines in the terminal without any additional dependencies. Support `--type`, `--project`, `--from`, `--to`, and `--group daily|weekly|monthly` filters consistent with `stats`. Add an optional `--format svg` or `--format png` output mode using `matplotlib` or another opt-in dependency; keep the dependency-free text output as the default.
 
 ## P1: Web API / Browser UI
 
@@ -49,6 +51,7 @@ Priority guide:
 - [ ] Represent recurrence occurrences in Web API/UI without confusing source items and generated occurrences.
 - [ ] Add API tests for mixed writable files and generated/read-only files.
 - [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with current endpoint request/response examples.
+- [ ] Add chart endpoints to the Web API (`/api/chart/tasks`, `/api/chart/habits`, `/api/chart/mood`, `/api/chart/elapsed`) that return JSON data suitable for rendering with a browser charting library. Add corresponding chart panels to the browser GUI.
 
 ## P1: Multiple Files / Sync / External Tools
 
@@ -71,6 +74,7 @@ Priority guide:
 - [ ] Add editor support for Markdown body, quoted values, RRULE, and recurrence occurrences.
 - [ ] Add snippets for task, event, status, message, journal, timer-ready task, and linked subtask records.
 - [ ] Add syntax highlight and snippet support for line continuation (`\` at end of line).
+- [ ] Add syntax highlight support for encrypted field values (e.g., `enc:` prefix tag) so editors display them distinctly rather than as plain text.
 
 ## P2: TUI Usability
 
@@ -93,10 +97,14 @@ Priority guide:
 - [ ] Add `--fix` mode to `check` (or a separate `fix` command) to auto-apply W222 duration normalization and other canonicalization warnings in-place.
 - [ ] Document line continuation syntax (`\`) with examples and known limitations (e.g., interaction with body continuation `|` lines).
 - [ ] Document cross-file ID reference behavior: which commands resolve cross-file IDs, how to pass multiple files, and how `--config paths` can automate this.
+- [ ] Document the `encrypt`/`decrypt` commands: supported algorithms, key management recommendations (passphrase vs. key file vs. environment variable), which field types are appropriate targets, and how to use `check` safely on a partially encrypted file.
+- [ ] Document the `plot` command: available chart types, filter options, terminal rendering behavior, and how to enable optional SVG/PNG output.
+- [ ] Add `plot` and `encrypt`/`decrypt` workflow examples to `docs/en/cli.md` and `docs/ja/cli.md`.
 
 ## P2: Tests / CI / Release
 
 - [ ] Add CI for unit tests, compile checks, and example validation.
+- [ ] Add a lightweight smoke-test runner for release checks that can execute selected CLI smoke tests, including the timer state-file smoke test, without running the full unittest suite.
 - [ ] Add snapshot tests for important human-readable CLI output.
 - [ ] Add cross-platform tests for paths, glob expansion, line endings, and shell completion output.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and `projects/**/*.life.txt`.
@@ -110,6 +118,8 @@ Priority guide:
 - [ ] Verify `pip install -e .`, optional extras, console script entry points, and Windows PowerShell usage.
 - [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
 - [ ] Add `archive` command integration tests for multi-file sources, `--status` custom filters, and `--before` edge cases (items missing date keys).
+- [ ] Add `encrypt`/`decrypt` round-trip tests: verify that encrypting and decrypting a field restores the original value exactly, across all supported algorithms. Test `--dry-run`, `--field`, `--type`, and `--key-env` options. Test that `check` does not emit false-positive errors for encrypted values it cannot read.
+- [ ] Add `plot` output tests: verify text chart rendering for task, habit, mood, and elapsed types with `--group daily`, `weekly`, and `monthly`. Add snapshot tests for terminal bar chart and sparkline output.
 
 ## Deferred Ideas
 
@@ -122,3 +132,6 @@ Priority guide:
 - [ ] Consider write-conflict detection that uses source ownership metadata before update/delete operations.
 - [ ] Consider an `archive` rotation policy (e.g., yearly auto-archive via config) after the basic `archive` command is stable.
 - [ ] Consider a `--config paths` auto-load mode where commands that accept file arguments fall back to configured paths when no explicit input is given, reducing repetition in daily use.
+- [ ] Consider asymmetric encryption (public/private key) for the `encrypt` command to support multi-user or team scenarios where different people can encrypt but only the key holder can decrypt.
+- [ ] Consider an interactive `plot` mode in `tui` that renders live-updating charts alongside the existing task and agenda panels, after the basic `plot` command is stable.
+- [ ] Consider exporting `plot` output as a self-contained HTML file with embedded JavaScript charting (e.g., Chart.js) as an alternative to SVG/PNG for users who want to share reports without running the server.

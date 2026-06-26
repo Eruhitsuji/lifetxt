@@ -2,6 +2,7 @@ import argparse
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -10,6 +11,9 @@ from datetime import datetime
 
 from lifetxt import completion, fzf_helper, git_hook, stats, timer, tui
 from lifetxt.parser import parse_text
+
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class CompletionTests(unittest.TestCase):
@@ -172,6 +176,95 @@ class TimerTests(unittest.TestCase):
             with open(path, "r", encoding="utf-8") as handle:
                 text = handle.read()
             self.assertIn("elapsed:45m", text)
+            self.assertFalse(os.path.exists(state_file))
+
+    def test_timer_cli_smoke_uses_real_state_file_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            state_file = os.path.join(tmp, "state", "timer.json")
+            config_path = os.path.join(tmp, "lifetxt.config.json")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Smoke_Timer id:t1 project:work\n")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump({"timer": {"state_file": state_file}}, handle)
+
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config",
+                config_path,
+                "timer",
+                "start",
+                path,
+                "--id",
+                "t1",
+            )
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Started timer for t1", stdout)
+            self.assertTrue(os.path.exists(state_file))
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertIn("[/] T Smoke_Timer", handle.read())
+
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config",
+                config_path,
+                "timer",
+                "status",
+                path,
+            )
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Running: t1", stdout)
+
+            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "pause")
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Paused timer for t1", stdout)
+            with open(state_file, "r", encoding="utf-8") as handle:
+                self.assertTrue(json.load(handle)["paused_at"])
+
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config",
+                config_path,
+                "timer",
+                "status",
+                path,
+            )
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Paused: t1", stdout)
+
+            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "resume")
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Resumed timer for t1", stdout)
+            with open(state_file, "r", encoding="utf-8") as handle:
+                self.assertEqual("", json.load(handle)["paused_at"])
+
+            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "stop")
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Stopped timer for t1", stdout)
+            self.assertFalse(os.path.exists(state_file))
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertIn("elapsed:", handle.read())
+
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config",
+                config_path,
+                "timer",
+                "start",
+                path,
+                "--id",
+                "t1",
+            )
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertTrue(os.path.exists(state_file))
+
+            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "cancel")
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Canceled running timer.", stdout)
             self.assertFalse(os.path.exists(state_file))
 
 
@@ -398,3 +491,21 @@ class TuiTests(unittest.TestCase):
 
             self.assertTrue(watcher.consume_changed())
             self.assertFalse(watcher.consume_changed())
+
+
+def run_lifetxt_cli(*args):
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    process = subprocess.Popen(
+        [sys.executable, "-m", "lifetxt"] + list(args),
+        cwd=ROOT_DIR,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, stderr = process.communicate()
+    return (
+        stdout.decode("utf-8"),
+        stderr.decode("utf-8"),
+        process.returncode,
+    )

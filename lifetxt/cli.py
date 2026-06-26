@@ -61,6 +61,7 @@ from .links import (
 )
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic
+from .timeutil import parse_date_or_datetime
 from .notifier import (
     format_notification_table,
     notification_records,
@@ -96,6 +97,7 @@ DIAGNOSTIC_CATEGORIES = (
     "id",
     "reference",
     "recurrence",
+    "duration",
     "workflow",
     "semantic",
 )
@@ -886,6 +888,52 @@ def build_parser():
         )
     assist.set_defaults(func=command_assist)
 
+    archive = subparsers.add_parser(
+        "archive",
+        help="Move or copy completed/canceled items to a separate archive file.",
+    )
+    archive.add_argument("paths", nargs="+", metavar="path", help="Source life.txt file(s).")
+    archive.add_argument("--dest", required=True, metavar="DEST", help="Archive file to append items to.")
+    archive.add_argument(
+        "--status",
+        action="append",
+        dest="statuses",
+        metavar="STATUS",
+        help=(
+            "Only archive items with this status. Can be repeated or comma-separated. "
+            "Defaults to done,canceled."
+        ),
+    )
+    archive.add_argument(
+        "--before",
+        metavar="DATE",
+        help="Only archive items whose done: or updated: date is before DATE (YYYY-MM-DD).",
+    )
+    archive.add_argument(
+        "--max-items",
+        type=int,
+        dest="max_items",
+        metavar="N",
+        help="Maximum number of items to archive.",
+    )
+    archive.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="Show which items would be archived without writing any changes.",
+    )
+    archive.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy items to the archive without removing them from the source file.",
+    )
+    archive.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip the confirmation prompt.",
+    )
+    archive.set_defaults(func=command_archive)
+
     return parser
 
 
@@ -1406,6 +1454,95 @@ def command_serve(args):
     app = create_app(paths=paths, writable_path=writable_path, config=_config(args))
     uvicorn.run(app, host=host, port=port)
     return 0
+
+
+def command_archive(args):
+    config = _config(args)
+    paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
+    if not paths:
+        raise ValueError("No source files specified.")
+
+    mode = "copy" if args.copy else "move"
+    if mode == "move" and "-" in paths:
+        raise ValueError("Cannot use move mode with stdin input. Use --copy or specify a file path.")
+
+    before_date = None
+    if args.before:
+        before_date = parse_date_or_datetime(args.before, is_end=False)
+        if before_date is None:
+            raise ValueError(
+                "Invalid --before date %r. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM." % args.before
+            )
+
+    if args.max_items is not None and args.max_items < 1:
+        raise ValueError("--max-items must be a positive integer.")
+
+    id_key = id_key_from_config(config)
+    file_items = OrderedDict()
+    for path in paths:
+        text = read_text(path)
+        items, _diags = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+        for item in items:
+            item.source = path
+        file_items[path] = items
+
+    all_items = [item for items in file_items.values() for item in items]
+
+    statuses_arg = args.statuses or ["done,canceled"]
+    try:
+        candidates = filter_items(all_items, statuses=statuses_arg)
+    except ValueError as exc:
+        raise ValueError("Invalid --status: %s" % exc)
+
+    if before_date is not None:
+        candidates = [item for item in candidates if _archive_item_date_before(item, before_date)]
+
+    if args.max_items is not None:
+        candidates = candidates[: args.max_items]
+
+    if not candidates:
+        sys.stdout.write("No items match the archive criteria.\n")
+        return 0
+
+    multi_source = len(paths) > 1
+    sys.stdout.write("Items to archive (%d, %s -> %s):\n" % (len(candidates), mode, args.dest))
+    for item in candidates:
+        source_label = ("  [%s]" % item.source) if multi_source else ""
+        sys.stdout.write("  %s %s %s%s\n" % (item.status, item.kind, item.title, source_label))
+
+    if args.dry_run:
+        sys.stdout.write("(dry run - no changes made)\n")
+        return 0
+
+    if not args.yes:
+        sys.stdout.write("Archive %d item(s)? [y/N] " % len(candidates))
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip().lower()
+        if answer not in ("y", "yes"):
+            sys.stdout.write("Aborted.\n")
+            return 0
+
+    archive_text = _items_to_life_text(candidates)
+    append_text(args.dest, archive_text)
+
+    if mode == "move":
+        archive_ids = {id(item) for item in candidates}
+        for path, items in file_items.items():
+            remaining = [item for item in items if id(item) not in archive_ids]
+            if len(remaining) < len(items):
+                atomic_write_text(path, _items_to_life_text(remaining))
+
+    sys.stdout.write("Archived %d item(s) to %s.\n" % (len(candidates), args.dest))
+    return 0
+
+
+def _archive_item_date_before(item, before_date):
+    for key in ("done", "updated", "created"):
+        for value in item.details.get(key, []):
+            parsed = parse_date_or_datetime(str(value))
+            if parsed is not None:
+                return parsed < before_date
+    return False
 
 
 def command_filter(args):

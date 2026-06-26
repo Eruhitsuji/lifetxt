@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated)
+Last updated: 2026-06-27 (updated x2)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -38,7 +38,6 @@ Priority guide:
 - [ ] Add text output modes for wide/compact terminal widths where tables currently become hard to read.
 - [ ] Improve `assist` support for Markdown body, RRULE, repeat, duration, and links.
 - [ ] Keep CLI help and docs synchronized for `tui`, `fzf`, `timer`, `stats`, `git-hook`, and `completion`.
-- [ ] Add `archive` command: move completed/canceled/old items to a separate archive file. Support `--before DATE`, `--max-items N`, `--status done,canceled`, `--dry-run` (preview without writing), and `--move` vs `--copy` modes. Prompt for confirmation unless `--yes` is given.
 
 ## P1: Web API / Browser UI
 
@@ -91,6 +90,7 @@ Priority guide:
 - [ ] Add source ownership examples for generated/read-only files and mixed writable files.
 - [ ] Document recommended file-splitting strategies: one file per editor/author (including auto-generated sources such as ICS sync), optional further split by project or period, and periodic archiving. Clarify that these are recommendations, not enforced constraints.
 - [ ] Add archive workflow docs: when to archive, how to run the `archive` command, and how to include archive files in `agenda` or `filter` via glob patterns.
+- [ ] Add `--fix` mode to `check` (or a separate `fix` command) to auto-apply W222 duration normalization and other canonicalization warnings in-place.
 - [ ] Document line continuation syntax (`\`) with examples and known limitations (e.g., interaction with body continuation `|` lines).
 - [ ] Document cross-file ID reference behavior: which commands resolve cross-file IDs, how to pass multiple files, and how `--config paths` can automate this.
 
@@ -109,7 +109,7 @@ Priority guide:
 - [ ] Add release notes, changelog, and versioning policy.
 - [ ] Verify `pip install -e .`, optional extras, console script entry points, and Windows PowerShell usage.
 - [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
-- [ ] Add `archive` command tests: `--dry-run` output, `--move` vs `--copy` behavior, and edge cases such as open items mixed with completed items.
+- [ ] Add `archive` command integration tests for multi-file sources, `--status` custom filters, and `--before` edge cases (items missing date keys).
 
 ## Deferred Ideas
 

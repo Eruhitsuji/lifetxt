@@ -159,6 +159,60 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertEqual(["First line.\nSecond line."], decoded[0].details["body"])
         self.assertEqual(item_to_line(items[0]), item_to_line(decoded[0]))
 
+    def test_safe_markdown_subset_renders_html_and_plain_text(self):
+        from lifetxt.markdown import markdown_to_html, markdown_to_plain
+
+        html = markdown_to_html(
+            "# Heading\n\n"
+            "See **bold**, *italic*, `code`, and [site](https://example.com).\n\n"
+            "- one\n"
+            "- two\n\n"
+            "```html\n"
+            "<script>alert(1)</script>\n"
+            "```"
+        )
+
+        self.assertIn("<h1>Heading</h1>", html)
+        self.assertIn("<strong>bold</strong>", html)
+        self.assertIn("<em>italic</em>", html)
+        self.assertIn("<code>code</code>", html)
+        self.assertIn('href="https://example.com"', html)
+        self.assertIn("<ul>", html)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
+        self.assertNotIn("<script>", html)
+        self.assertEqual("Heading\nbold and site", markdown_to_plain("# Heading\n**bold** and [site](https://example.com)"))
+
+    def test_safe_markdown_rejects_unsafe_link_scheme(self):
+        from lifetxt.markdown import markdown_to_html
+
+        html = markdown_to_html("[bad](javascript:alert(1))")
+
+        self.assertIn("bad", html)
+        self.assertNotIn("href=", html)
+        self.assertNotIn("javascript:", html)
+
+    def test_markdown_cli_json_renders_body(self):
+        stdout, stderr, code = run_cli(
+            "markdown",
+            "--format",
+            "json",
+            "--field",
+            "body",
+            input_text=(
+                '[N] J "Research day" on:2026-06-23\n'
+                "| **Done**\n"
+                "| - Parser\n"
+            ),
+        )
+
+        data = json.loads(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(data))
+        self.assertEqual("body", data[0]["field"])
+        self.assertIn("<strong>Done</strong>", data[0]["html"])
+        self.assertIn("<li>Parser</li>", data[0]["html"])
+
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
             "[ ] E Call from:2026-06-06T09:00:30.25+09:00 "
@@ -1192,6 +1246,49 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             data = json.loads(stdout)
             self.assertEqual(["First", "Second"], [entry["title"] for entry in data])
 
+    def test_sources_cli_reports_source_ownership(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:first\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Parent id:parent\n")
+                handle.write("  [ ] T Child id:child parent:parent\n")
+
+            stdout, stderr, code = run_cli(
+                "sources",
+                first_path,
+                second_path,
+                "--format",
+                "json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(["First", "Parent", "Child"], [entry["title"] for entry in data])
+            self.assertEqual(["first.life.txt", "second.life.txt", "second.life.txt"], [os.path.basename(entry["source"]) for entry in data])
+            self.assertEqual([1, 1, 2], [entry["line"] for entry in data])
+            self.assertEqual("parent", data[2]["parent"])
+            self.assertEqual(2, data[2]["indent"])
+
+    def test_sources_cli_filters_missing_ids_and_preserves_warnings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Missing\n")
+                handle.write("[ ] T Duplicate id:task_001\n")
+                handle.write("[ ] T Duplicate_2 id:task_001\n")
+
+            stdout, stderr, code = run_cli("sources", path, "--missing-id")
+
+            self.assertEqual(0, code)
+            self.assertIn("Source ownership (id): 1 item(s)", stdout)
+            self.assertIn("Missing", stdout)
+            self.assertNotIn("Duplicate_2", stdout)
+            self.assertIn("WARNING W213", stderr)
+
     def test_glob_and_directory_life_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first_life.txt")
@@ -1655,6 +1752,50 @@ class LifeTxtIdDiagnosticsTests(unittest.TestCase):
             self.assertIn("Duplicate id:task_001", stdout)
             self.assertIn("first.life.txt:1", stdout)
 
+    def test_check_cli_filters_diagnostics_by_code_severity_and_category(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_001 parent:missing from:not-a-date\n")
+                handle.write("[ ] T Second id:task_001\n")
+
+            stdout, stderr, code = run_cli("check", path, "--code", "W213")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("WARNING W213", stdout)
+            self.assertNotIn("WARNING W202", stdout)
+            self.assertNotIn("WARNING W215", stdout)
+
+            stdout, stderr, code = run_cli(
+                "check",
+                path,
+                "--severity",
+                "warning",
+                "--category",
+                "reference",
+                "--format",
+                "json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(["W215"], [entry["code"] for entry in data])
+            self.assertEqual(["reference"], [entry["category"] for entry in data])
+
+    def test_check_cli_filter_exit_code_uses_matching_diagnostics_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Broken Title due:2026-06-12\n")
+
+            stdout, stderr, code = run_cli("check", path, "--severity", "warning")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("0 matching diagnostic", stdout)
+
     def test_webapp_read_life_inputs_warns_for_cross_file_duplicate_ids(self):
         from lifetxt import webapp
 
@@ -2080,6 +2221,22 @@ class LifeTxtWebAppTests(unittest.TestCase):
             self.assertEqual("Updated", updated.title)
             with open(path, "r", encoding="utf-8") as handle:
                 self.assertEqual("[ ] T Updated uid:task_001 tag:done\n", handle.read())
+
+    def test_webapp_api_item_includes_safe_markdown_payload(self):
+        from lifetxt import webapp
+
+        items, diagnostics = parse_text(
+            '[N] J "Research **day**"\n'
+            "| **Done**\n"
+            "| [bad](javascript:alert(1))\n"
+        )
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        data = webapp.api_item(items[0])
+
+        self.assertIn("<strong>day</strong>", data["markdown"]["title"])
+        self.assertIn("<strong>Done</strong>", data["markdown"]["details"]["body"][0])
+        self.assertNotIn("javascript:", data["markdown"]["details"]["body"][0])
 
     def test_webapp_ack_and_snooze_message_helpers(self):
         from lifetxt import webapp

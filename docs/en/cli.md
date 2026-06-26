@@ -16,9 +16,11 @@ read from standard input.
 python -m lifetxt check [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
+python -m lifetxt sources [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
+python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
@@ -32,6 +34,8 @@ python -m lifetxt assist [options]
 python -m lifetxt tui [path ...]
 python -m lifetxt fzf [path ...]
 python -m lifetxt timer start path --id ID
+python -m lifetxt timer pause
+python -m lifetxt timer resume
 python -m lifetxt timer stop
 python -m lifetxt timer summary [path ...]
 python -m lifetxt stats [path ...]
@@ -47,9 +51,11 @@ python -m lifetxt config show
 | `check` | Validate life.txt syntax and semantic warnings |
 | `ids` | Audit present, missing, and duplicate item IDs |
 | `links` | Inspect ID-based references between items |
+| `sources` | Report which input file owns each parsed item |
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `to-csv` | Convert life.txt to CSV |
+| `markdown` | Render safe Markdown fields as HTML, text, JSON, or JSONL |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
 | `sync-ics` | Fetch iCalendar URLs and regenerate life.txt event items |
 | `filter` | Filter items and output life.txt, JSON, or JSONL |
@@ -182,7 +188,7 @@ CLI command coverage:
 | `check` | yes | no | yes | no |
 | `ids` | yes | optional with `--assign` | yes | no |
 | `links` | yes | no | yes | relation filters only |
-| `to-json`, `to-jsonl`, `to-csv` | yes | no | yes | yes |
+| `to-json`, `to-jsonl`, `to-csv`, `markdown` | yes | no | yes | yes |
 | `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rules |
 | `filter` | yes | yes | yes | yes |
 | `status` | yes | no | yes | `--person`, `--active` |
@@ -204,6 +210,8 @@ Validate life.txt syntax and semantic rules.
 
 ```sh
 python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check life.txt --severity warning --category reference
+python -m lifetxt check life.txt --code E010,W213 --format json
 ```
 
 Options:
@@ -214,6 +222,29 @@ Options:
 | `--format text` | Print human-readable diagnostics |
 | `--format json` | Print diagnostics as JSON |
 | `--warnings-as-errors` | Exit non-zero when warnings are present |
+| `--severity error|warning` | Show only matching severities; repeatable or comma-separated |
+| `--code CODE` | Show only matching diagnostic codes such as `E010` or `W213`; repeatable or comma-separated |
+| `--category CATEGORY` | Show only matching diagnostic categories; repeatable or comma-separated |
+
+Diagnostic filters affect both output and exit code. For example,
+`--category reference` exits according to matching reference diagnostics only,
+not unrelated syntax or style diagnostics.
+
+Categories:
+
+| Category | Typical diagnostics |
+|---|---|
+| `syntax` | Parser errors such as malformed status, type, title, or detail syntax |
+| `schema` | Invalid core status/type values |
+| `style` | Key style and custom-key recommendations |
+| `time` | Date/time value format and range warnings |
+| `status` | Presence/status item rules |
+| `message` | Message item sender/recipient/notification rules |
+| `id` | Duplicate IDs and unsafe ID-like values |
+| `reference` | Missing, self, cyclic, or ambiguous references |
+| `recurrence` | `repeat:`, `interval:`, and `count:` recommendations |
+| `workflow` | Status/detail workflow recommendations |
+| `semantic` | Fallback category for semantic diagnostics not covered above |
 
 Examples:
 
@@ -221,6 +252,7 @@ Examples:
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --category id,reference
 ```
 
 ### 3.1 `ids`
@@ -285,7 +317,33 @@ Options:
 `check` reports missing references (`W215`), self references (`W216`),
 `parent:` cycles (`W217`), and ambiguous references (`W218`).
 
-## 4. JSON Conversion
+### 3.3 `sources`
+
+Report source ownership for parsed items. This is useful when commands read
+multiple hand-written files, generated calendar files, and archives together.
+
+```sh
+python -m lifetxt sources [path ...]
+python -m lifetxt sources "projects/**/*.life.txt" --format json --pretty
+python -m lifetxt sources life.txt archive.life.txt --missing-id
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input life.txt file(s), directory, glob, or `-` for stdin |
+| `--key KEY` | Detail key shown as the item ID; defaults to config `ids.key`, `api.id_key`, or `id` |
+| `--missing-id` | Show only items missing the selected ID key |
+| `--format text|json|jsonl` | Output format |
+| `--pretty` | Pretty-print JSON output |
+
+The report includes source path, line range, selected ID, parent ID, type,
+status, title, indentation level, and detail count. It also runs duplicate-ID
+and reference checks across the same logical input set and prints warnings to
+stderr.
+
+## 4. Conversion And Rendering
 
 ### 4.1 `to-json`
 
@@ -351,9 +409,37 @@ array become repeated detail values.
 python -m lifetxt from-csv [path ...] [-o life.txt]
 ```
 
-### 4.7 Export Filter Options
+### 4.7 `markdown`
 
-`to-json`, `to-jsonl`, and `to-csv` can filter items before writing output.
+Render the safe life.txt Markdown subset from selected fields. This command
+does not modify the file; it reads raw title/body/note text and emits rendered
+HTML, plain text, JSON, or JSONL.
+
+```sh
+python -m lifetxt markdown [path ...] [--field body] [--format html|text|json|jsonl]
+python -m lifetxt markdown life.txt --field all --format json --pretty
+python -m lifetxt markdown examples/markdown_life.txt --type journal -o body.html
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input life.txt file(s), directory, glob, or `-` for stdin |
+| `--field title|body|note|all` | Field to render; repeatable or comma-separated. Defaults to `body` |
+| `--format html|text|json|jsonl` | Output format. Defaults to `html` |
+| `-o`, `--output` | Output file; defaults to stdout |
+| `--pretty` | Pretty-print JSON output |
+| `filter options` | Same item filters as `filter` |
+
+JSON and JSONL records include `source`, `line`, `type`, `status`, `title`,
+`field`, `index`, `raw`, `html`, and `text`. Raw HTML in Markdown source is
+escaped. Unsafe links such as `javascript:` are not rendered as links.
+
+### 4.8 Export Filter Options
+
+`to-json`, `to-jsonl`, `to-csv`, and `markdown` can filter items before writing
+output.
 
 | Option | Meaning |
 |---|---|
@@ -526,7 +612,7 @@ Options:
 | `--pretty` | Pretty-print JSON output |
 | `--canonical` | Regenerate normalized life.txt lines instead of preserving original item lines |
 
-Filter options are the same as the export filter options in section 4.5.
+Filter options are the same as the export filter options in section 4.8.
 With `--format life`, original matching item lines are preserved by default.
 Use `--canonical` when you want normalized quoting and spacing.
 
@@ -1007,6 +1093,16 @@ python -m lifetxt tui [path ...]
 The command reads the same path forms as other life.txt commands. If the
 optional `textual` package is installed, a minimal Textual interface is used.
 Otherwise the command falls back to a dependency-free terminal view.
+Use `?` or `H` for help. The default keymap is Vim-like: `h` / `l` or
+Left/Right move section focus, `j` / `k` or Down/Up scroll, `Ctrl-D` /
+`Ctrl-U` and PageDown/PageUp move by half pages, `g` / `gg` jumps to the top,
+`G` jumps to the bottom, `r` reloads, and `q` quits. `Tab` / `n` and `p` remain
+available as non-Vim section navigation aliases.
+When curses colors are available, section focus, active tasks, completed items,
+status rows, errors, and the footer are color-highlighted. Plain text fallback
+output remains uncolored.
+The dashboard auto-reloads when input files change. If `watchdog` is installed,
+file events are used; otherwise the fallback checks file mtimes periodically.
 
 ### 13.2 `fzf`
 
@@ -1029,7 +1125,9 @@ Options:
 | `--print-query` | With `fzf`, print the query line instead of selected items |
 
 `done` and `delete` require an item ID. Use `ids --assign` first if needed.
-`edit` opens the selected source file with `$EDITOR`.
+`delete` prints the selected source file, line, and title, then requires typing
+`DELETE`. `edit` opens the selected source file with `$EDITOR`. The fzf preview
+shows the source location, multiline `body:`, and the generated life.txt line.
 
 ### 13.3 `timer`
 
@@ -1039,6 +1137,8 @@ back to the item as `elapsed:`.
 ```sh
 python -m lifetxt timer start life.txt --id task_report
 python -m lifetxt timer status life.txt
+python -m lifetxt timer pause
+python -m lifetxt timer resume
 python -m lifetxt timer stop
 python -m lifetxt timer summary life.txt --project research
 ```
@@ -1048,14 +1148,18 @@ Subcommands:
 | Subcommand | Meaning |
 |---|---|
 | `start path --id ID` | Start timing the item with `id:ID`; `[ ]` becomes `[/]` |
+| `pause` | Pause the single running timer without changing the item |
+| `resume` | Resume a paused timer |
 | `stop [path] [--id ID]` | Stop the running timer and update `elapsed:` |
 | `status [path ...]` | Show the current timer and elapsed time |
 | `summary path ...` | Sum `elapsed:` values by item and project |
 | `cancel` | Remove the running state without changing any item |
 
-Elapsed values use compact forms such as `25m`, `1h`, or `1h30m`. The state file
-defaults to `~/.lifetxt_timer.json` and can be changed with
-`timer.state_file` in config.
+Only one global timer can run at a time. `pause` stores the current accumulated
+minutes in the state file, and `stop` writes the accumulated total back to the
+item even if the timer is currently paused. Elapsed values use compact forms
+such as `25m`, `1h`, or `1h30m`. The state file defaults to
+`~/.lifetxt_timer.json` and can be changed with `timer.state_file` in config.
 
 ### 13.4 `stats`
 
@@ -1079,6 +1183,9 @@ Options:
 | `--project PROJECT` | Restrict input items by `project:` |
 | `--group daily|weekly|monthly` | Bucket mood trend output |
 | `--format text|json` | Output format |
+
+For `weekly` and `monthly`, task buckets are shown with done / total / overdue
+counts, and habit sparklines are bucketed by completion count.
 
 ### 13.5 `git-hook`
 

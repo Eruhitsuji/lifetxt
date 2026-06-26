@@ -31,6 +31,7 @@ command 互換性、filter、出力形式、変換規則は [cli.md](./cli.md) �
 - [team_status_life.txt](../../examples/team_status_life.txt): 複数人の在席状態
 - [messages_life.txt](../../examples/messages_life.txt): message と通知 record
 - [diary_life.txt](../../examples/diary_life.txt): 複数行 body を含む日記・日誌
+- [markdown_life.txt](../../examples/markdown_life.txt): safe Markdown title / body / note rendering の例
 - [linked_life.txt](../../examples/linked_life.txt): `parent`、`ref`、`depends_on`、`blocks`、`related` による ID 参照
 - [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezone、小数秒、simple repeat、body、依存関係の例
 - [hierarchy_life.txt](../../examples/hierarchy_life.txt): インデントによる入れ子 record と `parent:` 推論の例
@@ -49,6 +50,7 @@ python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt to-csv life.txt --type journal -o journal.csv
+python -m lifetxt markdown life.txt --field all --format html -o markdown.html
 python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
 python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt

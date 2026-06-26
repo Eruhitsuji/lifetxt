@@ -16,9 +16,11 @@ path を省略すると標準入力から読み込みます。
 python -m lifetxt check [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
+python -m lifetxt sources [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
+python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
@@ -32,6 +34,8 @@ python -m lifetxt assist [options]
 python -m lifetxt tui [path ...]
 python -m lifetxt fzf [path ...]
 python -m lifetxt timer start path --id ID
+python -m lifetxt timer pause
+python -m lifetxt timer resume
 python -m lifetxt timer stop
 python -m lifetxt timer summary [path ...]
 python -m lifetxt stats [path ...]
@@ -47,9 +51,11 @@ python -m lifetxt config show
 | `check` | life.txt の構文と意味的な警告を検査 |
 | `ids` | item ID の存在、欠落、重複を監査 |
 | `links` | item 間の ID 参照を表示 |
+| `sources` | 各 item を所有する入力ファイルを表示 |
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
 | `to-csv` | life.txt を CSV へ変換 |
+| `markdown` | safe Markdown field を HTML / text / JSON / JSONL として描画 |
 | `import-ics` | iCalendar `.ics` の予定を life.txt event item に変換 |
 | `sync-ics` | iCalendar URL を取得して life.txt event item を再生成 |
 | `filter` | item を絞り込み、life.txt / JSON / JSONL で出力 |
@@ -166,7 +172,7 @@ command 対応表:
 | `check` | yes | no | yes | no |
 | `ids` | yes | `--assign` 時のみ | yes | no |
 | `links` | yes | no | yes | relation filter |
-| `to-json`, `to-jsonl`, `to-csv` | yes | no | yes | yes |
+| `to-json`, `to-jsonl`, `to-csv`, `markdown` | yes | no | yes | yes |
 | `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rule | no |
 | `filter` | yes | yes | yes | yes |
 | `status` | yes | no | yes | `--person`, `--active` |
@@ -188,6 +194,8 @@ life.txt の構文と意味的なルールを検査します。
 
 ```sh
 python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check life.txt --severity warning --category reference
+python -m lifetxt check life.txt --code E010,W213 --format json
 ```
 
 | Option | 意味 |
@@ -196,6 +204,29 @@ python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
 | `--format text` | 人間向けの診断を表示 |
 | `--format json` | 診断を JSON で表示 |
 | `--warnings-as-errors` | warning がある場合も非ゼロ終了 |
+| `--severity error|warning` | severity で絞り込み。複数回指定または comma-separated |
+| `--code CODE` | `E010` や `W213` などの診断 code で絞り込み。複数回指定または comma-separated |
+| `--category CATEGORY` | 診断 category で絞り込み。複数回指定または comma-separated |
+
+診断 filter は出力と終了コードの両方に適用されます。たとえば
+`--category reference` は reference category に一致した診断だけで終了コードを決め、
+無関係な syntax や style の診断は対象外にします。
+
+Category:
+
+| Category | 主な診断 |
+|---|---|
+| `syntax` | status、type、title、detail syntax などの parser error |
+| `schema` | core status/type value の不正 |
+| `style` | key style と custom-key recommendation |
+| `time` | date/time value format と range warning |
+| `status` | presence/status item rule |
+| `message` | message item sender/recipient/notification rule |
+| `id` | duplicate ID と unsafe ID-like value |
+| `reference` | missing/self/cyclic/ambiguous reference |
+| `recurrence` | `repeat:`、`interval:`、`count:` recommendation |
+| `workflow` | status/detail workflow recommendation |
+| `semantic` | 上記に含まれない semantic diagnostic |
 
 例:
 
@@ -203,6 +234,7 @@ python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --category id,reference
 ```
 
 ### 3.1 `ids`
@@ -260,7 +292,30 @@ python -m lifetxt links life.txt --id task_report --direction incoming
 
 `check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`) も報告します。
 
-## 4. JSON 変換
+### 3.3 `sources`
+
+parse された item の source ownership を表示します。手書きファイル、generated calendar
+file、archive file を同時に読むとき、どの item がどのファイル由来か確認するために使います。
+
+```sh
+python -m lifetxt sources [path ...]
+python -m lifetxt sources "projects/**/*.life.txt" --format json --pretty
+python -m lifetxt sources life.txt archive.life.txt --missing-id
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt、directory、glob、または標準入力の `-` |
+| `--key KEY` | item ID として表示する detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
+| `--missing-id` | 選択した ID key がない item だけ表示 |
+| `--format text|json|jsonl` | 出力形式 |
+| `--pretty` | JSON を整形して出力 |
+
+report には source path、line range、選択 ID、parent ID、type、status、title、
+indentation level、detail count が含まれます。同じ論理入力集合に対する duplicate ID
+と reference check も実行し、warning は stderr に出力します。
+
+## 4. 変換と rendering
 
 ### 4.1 `to-json`
 
@@ -318,11 +373,32 @@ CSV を life.txt に戻します。CSV には `status`、`type`、`title` 列が
 python -m lifetxt from-csv [path ...] [-o life.txt]
 ```
 
-### 4.7 export filter option
+### 4.7 `markdown`
 
-`to-json`、`to-jsonl`、`to-csv` は出力前に item を絞り込めます。
+選択した field の safe Markdown subset を描画します。この command はファイルを変更しません。raw の title / body / note を読み取り、HTML、plain text、JSON、JSONL として出力します。
 
-`to-json` と `to-jsonl` は、出力前に item を絞り込めます。
+```sh
+python -m lifetxt markdown [path ...] [--field body] [--format html|text|json|jsonl]
+python -m lifetxt markdown life.txt --field all --format json --pretty
+python -m lifetxt markdown examples/markdown_life.txt --type journal -o body.html
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt file、directory、glob、または stdin 用の `-` |
+| `--field title|body|note|all` | 描画する field。複数回指定または comma-separated。既定は `body` |
+| `--format html|text|json|jsonl` | 出力形式。既定は `html` |
+| `-o`, `--output` | 出力 file。省略時は stdout |
+| `--pretty` | JSON を整形して出力 |
+| `filter options` | `filter` と同じ item filter |
+
+JSON / JSONL record には `source`、`line`、`type`、`status`、`title`、
+`field`、`index`、`raw`、`html`、`text` が含まれます。Markdown source 内の
+raw HTML は escape され、`javascript:` のような unsafe link は link として描画しません。
+
+### 4.8 export filter option
+
+`to-json`、`to-jsonl`、`to-csv`、`markdown` は出力前に item を絞り込めます。
 
 | Option | 意味 |
 |---|---|
@@ -483,7 +559,7 @@ python -m lifetxt filter [path ...] [filter options] [--format life|json|jsonl] 
 | `--pretty` | JSON を整形して出力 |
 | `--canonical` | 元行ではなく正規化した life.txt 行を再生成 |
 
-filter option は 4.5 の export filter option と同じです。
+filter option は 4.8 の export filter option と同じです。
 `--format life` では、一致した item の元行を既定で保持します。
 引用や空白を正規化したい場合は `--canonical` を使います。
 
@@ -835,6 +911,15 @@ python -m lifetxt tui [path ...]
 ```
 
 `textual` が利用可能な場合は最小限の Textual UI を使い、未導入の場合は依存なしの端末表示に fallback します。
+`?` または `H` で help を表示します。既定 keymap は Vim 風です。
+`h` / `l` または Left/Right で section focus 移動、`j` / `k` または
+Down/Up で scroll、`Ctrl-D` / `Ctrl-U` と PageDown/PageUp で半ページ移動、
+`g` / `gg` で先頭、`G` で末尾、`r` で reload、`q` で終了します。
+`Tab` / `n` と `p` も非 Vim 風の section 移動 alias として使えます。
+curses の色表示が利用できる場合は、focus section、active task、完了 item、
+status 行、error、footer を色付きで表示します。plain text fallback は色なしのままです。
+入力 file が変更されると自動 reload します。`watchdog` が利用可能な場合は file event を使い、
+未導入の場合は mtime を定期確認する fallback で動作します。
 
 ### 13.2 `fzf`
 
@@ -854,6 +939,8 @@ python -m lifetxt fzf "projects/**/*.life.txt" --tool peco --action edit
 | `--print-query` | `fzf` の query 行だけを出力 |
 
 `done` と `delete` は item ID を必要とします。必要なら先に `ids --assign` で ID を付与してください。
+`delete` は source file、line、title を表示したうえで `DELETE` の入力を要求します。
+`fzf` preview では source location、複数行 `body:`、生成された life.txt 行を表示します。
 
 ### 13.3 `timer`
 
@@ -862,6 +949,8 @@ python -m lifetxt fzf "projects/**/*.life.txt" --tool peco --action edit
 ```sh
 python -m lifetxt timer start life.txt --id task_report
 python -m lifetxt timer status life.txt
+python -m lifetxt timer pause
+python -m lifetxt timer resume
 python -m lifetxt timer stop
 python -m lifetxt timer summary life.txt --project research
 ```
@@ -869,12 +958,16 @@ python -m lifetxt timer summary life.txt --project research
 | Subcommand | 意味 |
 |---|---|
 | `start path --id ID` | `id:ID` の item の計測を開始。`[ ]` は `[/]` に変更 |
+| `pause` | item は変更せず、単一の running timer を一時停止 |
+| `resume` | 一時停止中の timer を再開 |
 | `stop [path] [--id ID]` | running timer を停止し `elapsed:` を更新 |
 | `status [path ...]` | running timer と経過時間を表示 |
 | `summary path ...` | `elapsed:` を item / project ごとに集計 |
 | `cancel` | item を変更せず state file だけ削除 |
 
-`elapsed:` は `25m`、`1h`、`1h30m` のように記録されます。state file の既定値は
+同時に動かせる timer は 1 つだけです。`pause` は累積分数を state file に保存し、
+`stop` は timer が一時停止中でも累積合計を item に書き戻します。`elapsed:` は
+`25m`、`1h`、`1h30m` のように記録されます。state file の既定値は
 `~/.lifetxt_timer.json` で、config の `timer.state_file` で変更できます。
 
 ### 13.4 `stats`
@@ -896,6 +989,9 @@ python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 | `--project PROJECT` | `project:` で絞り込み |
 | `--group daily|weekly|monthly` | mood trend の集計単位 |
 | `--format text|json` | 出力形式 |
+
+`weekly` / `monthly` では task bucket ごとの done / total / overdue と、
+bucket ごとの habit sparkline も表示します。
 
 ### 13.5 `git-hook`
 

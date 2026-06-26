@@ -57,6 +57,25 @@ item payload 例:
 }
 ```
 
+item response には、Markdown を含みやすい field 用に sanitized HTML を入れた
+`markdown` object が含まれます。
+
+```json
+{
+  "title": "Research **day**",
+  "details": {"body": ["**Done**"]},
+  "markdown": {
+    "title": "Research <strong>day</strong>",
+    "details": {
+      "body": ["<p><strong>Done</strong></p>"]
+    }
+  }
+}
+```
+
+raw の `title` と `details` は変更されません。`markdown` HTML は safe life.txt
+Markdown subset から生成され、raw HTML は escape されます。
+
 例:
 
 ```sh
@@ -74,6 +93,7 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - URL parameter による filter、順序、件数、表示mode指定
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
+- sanitized Markdown title / body / note preview の描画
 - item 作成
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除

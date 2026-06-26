@@ -1,4 +1,7 @@
+import base64
+import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,6 +35,11 @@ def cmd_fzf(args):
     action = args.action or choose_action()
     records = [decode_selection(line) for line in selected if line.strip()]
     return run_action(action, records, args)
+
+
+def cmd_fzf_preview(args):
+    sys.stdout.write(preview_token(args.token))
+    return 0
 
 
 def resolve_tool(preferred=None):
@@ -97,8 +105,9 @@ def select_items(tool, items, args):
     base = os.path.basename(tool).lower()
     if base.startswith("fzf"):
         command.append("--multi")
+        command.extend(["--delimiter", "\t", "--with-nth", "2"])
         if args.preview:
-            command.extend(["--preview", "echo {}"])
+            command.extend(["--preview", _preview_command()])
         if args.print_query:
             command.append("--print-query")
     process = subprocess.Popen(
@@ -129,9 +138,10 @@ def run_action(action, records, args):
         sys.stdout.write("Marked %d item(s) done.\n" % len(records))
         return 0
     if action == "delete":
-        sys.stderr.write("Delete %d item(s)? [y/N] " % len(records))
+        write_delete_summary(records)
+        sys.stderr.write("Type DELETE to delete %d item(s): " % len(records))
         answer = sys.stdin.readline().strip().lower()
-        if answer not in ("y", "yes"):
+        if answer != "delete":
             sys.stdout.write("Canceled.\n")
             return 0
         for record in records:
@@ -155,15 +165,28 @@ def choose_action():
 def encode_item(item, key):
     item_id = item.details.get(key, [""])[0] if item.details.get(key) else ""
     source = getattr(item, "source", "") or ""
-    line = str(item.line or "")
+    line = item.line or None
     title = "%s %s %s" % (item.status, item.kind, item.title)
     body = item.details.get("body", [""])[0] if item.details.get("body") else ""
-    body = body.replace("\n", "\\n")
-    return "\t".join([item_id, source, line, title, body, item_to_line(item)])
+    record = OrderedDict(
+        [
+            ("id", item_id),
+            ("source", source),
+            ("line", line),
+            ("label", title),
+            ("body", body),
+            ("text", item_to_line(item)),
+        ]
+    )
+    return "\t".join([encode_record(record), display_label(record)])
 
 
 def decode_selection(line):
     parts = line.split("\t")
+    if parts:
+        record = decode_record(parts[0])
+        if record is not None:
+            return record
     while len(parts) < 6:
         parts.append("")
     return OrderedDict(
@@ -176,6 +199,80 @@ def decode_selection(line):
             ("text", parts[5]),
         ]
     )
+
+
+def encode_record(record):
+    raw = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii")
+
+
+def decode_record(token):
+    try:
+        raw = base64.urlsafe_b64decode(str(token).encode("ascii"))
+        data = json.loads(raw.decode("utf-8"), object_pairs_hook=OrderedDict)
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return OrderedDict(
+        [
+            ("id", str(data.get("id") or "")),
+            ("source", str(data.get("source") or "")),
+            ("line", data.get("line") if isinstance(data.get("line"), int) else None),
+            ("label", str(data.get("label") or "")),
+            ("body", str(data.get("body") or "")),
+            ("text", str(data.get("text") or "")),
+        ]
+    )
+
+
+def display_label(record):
+    location = ""
+    if record.get("source"):
+        location = "  %s" % record["source"]
+        if record.get("line"):
+            location += ":%s" % record["line"]
+    item_id = "  id:%s" % record["id"] if record.get("id") else ""
+    return "%s%s%s" % (record.get("label", ""), item_id, location)
+
+
+def preview_token(token):
+    record = decode_record(token)
+    if record is None:
+        return str(token) + "\n"
+    return preview_text(record)
+
+
+def preview_text(record):
+    lines = []
+    lines.append(record.get("label", ""))
+    lines.append("=" * 72)
+    if record.get("id"):
+        lines.append("id: %s" % record["id"])
+    if record.get("source"):
+        location = record["source"]
+        if record.get("line"):
+            location += ":%s" % record["line"]
+        lines.append("source: %s" % location)
+    if record.get("body"):
+        lines.append("")
+        lines.append("body:")
+        lines.extend("  " + line for line in record["body"].splitlines())
+    if record.get("text"):
+        lines.append("")
+        lines.append("life.txt:")
+        lines.append("  " + record["text"])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_delete_summary(records):
+    sys.stderr.write("Items selected for deletion:\n")
+    for index, record in enumerate(records, 1):
+        sys.stderr.write("  %d. %s\n" % (index, display_label(record)))
+
+
+def _preview_command():
+    return "%s -m lifetxt fzf-preview {1}" % shlex.quote(sys.executable)
 
 
 def require_id(record):

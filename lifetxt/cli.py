@@ -1,4 +1,5 @@
 import argparse
+import html
 import hashlib
 import json
 import os
@@ -58,6 +59,7 @@ from .links import (
     links_to_jsonl,
     reference_diagnostics,
 )
+from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic
 from .notifier import (
     format_notification_table,
@@ -84,12 +86,33 @@ from .status_summary import (
 from .validator import validate_item
 
 
+DIAGNOSTIC_CATEGORIES = (
+    "syntax",
+    "schema",
+    "style",
+    "time",
+    "status",
+    "message",
+    "id",
+    "reference",
+    "recurrence",
+    "workflow",
+    "semantic",
+)
+
+
 def main(argv=None):
     try:
         argv, config_path = _extract_config_arg(argv)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    if argv and argv[0] == "fzf-preview":
+        if len(argv) != 2:
+            sys.stderr.write("ERROR: fzf-preview requires one token.\n")
+            return 2
+        from .fzf_helper import cmd_fzf_preview
+        return cmd_fzf_preview(argparse.Namespace(token=argv[1]))
     parser = build_parser()
     args = parser.parse_args(argv)
     args.config = config_path
@@ -157,6 +180,25 @@ def build_parser():
         "--warnings-as-errors",
         action="store_true",
         help="Exit non-zero when warnings are present.",
+    )
+    check.add_argument(
+        "--severity",
+        dest="diagnostic_severities",
+        action="append",
+        help="Only show diagnostics with this severity, such as error or warning. Can be repeated or comma-separated.",
+    )
+    check.add_argument(
+        "--code",
+        dest="diagnostic_codes",
+        action="append",
+        help="Only show diagnostics with this code, such as E010 or W213. Can be repeated or comma-separated.",
+    )
+    check.add_argument(
+        "--category",
+        dest="diagnostic_categories",
+        action="append",
+        help="Only show diagnostics in this category: %s. Can be repeated or comma-separated."
+        % ", ".join(DIAGNOSTIC_CATEGORIES),
     )
     check.set_defaults(func=command_check)
 
@@ -237,6 +279,29 @@ def build_parser():
     links_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     links_command.set_defaults(func=command_links)
 
+    sources_command = subparsers.add_parser(
+        "sources",
+        help="Report which source file owns each parsed item.",
+    )
+    _add_input_paths(sources_command)
+    sources_command.add_argument(
+        "--key",
+        help="Detail key to display as the item ID. Defaults to ids.key, api.id_key, or id.",
+    )
+    sources_command.add_argument(
+        "--missing-id",
+        action="store_true",
+        help="Only show items missing the selected ID key.",
+    )
+    sources_command.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    sources_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    sources_command.set_defaults(func=command_sources)
+
     to_json = subparsers.add_parser("to-json", help="Convert life.txt to JSON array.")
     _add_input_paths(to_json)
     to_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
@@ -255,6 +320,27 @@ def build_parser():
     to_csv.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     _add_item_filter_arguments(to_csv)
     to_csv.set_defaults(func=command_to_csv)
+
+    markdown_command = subparsers.add_parser(
+        "markdown",
+        help="Render the safe life.txt Markdown subset from selected fields.",
+    )
+    _add_input_paths(markdown_command)
+    markdown_command.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    markdown_command.add_argument(
+        "--format",
+        choices=("html", "text", "json", "jsonl"),
+        default="html",
+        help="Output format. Defaults to html.",
+    )
+    markdown_command.add_argument(
+        "--field",
+        action="append",
+        help="Field to render: title, body, note, or all. Can be repeated or comma-separated. Defaults to body.",
+    )
+    markdown_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    _add_item_filter_arguments(markdown_command)
+    markdown_command.set_defaults(func=command_markdown)
 
     import_ics = subparsers.add_parser(
         "import-ics",
@@ -432,6 +518,10 @@ def build_parser():
     timer_start.add_argument("--id", dest="item_id", required=True, help="Item ID to time.")
     timer_start.add_argument("--note", help="Optional note stored in timer state.")
     timer_start.set_defaults(func=command_timer)
+    timer_pause = timer_subparsers.add_parser("pause", help="Pause the running timer.")
+    timer_pause.set_defaults(func=command_timer)
+    timer_resume = timer_subparsers.add_parser("resume", help="Resume a paused timer.")
+    timer_resume.set_defaults(func=command_timer)
     timer_stop = timer_subparsers.add_parser("stop", help="Stop the running timer.")
     timer_stop.add_argument("path", nargs="?", help="life.txt file. Defaults to the file stored in timer state.")
     timer_stop.add_argument("--id", dest="item_id", help="Expected running item ID.")
@@ -907,22 +997,34 @@ def _add_item_filter_arguments(parser):
 
 def command_check(args):
     items, diagnostics = _parse_life_inputs(args.paths, _config(args))
+    filtered_diagnostics = filter_diagnostics(
+        diagnostics,
+        severities=getattr(args, "diagnostic_severities", None),
+        codes=getattr(args, "diagnostic_codes", None),
+        categories=getattr(args, "diagnostic_categories", None),
+    )
+    has_filter = any(
+        getattr(args, name, None)
+        for name in ("diagnostic_severities", "diagnostic_codes", "diagnostic_categories")
+    )
 
     if args.format == "json":
         output = json.dumps(
-            [diagnostic.to_dict() for diagnostic in diagnostics],
+            [diagnostic_to_output_dict(diagnostic) for diagnostic in filtered_diagnostics],
             ensure_ascii=False,
             indent=2,
         )
         write_text(None, output + "\n")
     else:
-        if diagnostics:
-            for diagnostic in diagnostics:
+        if filtered_diagnostics:
+            for diagnostic in filtered_diagnostics:
                 write_text(None, diagnostic.format() + "\n")
+        elif has_filter:
+            write_text(None, "OK: %d item(s), 0 matching diagnostic(s)\n" % len(items))
         else:
             write_text(None, "OK: %d item(s)\n" % len(items))
 
-    return _exit_code(diagnostics, args.warnings_as_errors)
+    return _exit_code(filtered_diagnostics, args.warnings_as_errors)
 
 
 def command_ids(args):
@@ -977,6 +1079,39 @@ def command_links(args):
         write_text(None, output)
     else:
         write_text(None, format_link_table(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_sources(args):
+    key = args.key or id_key_from_config(_config(args))
+    records, diagnostics = source_ownership_records(args.paths, _config(args), key)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    if args.missing_id:
+        records = [record for record in records if not record.get("id")]
+
+    if args.format == "json":
+        output = json.dumps(
+            records,
+            ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        )
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        output = "\n".join(
+            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+            for record in records
+        )
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_source_ownership_table(records, key))
 
     _print_warnings(diagnostics)
     return 0
@@ -1050,6 +1185,137 @@ def command_to_csv(args):
     write_text(args.output, items_to_csv(items))
     _print_warnings(diagnostics)
     return 0
+
+
+def command_markdown(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    records = markdown_records(items, fields=args.field)
+
+    if args.format == "json":
+        output = json.dumps(
+            records,
+            ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        )
+        write_text(args.output, output + "\n")
+    elif args.format == "jsonl":
+        output = "\n".join(
+            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+            for record in records
+        )
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    elif args.format == "text":
+        write_text(args.output, markdown_records_to_text(records))
+    else:
+        write_text(args.output, markdown_records_to_html(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def markdown_records(items, fields=None):
+    selected_fields = _markdown_fields(fields)
+    records = []
+    for item in items:
+        for field in selected_fields:
+            if field == "title":
+                raw_values = [item.title]
+            else:
+                raw_values = item.details.get(field) or []
+            for index, raw in enumerate(raw_values):
+                inline = field == "title"
+                records.append(
+                    OrderedDict(
+                        [
+                            ("source", getattr(item, "source", None)),
+                            ("line", item.line),
+                            ("type", item.kind),
+                            ("status", item.status),
+                            ("title", item.title),
+                            ("field", field),
+                            ("index", index),
+                            ("raw", raw),
+                            ("html", markdown_to_html(raw, inline=inline)),
+                            ("text", markdown_to_plain(raw)),
+                        ]
+                    )
+                )
+    return records
+
+
+def markdown_records_to_html(records):
+    lines = []
+    for record in records:
+        title = markdown_to_html(record.get("title", ""), inline=True)
+        location = _markdown_location(record)
+        field = html.escape(str(record.get("field") or ""), quote=True)
+        kind = html.escape(str(record.get("type") or ""), quote=True)
+        status = html.escape(str(record.get("status") or ""), quote=True)
+        lines.append(
+            '<article class="lifetxt-markdown" data-field="%s" data-type="%s" data-status="%s">'
+            % (field, kind, status)
+        )
+        lines.append(
+            '<header><span class="lifetxt-markdown-meta">%s</span><span class="lifetxt-markdown-title">%s</span></header>'
+            % (html.escape(location), title)
+        )
+        lines.append(
+            '<div class="lifetxt-markdown-content">%s</div>'
+            % (record.get("html") or "")
+        )
+        lines.append("</article>")
+    if lines:
+        return "\n".join(lines) + "\n"
+    return ""
+
+
+def markdown_records_to_text(records):
+    chunks = []
+    for record in records:
+        header = "%s %s %s %s" % (
+            _markdown_location(record),
+            record.get("status") or "",
+            record.get("type") or "",
+            record.get("field") or "",
+        )
+        text = markdown_to_plain(record.get("raw") or "")
+        chunks.append("%s\n%s" % (header.strip(), text))
+    if chunks:
+        return "\n\n".join(chunks) + "\n"
+    return ""
+
+
+def _markdown_fields(fields):
+    raw_fields = _split_csv_args(fields) or ["body"]
+    selected = []
+    for field in raw_fields:
+        key = field.strip().lower()
+        if key == "all":
+            candidates = ("title", "body", "note")
+        elif key in ("title", "body", "note"):
+            candidates = (key,)
+        else:
+            raise ValueError("--field must be title, body, note, or all.")
+        for candidate in candidates:
+            if candidate not in selected:
+                selected.append(candidate)
+    return selected
+
+
+def _markdown_location(record):
+    source = record.get("source") or ""
+    line = record.get("line")
+    if source and line:
+        return "%s:%s" % (source, line)
+    if line:
+        return "line %s" % line
+    if source:
+        return source
+    return "item"
 
 
 def command_import_ics(args):
@@ -1682,6 +1948,80 @@ def _id_audit_jsonl_records(audit, only):
     return records
 
 
+def source_ownership_records(paths, config=None, key="id"):
+    normalized = _normalize_paths(paths, config)
+    records = []
+    items = []
+    diagnostics = []
+    for source_index, path in enumerate(normalized, 1):
+        source = "stdin" if path == "-" else path
+        text = read_text(path)
+        path_items, path_diagnostics = parse_text(
+            text,
+            id_key=key,
+            check_ids=False,
+            check_references=False,
+        )
+        _set_source(path_items, path_diagnostics, source)
+        items.extend(path_items)
+        diagnostics.extend(path_diagnostics)
+        for item in path_items:
+            records.append(_source_ownership_record(item, source, source_index, key))
+    diagnostics.extend(duplicate_id_diagnostics(items, key=key))
+    diagnostics.extend(reference_diagnostics(items, key=key))
+    return records, diagnostics
+
+
+def _source_ownership_record(item, source, source_index, key):
+    id_values = [str(value) for value in item.details.get(key, []) if value]
+    parent_values = [str(value) for value in item.details.get("parent", []) if value]
+    record = OrderedDict()
+    record["source"] = source
+    record["source_index"] = source_index
+    record["line"] = item.line
+    record["end_line"] = getattr(item, "end_line", item.line) or item.line
+    record["id_key"] = key
+    record["id"] = id_values[0] if id_values else ""
+    record["ids"] = id_values
+    record["parent"] = parent_values[0] if parent_values else ""
+    record["status"] = item.status
+    record["type"] = item.kind
+    record["title"] = item.title
+    record["indent"] = item.indent
+    record["detail_count"] = sum(len(values) for values in item.details.values())
+    return record
+
+
+def format_source_ownership_table(records, key):
+    lines = [
+        "Source ownership (%s): %d item(s) across %d source(s)"
+        % (key, len(records), len(set(record["source"] for record in records)))
+    ]
+    if not records:
+        return lines[0] + "\n"
+
+    rows = []
+    for record in records:
+        line_value = str(record["line"])
+        if record.get("end_line") and record["end_line"] != record["line"]:
+            line_value = "%s-%s" % (record["line"], record["end_line"])
+        rows.append(
+            OrderedDict(
+                [
+                    ("source", record["source"]),
+                    ("line", line_value),
+                    ("id", record["id"]),
+                    ("parent", record["parent"]),
+                    ("type", record["type"]),
+                    ("status", record["status"]),
+                    ("title", record["title"]),
+                ]
+            )
+        )
+    lines.extend(_format_table(rows, ("source", "line", "id", "parent", "type", "status", "title")))
+    return "\n".join(lines) + "\n"
+
+
 def _parse_or_exit(paths, config=None):
     items, diagnostics = _parse_life_inputs(paths, config)
     if _has_error(diagnostics):
@@ -2069,6 +2409,80 @@ def _exit_code(diagnostics, warnings_as_errors):
     if warnings_as_errors and has_warning:
         return 1
     return 0
+
+
+def filter_diagnostics(diagnostics, severities=None, codes=None, categories=None):
+    severity_filter = _diagnostic_severity_filter(severities)
+    code_filter = _diagnostic_code_filter(codes)
+    category_filter = _diagnostic_category_filter(categories)
+
+    filtered = []
+    for diagnostic in diagnostics:
+        if severity_filter and str(diagnostic.severity).lower() not in severity_filter:
+            continue
+        if code_filter and str(diagnostic.code).upper() not in code_filter:
+            continue
+        if category_filter and diagnostic_category(diagnostic) not in category_filter:
+            continue
+        filtered.append(diagnostic)
+    return filtered
+
+
+def diagnostic_to_output_dict(diagnostic):
+    data = diagnostic.to_dict()
+    output = OrderedDict()
+    for key, value in data.items():
+        output[key] = value
+        if key == "code":
+            output["category"] = diagnostic_category(diagnostic)
+    return output
+
+
+def diagnostic_category(diagnostic):
+    code = str(getattr(diagnostic, "code", "") or "").upper()
+    if code.startswith("E0"):
+        return "syntax"
+    if code in ("E101", "E102"):
+        return "schema"
+    if code in ("E201", "E202", "E203", "E204", "W207", "W208", "W209"):
+        return "status"
+    if code in ("E205", "E206", "W210", "W211", "W212"):
+        return "message"
+    if code in ("W105", "W106"):
+        return "style"
+    if code in ("W201", "W202", "W203", "W204", "W206"):
+        return "time"
+    if code in ("W205", "W219"):
+        return "recurrence"
+    if code in ("W213", "W214"):
+        return "id"
+    if code in ("W215", "W216", "W217", "W218"):
+        return "reference"
+    if code in ("W101", "W102", "W103", "W104"):
+        return "workflow"
+    return "semantic"
+
+
+def _diagnostic_severity_filter(values):
+    severities = set(value.lower() for value in _split_csv_args(values))
+    allowed = set(("error", "warning"))
+    invalid = sorted(severities - allowed)
+    if invalid:
+        raise ValueError("Unknown diagnostic severity: %s." % ", ".join(invalid))
+    return severities
+
+
+def _diagnostic_code_filter(values):
+    return set(value.upper() for value in _split_csv_args(values))
+
+
+def _diagnostic_category_filter(values):
+    categories = set(value.lower() for value in _split_csv_args(values))
+    allowed = set(DIAGNOSTIC_CATEGORIES)
+    invalid = sorted(categories - allowed)
+    if invalid:
+        raise ValueError("Unknown diagnostic category: %s." % ", ".join(invalid))
+    return categories
 
 
 def _has_error(diagnostics):

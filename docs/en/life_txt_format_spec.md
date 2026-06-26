@@ -682,7 +682,50 @@ This is equivalent to a `body:` value containing embedded newlines. Serializers
 should emit multiline `body` values with continuation lines. Continuation lines
 must follow an item; an orphan continuation line is a syntax error.
 
-## 12. Status / Presence State Values
+## 12. Safe Markdown Subset
+
+Markdown is allowed as display markup inside quoted titles, quoted detail
+values, and multiline `body:` content. It does not change the core life.txt
+grammar: parsers store the raw text and renderers decide whether to interpret
+the Markdown subset.
+
+Supported inline syntax:
+
+| Syntax | Meaning |
+|---|---|
+| `` `code` `` | Inline code |
+| `**bold**` | Strong emphasis |
+| `*italic*` | Emphasis |
+| `[label](https://example.com)` | Safe link; only `http`, `https`, and `mailto` links are rendered as links |
+
+Supported block syntax in multiline `body:` values:
+
+| Syntax | Meaning |
+|---|---|
+| `# Heading`, `## Heading`, `### Heading` | Headings |
+| Blank-line separated text | Paragraphs |
+| `- item` or `* item` | Unordered list |
+| `1. item` | Ordered list |
+| Triple backtick fences | Code block |
+
+Raw HTML is not part of the subset and must be escaped by renderers.
+Unsupported Markdown syntax should be preserved as text. JSON, JSONL, CSV, and
+life.txt output keep the raw Markdown text; HTML rendering is available through
+the Web API/UI and the `markdown` CLI command.
+
+```txt
+[N] J "Research **day**" on:2026-06-26
+| # Summary
+|
+| Implemented **safe Markdown** rendering.
+|
+| - Parser keeps raw Markdown text
+| - Web UI shows sanitized previews
+|
+| See [project docs](https://example.com/lifetxt).
+```
+
+## 13. Status / Presence State Values
 
 Recommended `state:` values for type `S`:
 
@@ -710,7 +753,7 @@ If `to:` is absent, range-based tools may treat the status as ongoing from
 `from:` onward. If `to:` is present, range-based tools may treat `from/to` as the
 status interval.
 
-## 13. Note And Journal Rule
+## 14. Note And Journal Rule
 
 The note status `[N]` should normally be used only with note type `N` or journal
 type `J`.
@@ -720,7 +763,7 @@ type `J`.
 [N] J "Research day" on:2026-06-23
 ```
 
-## 14. Formal Grammar
+## 15. Formal Grammar
 
 ```ebnf
 life_file         = { blank_line | comment_line | item_line | continuation_line } ;
@@ -763,7 +806,7 @@ Notes:
 - `key=value` appears only in CLI helper input; it is intentionally excluded
   from the file grammar.
 
-## 15. Complete Example
+## 16. Complete Example
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

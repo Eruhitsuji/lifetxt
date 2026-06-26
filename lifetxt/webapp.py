@@ -28,6 +28,7 @@ from .ids import (
     id_prefix_for_item,
 )
 from .links import link_records, reference_diagnostics
+from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_text
@@ -837,6 +838,7 @@ def api_item(item, writable_path=None, id_key="id"):
     data["text"] = getattr(item, "source_text", None) or item_to_line(item)
     data["generated"] = bool(getattr(item, "generated", False))
     data["editable"] = is_editable(item, writable_path)
+    data["markdown"] = item_markdown_payload(item)
     return data
 
 
@@ -1375,6 +1377,39 @@ HTML_PAGE = r"""<!doctype html>
     .item:hover, .item.selected { border-color: var(--accent); background: #f7fbf9; }
     .title { font-weight: 700; overflow-wrap: anywhere; }
     .meta { color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
+    .markdown {
+      overflow-wrap: anywhere;
+    }
+    .markdown p,
+    .markdown ul,
+    .markdown ol,
+    .markdown pre {
+      margin: .35rem 0 0;
+    }
+    .markdown ul,
+    .markdown ol {
+      padding-left: 1.25rem;
+    }
+    .markdown code {
+      padding: .05rem .25rem;
+      border-radius: .25rem;
+      background: var(--soft);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .9em;
+    }
+    .markdown pre {
+      max-width: 100%;
+      overflow: auto;
+      padding: .5rem;
+      border-radius: .45rem;
+      background: var(--soft);
+    }
+    .markdown a { color: var(--accent); }
+    .body-preview {
+      margin-top: .35rem;
+      color: var(--ink);
+      font-size: .9rem;
+    }
     .pill {
       display: inline-flex;
       align-items: center;
@@ -1776,10 +1811,20 @@ HTML_PAGE = r"""<!doctype html>
         .map(d => `<div class="diagnostic">${escapeHtml(d.severity)} ${escapeHtml(d.code)}: ${escapeHtml(d.message)}</div>`)
         .join("");
     }
+    function safeMarkdownHtml(value, fallback = "") {
+      return typeof value === "string" ? value : escapeHtml(fallback);
+    }
+    function firstMarkdownDetail(item, key) {
+      const values = item?.markdown?.details?.[key];
+      return Array.isArray(values) && values.length ? values[0] : "";
+    }
     function renderItems(items) {
       const root = document.getElementById("items");
       root.innerHTML = items.length ? "" : `<div class="empty">No items found.</div>`;
       for (const item of items) {
+        const titleHtml = safeMarkdownHtml(item?.markdown?.title, item.title);
+        const previewHtml = firstMarkdownDetail(item, "body") || firstMarkdownDetail(item, "note");
+        const preview = previewHtml ? `<div class="markdown body-preview">${previewHtml}</div>` : "";
         const node = document.createElement("button");
         node.type = "button";
         node.className = "item";
@@ -1791,8 +1836,9 @@ HTML_PAGE = r"""<!doctype html>
           <span class="pill">${escapeHtml(item.status)}</span>
           <span class="pill">${escapeHtml(item.type)}</span>
           <div>
-            <div class="title">${escapeHtml(item.title)}</div>
+            <div class="title markdown">${titleHtml}</div>
             <div class="meta">${escapeHtml(detailText(item.details))}</div>
+            ${preview}
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
         `;

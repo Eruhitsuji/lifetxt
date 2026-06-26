@@ -53,7 +53,7 @@ def build_stats(items, start, end, group, buckets=None):
     done_tasks = [item for item in tasks if item.status == "[x]"]
     overdue = [item for item in tasks if item.status != "[x]" and _is_overdue(item, end)]
     by_project = project_stats(tasks)
-    habits = habit_stats([item for item in items if item.kind == "H"], start, end)
+    habits = habit_stats([item for item in items if item.kind == "H"], start, end, buckets)
     mood = mood_stats([item for item in items if item.kind == "J"], buckets)
     data = OrderedDict()
     data["range"] = OrderedDict([("from", start.isoformat()), ("to", end.isoformat()), ("group", group)])
@@ -63,6 +63,7 @@ def build_stats(items, start, end, group, buckets=None):
             ("total", len(tasks)),
             ("rate", _rate(len(done_tasks), len(tasks))),
             ("overdue", len(overdue)),
+            ("buckets", task_bucket_stats(tasks, buckets)),
         ]
     )
     data["habits"] = habits
@@ -84,6 +85,18 @@ def format_stats(data):
         % (tasks["done"], tasks["total"], tasks["rate"], progress_bar(tasks["rate"]))
     )
     lines.append("  overdue  %s" % tasks["overdue"])
+    if tasks.get("buckets") and len(tasks["buckets"]) > 1:
+        lines.append("  buckets")
+        for bucket in tasks["buckets"]:
+            lines.append(
+                "    %s  done %s / %s  overdue %s"
+                % (
+                    bucket_label(bucket),
+                    bucket["done"],
+                    bucket["total"],
+                    bucket["overdue"],
+                )
+            )
     lines.append("")
     lines.append("Habits")
     if data["habits"]:
@@ -156,15 +169,48 @@ def make_buckets(start, end, group):
     return buckets
 
 
-def habit_stats(items, start, end):
+def task_bucket_stats(tasks, buckets):
     result = []
+    for bucket_start, bucket_end in buckets:
+        bucket_tasks = []
+        for item in tasks:
+            item_date = item_date_value(item)
+            if item_date is None:
+                continue
+            if bucket_start <= item_date <= bucket_end:
+                bucket_tasks.append(item)
+        done = len([item for item in bucket_tasks if item.status == "[x]"])
+        overdue = len([item for item in bucket_tasks if item.status != "[x]" and _is_overdue(item, bucket_end)])
+        result.append(
+            OrderedDict(
+                [
+                    ("from", bucket_start.isoformat()),
+                    ("to", bucket_end.isoformat()),
+                    ("done", done),
+                    ("total", len(bucket_tasks)),
+                    ("rate", _rate(done, len(bucket_tasks))),
+                    ("overdue", overdue),
+                ]
+            )
+        )
+    return result
+
+
+def habit_stats(items, start, end, buckets=None):
+    result = []
+    if buckets is None:
+        buckets = make_buckets(start, end, "daily")
     for item in items:
         dates = item_completion_dates(item)
         values = []
-        current = start
-        while current <= end:
-            values.append(1 if current in dates else None)
-            current += timedelta(days=1)
+        for bucket_start, bucket_end in buckets:
+            count = 0
+            current = bucket_start
+            while current <= bucket_end:
+                if current in dates:
+                    count += 1
+                current += timedelta(days=1)
+            values.append(count if count else None)
         result.append(
             OrderedDict(
                 [
@@ -211,6 +257,12 @@ def project_stats(tasks):
     for values in result.values():
         values["rate"] = _rate(values["done"], values["total"])
     return result
+
+
+def bucket_label(bucket):
+    if bucket["from"] == bucket["to"]:
+        return bucket["from"]
+    return "%s..%s" % (bucket["from"], bucket["to"])
 
 
 def item_completion_dates(item):

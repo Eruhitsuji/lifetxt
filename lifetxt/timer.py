@@ -18,6 +18,10 @@ def cmd_timer(args):
     command = args.timer_command
     if command == "start":
         return start_timer(args)
+    if command == "pause":
+        return pause_timer(args)
+    if command == "resume":
+        return resume_timer(args)
     if command == "stop":
         return stop_timer(args)
     if command == "status":
@@ -26,7 +30,7 @@ def cmd_timer(args):
         return summary_timer(args)
     if command == "cancel":
         return cancel_timer(args)
-    raise ValueError("timer requires start, stop, status, summary, or cancel.")
+    raise ValueError("timer requires start, pause, resume, stop, status, summary, or cancel.")
 
 
 def start_timer(args):
@@ -40,6 +44,8 @@ def start_timer(args):
             ("id", args.item_id),
             ("file", args.path),
             ("started_at", format_datetime(now)),
+            ("accumulated_minutes", 0),
+            ("paused_at", ""),
             ("note", args.note or ""),
         ]
     )
@@ -57,10 +63,7 @@ def stop_timer(args):
     if args.item_id and args.item_id != state.get("id"):
         raise ValueError("Running timer is for %s, not %s." % (state.get("id"), args.item_id))
     path = args.path or state.get("file")
-    started_at = parse_datetime_value(state.get("started_at"))
-    if started_at is None:
-        raise ValueError("Timer state has an invalid started_at value.")
-    minutes = elapsed_minutes(started_at, _now())
+    minutes = state_elapsed_minutes(state, _now())
     item = find_item_in_file(path, item_id, _id_key(args))
     existing = 0
     for value in item.details.get("elapsed", []):
@@ -73,14 +76,40 @@ def stop_timer(args):
     return 0
 
 
+def pause_timer(args):
+    state_file = timer_state_file(getattr(args, "config_data", None))
+    state = _read_state(state_file)
+    if state.get("paused_at"):
+        raise ValueError("Timer is already paused.")
+    now = _now()
+    minutes = state_elapsed_minutes(state, now)
+    state["accumulated_minutes"] = minutes
+    state["paused_at"] = format_datetime(now)
+    _write_json(state_file, state)
+    sys.stdout.write("Paused timer for %s: elapsed %s\n" % (state.get("id"), format_elapsed(minutes)))
+    return 0
+
+
+def resume_timer(args):
+    state_file = timer_state_file(getattr(args, "config_data", None))
+    state = _read_state(state_file)
+    if not state.get("paused_at"):
+        raise ValueError("Timer is not paused.")
+    now = _now()
+    state["started_at"] = format_datetime(now)
+    state["paused_at"] = ""
+    _write_json(state_file, state)
+    sys.stdout.write("Resumed timer for %s at %s\n" % (state.get("id"), format_datetime(now)))
+    return 0
+
+
 def status_timer(args):
     state_file = timer_state_file(getattr(args, "config_data", None))
     if not os.path.exists(state_file):
         sys.stdout.write("No running timer.\n")
         return 0
     state = _read_state(state_file)
-    started_at = parse_datetime_value(state.get("started_at"))
-    minutes = elapsed_minutes(started_at, _now()) if started_at else 0
+    minutes = state_elapsed_minutes(state, _now())
     title = ""
     path = state.get("file")
     item_id = state.get("id")
@@ -89,10 +118,16 @@ def status_timer(args):
         title = item.title
     except ValueError:
         title = "unknown"
-    sys.stdout.write(
-        "Running: %s (%s)  elapsed: %s  started: %s\n"
-        % (item_id, title, format_elapsed(minutes), state.get("started_at", ""))
-    )
+    if state.get("paused_at"):
+        sys.stdout.write(
+            "Paused: %s (%s)  elapsed: %s  paused: %s\n"
+            % (item_id, title, format_elapsed(minutes), state.get("paused_at", ""))
+        )
+    else:
+        sys.stdout.write(
+            "Running: %s (%s)  elapsed: %s  started: %s\n"
+            % (item_id, title, format_elapsed(minutes), state.get("started_at", ""))
+        )
     return 0
 
 
@@ -161,6 +196,16 @@ def elapsed_minutes(start, end):
     return int((seconds + 59) // 60)
 
 
+def state_elapsed_minutes(state, now):
+    accumulated = _int_value(state.get("accumulated_minutes"))
+    if state.get("paused_at"):
+        return accumulated
+    started_at = parse_datetime_value(state.get("started_at"))
+    if started_at is None:
+        raise ValueError("Timer state has an invalid started_at value.")
+    return accumulated + elapsed_minutes(started_at, now)
+
+
 def format_elapsed(minutes):
     minutes = int(minutes or 0)
     hours = minutes // 60
@@ -197,6 +242,13 @@ def parse_elapsed(value):
     if number and not saw_unit:
         total += int(number)
     return total
+
+
+def _int_value(value):
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def format_summary(rows, total, by_project, start, end):

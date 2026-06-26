@@ -34,6 +34,7 @@ Sample files are available in [../../examples/](../../examples/):
 - [team_status_life.txt](../../examples/team_status_life.txt): multi-person status records
 - [messages_life.txt](../../examples/messages_life.txt): message and notification records
 - [diary_life.txt](../../examples/diary_life.txt): journal / diary entries with multiline body text
+- [markdown_life.txt](../../examples/markdown_life.txt): safe Markdown title/body/note rendering examples
 - [linked_life.txt](../../examples/linked_life.txt): id-based links with `parent`, `ref`, `depends_on`, `blocks`, and `related`
 - [recurrence_time_life.txt](../../examples/recurrence_time_life.txt): timezones, fractional seconds, simple recurrence, body, and dependency examples
 - [hierarchy_life.txt](../../examples/hierarchy_life.txt): indented nested records that infer `parent:` links
@@ -52,6 +53,7 @@ python -m lifetxt check life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt to-csv life.txt --type journal -o journal.csv
+python -m lifetxt markdown life.txt --field all --format html -o markdown.html
 python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
 python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
 python -m lifetxt filter life.txt --open --type task -o open_tasks.life.txt

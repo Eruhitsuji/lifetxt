@@ -6,6 +6,8 @@ COMMANDS = (
     "check",
     "ids",
     "links",
+    "sources",
+    "markdown",
     "to-json",
     "to-jsonl",
     "to-csv",
@@ -37,7 +39,7 @@ COMMON_OPTIONS = (
 OPTION_VALUES = {
     "--type": "task event deadline reminder habit note status message journal T E D R H N S M J",
     "--status": "todo done progress cancel defer pending note [ ] [x] [/] [-] [>] [?] [N]",
-    "--format": "text life json jsonl",
+    "--format": "text life html json jsonl",
     "--window": "1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y",
     "--around": "now today",
 }
@@ -121,7 +123,7 @@ _lifetxt() {
   case "$words[CURRENT-1]" in
     --type) _values 'type' task event deadline reminder habit note status message journal T E D R H N S M J; return ;;
     --status) _values 'status' todo done progress cancel defer pending note '[ ]' '[x]' '[/]' '[-]' '[>]' '[?]' '[N]'; return ;;
-    --format) _values 'format' text life json jsonl; return ;;
+    --format) _values 'format' text life html json jsonl; return ;;
     --window) _values 'window' 1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y; return ;;
     --around) _values 'around' now today; return ;;
   esac
@@ -146,7 +148,7 @@ def fish_completion():
             lines.append("complete -c lifetxt -l %s" % option[2:])
     lines.append("complete -c lifetxt -l type -a 'task event deadline reminder habit note status message journal T E D R H N S M J'")
     lines.append("complete -c lifetxt -l status -a 'todo done progress cancel defer pending note \"[ ]\" \"[x]\" \"[/]\" \"[-]\" \"[>]\" \"[?]\" \"[N]\"'")
-    lines.append("complete -c lifetxt -l format -a 'text life json jsonl'")
+    lines.append("complete -c lifetxt -l format -a 'text life html json jsonl'")
     lines.append("complete -c lifetxt -l window -a '1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y'")
     lines.append("complete -c lifetxt -l around -a 'now today'")
     return "\n".join(lines) + "\n"
@@ -237,6 +239,7 @@ def _all_options():
         "--repo-dir",
         "--files",
         "--force",
+        "--field",
     )
 
 

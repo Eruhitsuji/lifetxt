@@ -2,9 +2,10 @@ import argparse
 import io
 import json
 import os
+import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
 
 from lifetxt import completion, fzf_helper, git_hook, stats, timer, tui
@@ -15,6 +16,7 @@ class CompletionTests(unittest.TestCase):
     def test_generates_completion_for_new_commands(self):
         script = completion.bash_completion()
 
+        self.assertIn("sources", script)
         self.assertIn("timer", script)
         self.assertIn("stats", script)
         self.assertIn("git-hook", script)
@@ -121,6 +123,57 @@ class TimerTests(unittest.TestCase):
             self.assertIn("elapsed:1h30m", text)
             self.assertFalse(os.path.exists(state_file))
 
+    def test_pause_resume_timer_accumulates_elapsed_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            state_file = os.path.join(tmp, "timer.json")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Deep_Work id:t1 elapsed:10m\n")
+            config_data = {"timer": {"state_file": state_file}}
+            start_args = argparse.Namespace(
+                path=path,
+                item_id="t1",
+                note=None,
+                config_data=config_data,
+            )
+            command_args = argparse.Namespace(config_data=config_data)
+            stop_args = argparse.Namespace(path=None, item_id=None, config_data=config_data)
+            status_args = argparse.Namespace(paths=[path], config_data=config_data)
+            original_now = timer._now
+            try:
+                timer._now = lambda: datetime(2026, 6, 10, 10, 0, 0)
+                with redirect_stdout(io.StringIO()):
+                    timer.start_timer(start_args)
+
+                timer._now = lambda: datetime(2026, 6, 10, 10, 25, 0)
+                with redirect_stdout(io.StringIO()):
+                    timer.pause_timer(command_args)
+                with open(state_file, "r", encoding="utf-8") as handle:
+                    paused_state = json.load(handle)
+                self.assertEqual(25, paused_state["accumulated_minutes"])
+                self.assertEqual("2026-06-10T10:25:00", paused_state["paused_at"])
+
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    timer.status_timer(status_args)
+                self.assertIn("Paused:", output.getvalue())
+                self.assertIn("elapsed: 25m", output.getvalue())
+
+                timer._now = lambda: datetime(2026, 6, 10, 11, 0, 0)
+                with redirect_stdout(io.StringIO()):
+                    timer.resume_timer(command_args)
+
+                timer._now = lambda: datetime(2026, 6, 10, 11, 10, 0)
+                with redirect_stdout(io.StringIO()):
+                    timer.stop_timer(stop_args)
+            finally:
+                timer._now = original_now
+
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("elapsed:45m", text)
+            self.assertFalse(os.path.exists(state_file))
+
 
 class StatsTests(unittest.TestCase):
     def test_build_stats_for_tasks_habits_and_journals(self):
@@ -150,6 +203,28 @@ class StatsTests(unittest.TestCase):
         self.assertEqual(1, data["mood"]["counts"]["good"])
         self.assertEqual(2, data["habits"][0]["streak"])
 
+    def test_weekly_stats_bucket_tasks_and_habits(self):
+        text = (
+            "[x] T Done_Task due:2026-06-02 project:work id:t1\n"
+            "[ ] T Open_Task due:2026-06-09 project:work id:t2\n"
+            "[x] H Exercise repeat:daily done:2026-06-02 done:2026-06-09 id:h1\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+
+            items = stats.load_items([path])
+            start = stats._parse_date_only("2026-06-01")
+            end = stats._parse_date_only("2026-06-14")
+            buckets = stats.make_buckets(start, end, "weekly")
+            data = stats.build_stats(items, start, end, "weekly", buckets)
+
+        self.assertEqual(2, len(data["tasks"]["buckets"]))
+        self.assertEqual(1, data["tasks"]["buckets"][0]["done"])
+        self.assertEqual(1, data["tasks"]["buckets"][1]["total"])
+        self.assertEqual("==", data["habits"][0]["sparkline"])
+
     def test_progress_bar_is_ascii(self):
         bar = stats.progress_bar(50, width=4)
 
@@ -168,6 +243,41 @@ class FzfHelperTests(unittest.TestCase):
         self.assertEqual("t1", record["id"])
         self.assertEqual("life.txt", record["source"])
         self.assertIn("Write_Report", record["label"])
+        self.assertIn("id:t1", line)
+
+    def test_preview_token_formats_body_and_source(self):
+        items, diagnostics = parse_text("[ ] T Write_Report id:t1\n| first line\n| second line\n")
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        items[0].source = "life.txt"
+
+        token = fzf_helper.encode_item(items[0], "id").split("\t", 1)[0]
+        preview = fzf_helper.preview_token(token)
+
+        self.assertIn("source: life.txt:1", preview)
+        self.assertIn("body:", preview)
+        self.assertIn("first line", preview)
+        self.assertIn("life.txt:", preview)
+
+    def test_delete_requires_explicit_delete_confirmation(self):
+        record = {
+            "id": "t1",
+            "source": "life.txt",
+            "line": 1,
+            "label": "[ ] T Write_Report",
+            "body": "",
+            "text": "[ ] T Write_Report id:t1",
+        }
+        args = argparse.Namespace(config_data={})
+        original_stdin = sys.stdin
+        try:
+            sys.stdin = io.StringIO("y\n")
+            with redirect_stdout(io.StringIO()) as stdout, redirect_stderr(io.StringIO()):
+                result = fzf_helper.run_action("delete", [record], args)
+        finally:
+            sys.stdin = original_stdin
+
+        self.assertEqual(0, result)
+        self.assertIn("Canceled.", stdout.getvalue())
 
     def test_update_item_marks_done_without_external_fzf(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -187,10 +297,24 @@ class TuiTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T Write_Report id:t1\n")
-            output = tui.render_dashboard(argparse.Namespace(paths=[path]))
+            output = tui.render_dashboard(argparse.Namespace(paths=[path]), focus="tasks")
 
-        self.assertIn("TASKS (open)", output)
+        self.assertIn("> TASKS (open)", output)
         self.assertIn("Write_Report", output)
+
+    def test_render_dashboard_help(self):
+        output = tui.render_dashboard(argparse.Namespace(paths=[]), help_visible=True)
+
+        self.assertIn("lifetxt TUI help", output)
+        self.assertIn("tab / n", output)
+        self.assertIn("h / left", output)
+        self.assertIn("G / end", output)
+
+    def test_render_dashboard_safe_shows_errors(self):
+        output = tui.render_dashboard_safe(argparse.Namespace(paths=["missing.life.txt"]))
+
+        self.assertIn("Could not load life.txt data.", output)
+        self.assertIn("ERROR:", output)
 
     def test_curses_draw_clips_to_small_screen(self):
         class FakeScreen:
@@ -210,11 +334,67 @@ class TuiTests(unittest.TestCase):
             screen,
             "lifetxt TUI with a very long title\nTASKS\n  [ ] T Example",
             "q quit  r reload",
+            scroll=1,
         )
 
         self.assertTrue(screen.calls)
         self.assertTrue(all(len(call[2]) <= 11 for call in screen.calls))
 
+    def test_curses_draw_uses_color_attributes_when_available(self):
+        class FakeScreen:
+            def __init__(self):
+                self.calls = []
+
+            def getmaxyx(self):
+                return (5, 40)
+
+            def addstr(self, row, column, text, attr=0):
+                self.calls.append((row, column, text, attr))
+
+        screen = FakeScreen()
+        tui._draw_curses_text(
+            screen,
+            "lifetxt TUI\n> TASKS (open)\n  [/] T Active_Task",
+            "q quit",
+            color_attrs={"title": 11, "focus": 22, "active": 33, "footer": 44},
+        )
+
+        attrs = [call[3] for call in screen.calls]
+        self.assertIn(11, attrs)
+        self.assertIn(22, attrs)
+        self.assertIn(33, attrs)
+        self.assertIn(44, attrs)
+
     def test_clip_display_width_handles_wide_characters(self):
         self.assertEqual("あい", tui._clip_display_width("あいう", 4))
         self.assertEqual("ab", tui._clip_display_width("abc", 2))
+
+    def test_section_navigation(self):
+        self.assertEqual("agenda", tui.next_section("tasks"))
+        self.assertEqual("status", tui.previous_section("tasks"))
+
+    def test_vim_scroll_helpers_and_line_styles(self):
+        class FakeScreen:
+            def getmaxyx(self):
+                return (4, 20)
+
+        self.assertEqual(1, tui._page_scroll_amount(FakeScreen()))
+        self.assertEqual(2, tui._max_scroll_for_screen(FakeScreen(), "a\nb\nc\nd\ne\n"))
+        self.assertEqual("title", tui._style_for_line("lifetxt TUI"))
+        self.assertEqual("focus", tui._style_for_line("> TASKS (open)"))
+        self.assertEqual("active", tui._style_for_line("  [/] T Active_Task"))
+        self.assertEqual("error", tui._style_for_line("ERROR: broken"))
+
+    def test_file_change_watcher_detects_polling_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T One id:t1\n")
+            watcher = tui.FileChangeWatcher([path], use_watchdog=False).start()
+
+            self.assertFalse(watcher.consume_changed())
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Two_Longer id:t1\n")
+
+            self.assertTrue(watcher.consume_changed())
+            self.assertFalse(watcher.consume_changed())

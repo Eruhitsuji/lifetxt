@@ -81,6 +81,25 @@ Example item payload:
 }
 ```
 
+Item responses include a `markdown` object with sanitized HTML for fields that
+commonly contain Markdown:
+
+```json
+{
+  "title": "Research **day**",
+  "details": {"body": ["**Done**"]},
+  "markdown": {
+    "title": "Research <strong>day</strong>",
+    "details": {
+      "body": ["<p><strong>Done</strong></p>"]
+    }
+  }
+}
+```
+
+The raw `title` and `details` values are unchanged. The `markdown` HTML is
+generated from the safe life.txt Markdown subset and escapes raw HTML.
+
 Examples:
 
 ```sh
@@ -119,6 +138,7 @@ The browser GUI supports:
 - Showing active status / presence records
 - Showing due message notifications
 - Browser notifications after the user grants permission
+- Rendering sanitized Markdown title/body/note previews
 - Creating new items
 - Selecting editable items and saving changes
 - Deleting editable item lines

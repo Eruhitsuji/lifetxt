@@ -1,0 +1,33 @@
+# Markdown body examples
+
+[N] J "Research **day**" on:2026-06-26 tag:markdown
+| # Summary
+|
+| Implemented **safe Markdown** rendering for life.txt.
+|
+| - Parser keeps raw Markdown text
+| - CLI can render Markdown as HTML, text, JSON, or JSONL
+| - Web UI shows sanitized body previews
+|
+| See [project docs](https://example.com/lifetxt).
+|
+| ## Code block example
+|
+| ```python
+| print("Hello, world!")  # This is a code block
+|
+| def add(a, b):
+|     return a + b
+| 
+| print(add(2, 3))  # Output: 5
+| ```
+|
+
+[ ] M "Review `markdown` support" sender:self recipient:alice notify_at:2026-06-27T09:00
+| Please review:
+| 1. HTML escaping
+| 2. CLI output
+| 3. Web preview
+
+[N] N "Unsafe HTML is escaped" body:"<script>alert(1)</script> stays text"
+[N] N "[Markdown](https://example.com/markdown)" body:"**bold** and *italic* are rendered"

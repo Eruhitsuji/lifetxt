@@ -544,7 +544,50 @@ project context tag note body url ref related
 
 孤立した `|` 行は構文エラーです。
 
-## 12. Status / Presence state 値
+## 12. Safe Markdown subset
+
+Markdown は、quoted title、quoted detail value、複数行 `body:` の表示用
+markup として利用できます。これは life.txt の基本文法を変更しません。
+parser は raw text を保持し、renderer が必要に応じて安全な Markdown subset
+として解釈します。
+
+対応する inline syntax:
+
+| Syntax | Meaning |
+|---|---|
+| `` `code` `` | Inline code |
+| `**bold**` | Strong emphasis |
+| `*italic*` | Emphasis |
+| `[label](https://example.com)` | Safe link。`http`、`https`、`mailto` のみ link として描画 |
+
+複数行 `body:` で対応する block syntax:
+
+| Syntax | Meaning |
+|---|---|
+| `# Heading`, `## Heading`, `### Heading` | Heading |
+| Blank-line separated text | Paragraph |
+| `- item` or `* item` | Unordered list |
+| `1. item` | Ordered list |
+| Triple backtick fences | Code block |
+
+Raw HTML は subset に含めません。renderer は必ず escape してください。
+未対応 Markdown syntax は text として保持します。JSON、JSONL、CSV、life.txt
+出力は raw Markdown text を保持し、HTML rendering は Web API/UI と
+`markdown` CLI command で利用できます。
+
+```txt
+[N] J "Research **day**" on:2026-06-26
+| # Summary
+|
+| Implemented **safe Markdown** rendering.
+|
+| - Parser keeps raw Markdown text
+| - Web UI shows sanitized previews
+|
+| See [project docs](https://example.com/lifetxt).
+```
+
+## 13. Status / Presence state 値
 
 type `S` の `state:` 推奨値:
 
@@ -565,7 +608,7 @@ type `S` の `state:` 推奨値:
 
 `person:` が省略された場合、ツールは `self` と解釈してよいです。
 
-## 13. Note / Journal ルール
+## 14. Note / Journal ルール
 
 note status `[N]` は通常 note type `N` または journal type `J` と組み合わせます。
 
@@ -574,7 +617,7 @@ note status `[N]` は通常 note type `N` または journal type `J` と組み�
 [N] J "Research day" on:2026-06-23
 ```
 
-## 14. 形式文法
+## 15. 形式文法
 
 ```ebnf
 life_file         = { blank_line | comment_line | item_line | continuation_line } ;
@@ -612,7 +655,7 @@ text              = ? 行末までの任意の文字 ? ;
 - continuation line は item の直後に必要です。JSON/JSONL/CSV から life.txt に戻す場合、複数行 `body:` は `|` 継続行として出力されます。
 - `key=value` は CLI helper の入力だけで使える便宜記法です。ファイル構文には含めません。
 
-## 15. 完全な例
+## 16. 完全な例
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

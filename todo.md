@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x4)
+Last updated: 2026-06-27 (updated x5)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -18,7 +18,6 @@ Priority guide:
 
 ## P1: Format Semantics
 
-- [ ] Simplify and document recommended detail keys. Keep a small core set and define type-specific meanings only where necessary.
 - [ ] Clarify user-related keys: `owner`, `assignee`, `attendee`, `person`, `sender`, `recipient`, `team`, and `group`.
 - [ ] Expand `repeat:` and `RRULE:` consistently in `agenda`, `filter --after/--before`, `stats`, Web API, and exports.
 - [ ] Decide whether typo-like `repete:` should be auto-fixed, warned as a likely `repeat:`, or left as a custom detail key.
@@ -106,6 +105,7 @@ Priority guide:
 - [ ] Add CI for unit tests, compile checks, and example validation.
 - [ ] Add a lightweight smoke-test runner for release checks that can execute selected CLI smoke tests, including the timer state-file smoke test, without running the full unittest suite.
 - [ ] Add snapshot tests for important human-readable CLI output.
+- [ ] Add sync tests that compare `RECOMMENDED_KEYS_BY_TYPE` in `lifetxt/model.py` with the type-specific recommended key lists in English and Japanese specs.
 - [ ] Add cross-platform tests for paths, glob expansion, line endings, and shell completion output.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and `projects/**/*.life.txt`.
 - [ ] Add parser edge-case tests for escaping, quoted values, invalid continuation, indentation, duplicate IDs, and missing references.

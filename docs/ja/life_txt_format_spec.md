@@ -316,10 +316,15 @@ time filter では一致対象にしません。
 
 ## 9. type 別 recommended keys
 
+ここでの recommended keys は、入力補助や簡易helpで最初に出す短い候補です。
+許可されるkeyの完全な一覧ではありません。`body`、`ref`、`depends_on`、
+`blocks`、`related`、`created`、`updated` などの known key は、必要な文脈が
+ある場合に引き続き利用できます。
+
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner team est elapsed project tag note body id parent ref depends_on blocks related
+do due priority assignee owner project tag id
 ```
 
 例:
@@ -331,7 +336,7 @@ do due priority assignee owner team est elapsed project tag note body id parent 
 ### 9.2 Event (`E`)
 
 ```txt
-from to on loc attendee owner team project tag note body ref related
+from to on loc attendee project id
 ```
 
 例:
@@ -343,7 +348,7 @@ from to on loc attendee owner team project tag note body ref related
 ### 9.3 Deadline (`D`)
 
 ```txt
-due priority owner assignee team project tag note body depends_on ref related
+due priority owner assignee project id
 ```
 
 例:
@@ -355,7 +360,7 @@ due priority owner assignee team project tag note body depends_on ref related
 ### 9.4 Reminder (`R`)
 
 ```txt
-at on owner team project context note body ref related
+at on project context note id
 ```
 
 例:
@@ -367,7 +372,7 @@ at on owner team project context note body ref related
 ### 9.5 Habit (`H`)
 
 ```txt
-repeat interval until count at on owner team project tag note body ref related
+repeat at on project tag id
 ```
 
 例:
@@ -380,7 +385,7 @@ repeat interval until count at on owner team project tag note body ref related
 ### 9.6 Note (`N`)
 
 ```txt
-project context tag note body url id parent ref related
+project tag note body url id
 ```
 
 例:
@@ -396,7 +401,7 @@ project context tag note body url id parent ref related
 推奨 key:
 
 ```txt
-on at from to mood weather loc person project tag note body url id parent ref related created updated
+on mood project tag body id
 ```
 
 例:
@@ -420,7 +425,7 @@ from state
 推奨 key:
 
 ```txt
-from state to person team group service loc project note body ref related visibility
+from state to person service visibility
 ```
 
 `to:` がない場合は現在有効な状態として扱えます。`to:` がある場合は過去の状態ログとして扱えます。
@@ -445,7 +450,7 @@ sender recipient
 推奨 key:
 
 ```txt
-sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
+sender recipient notify_at notify_from notify_to channel priority body id parent
 ```
 
 | Key | 推奨理由 |

@@ -320,6 +320,11 @@ without `on:` because they have no stable date anchor.
 
 ## 9. Type-Specific Recommended Keys
 
+The lists below are intentionally short first-choice keys for input helpers and
+quick documentation. They are not the full set of valid keys. Other known keys
+from section 7, such as `body`, `ref`, `depends_on`, `blocks`, `related`,
+`created`, and `updated`, remain valid when they add useful context.
+
 ### 9.1 Task (`T`)
 
 Use `T` for work that can be completed.
@@ -327,7 +332,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner team est elapsed project tag note body id parent ref depends_on blocks related
+do due priority assignee owner project tag id
 ```
 
 | Key | Why it is recommended |
@@ -337,10 +342,8 @@ do due priority assignee owner team est elapsed project tag note body id parent 
 | `priority` | Relative importance |
 | `assignee` | Person assigned to do the task |
 | `owner` | Person accountable for the task |
-| `team` | Team related to the task |
-| `est` | Estimated effort |
-| `elapsed` | Actual elapsed time, usually maintained by `timer` |
-| `project`, `tag`, `note`, `body`, `id`, `parent` | Organization and context |
+| `project`, `tag` | Organization and retrieval |
+| `id` | Stable reference target |
 
 Example:
 
@@ -355,7 +358,7 @@ Use `E` for calendar-like events.
 Recommended keys:
 
 ```txt
-from to on loc attendee owner team project tag note body ref related
+from to on loc attendee project id
 ```
 
 | Key | Why it is recommended |
@@ -364,9 +367,8 @@ from to on loc attendee owner team project tag note body ref related
 | `on` | All-day event date |
 | `loc` | Event location |
 | `attendee` | Event participant; repeat for multiple attendees |
-| `owner` | Person accountable for the event record |
-| `team` | Team related to the event |
-| `project`, `tag`, `note`, `body` | Organization and context |
+| `project` | Related project or work area |
+| `id` | Stable reference target |
 
 Example:
 
@@ -381,7 +383,7 @@ Use `D` for important deadlines that are not themselves events.
 Recommended keys:
 
 ```txt
-due priority owner assignee team project tag note body depends_on ref related
+due priority owner assignee project id
 ```
 
 | Key | Why it is recommended |
@@ -390,8 +392,8 @@ due priority owner assignee team project tag note body depends_on ref related
 | `priority` | Relative importance |
 | `owner` | Person accountable for the deadline |
 | `assignee` | Person assigned to complete related work |
-| `team` | Team related to the deadline |
-| `project`, `tag`, `note`, `body` | Organization and context |
+| `project` | Related project or work area |
+| `id` | Stable reference target |
 
 Example:
 
@@ -406,16 +408,16 @@ Use `R` for a reminder at a date, time, or datetime.
 Recommended keys:
 
 ```txt
-at on owner team project context note body ref related
+at on project context note id
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `at` | Reminder time or datetime |
 | `on` | Reminder date when `at:` is time-only |
-| `owner` | Person accountable for the reminder |
-| `team` | Team related to the reminder |
-| `project`, `context`, `note`, `body` | Organization and context |
+| `project`, `context` | Organization and trigger context |
+| `note` | Short reminder detail |
+| `id` | Stable reference target |
 
 Example:
 
@@ -430,17 +432,15 @@ Use `H` for recurring actions.
 Recommended keys:
 
 ```txt
-repeat interval until count at on owner team project tag note body ref related
+repeat at on project tag id
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `repeat` | Recurrence rule |
-| `interval`, `until`, `count` | Recurrence limits |
 | `at`, `on` | Time or date anchor |
-| `owner` | Person accountable for the habit |
-| `team` | Team related to the habit |
-| `project`, `tag`, `note`, `body` | Organization and context |
+| `project`, `tag` | Organization and retrieval |
+| `id` | Stable reference target |
 
 Example:
 
@@ -456,16 +456,16 @@ Use `N` for notes and memos.
 Recommended keys:
 
 ```txt
-project context tag note body url id parent ref related
+project tag note body url id
 ```
 
 | Key | Why it is recommended |
 |---|---|
-| `project`, `context`, `tag` | Organization and retrieval |
+| `project`, `tag` | Organization and retrieval |
 | `note` | Extra note text when the title is short |
 | `body` | Longer note text, especially with continuation lines |
 | `url` | Related reference |
-| `id`, `parent` | Linking notes to other items |
+| `id` | Stable reference target |
 
 Example:
 
@@ -482,16 +482,16 @@ Because `D` is already Deadline, diary uses the type letter `J` for Journal.
 Recommended keys:
 
 ```txt
-on at from to mood weather loc person project tag note body url id parent ref related created updated
+on mood project tag body id
 ```
 
 | Key | Why it is recommended |
 |---|---|
-| `on`, `at`, `from`, `to` | Date/time covered by the entry |
-| `mood`, `weather`, `loc` | Diary context |
-| `person` | Person the entry is about, usually `self` |
-| `project`, `tag`, `note`, `body`, `url` | Retrieval and long-form content |
-| `id`, `parent`, `created`, `updated` | Linking and metadata |
+| `on` | Journal date |
+| `mood` | Diary context |
+| `project`, `tag` | Retrieval and organization |
+| `body` | Long-form journal text |
+| `id` | Stable reference target |
 
 Examples:
 
@@ -514,7 +514,7 @@ from state
 Recommended keys:
 
 ```txt
-from state to person team group service loc project note body ref related visibility
+from state to person service visibility
 ```
 
 | Key | Why it is recommended |
@@ -523,9 +523,8 @@ from state to person team group service loc project note body ref related visibi
 | `state` | Presence state |
 | `to` | Status end datetime for finished logs |
 | `person` | Person or target whose state is recorded |
-| `team`, `group` | Team or group context for the status |
 | `service` | Source or target service |
-| `loc`, `project`, `note`, `body`, `visibility` | Context and visibility |
+| `visibility` | Intended audience |
 
 Example:
 
@@ -548,21 +547,19 @@ sender recipient
 Recommended keys:
 
 ```txt
-sender recipient team group notify_at notify_from notify_to ack snooze_until channel service priority project tag note body url id parent ref related created updated
+sender recipient notify_at notify_from notify_to channel priority body id parent
 ```
 
 | Key | Why it is recommended |
 |---|---|
 | `sender` | Person or agent sending the message |
 | `recipient` | Person receiving the message; repeat for multiple recipients |
-| `team`, `group` | Team or group routing/context |
 | `notify_at` | Single notification or delivery time |
 | `notify_from`, `notify_to` | Notification window or delivery period |
-| `ack` | Acknowledged notification; tools should not notify again |
-| `snooze_until` | Suppress notification until this date or datetime |
 | `channel` | Delivery route such as `teams`, `discord`, `slack`, or `email` |
-| `service` | Source or target service |
-| `priority`, `project`, `tag`, `note`, `body`, `url`, `id`, `parent`, `created`, `updated` | Routing, context, and traceability |
+| `priority` | Delivery or attention priority |
+| `body` | Longer message text |
+| `id`, `parent` | Traceability and message threads |
 
 Examples:
 

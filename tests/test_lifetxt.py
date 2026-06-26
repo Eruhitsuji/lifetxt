@@ -440,7 +440,7 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertEqual(2, duplicate_warnings[0].line)
         self.assertIn("Duplicate id:task_001", duplicate_warnings[0].message)
 
-    def test_people_keys_are_known_and_recommended_for_matching_types(self):
+    def test_people_keys_are_known_for_matching_types(self):
         _items, diagnostics = parse_text(
             "[ ] T Write_Report due:2026-06-12 assignee:alice owner:bob\n"
             "[ ] E Seminar from:2026-06-08T13:00 "
@@ -449,6 +449,21 @@ class LifeTxtParserTests(unittest.TestCase):
         )
 
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertFalse(any(d.code == "W106" for d in diagnostics))
+
+    def test_type_recommended_keys_are_short_first_choice_lists(self):
+        from lifetxt.model import KNOWN_KEYS, RECOMMENDED_KEYS_BY_TYPE
+
+        self.assertEqual(
+            ("do", "due", "priority", "assignee", "owner", "project", "tag", "id"),
+            RECOMMENDED_KEYS_BY_TYPE["T"],
+        )
+        self.assertLessEqual(max(len(keys) for keys in RECOMMENDED_KEYS_BY_TYPE.values()), 10)
+        self.assertIn("depends_on", KNOWN_KEYS)
+        self.assertNotIn("depends_on", RECOMMENDED_KEYS_BY_TYPE["T"])
+
+        _items, diagnostics = parse_text("[ ] T Write_Report depends_on:t0 body:details\n")
+
         self.assertFalse(any(d.code == "W106" for d in diagnostics))
 
     def test_tab_only_blank_line_reports_blank_warning(self):

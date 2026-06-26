@@ -16,6 +16,7 @@ Priority guide:
 - [ ] Verify `tui` in real terminals: WSL, Windows Terminal, Textual installed/not installed, watchdog installed/not installed, Vim-like keymap, and curses colors.
 - [ ] Verify `lifetxt fzf` with actual `fzf` and `peco` on both Windows and Unix-like shells, including preview command quoting.
 - [ ] Run a cross-platform smoke test for `timer start/pause/resume/status/stop/cancel` with a real state file path.
+- [ ] Fix Markdown table rendering: investigate and resolve broken table display in CLI output and Web UI (misaligned columns, missing separators, or renderer mismatch).
 
 ## P1: Format Semantics
 
@@ -28,6 +29,8 @@ Priority guide:
 - [ ] Finalize timezone-aware datetime round-trip rules for parser, JSON/CSV output, display, and filtering.
 - [ ] Define dependency semantics for `depends_on:` and `blocks:` beyond generic links.
 - [ ] Decide whether hierarchy should be represented mainly by `parent:` or inferred indentation, and how `--canonical` should output it.
+- [ ] Add line continuation syntax: a trailing `\` at end of line joins the next line as if they were one, following shell convention (bash/zsh style). Define parser behavior for whitespace handling at the join point and error handling for a bare `\` at end of file.
+- [ ] Define cross-file ID reference semantics: allow `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` to resolve IDs across multiple loaded files, not only within a single file. Specify how the file of origin is reported in JSON/JSONL output and error messages.
 
 ## P1: CLI / CUI
 
@@ -37,6 +40,8 @@ Priority guide:
 - [ ] Add text output modes for wide/compact terminal widths where tables currently become hard to read.
 - [ ] Improve `assist` support for Markdown body, RRULE, repeat, duration, and links.
 - [ ] Keep CLI help and docs synchronized for `tui`, `fzf`, `timer`, `stats`, `git-hook`, and `completion`.
+- [ ] Add `archive` command: move completed/canceled/old items to a separate archive file. Support `--before DATE`, `--max-items N`, `--status done,canceled`, `--dry-run` (preview without writing), and `--move` vs `--copy` modes. Prompt for confirmation unless `--yes` is given.
+- [ ] Add cross-file ID conflict detection to `check` and `ids` commands: report duplicate IDs found across all loaded files (glob or directory input), including the file path and line number of each occurrence. Extend warning code W213 to cover cross-file duplicates.
 
 ## P1: Web API / Browser UI
 
@@ -69,6 +74,7 @@ Priority guide:
 - [ ] Add highlight snapshot tests for title, status, type, detail key, quoted value, and body continuation.
 - [ ] Add editor support for Markdown body, quoted values, RRULE, and recurrence occurrences.
 - [ ] Add snippets for task, event, status, message, journal, timer-ready task, and linked subtask records.
+- [ ] Add syntax highlight and snippet support for line continuation (`\` at end of line).
 
 ## P2: TUI Usability
 
@@ -86,6 +92,10 @@ Priority guide:
 - [ ] Consider generating parts of the spec and CLI docs from parser/model definitions.
 - [ ] Generate a diagnostic code/category catalog from parser and validator definitions for docs and shell completion.
 - [ ] Add source ownership examples for generated/read-only files and mixed writable files.
+- [ ] Document recommended file-splitting strategies: one file per editor/author (including auto-generated sources such as ICS sync), optional further split by project or period, and periodic archiving. Clarify that these are recommendations, not enforced constraints.
+- [ ] Add archive workflow docs: when to archive, how to run the `archive` command, and how to include archive files in `agenda` or `filter` via glob patterns.
+- [ ] Document line continuation syntax (`\`) with examples and known limitations (e.g., interaction with body continuation `|` lines).
+- [ ] Document cross-file ID reference behavior: which commands resolve cross-file IDs, how to pass multiple files, and how `--config paths` can automate this.
 
 ## P2: Tests / CI / Release
 
@@ -100,6 +110,10 @@ Priority guide:
 - [ ] Add FastAPI test-client coverage when optional Web dependencies are installed.
 - [ ] Add release notes, changelog, and versioning policy.
 - [ ] Verify `pip install -e .`, optional extras, console script entry points, and Windows PowerShell usage.
+- [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
+- [ ] Add tests for cross-file ID conflict detection across glob-expanded file sets.
+- [ ] Add `archive` command tests: `--dry-run` output, `--move` vs `--copy` behavior, and edge cases such as open items mixed with completed items.
+- [ ] Add Markdown table rendering tests to catch regression in CLI and Web UI output.
 
 ## Deferred Ideas
 
@@ -110,3 +124,5 @@ Priority guide:
 - [ ] Consider read-only static HTML export for users who do not want to run the server.
 - [ ] Consider JSON Schema for JSON/JSONL output and API payloads.
 - [ ] Consider write-conflict detection that uses source ownership metadata before update/delete operations.
+- [ ] Consider an `archive` rotation policy (e.g., yearly auto-archive via config) after the basic `archive` command is stable.
+- [ ] Consider a `--config paths` auto-load mode where commands that accept file arguments fall back to configured paths when no explicit input is given, reducing repetition in daily use.

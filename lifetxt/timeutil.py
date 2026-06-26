@@ -113,3 +113,53 @@ def _normalize_timezone(value):
     if len(text) >= 6 and text[-6] in ("+", "-") and text[-3] == ":":
         return text[:-3] + text[-2:]
     return text
+
+
+_DURATION_VALUE_RE = re.compile(r"^\d+(?:h(?:\d+m)?|m)$|^\d+$")
+
+
+def parse_elapsed(value):
+    text = str(value or "").strip().lower()
+    if not text:
+        return 0
+    total = 0
+    number = ""
+    saw_unit = False
+    for char in text:
+        if char.isdigit():
+            number += char
+            continue
+        if char == "h":
+            total += int(number or "0") * 60
+            number = ""
+            saw_unit = True
+            continue
+        if char == "m":
+            total += int(number or "0")
+            number = ""
+            saw_unit = True
+            continue
+        return 0
+    if number and not saw_unit:
+        total += int(number)
+    return total
+
+
+def format_elapsed(minutes):
+    minutes = int(minutes or 0)
+    hours = minutes // 60
+    rest = minutes % 60
+    if hours and rest:
+        return "%dh%02dm" % (hours, rest)
+    if hours:
+        return "%dh" % hours
+    return "%dm" % rest
+
+
+def normalize_duration(value):
+    """Return canonical compact form (e.g. 90m -> 1h30m, 60m -> 1h) or value unchanged if not parseable."""
+    text = str(value or "").strip().lower()
+    if not _DURATION_VALUE_RE.match(text):
+        return value
+    minutes = parse_elapsed(text)
+    return format_elapsed(minutes)

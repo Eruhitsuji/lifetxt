@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-26 (updated)
+Last updated: 2026-06-27 (updated)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -23,7 +23,6 @@ Priority guide:
 - [ ] Clarify user-related keys: `owner`, `assignee`, `attendee`, `person`, `sender`, `recipient`, `team`, and `group`.
 - [ ] Expand `repeat:` and `RRULE:` consistently in `agenda`, `filter --after/--before`, `stats`, Web API, and exports.
 - [ ] Decide whether typo-like `repete:` should be auto-fixed, warned as a likely `repeat:`, or left as a custom detail key.
-- [ ] Normalize duration values such as `est:` and `elapsed:` to compact forms like `25m`, `1h`, and `1h30m`.
 - [ ] Decide which item types should recommend `elapsed:` beyond task-like records.
 - [ ] Finalize timezone-aware datetime round-trip rules for parser, JSON/CSV output, display, and filtering.
 - [ ] Define dependency semantics for `depends_on:` and `blocks:` beyond generic links.
@@ -40,7 +39,6 @@ Priority guide:
 - [ ] Improve `assist` support for Markdown body, RRULE, repeat, duration, and links.
 - [ ] Keep CLI help and docs synchronized for `tui`, `fzf`, `timer`, `stats`, `git-hook`, and `completion`.
 - [ ] Add `archive` command: move completed/canceled/old items to a separate archive file. Support `--before DATE`, `--max-items N`, `--status done,canceled`, `--dry-run` (preview without writing), and `--move` vs `--copy` modes. Prompt for confirmation unless `--yes` is given.
-- [ ] Add cross-file ID conflict detection to `check` and `ids` commands: report duplicate IDs found across all loaded files (glob or directory input), including the file path and line number of each occurrence. Extend warning code W213 to cover cross-file duplicates.
 
 ## P1: Web API / Browser UI
 
@@ -104,13 +102,13 @@ Priority guide:
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and `projects/**/*.life.txt`.
 - [ ] Add parser edge-case tests for escaping, quoted values, invalid continuation, indentation, duplicate IDs, and missing references.
 - [ ] Add tests for RRULE, recurrence occurrence, timezone normalization, and duration parsing.
+- [ ] Add tests for W222 duration normalization warnings across more edge cases (bare integers, `1h00m`, unrecognized formats like `1.5h`).
 - [ ] Add snapshot tests for Markdown CLI HTML output and Web UI Markdown preview rendering.
 - [ ] Check performance for large files and duplicate ID detection across many files.
 - [ ] Add FastAPI test-client coverage when optional Web dependencies are installed.
 - [ ] Add release notes, changelog, and versioning policy.
 - [ ] Verify `pip install -e .`, optional extras, console script entry points, and Windows PowerShell usage.
 - [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
-- [ ] Add tests for cross-file ID conflict detection across glob-expanded file sets.
 - [ ] Add `archive` command tests: `--dry-run` output, `--move` vs `--copy` behavior, and edge cases such as open items mixed with completed items.
 
 ## Deferred Ideas

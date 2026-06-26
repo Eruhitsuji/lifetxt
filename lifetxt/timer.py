@@ -8,7 +8,7 @@ from .config import config_section
 from .ids import id_key_from_config
 from .parser import parse_text
 from .serializer import item_to_line
-from .timeutil import parse_date, parse_date_or_datetime
+from .timeutil import format_elapsed, parse_date, parse_date_or_datetime, parse_elapsed
 
 
 DEFAULT_STATE_FILE = "~/.lifetxt_timer.json"
@@ -204,44 +204,6 @@ def state_elapsed_minutes(state, now):
     if started_at is None:
         raise ValueError("Timer state has an invalid started_at value.")
     return accumulated + elapsed_minutes(started_at, now)
-
-
-def format_elapsed(minutes):
-    minutes = int(minutes or 0)
-    hours = minutes // 60
-    rest = minutes % 60
-    if hours and rest:
-        return "%dh%02dm" % (hours, rest)
-    if hours:
-        return "%dh" % hours
-    return "%dm" % rest
-
-
-def parse_elapsed(value):
-    text = str(value or "").strip().lower()
-    if not text:
-        return 0
-    total = 0
-    number = ""
-    saw_unit = False
-    for char in text:
-        if char.isdigit():
-            number += char
-            continue
-        if char == "h":
-            total += int(number or "0") * 60
-            number = ""
-            saw_unit = True
-            continue
-        if char == "m":
-            total += int(number or "0")
-            number = ""
-            saw_unit = True
-            continue
-        return 0
-    if number and not saw_unit:
-        total += int(number)
-    return total
 
 
 def _int_value(value):

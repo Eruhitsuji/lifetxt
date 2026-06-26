@@ -119,6 +119,7 @@ KNOWN_KEYS = (
 )
 
 REFERENCE_KEYS = ("parent", "ref", "depends_on", "blocks", "related")
+DURATION_KEYS = ("est", "elapsed")
 COMMON_RECOMMENDED_KEYS = ("id", "project", "tag", "note", "url")
 LINK_RECOMMENDED_KEYS = REFERENCE_KEYS
 PEOPLE_RECOMMENDED_KEYS = (

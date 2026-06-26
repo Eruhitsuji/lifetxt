@@ -1705,13 +1705,16 @@ def _items_to_life_text(items, canonical=False):
 
 def format_id_audit(audit, only="all"):
     lines = []
+    cross_file_count = audit.get("cross_file_duplicate_count", 0)
+    cross_file_note = (", %d cross-file" % cross_file_count) if cross_file_count else ""
     lines.append(
-        "ID audit (%s): %d item(s), %d id(s), %d duplicate id(s), %d missing id item(s)"
+        "ID audit (%s): %d item(s), %d id(s), %d duplicate id(s)%s, %d missing id item(s)"
         % (
             audit.get("key", "id"),
             audit.get("total_items", 0),
             audit.get("id_count", 0),
             audit.get("duplicate_count", 0),
+            cross_file_note,
             audit.get("missing_count", 0),
         )
     )
@@ -1831,17 +1834,21 @@ def _format_id_duplicate_section(records):
         return lines
     rows = []
     for record in records:
+        cross_marker = "*" if record.get("cross_file") else ""
         rows.append(
             OrderedDict(
                 [
-                    ("id", record["id"]),
+                    ("id", record["id"] + cross_marker),
                     ("count", str(record["count"])),
                     ("locations", "; ".join(item["location"] for item in record["items"])),
                     ("titles", "; ".join(item["title"] for item in record["items"])),
                 ]
             )
         )
-    return lines + _format_table(rows, ("id", "count", "locations", "titles"))
+    result = lines + _format_table(rows, ("id", "count", "locations", "titles"))
+    if any(r.get("cross_file") for r in records):
+        result.append("* = duplicate spans multiple files")
+    return result
 
 
 def _format_id_missing_section(records):
@@ -1909,8 +1916,9 @@ def _id_audit_output(audit, only):
     if only == "all":
         return audit
     data = OrderedDict()
-    for key in ("key", "total_items", "id_count", "duplicate_count", "missing_count"):
-        data[key] = audit[key]
+    for key in ("key", "total_items", "id_count", "duplicate_count", "cross_file_duplicate_count", "missing_count"):
+        if key in audit:
+            data[key] = audit[key]
     data[only] = audit[only]
     return data
 
@@ -1926,6 +1934,7 @@ def _id_audit_jsonl_records(audit, only):
                     ("total_items", audit["total_items"]),
                     ("id_count", audit["id_count"]),
                     ("duplicate_count", audit["duplicate_count"]),
+                    ("cross_file_duplicate_count", audit.get("cross_file_duplicate_count", 0)),
                     ("missing_count", audit["missing_count"]),
                 ]
             )
@@ -2460,6 +2469,8 @@ def diagnostic_category(diagnostic):
         return "reference"
     if code in ("W101", "W102", "W103", "W104"):
         return "workflow"
+    if code == "W222":
+        return "duration"
     return "semantic"
 
 

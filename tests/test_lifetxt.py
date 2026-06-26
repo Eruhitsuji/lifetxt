@@ -309,6 +309,36 @@ class LifeTxtParserTests(unittest.TestCase):
 
         self.assertTrue(any(d.code == "W214" for d in diagnostics))
 
+    def test_normalize_duration_returns_compact_form(self):
+        from lifetxt.timeutil import normalize_duration
+
+        self.assertEqual("1h30m", normalize_duration("90m"))
+        self.assertEqual("1h", normalize_duration("60m"))
+        self.assertEqual("2h", normalize_duration("120m"))
+        self.assertEqual("25m", normalize_duration("25m"))
+        self.assertEqual("1h30m", normalize_duration("1h30m"))
+        self.assertEqual("1h", normalize_duration("1h00m"))
+        self.assertEqual("1h30m", normalize_duration("90"))
+        self.assertEqual("1.5h", normalize_duration("1.5h"))
+
+    def test_duration_canonical_form_no_warning(self):
+        _items, diagnostics = parse_text("[ ] T Review est:1h30m elapsed:25m\n")
+
+        self.assertFalse(any(d.code == "W222" for d in diagnostics))
+
+    def test_duration_non_canonical_warns_w222(self):
+        _items, diagnostics = parse_text("[ ] T Review est:90m elapsed:120m\n")
+
+        w222 = [d for d in diagnostics if d.code == "W222"]
+        codes_keys = [d.message.split(":")[0] for d in w222]
+        self.assertIn("est", codes_keys)
+        self.assertIn("elapsed", codes_keys)
+
+    def test_duration_unrecognized_format_no_warning(self):
+        _items, diagnostics = parse_text("[ ] T Review est:1.5h\n")
+
+        self.assertFalse(any(d.code == "W222" for d in diagnostics))
+
     def test_reference_diagnostics_and_link_records(self):
         text = (
             "[ ] T Root id:task_root\n"
@@ -1745,6 +1775,54 @@ class LifeTxtIdDiagnosticsTests(unittest.TestCase):
         self.assertEqual("id", data["key"])
         self.assertEqual(1, data["missing_count"])
         self.assertEqual("Missing", data["missing"][0]["title"])
+
+    def test_ids_cli_cross_file_duplicate_shows_marker_and_count(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "a.life.txt")
+            second_path = os.path.join(temp_dir, "b.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Alpha id:dup_001\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Beta id:dup_001\n")
+
+            stdout, stderr, code = run_cli("ids", first_path, second_path)
+
+            self.assertEqual(0, code)
+            self.assertIn("1 cross-file", stdout)
+            self.assertIn("dup_001*", stdout)
+            self.assertIn("* = duplicate spans multiple files", stdout)
+
+    def test_ids_cli_cross_file_duplicate_json_includes_count_and_flag(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "a.life.txt")
+            second_path = os.path.join(temp_dir, "b.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Alpha id:dup_001\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Beta id:dup_001\n")
+
+            stdout, stderr, code = run_cli(
+                "ids", first_path, second_path, "--format", "json"
+            )
+
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(1, data["cross_file_duplicate_count"])
+            self.assertEqual(1, len(data["cross_file_duplicates"]))
+            self.assertEqual("dup_001", data["cross_file_duplicates"][0]["id"])
+            self.assertTrue(data["cross_file_duplicates"][0]["cross_file"])
+
+    def test_ids_cli_same_file_duplicate_no_cross_file_marker(self):
+        text = (
+            "[ ] T First id:task_001\n"
+            "[ ] T Second id:task_001\n"
+        )
+
+        stdout, stderr, code = run_cli("ids", input_text=text)
+
+        self.assertEqual(0, code)
+        self.assertNotIn("cross-file", stdout)
+        self.assertNotIn("*", stdout)
 
     def test_ids_assign_dry_run_does_not_modify_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

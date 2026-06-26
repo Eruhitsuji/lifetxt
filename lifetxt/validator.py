@@ -6,6 +6,7 @@ from .model import (
     DATE_OR_DATETIME_KEYS,
     DATETIME_KEYS,
     Diagnostic,
+    DURATION_KEYS,
     KNOWN_KEYS,
     RECOMMENDED_KEYS_BY_TYPE,
     REFERENCE_KEYS,
@@ -15,6 +16,7 @@ from .model import (
     VALID_STATUSES,
     VALID_TYPES,
 )
+from .timeutil import normalize_duration
 from .timeutil import (
     is_date,
     is_datetime,
@@ -201,6 +203,17 @@ def _validate_value(item, key, value):
                     "warning",
                     "W219",
                     "%s: should be a positive integer." % key,
+                    item.line,
+                )
+            )
+    elif key in DURATION_KEYS:
+        normalized = normalize_duration(value)
+        if str(normalized) != str(value):
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W222",
+                    "%s: duration %r should be in compact form; use %r." % (key, value, normalized),
                     item.line,
                 )
             )

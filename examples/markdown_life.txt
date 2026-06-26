@@ -23,6 +23,7 @@
 | ```
 |
 | ## Table example
+|
 | | Name | Age | Occupation |
 | | --- | --- | --- |
 | | Alice | 30 | Engineer |

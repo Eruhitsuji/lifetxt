@@ -100,10 +100,13 @@ def id_audit(items, key="id"):
     present = []
     duplicates = []
     for value, entries in index.items():
+        sources = {e["source"] for e in entries if e["source"] is not None}
+        cross_file = len(sources) > 1
         record = OrderedDict(
             [
                 ("id", value),
                 ("count", len(entries)),
+                ("cross_file", cross_file),
                 ("items", entries),
             ]
         )
@@ -111,15 +114,19 @@ def id_audit(items, key="id"):
         if len(entries) > 1:
             duplicates.append(record)
 
+    cross_file_duplicates = [r for r in duplicates if r["cross_file"]]
+
     return OrderedDict(
         [
             ("key", key),
             ("total_items", total_items),
             ("id_count", len(index)),
             ("duplicate_count", len(duplicates)),
+            ("cross_file_duplicate_count", len(cross_file_duplicates)),
             ("missing_count", len(missing)),
             ("present", present),
             ("duplicates", duplicates),
+            ("cross_file_duplicates", cross_file_duplicates),
             ("missing", missing),
         ]
     )

@@ -42,7 +42,7 @@ from .validator import validate_item
 def create_app(paths=None, writable_path=None, config=None):
     try:
         from fastapi import Body, FastAPI, HTTPException, Query
-        from fastapi.responses import HTMLResponse
+        from fastapi.responses import HTMLResponse, JSONResponse
     except ImportError as exc:
         raise RuntimeError(
             "Web dependencies are not installed. Run: pip install -r requirements-web.txt"
@@ -73,6 +73,26 @@ def create_app(paths=None, writable_path=None, config=None):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             return await call_next(request)
+
+    @app.exception_handler(HTTPException)
+    async def _http_exception_handler(request, exc):
+        detail = exc.detail
+        if isinstance(detail, list):
+            payload = {
+                "error": "VALIDATION_ERROR",
+                "message": "Input validation failed.",
+                "detail": detail,
+            }
+        elif isinstance(detail, dict) and "error" in detail:
+            payload = detail
+        else:
+            code = "NOT_FOUND" if exc.status_code == 404 else "ERROR"
+            payload = {
+                "error": code,
+                "message": str(detail) if detail is not None else "An error occurred.",
+                "detail": None,
+            }
+        return JSONResponse(status_code=exc.status_code, content=payload)
 
     def raise_for_errors(diagnostics):
         if _has_error(diagnostics):

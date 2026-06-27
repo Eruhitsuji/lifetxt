@@ -5398,6 +5398,385 @@ class LifeTxtDependencyEdgeCaseTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W218" for d in diags))
 
 
+class LifeTxtDoneTests(unittest.TestCase):
+    def test_done_marks_item_done_by_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:fix001\n")
+            stdout, stderr, code = run_cli("done", path, "fix001")
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("[x]", content)
+            self.assertIn("done:", content)
+
+    def test_done_marks_item_by_line_number(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T First_task\n[ ] T Second_task\n")
+            stdout, stderr, code = run_cli("done", path, "--line", "2")
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            lines = content.splitlines()
+            self.assertIn("[x]", lines[1])
+            self.assertIn("[ ]", lines[0])
+
+    def test_done_marks_item_by_title_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Login_bug_fix\n[ ] T Deploy_service\n")
+            stdout, stderr, code = run_cli("done", path, "--text", "Login_bug")
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("[x] T Login_bug_fix", content)
+            self.assertIn("[ ] T Deploy_service", content)
+
+    def test_done_appends_done_date_today(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Buy_milk id:m001\n")
+            run_cli("done", path, "m001")
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("done:%s" % today, content)
+
+
+class LifeTxtW222Tests(unittest.TestCase):
+    def test_w222_fires_for_90m_not_compact(self):
+        items, diags = parse_text("[ ] T Task est:90m\n")
+        codes = [d.code for d in diags]
+        self.assertIn("W222", codes)
+
+    def test_w222_fires_for_bare_integer(self):
+        items, diags = parse_text("[ ] T Task est:90\n")
+        codes = [d.code for d in diags]
+        self.assertIn("W222", codes)
+
+    def test_w222_not_fired_for_compact_form_1h30m(self):
+        items, diags = parse_text("[ ] T Task est:1h30m\n")
+        codes = [d.code for d in diags]
+        self.assertNotIn("W222", codes)
+
+    def test_w222_message_suggests_compact_form(self):
+        items, diags = parse_text("[ ] T Task est:90m\n")
+        w222 = next(d for d in diags if d.code == "W222")
+        self.assertIn("1h30m", w222.message)
+
+
+class LifeTxtDirectiveParserTests(unittest.TestCase):
+    def test_directives_at_top_are_parsed(self):
+        from lifetxt.parser import parse_directives
+        text = "#! self: alice\n#! project: myproject\n[ ] T Task\n"
+        d = parse_directives(text)
+        self.assertEqual("alice", d.get("self"))
+        self.assertEqual("myproject", d.get("project"))
+
+    def test_unknown_directive_key_returned_without_error(self):
+        from lifetxt.parser import parse_directives
+        text = "#! unknown_key: value\n#! self: alice\n"
+        d = parse_directives(text)
+        self.assertEqual("value", d.get("unknown_key"))
+        self.assertEqual("alice", d.get("self"))
+
+    def test_directive_after_item_line_is_not_parsed(self):
+        from lifetxt.parser import parse_directives
+        text = "[ ] T Task\n#! self: alice\n"
+        d = parse_directives(text)
+        self.assertEqual(0, len(d))
+
+    def test_directive_block_ends_at_blank_line(self):
+        from lifetxt.parser import parse_directives
+        text = "#! self: alice\n\n#! project: late\n"
+        d = parse_directives(text)
+        self.assertIn("self", d)
+        self.assertNotIn("project", d)
+
+
+class LifeTxtReviewMoodTests(unittest.TestCase):
+    SOURCE = (
+        "[x] J Morning_entry mood:happy done:2026-06-01\n"
+        "[x] J Afternoon_entry mood:sad done:2026-06-02\n"
+        "[x] J Evening_entry mood:happy done:2026-06-03\n"
+    )
+
+    def test_review_mood_trend_sorted_chronologically(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli(
+                "review", path, "--format", "json",
+                "--from", "2026-06-01", "--to", "2026-06-30"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            trend = data.get("mood_trend", [])
+            self.assertEqual(3, len(trend))
+            dates = [e["date"] for e in trend]
+            self.assertEqual(sorted(dates), dates)
+
+    def test_review_elapsed_by_project_returns_formatted_string(self):
+        text = "[x] T Work_task project:backend elapsed:90m done:2026-06-01\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            stdout, stderr, code = run_cli(
+                "review", path, "--format", "json",
+                "--from", "2026-06-01", "--to", "2026-06-30"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            elapsed = data.get("elapsed_by_project", {})
+            self.assertIn("backend", elapsed)
+            val = elapsed["backend"]
+            self.assertIsInstance(val, str)
+            self.assertIn("h", val)
+
+
+class LifeTxtArchiveMultiFileRefsTests(unittest.TestCase):
+    def test_archive_cross_file_warning_shows_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            main_path = os.path.join(tmp, "main.life.txt")
+            ref_path = os.path.join(tmp, "refs.life.txt")
+            archive_path = os.path.join(tmp, "archive.life.txt")
+            with open(main_path, "w", encoding="utf-8") as f:
+                f.write("[x] T Done_item id:d001\n")
+            with open(ref_path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Depends_on_done depends_on:d001\n")
+            stdout, stderr, code = run_cli(
+                "archive", main_path, ref_path,
+                "--dest", archive_path,
+                "--dry-run", "--yes"
+            )
+            out = normalize_newlines(stdout)
+            self.assertIn("d001", out)
+            self.assertIn("depends_on", out)
+
+    def test_archive_block_cross_file_ref_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            main_path = os.path.join(tmp, "main.life.txt")
+            ref_path = os.path.join(tmp, "refs.life.txt")
+            archive_path = os.path.join(tmp, "archive.life.txt")
+            with open(main_path, "w", encoding="utf-8") as f:
+                f.write("[x] T Done_item id:d001\n")
+            with open(ref_path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Depends_on_done depends_on:d001\n")
+            stdout, stderr, code = run_cli(
+                "archive", main_path, ref_path,
+                "--dest", archive_path,
+                "--dry-run", "--yes", "--block-on-external-refs"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("Blocked", normalize_newlines(stdout))
+
+
+class LifeTxtW219ExtraTests(unittest.TestCase):
+    def test_w219_ignore_suppresses_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] R Habit repeat:daily interval:abc\n")
+            stdout, stderr, code = run_cli("check", path, "--ignore", "W219")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W219", normalize_newlines(stdout))
+
+    def test_w219_no_false_positive_for_leading_zero_interval(self):
+        items, diags = parse_text("[ ] R Habit repeat:daily interval:02\n")
+        codes = [d.code for d in diags]
+        self.assertNotIn("W219", codes)
+
+    def test_w219_no_false_positive_for_leading_zero_count(self):
+        items, diags = parse_text("[ ] R Habit repeat:daily count:05\n")
+        codes = [d.code for d in diags]
+        self.assertNotIn("W219", codes)
+
+
+class LifeTxtQuickExtraTests(unittest.TestCase):
+    def test_quick_relative_due_date_resolved(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            run_cli("quick", "Urgent_task", "--due", "today", "--append", path)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("due:%s" % today, content)
+
+    def test_quick_validation_error_exits_nonzero_for_bad_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            stdout, stderr, code = run_cli(
+                "quick", "Bad_item", "--type", "INVALID_TYPE", "--append", path
+            )
+            self.assertNotEqual(0, code)
+
+
+class LifeTxtSummaryStdinTest(unittest.TestCase):
+    def test_summary_reads_from_stdin(self):
+        text = (
+            "[ ] T Open_task\n"
+            "[x] T Done_task\n"
+        )
+        stdout, stderr, code = run_cli("summary", "--format", "json", input_text=text)
+        self.assertEqual(0, code, stderr)
+        data = json.loads(stdout)
+        self.assertIsInstance(data, dict)
+        self.assertIn("item_count", data)
+        self.assertEqual(2, data["item_count"])
+        self.assertIn("status_counts", data)
+
+
+class LifeTxtCheckIgnoreExtraTests(unittest.TestCase):
+    def test_check_ignore_comma_separated_suppresses_both(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[x] T Old_task\n[ ] T Task_without_id est:90m\n")
+            stdout, stderr, code = run_cli("check", path, "--ignore", "W103,W222")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertNotIn("W103", out)
+            self.assertNotIn("W222", out)
+
+    def test_check_ignore_repeated_flag_suppresses_both(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[x] T Old_task\n[ ] T Task est:90m\n")
+            stdout, stderr, code = run_cli("check", path, "--ignore", "W103", "--ignore", "W222")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertNotIn("W103", out)
+            self.assertNotIn("W222", out)
+
+    def test_check_ignore_unknown_code_does_not_crash(self):
+        text = "[ ] T Normal_task\n"
+        stdout, stderr, code = run_cli("check", "--ignore", "W9999", input_text=text)
+        self.assertEqual(0, code, stderr)
+
+
+class LifeTxtUndoEvictionTests(unittest.TestCase):
+    def test_undo_keep_evicts_oldest_snapshots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            cfg_path = os.path.join(tmp, "config.json")
+            undo_dir = os.path.join(tmp, "undo")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write('{"undo": {"dir": "%s", "keep": 2}}' % undo_dir.replace("\\", "/"))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_v1\n")
+            for i in range(3):
+                run_cli("quick", "Task_v%d" % (i + 2), "--append", path, "--config", cfg_path)
+            entries = sorted(os.listdir(os.path.join(undo_dir, "life.txt")))
+            self.assertLessEqual(len(entries), 2)
+
+    def test_backup_auto_creates_file_in_backup_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            cfg_path = os.path.join(tmp, "config.json")
+            backup_dir = os.path.join(tmp, "backup")
+            undo_dir = os.path.join(tmp, "undo")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '{"undo": {"dir": "%s"}, "backup": {"auto": true, "dir": "%s"}}'
+                    % (undo_dir.replace("\\", "/"), backup_dir.replace("\\", "/"))
+                )
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Initial_task\n")
+            run_cli("quick", "New_task", "--append", path, "--config", cfg_path)
+            backup_subdir = os.path.join(backup_dir, "life.txt")
+            self.assertTrue(os.path.isdir(backup_subdir), "backup dir should exist")
+            entries = os.listdir(backup_subdir)
+            self.assertGreater(len(entries), 0, "backup should contain at least one file")
+
+
+class LifeTxtLinksSpecialCharsTests(unittest.TestCase):
+    TEXT = (
+        "[ ] T Item-with-dash id:dash-001\n"
+        "[ ] T Another_item id:other depends_on:dash-001\n"
+    )
+
+    def test_links_mermaid_sanitizes_dash_in_node_id(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("dash_001", out)
+        self.assertIn("graph LR", out)
+
+    def test_links_dot_quotes_dash_id(self):
+        stdout, stderr, code = run_cli("links", "--format", "dot", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn('"dash-001"', out)
+
+
+class LifeTxtWhoMultiFileTests(unittest.TestCase):
+    def test_who_aggregates_across_multiple_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file1 = os.path.join(tmp, "alice.life.txt")
+            file2 = os.path.join(tmp, "bob.life.txt")
+            with open(file1, "w", encoding="utf-8") as f:
+                f.write("[ ] S Alice person:alice state:coding from:2026-06-27T09:00\n")
+            with open(file2, "w", encoding="utf-8") as f:
+                f.write("[ ] S Bob person:bob state:meeting from:2026-06-27T10:00\n")
+            stdout, stderr, code = run_cli("who", file1, file2)
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("alice", out)
+            self.assertIn("bob", out)
+
+    def test_who_multi_file_json_includes_both(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file1 = os.path.join(tmp, "file1.life.txt")
+            file2 = os.path.join(tmp, "file2.life.txt")
+            with open(file1, "w", encoding="utf-8") as f:
+                f.write("[ ] S Alice person:alice state:active from:2026-06-27T09:00\n")
+            with open(file2, "w", encoding="utf-8") as f:
+                f.write("[ ] S Bob person:bob state:active from:2026-06-27T09:00\n")
+            stdout, stderr, code = run_cli("who", file1, file2, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            persons = [r["person"] for r in data]
+            self.assertIn("alice", persons)
+            self.assertIn("bob", persons)
+
+
+class LifeTxtAssignEdgeCaseTests(unittest.TestCase):
+    def test_assign_by_id_sets_assignee(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:t001\n")
+            stdout, stderr, code = run_cli("assign", path, "t001", "--to", "alice")
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("assignee:alice", content)
+
+    def test_assign_missing_id_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:t001\n")
+            stdout, stderr, code = run_cli("assign", path, "noexist", "--to", "alice")
+            self.assertNotEqual(0, code)
+
+    def test_assign_notify_appends_m_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug id:bug001\n")
+            stdout, stderr, code = run_cli("assign", path, "bug001", "--to", "bob", "--notify")
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("[ ] M", content)
+            self.assertIn("recipient:bob", content)
+            self.assertIn("ref:bug001", content)
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

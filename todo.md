@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x26)
+Last updated: 2026-06-27 (updated x27)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -145,10 +145,6 @@ what is overdue, and what the week looked like.
 
 Commands and behaviors for moving old items out of active files.
 
-- [ ] Add `archive --block-on-external-refs` multi-file tests: second file
-  references archived item's ID; verify cross-file warning is reported with
-  correct source path. Currently tested only in single-file (intra-file) mode.
-
 ---
 
 ## P1: CLI — Encryption
@@ -184,10 +180,6 @@ CLI-native charts without external dependencies.
 ## P1: Web API / Browser UI
 
 ### API Stability & Security
-
-- [ ] Standardize API error responses: every error must return a stable JSON
-  body `{"error": CODE, "message": "...", "detail": {...}}` so clients can
-  parse errors programmatically without inspecting human-readable text.
 
 - [ ] Add API tests for mixed writable and generated/read-only file sets.
 
@@ -652,17 +644,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   shapes, and long-range expansion performance (10 years of daily recurrence
   must complete under 500 ms).
 
-- [ ] Add duration normalization tests (W222): bare integers, `1h00m`,
-  `1.5h`, and unrecognized formats.
+- [ ] Add duration normalization tests (W222): `1h00m` simplification, elapsed
+  accumulation across multiple items in the same project.
 
 - [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
   is affected once timezone wiring is implemented.
 
-- [ ] Add `quick` tests: relative date resolution (`due:tomorrow` → absolute
-  date), `write_file` config fallback (no `--append`), validation error on
-  malformed title.
-
-- [ ] Add `summary` tests: stdin input works (pipe a life.txt via stdin).
+- [ ] Add `quick` tests: `write_file` config fallback (no `--append`).
 
 - [ ] Add Markdown rendering regression tests: CLI HTML output snapshot and
   Web UI Markdown preview snapshot, run in CI to prevent the table-rendering
@@ -686,13 +674,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   empty sections retained), all three `--orphan-children` modes, `--dry-run`
   for each mode, `--block-on-external-refs`, and cross-file reference warning.
 
-- [ ] Add W219 tests: `--ignore W219` suppression via `check --ignore`; verify
-  no false positive when `interval:` is a valid positive integer string that
-  starts with a leading zero (e.g., `interval:02`).
-
-- [ ] Add `#!` directive parser tests: valid block at file start, block
-  terminated by a non-`#!` line, unknown key handling, directives appearing
-  after item lines (ignored or warned), and four-level resolution order.
+- [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
+  is affected once timezone wiring is implemented.
 
 - [ ] Add `encrypt`/`decrypt` round-trip tests: encrypt then decrypt restores
   original value exactly, for all supported algorithms. Test `--dry-run`,
@@ -710,22 +693,18 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   pass/warn/fail per check, optional dependencies reported as warn, exit
   non-zero on any failure.
 
-- [ ] Add `check --ignore` tests: comma-separated codes, unknown-code
-  handling, interaction with `--code` (include-only overrides ignore for same
-  code), and JSON output with ignored codes absent.
+- [ ] Add `check --ignore` tests: `--code` filter interaction (include-only
+  overrides ignore for same code when both flags specified).
 
-- [ ] Add `undo` edge-case tests: stack-depth eviction (verify oldest entry
-  removed when `undo.keep` exceeded), `backup.auto` creates file in
-  `backup.dir`.
+- [ ] Add `undo` edge-case tests: concurrent write isolation (two simultaneous
+  quick-adds to the same file).
 
-- [ ] Add `done` tests: by ID, by line number, by unique title match, by
-  ambiguous title match (confirmation prompt), auto-appended `done:` date.
+- [ ] Add `done` tests: ambiguous title match (interactive confirmation prompt).
 
 - [ ] Add `summary` tests: counts match file contents for every type/status
   combination, missing-ID count is accurate, JSON schema is stable.
 
-- [ ] Add `review` edge-case tests: mood trend ordering (most common mood first),
-  elapsed normalization in JSON output (minutes integer, not raw string).
+- [ ] Add `review` edge-case tests: mood trend most-common-first summary aggregation.
 
 - [ ] Add dependency edge-case tests: cross-file blockers, and source metadata
   in blocked agenda records.
@@ -733,9 +712,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.
 
-- [ ] Add `assign` edge-case tests: ambiguous `--text` match (confirm prompt),
-  validation error when resulting line is invalid, `--notify` with `--text`
-  selection verifies correct ref: value in M-item.
+- [ ] Add `assign` edge-case tests: ambiguous `--text` match (interactive
+  confirm prompt), validation error when resulting line is invalid.
 
 - [ ] Add `diff` tests: added, completed, canceled, status-changed,
   detail-changed items; filter scope; JSON output schema.
@@ -767,15 +745,15 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   known fixture; `?root=ID` returns only the reachable subgraph; `?depth=N`
   limits traversal; a fixture with a cycle does not cause infinite recursion.
 
-- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
-  characters in IDs/titles (quotes, spaces).
+- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, titles
+  with embedded quote characters.
 
 - [ ] Add git API endpoint tests (with a real git repo fixture): `POST
   /api/git/pull` returns exit code and stderr; `POST /api/git/commit` with a
   message creates a commit; endpoints return 403 when `git.enable_api` is
   false; endpoints return 403 when accessed from a non-loopback address.
 
-- [ ] Add `who` tests: cross-file glob pattern, multiple writers same person.
+- [ ] Add `who` tests: same person has records in multiple files (latest wins).
 
 ---
 

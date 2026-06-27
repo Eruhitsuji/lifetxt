@@ -4541,6 +4541,91 @@ class LifeTxtCleanupArchiveHintTests(unittest.TestCase):
             self.assertNotIn("archive", normalized.lower())
 
 
+class LifeTxtReviewJournalBodyTests(unittest.TestCase):
+    def _make_file(self, tmp, content):
+        life_file = os.path.join(tmp, "life.txt")
+        with open(life_file, "w", encoding="utf-8") as f:
+            f.write(content)
+        return life_file
+
+    def test_review_journal_body_shown_in_text_output(self):
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        content = '[ ] J Morning_notes on:%s body:"Had_a_great_day"\n' % today
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("Morning_notes", out)
+            self.assertIn("Had_a_great_day", out)
+
+    def test_review_journal_no_body_still_shows_title(self):
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        content = "[ ] J Evening_notes on:%s\n" % today
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("Evening_notes", out)
+
+    def test_review_journal_body_truncated_at_200_chars(self):
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        long_body = "x" * 300
+        content = '[ ] J Long_entry on:%s body:"%s"\n' % (today, long_body)
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("x" * 200, out)
+            self.assertNotIn("x" * 201, out)
+
+    def test_review_journal_body_not_in_json_output(self):
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        content = '[ ] J Notes on:%s body:"Secret_details"\n' % today
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(1, data["journals"])
+            self.assertNotIn("Secret_details", stdout)
+
+
+class LifeTxtAssignFromUserTests(unittest.TestCase):
+    def test_assign_from_user_overrides_sender_in_notify(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Review_PR id:T001\n")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "T001", "--to", "bob",
+                "--notify", "--from-user", "alice",
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("sender:alice", content)
+            self.assertIn("recipient:bob", content)
+
+    def test_assign_without_from_user_uses_default_sender(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Review_PR id:T001\n")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "T001", "--to", "bob", "--notify"
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("sender:self", content)
+            self.assertIn("recipient:bob", content)
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

@@ -1110,6 +1110,12 @@ def build_parser():
         action="store_true",
         help="Append an M notification item to the new assignee.",
     )
+    assign_cmd.add_argument(
+        "--from-user",
+        dest="from_user",
+        metavar="NAME",
+        help="Override sender name in --notify M-items (default: config user name).",
+    )
     assign_cmd.set_defaults(func=command_assign)
 
     health_cmd = subparsers.add_parser(
@@ -2523,7 +2529,7 @@ def command_assign(args):
 
     if args.notify:
         today = datetime.date.today().isoformat()
-        sender = config_user_name(config) or "self"
+        sender = getattr(args, "from_user", None) or config_user_name(config) or "self"
         target_ids = target.details.get(id_key, [])
         ref_val = str(target_ids[0]) if target_ids else (item_id or "(no-id)")
         notif_line = "[ ] M Assigned_to_%s sender:%s recipient:%s ref:%s on:%s" % (
@@ -2872,6 +2878,7 @@ def command_review(args):
     completed_tasks = []
     open_tasks = []
     habits = {}
+    journal_entries = []
     journal_count = 0
     moods = []
     elapsed_by_project = {}
@@ -2901,6 +2908,9 @@ def command_review(args):
             j_date = _latest_item_date(item) or today
             if j_date >= start and j_date <= end:
                 journal_count += 1
+                body_vals = item.details.get("body", [])
+                excerpt = str(body_vals[0])[:200] if body_vals else ""
+                journal_entries.append((j_date, item.title, excerpt))
                 mood_vals = item.details.get("mood", [])
                 if mood_vals:
                     moods.append((j_date, str(mood_vals[0])))
@@ -2966,6 +2976,10 @@ def command_review(args):
 
     if result["journals"]:
         sys.stdout.write("\nJournal entries: %d\n" % result["journals"])
+        for j_date, title, excerpt in sorted(journal_entries):
+            sys.stdout.write("  %s %s\n" % (j_date.isoformat(), title))
+            if excerpt:
+                sys.stdout.write("    %s\n" % excerpt)
 
     if result["mood_trend"]:
         sys.stdout.write("\nMood trend:\n")

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x20)
+Last updated: 2026-06-27 (updated x21)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -128,8 +128,9 @@ subsequent use.
 New commands for the most frequent daily actions. Each delegates to an
 existing command internally to reuse validation and atomic write behavior.
 
-- [ ] Extend `assign` command: add `--from-user` flag to override the sender
-  name in `--notify` M-items (currently defaults to config user name).
+- [ ] Add `assign --from-user` edge-case tests: no config user name (falls
+  back to "self"), empty string passed (treated as falsy, uses default),
+  `--from-user` without `--notify` is silently ignored.
 
 ---
 
@@ -138,13 +139,13 @@ existing command internally to reuse validation and atomic write behavior.
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
 
-- [ ] Extend `review` with journal body excerpts in text output: when a J
-  item falls within the review period, include the first 200 characters of
-  `body:` in the text output for each entry.
-
 - [ ] Add `--process` mode to `inbox` command: interactive one-by-one triage
   prompting for `project:`, `due:`, and `assignee:` using `assist` completion
   helpers. Add `--fzf` to open inbox results in `fzf` for quick editing.
+
+- [ ] Add `review` journal body excerpts to JSON output: include
+  `journal_entries: [{date, title, excerpt}]` in the `--format json` result
+  dict so LLM pipelines can access body content without text parsing.
 
 ---
 
@@ -288,9 +289,6 @@ CLI-native charts without external dependencies.
 ## P1: Validation
 
 Diagnostics added to `check` and `health` that catch common mistakes.
-
-- [ ] Add `--ignore CODE` support to `health` command (similar to `check
-  --ignore`) so users can suppress specific W3xx codes per invocation.
 
 ---
 

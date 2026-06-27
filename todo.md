@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x28)
+Last updated: 2026-06-27 (updated x29)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -197,46 +197,28 @@ CLI-native charts without external dependencies.
 
 ### Item Input Form (Web UI)
 
-- [ ] Improve `quick-add` bar: add a live syntax-check indicator (green/red
-  border) as the user types by calling a dedicated `/api/check-line` endpoint
-  or reusing `parse_text` logic client-side.
-
-- [ ] Add type-aware field hints to the editor form: when the user selects
-  a type (`T`, `E`, `D`, etc.) in the editor sidebar, show a hint row listing
-  the recommended `details` keys for that type with placeholder examples in
-  the Details textarea.
+- [ ] Improve `quick-add` bar further: parse the submitted raw line server-side
+  via `/api/check-line` before writing and show the error inline instead of
+  silently failing; add a `POST /api/items/raw` endpoint that accepts a raw
+  life.txt line string directly.
 
 ### Record Display (Web UI)
 
-- [ ] Extend overdue/due-soon highlighting to the agenda panel: items in the
-  agenda section should also show red/amber accents when `due:` is past or
-  within `ui.due_soon_days` days.
-
-- [ ] Add item detail side-drawer: clicking a row expands a persistent side
-  panel showing all fields in a structured layout, rendered `body:` Markdown,
-  incoming links (from `/api/links?id=X&direction=incoming`), and action buttons
-  (mark done, delete). The drawer stays open when navigating the item list.
+- [ ] Enhance item detail side-drawer: add a miniature link graph preview
+  (D3-force) inside the drawer showing direct dependencies and blocks
+  for the current item. Clicking a node in the preview navigates to that item.
 
 ### ID Links & Cross-References (Web UI)
 
-- [ ] Make ID values in detail fields clickable: `parent:`, `ref:`,
-  `depends_on:`, `blocks:`, and `related:` values rendered in the item detail
-  panel must link to the referenced item via `GET /api/items/id/{id}`. Clicking
-  the link opens the referenced item in the detail panel without a page
-  navigation. If the referenced item is in a read-only file, show it as
-  read-only in the detail panel.
-
-- [ ] Add clickable ID cross-reference links in item rows: `depends_on:`,
-  `parent:`, `blocks:`, `related:`, `ref:` values in the detail text of each
-  row should be rendered as links that load the referenced item via
-  `GET /api/items/id/{id}` and scroll to or highlight it in the list.
+- [ ] Add clickable ID cross-reference links in the item list rows: render
+  `depends_on:`, `parent:`, `blocks:`, `related:`, `ref:` values in the meta
+  line of each row as inline links that open the target item in the side drawer.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
 - [ ] Add a dependency/reference graph panel to the browser GUI: render the
-  `/api/graph` JSON using a browser graph library (Cytoscape.js or D3-force,
-  loaded from CDN). Node color encodes type; node border encodes status.
-  Clicking a node scrolls to or highlights the item in the list.
+  `/api/graph` JSON using D3-force (loaded from CDN). Node color encodes type;
+  node border encodes status. Clicking a node opens the item in the side drawer.
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
@@ -265,12 +247,9 @@ CLI-native charts without external dependencies.
 
 ### Git Integration (Web API)
 
-- [ ] Add Git status indicator to the browser GUI header: poll `GET
-  /api/git/status` every 60 seconds (configurable; disable with
-  `git.ui_poll: false`) and show a badge indicating clean/modified/unpushed
-  state. Add Commit and Push buttons that call the corresponding API endpoints
-  with a user-supplied commit message prompt. Display stdout/stderr in a
-  dismissable toast notification.
+- [ ] Improve Git commit modal: show `git status --short` output before
+  commit, add a "Pull first" button, and display the last 3 commit titles
+  to confirm the commit was created. Requires `git.enable_api: true`.
 
 ### MCP Support
 
@@ -589,7 +568,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   detection on a 50,000-line file must each complete under 5 seconds.
 
 - [ ] Add FastAPI test-client coverage for all `/api/*` routes when optional
-  web dependencies are installed.
+  web dependencies are installed, including `/api/check-line` and `/api/graph`.
+
+- [ ] Add `/api/check-line` tests: valid line returns `ok:true`; invalid line
+  returns `ok:false` with error diagnostics; empty line returns `ok:true`.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that

@@ -131,6 +131,7 @@ def create_app(paths=None, writable_path=None, config=None):
             "notifications": public_notification_config(app.state.config),
             "ids": public_id_config(app.state.config),
             "web": public_web_config(app.state.config),
+            "git": public_git_config(app.state.config),
             "views": public_views_config(app.state.config),
             "users": public_users_config(app.state.config),
             "teams": public_teams_config(app.state.config),
@@ -216,6 +217,20 @@ def create_app(paths=None, writable_path=None, config=None):
         )
         records = limit_items(records, limit)
         return links_response(records, diagnostics)
+
+    @app.post("/api/check-line")
+    def check_line(payload=Body(...)):
+        line = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        if not str(line).strip():
+            return {"ok": True, "item_count": 0, "diagnostics": []}
+        text = str(line).rstrip("\n") + "\n"
+        parsed_items, diagnostics = parse_text(text)
+        has_error = any(d.severity == "error" for d in diagnostics)
+        return {
+            "ok": not has_error,
+            "item_count": len(parsed_items),
+            "diagnostics": [d.to_dict() for d in diagnostics],
+        }
 
     @app.get("/api/graph")
     def get_graph(
@@ -962,6 +977,16 @@ def public_web_config(config):
         "default_limit": web.get("default_limit", ""),
         "default_sort": web.get("default_sort", "line"),
         "default_order": web.get("default_order", "asc"),
+        "due_soon_days": int(web.get("due_soon_days") or 3),
+    }
+
+
+def public_git_config(config):
+    git = config_section(config, "git")
+    return {
+        "enable_api": bool(git.get("enable_api")),
+        "ui_poll": bool(git.get("ui_poll", True)),
+        "ui_poll_seconds": int(git.get("ui_poll_seconds") or 60),
     }
 
 
@@ -1845,6 +1870,131 @@ HTML_PAGE = r"""<!doctype html>
       align-self: center;
       white-space: nowrap;
     }
+    .quick-add-bar input.ok  { border-color: #86efac; }
+    .quick-add-bar input.err { border-color: #fca5a5; }
+    .quick-add-bar .check-msg { font-size: .78rem; align-self: center; }
+    .quick-add-bar .check-msg.ok  { color: #166534; }
+    .quick-add-bar .check-msg.err { color: #991b1b; }
+    .type-hints {
+      padding: .3rem .65rem .3rem;
+      font-size: .78rem;
+      color: var(--muted);
+      background: var(--soft);
+      border-radius: .35rem;
+      margin: .2rem 0;
+    }
+    .detail-drawer {
+      position: fixed;
+      top: 0;
+      right: -460px;
+      width: min(460px, 92vw);
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+      box-shadow: -4px 0 32px rgba(0,0,0,.14);
+      transition: right .22s ease;
+      z-index: 100;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .detail-drawer.open { right: 0; }
+    .drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .85rem 1.1rem;
+      border-bottom: 1px solid var(--line);
+      gap: .5rem;
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      z-index: 1;
+    }
+    .drawer-head h3 { margin: 0; font-size: .95rem; }
+    .drawer-body { padding: 1rem 1.1rem; display: grid; gap: 1rem; }
+    .drawer-fields { display: grid; gap: .4rem; }
+    .drawer-field { display: grid; grid-template-columns: 7rem 1fr; gap: .5rem; font-size: .88rem; }
+    .drawer-field .key { color: var(--muted); }
+    .drawer-field .val { overflow-wrap: anywhere; }
+    .drawer-section-title {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: .2rem 0 .1rem;
+    }
+    .drawer-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .drawer-link { color: var(--accent); text-decoration: underline; cursor: pointer; font-size: .88rem; }
+    .incoming-link-row { font-size: .88rem; padding: .25rem 0; border-bottom: 1px solid var(--line); }
+    .incoming-link-row:last-child { border-bottom: none; }
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      pointer-events: none;
+    }
+    .toast {
+      padding: .65rem 1.1rem;
+      border-radius: .5rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 2px 16px rgba(0,0,0,.14);
+      font-size: .88rem;
+      max-width: 340px;
+      pointer-events: auto;
+      animation: toastIn .18s ease;
+    }
+    .toast.success { border-color: #86efac; background: #f0fdf4; color: #166534; }
+    .toast.error   { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+    .toast.info    { border-color: #93c5fd; background: #eff6ff; color: #1e40af; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .git-badge {
+      padding: .2rem .55rem;
+      border-radius: .35rem;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      white-space: nowrap;
+    }
+    .git-clean    { background: #d4edda; color: #1a5c30; }
+    .git-modified { background: #fff3cd; color: #7a5200; }
+    .git-error    { background: #fde8e8; color: #8a1a1a; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--panel);
+      border-radius: .75rem;
+      padding: 1.5rem 1.75rem;
+      max-width: 520px;
+      width: 92vw;
+      max-height: 82vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,.2);
+    }
+    .modal h3 { margin: 0 0 1rem; }
+    .modal table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .modal td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
+    .modal td:first-child { color: var(--muted); width: 7rem; white-space: nowrap; }
+    .notif-permission { display: flex; align-items: center; gap: .4rem; font-size: .82rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
+    .notif-perm-granted { color: #166534; }
+    .notif-perm-denied  { color: #991b1b; }
+    .notif-perm-default { color: #7a5200; }
+    mark { background: #fff9c4; border-radius: .2rem; padding: 0 .1rem; }
     .source { color: var(--muted); font-size: .78rem; white-space: nowrap; }
     .side { display: grid; gap: 1rem; align-content: start; min-width: 0; }
     form.stack { grid-template-columns: 1fr 1fr; }
@@ -1960,7 +2110,8 @@ HTML_PAGE = r"""<!doctype html>
       <button class="secondary" onclick="toggleStats()">Stats</button>
       <button class="secondary" onclick="enableBrowserNotifications()">Notifications</button>
       <button class="secondary" onclick="refreshAll()">Refresh</button>
-      <span class="hint" style="color:var(--muted);font-size:.78rem">n=new  /=search</span>
+      <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts">?</button>
+      <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
     </div>
   </header>
   <main>
@@ -2000,8 +2151,9 @@ HTML_PAGE = r"""<!doctype html>
       </div>
       <div class="quick-add-bar" id="quick-add-bar" style="display:none">
         <input id="quick-line" placeholder="[ ] T My_task  due:tomorrow  project:work" autocomplete="off">
+        <span id="quick-check-msg" class="check-msg"></span>
         <button onclick="quickAddLine()">Add</button>
-        <span class="hint">n or Escape to close</span>
+        <span class="hint">q or Escape to close</span>
       </div>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
@@ -2046,6 +2198,7 @@ HTML_PAGE = r"""<!doctype html>
             <input id="edit-title" required>
           </label>
           <label class="wide">Details
+            <div id="type-hints" class="type-hints" style="display:none"></div>
             <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
           </label>
           <div id="editor-note" class="note wide">Create a new item or select an editable row.</div>
@@ -2064,11 +2217,67 @@ HTML_PAGE = r"""<!doctype html>
         <div id="status" class="stack"></div>
       </section>
       <section class="notifications-section">
-        <div class="section-head"><h2>Notifications</h2></div>
+        <div class="section-head">
+          <h2>Notifications</h2>
+          <div id="notif-permission-badge"></div>
+        </div>
+        <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
         <div id="notifications" class="stack"></div>
       </section>
     </div>
   </main>
+  <!-- Detail Side Drawer -->
+  <aside id="detail-drawer" class="detail-drawer" role="complementary" aria-label="Item detail">
+    <div class="drawer-head">
+      <h3 id="drawer-title">Item Detail</h3>
+      <div style="display:flex;gap:.4rem">
+        <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
+        <button class="secondary" onclick="drawerEdit()">Edit</button>
+        <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
+        <button class="secondary" onclick="closeDrawer()">✕</button>
+      </div>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Keyboard Help Modal -->
+  <div class="modal-backdrop" id="help-modal" onclick="if(event.target===this)closeHelpModal()">
+    <div class="modal">
+      <h3>Keyboard shortcuts</h3>
+      <table>
+        <tr><td>/</td><td>Focus search</td></tr>
+        <tr><td>n</td><td>New item (focus editor title)</td></tr>
+        <tr><td>q</td><td>Toggle quick-add bar</td></tr>
+        <tr><td>r</td><td>Refresh all</td></tr>
+        <tr><td>s</td><td>Toggle statistics panel</td></tr>
+        <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
+        <tr><td>?</td><td>Show / hide this help</td></tr>
+      </table>
+      <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Git commit/push modal -->
+  <div class="modal-backdrop" id="git-modal" onclick="if(event.target===this)closeGitModal()">
+    <div class="modal">
+      <h3 id="git-modal-title">Git</h3>
+      <div id="git-modal-body" style="display:grid;gap:.75rem">
+        <label>Commit message
+          <input id="git-commit-msg" placeholder="Update life.txt">
+        </label>
+        <div class="actions">
+          <button onclick="gitCommit()">Commit</button>
+          <button class="secondary" onclick="gitPush()">Push</button>
+          <button class="secondary" onclick="closeGitModal()">Cancel</button>
+        </div>
+        <pre id="git-output" style="font-size:.78rem;color:var(--muted);white-space:pre-wrap;display:none"></pre>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentItems = [];
     let selectedItem = null;
@@ -2280,7 +2489,7 @@ HTML_PAGE = r"""<!doctype html>
       "[-]": "cancelled", "[>]": "deferred", "[?]": "maybe", "[N]": "note",
     };
     function dueSoonDays() {
-      return Number(appConfig?.web?.due_soon_days || 3);
+      return Number((appConfig?.web?.due_soon_days) ?? 3);
     }
     function itemDueSoonClass(item) {
       const dueVals = item?.details?.due;
@@ -2378,6 +2587,12 @@ HTML_PAGE = r"""<!doctype html>
         `;
         root.appendChild(node);
       }
+      const queryText = document.getElementById("search").value.trim();
+      if (queryText) {
+        root.querySelectorAll(".title.markdown").forEach(el => {
+          el.innerHTML = highlightText(el.innerHTML, queryText);
+        });
+      }
     }
     function selectItem(item) {
       if (isDisplayMode()) return;
@@ -2394,6 +2609,7 @@ HTML_PAGE = r"""<!doctype html>
         : "This item comes from a read-only input or generated file.";
       setEditorDisabled(!item.editable);
       renderItems(currentItems);
+      openDrawer(item);
     }
     function newItem() {
       selectedItem = null;
@@ -2463,9 +2679,11 @@ HTML_PAGE = r"""<!doctype html>
       node.innerHTML = data.records.length ? "" : `<div class="empty">No agenda items.</div>`;
       const maxAgenda = Number(firstParam(query(), ["agenda_limit"], "8"));
       for (const record of data.records.slice(0, Number.isFinite(maxAgenda) ? maxAgenda : 8)) {
+        const dueCls = agendaDueSoonClass(record);
+        const borderStyle = dueCls === "overdue" ? "border-left:3px solid #c0392b;" : dueCls === "due-soon" ? "border-left:3px solid #e67e22;" : "";
         node.insertAdjacentHTML(
           "beforeend",
-          `<div><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
         );
       }
     }
@@ -2602,11 +2820,15 @@ HTML_PAGE = r"""<!doctype html>
       const active = document.activeElement;
       const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
       if (e.key === "Escape") {
+        if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
+        if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
+        if (document.getElementById("detail-drawer").classList.contains("open")) { closeDrawer(); return; }
         if (inInput) { active.blur(); return; }
         toggleQuickAdd(false);
         return;
       }
       if (inInput) return;
+      if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         newItem();
@@ -2618,17 +2840,284 @@ HTML_PAGE = r"""<!doctype html>
         document.getElementById("search").focus();
         return;
       }
-      if (e.key === "q") {
-        e.preventDefault();
-        toggleQuickAdd();
-        return;
+      if (e.key === "q") { e.preventDefault(); toggleQuickAdd(); return; }
+      if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
+      if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
+    });
+
+    // ── Help modal ─────────────────────────────────────────────────
+    function openHelpModal() { document.getElementById("help-modal").classList.add("open"); }
+    function closeHelpModal() { document.getElementById("help-modal").classList.remove("open"); }
+
+    // ── Toast system ────────────────────────────────────────────────
+    function showToast(message, type = "info", duration = 3500) {
+      const container = document.getElementById("toast-container");
+      const el = document.createElement("div");
+      el.className = "toast " + type;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), duration);
+    }
+
+    // ── Detail side-drawer ─────────────────────────────────────────
+    let drawerItem = null;
+
+    function openDrawer(item) {
+      drawerItem = item;
+      const drawer = document.getElementById("detail-drawer");
+      const body = document.getElementById("drawer-body");
+      const title = document.getElementById("drawer-title");
+      const doneBt = document.getElementById("drawer-done-btn");
+      const delBt = document.getElementById("drawer-delete-btn");
+      const isDone = ["[x]", "[-]"].includes(item.status);
+      const statusCls = STATUS_CLASS[item.status] || "status-note";
+      const statusLbl = STATUS_LABEL[item.status] || item.status;
+      const typeCls = "type-" + (item.type || "N");
+      title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(statusLbl)}</span>
+        <span class="type-badge ${typeCls}" style="margin-left:.35rem">${escapeHtml(item.type)}</span>
+        <span style="margin-left:.4rem;font-weight:700">${escapeHtml(item.title)}</span>`;
+      doneBt.disabled = !item.editable || isDone;
+      delBt.disabled = !item.editable;
+      const REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
+      let fieldsHtml = `<div class="drawer-section-title">Fields</div><div class="drawer-fields">`;
+      for (const [key, values] of Object.entries(item.details || {})) {
+        const valHtml = (values || []).map(v => {
+          if (REF_KEYS.has(key)) {
+            return `<a class="drawer-link" onclick="drawerNavigate(${jsLiteral(String(v))})">${escapeHtml(String(v))}</a>`;
+          }
+          return escapeHtml(String(v));
+        }).join(", ");
+        fieldsHtml += `<div class="drawer-field"><span class="key">${escapeHtml(key)}</span><span class="val">${valHtml}</span></div>`;
       }
-      if (e.key === "r" || e.key === "R") {
-        e.preventDefault();
-        refreshAll();
-        return;
+      fieldsHtml += `</div>`;
+      const bodyHtml = item?.markdown?.details?.body?.[0]
+        ? `<div class="drawer-section-title">Body</div><div class="markdown">${item.markdown.details.body[0]}</div>` : "";
+      const sourceHtml = `<div class="drawer-section-title">Source</div>
+        <div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
+      body.innerHTML = fieldsHtml + bodyHtml +
+        `<div id="drawer-incoming"><div class="drawer-section-title">Incoming links</div><div class="empty">Loading…</div></div>` +
+        sourceHtml;
+      drawer.classList.add("open");
+      loadIncomingLinks(item);
+    }
+
+    async function loadIncomingLinks(item) {
+      const itemId = item?.id || (item?.details?.id?.[0]);
+      const container = document.getElementById("drawer-incoming");
+      if (!container) return;
+      if (!itemId) { container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">No ID — cannot look up links.</div>`; return; }
+      try {
+        const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=incoming`);
+        const records = data.records || [];
+        if (!records.length) {
+          container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">No incoming links.</div>`;
+          return;
+        }
+        let html = `<div class="drawer-section-title">Incoming links (${records.length})</div>`;
+        for (const rec of records) {
+          html += `<div class="incoming-link-row">
+            <span class="pill" style="font-size:.78rem">${escapeHtml(rec.relation)}</span>
+            <a class="drawer-link" onclick="drawerNavigate(${jsLiteral(rec.source_id || "")})">${escapeHtml(rec.source_title || rec.source_id || "")}</a>
+          </div>`;
+        }
+        container.innerHTML = html;
+      } catch(e) {
+        if (container) container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function closeDrawer() {
+      document.getElementById("detail-drawer").classList.remove("open");
+      drawerItem = null;
+    }
+
+    function drawerEdit() {
+      if (!drawerItem) return;
+      selectItem(drawerItem);
+      closeDrawer();
+    }
+
+    async function drawerMarkDone() {
+      if (!drawerItem || !drawerItem.editable) return;
+      await api(`/api/items/${drawerItem.line}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({...drawerItem.details && {details: drawerItem.details}, status: "[x]", type: drawerItem.type, title: drawerItem.title}),
+      });
+      showToast("Marked done.", "success");
+      closeDrawer();
+      await refreshAll();
+    }
+
+    async function drawerDelete() {
+      if (!drawerItem || !drawerItem.editable) return;
+      if (!confirm(`Delete "${drawerItem.title}"?`)) return;
+      await api(`/api/items/${drawerItem.line}`, {method: "DELETE"});
+      showToast("Item deleted.", "info");
+      closeDrawer();
+      newItem();
+      await refreshAll();
+    }
+
+    async function drawerNavigate(itemId) {
+      if (!itemId) return;
+      try {
+        const data = await api(`/api/items/id/${encodeURIComponent(itemId)}`);
+        if (data?.item) openDrawer(data.item);
+      } catch(e) {
+        showToast("Item not found: " + itemId, "error");
+      }
+    }
+
+    // ── Live syntax check for quick-add bar ───────────────────────
+    let _checkTimer = null;
+    document.addEventListener("DOMContentLoaded", () => {
+      const qInput = document.getElementById("quick-line");
+      if (qInput) {
+        qInput.addEventListener("input", () => {
+          clearTimeout(_checkTimer);
+          _checkTimer = setTimeout(() => liveCheckLine(qInput.value), 280);
+        });
       }
     });
+    async function liveCheckLine(line) {
+      const qInput = document.getElementById("quick-line");
+      if (!qInput) return;
+      if (!line.trim()) { qInput.className = ""; document.getElementById("quick-check-msg") && (document.getElementById("quick-check-msg").textContent = ""); return; }
+      try {
+        const data = await api("/api/check-line", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line}),
+        });
+        qInput.classList.toggle("ok", data.ok);
+        qInput.classList.toggle("err", !data.ok);
+        const msg = document.getElementById("quick-check-msg");
+        if (msg) {
+          const errs = (data.diagnostics || []).filter(d => d.severity === "error");
+          msg.textContent = errs.length ? errs[0].message : (data.ok && data.item_count > 0 ? "✓" : "");
+          msg.className = "check-msg " + (data.ok ? "ok" : "err");
+        }
+      } catch(_) {}
+    }
+
+    // ── Type-aware field hints in editor ────────────────────────────
+    const TYPE_HINTS = {
+      T: "due: est: project: tag: assignee: depends_on: parent:",
+      E: "from: to: attendee: project: location: url:",
+      D: "due: project: tag: assignee:",
+      R: "repeat: interval: due: project:",
+      H: "repeat: interval: done: project:",
+      N: "body: tag: project: url:",
+      S: "person: state: from: project:",
+      M: "sender: recipient: notify_at: channel: body: ref:",
+      J: "mood: body: project: on:",
+    };
+    document.addEventListener("change", function(e) {
+      if (e.target.id === "edit-type") updateTypeHints(e.target.value);
+    });
+    function updateTypeHints(type) {
+      const el = document.getElementById("type-hints");
+      if (!el) return;
+      const hint = TYPE_HINTS[type];
+      if (hint) { el.textContent = "Suggested keys: " + hint; el.style.display = ""; }
+      else el.style.display = "none";
+    }
+
+    // ── Search highlighting in item list ────────────────────────────
+    function highlightText(html, query) {
+      if (!query || !query.trim()) return html;
+      const safe = query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        return html.replace(new RegExp("(" + safe + ")", "gi"), "<mark>$1</mark>");
+      } catch(_) { return html; }
+    }
+    // ── Agenda overdue/due-soon highlighting ───────────────────────
+    function agendaDueSoonClass(record) {
+      const due = record?.details?.due?.[0] || record?.due;
+      if (!due) return "";
+      const d = new Date(due); if (isNaN(d)) return "";
+      const today = new Date(); today.setHours(0,0,0,0);
+      d.setHours(0,0,0,0);
+      const diffDays = Math.floor((d - today) / 86400000);
+      if (diffDays < 0) return "overdue";
+      if (diffDays <= dueSoonDays()) return "due-soon";
+      return "";
+    }
+
+    // ── Notification permission state display ──────────────────────
+    function updateNotifPermissionDisplay() {
+      const bar = document.getElementById("notif-permission-bar");
+      const badge = document.getElementById("notif-permission-badge");
+      if (!("Notification" in window)) { if (bar) { bar.textContent = "Browser notifications not supported."; bar.style.display = ""; } return; }
+      const perm = Notification.permission;
+      const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
+      const labels = {granted: "Notifications: granted", denied: "Notifications: denied — check browser settings", default: "Notifications: not yet requested"};
+      if (bar) {
+        bar.className = "notif-permission " + (classes[perm] || "");
+        bar.textContent = labels[perm] || perm;
+        bar.style.display = "";
+      }
+    }
+
+    // ── Git status badge + modal ─────────────────────────────────
+    let gitPollTimer = null;
+    function startGitPolling() {
+      if (!appConfig?.git?.enable_api || appConfig?.git?.ui_poll === false) return;
+      const seconds = appConfig?.git?.ui_poll_seconds || 60;
+      loadGitStatus();
+      gitPollTimer = setInterval(loadGitStatus, seconds * 1000);
+    }
+    async function loadGitStatus() {
+      const badge = document.getElementById("git-status-badge");
+      if (!badge) return;
+      try {
+        const data = await api("/api/git/status");
+        badge.style.display = "";
+        const out = (data.stdout || "").trim();
+        if (!out) { badge.className = "git-badge git-clean"; badge.textContent = "git: clean"; }
+        else { badge.className = "git-badge git-modified"; badge.textContent = "git: modified"; }
+      } catch(e) {
+        badge.style.display = "";
+        badge.className = "git-badge git-error";
+        badge.textContent = "git: error";
+      }
+    }
+    function openGitModal() {
+      document.getElementById("git-output").style.display = "none";
+      document.getElementById("git-output").textContent = "";
+      document.getElementById("git-modal").classList.add("open");
+      document.getElementById("git-commit-msg").focus();
+    }
+    function closeGitModal() { document.getElementById("git-modal").classList.remove("open"); }
+    async function gitCommit() {
+      const msg = document.getElementById("git-commit-msg").value.trim();
+      if (!msg) { showToast("Enter a commit message.", "error"); return; }
+      try {
+        const data = await api("/api/git/commit", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: msg}),
+        });
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) showToast("Committed.", "success");
+        else showToast("Commit failed — see output.", "error");
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+    async function gitPush() {
+      try {
+        const data = await api("/api/git/push", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) showToast("Pushed.", "success");
+        else showToast("Push failed — see output.", "error");
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
 
     // ── Statistics / Chart.js panel ────────────────────────────────
     let chartJsLoaded = false;
@@ -2706,6 +3195,9 @@ HTML_PAGE = r"""<!doctype html>
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();
+      updateNotifPermissionDisplay();
+      updateTypeHints(document.getElementById("edit-type").value);
+      startGitPolling();
       return refreshAll();
     }).catch(error => {
       document.body.insertAdjacentHTML("beforeend", `<pre class="diagnostic">${escapeHtml(error.message)}</pre>`);

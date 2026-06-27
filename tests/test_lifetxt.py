@@ -360,6 +360,14 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn(".markdown table", webapp.HTML_PAGE)
         self.assertIn("border-collapse: collapse", webapp.HTML_PAGE)
 
+    def test_webapp_item_render_functions_are_not_self_overridden(self):
+        from lifetxt import webapp
+
+        self.assertEqual(1, webapp.HTML_PAGE.count("function renderItems("))
+        self.assertEqual(1, webapp.HTML_PAGE.count("function selectItem("))
+        self.assertNotIn("_origRenderItems", webapp.HTML_PAGE)
+        self.assertNotIn("_origSelectItem", webapp.HTML_PAGE)
+
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
             "[ ] E Call from:2026-06-06T09:00:30.25+09:00 "
@@ -3018,6 +3026,44 @@ class LifeTxtNotifyTests(unittest.TestCase):
         data = json.loads(stdout)
         self.assertEqual("msg_001", data[0]["id"])
         self.assertEqual("long_message", data[0]["body"])
+
+
+class LifeTxtCheckLineTests(unittest.TestCase):
+    def test_check_line_valid_item_returns_ok(self):
+        from lifetxt.parser import parse_text as pt
+        text = "[ ] T Valid_task due:2026-06-30\n"
+        items, diags = pt(text)
+        self.assertEqual(1, len(items))
+        self.assertFalse(any(d.severity == "error" for d in diags))
+
+    def test_check_line_invalid_item_has_error_diagnostic(self):
+        from lifetxt.parser import parse_text as pt
+        text = "NOTAVALIDLINE\n"
+        items, diags = pt(text)
+        self.assertEqual(0, len(items))
+
+    def test_webapp_check_line_function_ok(self):
+        from lifetxt.webapp import create_app
+        items, diags = parse_text("[ ] T Good_task project:work\n")
+        has_error = any(d.severity == "error" for d in diags)
+        self.assertFalse(has_error)
+
+    def test_public_git_config_defaults(self):
+        from lifetxt.webapp import public_git_config
+        result = public_git_config({})
+        self.assertFalse(result["enable_api"])
+        self.assertTrue(result["ui_poll"])
+        self.assertEqual(60, result["ui_poll_seconds"])
+
+    def test_public_web_config_due_soon_days(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config({"web": {"due_soon_days": "7"}})
+        self.assertEqual(7, result["due_soon_days"])
+
+    def test_public_web_config_due_soon_days_default(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config({})
+        self.assertEqual(3, result["due_soon_days"])
 
 
 class LifeTxtWebappHelperTests(unittest.TestCase):

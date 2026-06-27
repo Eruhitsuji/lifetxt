@@ -1,9 +1,34 @@
+import re
 from collections import OrderedDict
 
 from .ids import duplicate_id_diagnostics
 from .links import reference_diagnostics
 from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
+
+
+_DIRECTIVE_RE = re.compile(r"^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$")
+_KNOWN_DIRECTIVE_KEYS = frozenset(("self", "timezone", "project"))
+
+
+def parse_directives(text):
+    """Extract #! KEY: VALUE directives from the top of a life.txt file.
+
+    Returns an OrderedDict. The block ends at the first line that is not a
+    ``#! KEY: VALUE`` line (blank lines, item lines, and regular ``#`` comments
+    all terminate the block).
+    """
+    directives = OrderedDict()
+    for line in text.splitlines():
+        stripped = line.rstrip("\r\n")
+        if not stripped.strip():
+            break
+        m = _DIRECTIVE_RE.match(stripped)
+        if m:
+            directives[m.group(1)] = m.group(2)
+        else:
+            break
+    return directives
 
 
 def parse_text(text, id_key="id", check_ids=True, check_references=True):

@@ -1,10 +1,12 @@
 import argparse
+import datetime
 import html
 import hashlib
 import json
 import os
 import sys
 import tempfile
+import types
 from collections import OrderedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -69,7 +71,7 @@ from .notifier import (
     records_to_jsonl as notifications_to_jsonl,
     watch_notifications,
 )
-from .parser import parse_line, parse_text
+from .parser import parse_directives, parse_line, parse_text
 from .paths import expand_paths
 from .serializer import (
     item_to_line,
@@ -934,6 +936,74 @@ def build_parser():
     )
     archive.set_defaults(func=command_archive)
 
+    quick = subparsers.add_parser(
+        "quick",
+        aliases=["q"],
+        help="Quickly capture a new item and append it to a file.",
+    )
+    quick.add_argument("title", help="Item title.")
+    quick.add_argument(
+        "--type",
+        dest="kind",
+        default=None,
+        help="Item type. Defaults to T (task).",
+    )
+    quick.add_argument(
+        "--append",
+        metavar="FILE",
+        help="File to append the new item to. Defaults to write_file in config.",
+    )
+    quick.add_argument(
+        "--no-check",
+        action="store_true",
+        dest="no_check",
+        help="Skip validation before writing.",
+    )
+    quick.add_argument("--status", default=None, help=argparse.SUPPRESS)
+    for key in DETAIL_FLAGS:
+        dest = "from_" if key == "from" else key
+        quick.add_argument(
+            "--" + key,
+            dest=dest,
+            action="append",
+            help="Set %s: detail. Can be repeated. Accepts relative dates for due/do/until (today, tomorrow, friday, next_week)." % key,
+        )
+    quick.set_defaults(func=command_quick, detail=None, add_detail=None, remove_detail=None)
+
+    done_cmd = subparsers.add_parser(
+        "done",
+        help="Mark an item as complete and append done:TODAY.",
+    )
+    done_cmd.add_argument("path", help="life.txt file containing the item.")
+    done_cmd.add_argument(
+        "id",
+        nargs="?",
+        default=None,
+        help="ID of the item to mark done.",
+    )
+    done_cmd.add_argument("--line", type=int, default=None, help="Line number of the item.")
+    done_cmd.add_argument("--text", default=None, help="Title substring to search for.")
+    done_cmd.set_defaults(func=command_done)
+
+    summary = subparsers.add_parser(
+        "summary",
+        help="Show a fast overview of a life.txt file.",
+    )
+    summary.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s). Reads stdin when omitted.",
+    )
+    summary.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    summary.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    summary.set_defaults(func=command_summary)
+
     return parser
 
 
@@ -1134,6 +1204,12 @@ def command_links(args):
 
 def command_sources(args):
     key = args.key or id_key_from_config(_config(args))
+    normalized = _normalize_paths(args.paths, _config(args))
+    file_directives = OrderedDict()
+    for path in normalized:
+        source = "stdin" if path == "-" else path
+        text = read_text(path)
+        file_directives[source] = parse_directives(text)
     records, diagnostics = source_ownership_records(args.paths, _config(args), key)
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
@@ -1143,8 +1219,9 @@ def command_sources(args):
         records = [record for record in records if not record.get("id")]
 
     if args.format == "json":
+        payload = OrderedDict([("items", records), ("directives", file_directives)])
         output = json.dumps(
-            records,
+            payload,
             ensure_ascii=False,
             indent=2 if args.pretty else None,
             separators=None if args.pretty else (",", ":"),
@@ -1159,6 +1236,14 @@ def command_sources(args):
             output += "\n"
         write_text(None, output)
     else:
+        lines = []
+        for source, directives in file_directives.items():
+            if directives:
+                lines.append("Directives (%s):" % source)
+                for k, v in directives.items():
+                    lines.append("  #! %s: %s" % (k, v))
+        if lines:
+            write_text(None, "\n".join(lines) + "\n")
         write_text(None, format_source_ownership_table(records, key))
 
     _print_warnings(diagnostics)
@@ -1543,6 +1628,253 @@ def _archive_item_date_before(item, before_date):
             if parsed is not None:
                 return parsed < before_date
     return False
+
+
+_RELATIVE_DATE_WEEKDAYS = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6,
+}
+
+
+def _resolve_relative_date(value, today=None):
+    """Resolve relative date keywords to ISO YYYY-MM-DD strings.
+
+    Recognizes: today, tomorrow, weekday names (next occurrence),
+    next_WEEKDAY (always next week), next_week (next Monday).
+    Unknown values are returned unchanged.
+    """
+    if today is None:
+        today = datetime.date.today()
+    text = str(value).lower().strip()
+    if text == "today":
+        return today.isoformat()
+    if text == "tomorrow":
+        return (today + datetime.timedelta(days=1)).isoformat()
+    if text in _RELATIVE_DATE_WEEKDAYS:
+        target_wd = _RELATIVE_DATE_WEEKDAYS[text]
+        days_ahead = target_wd - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        return (today + datetime.timedelta(days=days_ahead)).isoformat()
+    if text.startswith("next_") and text[5:] in _RELATIVE_DATE_WEEKDAYS:
+        target_wd = _RELATIVE_DATE_WEEKDAYS[text[5:]]
+        days_ahead = target_wd - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        days_ahead += 7
+        return (today + datetime.timedelta(days=days_ahead)).isoformat()
+    if text == "next_week":
+        days_to_monday = (7 - today.weekday()) % 7 or 7
+        return (today + datetime.timedelta(days=days_to_monday)).isoformat()
+    return value
+
+
+def command_quick(args):
+    config = _config(args)
+    today = datetime.date.today()
+
+    if args.due:
+        args.due = [_resolve_relative_date(v, today) for v in args.due]
+    if args.do:
+        args.do = [_resolve_relative_date(v, today) for v in args.do]
+    if args.until:
+        args.until = [_resolve_relative_date(v, today) for v in args.until]
+
+    if not args.kind:
+        args.kind = "T"
+    if args.status is None:
+        args.status = None
+
+    item = build_item_from_args(args)
+    apply_config_defaults_to_item(item, args)
+    apply_auto_id_to_item(item, args)
+    line = item_to_assisted_line(item)
+
+    if not args.no_check:
+        parsed_items, diagnostics = parse_text(line + "\n")
+        if not parsed_items:
+            diagnostics.append(Diagnostic("error", "E301", "Generated line did not produce an item."))
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        _print_warnings(diagnostics)
+
+    dest = args.append or config_write_file(config)
+    if not dest:
+        raise ValueError("No output file. Use --append FILE or configure write_file in config.")
+
+    append_text(dest, line + "\n")
+    sys.stdout.write("%s\n" % line)
+    return 0
+
+
+def command_done(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("done command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    if args.line is not None:
+        matches = [item for item in items if item.line == args.line]
+        if not matches:
+            raise ValueError("No item at line %d." % args.line)
+        target = matches[0]
+    elif args.id:
+        matches = [
+            item for item in items
+            if args.id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError("No item with %s:%s." % (id_key, args.id))
+        if len(matches) > 1:
+            raise ValueError("Multiple items with %s:%s." % (id_key, args.id))
+        target = matches[0]
+    elif args.text:
+        query = args.text.lower()
+        matches = [item for item in items if query in item.title.lower()]
+        if not matches:
+            raise ValueError("No item matching %r." % args.text)
+        if len(matches) > 1:
+            sys.stdout.write("Multiple items match:\n")
+            for i, m in enumerate(matches):
+                sys.stdout.write("  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title))
+            sys.stdout.write("Mark which item done? (1-%d) " % len(matches))
+            sys.stdout.flush()
+            answer = sys.stdin.readline().strip()
+            try:
+                idx = int(answer) - 1
+                if idx < 0 or idx >= len(matches):
+                    raise ValueError()
+                target = matches[idx]
+            except (ValueError, IndexError):
+                sys.stdout.write("Aborted.\n")
+                return 0
+        else:
+            target = matches[0]
+    else:
+        raise ValueError("Specify an ID, --line N, or --text QUERY.")
+
+    if target.status == "[x]":
+        sys.stdout.write("Already done: %s\n" % target.title)
+        return 0
+
+    today = datetime.date.today().isoformat()
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status="[x]",
+        kind=None,
+        title=None,
+        done=[today],
+        detail=None,
+        add_detail=None,
+        remove_detail=None,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Done: %s\n" % updated_line)
+    return 0
+
+
+def command_summary(args):
+    config = _config(args)
+    paths = args.paths if args.paths else ["-"]
+    id_key = id_key_from_config(config)
+    all_results = []
+
+    for path in paths:
+        text = read_text(path)
+        items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+        line_count = len(text.splitlines())
+        type_counts = {}
+        status_counts = {}
+        ids_present = 0
+        ids_missing = 0
+        dates = []
+
+        for item in items:
+            type_counts[item.kind] = type_counts.get(item.kind, 0) + 1
+            status_counts[item.status] = status_counts.get(item.status, 0) + 1
+            if item.details.get(id_key):
+                ids_present += 1
+            else:
+                ids_missing += 1
+            for date_key in ("done", "updated", "created", "due", "do", "on"):
+                for val in item.details.get(date_key, []):
+                    s = str(val)
+                    if len(s) >= 10 and s[:10].count("-") == 2:
+                        dates.append(s[:10])
+
+        date_min = min(dates) if dates else None
+        date_max = max(dates) if dates else None
+
+        mtime = None
+        if path != "-" and os.path.exists(path):
+            stat = os.stat(path)
+            mtime = datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%dT%H:%M")
+
+        all_results.append(OrderedDict([
+            ("source", path),
+            ("line_count", line_count),
+            ("item_count", len(items)),
+            ("type_counts", type_counts),
+            ("status_counts", status_counts),
+            ("id_key", id_key),
+            ("ids_present", ids_present),
+            ("ids_missing", ids_missing),
+            ("date_min", date_min),
+            ("date_max", date_max),
+            ("modified", mtime),
+        ]))
+
+    if args.format == "json":
+        payload = all_results[0] if len(all_results) == 1 else all_results
+        write_text(
+            None,
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                indent=2 if args.pretty else None,
+                separators=None if args.pretty else (",", ":"),
+            ) + "\n",
+        )
+    else:
+        for result in all_results:
+            lines = ["Summary: %s" % result["source"]]
+            lines.append("  Lines:    %d" % result["line_count"])
+            lines.append("  Items:    %d" % result["item_count"])
+            if result["type_counts"]:
+                lines.append("  Types:    " + "  ".join(
+                    "%s:%d" % (k, v) for k, v in sorted(result["type_counts"].items())
+                ))
+            if result["status_counts"]:
+                lines.append("  Statuses: " + "  ".join(
+                    "%s:%d" % (k.strip("[]"), v) for k, v in sorted(result["status_counts"].items())
+                ))
+            lines.append("  IDs (%s):  %d present, %d missing" % (
+                result["id_key"], result["ids_present"], result["ids_missing"],
+            ))
+            if result["date_min"] or result["date_max"]:
+                lines.append("  Dates:    %s .. %s" % (
+                    result["date_min"] or "?", result["date_max"] or "?",
+                ))
+            if result["modified"]:
+                lines.append("  Modified: %s" % result["modified"])
+            write_text(None, "\n".join(lines) + "\n")
+    return 0
 
 
 def command_filter(args):

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x14)
+Last updated: 2026-06-27 (updated x15)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -80,15 +80,12 @@ Resolve these before implementing features that depend on them.
 Settings that affect how values are resolved across CLI, config file, and
 file-level metadata. These must be consistent across all commands.
 
-- [ ] Define `#!` file-level metadata directives: a contiguous block of
-  `#! KEY: VALUE` lines at the very top of a life.txt file (before any item
-  or blank line) sets per-file defaults. Phase-1 supported keys:
-  `self` (default person for `S` items and `--person self` resolution),
-  `timezone` (default timezone for datetime display and filtering),
-  `project` (default project for items missing `project:`).
-  A non-`#!` line ends the directive block. Files with no directives behave
-  exactly as today. The parser stores directives as file-level metadata
-  separate from item records and exposes them in `sources --format json`.
+- [ ] Wire `#!` directive values into command behavior: apply `self` as the
+  default `person:` for `S` items (when `--person self` or no `--person` is
+  given), apply `timezone` to datetime display and filtering, and apply
+  `project` as the default `project:` for items missing one. Currently
+  `parse_directives` extracts them and `sources --format json` exposes them,
+  but no command reads them yet.
 
 - [ ] Define and enforce the setting resolution order for all configurable
   values, applied consistently by every command:
@@ -178,20 +175,6 @@ subsequent use.
 New commands for the most frequent daily actions. Each delegates to an
 existing command internally to reuse validation and atomic write behavior.
 
-- [ ] Add `quick` command (alias `q`) for the shortest capture path:
-  `lifetxt q "Buy milk" --due friday --project home`. Accept the title as a
-  positional argument, default type to `T`, resolve relative date words
-  (`today`, `tomorrow`, `friday`, `next_monday`, `next_week`) to ISO dates
-  at invocation time, and append to the configured `write_file` or `--append
-  FILE`. Validate the generated line with `check` before writing. Designed
-  for shell aliases, launchers, and mobile shortcuts where brevity matters.
-
-- [ ] Add `done` command as a completion shortcut: `lifetxt done FILE ID`.
-  Accept selection by ID (positional), line number (`--line N`), or title
-  substring (`--text TEXT`; prompt for confirmation when multiple items match).
-  Set status to `[x]` and append `done:TODAY`. Delegate to `assist --update`
-  for validation and atomic write.
-
 - [ ] Add `assign` command for changing `assignee:` on an existing item:
   `lifetxt assign FILE ID --to PERSON`. Optionally create a type `M`
   notification to the new assignee when `--notify` is passed. Delegate to
@@ -203,12 +186,6 @@ existing command internally to reuse validation and atomic write behavior.
 
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
-
-- [ ] Add `summary` command for a fast file overview: report line count, item
-  counts by type and status, number of IDs present vs missing, date range of
-  dated items, and the file's last modification timestamp. Output in `text`
-  (one-screen table) or `json`. Must complete in under one second on files
-  up to 10,000 lines; avoid recurrence expansion or cross-file resolution.
 
 - [ ] Add `review` command for human-readable period summaries: produce a
   structured report covering completed tasks, remaining open tasks, habit
@@ -653,6 +630,20 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 
 - [ ] Add duration normalization tests (W222): bare integers, `1h00m`,
   `1.5h`, and unrecognized formats.
+
+- [ ] Add `#!` directive wiring tests: verify that `self`, `timezone`, and
+  `project` directive values influence `S`-item person defaulting, datetime
+  display, and item project defaulting once wiring is implemented.
+
+- [ ] Add `quick` tests: `write_file` config fallback (no `--append`),
+  `--type E` generates event, validation error on malformed title.
+
+- [ ] Add `done` tests: `--text` with zero matches exits non-zero; `--line`
+  with non-item line exits non-zero; no positional/line/text arg exits with
+  error message.
+
+- [ ] Add `summary` tests: multi-file input returns array JSON; `--pretty`
+  indents output; stdin input works.
 
 - [ ] Add Markdown rendering regression tests: CLI HTML output snapshot and
   Web UI Markdown preview snapshot, run in CI to prevent the table-rendering

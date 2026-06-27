@@ -19,6 +19,6 @@ due:2026-08-31
 | ## Next Steps
 | - Test the new feature.
 | - Write documentation for the new feature.
-    [ ] T "Write documentation" due:2026-06-30 project:my_project assignee:self parent:my_project_root
-    [ ] T "Prepare new content" due:2026-07-05 project:my_project assignee:self parent:my_project_root
-    [ ] T "Test new feature" due:2026-07-10 project:my_project assignee:self parent:my_project_root
+    [ ] T "Write documentation" due:2026-06-30 project:my_project assignee:self id:my_project_doc parent:my_project_root
+    [ ] T "Prepare new content" due:2026-07-05 project:my_project assignee:self id:my_project_content parent:my_project_root
+    [ ] T "Test new feature" due:2026-07-10 project:my_project assignee:self id:my_project_test parent:my_project_root

@@ -1273,6 +1273,47 @@ def build_parser():
     review_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     review_cmd.set_defaults(func=command_review)
 
+    who_cmd = subparsers.add_parser(
+        "who",
+        help="Team presence summary: latest active S item per person across loaded files.",
+    )
+    _add_input_paths(who_cmd)
+    who_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    who_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    who_cmd.set_defaults(func=command_who)
+
+    search_cmd = subparsers.add_parser(
+        "search",
+        help="Search life.txt items by substring or regex match in title or field values.",
+    )
+    _add_input_paths(search_cmd)
+    search_cmd.add_argument("pattern", help="Substring or regex pattern to match.")
+    search_cmd.add_argument(
+        "--regex",
+        action="store_true",
+        help="Treat pattern as a regular expression (case-insensitive).",
+    )
+    search_cmd.add_argument(
+        "--in",
+        dest="in_fields",
+        action="append",
+        metavar="FIELD",
+        help="Scope search to a detail field (e.g. title, body, note). Can be repeated or comma-separated.",
+    )
+    search_cmd.add_argument(
+        "--format",
+        choices=("text", "life", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    search_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    search_cmd.set_defaults(func=command_search)
+
     return parser
 
 
@@ -3189,6 +3230,121 @@ def command_status(args):
 
     _print_warnings(diagnostics)
     return 0
+
+
+def command_who(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    records = latest_status_records(items, active_only=True)
+
+    if args.format == "json":
+        write_text(None, status_records_to_json(records, pretty=args.pretty) + "\n")
+    else:
+        if not records:
+            write_text(None, "No active presence records found.\n")
+        else:
+            for record in records:
+                person = str(record.get("person", "?"))
+                state = str(record.get("state", ""))
+                title = str(record.get("title", ""))
+                display = state if state else title
+                from_val = str(record.get("from", ""))
+                write_text(None, "%-20s  %-16s  %s\n" % (person, display, from_val))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_search(args):
+    import re as _re
+
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    pattern = args.pattern
+    use_regex = getattr(args, "regex", False)
+    in_fields = _split_csv_args(getattr(args, "in_fields", None))
+
+    if use_regex:
+        try:
+            compiled = _re.compile(pattern, _re.IGNORECASE)
+        except _re.error as exc:
+            sys.stderr.write("ERROR: Invalid regex %r: %s\n" % (pattern, exc))
+            return 1
+        def _matches(text):
+            return bool(compiled.search(str(text)))
+    else:
+        pat_lower = pattern.lower()
+        def _matches(text):
+            return pat_lower in str(text).lower()
+
+    results = []
+    for item in items:
+        found_field = None
+        if in_fields:
+            for field in in_fields:
+                if field == "title":
+                    if _matches(item.title):
+                        found_field = "title"
+                        break
+                else:
+                    if any(_matches(v) for v in item.details.get(field, [])):
+                        found_field = field
+                        break
+        else:
+            if _matches(item.title):
+                found_field = "title"
+            else:
+                for key, vals in item.details.items():
+                    if any(_matches(v) for v in vals):
+                        found_field = key
+                        break
+        if found_field is not None:
+            results.append((item, found_field))
+
+    if args.format == "json":
+        data = [
+            OrderedDict([
+                ("source", getattr(item, "source", None)),
+                ("line", item.line),
+                ("status", item.status),
+                ("type", item.kind),
+                ("title", item.title),
+                ("match_field", field),
+            ])
+            for item, field in results
+        ]
+        write_text(None, json.dumps(
+            data, ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        ) + "\n")
+    elif args.format == "jsonl":
+        for item, field in results:
+            write_text(None, json.dumps(
+                OrderedDict([
+                    ("source", getattr(item, "source", None)),
+                    ("line", item.line),
+                    ("status", item.status),
+                    ("type", item.kind),
+                    ("title", item.title),
+                    ("match_field", field),
+                ]),
+                ensure_ascii=False, separators=(",", ":"),
+            ) + "\n")
+    elif args.format == "life":
+        for item, _field in results:
+            src = getattr(item, "source_text", None)
+            write_text(None, (src if src is not None else item_to_line(item)) + "\n")
+    else:
+        if not results:
+            write_text(None, "No matches found.\n")
+        else:
+            for item, _field in results:
+                source = getattr(item, "source", None)
+                line = item.line
+                loc = ("%s:%d" % (source, line)) if source and line else ("line %d" % line if line else "?")
+                write_text(None, "%s  %s %s %s\n" % (loc, item.status, item.kind, item.title))
+
+    _print_warnings(diagnostics)
+    return 0 if results else 1
 
 
 def command_notify(args):

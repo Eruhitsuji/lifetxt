@@ -5062,6 +5062,100 @@ class LifeTxtCheckIgnoreEdgeCaseTests(unittest.TestCase):
             self.assertNotIn("W222", codes)
 
 
+class LifeTxtWhoCommandTests(unittest.TestCase):
+    SOURCE = (
+        "[ ] S Alice person:alice state:focus from:2026-06-27T09:00\n"
+        "[ ] S Bob person:bob state:away from:2026-06-26T08:00\n"
+        "[ ] S Alice person:alice state:lunch from:2026-06-27T12:00\n"
+    )
+
+    def test_who_shows_latest_active_per_person(self):
+        stdout, stderr, code = run_cli("who", input_text=self.SOURCE)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("alice", out)
+        self.assertIn("bob", out)
+        self.assertIn("lunch", out)
+        self.assertNotIn("focus", out)
+
+    def test_who_json_returns_list(self):
+        stdout, stderr, code = run_cli("who", "--format", "json", input_text=self.SOURCE)
+        self.assertEqual(0, code, stderr)
+        data = json.loads(stdout)
+        self.assertIsInstance(data, list)
+        persons = [r["person"] for r in data]
+        self.assertIn("alice", persons)
+        self.assertIn("bob", persons)
+
+    def test_who_empty_when_no_s_items(self):
+        stdout, stderr, code = run_cli("who", input_text="[ ] T Task\n")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("No active", normalize_newlines(stdout))
+
+    def test_who_excludes_finished_s_records(self):
+        source = (
+            "[ ] S Alice person:alice state:focus from:2026-06-27T09:00 to:2026-06-27T10:00\n"
+        )
+        stdout, stderr, code = run_cli("who", input_text=source)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("No active", normalize_newlines(stdout))
+
+
+class LifeTxtSearchCommandTests(unittest.TestCase):
+    SOURCE = (
+        "[ ] T Fix_login_bug project:auth\n"
+        "[x] T Write_unit_tests project:testing\n"
+        "[N] N Important_note body:login_details_here\n"
+        "[ ] T Deploy_service note:urgent\n"
+    )
+
+    def test_search_substring_match_in_title(self):
+        stdout, stderr, code = run_cli("search", "Fix", input_text=self.SOURCE)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+        self.assertNotIn("Write_unit_tests", normalize_newlines(stdout))
+
+    def test_search_no_match_exits_nonzero(self):
+        stdout, stderr, code = run_cli("search", "zzz_nonexistent", input_text=self.SOURCE)
+        self.assertEqual(1, code)
+
+    def test_search_regex_flag(self):
+        stdout, stderr, code = run_cli(
+            "search", "^fix.*bug$", "--regex", input_text=self.SOURCE
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+
+    def test_search_in_title_field(self):
+        stdout, stderr, code = run_cli(
+            "search", "login", "--in", "title", input_text=self.SOURCE
+        )
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("Fix_login_bug", out)
+        self.assertNotIn("Important_note", out)
+
+    def test_search_json_output_schema(self):
+        stdout, stderr, code = run_cli(
+            "search", "Fix", "--format", "json", input_text=self.SOURCE
+        )
+        self.assertEqual(0, code, stderr)
+        data = json.loads(stdout)
+        self.assertIsInstance(data, list)
+        self.assertTrue(len(data) >= 1)
+        rec = data[0]
+        self.assertIn("title", rec)
+        self.assertIn("match_field", rec)
+        self.assertIn("status", rec)
+
+    def test_search_life_format_outputs_source_line(self):
+        stdout, stderr, code = run_cli(
+            "search", "login", "--format", "life", input_text=self.SOURCE
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+
+
 class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
     def test_health_ignore_suppresses_w303(self):
         import datetime as dt
@@ -5095,6 +5189,213 @@ class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
             stdout, stderr, code = run_cli("health", path)
             self.assertEqual(0, code, stderr)
             self.assertNotIn("W302", normalize_newlines(stdout))
+
+
+class LifeTxtQuickTests(unittest.TestCase):
+    def test_quick_creates_task_with_title(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            stdout, stderr, code = run_cli("quick", "Buy_groceries", "--append", path)
+            self.assertEqual(0, code, stderr)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("Buy_groceries", content)
+            self.assertIn("[ ] T", content)
+
+    def test_quick_default_type_is_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            run_cli("quick", "Task_title", "--append", path)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("[ ] T Task_title", content)
+
+    def test_quick_explicit_type_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            run_cli("quick", "Team_meeting", "--type", "E", "--append", path)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("[ ] E Team_meeting", content)
+
+    def test_quick_appends_to_existing_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Existing_task\n")
+            run_cli("quick", "New_task", "--append", path)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("Existing_task", content)
+            self.assertIn("New_task", content)
+
+    def test_quick_generated_line_passes_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            run_cli("quick", "Valid_title", "--append", path)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+
+
+class LifeTxtCleanupIgnoreTests(unittest.TestCase):
+    def test_cleanup_ignore_suppresses_specific_code(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent_task id:P001\n"
+                    "[ ] T Child_task parent:P001\n"
+                )
+            stdout, stderr, code = run_cli("cleanup", path, "--ignore", "W225")
+            self.assertEqual(0, code, stderr)
+
+    def test_cleanup_json_schema_has_required_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_without_project\n")
+            stdout, stderr, code = run_cli("cleanup", path, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIsInstance(data, list)
+            if data:
+                rec = data[0]
+                self.assertIn("priority", rec)
+                self.assertIn("check", rec)
+                self.assertIn("count", rec)
+                self.assertIn("action", rec)
+
+    def test_cleanup_ignore_comma_separated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent id:P001\n"
+                    "[ ] T Child parent:P001 est:90m\n"
+                )
+            stdout, stderr, code = run_cli("cleanup", path, "--ignore", "W225,W222")
+            self.assertEqual(0, code, stderr)
+
+
+class LifeTxtUndoEdgeCaseTests(unittest.TestCase):
+    def test_undo_creates_snapshot_on_quick_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            cfg_path = os.path.join(tmp, "config.toml")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Old_task\n")
+            run_cli("quick", "New_task", "--append", path, "--config", cfg_path)
+            stdout, stderr, code = run_cli("undo", path, "--list", "--config", cfg_path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("quick", normalize_newlines(stdout))
+
+    def test_undo_restores_previous_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            cfg_path = os.path.join(tmp, "config.toml")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Original_task\n")
+            run_cli("quick", "Added_task", "--append", path, "--config", cfg_path)
+            run_cli("undo", path, "--config", cfg_path)
+            content = open(path, encoding="utf-8").read()
+            self.assertIn("Original_task", content)
+            self.assertNotIn("Added_task", content)
+
+    def test_undo_creates_snapshot_on_done_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            cfg_path = os.path.join(tmp, "config.toml")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Buy_milk id:t001\n")
+            run_cli("done", path, "t001", "--config", cfg_path)
+            stdout, stderr, code = run_cli("undo", path, "--list", "--config", cfg_path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("done", normalize_newlines(stdout))
+
+
+class LifeTxtHealthW304Tests(unittest.TestCase):
+    def test_w304_fires_when_assignee_has_no_s_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug assignee:alice\n")
+            stdout, stderr, code = run_cli("health", path)
+            self.assertIn("W304", normalize_newlines(stdout))
+
+    def test_w304_not_fired_when_assignee_has_recent_s_record(self):
+        import datetime as dt
+        today = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(
+                    "[ ] T Fix_bug assignee:alice updated:%s\n"
+                    "[ ] S Alice person:alice state:active from:%sT09:00\n" % (today, today)
+                )
+            stdout, stderr, code = run_cli("health", path)
+            self.assertNotIn("W304", normalize_newlines(stdout))
+
+
+class LifeTxtLinksScopeTests(unittest.TestCase):
+    TEXT = (
+        "[ ] T Root id:root\n"
+        "[ ] T Child id:child parent:root\n"
+        "[ ] T Unrelated id:other\n"
+    )
+
+    def test_links_id_scope_mermaid_limits_nodes(self):
+        stdout, stderr, code = run_cli(
+            "links", "--id", "root", "--direction", "incoming",
+            "--format", "mermaid", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("child", out)
+        self.assertIn("root", out)
+        self.assertNotIn("other", out)
+
+    def test_links_id_scope_dot_limits_nodes(self):
+        stdout, stderr, code = run_cli(
+            "links", "--id", "root", "--direction", "incoming",
+            "--format", "dot", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("child", out)
+        self.assertIn("root", out)
+        self.assertNotIn("other", out)
+
+
+class LifeTxtDependencyEdgeCaseTests(unittest.TestCase):
+    def test_missing_depends_on_id_fires_w215(self):
+        text = "[ ] T Task depends_on:nonexistent_id\n"
+        _items, diags = parse_text(text)
+        self.assertTrue(any(d.code == "W215" for d in diags))
+
+    def test_duplicate_depends_on_blocks_pair_allowed(self):
+        text = (
+            "[ ] T Task_A id:A depends_on:B\n"
+            "[ ] T Task_B id:B blocks:A\n"
+        )
+        _items, diags = parse_text(text)
+        errors = [d for d in diags if d.severity == "error"]
+        self.assertEqual([], errors)
+
+    def test_self_reference_fires_w216(self):
+        text = "[ ] T Task id:t001 depends_on:t001\n"
+        _items, diags = parse_text(text)
+        self.assertTrue(any(d.code == "W216" for d in diags))
+
+    def test_ambiguous_id_fires_w218(self):
+        text = (
+            "[ ] T Task_A id:dup\n"
+            "[ ] T Task_B id:dup\n"
+            "[ ] T Task_C depends_on:dup\n"
+        )
+        _items, diags = parse_text(text)
+        self.assertTrue(any(d.code == "W218" for d in diags))
 
 
 def run_cli(*args, **kwargs):

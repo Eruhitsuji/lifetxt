@@ -53,6 +53,27 @@ def create_app(paths=None, writable_path=None, config=None):
     app.state.writable_path = writable_path or app.state.paths[0]
     app.state.config = config or {}
 
+    _api_token = (config or {}).get("api", {}).get("token") if config else None
+    if _api_token:
+        from fastapi import Request
+        from fastapi.responses import JSONResponse as _JSONResponse
+
+        @app.middleware("http")
+        async def _bearer_auth(request: Request, call_next):
+            if request.url.path in ("/", "/api/health"):
+                return await call_next(request)
+            auth = request.headers.get("authorization", "")
+            if auth != "Bearer " + _api_token:
+                return _JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": "UNAUTHORIZED",
+                        "message": "Authorization: Bearer TOKEN header required.",
+                    },
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return await call_next(request)
+
     def raise_for_errors(diagnostics):
         if _has_error(diagnostics):
             raise HTTPException(

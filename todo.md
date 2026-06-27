@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x25)
+Last updated: 2026-06-27 (updated x26)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -188,11 +188,6 @@ CLI-native charts without external dependencies.
 - [ ] Standardize API error responses: every error must return a stable JSON
   body `{"error": CODE, "message": "...", "detail": {...}}` so clients can
   parse errors programmatically without inspecting human-readable text.
-
-- [ ] Add local authentication: implement a simple bearer-token option
-  (`api.token` in config, presented as `Authorization: Bearer TOKEN`) before
-  exposing the server to any non-loopback address. Document that the server
-  must not be exposed to the network without a token.
 
 - [ ] Add API tests for mixed writable and generated/read-only file sets.
 
@@ -420,13 +415,6 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
 
-- [ ] Add `search` command as a life.txt-aware alternative to `grep`: support
-  substring and regex matching (`--regex`) scoped to specific fields (`--in
-  title`, `--in body`, `--in KEY`; multiple `--in` values are OR-ed). Highlight
-  matched text in `text` output. Accept glob input for cross-file search.
-  Output formats: `text` (highlighted), `life` (original lines), `json`,
-  `jsonl`.
-
 - [ ] Add `lint` command for style and convention checks separate from
   `check`: detect key-name typos (e.g., `proj:` vs `project:`), non-standard
   tag casing, priority values outside a configured set, and custom rules
@@ -477,12 +465,6 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   (append Markdown to a local log). Transport dependencies are optional; the
   command exits with a clear error if the required dependency or environment
   variable is missing before making any network request.
-
-- [ ] Add `who` command as a multi-file presence summary: read `S` items from
-  all loaded files, group by `person:`, and display the latest active state in
-  a compact one-line-per-person table. Equivalent to `status --active` across
-  a glob but optimized for team-at-a-glance use. Support `--format text|json`
-  and accept glob patterns directly.
 
 - [ ] Add dependency-focused views and filters: show only blocked or unblocked
   items in `agenda`, expose blocker chains in `links` or a dedicated
@@ -676,8 +658,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
   is affected once timezone wiring is implemented.
 
-- [ ] Add `quick` tests: `write_file` config fallback (no `--append`),
-  `--type E` generates event, validation error on malformed title.
+- [ ] Add `quick` tests: relative date resolution (`due:tomorrow` → absolute
+  date), `write_file` config fallback (no `--append`), validation error on
+  malformed title.
 
 - [ ] Add `summary` tests: stdin input works (pipe a life.txt via stdin).
 
@@ -727,16 +710,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   pass/warn/fail per check, optional dependencies reported as warn, exit
   non-zero on any failure.
 
-- [ ] Add `quick` tests: positional title parsing, relative date resolution,
-  default type `T`, generated line passes `check`, appended to correct file.
-
 - [ ] Add `check --ignore` tests: comma-separated codes, unknown-code
   handling, interaction with `--code` (include-only overrides ignore for same
   code), and JSON output with ignored codes absent.
 
 - [ ] Add `undo` edge-case tests: stack-depth eviction (verify oldest entry
   removed when `undo.keep` exceeded), `backup.auto` creates file in
-  `backup.dir`, `undo` after `assign` and `archive` write operations.
+  `backup.dir`.
 
 - [ ] Add `done` tests: by ID, by line number, by unique title match, by
   ambiguous title match (confirmation prompt), auto-appended `done:` date.
@@ -747,12 +727,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `review` edge-case tests: mood trend ordering (most common mood first),
   elapsed normalization in JSON output (minutes integer, not raw string).
 
-- [ ] Add `health` edge-case tests: W304 passes when assignee has an active S
-  record within the `--since` window; W304 fires when S record is absent.
-
-- [ ] Add dependency edge-case tests: ambiguous and missing dependency IDs,
-  cross-file blockers, duplicate `depends_on:` / `blocks:` pairs, and
-  source metadata in blocked agenda records.
+- [ ] Add dependency edge-case tests: cross-file blockers, and source metadata
+  in blocked agenda records.
 
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.
@@ -761,14 +737,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   validation error when resulting line is invalid, `--notify` with `--text`
   selection verifies correct ref: value in M-item.
 
-- [ ] Add `cleanup --ignore CODE` tests: suppressed codes absent from output;
-  JSON schema has `priority`, `check`, `count`, `action` keys.
-
 - [ ] Add `diff` tests: added, completed, canceled, status-changed,
   detail-changed items; filter scope; JSON output schema.
 
-- [ ] Add `search` tests: substring, regex, field-scoped, multi-field,
-  no-match, cross-file glob.
+- [ ] Add `search` tests: cross-file glob, highlighted matches in text output.
 
 - [ ] Add `migrate` tests: `--dry-run`, `--backup`, chained migrations,
   idempotency.
@@ -795,20 +767,15 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   known fixture; `?root=ID` returns only the reachable subgraph; `?depth=N`
   limits traversal; a fixture with a cycle does not cause infinite recursion.
 
-- [ ] Add `links --format mermaid` tests: output is valid Mermaid `graph LR`
-  syntax; completed items use distinct node style; `--id` scoping limits nodes;
-  no output for a file with no links.
-
-- [ ] Add `links --format dot` tests: output is valid Graphviz DOT syntax;
-  relation labels appear on edges; isolated nodes are included.
+- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
+  characters in IDs/titles (quotes, spaces).
 
 - [ ] Add git API endpoint tests (with a real git repo fixture): `POST
   /api/git/pull` returns exit code and stderr; `POST /api/git/commit` with a
   message creates a commit; endpoints return 403 when `git.enable_api` is
   false; endpoints return 403 when accessed from a non-loopback address.
 
-- [ ] Add `who` tests: latest active `S` per person across multiple files,
-  finished records excluded, JSON schema stable.
+- [ ] Add `who` tests: cross-file glob pattern, multiple writers same person.
 
 ---
 

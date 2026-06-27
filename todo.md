@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x18)
+Last updated: 2026-06-27 (updated x19)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -118,25 +118,8 @@ New commands that reduce the initial setup cost and protect against data loss.
 Implement before other new commands because they lower the barrier for all
 subsequent use.
 
-- [ ] Extend `init` command: add `--yes` flag to run fully non-interactively
-  with defaults (`self`, `UTC`, no project) without reading stdin; currently
-  prompts for omitted values. Add onboarding mention to README.
-
-- [ ] Add `undo` command to reverse the most recent write on a given file:
-  before every successful write operation (`assist`, `done`, `archive`,
-  `quick`, `assign`, `encrypt`, `decrypt`), save a timestamped backup to
-  `.cache/lifetxt/undo/` (configurable via `undo.dir`). `lifetxt undo FILE`
-  restores the previous version; `--list` shows the undo stack with
-  timestamps and operation names. Limit stack depth via `undo.keep`
-  (default: 20). Document that `undo` is not a substitute for Git but provides
-  safety for users who do not use version control.
-
-- [ ] Add automatic backup configuration: when `backup.auto` is `true` in
-  config, save a timestamped copy of any modified file to `backup.dir`
-  (default: `.cache/lifetxt/backup/`) before each write. Retain the most
-  recent `backup.keep` copies (default: 20) per file and delete older ones.
-  Complements `undo` (operation-level) with file-level timestamped recovery
-  that survives process crashes and does not require an explicit undo step.
+- [ ] Add onboarding mention for `init` and `doctor` to README and verify
+  `--yes` behavior is documented in CLI guide.
 
 ---
 
@@ -156,29 +139,8 @@ existing command internally to reuse validation and atomic write behavior.
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
 
-- [ ] Add `undo` command to reverse the most recent write on a given file:
-  before every successful write operation (`assist`, `done`, `archive`,
-  `quick`, `assign`, `encrypt`, `decrypt`), save a timestamped backup to
-  `.cache/lifetxt/undo/` (configurable via `undo.dir`). `lifetxt undo FILE`
-  restores the previous version; `--list` shows the undo stack with
-  timestamps and operation names. Limit stack depth via `undo.keep`
-  (default: 20). Document that `undo` is not a substitute for Git but provides
-  safety for users who do not use version control.
-
-- [ ] Add automatic backup configuration: when `backup.auto` is `true` in
-  config, save a timestamped copy of any modified file to `backup.dir`
-  (default: `.cache/lifetxt/backup/`) before each write. Retain the most
-  recent `backup.keep` copies (default: 20) per file and delete older ones.
-  Complements `undo` (operation-level) with file-level timestamped recovery
-  that survives process crashes and does not require an explicit undo step.
-
-- [ ] Add `review` command for human-readable period summaries: produce a
-  structured report covering completed tasks, remaining open tasks, habit
-  completion rates, mood trend, elapsed time by project, and journal body
-  excerpts. Options: `--week` (current ISO week), `--month YYYY-MM`,
-  `--from`/`--to`, `--project`. Formats: `text` (terminal-readable, pipeable
-  to a pager) and `json` (structured for LLM input). The JSON schema must be
-  stable so AI-assisted review workflows can rely on it.
+- [ ] Extend `review` with journal body excerpts in text output and add
+  `--format jsonl` for streaming output to LLM pipelines.
 
 - [ ] Extend `health` command: add `--format jsonl`, add `--type` filter to
   restrict checks to specific item types, and add W301 suppression when an
@@ -351,17 +313,14 @@ CLI-native charts without external dependencies.
 
 Diagnostics added to `check` and `health` that catch common mistakes.
 
-- [ ] Add W219: warn when a completed or canceled parent (`[x]` or `[-]`)
-  has one or more open children (`[ ]`, `[/]`, `[>]`, `[?]`). Report each
-  open child's ID, line number, and status. Apply to both explicit `parent:`
-  references and inferred indentation-based relationships. Suppress with
-  `--ignore W219` for intentional cases (open subtasks that continue
-  independently after the parent closes).
-
-- [ ] Add W219 resolution guidance to `check` output: when W219 fires,
-  print the three resolution options — (1) close children manually, (2) run
+- [ ] Add W225 resolution guidance to `check` output: when W225 fires,
+  suggest the three resolution paths — (1) close children manually, (2) run
   `archive --orphan-children adopt`, (3) run `archive --orphan-children
-  promote` — so the user knows how to fix the issue without reading docs.
+  promote`. Note: W225 already fires; guidance message needs to be added.
+
+- [ ] Add `--ignore W225` support to `check` command (and verify it works
+  for W219, W220, W221 etc.) so users can suppress cross-item warnings for
+  intentional cases.
 
 ---
 
@@ -674,8 +633,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `quick` tests: positional title parsing, relative date resolution,
   default type `T`, generated line passes `check`, appended to correct file.
 
-- [ ] Add `undo` tests: undo after each write command, `--list` output,
-  stack-depth eviction, error on empty stack.
+- [ ] Add `undo` edge-case tests: stack-depth eviction (verify oldest entry
+  removed when `undo.keep` exceeded), `backup.auto` creates file in
+  `backup.dir`, `undo` after `assign` and `archive` write operations.
 
 - [ ] Add `done` tests: by ID, by line number, by unique title match, by
   ambiguous title match (confirmation prompt), auto-appended `done:` date.
@@ -683,8 +643,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `summary` tests: counts match file contents for every type/status
   combination, missing-ID count is accurate, JSON schema is stable.
 
-- [ ] Add `review` tests: all output sections present for `--week`, `--month`,
-  `--from/--to`; JSON schema stability; empty period (no items).
+- [ ] Add `review` edge-case tests: `--from/--to` custom range, empty period
+  (no items in range), mood trend ordering, elapsed normalization in JSON
+  output, multi-file input.
 
 - [ ] Add `health` edge-case tests: `--ignore CODE` suppresses correctly,
   W301 not fired when item has a recent `updated:`, W302 passes when habit has

@@ -4035,6 +4035,251 @@ class LifeTxtCleanupCliTests(unittest.TestCase):
             self.assertIn("ids", checks)
 
 
+class LifeTxtUndoCliTests(unittest.TestCase):
+    def _cfg(self, tmp):
+        """Return a --config path that isolates undo/backup dirs inside tmp."""
+        cfg_path = os.path.join(tmp, ".lifetxt.json")
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {"undo": {"dir": os.path.join(tmp, "undo")},
+                 "backup": {"dir": os.path.join(tmp, "backup")}},
+                f,
+            )
+        return cfg_path
+
+    def test_undo_restores_previous_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:T001\n")
+            run_cli("--config", cfg, "done", life_file, "T001")
+            with open(life_file, encoding="utf-8") as fh:
+                content_after_done = fh.read()
+            self.assertIn("[x]", content_after_done)
+            stdout, stderr, code = run_cli("--config", cfg, "undo", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Restored", normalize_newlines(stdout))
+            with open(life_file, encoding="utf-8") as fh:
+                restored = fh.read()
+            self.assertIn("[ ]", restored)
+
+    def test_undo_list_shows_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:T001\n")
+            run_cli("--config", cfg, "done", life_file, "T001")
+            stdout, stderr, code = run_cli("--config", cfg, "undo", life_file, "--list")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("op=done", normalize_newlines(stdout))
+
+    def test_undo_no_history_is_graceful(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one\n")
+            stdout, stderr, code = run_cli("--config", cfg, "undo", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("No undo history", normalize_newlines(stdout))
+
+    def test_undo_quick_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Existing\n")
+            run_cli("--config", cfg, "quick", "--append", life_file, "New_task")
+            stdout, stderr, code = run_cli("--config", cfg, "undo", life_file, "--list")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("op=quick", normalize_newlines(stdout))
+
+
+class LifeTxtReviewCliTests(unittest.TestCase):
+    def _make_file(self, tmp, content):
+        life_file = os.path.join(tmp, "life.txt")
+        with open(life_file, "w", encoding="utf-8") as f:
+            f.write(content)
+        return life_file
+
+    def test_review_text_shows_tasks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            today = __import__("datetime").date.today().isoformat()
+            content = (
+                "[x] T Finished_task done:%s id:T001\n"
+                "[ ] T Open_task id:T002\n"
+            ) % today
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week")
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("Completed:", out)
+            self.assertIn("Open:", out)
+
+    def test_review_json_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            today = __import__("datetime").date.today().isoformat()
+            content = "[x] T Done_task done:%s id:T001\n[ ] T Open_task id:T002\n" % today
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIn("completed_tasks", data)
+            self.assertIn("open_tasks", data)
+            self.assertIn("range", data)
+            self.assertEqual(1, data["completed_tasks"])
+            self.assertEqual(1, data["open_tasks"])
+
+    def test_review_month_filter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            content = (
+                "[x] T January_task done:2026-01-15 id:T001\n"
+                "[x] T February_task done:2026-02-10 id:T002\n"
+            )
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli(
+                "review", life_file, "--month", "2026-01", "--format", "json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(1, data["completed_tasks"])
+
+    def test_review_habit_completion_rate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            content = (
+                "[x] H Exercise\n"
+                "[x] H Exercise\n"
+                "[ ] H Exercise\n"
+            )
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIn("Exercise", data["habits"])
+            h = data["habits"]["Exercise"]
+            self.assertEqual(2, h["done"])
+            self.assertEqual(1, h["open"])
+            self.assertEqual(67, h["completion_rate"])
+
+    def test_review_elapsed_by_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            content = (
+                "[x] T Work_task project:projectA elapsed:1h30m done:2026-01-15 id:T001\n"
+                "[x] T Other_task project:projectB elapsed:45m done:2026-01-15 id:T002\n"
+            )
+            life_file = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli(
+                "review", life_file, "--month", "2026-01", "--format", "json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIn("projectA", data["elapsed_by_project"])
+            self.assertIn("projectB", data["elapsed_by_project"])
+
+
+class LifeTxtW225Tests(unittest.TestCase):
+    def test_w225_fires_for_completed_parent_with_open_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent_task id:P001\n"
+                    "[ ] T Child_task parent:P001 id:C001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file)
+            out = normalize_newlines(stdout + stderr)
+            self.assertIn("W225", out)
+
+    def test_w225_no_fire_when_all_children_done(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent_task id:P001\n"
+                    "[x] T Child_task parent:P001 id:C001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file)
+            out = normalize_newlines(stdout + stderr)
+            self.assertNotIn("W225", out)
+
+    def test_w225_no_fire_for_open_parent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[ ] T Parent_task id:P001\n"
+                    "[ ] T Child_task parent:P001 id:C001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file)
+            out = normalize_newlines(stdout + stderr)
+            self.assertNotIn("W225", out)
+
+    def test_w225_fires_for_canceled_parent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[-] T Canceled_parent id:P001\n"
+                    "[ ] T Orphan_child parent:P001 id:C001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file)
+            out = normalize_newlines(stdout + stderr)
+            self.assertIn("W225", out)
+
+
+class LifeTxtInitYesTests(unittest.TestCase):
+    def test_init_yes_creates_files_without_prompts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            config_file = os.path.join(tmp, ".lifetxt.json")
+            stdout, stderr, code = run_cli(
+                "init",
+                "--file", life_file,
+                "--config-output", config_file,
+                "--yes",
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertTrue(os.path.exists(life_file))
+            self.assertTrue(os.path.exists(config_file))
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("#! self: self", content)
+            self.assertIn("#! timezone: UTC", content)
+
+    def test_init_yes_with_name_uses_provided_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            config_file = os.path.join(tmp, ".lifetxt.json")
+            run_cli(
+                "init",
+                "--file", life_file,
+                "--config-output", config_file,
+                "--yes",
+                "--name", "alice",
+            )
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("#! self: alice", content)
+
+    def test_init_yes_overwrite_without_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            config_file = os.path.join(tmp, ".lifetxt.json")
+            # Create existing file
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("# existing\n")
+            stdout, stderr, code = run_cli(
+                "init",
+                "--file", life_file,
+                "--config-output", config_file,
+                "--yes",
+            )
+            self.assertEqual(0, code, stderr)
+            # Should have overwritten without prompting
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("#! self:", content)
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

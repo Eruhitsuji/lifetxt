@@ -1043,6 +1043,11 @@ def build_parser():
     init_cmd.add_argument("--name", help="Your name (for #! self: directive).")
     init_cmd.add_argument("--timezone", help="Your timezone (for #! timezone: directive).")
     init_cmd.add_argument("--project", help="Default project name (for #! project: directive).")
+    init_cmd.add_argument(
+        "--yes",
+        action="store_true",
+        help="Run fully non-interactively using defaults (self, UTC, no project).",
+    )
     init_cmd.set_defaults(func=command_init)
 
     doctor_cmd = subparsers.add_parser(
@@ -1158,6 +1163,58 @@ def build_parser():
     )
     cleanup_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     cleanup_cmd.set_defaults(func=command_cleanup)
+
+    undo_cmd = subparsers.add_parser(
+        "undo",
+        help="Restore a file to its state before the most recent write operation.",
+    )
+    undo_cmd.add_argument("path", help="life.txt file to restore.")
+    undo_cmd.add_argument(
+        "--list",
+        action="store_true",
+        help="List the undo stack with timestamps and operation names.",
+    )
+    undo_cmd.set_defaults(func=command_undo)
+
+    review_cmd = subparsers.add_parser(
+        "review",
+        help="Human-readable period summary: completed tasks, habits, mood, and elapsed time.",
+    )
+    _add_input_paths(review_cmd)
+    review_cmd.add_argument(
+        "--week",
+        action="store_true",
+        help="Review the current ISO week (Monday to today).",
+    )
+    review_cmd.add_argument(
+        "--month",
+        metavar="YYYY-MM",
+        help="Review a specific calendar month.",
+    )
+    review_cmd.add_argument(
+        "--from",
+        dest="from_date",
+        metavar="DATE",
+        help="Start date for custom range (YYYY-MM-DD).",
+    )
+    review_cmd.add_argument(
+        "--to",
+        dest="to_date",
+        metavar="DATE",
+        help="End date for custom range (YYYY-MM-DD).",
+    )
+    review_cmd.add_argument(
+        "--project",
+        help="Restrict review to a specific project.",
+    )
+    review_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    review_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    review_cmd.set_defaults(func=command_review)
 
     return parser
 
@@ -1763,6 +1820,7 @@ def command_archive(args):
             return 0
 
     archive_text = _items_to_life_text(candidates)
+    _pre_write_backup(args.dest, config, "archive")
     append_text(args.dest, archive_text)
 
     if mode == "move":
@@ -1770,6 +1828,7 @@ def command_archive(args):
         for path, items in file_items.items():
             remaining = [item for item in items if id(item) not in archive_ids]
             if len(remaining) < len(items):
+                _pre_write_backup(path, config, "archive")
                 atomic_write_text(path, _items_to_life_text(remaining))
 
     sys.stdout.write("Archived %d item(s) to %s.\n" % (len(candidates), args.dest))
@@ -1891,6 +1950,7 @@ def command_quick(args):
     if not dest:
         raise ValueError("No output file. Use --append FILE or configure write_file in config.")
 
+    _pre_write_backup(dest, config, "quick")
     append_text(dest, line + "\n")
     sys.stdout.write("%s\n" % line)
     return 0
@@ -1971,6 +2031,7 @@ def command_done(args):
         _print_diagnostics(diagnostics)
         return 1
 
+    _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
     sys.stdout.write("Done: %s\n" % updated_line)
     return 0
@@ -2065,6 +2126,57 @@ def command_summary(args):
     return 0
 
 
+def command_undo(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("undo requires a file path.")
+    basename = os.path.basename(path)
+    undo_dir = os.path.join(_undo_cache_dir(config), basename)
+
+    try:
+        entries = sorted(e for e in os.listdir(undo_dir) if e.endswith(".txt"))
+    except OSError:
+        entries = []
+
+    if not entries:
+        sys.stdout.write("No undo history for: %s\n" % path)
+        return 0
+
+    if args.list:
+        sys.stdout.write("Undo history for %s (%d snapshot(s)):\n" % (path, len(entries)))
+        for i, name in enumerate(reversed(entries)):
+            parts = name.rsplit(".", 2)
+            if len(parts) == 3:
+                ts_raw, op, _ = parts
+                try:
+                    dt = datetime.datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
+                    ts_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    ts_str = ts_raw
+                    op = "?"
+                sys.stdout.write("  [%d] %s  op=%s\n" % (i + 1, ts_str, op))
+            else:
+                sys.stdout.write("  [%d] %s\n" % (i + 1, name))
+        return 0
+
+    snapshot = entries[-1]
+    snapshot_path = os.path.join(undo_dir, snapshot)
+    try:
+        content = read_text(snapshot_path)
+    except OSError as exc:
+        raise ValueError("Failed to read undo snapshot: %s" % exc)
+
+    atomic_write_text(path, content)
+    try:
+        os.unlink(snapshot_path)
+    except OSError:
+        pass
+
+    sys.stdout.write("Restored: %s (from %s)\n" % (path, snapshot))
+    return 0
+
+
 def command_init(args):
     life_file = getattr(args, "file", None) or "life.txt"
     config_file = getattr(args, "config_output", None) or ".lifetxt.json"
@@ -2072,7 +2184,9 @@ def command_init(args):
     life_exists = os.path.exists(life_file)
     config_exists = os.path.exists(config_file)
 
-    if (life_exists or config_exists) and not args.force:
+    yes = getattr(args, "yes", False) or args.force
+
+    if (life_exists or config_exists) and not yes:
         existing = [p for p in (life_file, config_file) if os.path.exists(p)]
         sys.stdout.write("File(s) already exist: %s\n" % ", ".join(existing))
         sys.stdout.write("Overwrite? [y/N] ")
@@ -2083,19 +2197,23 @@ def command_init(args):
             return 0
 
     name = getattr(args, "name", None)
-    if not name:
+    if not name and not yes:
         sys.stdout.write("Your name (for S presence records) [self]: ")
         sys.stdout.flush()
         name = sys.stdin.readline().strip() or "self"
+    if not name:
+        name = "self"
 
     timezone_val = getattr(args, "timezone", None)
-    if not timezone_val:
+    if not timezone_val and not yes:
         sys.stdout.write("Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ")
         sys.stdout.flush()
         timezone_val = sys.stdin.readline().strip() or "UTC"
+    if not timezone_val:
+        timezone_val = "UTC"
 
     project = getattr(args, "project", None)
-    if project is None:
+    if project is None and not yes:
         sys.stdout.write("Default project name (leave blank to skip): ")
         sys.stdout.flush()
         project = sys.stdin.readline().strip()
@@ -2246,6 +2364,7 @@ def command_assign(args):
         _print_diagnostics(diagnostics)
         return 1
 
+    _pre_write_backup(path, config, "assign")
     atomic_write_text(path, updated_text)
     sys.stdout.write("Assigned to %s: %s\n" % (args.to, updated_line))
 
@@ -2528,6 +2647,146 @@ def command_cleanup(args):
             for sg in sorted(suggestions, key=lambda x: x["priority"]):
                 write_text(None, "  [%d] %s: %s\n" % (sg["priority"], sg["check"], sg["message"]))
                 write_text(None, "      Run: %s\n" % sg["action"])
+
+    return 0
+
+
+def command_review(args):
+    import calendar as _calendar
+    from .timeutil import parse_elapsed as _parse_elapsed
+
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config)
+    items, _ = _parse_life_inputs(paths, config)
+
+    today = datetime.date.today()
+
+    if getattr(args, "week", False):
+        start = today - datetime.timedelta(days=today.weekday())
+        end = start + datetime.timedelta(days=6)
+    elif getattr(args, "month", None):
+        try:
+            year_s, month_s = args.month.split("-")
+            year_i, month_i = int(year_s), int(month_s)
+            start = datetime.date(year_i, month_i, 1)
+            last_day = _calendar.monthrange(year_i, month_i)[1]
+            end = datetime.date(year_i, month_i, last_day)
+        except (ValueError, AttributeError):
+            raise ValueError("Invalid --month format. Use YYYY-MM.")
+    else:
+        from_date = getattr(args, "from_date", None)
+        to_date = getattr(args, "to_date", None)
+        start = _parse_date_only(from_date) if from_date else today - datetime.timedelta(days=today.weekday())
+        end = _parse_date_only(to_date) if to_date else today
+
+    project_filter = getattr(args, "project", None)
+    if project_filter:
+        items = [i for i in items if project_filter in [str(v) for v in i.details.get("project", [])]]
+
+    completed_tasks = []
+    open_tasks = []
+    habits = {}
+    journal_count = 0
+    moods = []
+    elapsed_by_project = {}
+
+    for item in items:
+        if item.kind == "T":
+            if item.status == "[x]":
+                done_dates = [_parse_date_only(str(v)) for v in item.details.get("done", [])]
+                in_range = any(
+                    d and d >= start and d <= end for d in done_dates
+                ) if done_dates else False
+                if in_range:
+                    completed_tasks.append(item)
+            elif item.status in ("[ ]", "[/]", "[>]", "[?]"):
+                open_tasks.append(item)
+
+        elif item.kind == "H":
+            title = item.title
+            if title not in habits:
+                habits[title] = {"done": 0, "open": 0}
+            if item.status == "[x]":
+                habits[title]["done"] += 1
+            elif item.status in ("[ ]", "[/]"):
+                habits[title]["open"] += 1
+
+        elif item.kind == "J":
+            j_date = _latest_item_date(item) or today
+            if j_date >= start and j_date <= end:
+                journal_count += 1
+                mood_vals = item.details.get("mood", [])
+                if mood_vals:
+                    moods.append((j_date, str(mood_vals[0])))
+
+        elapsed_vals = item.details.get("elapsed", [])
+        if elapsed_vals:
+            minutes = _parse_elapsed(str(elapsed_vals[0]))
+            if minutes:
+                proj = str(item.details.get("project", ["(no project)"])[0])
+                elapsed_by_project[proj] = elapsed_by_project.get(proj, 0) + minutes
+
+    def _fmt_elapsed(m):
+        if m >= 60:
+            return "%dh%dm" % (m // 60, m % 60)
+        return "%dm" % m
+
+    result = {
+        "range": "%s to %s" % (start.isoformat(), end.isoformat()),
+        "completed_tasks": len(completed_tasks),
+        "open_tasks": len(open_tasks),
+        "habits": {
+            title: {
+                "done": h["done"],
+                "open": h["open"],
+                "completion_rate": (
+                    round(h["done"] / (h["done"] + h["open"]) * 100)
+                    if (h["done"] + h["open"] > 0) else 0
+                ),
+            }
+            for title, h in habits.items()
+        },
+        "journals": journal_count,
+        "mood_trend": [
+            {"date": d.isoformat(), "mood": m} for d, m in sorted(moods)
+        ],
+        "elapsed_by_project": {
+            proj: _fmt_elapsed(m)
+            for proj, m in sorted(elapsed_by_project.items(), key=lambda x: -x[1])
+        },
+    }
+
+    fmt = getattr(args, "format", "text") or "text"
+    if fmt == "json":
+        indent = 2 if getattr(args, "pretty", False) else None
+        sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=indent) + "\n")
+        return 0
+
+    sys.stdout.write("Review: %s\n" % result["range"])
+    sys.stdout.write("\nTasks:\n")
+    sys.stdout.write("  Completed: %d\n" % result["completed_tasks"])
+    sys.stdout.write("  Open: %d\n" % result["open_tasks"])
+
+    if result["habits"]:
+        sys.stdout.write("\nHabits:\n")
+        for title, h in result["habits"].items():
+            sys.stdout.write(
+                "  %s: %d/%d (%d%%)\n"
+                % (title, h["done"], h["done"] + h["open"], h["completion_rate"])
+            )
+
+    if result["journals"]:
+        sys.stdout.write("\nJournal entries: %d\n" % result["journals"])
+
+    if result["mood_trend"]:
+        sys.stdout.write("\nMood trend:\n")
+        for entry in result["mood_trend"]:
+            sys.stdout.write("  %s: %s\n" % (entry["date"], entry["mood"]))
+
+    if result["elapsed_by_project"]:
+        sys.stdout.write("\nElapsed by project:\n")
+        for proj, elapsed in result["elapsed_by_project"].items():
+            sys.stdout.write("  %s: %s\n" % (proj, elapsed))
 
     return 0
 
@@ -3214,6 +3473,47 @@ def format_source_ownership_table(records, key):
     return "\n".join(lines) + "\n"
 
 
+def _completed_parent_diagnostics(items, key="id"):
+    """W225: completed/canceled parent has open children."""
+    diagnostics = []
+    _open_statuses = frozenset(("[ ]", "[/]", "[>]", "[?]"))
+    _closed_statuses = frozenset(("[x]", "[-]"))
+
+    id_to_item = {}
+    for item in items:
+        for val in item.details.get(key, []):
+            id_to_item[str(val)] = item
+
+    children_by_parent = {}
+    for item in items:
+        for parent_id in item.details.get("parent", []):
+            pid = str(parent_id)
+            children_by_parent.setdefault(pid, []).append(item)
+
+    for parent_id, children in children_by_parent.items():
+        parent = id_to_item.get(parent_id)
+        if parent is None or parent.status not in _closed_statuses:
+            continue
+        open_children = [c for c in children if c.status in _open_statuses]
+        if not open_children:
+            continue
+        child_ids = ", ".join(
+            str(v)
+            for c in open_children
+            for v in c.details.get(key, [])
+        ) or "(no id)"
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W225",
+                "Completed/canceled parent %s:%s has %d open child(ren): %s."
+                % (key, parent_id, len(open_children), child_ids),
+                parent.line,
+            )
+        )
+    return diagnostics
+
+
 def _parse_or_exit(paths, config=None):
     items, diagnostics = _parse_life_inputs(paths, config)
     if _has_error(diagnostics):
@@ -3243,6 +3543,7 @@ def _parse_life_inputs(paths, config=None):
         diagnostics.extend(path_diagnostics)
     diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
     diagnostics.extend(reference_diagnostics(items, key=id_key))
+    diagnostics.extend(_completed_parent_diagnostics(items, key=id_key))
     return items, diagnostics
 
 
@@ -3506,6 +3807,81 @@ def append_text(path, text):
         pass
     prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
     atomic_write_text(path, existing + prefix + text)
+
+
+def _undo_cache_dir(config):
+    undo_cfg = config_section(config, "undo")
+    return undo_cfg.get("dir") or os.path.join(".cache", "lifetxt", "undo")
+
+
+def _backup_cache_dir(config):
+    backup_cfg = config_section(config, "backup")
+    return backup_cfg.get("dir") or os.path.join(".cache", "lifetxt", "backup")
+
+
+def _undo_keep(config):
+    undo_cfg = config_section(config, "undo")
+    keep = undo_cfg.get("keep", 20)
+    try:
+        return max(1, int(keep))
+    except (TypeError, ValueError):
+        return 20
+
+
+def _evict_old_snapshots(directory, keep=20):
+    try:
+        entries = sorted(os.listdir(directory))
+        excess = entries[: max(0, len(entries) - keep)]
+        for name in excess:
+            try:
+                os.unlink(os.path.join(directory, name))
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
+def _pre_write_backup(path, config, op):
+    """Save current file content as an undo snapshot before a write operation."""
+    if not path or path == "-":
+        return
+    try:
+        content = read_text(path)
+    except FileNotFoundError:
+        return
+
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    basename = os.path.basename(path)
+
+    undo_root = _undo_cache_dir(config)
+    undo_dir = os.path.join(undo_root, basename)
+    snapshot_name = "%s.%s.txt" % (ts, op)
+    snapshot_path = os.path.join(undo_dir, snapshot_name)
+    try:
+        ensure_parent_dir(snapshot_path)
+        with open(snapshot_path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(content)
+        _evict_old_snapshots(undo_dir, keep=_undo_keep(config))
+    except OSError:
+        pass
+
+    backup_cfg = config_section(config, "backup")
+    if backup_cfg.get("auto"):
+        backup_root = _backup_cache_dir(config)
+        backup_dir = os.path.join(backup_root, basename)
+        backup_path = os.path.join(backup_dir, "%s.txt" % ts)
+        try:
+            ensure_parent_dir(backup_path)
+            with open(backup_path, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(content)
+            keep_b = backup_cfg.get("keep", 20)
+            try:
+                keep_b = max(1, int(keep_b))
+            except (TypeError, ValueError):
+                keep_b = 20
+            _evict_old_snapshots(backup_dir, keep=keep_b)
+        except OSError:
+            pass
 
 
 def split_line_ending(line):

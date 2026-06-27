@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x6)
+Last updated: 2026-06-27 (updated x7)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -38,6 +38,9 @@ Priority guide:
 - [ ] Keep CLI help and docs synchronized for `tui`, `fzf`, `timer`, `stats`, `git-hook`, and `completion`.
 - [ ] Add `encrypt` and `decrypt` commands: encrypt selected field values (e.g., `body:`, `note:`, or all fields of `J` and `M` type items) using a passphrase or key file. `encrypt` rewrites matched values as tagged ciphertext in-place; `decrypt` restores them. Support `--field FIELD` to limit scope, `--type TYPE` to target specific item types, `--dry-run` to preview changes, and `--key-env ENVVAR` to avoid passing secrets on the command line. Use only Python standard-library primitives (`hashlib`, `hmac`, `secrets`) for the dependency-free core; document an optional path using the `cryptography` package for stronger algorithms. Define a stable ciphertext tag format (e.g., `enc:AES256GCM:BASE64`) so the parser can detect and skip rendering of encrypted values without decrypting.
 - [ ] Add `plot` command for CLI-native visualization: render task completion trends, habit streaks, mood timelines, elapsed time by project, and deadline density as Unicode bar charts or sparklines in the terminal without any additional dependencies. Support `--type`, `--project`, `--from`, `--to`, and `--group daily|weekly|monthly` filters consistent with `stats`. Add an optional `--format svg` or `--format png` output mode using `matplotlib` or another opt-in dependency; keep the dependency-free text output as the default.
+- [ ] Add `archive` command: move or copy completed/canceled/old items to a separate archive file. Support `--before DATE`, `--max-items N`, `--status done,canceled`, `--dry-run` (preview without writing), `--move` vs `--copy` modes, and `--yes` to skip confirmation. Handle comments and blank lines with the structure-preserving mode described below.
+- [ ] Implement structure-preserving mode for `archive` (default behavior): comments and blank lines are copied verbatim to both the source remainder file and the archive file so that section headings remain intact in both outputs. Item lines are distributed between the two files according to the archive criteria; comments are never removed from either file. This means a comment may appear in both files simultaneously, and sections may become empty in either file. Document this behavior clearly, including the expected appearance of empty sections (a comment heading with no items below it) in the source file after archiving.
+- [ ] Implement orphan-child handling for `archive` via `--orphan-children block|adopt|promote` (default: `block`). In `block` mode, refuse to archive a parent item if any of its direct or transitive children remain open, and report all blocking children so the user can resolve them first. In `adopt` mode, archive parent and all children together regardless of their status, marking any open children as canceled (`[-]`) with `reason:adopted-by-archive` before writing. In `promote` mode, archive the parent and leave open children in the source file with their `parent:` detail removed and a comment line inserted above them noting the archived parent ID. Document all three modes with examples.
 
 ## P1: Web API / Browser UI
 
@@ -62,6 +65,10 @@ Priority guide:
 - [ ] Consider JSONL streaming or watch-mode APIs for editors, launchers, and notification daemons.
 - [ ] Add pre-commit framework examples in addition to the built-in Git hook installer.
 - [ ] Document that secret URLs and tokens should not be stored in life.txt content.
+
+## P1: Validation
+
+- [ ] Add W219 diagnostic: warn when a completed or canceled parent item (`[x]` or `[-]`) has one or more open children (`[ ]`, `[/]`, `[>]`, or `[?]`). Report each open child's ID, line number, and status. Treat as a warning (not an error) so it can be suppressed with `--ignore W219` for intentional cases where open subtasks continue independently after the parent is closed. Apply the check to both explicit `parent:` references and inferred indentation-based parent relationships.
 
 ## P2: Editor Support
 
@@ -91,8 +98,9 @@ Priority guide:
 - [ ] Generate a diagnostic code/category catalog from parser and validator definitions for docs and shell completion.
 - [ ] Add source ownership examples for generated/read-only files and mixed writable files.
 - [ ] Document recommended file-splitting strategies: one file per editor/author (including auto-generated sources such as ICS sync), optional further split by project or period, and periodic archiving. Clarify that these are recommendations, not enforced constraints.
-- [ ] Add archive workflow docs: when to archive, how to run the `archive` command, and how to include archive files in `agenda` or `filter` via glob patterns.
+- [ ] Add archive workflow docs: when to archive, how to run the `archive` command with each `--orphan-children` mode, and how to include archive files in `agenda` or `filter` via glob patterns. Include a before/after example showing the structure-preserving comment behavior (both source and archive files retain comment lines; sections may be empty in either file after archiving).
 - [ ] Add `--fix` mode to `check` (or a separate `fix` command) to auto-apply W222 duration normalization and other canonicalization warnings in-place.
+- [ ] Document W219 (completed parent with open children): explain the three resolution strategies (close children manually, use `archive --orphan-children adopt`, use `archive --orphan-children promote`) and when to suppress with `--ignore W219`.
 - [ ] Document line continuation syntax (`\`) with examples and known limitations (e.g., interaction with body continuation `|` lines).
 - [ ] Document cross-file ID reference behavior: which commands resolve cross-file IDs, how to pass multiple files, and how `--config paths` can automate this.
 - [ ] Document the `encrypt`/`decrypt` commands: supported algorithms, key management recommendations (passphrase vs. key file vs. environment variable), which field types are appropriate targets, and how to use `check` safely on a partially encrypted file.
@@ -116,7 +124,8 @@ Priority guide:
 - [ ] Add release notes, changelog, and versioning policy.
 - [ ] Verify `pip install -e .`, optional extras, console script entry points, and Windows PowerShell usage.
 - [ ] Add parser tests for line continuation (`\`): mid-line join, trailing whitespace, bare `\` at EOF, and interaction with body continuation lines.
-- [ ] Add `archive` command integration tests for multi-file sources, `--status` custom filters, and `--before` edge cases (items missing date keys).
+- [ ] Add `archive` command tests: structure-preserving mode (verify comments appear in both output files, verify empty sections are retained), `--orphan-children block` (verify parent is refused when open children exist and all blocking children are reported), `--orphan-children adopt` (verify open children are canceled with `reason:adopted-by-archive` before archiving), `--orphan-children promote` (verify parent is archived and children have `parent:` removed with a comment inserted), and `--dry-run` for all three modes.
+- [ ] Add W219 diagnostic tests: explicit `parent:` reference with completed parent and open child, inferred indentation-based parent with completed parent and open child, suppression with `--ignore W219`, and no false positive when all children are also completed.
 - [ ] Add `encrypt`/`decrypt` round-trip tests: verify that encrypting and decrypting a field restores the original value exactly, across all supported algorithms. Test `--dry-run`, `--field`, `--type`, and `--key-env` options. Test that `check` does not emit false-positive errors for encrypted values it cannot read.
 - [ ] Add `plot` output tests: verify text chart rendering for task, habit, mood, and elapsed types with `--group daily`, `weekly`, and `monthly`. Add snapshot tests for terminal bar chart and sparkline output.
 
@@ -134,3 +143,4 @@ Priority guide:
 - [ ] Consider asymmetric encryption (public/private key) for the `encrypt` command to support multi-user or team scenarios where different people can encrypt but only the key holder can decrypt.
 - [ ] Consider an interactive `plot` mode in `tui` that renders live-updating charts alongside the existing task and agenda panels, after the basic `plot` command is stable.
 - [ ] Consider exporting `plot` output as a self-contained HTML file with embedded JavaScript charting (e.g., Chart.js) as an alternative to SVG/PNG for users who want to share reports without running the server.
+- [ ] Consider file-level metadata and namespace support: allow a config-like header (either as special comment lines `#!` at the top of a life.txt file, or as a separate per-file `.lifetxt-meta` sidecar) to define per-file defaults such as `self`, `timezone`, and `project`, and to declare references to other files for cross-file ID resolution. Evaluate whether this belongs in the file format itself or remains entirely in the external config. Resolve open questions: which parser-level behavior changes when a metadata header is present, how circular references between files are detected, and whether namespace-qualified ID syntax (e.g., `alias:id`) is needed or whether flat cross-file resolution via `--config paths` is sufficient for practical use.

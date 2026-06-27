@@ -4,6 +4,7 @@ import re
 from collections import OrderedDict
 from datetime import datetime, time, timedelta
 
+from .links import dependency_blockers_by_item
 from .model import (
     VALID_STATUSES,
     VALID_TYPES,
@@ -47,6 +48,7 @@ _TABLE_COLUMNS = (
     ("line_text", "line"),
     ("type", "type"),
     ("status", "status"),
+    ("blocked_text", "blocked"),
     ("title", "title"),
 )
 
@@ -120,10 +122,12 @@ def parse_optional_time_range(after_text=None, before_text=None, now=None):
 
 def agenda_records(items, range_start, range_end):
     records = []
+    blockers_by_item = dependency_blockers_by_item(items)
     for item in items:
         matches = item_time_matches(item, range_start, range_end)
         if not matches:
             continue
+        blockers = blockers_by_item.get(id(item), [])
         primary = matches[0]
         record = OrderedDict()
         record["when"] = format_match_time(primary)
@@ -132,6 +136,9 @@ def agenda_records(items, range_start, range_end):
             record["line"] = item.line
         record["status"] = item.status
         record["type"] = item.kind
+        record["blocked"] = bool(blockers)
+        if blockers:
+            record["blocked_by"] = blockers
         record["title"] = item.title
         record["matches"] = matches
         record["details"] = _copy_details(item.details)
@@ -344,6 +351,8 @@ def format_agenda_table(records):
         for key, _heading in _TABLE_COLUMNS:
             if key == "line_text":
                 value = record.get("line", "")
+            elif key == "blocked_text":
+                value = "yes" if record.get("blocked") else ""
             else:
                 value = record.get(key, "")
             row[key] = _table_cell(value)

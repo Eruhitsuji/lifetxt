@@ -195,6 +195,20 @@ Reference values point to the selected ID key, normally `id:`. Tools should
 warn when a reference has no target, points to the same item, or creates a
 cycle through `parent:`.
 
+Dependency semantics:
+
+- `depends_on:ID` means the current item cannot proceed until item `ID` is
+  completed, canceled, or otherwise no longer open.
+- `blocks:ID` means the current item is an independent blocker for item `ID`.
+  It is an inverse assertion, not a required mirror of `depends_on:`.
+- Open dependency statuses are `[ ]`, `[/]`, `[>]`, and `[?]`.
+- `check` emits `W224` when an item marked `[x]` still has a `depends_on:`
+  prerequisite that is open.
+- `agenda` includes `blocked: true` and `blocked_by` in JSON / JSONL output
+  when an open item is blocked by an open prerequisite. Text output shows a
+  compact `blocked` column.
+- `health` emits `W305` for open items blocked by open prerequisites.
+
 When a command loads multiple life.txt files in one invocation, references are
 resolved against the whole loaded input set. For example, `parent:task_001` in
 `team.life.txt` may point to `id:task_001` in `life.txt` if both files are

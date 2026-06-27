@@ -4,6 +4,10 @@ from collections import OrderedDict
 from .model import Diagnostic, REFERENCE_KEYS
 
 
+OPEN_DEPENDENCY_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
+DONE_DEPENDENCY_STATUS = "[x]"
+
+
 def link_records(
     items,
     key="id",
@@ -87,7 +91,75 @@ def reference_diagnostics(items, key="id", reference_keys=None):
                     )
 
     diagnostics.extend(_parent_cycle_diagnostics(items, index, key))
+    diagnostics.extend(_completed_dependency_diagnostics(items, index, key))
     return diagnostics
+
+
+def dependency_blocker_records(items, key="id"):
+    """Return open dependency blockers for open items.
+
+    ``depends_on:`` is a direct prerequisite relation: the source item is
+    blocked while the referenced target is still open.
+
+    ``blocks:`` is an independent inverse assertion: the source item blocks the
+    referenced target while the source is still open. It does not have to be
+    mirrored by a matching ``depends_on:`` on the target.
+    """
+    index = build_id_index(items, key)
+    records = []
+
+    for item in items:
+        for target_id in item.details.get("depends_on", []):
+            target_id = str(target_id)
+            target = _unique_reference_target(index, target_id, item, key)
+            if target is None:
+                continue
+            if _is_open_dependency_item(item) and _is_open_dependency_item(target):
+                records.append(
+                    _dependency_blocker_record(
+                        blocked=item,
+                        blocker=target,
+                        relation="depends_on",
+                        reference_id=target_id,
+                        key=key,
+                    )
+                )
+
+        for target_id in item.details.get("blocks", []):
+            target_id = str(target_id)
+            target = _unique_reference_target(index, target_id, item, key)
+            if target is None:
+                continue
+            if _is_open_dependency_item(item) and _is_open_dependency_item(target):
+                records.append(
+                    _dependency_blocker_record(
+                        blocked=target,
+                        blocker=item,
+                        relation="blocks",
+                        reference_id=target_id,
+                        key=key,
+                    )
+                )
+
+    return records
+
+
+def dependency_blockers_by_item(items, key="id"):
+    blockers = OrderedDict()
+    for record in dependency_blocker_records(items, key=key):
+        blockers.setdefault(record["_blocked_item_key"], []).append(
+            OrderedDict(
+                [
+                    ("relation", record["relation"]),
+                    ("id", record["blocker_id"]),
+                    ("status", record["blocker_status"]),
+                    ("type", record["blocker_type"]),
+                    ("title", record["blocker_title"]),
+                    ("location", record["blocker_location"]),
+                ]
+            )
+        )
+    return blockers
 
 
 def build_id_index(items, key="id"):
@@ -172,6 +244,77 @@ def _link_record(item, source_id, relation, target_id, index, key):
     elif matches:
         record["target_matches"] = [_item_location(match) for match in matches]
     return record
+
+
+def _completed_dependency_diagnostics(items, index, key):
+    diagnostics = []
+    for item in items:
+        if item.status != DONE_DEPENDENCY_STATUS:
+            continue
+        for target_id in item.details.get("depends_on", []):
+            target_id = str(target_id)
+            target = _unique_reference_target(index, target_id, item, key)
+            if target is None:
+                continue
+            if _is_open_dependency_item(target):
+                diagnostics.append(
+                    Diagnostic(
+                        "warning",
+                        "W224",
+                        "Completed item depends_on:%s but the prerequisite is still open (%s)."
+                        % (target_id, target.status),
+                        item.line,
+                        None,
+                        getattr(item, "source", None),
+                    )
+                )
+    return diagnostics
+
+
+def _dependency_blocker_record(blocked, blocker, relation, reference_id, key):
+    blocked_id = _first_item_id(blocked, key)
+    blocker_id = _first_item_id(blocker, key)
+    record = OrderedDict()
+    record["relation"] = relation
+    record["reference_id"] = reference_id
+    record["blocked_id"] = blocked_id
+    record["blocked_line"] = blocked.line
+    record["blocked_location"] = _item_location(blocked)
+    record["blocked_source"] = getattr(blocked, "source", None)
+    record["blocked_status"] = blocked.status
+    record["blocked_type"] = blocked.kind
+    record["blocked_title"] = blocked.title
+    record["blocker_id"] = blocker_id
+    record["blocker_line"] = blocker.line
+    record["blocker_location"] = _item_location(blocker)
+    record["blocker_source"] = getattr(blocker, "source", None)
+    record["blocker_status"] = blocker.status
+    record["blocker_type"] = blocker.kind
+    record["blocker_title"] = blocker.title
+    record["_blocked_item_key"] = id(blocked)
+    record["_blocker_item_key"] = id(blocker)
+    return record
+
+
+def _unique_reference_target(index, target_id, item, key):
+    matches = index.get(target_id, [])
+    if len(matches) != 1:
+        return None
+    target = matches[0]
+    if target is item or target_id in item_id_values(item, key):
+        return None
+    return target
+
+
+def _is_open_dependency_item(item):
+    return item.status in OPEN_DEPENDENCY_STATUSES
+
+
+def _first_item_id(item, key):
+    values = item_id_values(item, key)
+    if values:
+        return values[0]
+    return _item_location(item)
 
 
 def _parent_cycle_diagnostics(items, index, key):

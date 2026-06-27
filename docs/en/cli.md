@@ -252,7 +252,7 @@ Categories:
 | `id` | Duplicate IDs and unsafe ID-like values |
 | `reference` | Missing, self, cyclic, or ambiguous references |
 | `recurrence` | `repeat:`, `RRULE:`, `interval:`, and `count:` recommendations |
-| `workflow` | Status/detail workflow recommendations |
+| `workflow` | Status/detail workflow and dependency-state recommendations |
 | `semantic` | Fallback category for semantic diagnostics not covered above |
 
 Examples:
@@ -324,7 +324,14 @@ Options:
 | `--pretty` | Pretty-print JSON |
 
 `check` reports missing references (`W215`), self references (`W216`),
-`parent:` cycles (`W217`), and ambiguous references (`W218`).
+`parent:` cycles (`W217`), ambiguous references (`W218`), and completed items
+whose `depends_on:` prerequisite is still open (`W224`).
+
+Dependency behavior:
+
+- `depends_on:ID` blocks the current item while `ID` is open.
+- `blocks:ID` independently marks `ID` as blocked while the current item is open.
+- `health` reports blocked open items as `W305`.
 
 ### 3.3 `sources`
 
@@ -845,6 +852,11 @@ exact detail value. Multiple `--detail` filters are ANDed.
 | `--format jsonl` | Print JSONL |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON output |
+
+Agenda JSON / JSONL records include `blocked: true` and a `blocked_by` array
+when an open item is blocked by an open `depends_on:` or `blocks:` relation.
+Text output shows the same state with a compact `blocked` column. `--format
+life` still prints the original stored item lines.
 
 Examples:
 

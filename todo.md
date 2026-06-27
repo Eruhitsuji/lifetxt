@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x17)
+Last updated: 2026-06-27 (updated x18)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -39,12 +39,6 @@ real environments. Each item must be tested manually before the next release.
 
 Design decisions that affect the file format, parser, and all downstream tools.
 Resolve these before implementing features that depend on them.
-
-- [ ] Define dependency semantics for `depends_on:` and `blocks:`: specify
-  whether `check` warns when a task is marked done while a `depends_on:`
-  prerequisite is still open, whether `blocks:` is the inverse mirror of
-  `depends_on:` or an independent assertion, and how `agenda` and `health`
-  surface blocked items.
 
 - [ ] Finalize timezone-aware datetime round-trip rules: specify how naive
   datetimes (no timezone suffix) are stored and interpreted, how
@@ -440,6 +434,12 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   a glob but optimized for team-at-a-glance use. Support `--format text|json`
   and accept glob patterns directly.
 
+- [ ] Add dependency-focused views and filters: show only blocked or unblocked
+  items in `agenda`, expose blocker chains in `links` or a dedicated
+  `deps` view, and add Web UI affordances for quickly seeing why an item is
+  blocked. Keep this as a usability layer on top of the implemented
+  `depends_on:` / `blocks:` semantics.
+
 ---
 
 ## P2: Editor Support
@@ -689,6 +689,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `health` edge-case tests: `--ignore CODE` suppresses correctly,
   W301 not fired when item has a recent `updated:`, W302 passes when habit has
   recent completion, W304 passes when assignee has active S record.
+
+- [ ] Add dependency edge-case tests: ambiguous and missing dependency IDs,
+  cross-file blockers, duplicate `depends_on:` / `blocks:` pairs, and
+  source metadata in blocked agenda records.
 
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.

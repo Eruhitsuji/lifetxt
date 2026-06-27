@@ -239,7 +239,7 @@ Category:
 | `id` | duplicate ID と unsafe ID-like value |
 | `reference` | missing/self/cyclic/ambiguous reference |
 | `recurrence` | `repeat:`、`RRULE:`、`interval:`、`count:` recommendation |
-| `workflow` | status/detail workflow recommendation |
+| `workflow` | status/detail workflow と dependency-state recommendation |
 | `semantic` | 上記に含まれない semantic diagnostic |
 
 例:
@@ -304,7 +304,13 @@ python -m lifetxt links life.txt --id task_report --direction incoming
 | `--format text|json|jsonl` | 出力形式 |
 | `--pretty` | JSON を整形して出力 |
 
-`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`) も報告します。
+`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`) も報告します。
+
+依存関係の動作:
+
+- `depends_on:ID` は `ID` が open の間、現在の item を block します。
+- `blocks:ID` は現在の item が open の間、`ID` を block する独立した主張です。
+- `health` は block されている open item を `W305` として報告します。
 
 ### 3.3 `sources`
 
@@ -777,6 +783,11 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 | `--format jsonl` | JSONL で表示 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
+
+agenda の JSON / JSONL record は、open item が open な `depends_on:` または
+`blocks:` 関係で block されている場合に `blocked: true` と `blocked_by` 配列を
+含めます。text 出力では短い `blocked` 列で同じ状態を表示します。`--format life`
+は保存されている元の item 行をそのまま出力します。
 
 例:
 

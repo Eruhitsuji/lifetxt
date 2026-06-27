@@ -214,7 +214,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 `ids --assign --dry-run` で既存データへのID付与予定を確認し、`--backup` 付きで安全に反映できます。
 `ids.key` / `api.id_key` を設定すると、`id:` 以外の detail key を ID key として使えます。
 
-item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle を warning として報告します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。依存関係だけを見たい場合は `python -m lifetxt links life.txt --relation depends_on --relation blocks` を使えます。
+item は ID で相互参照できます。`parent:` は階層や message thread、`ref:` は汎用参照、`depends_on:` は前提、`blocks:` は後続 item のブロック、`related:` は弱い関連に使います。`check` は存在しない参照、自己参照、`parent:` cycle、完了済み item が open な prerequisite に依存している状態を warning として報告します。`agenda` と `health` は open prerequisite に block されている open item を表示します。関係の一覧は `python -m lifetxt links life.txt` で確認できます。依存関係だけを見たい場合は `python -m lifetxt links life.txt --relation depends_on --relation blocks` を使えます。
 インデントされた item 行でも階層を表現できます。子 item に `parent:` がない場合、nearest less-indented ancestor の `id:` から `parent:` を推論します。
 
 ```txt

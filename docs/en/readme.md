@@ -225,7 +225,9 @@ Items can link to other records by ID. Use `parent:` for hierarchy or message
 threads, `ref:` for a generic reference, `depends_on:` for prerequisites,
 `blocks:` for blocked downstream work, and `related:` for loose links. The
 `check` command warns about missing references, self references, and `parent:`
-cycles. Use `python -m lifetxt links life.txt` to inspect these relationships.
+cycles. It also warns when a completed item still depends on an open
+prerequisite. `agenda` and `health` surface open items blocked by open
+prerequisites. Use `python -m lifetxt links life.txt` to inspect these relationships.
 Use `python -m lifetxt links life.txt --relation depends_on --relation blocks`
 to focus on dependency edges.
 

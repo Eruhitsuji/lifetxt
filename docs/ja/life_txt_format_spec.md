@@ -206,6 +206,15 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 
 参照値は通常 `id:` を指します。config で `ids.key` / `api.id_key` を変更した場合は、その key を ID として扱います。存在しない参照、自己参照、`parent:` cycle は warning として報告されます。
 
+依存関係の semantics:
+
+- `depends_on:ID` は、現在の item が item `ID` の完了、取消、または open でない状態への移行を前提にしていることを表します。
+- `blocks:ID` は、現在の item が item `ID` を block しているという独立した逆方向の主張です。`depends_on:` と必ず mirror させる必要はありません。
+- open な依存状態は `[ ]`、`[/]`、`[>]`、`[?]` です。
+- `check` は、`[x]` の item がまだ open な `depends_on:` prerequisite を持つ場合に `W224` を出します。
+- `agenda` は、open item が open prerequisite に block されている場合、JSON / JSONL に `blocked: true` と `blocked_by` を含めます。text 出力では短い `blocked` 列を表示します。
+- `health` は、open prerequisite に block されている open item に `W305` を出します。
+
 複数の life.txt ファイルを 1 回の command invocation で読み込む場合、参照は読み込まれた入力全体に対して解決されます。たとえば `team.life.txt` の `parent:task_001` は、同じ command に `life.txt` も渡されていれば `life.txt` 内の `id:task_001` を参照できます。JSON / JSONL を出力する converter は、ファイル由来の record に `_source_file`、`_source_line`、複数行 record では `_source_end_line` を含めます。これらの `_source_*` field は command output の metadata であり、life.txt の detail key ではありません。`from-json` / `from-jsonl` は life.txt に戻すときに無視します。
 
 ### 7.3 People keys

@@ -474,6 +474,28 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn(("related", "task_child", "missing_note", "missing"), compact)
         self.assertIn(("ref", "task_self", "task_self", "self"), compact)
 
+    def test_completed_item_warns_when_dependency_is_still_open(self):
+        text = (
+            "[ ] T Prerequisite id:task_setup\n"
+            "[x] T Finished_Work id:task_finish depends_on:task_setup\n"
+        )
+
+        _items, diagnostics = parse_text(text)
+
+        warnings = [d for d in diagnostics if d.code == "W224"]
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(2, warnings[0].line)
+
+    def test_completed_item_has_no_dependency_warning_when_dependency_is_done(self):
+        text = (
+            "[x] T Prerequisite id:task_setup\n"
+            "[x] T Finished_Work id:task_finish depends_on:task_setup\n"
+        )
+
+        _items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.code == "W224" for d in diagnostics))
+
     def test_indented_items_infer_parent_from_nearest_id(self):
         text = (
             "[ ] T Project id:task_project\n"
@@ -753,6 +775,50 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertEqual(["Seminar", "Form"], [entry["title"] for entry in data])
         self.assertEqual("from/to", data[0]["key"])
         self.assertEqual("due", data[1]["key"])
+
+    def test_agenda_cli_marks_blocked_items_in_json_and_text(self):
+        text = (
+            "[ ] T Setup id:task_setup\n"
+            "[ ] T Report id:task_report due:2026-06-06 depends_on:task_setup\n"
+            "[ ] T Review id:task_review due:2026-06-06\n"
+            "[ ] T Gate id:task_gate blocks:task_review\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        by_title = {entry["title"]: entry for entry in data}
+        self.assertTrue(by_title["Report"]["blocked"])
+        self.assertEqual("task_setup", by_title["Report"]["blocked_by"][0]["id"])
+        self.assertEqual("depends_on", by_title["Report"]["blocked_by"][0]["relation"])
+        self.assertTrue(by_title["Review"]["blocked"])
+        self.assertEqual("task_gate", by_title["Review"]["blocked_by"][0]["id"])
+        self.assertEqual("blocks", by_title["Review"]["blocked_by"][0]["relation"])
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            input_text=text,
+        )
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        normalized = normalize_newlines(stdout)
+        self.assertIn("blocked", normalized.splitlines()[0])
+        self.assertIn("yes", normalized)
 
     def test_agenda_cli_time_only_at_matches_range_day(self):
         text = "[ ] H Practice repeat:daily at:18:00\n"
@@ -3865,6 +3931,24 @@ class LifeTxtHealthCliTests(unittest.TestCase):
             self.assertIn("code", issues[0])
             codes = [issue["code"] for issue in issues]
             self.assertIn("W303", codes)
+
+    def test_health_reports_blocked_items_w305(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[ ] T Setup id:task_setup\n"
+                    "[ ] T Report id:task_report depends_on:task_setup\n"
+                )
+            stdout, stderr, code = run_cli("health", life_file, "--format", "json")
+            issues = json.loads(stdout)
+            codes = [issue["code"] for issue in issues]
+            self.assertEqual(1, code)
+            self.assertEqual("", stderr)
+            self.assertIn("W305", codes)
+            issue = [entry for entry in issues if entry["code"] == "W305"][0]
+            self.assertEqual("Report", issue["title"])
+            self.assertEqual("task_setup", issue["blocked_by"])
 
     def test_health_w302_open_habit_no_completion(self):
         with tempfile.TemporaryDirectory() as tmp:

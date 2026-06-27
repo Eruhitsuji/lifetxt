@@ -43,6 +43,10 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
 
+`GET /api/agenda` は CLI `agenda` と同じ record を返します。open item が
+open な `depends_on:` または `blocks:` 関係で block されている場合、
+record に `blocked: true` と `blocked_by` が含まれます。
+
 item payload 例:
 
 ```json

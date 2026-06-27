@@ -55,6 +55,7 @@ from .ids import (
     id_prefix_for_item,
 )
 from .links import (
+    dependency_blocker_records,
     format_link_table,
     link_records,
     links_to_json,
@@ -2293,6 +2294,9 @@ def command_health(args):
                 recent_persons.add(person)
 
     health_issues = []
+    dependency_records = []
+    if "W305" not in ignore_codes:
+        dependency_records = dependency_blocker_records(items, key=id_key_from_config(config))
 
     for item in items:
         location = getattr(item, "source", None)
@@ -2358,6 +2362,21 @@ def command_health(args):
                                 ("source", location),
                                 ("title", item.title),
                             ]))
+
+    for record in dependency_records:
+        health_issues.append(OrderedDict([
+            ("code", "W305"),
+            (
+                "message",
+                "Blocked by %s via %s"
+                % (record["blocker_id"] or record["blocker_location"], record["relation"]),
+            ),
+            ("line", record["blocked_line"]),
+            ("source", record["blocked_source"]),
+            ("title", record["blocked_title"]),
+            ("blocked_by", record["blocker_id"] or record["blocker_location"]),
+            ("relation", record["relation"]),
+        ]))
 
     _fmt = getattr(args, "format", "text")
     _pretty = getattr(args, "pretty", False)
@@ -3644,7 +3663,7 @@ def diagnostic_category(diagnostic):
         return "id"
     if code in ("W215", "W216", "W217", "W218"):
         return "reference"
-    if code in ("W101", "W102", "W103", "W104"):
+    if code in ("W101", "W102", "W103", "W104", "W224"):
         return "workflow"
     if code == "W222":
         return "duration"

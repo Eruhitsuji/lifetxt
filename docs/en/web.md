@@ -67,6 +67,10 @@ id-based operations reject ambiguous IDs. If config `ids.key` / `api.id_key` is
 changed, id-based endpoints use that configured detail key while still exposing
 the selected value as top-level `id` in API item responses.
 
+`GET /api/agenda` uses the same agenda records as the CLI. Records include
+`blocked: true` and `blocked_by` when an open item is blocked by an open
+`depends_on:` or `blocks:` relation.
+
 Example item payload:
 
 ```json

@@ -969,6 +969,15 @@ def build_parser():
             "promote archives the parent only and removes parent: from orphaned children."
         ),
     )
+    archive.add_argument(
+        "--preserve-structure",
+        action="store_true",
+        dest="preserve_structure",
+        help=(
+            "Copy comment lines and blank lines verbatim to both the archive file "
+            "and the source remainder so section headings remain intact."
+        ),
+    )
     archive.set_defaults(func=command_archive)
 
     quick = subparsers.add_parser(
@@ -1800,6 +1809,64 @@ def command_serve(args):
     return 0
 
 
+def _split_archive_text(raw_text, items, archive_id_set,
+                         archive_overrides=None, remainder_overrides=None):
+    """Split raw_text into (archive_text, remainder_text) preserving non-item lines.
+
+    Non-item lines (comments, blanks, directives) appear in BOTH outputs.
+    archive_overrides: {id(item): str} replacement text for an archived item.
+    remainder_overrides: {id(item): Item|None} replacement/exclusion for remainder items.
+    """
+    archive_overrides = archive_overrides or {}
+    remainder_overrides = remainder_overrides or {}
+
+    raw_lines = raw_text.splitlines(keepends=True)
+
+    line_to_item = {}
+    for item in items:
+        start = getattr(item, "line", 0)
+        end = getattr(item, "end_line", start)
+        for ln in range(max(1, start), end + 1):
+            line_to_item[ln] = item
+
+    archive_out = []
+    remainder_out = []
+    custom_written = set()
+
+    for i, raw_line in enumerate(raw_lines):
+        lineno = i + 1
+        item = line_to_item.get(lineno)
+
+        if item is None:
+            archive_out.append(raw_line)
+            remainder_out.append(raw_line)
+        elif id(item) in archive_id_set:
+            item_id = id(item)
+            if item_id in custom_written:
+                pass
+            elif item_id in archive_overrides:
+                text = archive_overrides[item_id]
+                if text is not None:
+                    archive_out.append(text if text.endswith("\n") else text + "\n")
+                custom_written.add(item_id)
+            else:
+                archive_out.append(raw_line)
+        else:
+            item_id = id(item)
+            if item_id in custom_written:
+                pass
+            elif item_id in remainder_overrides:
+                modified = remainder_overrides[item_id]
+                if modified is not None:
+                    text = getattr(modified, "source_text", None) or item_to_line(modified)
+                    remainder_out.append(text if text.endswith("\n") else text + "\n")
+                custom_written.add(item_id)
+            else:
+                remainder_out.append(raw_line)
+
+    return "".join(archive_out), "".join(remainder_out)
+
+
 def command_archive(args):
     config = _config(args)
     paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
@@ -1822,9 +1889,11 @@ def command_archive(args):
         raise ValueError("--max-items must be a positive integer.")
 
     id_key = id_key_from_config(config)
+    file_texts = OrderedDict()
     file_items = OrderedDict()
     for path in paths:
         text = read_text(path)
+        file_texts[path] = text
         items, _diags = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
         for item in items:
             item.source = path
@@ -1907,26 +1976,51 @@ def command_archive(args):
             sys.stdout.write("Aborted.\n")
             return 0
 
+    adopted_ids = set()
     if orphan_mode == "adopt":
-        adopted_ids = set()
         for children in open_children_by_parent.values():
             for child in children:
                 adopted_ids.add(id(child))
 
-        def _adopt_item_text(item):
-            if id(item) in adopted_ids:
-                from copy import deepcopy as _deepcopy
-                adopted = _deepcopy(item)
-                adopted.status = "[-]"
-                return item_to_line(adopted)
-            return getattr(item, "source_text", None) or item_to_line(item)
+    preserve = getattr(args, "preserve_structure", False)
 
-        archive_lines = [_adopt_item_text(item) for item in candidates]
-        archive_text = "\n".join(archive_lines)
-        if archive_text:
-            archive_text += "\n"
+    if preserve:
+        from copy import deepcopy as _deepcopy
+        archive_parts = []
+        for path, items in file_items.items():
+            path_archive_ids = {
+                id(item) for item in candidates
+                if getattr(item, "source", None) == path
+            }
+            if not path_archive_ids:
+                continue
+            ao = {}
+            for item in candidates:
+                if getattr(item, "source", None) == path and id(item) in adopted_ids:
+                    adopted = _deepcopy(item)
+                    adopted.status = "[-]"
+                    ao[id(item)] = item_to_line(adopted)
+            archive_part, _ = _split_archive_text(
+                file_texts[path], items, path_archive_ids, archive_overrides=ao
+            )
+            archive_parts.append(archive_part)
+        archive_text = "".join(archive_parts)
     else:
-        archive_text = _items_to_life_text(candidates)
+        if orphan_mode == "adopt":
+            def _adopt_item_text(item):
+                if id(item) in adopted_ids:
+                    from copy import deepcopy as _deepcopy
+                    adopted = _deepcopy(item)
+                    adopted.status = "[-]"
+                    return item_to_line(adopted)
+                return getattr(item, "source_text", None) or item_to_line(item)
+
+            archive_lines = [_adopt_item_text(item) for item in candidates]
+            archive_text = "\n".join(archive_lines)
+            if archive_text:
+                archive_text += "\n"
+        else:
+            archive_text = _items_to_life_text(candidates)
 
     _pre_write_backup(args.dest, config, "archive")
     append_text(args.dest, archive_text)
@@ -1953,14 +2047,33 @@ def command_archive(args):
                         return promoted
                 return item
 
-            remaining_raw = [item for item in items if id(item) not in archive_ids]
-            remaining = [_promote_item(item) for item in remaining_raw]
-            needs_write = len(remaining) < len(items) or any(
-                id(r) != id(o) for r, o in zip(remaining, remaining_raw)
-            )
-            if needs_write:
-                _pre_write_backup(path, config, "archive")
-                atomic_write_text(path, _items_to_life_text(remaining))
+            if preserve:
+                path_archive_ids = {
+                    id(item) for item in candidates
+                    if getattr(item, "source", None) == path
+                }
+                ro = {}
+                for item in items:
+                    if id(item) not in path_archive_ids:
+                        modified = _promote_item(item)
+                        if id(modified) != id(item):
+                            ro[id(item)] = modified
+                _, remainder_text = _split_archive_text(
+                    file_texts[path], items, path_archive_ids, remainder_overrides=ro
+                )
+                needs_write = bool(path_archive_ids) or bool(ro)
+                if needs_write:
+                    _pre_write_backup(path, config, "archive")
+                    atomic_write_text(path, remainder_text)
+            else:
+                remaining_raw = [item for item in items if id(item) not in archive_ids]
+                remaining = [_promote_item(item) for item in remaining_raw]
+                needs_write = len(remaining) < len(items) or any(
+                    id(r) != id(o) for r, o in zip(remaining, remaining_raw)
+                )
+                if needs_write:
+                    _pre_write_backup(path, config, "archive")
+                    atomic_write_text(path, _items_to_life_text(remaining))
 
     sys.stdout.write("Archived %d item(s) to %s.\n" % (len(candidates), args.dest))
     return 0
@@ -2943,6 +3056,10 @@ def command_review(args):
             for title, h in habits.items()
         },
         "journals": journal_count,
+        "journal_entries": [
+            {"date": d.isoformat(), "title": t, "excerpt": e}
+            for d, t, e in sorted(journal_entries)
+        ],
         "mood_trend": [
             {"date": d.isoformat(), "mood": m} for d, m in sorted(moods)
         ],

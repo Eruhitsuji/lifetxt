@@ -4541,6 +4541,33 @@ class LifeTxtCleanupArchiveHintTests(unittest.TestCase):
             self.assertNotIn("archive", normalized.lower())
 
 
+class LifeTxtAssignFromUserEdgeCaseTests(unittest.TestCase):
+    def test_assign_from_user_empty_string_falls_back_to_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task id:T001\n")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "T001", "--to", "bob", "--notify", "--from-user", ""
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("sender:self", content)
+
+    def test_assign_from_user_without_notify_is_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task id:T001\n")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "T001", "--to", "bob", "--from-user", "alice"
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertNotIn("sender:", content)
+            self.assertIn("assignee:bob", content)
+
+
 class LifeTxtReviewJournalBodyTests(unittest.TestCase):
     def _make_file(self, tmp, content):
         life_file = os.path.join(tmp, "life.txt")
@@ -4584,17 +4611,88 @@ class LifeTxtReviewJournalBodyTests(unittest.TestCase):
             self.assertIn("x" * 200, out)
             self.assertNotIn("x" * 201, out)
 
-    def test_review_journal_body_not_in_json_output(self):
+    def test_review_journal_body_in_json_output(self):
         import datetime as _dt
         today = _dt.date.today().isoformat()
-        content = '[ ] J Notes on:%s body:"Secret_details"\n' % today
+        content = '[ ] J Morning_notes on:%s body:"Had_a_great_day"\n' % today
         with tempfile.TemporaryDirectory() as tmp:
             life_file = self._make_file(tmp, content)
             stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
             self.assertEqual(1, data["journals"])
-            self.assertNotIn("Secret_details", stdout)
+            self.assertIn("journal_entries", data)
+            entries = data["journal_entries"]
+            self.assertEqual(1, len(entries))
+            self.assertEqual("Morning_notes", entries[0]["title"])
+            self.assertIn("Had_a_great_day", entries[0]["excerpt"])
+
+
+class LifeTxtArchivePreserveStructureTests(unittest.TestCase):
+    SOURCE = (
+        "# Tasks section\n"
+        "[x] T Done_task id:T001 done:2026-01-01\n"
+        "\n"
+        "# Notes section\n"
+        "[ ] T Open_task id:T002\n"
+    )
+
+    def test_preserve_structure_keeps_comments_in_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--preserve-structure"
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(src, encoding="utf-8").read()
+            self.assertIn("# Tasks section", content)
+            self.assertIn("# Notes section", content)
+            self.assertNotIn("Done_task", content)
+            self.assertIn("Open_task", content)
+
+    def test_preserve_structure_keeps_comments_in_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--preserve-structure"
+            )
+            self.assertEqual(0, code, stderr)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertIn("# Tasks section", archive_content)
+            self.assertIn("Done_task", archive_content)
+
+    def test_preserve_structure_keeps_blank_lines_in_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--preserve-structure"
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(src, encoding="utf-8").read()
+            self.assertIn("\n\n", content)
+
+    def test_no_preserve_structure_omits_comments_from_archive_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes"
+            )
+            self.assertEqual(0, code, stderr)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertNotIn("# Tasks section", archive_content)
+            self.assertIn("Done_task", archive_content)
 
 
 class LifeTxtAssignFromUserTests(unittest.TestCase):

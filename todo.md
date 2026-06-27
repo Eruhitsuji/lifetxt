@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x21)
+Last updated: 2026-06-27 (updated x22)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -128,10 +128,6 @@ subsequent use.
 New commands for the most frequent daily actions. Each delegates to an
 existing command internally to reuse validation and atomic write behavior.
 
-- [ ] Add `assign --from-user` edge-case tests: no config user name (falls
-  back to "self"), empty string passed (treated as falsy, uses default),
-  `--from-user` without `--notify` is silently ignored.
-
 ---
 
 ## P1: CLI — New Commands (Review & Health)
@@ -143,20 +139,11 @@ what is overdue, and what the week looked like.
   prompting for `project:`, `due:`, and `assignee:` using `assist` completion
   helpers. Add `--fzf` to open inbox results in `fzf` for quick editing.
 
-- [ ] Add `review` journal body excerpts to JSON output: include
-  `journal_entries: [{date, title, excerpt}]` in the `--format json` result
-  dict so LLM pipelines can access body content without text parsing.
-
 ---
 
 ## P1: CLI — Archive
 
 Commands and behaviors for moving old items out of active files.
-
-- [ ] Implement structure-preserving mode for `archive`: copy comment lines
-  and blank lines verbatim to both the source remainder file and the archive
-  file so section headings remain intact. Document this behavior with a
-  before/after example.
 
 - [ ] Extend `archive --dry-run` with cross-file reference checking: when
   other loaded files reference the ID of an item being archived (via

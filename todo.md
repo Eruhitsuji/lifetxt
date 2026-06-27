@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x19)
+Last updated: 2026-06-27 (updated x20)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -128,9 +128,8 @@ subsequent use.
 New commands for the most frequent daily actions. Each delegates to an
 existing command internally to reuse validation and atomic write behavior.
 
-- [ ] Extend `assign` command: support `--text QUERY` item selection in
-  addition to positional ID (same approach as `done --text`); add `--notify`
-  sender name override (`--from-user`).
+- [ ] Extend `assign` command: add `--from-user` flag to override the sender
+  name in `--notify` M-items (currently defaults to config user name).
 
 ---
 
@@ -139,13 +138,9 @@ existing command internally to reuse validation and atomic write behavior.
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
 
-- [ ] Extend `review` with journal body excerpts in text output and add
-  `--format jsonl` for streaming output to LLM pipelines.
-
-- [ ] Extend `health` command: add `--format jsonl`, add `--type` filter to
-  restrict checks to specific item types, and add W301 suppression when an
-  item has been explicitly marked `[>]` (deferred). Add `archive` suggestion
-  to `cleanup` output when many completed items are older than 90 days.
+- [ ] Extend `review` with journal body excerpts in text output: when a J
+  item falls within the review period, include the first 200 characters of
+  `body:` in the text output for each entry.
 
 - [ ] Add `--process` mode to `inbox` command: interactive one-by-one triage
   prompting for `project:`, `due:`, and `assignee:` using `assist` completion
@@ -157,29 +152,10 @@ what is overdue, and what the week looked like.
 
 Commands and behaviors for moving old items out of active files.
 
-- [ ] Add `archive` command: move or copy completed/canceled/old items from
-  a source file to a separate archive file. Core options: `--before DATE`
-  (archive items whose latest date key is before DATE), `--max-items N`
-  (archive at most N items), `--status done,canceled` (filter by status),
-  `--dry-run` (print what would change without writing), `--move` (default)
-  vs `--copy`, `--yes` (skip confirmation prompt).
-
-- [ ] Implement structure-preserving mode for `archive` (default): copy
-  comment lines and blank lines verbatim to both the source remainder file
-  and the archive file. Item lines are distributed by the archive criteria.
-  Comments are never removed from either file, so section headings remain
-  intact; a section may become empty (heading with no items below it) in
-  either file. Document this behavior with a before/after example.
-
-- [ ] Implement orphan-child handling via `--orphan-children MODE`
-  (default: `block`):
-  - `block`: refuse to archive a parent when any direct or transitive child
-    is open; report all blocking child IDs and line numbers.
-  - `adopt`: archive parent and all children together; mark open children
-    `[-]` with `reason:adopted-by-archive` before writing.
-  - `promote`: archive the parent only; remove `parent:` from children left
-    behind and insert a comment above each noting the archived parent ID.
-  Document all three modes with before/after examples.
+- [ ] Implement structure-preserving mode for `archive`: copy comment lines
+  and blank lines verbatim to both the source remainder file and the archive
+  file so section headings remain intact. Document this behavior with a
+  before/after example.
 
 - [ ] Extend `archive --dry-run` with cross-file reference checking: when
   other loaded files reference the ID of an item being archived (via
@@ -313,14 +289,8 @@ CLI-native charts without external dependencies.
 
 Diagnostics added to `check` and `health` that catch common mistakes.
 
-- [ ] Add W225 resolution guidance to `check` output: when W225 fires,
-  suggest the three resolution paths — (1) close children manually, (2) run
-  `archive --orphan-children adopt`, (3) run `archive --orphan-children
-  promote`. Note: W225 already fires; guidance message needs to be added.
-
-- [ ] Add `--ignore W225` support to `check` command (and verify it works
-  for W219, W220, W221 etc.) so users can suppress cross-item warnings for
-  intentional cases.
+- [ ] Add `--ignore CODE` support to `health` command (similar to `check
+  --ignore`) so users can suppress specific W3xx codes per invocation.
 
 ---
 
@@ -633,6 +603,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `quick` tests: positional title parsing, relative date resolution,
   default type `T`, generated line passes `check`, appended to correct file.
 
+- [ ] Add `check --ignore` tests: comma-separated codes, unknown-code
+  handling, interaction with `--code` (include-only overrides ignore for same
+  code), and JSON output with ignored codes absent.
+
 - [ ] Add `undo` edge-case tests: stack-depth eviction (verify oldest entry
   removed when `undo.keep` exceeded), `backup.auto` creates file in
   `backup.dir`, `undo` after `assign` and `archive` write operations.
@@ -658,8 +632,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.
 
-- [ ] Add `assign` edge-case tests: `--text` match selection, validation error
-  when resulting line is invalid, `--notify` M-item content verification.
+- [ ] Add `assign` edge-case tests: ambiguous `--text` match (confirm prompt),
+  validation error when resulting line is invalid, `--notify` with `--text`
+  selection verifies correct ref: value in M-item.
 
 - [ ] Add `cleanup --ignore CODE` tests: suppressed codes absent from output;
   JSON schema has `priority`, `check`, `count`, `action` keys.

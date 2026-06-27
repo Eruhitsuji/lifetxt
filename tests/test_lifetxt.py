@@ -4280,6 +4280,267 @@ class LifeTxtInitYesTests(unittest.TestCase):
             self.assertIn("#! self:", content)
 
 
+class LifeTxtCheckIgnoreTests(unittest.TestCase):
+    def test_check_ignore_suppresses_w225(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent_task id:P001\n"
+                    "[ ] T Child_task id:C001 parent:P001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file, "--ignore", "W225")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W225", normalize_newlines(stdout))
+
+    def test_check_ignore_multiple_codes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task est:90m\n")
+            stdout, stderr, code = run_cli("check", life_file, "--ignore", "W222")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W222", normalize_newlines(stdout))
+
+    def test_check_w225_shows_hint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent_task id:P001\n"
+                    "[ ] T Child_task id:C001 parent:P001\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file)
+            self.assertIn("W225", normalize_newlines(stdout))
+            self.assertIn("Hint", normalize_newlines(stdout))
+            self.assertIn("adopt", normalize_newlines(stdout))
+
+    def test_check_ignore_comma_separated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[x] T Parent id:P001\n"
+                    "[ ] T Child parent:P001 est:90m\n"
+                )
+            stdout, stderr, code = run_cli("check", life_file, "--ignore", "W225,W222")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W225", normalize_newlines(stdout))
+            self.assertNotIn("W222", normalize_newlines(stdout))
+
+
+class LifeTxtAssignTextTests(unittest.TestCase):
+    def test_assign_text_selects_by_title(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login_bug id:T001 assignee:alice\n")
+            stdout, stderr, code = run_cli("assign", life_file, "--text", "Fix_login", "--to", "bob")
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("assignee:bob", content)
+            self.assertNotIn("assignee:alice", content)
+
+    def test_assign_text_no_match_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001\n")
+            stdout, stderr, code = run_cli("assign", life_file, "--text", "nonexistent", "--to", "bob")
+            self.assertEqual(1, code)
+            self.assertIn("nonexistent", stderr)
+
+    def test_assign_requires_id_or_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001\n")
+            stdout, stderr, code = run_cli("assign", life_file, "--to", "bob")
+            self.assertEqual(1, code)
+
+
+class LifeTxtHealthExtTests(unittest.TestCase):
+    def test_health_jsonl_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Old_task due:2020-01-01\n")
+            stdout, stderr, code = run_cli("health", life_file, "--format", "jsonl")
+            self.assertEqual(1, code)
+            lines = [l for l in normalize_newlines(stdout).splitlines() if l.strip()]
+            self.assertGreater(len(lines), 0)
+            records = [json.loads(l) for l in lines]
+            codes = [r["code"] for r in records]
+            self.assertIn("W303", codes)
+
+    def test_health_type_filter_restricts_checks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "[ ] T Old_task due:2020-01-01\n"
+                    "[ ] H Daily_habit repeat:daily\n"
+                )
+            stdout, stderr, code = run_cli("health", life_file, "--type", "H")
+            self.assertEqual(1, code)
+            normalized = normalize_newlines(stdout)
+            self.assertIn("W302", normalized)
+            self.assertNotIn("W303", normalized)
+
+    def test_health_w301_suppressed_for_deferred_items(self):
+        import datetime as _dt
+        old_date = (_dt.date.today() - _dt.timedelta(days=60)).isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[>] T Deferred_task updated:%s\n" % old_date)
+            stdout, stderr, code = run_cli("health", life_file, "--since", "30")
+            self.assertEqual(0, code)
+            self.assertNotIn("W301", normalize_newlines(stdout))
+
+
+class LifeTxtReviewJsonlTests(unittest.TestCase):
+    def test_review_jsonl_returns_single_line_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[x] T Done_task done:2026-06-01\n")
+            stdout, stderr, code = run_cli("review", life_file, "--format", "jsonl")
+            self.assertEqual(0, code, stderr)
+            lines = [l for l in normalize_newlines(stdout).splitlines() if l.strip()]
+            self.assertEqual(1, len(lines))
+            record = json.loads(lines[0])
+            self.assertIn("range", record)
+            self.assertIn("completed_tasks", record)
+
+    def test_review_jsonl_no_pretty_indentation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Open_task\n")
+            stdout, stderr, code = run_cli("review", life_file, "--format", "jsonl")
+            self.assertEqual(0, code, stderr)
+            output = normalize_newlines(stdout).strip()
+            self.assertNotIn("\n  ", output)
+
+
+class LifeTxtArchiveOrphanTests(unittest.TestCase):
+    SOURCE_WITH_CHILDREN = (
+        "[x] T Parent_done id:P001 done:2026-01-01\n"
+        "[ ] T Child_open id:C001 parent:P001\n"
+        "[ ] T Unrelated id:U001\n"
+    )
+
+    def test_archive_orphan_block_refuses_when_open_children(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE_WITH_CHILDREN)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--orphan-children", "block"
+            )
+            self.assertEqual(1, code)
+            normalized = normalize_newlines(stdout)
+            self.assertIn("P001", normalized)
+            self.assertFalse(os.path.exists(dest))
+
+    def test_archive_orphan_adopt_moves_children_as_canceled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE_WITH_CHILDREN)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--orphan-children", "adopt"
+            )
+            self.assertEqual(0, code, stderr)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertIn("Parent_done", archive_content)
+            self.assertIn("Child_open", archive_content)
+            self.assertIn("[-]", archive_content)
+            src_content = open(src, encoding="utf-8").read()
+            self.assertNotIn("Child_open", src_content)
+
+    def test_archive_orphan_promote_archives_parent_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE_WITH_CHILDREN)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--orphan-children", "promote"
+            )
+            self.assertEqual(0, code, stderr)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertIn("Parent_done", archive_content)
+            self.assertNotIn("Child_open", archive_content)
+            src_content = open(src, encoding="utf-8").read()
+            self.assertIn("Child_open", src_content)
+            self.assertNotIn("parent:P001", src_content)
+
+    def test_archive_orphan_dry_run_block_shows_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE_WITH_CHILDREN)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--dry-run"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("P001", normalize_newlines(stdout))
+            self.assertFalse(os.path.exists(dest))
+
+    def test_archive_no_orphan_when_children_done(self):
+        content = (
+            "[x] T Parent_done id:P001 done:2026-01-01\n"
+            "[x] T Child_done id:C001 parent:P001 done:2026-01-02\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes"
+            )
+            self.assertEqual(0, code, stderr)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertIn("Parent_done", archive_content)
+            self.assertIn("Child_done", archive_content)
+
+
+class LifeTxtCleanupArchiveHintTests(unittest.TestCase):
+    def test_cleanup_suggests_archive_for_many_old_done_items(self):
+        import datetime as _dt
+        old_date = (_dt.date.today() - _dt.timedelta(days=100)).isoformat()
+        lines = ""
+        for i in range(12):
+            lines += "[x] T Old_task_%d id:T%03d done:%s\n" % (i, i, old_date)
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(lines)
+            stdout, stderr, code = run_cli("cleanup", life_file)
+            self.assertEqual(0, code, stderr)
+            normalized = normalize_newlines(stdout)
+            self.assertIn("archive", normalized.lower())
+
+    def test_cleanup_no_archive_hint_for_few_old_items(self):
+        import datetime as _dt
+        old_date = (_dt.date.today() - _dt.timedelta(days=100)).isoformat()
+        lines = "[x] T Old_task id:T001 done:%s\n" % old_date
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write(lines)
+            stdout, stderr, code = run_cli("cleanup", life_file)
+            self.assertEqual(0, code, stderr)
+            normalized = normalize_newlines(stdout)
+            self.assertNotIn("archive", normalized.lower())
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

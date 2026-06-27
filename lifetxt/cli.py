@@ -187,6 +187,13 @@ def build_parser():
         help="Exit non-zero when warnings are present.",
     )
     check.add_argument(
+        "--ignore",
+        action="append",
+        dest="ignore_codes",
+        metavar="CODE",
+        help="Suppress a diagnostic code, e.g. W225. Can be repeated or comma-separated.",
+    )
+    check.add_argument(
         "--severity",
         dest="diagnostic_severities",
         action="append",
@@ -950,6 +957,18 @@ def build_parser():
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    archive.add_argument(
+        "--orphan-children",
+        dest="orphan_children",
+        choices=("block", "adopt", "promote"),
+        default="block",
+        help=(
+            "How to handle open children of archived parents: "
+            "block (default) refuses to archive, "
+            "adopt archives open children together (marking them [-]), "
+            "promote archives the parent only and removes parent: from orphaned children."
+        ),
+    )
     archive.set_defaults(func=command_archive)
 
     quick = subparsers.add_parser(
@@ -1074,7 +1093,12 @@ def build_parser():
         help="Change the assignee: on an existing item.",
     )
     assign_cmd.add_argument("path", help="life.txt file containing the item.")
-    assign_cmd.add_argument("id", help="ID of the item to reassign.")
+    assign_cmd.add_argument("id", nargs="?", help="ID of the item to reassign.")
+    assign_cmd.add_argument(
+        "--text",
+        metavar="QUERY",
+        help="Select item by title substring instead of ID.",
+    )
     assign_cmd.add_argument(
         "--to",
         required=True,
@@ -1113,8 +1137,15 @@ def build_parser():
         help="Suppress a health code, e.g. W301. Can be repeated or comma-separated.",
     )
     health_cmd.add_argument(
+        "--type",
+        action="append",
+        dest="health_types",
+        metavar="TYPE",
+        help="Restrict checks to items of this type (T, H, E, etc.). Can be repeated or comma-separated.",
+    )
+    health_cmd.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "jsonl"),
         default="text",
         help="Output format.",
     )
@@ -1209,7 +1240,7 @@ def build_parser():
     )
     review_cmd.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "jsonl"),
         default="text",
         help="Output format.",
     )
@@ -1325,17 +1356,25 @@ def _add_item_filter_arguments(parser):
     )
 
 
+_W225_GUIDANCE = (
+    "  Hint: To resolve W225, either (1) close children manually, "
+    "(2) run archive --orphan-children adopt, or (3) run archive --orphan-children promote."
+)
+
+
 def command_check(args):
     items, diagnostics = _parse_life_inputs(args.paths, _config(args))
+    ignore_codes = getattr(args, "ignore_codes", None)
     filtered_diagnostics = filter_diagnostics(
         diagnostics,
         severities=getattr(args, "diagnostic_severities", None),
         codes=getattr(args, "diagnostic_codes", None),
         categories=getattr(args, "diagnostic_categories", None),
+        ignore_codes=ignore_codes,
     )
     has_filter = any(
         getattr(args, name, None)
-        for name in ("diagnostic_severities", "diagnostic_codes", "diagnostic_categories")
+        for name in ("diagnostic_severities", "diagnostic_codes", "diagnostic_categories", "ignore_codes")
     )
 
     if args.format == "json":
@@ -1349,6 +1388,8 @@ def command_check(args):
         if filtered_diagnostics:
             for diagnostic in filtered_diagnostics:
                 write_text(None, diagnostic.format() + "\n")
+                if str(getattr(diagnostic, "code", "")).upper() == "W225":
+                    write_text(None, _W225_GUIDANCE + "\n")
         elif has_filter:
             write_text(None, "OK: %d item(s), 0 matching diagnostic(s)\n" % len(items))
         else:
@@ -1801,6 +1842,47 @@ def command_archive(args):
         sys.stdout.write("No items match the archive criteria.\n")
         return 0
 
+    orphan_mode = getattr(args, "orphan_children", "block")
+    open_statuses_set = {"[ ]", "[/]", "[>]", "[?]"}
+    candidate_ids = set()
+    for item in candidates:
+        for val in item.details.get(id_key, []):
+            candidate_ids.add(str(val))
+
+    open_children_by_parent = {}
+    if candidate_ids:
+        candidate_id_set = {id(item) for item in candidates}
+        for item in all_items:
+            if id(item) in candidate_id_set:
+                continue
+            if item.status not in open_statuses_set:
+                continue
+            for parent_val in item.details.get("parent", []):
+                pid = str(parent_val)
+                if pid in candidate_ids:
+                    open_children_by_parent.setdefault(pid, []).append(item)
+
+    if open_children_by_parent:
+        if orphan_mode == "block":
+            sys.stdout.write("Cannot archive: the following candidates have open children:\n")
+            for pid, children in open_children_by_parent.items():
+                child_ids = ", ".join(
+                    str(v) for c in children for v in c.details.get(id_key, [])
+                ) or "(no id)"
+                sys.stdout.write("  parent %s: open children %s\n" % (pid, child_ids))
+            sys.stdout.write("Use --orphan-children adopt or --orphan-children promote to proceed.\n")
+            return 1
+
+        elif orphan_mode == "adopt":
+            already = {id(item) for item in candidates}
+            for children in open_children_by_parent.values():
+                for child in children:
+                    if id(child) not in already:
+                        candidates.append(child)
+                        already.add(id(child))
+
+        # promote: archive parent only; children lose parent: in source (handled below)
+
     multi_source = len(paths) > 1
     sys.stdout.write("Items to archive (%d, %s -> %s):\n" % (len(candidates), mode, args.dest))
     for item in candidates:
@@ -1819,15 +1901,58 @@ def command_archive(args):
             sys.stdout.write("Aborted.\n")
             return 0
 
-    archive_text = _items_to_life_text(candidates)
+    if orphan_mode == "adopt":
+        adopted_ids = set()
+        for children in open_children_by_parent.values():
+            for child in children:
+                adopted_ids.add(id(child))
+
+        def _adopt_item_text(item):
+            if id(item) in adopted_ids:
+                from copy import deepcopy as _deepcopy
+                adopted = _deepcopy(item)
+                adopted.status = "[-]"
+                return item_to_line(adopted)
+            return getattr(item, "source_text", None) or item_to_line(item)
+
+        archive_lines = [_adopt_item_text(item) for item in candidates]
+        archive_text = "\n".join(archive_lines)
+        if archive_text:
+            archive_text += "\n"
+    else:
+        archive_text = _items_to_life_text(candidates)
+
     _pre_write_backup(args.dest, config, "archive")
     append_text(args.dest, archive_text)
 
     if mode == "move":
         archive_ids = {id(item) for item in candidates}
+        promote_parent_ids = candidate_ids if orphan_mode == "promote" else set()
+
         for path, items in file_items.items():
-            remaining = [item for item in items if id(item) not in archive_ids]
-            if len(remaining) < len(items):
+            def _promote_item(item):
+                if promote_parent_ids and item.details.get("parent"):
+                    new_parents = [
+                        p for p in item.details["parent"]
+                        if str(p) not in promote_parent_ids
+                    ]
+                    if len(new_parents) < len(item.details["parent"]):
+                        from copy import deepcopy as _deepcopy
+                        promoted = _deepcopy(item)
+                        if new_parents:
+                            promoted.details["parent"] = new_parents
+                        else:
+                            del promoted.details["parent"]
+                        promoted.source_text = None
+                        return promoted
+                return item
+
+            remaining_raw = [item for item in items if id(item) not in archive_ids]
+            remaining = [_promote_item(item) for item in remaining_raw]
+            needs_write = len(remaining) < len(items) or any(
+                id(r) != id(o) for r, o in zip(remaining, remaining_raw)
+            )
+            if needs_write:
                 _pre_write_backup(path, config, "archive")
                 atomic_write_text(path, _items_to_life_text(remaining))
 
@@ -2333,15 +2458,43 @@ def command_assign(args):
     id_key = id_key_from_config(config)
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
 
-    matches = [
-        item for item in items
-        if args.id in [str(v) for v in item.details.get(id_key, [])]
-    ]
-    if not matches:
-        raise ValueError("No item with %s:%s." % (id_key, args.id))
-    if len(matches) > 1:
-        raise ValueError("Multiple items with %s:%s." % (id_key, args.id))
-    target = matches[0]
+    item_id = getattr(args, "id", None)
+    item_text = getattr(args, "text", None)
+
+    if item_id:
+        matches = [
+            item for item in items
+            if item_id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError("No item with %s:%s." % (id_key, item_id))
+        if len(matches) > 1:
+            raise ValueError("Multiple items with %s:%s." % (id_key, item_id))
+        target = matches[0]
+    elif item_text:
+        query = item_text.lower()
+        matches = [item for item in items if query in item.title.lower()]
+        if not matches:
+            raise ValueError("No item matching %r." % item_text)
+        if len(matches) > 1:
+            sys.stdout.write("Multiple items match:\n")
+            for i, m in enumerate(matches):
+                sys.stdout.write("  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title))
+            sys.stdout.write("Assign which item? (1-%d) " % len(matches))
+            sys.stdout.flush()
+            answer = sys.stdin.readline().strip()
+            try:
+                idx = int(answer) - 1
+                if idx < 0 or idx >= len(matches):
+                    raise ValueError()
+                target = matches[idx]
+            except (ValueError, IndexError):
+                sys.stdout.write("Aborted.\n")
+                return 0
+        else:
+            target = matches[0]
+    else:
+        raise ValueError("Specify an ID positional argument or --text QUERY.")
 
     update_args = types.SimpleNamespace(
         line=target.line,
@@ -2371,8 +2524,10 @@ def command_assign(args):
     if args.notify:
         today = datetime.date.today().isoformat()
         sender = config_user_name(config) or "self"
+        target_ids = target.details.get(id_key, [])
+        ref_val = str(target_ids[0]) if target_ids else (item_id or "(no-id)")
         notif_line = "[ ] M Assigned_to_%s sender:%s recipient:%s ref:%s on:%s" % (
-            args.to.replace(" ", "_"), sender, args.to, args.id, today
+            args.to.replace(" ", "_"), sender, args.to, ref_val, today
         )
         append_text(path, notif_line + "\n")
         sys.stdout.write("Notification: %s\n" % notif_line)
@@ -2387,6 +2542,7 @@ def command_health(args):
     since_days = getattr(args, "since", 30)
     lookahead_days = getattr(args, "lookahead", 7)
     ignore_codes = set(c.upper() for c in _split_csv_args(getattr(args, "ignore", None)))
+    type_filter = set(_split_csv_args(getattr(args, "health_types", None)))
 
     open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
 
@@ -2418,11 +2574,13 @@ def command_health(args):
         dependency_records = dependency_blocker_records(items, key=id_key_from_config(config))
 
     for item in items:
+        if type_filter and item.kind not in type_filter:
+            continue
         location = getattr(item, "source", None)
         line_no = item.line
 
         if "W301" not in ignore_codes:
-            if item.kind == "T" and item.status in open_statuses:
+            if item.kind == "T" and item.status in open_statuses and item.status != "[>]":
                 latest = _latest_item_date(item)
                 if latest and (today - latest).days > since_days:
                     health_issues.append(OrderedDict([
@@ -2501,6 +2659,14 @@ def command_health(args):
     _pretty = getattr(args, "pretty", False)
     if _fmt == "json":
         write_text(None, json.dumps(health_issues, ensure_ascii=False, indent=2 if _pretty else None, separators=None if _pretty else (",", ":")) + "\n")
+    elif _fmt == "jsonl":
+        output = "\n".join(
+            json.dumps(issue, ensure_ascii=False, separators=(",", ":"))
+            for issue in health_issues
+        )
+        if output:
+            output += "\n"
+        write_text(None, output)
     else:
         if not health_issues:
             write_text(None, "OK: No health issues found.\n")
@@ -2635,6 +2801,26 @@ def command_cleanup(args):
             ("action", "lifetxt inbox %s" % path_label),
         ]))
 
+    today_date = datetime.date.today()
+    cutoff = today_date - datetime.timedelta(days=90)
+    old_done_count = sum(
+        1 for item in items
+        if item.status in ("[x]", "[-]")
+        and _archive_item_date_before(
+            item,
+            datetime.datetime.combine(cutoff, datetime.time.min),
+        )
+    )
+    if old_done_count >= 10:
+        suggestions.append(OrderedDict([
+            ("priority", 5), ("check", "archive"),
+            ("count", old_done_count),
+            ("message", "%d completed/canceled item(s) older than 90 days" % old_done_count),
+            ("action", "lifetxt archive --dest archive.txt --before %s --yes %s" % (
+                cutoff.isoformat(), path_label,
+            )),
+        ]))
+
     _fmt = getattr(args, "format", "text")
     _pretty = getattr(args, "pretty", False)
     if _fmt == "json":
@@ -2760,6 +2946,9 @@ def command_review(args):
     if fmt == "json":
         indent = 2 if getattr(args, "pretty", False) else None
         sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=indent) + "\n")
+        return 0
+    if fmt == "jsonl":
+        sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n")
         return 0
 
     sys.stdout.write("Review: %s\n" % result["range"])
@@ -3992,13 +4181,16 @@ def _exit_code(diagnostics, warnings_as_errors):
     return 0
 
 
-def filter_diagnostics(diagnostics, severities=None, codes=None, categories=None):
+def filter_diagnostics(diagnostics, severities=None, codes=None, categories=None, ignore_codes=None):
     severity_filter = _diagnostic_severity_filter(severities)
     code_filter = _diagnostic_code_filter(codes)
     category_filter = _diagnostic_category_filter(categories)
+    ignore_set = set(c.upper() for c in _split_csv_args(ignore_codes))
 
     filtered = []
     for diagnostic in diagnostics:
+        if ignore_set and str(diagnostic.code).upper() in ignore_set:
+            continue
         if severity_filter and str(diagnostic.severity).lower() not in severity_filter:
             continue
         if code_filter and str(diagnostic.code).upper() not in code_filter:

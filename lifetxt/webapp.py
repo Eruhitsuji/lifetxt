@@ -27,7 +27,17 @@ from .ids import (
     id_key_from_config,
     id_prefix_for_item,
 )
-from .links import link_records, reference_diagnostics
+from .links import build_id_index, item_id_values, link_records, reference_diagnostics
+from .stats import (
+    MOOD_VALUES,
+    build_stats,
+    habit_stats,
+    make_buckets,
+    mood_stats,
+    project_stats,
+    stats_range,
+    task_bucket_stats,
+)
 from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
@@ -41,7 +51,7 @@ from .validator import validate_item
 
 def create_app(paths=None, writable_path=None, config=None):
     try:
-        from fastapi import Body, FastAPI, HTTPException, Query
+        from fastapi import Body, FastAPI, HTTPException, Query, Request
         from fastapi.responses import HTMLResponse, JSONResponse
     except ImportError as exc:
         raise RuntimeError(
@@ -55,16 +65,13 @@ def create_app(paths=None, writable_path=None, config=None):
 
     _api_token = (config or {}).get("api", {}).get("token") if config else None
     if _api_token:
-        from fastapi import Request
-        from fastapi.responses import JSONResponse as _JSONResponse
-
         @app.middleware("http")
         async def _bearer_auth(request: Request, call_next):
             if request.url.path in ("/", "/api/health"):
                 return await call_next(request)
             auth = request.headers.get("authorization", "")
             if auth != "Bearer " + _api_token:
-                return _JSONResponse(
+                return JSONResponse(
                     status_code=401,
                     content={
                         "error": "UNAUTHORIZED",
@@ -209,6 +216,214 @@ def create_app(paths=None, writable_path=None, config=None):
         )
         records = limit_items(records, limit)
         return links_response(records, diagnostics)
+
+    @app.get("/api/graph")
+    def get_graph(
+        root=Query(None),
+        depth=Query(None),
+    ):
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        id_key = id_key_from_config(app.state.config)
+        records = link_records(items, key=id_key)
+        nodes_map = {}
+        edges = []
+        for rec in records:
+            src_id = rec["source_id"] or rec["source_location"]
+            tgt_id = rec["target_id"]
+            if src_id not in nodes_map:
+                nodes_map[src_id] = {
+                    "id": src_id,
+                    "title": rec["source_title"],
+                    "status": rec["source_status"],
+                    "type": rec["source_type"],
+                }
+            if tgt_id and tgt_id not in nodes_map:
+                nodes_map[tgt_id] = {
+                    "id": tgt_id,
+                    "title": rec.get("target_title", tgt_id),
+                    "status": rec.get("target_status", ""),
+                    "type": rec.get("target_type", ""),
+                }
+            edges.append({"source": src_id, "target": tgt_id, "relation": rec["relation"]})
+        nodes = list(nodes_map.values())
+        if root:
+            nodes, edges = _subgraph(nodes, edges, root, depth)
+        return {"nodes": nodes, "edges": edges}
+
+    @app.get("/api/chart/tasks")
+    def chart_tasks(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        group="daily",
+        project=None,
+    ):
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = stats_range(start, end)
+        tasks = [item for item in items if item.kind == "T"]
+        if project:
+            tasks = [item for item in tasks if project in item.details.get("project", [])]
+        buckets = make_buckets(s, e, group)
+        bucket_stats = task_bucket_stats(tasks, buckets)
+        labels = [b["from"] if b["from"] == b["to"] else "%s/%s" % (b["from"], b["to"]) for b in bucket_stats]
+        return {
+            "labels": labels,
+            "datasets": [
+                {"label": "done", "data": [b["done"] for b in bucket_stats]},
+                {"label": "total", "data": [b["total"] for b in bucket_stats]},
+                {"label": "overdue", "data": [b["overdue"] for b in bucket_stats]},
+            ],
+            "range": {"from": s.isoformat(), "to": e.isoformat(), "group": group},
+        }
+
+    @app.get("/api/chart/habits")
+    def chart_habits(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        group="daily",
+    ):
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = stats_range(start, end)
+        habit_items = [item for item in items if item.kind == "H"]
+        buckets = make_buckets(s, e, group)
+        habits = habit_stats(habit_items, s, e, buckets)
+        labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
+        datasets = []
+        for habit in habits:
+            sp = habit.get("sparkline", "")
+            from .stats import SPARK, MISSING
+            data = []
+            for ch in sp:
+                if ch == MISSING:
+                    data.append(0)
+                else:
+                    idx = SPARK.find(ch)
+                    data.append(max(0, idx))
+            if len(data) < len(labels):
+                data.extend([0] * (len(labels) - len(data)))
+            datasets.append({"label": habit["title"], "streak": habit["streak"], "data": data[:len(labels)]})
+        return {
+            "labels": labels,
+            "datasets": datasets,
+            "range": {"from": s.isoformat(), "to": e.isoformat(), "group": group},
+        }
+
+    @app.get("/api/chart/mood")
+    def chart_mood(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        group="daily",
+    ):
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = stats_range(start, end)
+        journal_items = [item for item in items if item.kind == "J"]
+        buckets = make_buckets(s, e, group)
+        mood = mood_stats(journal_items, buckets)
+        labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
+        from .stats import SPARK, MISSING
+        sp = mood.get("sparkline", "")
+        data = []
+        for ch in sp:
+            if ch == MISSING:
+                data.append(None)
+            else:
+                idx = SPARK.find(ch)
+                data.append(round(1 + idx * (len(MOOD_VALUES) - 1) / max(1, len(SPARK) - 1), 2))
+        if len(data) < len(labels):
+            data.extend([None] * (len(labels) - len(data)))
+        return {
+            "labels": labels,
+            "datasets": [{"label": "mood", "data": data[:len(labels)]}],
+            "mood_scale": MOOD_VALUES,
+            "counts": dict(mood.get("counts", {})),
+            "range": {"from": s.isoformat(), "to": e.isoformat(), "group": group},
+        }
+
+    @app.get("/api/chart/elapsed")
+    def chart_elapsed(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        project=None,
+    ):
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        elapsed_by_project = {}
+        for item in items:
+            for elapsed_val in item.details.get("elapsed", []):
+                minutes = _elapsed_to_minutes(elapsed_val)
+                if minutes is None:
+                    continue
+                projects = item.details.get("project") or ["(none)"]
+                for proj in projects:
+                    if project and proj != project:
+                        continue
+                    elapsed_by_project[proj] = elapsed_by_project.get(proj, 0) + minutes
+        sorted_projects = sorted(elapsed_by_project.items(), key=lambda x: -x[1])
+        labels = [p for p, _ in sorted_projects]
+        data = [v for _, v in sorted_projects]
+        return {
+            "labels": labels,
+            "datasets": [{"label": "elapsed (min)", "data": data}],
+        }
+
+    def _git_guard(request):
+        git_config = (app.state.config or {}).get("git", {})
+        if not git_config.get("enable_api"):
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "FORBIDDEN", "message": "Git API is not enabled. Set git.enable_api: true in config.", "detail": None},
+            )
+        host = request.client.host if request.client else None
+        if host not in ("127.0.0.1", "::1", "localhost"):
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "FORBIDDEN", "message": "Git API is restricted to loopback access.", "detail": None},
+            )
+
+    def _run_git(cmd, cwd=None):
+        import subprocess
+        result = subprocess.run(
+            cmd,
+            cwd=cwd or os.path.dirname(os.path.abspath(app.state.writable_path)),
+            capture_output=True,
+            text=True,
+        )
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+            "ok": result.returncode == 0,
+        }
+
+    @app.get("/api/git/status")
+    def git_status(request: Request):
+        _git_guard(request)
+        return _run_git(["git", "status", "--short"])
+
+    @app.post("/api/git/pull")
+    def git_pull(request: Request):
+        _git_guard(request)
+        return _run_git(["git", "pull"])
+
+    @app.post("/api/git/commit")
+    def git_commit(request: Request, payload=Body(...)):
+        _git_guard(request)
+        message = payload.get("message", "") if isinstance(payload, dict) else ""
+        if not message:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "ERROR", "message": "commit message is required.", "detail": None},
+            )
+        writable = app.state.writable_path
+        import subprocess
+        cwd = os.path.dirname(os.path.abspath(writable))
+        add_result = subprocess.run(["git", "add", os.path.abspath(writable)], cwd=cwd, capture_output=True, text=True)
+        if add_result.returncode != 0:
+            return {"stdout": add_result.stdout, "stderr": add_result.stderr, "exit_code": add_result.returncode, "ok": False}
+        return _run_git(["git", "commit", "-m", message], cwd=cwd)
+
+    @app.post("/api/git/push")
+    def git_push(request: Request):
+        _git_guard(request)
+        return _run_git(["git", "push"])
 
     @app.get("/api/agenda")
     def get_agenda(
@@ -1274,6 +1489,44 @@ def _format_datetime(value):
     return format_life_datetime(value)
 
 
+def _subgraph(nodes, edges, root, depth):
+    max_depth = int(depth) if depth is not None else None
+    node_ids = {n["id"] for n in nodes}
+    if root not in node_ids:
+        return [], []
+    reachable = set()
+    queue = [(root, 0)]
+    while queue:
+        current, d = queue.pop(0)
+        if current in reachable:
+            continue
+        reachable.add(current)
+        if max_depth is not None and d >= max_depth:
+            continue
+        for edge in edges:
+            if edge["source"] == current and edge["target"] not in reachable:
+                queue.append((edge["target"], d + 1))
+            if edge["target"] == current and edge["source"] not in reachable:
+                queue.append((edge["source"], d + 1))
+    filtered_nodes = [n for n in nodes if n["id"] in reachable]
+    filtered_edges = [e for e in edges if e["source"] in reachable and e["target"] in reachable]
+    return filtered_nodes, filtered_edges
+
+
+def _elapsed_to_minutes(value):
+    import re
+    text = str(value).strip()
+    m = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?", text)
+    if m and (m.group(1) or m.group(2)):
+        hours = int(m.group(1) or 0)
+        minutes = int(m.group(2) or 0)
+        return hours * 60 + minutes
+    try:
+        return int(text)
+    except (ValueError, TypeError):
+        return None
+
+
 def _csv_values(value):
     if value is None:
         return None
@@ -1479,6 +1732,119 @@ HTML_PAGE = r"""<!doctype html>
       font-size: .82rem;
       white-space: nowrap;
     }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.55rem;
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .82rem;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+    .status-open   { background: #d9eef8; color: #1a5a80; }
+    .status-active { background: #fff3cd; color: #7a5200; }
+    .status-done   { background: #d4edda; color: #1a5c30; text-decoration: line-through; opacity: .7; }
+    .status-cancel { background: #f0f0f0; color: #666; text-decoration: line-through; opacity: .7; }
+    .status-defer  { background: #e8e0f5; color: #4a2d85; }
+    .status-maybe  { background: #fce8e8; color: #8a2020; }
+    .status-note   { background: #f5f5f5; color: #555; }
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.55rem;
+      padding: .15rem .45rem;
+      border-radius: .35rem;
+      font-size: .78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      letter-spacing: .04em;
+    }
+    .type-T { background: #e8f4fd; color: #1a5a80; }
+    .type-E { background: #fce8ff; color: #6a1a80; }
+    .type-D { background: #fde8e8; color: #8a1a1a; }
+    .type-R { background: #fdf4e8; color: #7a4a00; }
+    .type-H { background: #e8fdf0; color: #1a5c30; }
+    .type-N { background: #f5f5f5; color: #555; }
+    .type-S { background: #e8f0fd; color: #1a3080; }
+    .type-M { background: #fdf0e8; color: #80401a; }
+    .type-J { background: #fdfde8; color: #6a6a00; }
+    .item.overdue   { border-left: 3px solid #c0392b; }
+    .item.due-soon  { border-left: 3px solid #e67e22; }
+    .stats-summary {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: .6rem 1rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--soft);
+      font-size: .85rem;
+    }
+    .stats-count { display: flex; gap: .3rem; align-items: center; }
+    .stats-count .n { font-weight: 700; font-size: 1.05rem; }
+    .stats-count.overdue-count .n { color: var(--danger); }
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      padding: .5rem 1rem;
+      border-bottom: 1px solid var(--line);
+      min-height: 0;
+    }
+    .filter-chips:empty { display: none; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .2rem .5rem;
+      border-radius: 999px;
+      background: #e0eeea;
+      color: var(--accent);
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    .chip button {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--accent);
+      font-size: .9rem;
+      line-height: 1;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .chart-panel {
+      position: relative;
+      height: 200px;
+    }
+    .chart-tabs { display: flex; gap: .3rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
+    .chart-tab {
+      padding: .25rem .65rem;
+      border-radius: .35rem;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: var(--muted);
+      font-size: .82rem;
+      cursor: pointer;
+    }
+    .chart-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .quick-add-bar {
+      display: flex;
+      gap: .4rem;
+      padding: .5rem 1rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--soft);
+    }
+    .quick-add-bar input {
+      flex: 1;
+    }
+    .quick-add-bar .hint {
+      color: var(--muted);
+      font-size: .78rem;
+      align-self: center;
+      white-space: nowrap;
+    }
     .source { color: var(--muted); font-size: .78rem; white-space: nowrap; }
     .side { display: grid; gap: 1rem; align-content: start; min-width: 0; }
     form.stack { grid-template-columns: 1fr 1fr; }
@@ -1591,8 +1957,10 @@ HTML_PAGE = r"""<!doctype html>
       <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
     </div>
     <div class="toolbar">
-      <button class="secondary" onclick="enableBrowserNotifications()">Enable Notifications</button>
+      <button class="secondary" onclick="toggleStats()">Stats</button>
+      <button class="secondary" onclick="enableBrowserNotifications()">Notifications</button>
       <button class="secondary" onclick="refreshAll()">Refresh</button>
+      <span class="hint" style="color:var(--muted);font-size:.78rem">n=new  /=search</span>
     </div>
   </header>
   <main>
@@ -1600,7 +1968,7 @@ HTML_PAGE = r"""<!doctype html>
       <div class="section-head">
         <h2>Items</h2>
         <div class="toolbar">
-          <input id="search" placeholder="Search">
+          <input id="search" placeholder="Search (/)">
           <label class="inline"><input id="open-only" type="checkbox"> Open</label>
           <select id="kind">
             <option value="">All types</option>
@@ -1630,8 +1998,30 @@ HTML_PAGE = r"""<!doctype html>
           <button onclick="loadItems()">Apply</button>
         </div>
       </div>
+      <div class="quick-add-bar" id="quick-add-bar" style="display:none">
+        <input id="quick-line" placeholder="[ ] T My_task  due:tomorrow  project:work" autocomplete="off">
+        <button onclick="quickAddLine()">Add</button>
+        <span class="hint">n or Escape to close</span>
+      </div>
+      <div id="filter-chips" class="filter-chips"></div>
+      <div id="stats-summary" class="stats-summary" style="display:none"></div>
       <div id="diagnostics"></div>
       <div id="items" class="content"></div>
+    </section>
+    <section class="stats-section" style="display:none">
+      <div class="section-head">
+        <h2>Statistics</h2>
+        <button class="secondary" onclick="refreshCharts()">Refresh</button>
+      </div>
+      <div class="chart-tabs">
+        <button class="chart-tab active" onclick="showChart('tasks', this)">Tasks</button>
+        <button class="chart-tab" onclick="showChart('habits', this)">Habits</button>
+        <button class="chart-tab" onclick="showChart('mood', this)">Mood</button>
+        <button class="chart-tab" onclick="showChart('elapsed', this)">Elapsed</button>
+      </div>
+      <div id="chart-container" style="padding:.75rem 1rem">
+        <div class="chart-panel"><canvas id="main-chart"></canvas></div>
+      </div>
     </section>
     <div class="side">
       <section class="editor-section">
@@ -1876,23 +2266,109 @@ HTML_PAGE = r"""<!doctype html>
       const values = item?.markdown?.details?.[key];
       return Array.isArray(values) && values.length ? values[0] : "";
     }
+    const STATUS_CLASS = {
+      "[ ]": "status-open",
+      "[/]": "status-active",
+      "[x]": "status-done",
+      "[-]": "status-cancel",
+      "[>]": "status-defer",
+      "[?]": "status-maybe",
+      "[N]": "status-note",
+    };
+    const STATUS_LABEL = {
+      "[ ]": "open", "[/]": "active", "[x]": "done",
+      "[-]": "cancelled", "[>]": "deferred", "[?]": "maybe", "[N]": "note",
+    };
+    function dueSoonDays() {
+      return Number(appConfig?.web?.due_soon_days || 3);
+    }
+    function itemDueSoonClass(item) {
+      const dueVals = item?.details?.due;
+      if (!dueVals || !dueVals.length) return "";
+      const due = new Date(dueVals[0]);
+      if (isNaN(due)) return "";
+      const today = new Date(); today.setHours(0,0,0,0);
+      const dueMid = new Date(due); dueMid.setHours(0,0,0,0);
+      const diffDays = Math.floor((dueMid - today) / 86400000);
+      if (diffDays < 0 && item.status !== "[x]" && item.status !== "[-]") return "overdue";
+      if (diffDays >= 0 && diffDays <= dueSoonDays() && item.status !== "[x]" && item.status !== "[-]") return "due-soon";
+      return "";
+    }
+    function renderSummary(items) {
+      const el = document.getElementById("stats-summary");
+      const total = items.length;
+      const open = items.filter(i => !["[x]", "[-]"].includes(i.status)).length;
+      const done = items.filter(i => i.status === "[x]").length;
+      const overdue = items.filter(i => itemDueSoonClass(i) === "overdue").length;
+      if (!total) { el.style.display = "none"; return; }
+      el.style.display = "";
+      el.innerHTML = `
+        <div class="stats-count"><span class="n">${total}</span> total</div>
+        <div class="stats-count"><span class="n">${open}</span> open</div>
+        <div class="stats-count"><span class="n">${done}</span> done</div>
+        <div class="stats-count overdue-count"><span class="n">${overdue}</span> overdue</div>
+      `;
+    }
+    function renderFilterChips() {
+      const params = query();
+      const el = document.getElementById("filter-chips");
+      el.innerHTML = "";
+      const filterKeys = [
+        ["kind", "type"], ["status"], ["project"], ["tag"], ["user"], ["team"],
+        ["person"], ["assignee"], ["owner"], ["after"], ["before"],
+      ];
+      const shown = new Set();
+      for (const keys of filterKeys) {
+        for (const k of keys) {
+          if (shown.has(k)) break;
+          const val = params.get(k);
+          if (val) {
+            shown.add(k);
+            const chip = document.createElement("span");
+            chip.className = "chip";
+            chip.innerHTML = `${escapeHtml(k)}:${escapeHtml(val)} <button title="Remove" onclick="removeFilter(${jsLiteral(k)})">×</button>`;
+            el.appendChild(chip);
+          }
+        }
+      }
+      if (params.get("open_only") === "true") {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.innerHTML = `open only <button title="Remove" onclick="removeFilter('open_only')">×</button>`;
+        el.appendChild(chip);
+      }
+    }
+    function removeFilter(key) {
+      const params = query();
+      params.delete(key);
+      if (key === "open_only") document.getElementById("open-only").checked = false;
+      if (key === "kind" || key === "type") document.getElementById("kind").value = "";
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadItems();
+    }
     function renderItems(items) {
       const root = document.getElementById("items");
       root.innerHTML = items.length ? "" : `<div class="empty">No items found.</div>`;
+      renderSummary(items);
+      renderFilterChips();
       for (const item of items) {
         const titleHtml = safeMarkdownHtml(item?.markdown?.title, item.title);
         const previewHtml = firstMarkdownDetail(item, "body") || firstMarkdownDetail(item, "note");
         const preview = previewHtml ? `<div class="markdown body-preview">${previewHtml}</div>` : "";
+        const statusCls = STATUS_CLASS[item.status] || "status-note";
+        const statusLabel = STATUS_LABEL[item.status] || item.status;
+        const typeCls = "type-" + (item.type || "N");
+        const dueCls = itemDueSoonClass(item);
         const node = document.createElement("button");
         node.type = "button";
-        node.className = "item";
+        node.className = "item" + (dueCls ? " " + dueCls : "");
         if (selectedItem && item.line === selectedItem.line && item.editable === selectedItem.editable) {
           node.classList.add("selected");
         }
         node.addEventListener("click", () => selectItem(item));
         node.innerHTML = `
-          <span class="pill">${escapeHtml(item.status)}</span>
-          <span class="pill">${escapeHtml(item.type)}</span>
+          <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
+          <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
             <div class="title markdown">${titleHtml}</div>
             <div class="meta">${escapeHtml(detailText(item.details))}</div>
@@ -2090,6 +2566,143 @@ HTML_PAGE = r"""<!doctype html>
     async function refreshAll() {
       await Promise.all([loadItems(), loadAgenda(), loadStatus(), loadNotifications()]);
     }
+
+    // ── Quick-add bar ──────────────────────────────────────────────
+    function toggleQuickAdd(show) {
+      const bar = document.getElementById("quick-add-bar");
+      bar.style.display = (show === undefined ? bar.style.display === "none" : show) ? "" : "none";
+      if (bar.style.display !== "none") {
+        document.getElementById("quick-line").focus();
+        document.getElementById("quick-line").select();
+      }
+    }
+    async function quickAddLine() {
+      const input = document.getElementById("quick-line");
+      const line = input.value.trim();
+      if (!line) return;
+      await api("/api/items", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({_raw_line: line, title: line.split(/\s+/).slice(2).join("_") || "item",
+          status: line.match(/^\[.\]/)?.[0] || "[ ]",
+          type: line.split(/\s+/)[1] || "T",
+          details: {}
+        }),
+      }).catch(async err => {
+        document.getElementById("diagnostics").innerHTML =
+          `<div class="diagnostic">Quick-add failed: ${escapeHtml(err.message)}</div>`;
+      });
+      input.value = "";
+      toggleQuickAdd(false);
+      await refreshAll();
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────
+    document.addEventListener("keydown", function(e) {
+      const active = document.activeElement;
+      const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
+      if (e.key === "Escape") {
+        if (inInput) { active.blur(); return; }
+        toggleQuickAdd(false);
+        return;
+      }
+      if (inInput) return;
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        newItem();
+        document.getElementById("edit-title").focus();
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        document.getElementById("search").focus();
+        return;
+      }
+      if (e.key === "q") {
+        e.preventDefault();
+        toggleQuickAdd();
+        return;
+      }
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        refreshAll();
+        return;
+      }
+    });
+
+    // ── Statistics / Chart.js panel ────────────────────────────────
+    let chartJsLoaded = false;
+    let mainChart = null;
+    let statsVisible = false;
+
+    function toggleStats() {
+      statsVisible = !statsVisible;
+      const sec = document.querySelector(".stats-section");
+      if (sec) sec.style.display = statsVisible ? "" : "none";
+      if (statsVisible) loadChart("tasks");
+    }
+
+    async function loadChart(type) {
+      await ensureChartJs();
+      const container = document.getElementById("chart-container");
+      const canvas = document.getElementById("main-chart");
+      if (mainChart) { mainChart.destroy(); mainChart = null; }
+      try {
+        const data = await api("/api/chart/" + encodeURIComponent(type));
+        const ctx = canvas.getContext("2d");
+        const isBar = ["tasks", "habits", "elapsed"].includes(type);
+        mainChart = new Chart(ctx, {
+          type: isBar ? "bar" : "line",
+          data: {
+            labels: data.labels || [],
+            datasets: (data.datasets || []).map((ds, i) => ({
+              label: ds.label,
+              data: ds.data,
+              backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + "88",
+              borderColor: CHART_COLORS[i % CHART_COLORS.length],
+              borderWidth: 1.5,
+              fill: !isBar,
+              spanGaps: true,
+              pointRadius: 2,
+            })),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {legend: {position: "top"}},
+            scales: {y: {beginAtZero: true}},
+          },
+        });
+      } catch(err) {
+        container.innerHTML = `<div class="diagnostic">Chart error: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function showChart(type, btn) {
+      document.querySelectorAll(".chart-tab").forEach(t => t.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      loadChart(type);
+    }
+
+    async function refreshCharts() {
+      const active = document.querySelector(".chart-tab.active");
+      const type = active ? active.textContent.trim().toLowerCase() : "tasks";
+      await loadChart(type);
+    }
+
+    const CHART_COLORS = ["#256b5f","#e07b54","#4a7db5","#8e6bbf","#b5a14a","#5aa876","#c0524a"];
+
+    function ensureChartJs() {
+      if (chartJsLoaded) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js";
+        s.onload = () => { chartJsLoaded = true; resolve(); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();

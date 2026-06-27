@@ -3020,6 +3020,78 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual("long_message", data[0]["body"])
 
 
+class LifeTxtWebappHelperTests(unittest.TestCase):
+    def test_subgraph_returns_reachable_nodes_only(self):
+        from lifetxt.webapp import _subgraph
+        nodes = [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}]
+        edges = [
+            {"source": "a", "target": "b", "relation": "depends_on"},
+            {"source": "b", "target": "c", "relation": "depends_on"},
+        ]
+        fn, fe = _subgraph(nodes, edges, "a", depth=None)
+        ids = {n["id"] for n in fn}
+        self.assertIn("a", ids)
+        self.assertIn("b", ids)
+        self.assertIn("c", ids)
+        self.assertNotIn("d", ids)
+
+    def test_subgraph_depth_limit(self):
+        from lifetxt.webapp import _subgraph
+        nodes = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        edges = [
+            {"source": "a", "target": "b", "relation": "depends_on"},
+            {"source": "b", "target": "c", "relation": "depends_on"},
+        ]
+        fn, fe = _subgraph(nodes, edges, "a", depth=1)
+        ids = {n["id"] for n in fn}
+        self.assertIn("a", ids)
+        self.assertIn("b", ids)
+        self.assertNotIn("c", ids)
+
+    def test_subgraph_unknown_root_returns_empty(self):
+        from lifetxt.webapp import _subgraph
+        nodes = [{"id": "a"}]
+        edges = []
+        fn, fe = _subgraph(nodes, edges, "zzz", depth=None)
+        self.assertEqual([], fn)
+        self.assertEqual([], fe)
+
+    def test_elapsed_to_minutes_compact_form(self):
+        from lifetxt.webapp import _elapsed_to_minutes
+        self.assertEqual(90, _elapsed_to_minutes("1h30m"))
+        self.assertEqual(30, _elapsed_to_minutes("30m"))
+        self.assertEqual(60, _elapsed_to_minutes("1h"))
+
+    def test_elapsed_to_minutes_bare_integer(self):
+        from lifetxt.webapp import _elapsed_to_minutes
+        self.assertEqual(90, _elapsed_to_minutes("90"))
+
+    def test_elapsed_to_minutes_invalid_returns_none(self):
+        from lifetxt.webapp import _elapsed_to_minutes
+        self.assertIsNone(_elapsed_to_minutes("abc"))
+
+    def test_chart_tasks_stats_via_library(self):
+        from lifetxt.stats import stats_range, make_buckets, task_bucket_stats
+        items_text = "[x] T Done done:2026-06-01\n[ ] T Open due:2026-06-01\n"
+        items, _ = parse_text(items_text)
+        s, e = stats_range("2026-06-01", "2026-06-30")
+        buckets = make_buckets(s, e, "daily")
+        stats = task_bucket_stats(items, buckets)
+        self.assertIsInstance(stats, list)
+        self.assertIn("done", stats[0])
+        self.assertIn("total", stats[0])
+
+    def test_chart_mood_via_library(self):
+        from lifetxt.stats import stats_range, make_buckets, mood_stats
+        items_text = "[x] J Morning mood:happy done:2026-06-01\n[x] J Evening mood:sad done:2026-06-02\n"
+        items, _ = parse_text(items_text)
+        s, e = stats_range("2026-06-01", "2026-06-30")
+        buckets = make_buckets(s, e, "daily")
+        result = mood_stats(items, buckets)
+        self.assertIn("counts", result)
+        self.assertIn("happy", result["counts"])
+
+
 class LifeTxtWebAppTests(unittest.TestCase):
     def test_webapp_file_helpers_append_update_and_delete_item(self):
         from lifetxt import webapp

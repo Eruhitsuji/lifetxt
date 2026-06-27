@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x27)
+Last updated: 2026-06-27 (updated x28)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -188,77 +188,34 @@ CLI-native charts without external dependencies.
 
 ### Statistics & Charts (Web UI)
 
-- [ ] Add chart API endpoints: `/api/chart/tasks`, `/api/chart/habits`,
-  `/api/chart/mood`, `/api/chart/elapsed`. Each returns a stable JSON data
-  structure (labels array + datasets array) suitable for Chart.js or any
-  browser charting library without server-side rendering. Support query
-  parameters `from`, `to`, `project`, and `group=daily|weekly|monthly`
-  consistent with the CLI `stats` filters. The server returns only data; all
-  rendering is done in the browser.
+- [ ] Add `group=weekly|monthly` support to `/api/chart/habits` and
+  `/api/chart/mood` — currently only `daily` is meaningful for those but
+  the parameter is accepted without aggregation. Implement bucket merging.
 
-- [ ] Add a statistics dashboard panel to the browser GUI: render the chart
-  API responses using Chart.js loaded from CDN. Include at minimum: task
-  completion trend (bar chart), habit streak calendar (heatmap or bar),
-  mood timeline (line chart), and elapsed time by project (horizontal bar).
-  Make each panel collapsible and individually refreshable without a full
-  page reload.
-
-- [ ] Add summary statistics row to the item list view: show total / open /
-  done / overdue counts for the current filter context, updated on every
-  filter change without a page reload.
+- [ ] Add habit streak calendar (heatmap) to the statistics dashboard panel:
+  render each habit as a GitHub-style heatmap grid instead of a line chart.
 
 ### Item Input Form (Web UI)
 
-- [ ] Add a type-aware item creation form to the browser GUI: render a
-  structured form whose visible fields change based on the selected type
-  (`T`, `E`, `D`, `R`, `H`, `N`, `S`, `M`, `J`). Each type shows its
-  recommended keys as labeled input fields with appropriate input types
-  (date picker for `due:`/`from:`/`to:`, text for `title:`, dropdown for
-  `status:` and `priority:`, multi-value chips for `tag:` and `attendee:`).
-  On submit, `POST /api/items` using the existing item payload schema. Provide
-  both a modal dialog (triggered from any view) and an inline quick-add row
-  at the top of the item list.
+- [ ] Improve `quick-add` bar: add a live syntax-check indicator (green/red
+  border) as the user types by calling a dedicated `/api/check-line` endpoint
+  or reusing `parse_text` logic client-side.
 
-- [ ] Add an item edit form: clicking an item opens the same type-aware form
-  pre-populated with current values. On submit, `PUT /api/items/id/{id}`.
-  Show a diff preview (before/after field values) before confirming the write.
-
-- [ ] Add a `body:` Markdown editor to the creation and edit forms: use a
-  simple textarea with a preview toggle. Render the preview using the
-  sanitized HTML already returned in the `markdown` object of item responses.
-
-- [ ] Add `quick-add` shortcut: a persistent input bar at the top of the GUI
-  (keyboard shortcut `n` or `/`) that accepts a life.txt line directly and
-  appends it via `POST /api/items`. Show a live syntax-check indicator
-  (green/red) as the user types by calling `GET /api/items` with a dry-run
-  flag or a dedicated `/api/check` endpoint.
+- [ ] Add type-aware field hints to the editor form: when the user selects
+  a type (`T`, `E`, `D`, etc.) in the editor sidebar, show a hint row listing
+  the recommended `details` keys for that type with placeholder examples in
+  the Details textarea.
 
 ### Record Display (Web UI)
 
-- [ ] Add item detail panel: clicking a row expands an inline panel (or opens
-  a side drawer) showing all fields, the rendered `body:` Markdown, link
-  references, and action buttons (edit, mark done, archive, delete). Do not
-  require a page navigation.
+- [ ] Extend overdue/due-soon highlighting to the agenda panel: items in the
+  agenda section should also show red/amber accents when `due:` is past or
+  within `ui.due_soon_days` days.
 
-- [ ] Render `body:` Markdown in item list rows: show the first line of the
-  rendered body as a subtitle beneath the title when the item has a `body:`
-  field. The full body appears in the detail panel. Use the sanitized HTML
-  already returned in the `markdown` object of item responses.
-
-- [ ] Add status badge and type icon to each row: display a colored badge for
-  `[ ]`/`[/]`/`[x]`/`[-]`/`[>]`/`[?]`/`[N]` and a type label or icon for
-  `T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J` so rows are scannable at a glance
-  without reading the raw status/type string.
-
-- [ ] Add overdue and due-soon highlighting: items whose `due:` is past today
-  are shown with a red accent; items due within the next 3 days (configurable
-  via `ui.due_soon_days`) are shown with an amber accent. Apply to both the
-  list view and the agenda view.
-
-- [ ] Add filter chips / active filter summary bar: when filters are active
-  (`--open`, `--project`, `--tag`, etc.), show them as removable chips above
-  the item list so the user can see and clear individual filters without
-  reloading.
+- [ ] Add item detail side-drawer: clicking a row expands a persistent side
+  panel showing all fields in a structured layout, rendered `body:` Markdown,
+  incoming links (from `/api/links?id=X&direction=incoming`), and action buttons
+  (mark done, delete). The drawer stays open when navigating the item list.
 
 ### ID Links & Cross-References (Web UI)
 
@@ -269,32 +226,17 @@ CLI-native charts without external dependencies.
   navigation. If the referenced item is in a read-only file, show it as
   read-only in the detail panel.
 
-- [ ] Add backlink section to the item detail panel: call `GET /api/links`
-  filtered to the current item ID and show incoming references (items that
-  link to this one) grouped by relation type (`parent`, `depends_on`, `blocks`,
-  `related`). This makes it easy to see what depends on the current item
-  without manually searching.
-
-- [ ] Add dependency status indicators to the item detail panel: when an item
-  has `depends_on:` references, show each prerequisite with its current status
-  badge so the user can immediately see which blockers are still open. Mirror
-  the `blocked: true` and `blocked_by` fields already returned by
-  `/api/agenda`.
+- [ ] Add clickable ID cross-reference links in item rows: `depends_on:`,
+  `parent:`, `blocks:`, `related:`, `ref:` values in the detail text of each
+  row should be rendered as links that load the referenced item via
+  `GET /api/items/id/{id}` and scroll to or highlight it in the list.
 
 ### Dependency & Reference Graph (Web UI & CLI)
-
-- [ ] Add graph API endpoint: `GET /api/graph` returns the full link graph as
-  a stable JSON structure `{"nodes": [...], "edges": [...]}` where each node
-  includes `id`, `title`, `status`, `type`, and each edge includes `source`,
-  `target`, and `relation`. Support `?root=ID` to return only the subgraph
-  reachable from a given node, and `?depth=N` to limit traversal depth.
 
 - [ ] Add a dependency/reference graph panel to the browser GUI: render the
   `/api/graph` JSON using a browser graph library (Cytoscape.js or D3-force,
   loaded from CDN). Node color encodes type; node border encodes status.
-  Clicking a node opens the item detail panel. Support `?root=ID` to start
-  the view from a specific item. The panel must be reachable from the item
-  detail panel via a "Show graph" button and from a top-level nav link.
+  Clicking a node scrolls to or highlights the item in the list.
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
@@ -322,19 +264,6 @@ CLI-native charts without external dependencies.
   URL parameters.
 
 ### Git Integration (Web API)
-
-- [ ] Add lightweight Git operation endpoints to the Web API: `POST
-  /api/git/pull` (run `git pull` in the directory of the writable file),
-  `POST /api/git/commit` (run `git add <writable_file> && git commit -m MSG`),
-  `POST /api/git/push` (run `git push`), and `GET /api/git/status` (run
-  `git status --short` and return the output as JSON). All endpoints invoke
-  `git` as a subprocess; no git library dependency is added. Restrict these
-  endpoints to loopback access only (enforce regardless of `api.token`) and
-  require explicit opt-in via `git.enable_api: true` in config to prevent
-  accidental exposure. Return stdout, stderr, and exit code in the response
-  so the caller can detect failures. Document security implications clearly:
-  these endpoints give the caller shell-equivalent write access to the
-  repository.
 
 - [ ] Add Git status indicator to the browser GUI header: poll `GET
   /api/git/status` every 60 seconds (configurable; disable with

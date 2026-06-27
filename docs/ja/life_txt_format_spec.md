@@ -169,6 +169,8 @@ ancestor に ID がない場合、item 自体は有効ですが ID link とし�
 warning を出します。`parent:` を明示した場合は、明示値を優先します。
 インデントされた `|` body 継続行も許可され、直前 item の `body:` に結合されます。
 
+階層の canonical な機械表現は明示的な `parent:` です。indentation は人が書きやすく読むための派生表現として扱います。`--canonical` を持つ CLI command は、親を推論できる場合に `parent:` を保持または追加し、item 行を unindented にして出力します。
+
 ## 6. detail key の考え方
 
 - known key は、ツールが検証、補完、ヘルプで認識する key です。

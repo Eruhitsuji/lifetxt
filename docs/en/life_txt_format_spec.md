@@ -138,6 +138,12 @@ When an indented item does not already contain `parent:`, parsers may infer
 `id:`. In the example above, `Literature_Review` and `Lab_Meeting` inherit
 `parent:proj_research`, and `Reading_Memo` inherits `parent:task_lit`.
 
+The canonical machine representation of hierarchy is explicit `parent:`.
+Indentation is a convenient authoring and display form derived from the same
+relationship. CLI commands that provide `--canonical` write unindented item
+lines and keep or add explicit `parent:` details when they can infer the parent
+from indentation and the parent item has an ID.
+
 If the ancestor has no ID, the item remains valid but tools should warn because
 the hierarchy cannot be represented as an ID link. You can always write
 `parent:` explicitly, and explicit `parent:` takes precedence over indentation.

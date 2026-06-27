@@ -1225,6 +1225,28 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             normalize_newlines(stdout),
         )
 
+    def test_filter_canonical_outputs_explicit_parent_without_indent(self):
+        text = (
+            "[ ] T Project id:proj_research\n"
+            "  [ ] T Literature_Review id:task_lit\n"
+        )
+
+        stdout, stderr, code = run_cli("filter", input_text=text)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(text, normalize_newlines(stdout))
+
+        stdout, stderr, code = run_cli("filter", "--canonical", input_text=text)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] T Project id:proj_research\n"
+            "[ ] T Literature_Review id:task_lit parent:proj_research\n",
+            normalize_newlines(stdout),
+        )
+
     def test_filter_one_sided_time_filter_ignores_floating_at(self):
         text = (
             "[ ] H Daily repeat:daily at:18:00\n"
@@ -1773,6 +1795,47 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertEqual("[ ] T First\n[N] N Second\n", normalize_newlines(stdout))
+
+    def test_from_json_canonical_outputs_explicit_parent_without_indent(self):
+        payload = [
+            {
+                "status": "[ ]",
+                "type": "T",
+                "title": "Project",
+                "details": {"id": ["proj_research"]},
+            },
+            {
+                "status": "[ ]",
+                "type": "T",
+                "title": "Literature Review",
+                "indent": 2,
+                "details": {"id": ["task_lit"]},
+            },
+        ]
+
+        stdout, stderr, code = run_cli("from-json", input_text=json.dumps(payload))
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] T Project id:proj_research\n"
+            '  [ ] T "Literature Review" id:task_lit\n',
+            normalize_newlines(stdout),
+        )
+
+        stdout, stderr, code = run_cli(
+            "from-json",
+            "--canonical",
+            input_text=json.dumps(payload),
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] T Project id:proj_research\n"
+            '[ ] T "Literature Review" id:task_lit parent:proj_research\n',
+            normalize_newlines(stdout),
+        )
 
 
 class LifeTxtArchiveCliTests(unittest.TestCase):

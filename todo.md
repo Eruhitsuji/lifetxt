@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x16)
+Last updated: 2026-06-27 (updated x17)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -39,11 +39,6 @@ real environments. Each item must be tested manually before the next release.
 
 Design decisions that affect the file format, parser, and all downstream tools.
 Resolve these before implementing features that depend on them.
-
-- [ ] Decide hierarchy representation: choose whether `parent:` (explicit) or
-  indentation (inferred) is the canonical form, and document the other as
-  derived. Define `--canonical` output for `filter` and `from-json` so that
-  round-tripped files have a predictable structure.
 
 - [ ] Define dependency semantics for `depends_on:` and `blocks:`: specify
   whether `check` warns when a task is marked done while a `depends_on:`
@@ -603,6 +598,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add parser edge-case tests: Unicode escaping, nested quotes, invalid
   `|` continuation variants, indentation with mixed spaces and tabs, and
   same-file duplicate-ID edge cases.
+
+- [ ] Add canonical hierarchy edge-case tests: `from-jsonl --canonical`,
+  `from-csv --canonical`, custom `ids.key`, a parent without an ID, and items
+  that already have explicit `parent:` details.
 
 - [ ] Add recurrence tests: occurrence expansion for all five simple repeat
   values, `interval:` / `until:` / `count:` edge cases, occurrence export

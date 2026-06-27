@@ -62,7 +62,7 @@ from .links import (
     reference_diagnostics,
 )
 from .markdown import markdown_to_html, markdown_to_plain
-from .model import Diagnostic
+from .model import Diagnostic, Item
 from .timeutil import parse_date_or_datetime
 from .notifier import (
     format_notification_table,
@@ -615,7 +615,7 @@ def build_parser():
     filter_command.add_argument(
         "--canonical",
         action="store_true",
-        help="Regenerate life.txt lines instead of preserving original item lines.",
+        help="Regenerate unindented life.txt lines with explicit parent: links where inferable.",
     )
     filter_command.set_defaults(func=command_filter)
 
@@ -815,16 +815,31 @@ def build_parser():
     from_json = subparsers.add_parser("from-json", help="Convert JSON to life.txt.")
     _add_input_paths(from_json)
     from_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    from_json.add_argument(
+        "--canonical",
+        action="store_true",
+        help="Write explicit parent: links and remove indentation from output.",
+    )
     from_json.set_defaults(func=command_from_json)
 
     from_jsonl = subparsers.add_parser("from-jsonl", help="Convert JSONL to life.txt.")
     _add_input_paths(from_jsonl)
     from_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    from_jsonl.add_argument(
+        "--canonical",
+        action="store_true",
+        help="Write explicit parent: links and remove indentation from output.",
+    )
     from_jsonl.set_defaults(func=command_from_jsonl)
 
     from_csv = subparsers.add_parser("from-csv", help="Convert CSV to life.txt.")
     _add_input_paths(from_csv)
     from_csv.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    from_csv.add_argument(
+        "--canonical",
+        action="store_true",
+        help="Write explicit parent: links and remove indentation from output.",
+    )
     from_csv.set_defaults(func=command_from_csv)
 
     assist = subparsers.add_parser(
@@ -2501,6 +2516,7 @@ def command_cleanup(args):
 def command_filter(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
+    id_key = id_key_from_config(_config(args))
 
     if args.format == "json":
         output = items_to_json(items, pretty=args.pretty)
@@ -2511,7 +2527,7 @@ def command_filter(args):
             output += "\n"
         write_text(args.output, output)
     else:
-        write_text(args.output, _items_to_life_text(items, canonical=args.canonical))
+        write_text(args.output, _items_to_life_text(items, canonical=args.canonical, key=id_key))
 
     _print_warnings(diagnostics)
     return 0
@@ -2635,17 +2651,32 @@ def command_agenda(args):
 
 def command_from_json(args):
     items = _items_from_json_paths(args.paths)
-    return _write_life_items(items, args.output)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
 
 
 def command_from_jsonl(args):
     items = _items_from_jsonl_paths(args.paths)
-    return _write_life_items(items, args.output)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
 
 
 def command_from_csv(args):
     items = _items_from_csv_paths(args.paths)
-    return _write_life_items(items, args.output)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
 
 
 def command_assist(args):
@@ -2757,15 +2788,17 @@ def command_assist_update(args):
     return 0
 
 
-def _write_life_items(items, output):
-    text = _validated_life_text_or_exit(items)
+def _write_life_items(items, output, canonical=False, key="id"):
+    text = _validated_life_text_or_exit(items, canonical=canonical, key=key)
     if text is None:
         return 1
     write_text(output, text)
     return 0
 
 
-def _validated_life_text_or_exit(items):
+def _validated_life_text_or_exit(items, canonical=False, key="id"):
+    if canonical:
+        items = _canonical_hierarchy_items(items, key=key)
     diagnostics = []
     lines = []
     for item in items:
@@ -2781,7 +2814,9 @@ def _validated_life_text_or_exit(items):
     return text
 
 
-def _items_to_life_text(items, canonical=False):
+def _items_to_life_text(items, canonical=False, key="id"):
+    if canonical:
+        items = _canonical_hierarchy_items(items, key=key)
     lines = []
     for item in items:
         if canonical:
@@ -2792,6 +2827,44 @@ def _items_to_life_text(items, canonical=False):
     if text:
         text += "\n"
     return text
+
+
+def _canonical_hierarchy_items(items, key="id"):
+    """Return item copies with explicit parent: links and no indentation."""
+    canonical = []
+    stack = []
+    for item in items:
+        cloned = _copy_item(item)
+        indent = int(getattr(item, "indent", 0) or 0)
+        while stack and stack[-1][0] >= indent:
+            stack.pop()
+
+        if indent > 0 and not cloned.details.get("parent") and stack:
+            parent = stack[-1][1]
+            parent_ids = parent.details.get(key, [])
+            if parent_ids:
+                cloned.details.setdefault("parent", []).append(parent_ids[0])
+
+        cloned.indent = 0
+        canonical.append(cloned)
+        stack.append((indent, cloned))
+    return canonical
+
+
+def _copy_item(item):
+    cloned = Item(
+        item.status,
+        item.kind,
+        item.title,
+        OrderedDict((key, list(values)) for key, values in item.details.items()),
+        line=item.line,
+        source_text=getattr(item, "source_text", None),
+        source=getattr(item, "source", None),
+        indent=getattr(item, "indent", 0),
+    )
+    if hasattr(item, "end_line"):
+        cloned.end_line = item.end_line
+    return cloned
 
 
 def format_id_audit(audit, only="all"):

@@ -154,9 +154,10 @@ less-indented ancestor that has the selected ID key, normally `id:`.
     [N] N Reading_Memo
 ```
 
-Machine-readable JSON includes an `indent` field for indented items. Life output
-preserves original lines by default; `--canonical` may expand inferred
-`parent:` details.
+Machine-readable JSON includes an `indent` field for indented items. The
+canonical hierarchy form is explicit `parent:`. Life output preserves original
+lines by default; `--canonical` writes unindented lines and keeps or adds
+explicit `parent:` details when the parent can be inferred.
 
 ### 2.5 Exit Codes
 
@@ -394,6 +395,14 @@ life.txt.
 python -m lifetxt from-json [path ...] [-o life.txt]
 ```
 
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input JSON file(s), or `-` for stdin |
+| `-o`, `--output` | Output life.txt file; defaults to stdout |
+| `--canonical` | Convert indented JSON records to explicit `parent:` links and write unindented life.txt |
+
 ### 4.4 `from-jsonl`
 
 Convert JSONL to life.txt.
@@ -401,6 +410,8 @@ Convert JSONL to life.txt.
 ```sh
 python -m lifetxt from-jsonl [path ...] [-o life.txt]
 ```
+
+`from-jsonl` accepts the same `-o` and `--canonical` options as `from-json`.
 
 ### 4.5 `to-csv`
 
@@ -423,6 +434,8 @@ array become repeated detail values.
 ```sh
 python -m lifetxt from-csv [path ...] [-o life.txt]
 ```
+
+`from-csv` also accepts `--canonical` for consistency with `from-json`.
 
 ### 4.7 `markdown`
 
@@ -626,11 +639,12 @@ Options:
 | `--format jsonl` | Output JSONL |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON output |
-| `--canonical` | Regenerate normalized life.txt lines instead of preserving original item lines |
+| `--canonical` | Regenerate normalized, unindented life.txt lines with explicit `parent:` links where inferable |
 
 Filter options are the same as the export filter options in section 4.8.
 With `--format life`, original matching item lines are preserved by default.
-Use `--canonical` when you want normalized quoting and spacing.
+Use `--canonical` when you want normalized quoting, spacing, and hierarchy
+represented as explicit `parent:` links rather than indentation.
 
 Examples:
 

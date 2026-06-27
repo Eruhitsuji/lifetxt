@@ -146,6 +146,8 @@ JSON / JSONL では、インデントされた item に `indent` field が含ま
 life output は既定で元の行を保持します。`--canonical` を使うと、推論された
 `parent:` が detail として展開される場合があります。
 
+階層の canonical form は明示的な `parent:` です。`--canonical` は indentation を除去し、推論できる場合は `parent:` を保持または追加します。
+
 ### 2.5 終了コード
 
 | Code | 意味 |
@@ -364,6 +366,8 @@ JSON item、JSON item 配列、または `{ "items": [...] }` を life.txt に�
 python -m lifetxt from-json [path ...] [-o life.txt]
 ```
 
+`--canonical` を指定すると、JSON の `indent` から推論できる階層を明示的な `parent:` に変換し、unindented な life.txt を出力します。
+
 ### 4.4 `from-jsonl`
 
 JSONL を life.txt に変換します。
@@ -371,6 +375,8 @@ JSONL を life.txt に変換します。
 ```sh
 python -m lifetxt from-jsonl [path ...] [-o life.txt]
 ```
+
+`from-jsonl` も `from-json` と同じ `--canonical` option を受け付けます。
 
 ### 4.5 `to-csv`
 
@@ -388,6 +394,8 @@ CSV を life.txt に戻します。CSV には `status`、`type`、`title` 列が
 ```sh
 python -m lifetxt from-csv [path ...] [-o life.txt]
 ```
+
+`from-csv` も `--canonical` を受け付けます。
 
 ### 4.7 `markdown`
 
@@ -574,11 +582,12 @@ python -m lifetxt filter [path ...] [filter options] [--format life|json|jsonl] 
 | `--format jsonl` | JSONL で出力 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
-| `--canonical` | 元行ではなく正規化した life.txt 行を再生成 |
+| `--canonical` | 元行ではなく、明示的な `parent:` を使う unindented life.txt 行を再生成 |
 
 filter option は 4.8 の export filter option と同じです。
 `--format life` では、一致した item の元行を既定で保持します。
 引用や空白を正規化したい場合は `--canonical` を使います。
+階層も正規化したい場合は `--canonical` を使います。出力では indentation を使わず、推論済みまたは明示済みの `parent:` を detail として書きます。
 
 例:
 

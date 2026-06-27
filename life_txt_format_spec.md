@@ -80,6 +80,27 @@ Use double quotes when a title or value contains spaces.
 
 Inside quoted strings, escape `"` as `\"` and `\` as `\\`.
 
+### 4.1 Line Continuation
+
+A physical line ending with a trailing backslash (`\`) is joined with the next
+physical line before parsing. This is intended for long item lines.
+
+```txt
+[ ] T Write_Report \
+  due:2026-06-12 project:research
+```
+
+The joined logical line is parsed as:
+
+```txt
+[ ] T Write_Report due:2026-06-12 project:research
+```
+
+Whitespace after the trailing backslash is ignored. Leading spaces on the
+continued line are stripped. A bare trailing backslash at the end of the file is
+an error. A backslash-continued item line must not continue into a `|` body
+continuation line; use normal `|` body lines after a complete item line instead.
+
 ## 5. Details
 
 Details must use `key:value`.
@@ -167,6 +188,16 @@ quotes. External IDs such as iCalendar UIDs may contain symbols like `@`.
 Reference values point to the selected ID key, normally `id:`. Tools should
 warn when a reference has no target, points to the same item, or creates a
 cycle through `parent:`.
+
+When a command loads multiple life.txt files in one invocation, references are
+resolved against the whole loaded input set. For example, `parent:task_001` in
+`team.life.txt` may point to `id:task_001` in `life.txt` if both files are
+passed to the same command or loaded through config paths. Converters that
+emit JSON or JSONL include source metadata for file-backed input records:
+`_source_file`, `_source_line`, and, for multi-line records,
+`_source_end_line`. These `_source_*` fields are command output metadata, not
+life.txt detail keys, and `from-json` / `from-jsonl` ignore them when writing
+life.txt back.
 
 ### 7.3 People Keys
 
@@ -326,7 +357,8 @@ For `repeat:RRULE:...`, the built-in subset reads `FREQ`, `INTERVAL`, `COUNT`,
 and `UNTIL`; `BYDAY` is supported for `FREQ=DAILY` and `FREQ=WEEKLY`. `UNTIL`
 may use life.txt datetime syntax or iCalendar basic forms such as `20260630`
 and `20260630T090000`. More complex RRULE features are preserved as text but
-are not expanded by the dependency-free core.
+are not expanded by the dependency-free core. `check` emits recurrence warning
+`W223` when it detects unsupported RRULE features.
 
 ## 9. Type-Specific Recommended Keys
 

@@ -107,6 +107,27 @@ config の `ids.key` / `api.id_key` により、`id:` 以外の detail key を I
 
 引用文字列内では `"` を `\"`、`\` を `\\` としてエスケープします。
 
+### 4.2 line continuation
+
+物理行の末尾が backslash (`\`) の場合、次の物理行と結合してから parser に渡します。
+長い item 行を分割するための構文です。
+
+```txt
+[ ] T Write_Report \
+  due:2026-06-12 project:research
+```
+
+これは次の logical line として解釈されます。
+
+```txt
+[ ] T Write_Report due:2026-06-12 project:research
+```
+
+末尾 backslash の後の空白は無視され、継続先行の先頭 space は取り除かれます。
+ファイル末尾の bare backslash は error です。backslash で継続した item 行を
+`|` body continuation line へ直接つなげることはできません。body は complete な
+item 行の後に通常の `|` 行として書きます。
+
 ## 5. details
 
 detail は必ず `key:value` 形式です。
@@ -182,6 +203,8 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 | `related` | 弱い関連 item | `related:note_001` |
 
 参照値は通常 `id:` を指します。config で `ids.key` / `api.id_key` を変更した場合は、その key を ID として扱います。存在しない参照、自己参照、`parent:` cycle は warning として報告されます。
+
+複数の life.txt ファイルを 1 回の command invocation で読み込む場合、参照は読み込まれた入力全体に対して解決されます。たとえば `team.life.txt` の `parent:task_001` は、同じ command に `life.txt` も渡されていれば `life.txt` 内の `id:task_001` を参照できます。JSON / JSONL を出力する converter は、ファイル由来の record に `_source_file`、`_source_line`、複数行 record では `_source_end_line` を含めます。これらの `_source_*` field は command output の metadata であり、life.txt の detail key ではありません。`from-json` / `from-jsonl` は life.txt に戻すときに無視します。
 
 ### 7.3 People keys
 
@@ -319,6 +342,8 @@ time filter では一致対象にしません。`repeat:RRULE:...` では `FREQ`
 `BYDAY` も利用できます。`UNTIL` は life.txt の datetime 構文または
 `20260630`、`20260630T090000` のような iCalendar basic 形式を使えます。
 より複雑な RRULE は text として保持しますが、dependency-free core では展開しません。
+`check` は対応外の RRULE feature を検出した場合、recurrence warning `W223`
+を出します。
 
 ## 9. type 別 recommended keys
 

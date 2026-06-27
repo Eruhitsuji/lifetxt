@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from .ids import id_value_is_safe
 from .model import (
@@ -27,6 +28,11 @@ from .timeutil import (
 
 
 _KEY_STYLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+_RRULE_PREFIX = "RRULE:"
+_SUPPORTED_RRULE_KEYS = set(("FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY"))
+_SUPPORTED_RRULE_FREQS = set(("DAILY", "WEEKLY", "MONTHLY", "YEARLY"))
+_SUPPORTED_RRULE_BYDAY_FREQS = set(("DAILY", "WEEKLY"))
+_RRULE_WEEKDAYS = set(("MO", "TU", "WE", "TH", "FR", "SA", "SU"))
 
 
 def validate_item(item):
@@ -196,6 +202,8 @@ def _validate_value(item, key, value):
                     item.line,
                 )
             )
+        elif value.startswith("RRULE:"):
+            diagnostics.extend(_validate_rrule_value(item, value))
     elif key in ("interval", "count"):
         if not _is_positive_integer(value):
             diagnostics.append(
@@ -229,6 +237,113 @@ def _validate_value(item, key, value):
                 )
             )
     return diagnostics
+
+
+def _validate_rrule_value(item, value):
+    diagnostics = []
+    parts = _parse_rrule_parts(value)
+    freq = parts.get("FREQ")
+
+    if not freq:
+        diagnostics.append(_rrule_warning(item, "RRULE is missing FREQ."))
+    elif freq not in _SUPPORTED_RRULE_FREQS:
+        diagnostics.append(
+            _rrule_warning(
+                item,
+                "RRULE FREQ=%s is stored but not expanded by the dependency-free core." % freq,
+            )
+        )
+
+    unsupported = sorted(set(parts.keys()) - _SUPPORTED_RRULE_KEYS)
+    if unsupported:
+        diagnostics.append(
+            _rrule_warning(
+                item,
+                "RRULE keys are stored but not expanded by the dependency-free core: %s."
+                % ", ".join(unsupported),
+            )
+        )
+
+    if "INTERVAL" in parts and not _is_positive_integer(parts["INTERVAL"]):
+        diagnostics.append(_rrule_warning(item, "RRULE INTERVAL should be a positive integer."))
+
+    if "COUNT" in parts and not _is_positive_integer(parts["COUNT"]):
+        diagnostics.append(_rrule_warning(item, "RRULE COUNT should be a positive integer."))
+
+    if "UNTIL" in parts and not _is_rrule_until(parts["UNTIL"]):
+        diagnostics.append(
+            _rrule_warning(
+                item,
+                "RRULE UNTIL should use life.txt datetime syntax or iCalendar basic date/datetime.",
+            )
+        )
+
+    if "BYDAY" in parts:
+        byday_warning = _rrule_byday_warning(freq, parts["BYDAY"])
+        if byday_warning:
+            diagnostics.append(_rrule_warning(item, byday_warning))
+
+    return diagnostics
+
+
+def _parse_rrule_parts(value):
+    text = str(value or "")
+    if text.startswith(_RRULE_PREFIX):
+        text = text[len(_RRULE_PREFIX):]
+    parts = {}
+    for raw_part in text.split(";"):
+        if "=" not in raw_part:
+            continue
+        key, raw_value = raw_part.split("=", 1)
+        key = key.strip().upper()
+        if key:
+            parts[key] = raw_value.strip().upper()
+    return parts
+
+
+def _is_rrule_until(value):
+    if parse_date_or_datetime(value, is_end=True) is not None:
+        return True
+    text = str(value or "").strip().upper()
+    if re.match(r"^\d{8}$", text):
+        fmt = "%Y%m%d"
+    elif re.match(r"^\d{8}T\d{6}Z$", text):
+        fmt = "%Y%m%dT%H%M%SZ"
+    elif re.match(r"^\d{8}T\d{6}[+-]\d{4}$", text):
+        fmt = "%Y%m%dT%H%M%S%z"
+    elif re.match(r"^\d{8}T\d{6}$", text):
+        fmt = "%Y%m%dT%H%M%S"
+    else:
+        return False
+    try:
+        datetime.strptime(text, fmt)
+    except ValueError:
+        return False
+    return True
+
+
+def _rrule_byday_warning(freq, value):
+    if freq and freq not in _SUPPORTED_RRULE_BYDAY_FREQS:
+        return "RRULE BYDAY is expanded only for FREQ=DAILY or FREQ=WEEKLY."
+    for raw_part in str(value or "").split(","):
+        code = raw_part.strip().upper()
+        if not code:
+            return "RRULE BYDAY should list weekday codes such as MO,WE,FR."
+        if len(code) != 2 or code not in _RRULE_WEEKDAYS:
+            return (
+                "RRULE BYDAY supports only plain weekday codes such as MO,WE,FR; "
+                "positional values such as 1MO are stored but not expanded."
+            )
+    return None
+
+
+def _rrule_warning(item, message):
+    return Diagnostic(
+        "warning",
+        "W223",
+        message,
+        item.line,
+    )
 
 
 def _validate_event_range(item):

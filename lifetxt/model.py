@@ -317,6 +317,13 @@ class Item(object):
         for key, values in self.details.items():
             details[key] = list(values)
         data["details"] = details
+        if self.source is not None:
+            data["_source_file"] = self.source
+            if self.line is not None:
+                data["_source_line"] = self.line
+            end_line = getattr(self, "end_line", self.line)
+            if end_line is not None and end_line != self.line:
+                data["_source_end_line"] = end_line
         return data
 
 

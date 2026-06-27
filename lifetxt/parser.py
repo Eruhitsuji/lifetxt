@@ -11,9 +11,11 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
 
     Returns ``(items, diagnostics)``. Blank lines and comment lines are ignored.
     Lines that start with ``|`` continue the previous item as a multiline
-    ``body:`` detail. Item lines may be indented with spaces to express a
-    visual hierarchy; when possible, the parser adds an implicit ``parent:``
-    detail that points to the nearest less-indented ancestor's ID.
+    ``body:`` detail. A trailing ``\`` joins the following physical line into
+    the current logical line before parsing. Item lines may be indented with
+    spaces to express a visual hierarchy; when possible, the parser adds an
+    implicit ``parent:`` detail that points to the nearest less-indented
+    ancestor's ID.
     """
     items = []
     diagnostics = []
@@ -31,7 +33,10 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
         current_item = None
         current_has_error = False
 
-    for line_no, line in enumerate(text.splitlines(), 1):
+    logical_lines, continuation_diagnostics = _logical_lines(text)
+    diagnostics.extend(continuation_diagnostics)
+
+    for line_no, end_line, line in logical_lines:
         leading_spaces = len(line) - len(line.lstrip(" "))
         stripped_line = line[leading_spaces:]
         if stripped_line.startswith("|"):
@@ -47,7 +52,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                 )
                 continue
             _append_body_continuation(current_item, stripped_line)
-            current_item.end_line = line_no
+            current_item.end_line = end_line
             if current_item.source_text is None:
                 current_item.source_text = line
             else:
@@ -60,7 +65,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
         if item is not None:
             _apply_hierarchy(item, hierarchy_stack, diagnostics, id_key)
             finish_current()
-            item.end_line = line_no
+            item.end_line = end_line
             current_item = item
             current_has_error = _has_error(line_diagnostics)
             _push_hierarchy_item(item, hierarchy_stack)
@@ -73,6 +78,57 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
     if check_references:
         diagnostics.extend(reference_diagnostics(items, key=id_key))
     return items, diagnostics
+
+
+def _logical_lines(text):
+    diagnostics = []
+    physical_lines = text.splitlines()
+    logical_lines = []
+    index = 0
+    while index < len(physical_lines):
+        start_line = index + 1
+        end_line = start_line
+        current = physical_lines[index]
+        parts = []
+
+        while True:
+            stripped_trailing = current.rstrip(" ")
+            if stripped_trailing.endswith("\\"):
+                parts.append(stripped_trailing[:-1])
+                if index + 1 >= len(physical_lines):
+                    diagnostics.append(
+                        Diagnostic(
+                            "error",
+                            "E020",
+                            "Line continuation backslash must be followed by another line.",
+                            end_line,
+                            len(stripped_trailing),
+                        )
+                    )
+                    break
+
+                index += 1
+                end_line = index + 1
+                current = physical_lines[index].lstrip(" ")
+                if current.startswith("|"):
+                    diagnostics.append(
+                        Diagnostic(
+                            "error",
+                            "E021",
+                            "Line continuation cannot continue into a body continuation line.",
+                            end_line,
+                            1,
+                        )
+                    )
+                continue
+
+            parts.append(current)
+            break
+
+        logical_lines.append((start_line, end_line, "".join(parts)))
+        index += 1
+
+    return logical_lines, diagnostics
 
 
 def parse_line(line, line_no=1):

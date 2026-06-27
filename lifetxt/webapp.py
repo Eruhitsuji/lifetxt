@@ -1404,6 +1404,23 @@ HTML_PAGE = r"""<!doctype html>
       border-radius: .45rem;
       background: var(--soft);
     }
+    .markdown table {
+      width: 100%;
+      margin: .45rem 0 0;
+      border-collapse: collapse;
+      font-size: .9rem;
+      overflow-wrap: normal;
+    }
+    .markdown th,
+    .markdown td {
+      padding: .35rem .45rem;
+      border: 1px solid var(--line);
+      vertical-align: top;
+    }
+    .markdown th {
+      background: var(--soft);
+      font-weight: 700;
+    }
     .markdown a { color: var(--accent); }
     .body-preview {
       margin-top: .35rem;

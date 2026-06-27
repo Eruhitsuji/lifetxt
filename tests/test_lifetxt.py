@@ -43,6 +43,48 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertEqual(1, len(items))
         self.assertTrue(any(d.code == "E010" for d in diagnostics))
 
+    def test_line_continuation_joins_next_line(self):
+        text = (
+            "[ ] T Write_Report \\\n"
+            "  due:2026-06-12 project:research\n"
+        )
+
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(1, len(items))
+        self.assertEqual(1, items[0].line)
+        self.assertEqual(2, items[0].end_line)
+        self.assertEqual(["2026-06-12"], items[0].details["due"])
+        self.assertEqual(
+            "[ ] T Write_Report due:2026-06-12 project:research",
+            item_to_line(items[0]),
+        )
+
+    def test_line_continuation_strips_trailing_and_leading_whitespace(self):
+        text = (
+            "[ ] T Review \\   \n"
+            "    due:2026-06-12\n"
+        )
+
+        items, diagnostics = parse_text(text)
+
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(["2026-06-12"], items[0].details["due"])
+
+    def test_line_continuation_at_eof_reports_error(self):
+        _items, diagnostics = parse_text("[ ] T Broken \\")
+
+        self.assertTrue(any(d.code == "E020" for d in diagnostics))
+
+    def test_line_continuation_into_body_reports_error(self):
+        _items, diagnostics = parse_text(
+            "[ ] T Broken \\\n"
+            "| body\n"
+        )
+
+        self.assertTrue(any(d.code == "E021" for d in diagnostics))
+
     def test_jsonl_round_trip(self):
         text = (
             "[ ] T Write_Report due:2026-06-12 tag:report tag:important\n"
@@ -236,13 +278,17 @@ class LifeTxtParserTests(unittest.TestCase):
             "| Name | Score |\n"
             "|------|-------|\n"
             "| Alice | 10 |\n"
+            "| Bob | 200 |\n"
         )
         result = markdown_to_plain(md)
 
-        self.assertIn("Name", result)
-        self.assertIn("Alice", result)
-        self.assertNotIn("---", result)
-        self.assertNotIn("|", result)
+        self.assertEqual(
+            "| Name  | Score |\n"
+            "| ----- | ----- |\n"
+            "| Alice | 10    |\n"
+            "| Bob   | 200   |",
+            result,
+        )
 
     def test_markdown_table_header_only_no_sep_renders_as_paragraphs(self):
         from lifetxt.markdown import markdown_to_html
@@ -284,6 +330,36 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn("<strong>Done</strong>", data[0]["html"])
         self.assertIn("<li>Parser</li>", data[0]["html"])
 
+    def test_markdown_cli_text_preserves_table_shape(self):
+        stdout, stderr, code = run_cli(
+            "markdown",
+            "--format",
+            "text",
+            "--field",
+            "body",
+            input_text=(
+                '[N] J "Table day"\n'
+                "| | Name | Score |\n"
+                "| |------|-------|\n"
+                "| | Alice | 10 |\n"
+                "| | Bob | 200 |\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("| Name  | Score |", normalized)
+        self.assertIn("| ----- | ----- |", normalized)
+        self.assertIn("| Alice | 10    |", normalized)
+        self.assertIn("| Bob   | 200   |", normalized)
+
+    def test_webapp_markdown_css_includes_table_rules(self):
+        from lifetxt import webapp
+
+        self.assertIn(".markdown table", webapp.HTML_PAGE)
+        self.assertIn("border-collapse: collapse", webapp.HTML_PAGE)
+
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
             "[ ] E Call from:2026-06-06T09:00:30.25+09:00 "
@@ -303,6 +379,43 @@ class LifeTxtParserTests(unittest.TestCase):
 
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
         self.assertFalse(any(d.code in ("W203", "W205", "W219") for d in diagnostics))
+
+    def test_supported_rrule_subset_has_no_warning(self):
+        _items, diagnostics = parse_text(
+            "[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3 "
+            "from:2026-06-01T09:00 to:2026-06-01T10:00\n"
+        )
+
+        self.assertFalse(any(d.code == "W223" for d in diagnostics))
+
+    def test_unsupported_rrule_features_warn_w223(self):
+        _items, diagnostics = parse_text(
+            "[ ] H Hourly repeat:RRULE:FREQ=HOURLY at:09:00\n"
+            "[ ] H Positional repeat:RRULE:FREQ=MONTHLY;BYDAY=1MO at:09:00\n"
+            "[ ] H MonthFilter repeat:RRULE:FREQ=WEEKLY;BYMONTH=6 at:09:00\n"
+            "[ ] H BadCount repeat:RRULE:FREQ=DAILY;COUNT=zero at:09:00\n"
+        )
+
+        warnings = [d for d in diagnostics if d.code == "W223"]
+        self.assertGreaterEqual(len(warnings), 4)
+        messages = "\n".join(d.message for d in warnings)
+        self.assertIn("FREQ=HOURLY", messages)
+        self.assertIn("BYDAY", messages)
+        self.assertIn("BYMONTH", messages)
+        self.assertIn("COUNT", messages)
+
+    def test_check_cli_rrule_warning_is_recurrence_category(self):
+        stdout, stderr, code = run_cli(
+            "check",
+            "--category",
+            "recurrence",
+            input_text="[ ] H Hourly repeat:RRULE:FREQ=HOURLY at:09:00\n",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("W223", stdout)
+        self.assertIn("FREQ=HOURLY", stdout)
 
     def test_id_style_warning(self):
         _items, diagnostics = parse_text('[ ] T Bad_ID id:"bad id"\n')
@@ -1438,6 +1551,102 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual(0, code)
             data = json.loads(stdout)
             self.assertEqual(["First", "Second"], [entry["title"] for entry in data])
+
+    def test_to_json_records_source_metadata_for_file_inputs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Root id:task_root\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Child id:task_child parent:task_root\n")
+
+            stdout, stderr, code = run_cli(
+                "to-json",
+                first_path,
+                second_path,
+                "--pretty",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            by_title = {entry["title"]: entry for entry in data}
+            self.assertEqual(
+                "first.life.txt",
+                os.path.basename(by_title["Root"]["_source_file"]),
+            )
+            self.assertEqual(1, by_title["Root"]["_source_line"])
+            self.assertEqual(
+                "second.life.txt",
+                os.path.basename(by_title["Child"]["_source_file"]),
+            )
+            self.assertEqual(1, by_title["Child"]["_source_line"])
+
+    def test_to_jsonl_records_source_metadata_for_single_file_input(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_001\n")
+
+            stdout, stderr, code = run_cli("to-jsonl", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            rows = [json.loads(line) for line in stdout.splitlines()]
+            self.assertEqual(1, len(rows))
+            self.assertEqual("life.txt", os.path.basename(rows[0]["_source_file"]))
+            self.assertEqual(1, rows[0]["_source_line"])
+
+    def test_check_cli_resolves_references_across_input_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Root id:task_root\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Child id:task_child parent:task_root depends_on:task_root\n")
+
+            stdout, stderr, code = run_cli("check", first_path, second_path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertNotIn("W215", stdout)
+
+            stdout, stderr, code = run_cli("check", second_path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("WARNING W215", stdout)
+            self.assertIn(os.path.basename(second_path), stdout)
+
+    def test_links_cli_reports_cross_file_source_locations(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = os.path.join(temp_dir, "first.life.txt")
+            second_path = os.path.join(temp_dir, "second.life.txt")
+            with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Root id:task_root\n")
+            with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Child id:task_child parent:task_root\n")
+
+            stdout, stderr, code = run_cli(
+                "links",
+                first_path,
+                second_path,
+                "--id",
+                "task_root",
+                "--direction",
+                "incoming",
+                "--format",
+                "json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            data = json.loads(stdout)
+            self.assertEqual(1, len(data))
+            self.assertIn(os.path.basename(second_path), data[0]["source_location"])
+            self.assertIn(os.path.basename(first_path), data[0]["target_location"])
 
     def test_sources_cli_reports_source_ownership(self):
         with tempfile.TemporaryDirectory() as temp_dir:

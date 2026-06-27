@@ -109,7 +109,8 @@ type life.txt | python -m lifetxt check
 ```
 
 path を省略するか `-` を指定した場合、標準入力から読み込みます。
-複数の入力 path を指定した場合、診断には line / column の前に source path が付きます。
+ファイル入力の場合、診断には line / column の前に source path が付きます。
+stdin のみの場合は source path を省略します。
 
 ### 2.2 出力 path
 
@@ -188,6 +189,17 @@ command 対応表:
 | `completion` | no | 任意の script output | no | no |
 | `serve` | yes | API/UI 経由で yes | yes | URL/API filter |
 
+### 2.x format compatibility note
+
+life.txt の detail は file 内では `key:value` です。`key=value` は `assist`
+などの helper input でのみ受け付けます。行末の `\` は次の物理行と結合され、
+`check`、`filter`、`agenda`、converter などすべての読み取り系 command で
+同じ logical-line parser により扱われます。
+
+### 2.y Cross-file input set
+
+1 回の command で読み込まれたファイル群は、ID check と reference 解決では 1 つの logical input set として扱われます。`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` は、同時に読み込まれた任意のファイル内の ID を参照できます。cross-file reference を解決したい場合は、関連ファイルをすべて path / glob / config paths で渡してください。
+
 ## 3. `check`
 
 life.txt の構文と意味的なルールを検査します。
@@ -224,7 +236,7 @@ Category:
 | `message` | message item sender/recipient/notification rule |
 | `id` | duplicate ID と unsafe ID-like value |
 | `reference` | missing/self/cyclic/ambiguous reference |
-| `recurrence` | `repeat:`、`interval:`、`count:` recommendation |
+| `recurrence` | `repeat:`、`RRULE:`、`interval:`、`count:` recommendation |
 | `workflow` | status/detail workflow recommendation |
 | `semantic` | 上記に含まれない semantic diagnostic |
 
@@ -332,6 +344,8 @@ python -m lifetxt to-json [path ...] [-o output.json] [--pretty] [filter options
 | `--pretty` | JSON を整形して出力 |
 | `filter options` | `filter` と同じ item filter |
 
+ファイル由来の入力では、各 JSON object に `_source_file` と `_source_line` が含まれます。複数行 record では `_source_end_line` も含まれます。これらは tool 用 metadata であり、`from-json` では life.txt の detail key として扱われません。
+
 ### 4.2 `to-jsonl`
 
 life.txt を JSONL へ変換します。
@@ -339,6 +353,8 @@ life.txt を JSONL へ変換します。
 ```sh
 python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [filter options]
 ```
+
+JSONL の各行は `to-json` と同じ shape で、ファイル由来の入力では `_source_file` と line metadata を含みます。
 
 ### 4.3 `from-json`
 

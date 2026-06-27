@@ -2190,7 +2190,7 @@ def _parse_life_inputs(paths, config=None):
             check_ids=False,
             check_references=False,
         )
-        if include_source:
+        if include_source or path != "-":
             source = "stdin" if path == "-" else path
             _set_source(path_items, path_diagnostics, source)
         items.extend(path_items)
@@ -2598,7 +2598,7 @@ def diagnostic_category(diagnostic):
         return "style"
     if code in ("W201", "W202", "W203", "W204", "W206"):
         return "time"
-    if code in ("W205", "W219"):
+    if code in ("W205", "W219", "W223"):
         return "recurrence"
     if code in ("W213", "W214"):
         return "id"

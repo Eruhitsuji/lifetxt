@@ -111,8 +111,14 @@ type life.txt | python -m lifetxt check
 ```
 
 If paths are omitted or the path is `-`, the command reads from stdin.
-When multiple input paths are used, diagnostics include the source path before
-the line and column number.
+When input comes from files, diagnostics include the source path before the line
+and column number. Stdin-only diagnostics omit the source path.
+
+All files loaded by one command form one logical input set for ID checks and
+references. `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` can
+point to IDs in any loaded file. Commands such as `check`, `links`, `ids`,
+`to-json`, and `to-jsonl` use this same input set, so pass every related file
+or configure shared paths when you want cross-file references to resolve.
 
 ### 2.2 Output Paths
 
@@ -169,6 +175,8 @@ compatibility rules are:
 - `key:value` is the only detail syntax in a life.txt file.
 - `key=value` is accepted only by helper inputs such as `assist -d`,
   `assist --add-detail`, and the interactive detail prompt.
+- A trailing `\` joins the following physical line before parsing; all reading
+  commands use this same logical-line parser.
 - JSON and JSONL details are always arrays, even when the item has only one
   value for a key.
 - CSV conversion requires `status`, `type`, and `title` columns. Other non-empty
@@ -242,7 +250,7 @@ Categories:
 | `message` | Message item sender/recipient/notification rules |
 | `id` | Duplicate IDs and unsafe ID-like values |
 | `reference` | Missing, self, cyclic, or ambiguous references |
-| `recurrence` | `repeat:`, `interval:`, and `count:` recommendations |
+| `recurrence` | `repeat:`, `RRULE:`, `interval:`, and `count:` recommendations |
 | `workflow` | Status/detail workflow recommendations |
 | `semantic` | Fallback category for semantic diagnostics not covered above |
 
@@ -362,6 +370,10 @@ Options:
 | `--pretty` | Pretty-print JSON |
 | `filter options` | Same item filters as `filter` |
 
+For file-backed input, each item object includes `_source_file` and
+`_source_line`. Multi-line records also include `_source_end_line`. These
+fields are metadata for tools and are ignored by `from-json`.
+
 ### 4.2 `to-jsonl`
 
 Convert life.txt to JSONL.
@@ -369,6 +381,9 @@ Convert life.txt to JSONL.
 ```sh
 python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [filter options]
 ```
+
+JSONL rows use the same shape as `to-json`, including `_source_file` and line
+metadata when the input came from a file.
 
 ### 4.3 `from-json`
 

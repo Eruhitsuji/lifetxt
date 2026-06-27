@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x12)
+Last updated: 2026-06-27 (updated x14)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -33,31 +33,12 @@ real environments. Each item must be tested manually before the next release.
   in compact form (`25m`, `1h30m`) and that pause/resume accumulates time
   correctly across multiple sessions.
 
-- [ ] Fix Markdown table rendering: investigate and resolve broken table display
-  in `--format text` CLI output and the browser GUI (misaligned columns, missing
-  separator lines, or renderer mismatch between the CLI rich library and the
-  Web UI). Add a regression test once fixed.
-
 ---
 
 ## P1: Format Semantics
 
 Design decisions that affect the file format, parser, and all downstream tools.
 Resolve these before implementing features that depend on them.
-
-- [ ] Add line continuation syntax: a trailing `\` at the end of a line joins
-  the next line as if they were one, following shell convention (bash/zsh
-  style). Specify: whitespace handling at the join point (strip leading
-  whitespace of the continuation line), error for a bare `\` at end of file,
-  and interaction with `|` body-continuation lines (a `\`-continued line may
-  not itself begin a `|` block).
-
-- [ ] Define cross-file ID reference semantics: `parent:`, `ref:`,
-  `depends_on:`, `blocks:`, and `related:` must be resolvable across all files
-  loaded in a single command invocation, not only within one file. Specify:
-  how the source file is recorded in JSON/JSONL output (`_source_file` field),
-  how `check` and `links` report unresolved cross-file references, and how
-  `ids --assign` avoids collisions across all loaded files.
 
 - [ ] Decide hierarchy representation: choose whether `parent:` (explicit) or
   indentation (inferred) is the canonical form, and document the other as
@@ -81,11 +62,10 @@ Resolve these before implementing features that depend on them.
   and `J` journal entries should also record elapsed time, and add
   type-specific guidance to the spec.
 
-- [ ] Extend recurrence expansion: `repeat:` and `RRULE:` are currently
-  expanded only in `agenda` and time filters. Specify expansion behavior for
-  `stats`, `filter --after/--before`, occurrence exports (JSON/JSONL/CSV/
-  life.txt), and Web API/UI. Define diagnostics for unsupported `RRULE:`
-  features so users know when a rule is stored as text but not expanded.
+- [ ] Extend recurrence expansion beyond `agenda` and shared time filters:
+  specify expansion behavior for `stats`, occurrence exports (JSON/JSONL/CSV/
+  life.txt), and Web API/UI. Define how generated occurrences should be
+  represented without confusing them with stored source items.
 
 - [ ] Define encryption metadata conventions: specify whether encrypted field
   values are stored inline as a tagged string (e.g., `note:enc:AES256GCM:BASE64`)
@@ -663,15 +643,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `projects/**/*.life.txt` across all file-reading commands.
 
 - [ ] Add parser edge-case tests: Unicode escaping, nested quotes, invalid
-  `|` continuation (no preceding item), indentation with mixed spaces and
-  tabs, duplicate IDs in the same file and across files, and missing
-  cross-file references.
+  `|` continuation variants, indentation with mixed spaces and tabs, and
+  same-file duplicate-ID edge cases.
 
 - [ ] Add recurrence tests: occurrence expansion for all five simple repeat
-  values, `interval:` and `until:` and `count:` constraints, unsupported
-  RRULE features (verify diagnostic is emitted, not a crash), and long-range
-  expansion performance (10 years of daily recurrence must complete under
-  500 ms).
+  values, `interval:` / `until:` / `count:` edge cases, occurrence export
+  shapes, and long-range expansion performance (10 years of daily recurrence
+  must complete under 500 ms).
 
 - [ ] Add duration normalization tests (W222): bare integers, `1h00m`,
   `1.5h`, and unrecognized formats.
@@ -693,10 +671,6 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Verify packaging on a clean environment: `pip install -e .`, optional
   extras (`[web]`, `[crypto]`, `[plot]`), console script entry points, and
   Windows PowerShell usage.
-
-- [ ] Add parser tests for `\` line continuation: mid-line join, trailing
-  whitespace stripping, bare `\` at EOF (error), and interaction with `|`
-  body-continuation lines.
 
 - [ ] Add `archive` tests: structure-preserving mode (comments in both files,
   empty sections retained), all three `--orphan-children` modes, `--dry-run`

@@ -29,7 +29,12 @@ def markdown_to_plain(text):
     text = "" if text is None else str(text)
     text = _strip_fence_markers(text)
     text = re.sub(r"(?m)^#{1,3}\s+", "", text)
-    text = _strip_table_markers(text)
+    text = _strip_inline_markers(text)
+    text = _render_plain_tables(text)
+    return text
+
+
+def _strip_inline_markers(text):
     text = _LINK_RE.sub(lambda match: match.group(1), text)
     text = _CODE_RE.sub(lambda match: match.group(1), text)
     text = _BOLD_RE.sub(lambda match: match.group(1), text)
@@ -215,9 +220,50 @@ def _strip_fence_markers(text):
     return "\n".join(lines)
 
 
-def _strip_table_markers(text):
+def _render_plain_tables(text):
     result = []
+    table_lines = []
+
+    def flush_table():
+        if table_lines:
+            result.extend(_render_plain_table_lines(table_lines))
+            table_lines[:] = []
+
     for line in text.splitlines():
+        if _TABLE_ROW_RE.match(line):
+            table_lines.append(line)
+            continue
+        flush_table()
+        result.append(line)
+    flush_table()
+    return "\n".join(result)
+
+
+def _render_plain_table_lines(table_lines):
+    if len(table_lines) < 2 or not _is_separator_row(table_lines[1]):
+        return _strip_pipe_lines(table_lines)
+
+    rows = [_parse_table_cells(table_lines[0])] + [
+        _parse_table_cells(line) for line in table_lines[2:]
+    ]
+    sep_cells = _parse_table_cells(table_lines[1])
+    column_count = max([len(sep_cells)] + [len(row) for row in rows])
+    alignments = _table_alignments(sep_cells, column_count)
+    normalized = [_pad_row(row, column_count) for row in rows]
+    widths = []
+    for index in range(column_count):
+        widths.append(max(3, max(len(row[index]) for row in normalized)))
+
+    output = [_format_plain_table_row(normalized[0], widths, alignments)]
+    output.append(_format_plain_table_separator(widths))
+    for row in normalized[1:]:
+        output.append(_format_plain_table_row(row, widths, alignments))
+    return output
+
+
+def _strip_pipe_lines(lines):
+    result = []
+    for line in lines:
         stripped = line.strip()
         if not stripped.startswith("|"):
             result.append(line)
@@ -226,7 +272,7 @@ def _strip_table_markers(text):
         if all(_TABLE_SEP_CELL_RE.match(c) for c in cells if c):
             continue  # drop separator rows
         result.append("  ".join(c for c in cells if c))
-    return "\n".join(result)
+    return result
 
 
 def _is_separator_row(line):
@@ -245,16 +291,7 @@ def _render_table(table_lines):
         )
 
     sep_cells = _parse_table_cells(table_lines[1])
-    alignments = []
-    for cell in sep_cells:
-        if cell.startswith(":") and cell.endswith(":"):
-            alignments.append("center")
-        elif cell.endswith(":"):
-            alignments.append("right")
-        elif cell.startswith(":"):
-            alignments.append("left")
-        else:
-            alignments.append(None)
+    alignments = _table_alignments(sep_cells, len(sep_cells))
 
     def cell_style(i):
         align = alignments[i] if i < len(alignments) else None
@@ -277,3 +314,44 @@ def _render_table(table_lines):
 
     parts.append("</table>")
     return "\n".join(parts)
+
+
+def _table_alignments(sep_cells, column_count):
+    alignments = []
+    for index in range(column_count):
+        cell = sep_cells[index] if index < len(sep_cells) else ""
+        if cell.startswith(":") and cell.endswith(":"):
+            alignments.append("center")
+        elif cell.endswith(":"):
+            alignments.append("right")
+        elif cell.startswith(":"):
+            alignments.append("left")
+        else:
+            alignments.append(None)
+    return alignments
+
+
+def _pad_row(row, column_count):
+    padded = list(row)
+    while len(padded) < column_count:
+        padded.append("")
+    return padded[:column_count]
+
+
+def _format_plain_table_row(row, widths, alignments):
+    cells = []
+    for index, value in enumerate(row):
+        cells.append(_align_plain_cell(value, widths[index], alignments[index]))
+    return "| " + " | ".join(cells) + " |"
+
+
+def _format_plain_table_separator(widths):
+    return "| " + " | ".join("-" * width for width in widths) + " |"
+
+
+def _align_plain_cell(value, width, alignment):
+    if alignment == "right":
+        return value.rjust(width)
+    if alignment == "center":
+        return value.center(width)
+    return value.ljust(width)

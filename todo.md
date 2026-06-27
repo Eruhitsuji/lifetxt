@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x22)
+Last updated: 2026-06-27 (updated x23)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -185,6 +185,8 @@ CLI-native charts without external dependencies.
 
 ## P1: Web API / Browser UI
 
+### API Stability & Security
+
 - [ ] Standardize API error responses: every error must return a stable JSON
   body `{"error": CODE, "message": "...", "detail": {...}}` so clients can
   parse errors programmatically without inspecting human-readable text.
@@ -193,6 +195,139 @@ CLI-native charts without external dependencies.
   (`api.token` in config, presented as `Authorization: Bearer TOKEN`) before
   exposing the server to any non-loopback address. Document that the server
   must not be exposed to the network without a token.
+
+- [ ] Add API tests for mixed writable and generated/read-only file sets.
+
+- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with current endpoint
+  request/response examples for every route.
+
+### Statistics & Charts (Web UI)
+
+- [ ] Add chart API endpoints: `/api/chart/tasks`, `/api/chart/habits`,
+  `/api/chart/mood`, `/api/chart/elapsed`. Each returns a stable JSON data
+  structure (labels array + datasets array) suitable for Chart.js or any
+  browser charting library without server-side rendering. Support query
+  parameters `from`, `to`, `project`, and `group=daily|weekly|monthly`
+  consistent with the CLI `stats` filters. The server returns only data; all
+  rendering is done in the browser.
+
+- [ ] Add a statistics dashboard panel to the browser GUI: render the chart
+  API responses using Chart.js loaded from CDN. Include at minimum: task
+  completion trend (bar chart), habit streak calendar (heatmap or bar),
+  mood timeline (line chart), and elapsed time by project (horizontal bar).
+  Make each panel collapsible and individually refreshable without a full
+  page reload.
+
+- [ ] Add summary statistics row to the item list view: show total / open /
+  done / overdue counts for the current filter context, updated on every
+  filter change without a page reload.
+
+### Item Input Form (Web UI)
+
+- [ ] Add a type-aware item creation form to the browser GUI: render a
+  structured form whose visible fields change based on the selected type
+  (`T`, `E`, `D`, `R`, `H`, `N`, `S`, `M`, `J`). Each type shows its
+  recommended keys as labeled input fields with appropriate input types
+  (date picker for `due:`/`from:`/`to:`, text for `title:`, dropdown for
+  `status:` and `priority:`, multi-value chips for `tag:` and `attendee:`).
+  On submit, `POST /api/items` using the existing item payload schema. Provide
+  both a modal dialog (triggered from any view) and an inline quick-add row
+  at the top of the item list.
+
+- [ ] Add an item edit form: clicking an item opens the same type-aware form
+  pre-populated with current values. On submit, `PUT /api/items/id/{id}`.
+  Show a diff preview (before/after field values) before confirming the write.
+
+- [ ] Add a `body:` Markdown editor to the creation and edit forms: use a
+  simple textarea with a preview toggle. Render the preview using the
+  sanitized HTML already returned in the `markdown` object of item responses.
+
+- [ ] Add `quick-add` shortcut: a persistent input bar at the top of the GUI
+  (keyboard shortcut `n` or `/`) that accepts a life.txt line directly and
+  appends it via `POST /api/items`. Show a live syntax-check indicator
+  (green/red) as the user types by calling `GET /api/items` with a dry-run
+  flag or a dedicated `/api/check` endpoint.
+
+### Record Display (Web UI)
+
+- [ ] Add item detail panel: clicking a row expands an inline panel (or opens
+  a side drawer) showing all fields, the rendered `body:` Markdown, link
+  references, and action buttons (edit, mark done, archive, delete). Do not
+  require a page navigation.
+
+- [ ] Render `body:` Markdown in item list rows: show the first line of the
+  rendered body as a subtitle beneath the title when the item has a `body:`
+  field. The full body appears in the detail panel. Use the sanitized HTML
+  already returned in the `markdown` object of item responses.
+
+- [ ] Add status badge and type icon to each row: display a colored badge for
+  `[ ]`/`[/]`/`[x]`/`[-]`/`[>]`/`[?]`/`[N]` and a type label or icon for
+  `T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J` so rows are scannable at a glance
+  without reading the raw status/type string.
+
+- [ ] Add overdue and due-soon highlighting: items whose `due:` is past today
+  are shown with a red accent; items due within the next 3 days (configurable
+  via `ui.due_soon_days`) are shown with an amber accent. Apply to both the
+  list view and the agenda view.
+
+- [ ] Add filter chips / active filter summary bar: when filters are active
+  (`--open`, `--project`, `--tag`, etc.), show them as removable chips above
+  the item list so the user can see and clear individual filters without
+  reloading.
+
+### ID Links & Cross-References (Web UI)
+
+- [ ] Make ID values in detail fields clickable: `parent:`, `ref:`,
+  `depends_on:`, `blocks:`, and `related:` values rendered in the item detail
+  panel must link to the referenced item via `GET /api/items/id/{id}`. Clicking
+  the link opens the referenced item in the detail panel without a page
+  navigation. If the referenced item is in a read-only file, show it as
+  read-only in the detail panel.
+
+- [ ] Add backlink section to the item detail panel: call `GET /api/links`
+  filtered to the current item ID and show incoming references (items that
+  link to this one) grouped by relation type (`parent`, `depends_on`, `blocks`,
+  `related`). This makes it easy to see what depends on the current item
+  without manually searching.
+
+- [ ] Add dependency status indicators to the item detail panel: when an item
+  has `depends_on:` references, show each prerequisite with its current status
+  badge so the user can immediately see which blockers are still open. Mirror
+  the `blocked: true` and `blocked_by` fields already returned by
+  `/api/agenda`.
+
+### Dependency & Reference Graph (Web UI & CLI)
+
+- [ ] Add `--format mermaid` output to the CLI `links` command: serialize the
+  link graph as a Mermaid `graph LR` diagram. Each node is labeled with the
+  item ID and title; edges are labeled with the relation type (`parent`,
+  `depends_on`, `blocks`, `related`, `ref`). Completed items (`[x]`, `[-]`)
+  are rendered with a distinct node style. This output can be pasted into any
+  Markdown file that supports Mermaid rendering (GitHub, Obsidian, etc.).
+
+- [ ] Add graph API endpoint: `GET /api/graph` returns the full link graph as
+  a stable JSON structure `{"nodes": [...], "edges": [...]}` where each node
+  includes `id`, `title`, `status`, `type`, and each edge includes `source`,
+  `target`, and `relation`. Support `?root=ID` to return only the subgraph
+  reachable from a given node, and `?depth=N` to limit traversal depth.
+
+- [ ] Add a dependency/reference graph panel to the browser GUI: render the
+  `/api/graph` JSON using a browser graph library (Cytoscape.js or D3-force,
+  loaded from CDN). Node color encodes type; node border encodes status.
+  Clicking a node opens the item detail panel. Support `?root=ID` to start
+  the view from a specific item. The panel must be reachable from the item
+  detail panel via a "Show graph" button and from a top-level nav link.
+
+- [ ] Add `--format dot` output to the CLI `links` command: serialize the link
+  graph as a Graphviz DOT file for users who prefer `dot`/`neato`/`fdp` for
+  layout. Allows offline rendering to SVG or PNG without a browser.
+
+### Recurrence & Notifications (Web UI)
+
+- [ ] Represent recurrence occurrences in the Web API/UI: distinguish source
+  items (stored in the file) from generated occurrences (computed at request
+  time) in `/api/agenda` and the GUI calendar view. Never write generated
+  occurrences back to the file.
 
 - [ ] Improve message thread UI: use `parent:` and `/api/messages/thread/{id}`
   to render conversation threads in the browser GUI. Ensure `ack:` and
@@ -208,15 +343,29 @@ CLI-native charts without external dependencies.
   URL. Currently presets are defined in config but must be re-specified as
   URL parameters.
 
-- [ ] Represent recurrence occurrences in the Web API/UI: distinguish source
-  items (stored in the file) from generated occurrences (computed at request
-  time) in `/api/agenda` and the GUI calendar view. Never write generated
-  occurrences back to the file.
+### Git Integration (Web API)
 
-- [ ] Add chart API endpoints: `/api/chart/tasks`, `/api/chart/habits`,
-  `/api/chart/mood`, `/api/chart/elapsed`. Each returns a stable JSON data
-  structure suitable for a browser charting library (e.g., Chart.js). Add
-  corresponding chart panels to the browser GUI.
+- [ ] Add lightweight Git operation endpoints to the Web API: `POST
+  /api/git/pull` (run `git pull` in the directory of the writable file),
+  `POST /api/git/commit` (run `git add <writable_file> && git commit -m MSG`),
+  `POST /api/git/push` (run `git push`), and `GET /api/git/status` (run
+  `git status --short` and return the output as JSON). All endpoints invoke
+  `git` as a subprocess; no git library dependency is added. Restrict these
+  endpoints to loopback access only (enforce regardless of `api.token`) and
+  require explicit opt-in via `git.enable_api: true` in config to prevent
+  accidental exposure. Return stdout, stderr, and exit code in the response
+  so the caller can detect failures. Document security implications clearly:
+  these endpoints give the caller shell-equivalent write access to the
+  repository.
+
+- [ ] Add Git status indicator to the browser GUI header: poll `GET
+  /api/git/status` every 60 seconds (configurable; disable with
+  `git.ui_poll: false`) and show a badge indicating clean/modified/unpushed
+  state. Add Commit and Push buttons that call the corresponding API endpoints
+  with a user-supplied commit message prompt. Display stdout/stderr in a
+  dismissable toast notification.
+
+### MCP Support
 
 - [ ] Add MCP (Model Context Protocol) server support via `serve --mcp`:
   expose life.txt operations as MCP tools so MCP-compatible AI clients
@@ -224,13 +373,9 @@ CLI-native charts without external dependencies.
   language. Minimum tool set: `list_items` (with filter parameters matching
   `filter`), `get_item` (by ID), `create_item` (delegates to `assist`),
   `update_item` (delegates to `assist --update`), `mark_done` (delegates to
-  `done`), `get_agenda` (delegates to `agenda`). Implement as an optional
-  dependency separate from the existing FastAPI server.
-
-- [ ] Add API tests for mixed writable and generated/read-only file sets.
-
-- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with current endpoint
-  request/response examples for every route.
+  `done`), `get_agenda` (delegates to `agenda`), `get_graph` (delegates to
+  `/api/graph`). Implement as an optional dependency separate from the
+  existing FastAPI server.
 
 ---
 
@@ -481,6 +626,18 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `decrypt`, `plot`, `search`, `lint`, `diff`, `snapshot`, `migrate`,
   `template`, `share`, `digest`, `who`.
 
+- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with: current endpoint
+  request/response examples for every route, the statistics dashboard and
+  chart panel usage, the item creation and edit form, the dependency graph
+  panel (how to open it, how to navigate, how to use `?root=ID`), the Git
+  integration endpoints and security model, and the `quick-add` shortcut.
+
+- [ ] Document the dependency graph feature end-to-end: explain the
+  `links --format mermaid` and `links --format dot` CLI outputs, the
+  `/api/graph` endpoint, the browser GUI graph panel, and when to use each.
+  Include a worked example showing how to trace a blocked task back to its
+  root blocker using both the CLI and the GUI.
+
 - [ ] Consider generating CLI reference pages from `argparse` definitions to
   eliminate drift between `--help` output and the Markdown docs.
 
@@ -645,6 +802,28 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add MCP server smoke tests: each tool returns the expected response
   shape; write tools modify only the writable file.
 
+- [ ] Add chart API tests: `/api/chart/tasks`, `/api/chart/habits`,
+  `/api/chart/mood`, `/api/chart/elapsed` each return a stable JSON structure
+  with `labels` and `datasets` arrays; `from`/`to`/`project`/`group` query
+  parameters filter results correctly; empty data range returns empty datasets
+  without error.
+
+- [ ] Add graph API tests: `GET /api/graph` returns all nodes and edges for a
+  known fixture; `?root=ID` returns only the reachable subgraph; `?depth=N`
+  limits traversal; a fixture with a cycle does not cause infinite recursion.
+
+- [ ] Add `links --format mermaid` tests: output is valid Mermaid `graph LR`
+  syntax; completed items use distinct node style; `--id` scoping limits nodes;
+  no output for a file with no links.
+
+- [ ] Add `links --format dot` tests: output is valid Graphviz DOT syntax;
+  relation labels appear on edges; isolated nodes are included.
+
+- [ ] Add git API endpoint tests (with a real git repo fixture): `POST
+  /api/git/pull` returns exit code and stderr; `POST /api/git/commit` with a
+  message creates a commit; endpoints return 403 when `git.enable_api` is
+  false; endpoints return 403 when accessed from a non-loopback address.
+
 - [ ] Add `who` tests: latest active `S` per person across multiple files,
   finished records excluded, JSON schema stable.
 
@@ -702,6 +881,17 @@ after the corresponding P1 or P2 feature is stable.
 - [ ] Consider `share` export as an email-ready HTML attachment via `digest`.
 - [ ] Consider write-conflict detection using source-ownership metadata before
   `update` and `delete` operations when multiple writers share a file.
+- [ ] Consider a full Git server (e.g., Soft-serve or a Gitea-compatible
+  endpoint) embedded in `serve` for teams who cannot use GitHub/GitLab. Only
+  worth implementing if the lightweight `/api/git/*` subprocess endpoints
+  prove insufficient for multi-user workflows; defer until there is concrete
+  demand.
+- [ ] Consider graph layout presets in the browser GUI graph panel: `LR`
+  (left-to-right hierarchy), `TB` (top-to-bottom), and `force` (physics-based
+  for non-hierarchical graphs). Let the user switch layouts without reloading.
+- [ ] Consider exporting the dependency graph as an SVG or PNG from the
+  browser GUI (using the Cytoscape.js export API) so users can share the graph
+  without running the server.
 
 ### Security
 - [ ] Consider asymmetric encryption (public/private key) for `encrypt` to

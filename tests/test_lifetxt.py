@@ -2329,6 +2329,76 @@ class LifeTxtSummaryCliTests(unittest.TestCase):
             self.assertEqual(0, data["line_count"])
 
 
+class LifeTxtDoneEdgeCaseTests(unittest.TestCase):
+    SOURCE = "[ ] T Buy_milk id:t001\n[ ] T Clean_house id:t002\n"
+
+    def test_done_text_no_match_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli("done", path, "--text", "xyz_nonexistent_999")
+            self.assertEqual(1, code)
+            self.assertIn("xyz_nonexistent_999", stderr)
+
+    def test_done_line_on_blank_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T First_item\n\n[ ] T Third_item\n")
+            stdout, stderr, code = run_cli("done", path, "--line", "2")
+            self.assertEqual(1, code)
+
+    def test_done_no_args_exits_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.SOURCE)
+            stdout, stderr, code = run_cli("done", path)
+            self.assertEqual(1, code)
+
+
+class LifeTxtSummaryEdgeCaseTests(unittest.TestCase):
+    def test_summary_multi_file_returns_array(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path1 = os.path.join(tmp, "a.txt")
+            path2 = os.path.join(tmp, "b.txt")
+            with open(path1, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_A id:A001\n")
+            with open(path2, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_B id:B001\n")
+            stdout, stderr, code = run_cli("summary", path1, path2, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIsInstance(data, list)
+            self.assertEqual(2, len(data))
+            sources = [d["source"] for d in data]
+            self.assertIn(path1, sources)
+            self.assertIn(path2, sources)
+
+    def test_summary_pretty_indents_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one\n")
+            stdout, stderr, code = run_cli("summary", path, "--format", "json", "--pretty")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("  ", stdout)
+            data = json.loads(stdout)
+            self.assertIn("item_count", data)
+
+    def test_summary_single_file_returns_object(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one\n")
+            stdout, stderr, code = run_cli("summary", path, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIsInstance(data, dict)
+            self.assertIn("item_count", data)
+
+
 class LifeTxtIcsImportCliTests(unittest.TestCase):
     def test_import_ics_cli_converts_google_event(self):
         ics = (
@@ -4509,6 +4579,83 @@ class LifeTxtArchiveOrphanTests(unittest.TestCase):
             archive_content = open(dest, encoding="utf-8").read()
             self.assertIn("Parent_done", archive_content)
             self.assertIn("Child_done", archive_content)
+
+
+class LifeTxtArchiveExternalRefsTests(unittest.TestCase):
+    def test_archive_warns_on_external_ref_by_default(self):
+        content = (
+            "[x] T Done_task id:T001 done:2026-01-01\n"
+            "[ ] T Open_blocker depends_on:T001\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes"
+            )
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("Warning", out)
+            self.assertIn("T001", out)
+            archive_content = open(dest, encoding="utf-8").read()
+            self.assertIn("Done_task", archive_content)
+
+    def test_archive_block_on_external_refs_exits_nonzero(self):
+        content = (
+            "[x] T Done_task id:T001 done:2026-01-01\n"
+            "[ ] T Open_blocker depends_on:T001\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes", "--block-on-external-refs"
+            )
+            self.assertEqual(1, code)
+            out = normalize_newlines(stdout)
+            self.assertIn("Blocked", out)
+            self.assertFalse(os.path.exists(dest))
+
+    def test_archive_no_external_refs_no_warning(self):
+        content = (
+            "[x] T Done_task id:T001 done:2026-01-01\n"
+            "[ ] T Unrelated_task id:T002\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--yes"
+            )
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertNotIn("Warning", out)
+
+    def test_archive_dry_run_shows_external_ref_warning(self):
+        content = (
+            "[x] T Done_task id:T001 done:2026-01-01\n"
+            "[ ] T Ref_task depends_on:T001\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "life.txt")
+            dest = os.path.join(tmp, "archive.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            out = normalize_newlines(stdout)
+            self.assertIn("Warning", out)
+            self.assertIn("T001", out)
+            self.assertIn("dry run", out)
+            self.assertFalse(os.path.exists(dest))
 
 
 class LifeTxtCleanupArchiveHintTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x23)
+Last updated: 2026-06-27 (updated x24)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -145,11 +145,9 @@ what is overdue, and what the week looked like.
 
 Commands and behaviors for moving old items out of active files.
 
-- [ ] Extend `archive --dry-run` with cross-file reference checking: when
-  other loaded files reference the ID of an item being archived (via
-  `depends_on:`, `blocks:`, `parent:`, `ref:`, or `related:`), report each
-  referencing item (file path, line, key, referencing ID) as a warning.
-  Default: warn only. Add `--block-on-external-refs` to treat these as errors.
+- [ ] Add `archive --block-on-external-refs` multi-file tests: second file
+  references archived item's ID; verify cross-file warning is reported with
+  correct source path. Currently tested only in single-file (intra-file) mode.
 
 ---
 
@@ -689,12 +687,7 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `quick` tests: `write_file` config fallback (no `--append`),
   `--type E` generates event, validation error on malformed title.
 
-- [ ] Add `done` tests: `--text` with zero matches exits non-zero; `--line`
-  with non-item line exits non-zero; no positional/line/text arg exits with
-  error message.
-
-- [ ] Add `summary` tests: multi-file input returns array JSON; `--pretty`
-  indents output; stdin input works.
+- [ ] Add `summary` tests: stdin input works (pipe a life.txt via stdin).
 
 - [ ] Add Markdown rendering regression tests: CLI HTML output snapshot and
   Web UI Markdown preview snapshot, run in CI to prevent the table-rendering

@@ -978,6 +978,15 @@ def build_parser():
             "and the source remainder so section headings remain intact."
         ),
     )
+    archive.add_argument(
+        "--block-on-external-refs",
+        action="store_true",
+        dest="block_on_external_refs",
+        help=(
+            "Treat cross-file or intra-file references to archived items as errors "
+            "instead of warnings. Requires --dry-run or a live run to check."
+        ),
+    )
     archive.set_defaults(func=command_archive)
 
     quick = subparsers.add_parser(
@@ -1963,6 +1972,32 @@ def command_archive(args):
     for item in candidates:
         source_label = ("  [%s]" % item.source) if multi_source else ""
         sys.stdout.write("  %s %s %s%s\n" % (item.status, item.kind, item.title, source_label))
+
+    _ext_ref_keys = ("depends_on", "blocks", "parent", "ref", "related")
+    candidate_obj_ids = {id(c) for c in candidates}
+    external_refs = []
+    for item in all_items:
+        if id(item) in candidate_obj_ids:
+            continue
+        for key in _ext_ref_keys:
+            for val in item.details.get(key, []):
+                if str(val) in candidate_ids:
+                    external_refs.append((item, key, str(val)))
+
+    if external_refs:
+        sys.stdout.write("Warning: the following items reference IDs being archived:\n")
+        for ref_item, key, ref_id in external_refs:
+            location = getattr(ref_item, "source", None) or "?"
+            sys.stdout.write(
+                "  %s:%d %s %s:%s\n"
+                % (location, ref_item.line, ref_item.title, key, ref_id)
+            )
+        if getattr(args, "block_on_external_refs", False):
+            sys.stdout.write(
+                "Blocked by %d external reference(s). Remove references or archive referencing items first.\n"
+                % len(external_refs)
+            )
+            return 1
 
     if args.dry_run:
         sys.stdout.write("(dry run - no changes made)\n")

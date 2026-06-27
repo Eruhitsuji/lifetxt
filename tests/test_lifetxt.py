@@ -701,6 +701,51 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual(text, normalize_newlines(stdout))
 
+    def test_agenda_cli_expands_rrule_weekly_byday(self):
+        text = (
+            "[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3 "
+            "from:2026-06-01T09:00 to:2026-06-01T10:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-03",
+            "--to",
+            "2026-06-03",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual(["Training"], [entry["title"] for entry in data])
+        self.assertEqual("2026-06-03T09:00..2026-06-03T10:00", data[0]["when"])
+        self.assertEqual("repeat:from/to", data[0]["key"])
+        self.assertEqual("RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3", data[0]["matches"][0]["repeat"])
+        self.assertEqual(2, data[0]["matches"][0]["occurrence_index"])
+
+    def test_agenda_cli_rrule_count_limits_later_occurrences(self):
+        text = (
+            "[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3 "
+            "from:2026-06-01T09:00 to:2026-06-01T10:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-10",
+            "--to",
+            "2026-06-10",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("No agenda items found.", normalize_newlines(stdout))
+
     def test_agenda_life_output_preserves_original_line(self):
         text = '[ ] R "Break" at:2026-06-06T14:15\n'
 
@@ -1087,6 +1132,38 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("Past", normalized)
         self.assertNotIn("Daily", normalized)
         self.assertNotIn("Future", normalized)
+
+    def test_filter_time_range_expands_rrule_daily_byday_until(self):
+        text = (
+            "[ ] H Workday_Checkin repeat:RRULE:FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20260610 "
+            "at:09:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--after",
+            "2026-06-08",
+            "--before",
+            "2026-06-08",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(text, normalize_newlines(stdout))
+
+        stdout, stderr, code = run_cli(
+            "filter",
+            "--after",
+            "2026-06-13",
+            "--before",
+            "2026-06-13",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual("", normalize_newlines(stdout))
 
     def test_filter_cli_people_filters(self):
         text = (

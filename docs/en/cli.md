@@ -531,7 +531,8 @@ Notes:
   events become repeated `on:` values.
 - `TZID` local wall times are kept as written. UTC `Z` datetimes are converted
   to the machine's local timezone before writing `YYYY-MM-DDTHH:MM`.
-- `RRULE` values are preserved but not expanded into individual events.
+- `RRULE` values are preserved as `repeat:RRULE:...`; supported RRULE subsets
+  are expanded later by `agenda` and time filters, not during import.
 
 Examples:
 
@@ -726,6 +727,9 @@ Range matching rules:
 - `at:HH:MM` is combined with `on:` when present, otherwise with each date in the requested range.
 - Simple `repeat:` values are expanded for `daily`, `weekly`, `monthly`, `yearly`, and `weekdays`.
 - `interval:`, `until:`, and `count:` constrain simple recurrence expansion.
+- `repeat:RRULE:...` expands a dependency-free subset:
+  `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and
+  daily/weekly `BYDAY`.
 - Floating repeated `at:` values without `on:` are expanded only inside bounded agenda ranges.
 
 ### 9.1 Range Options

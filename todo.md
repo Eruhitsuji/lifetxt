@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x5)
+Last updated: 2026-06-27 (updated x6)
 
 This roadmap tracks remaining work after the current prototype updates. Completed prototype-only items are removed; items below are implementation, validation, documentation, or design work that still matters.
 
@@ -18,9 +18,8 @@ Priority guide:
 
 ## P1: Format Semantics
 
-- [ ] Clarify user-related keys: `owner`, `assignee`, `attendee`, `person`, `sender`, `recipient`, `team`, and `group`.
-- [ ] Expand `repeat:` and `RRULE:` consistently in `agenda`, `filter --after/--before`, `stats`, Web API, and exports.
-- [ ] Decide whether typo-like `repete:` should be auto-fixed, warned as a likely `repeat:`, or left as a custom detail key.
+- [ ] Extend recurrence expansion beyond the current `agenda` / time-filter subset: support `stats`, filtered occurrence exports, and clear Web API/UI occurrence modeling.
+- [ ] Define diagnostics for unsupported `RRULE:` features so users can tell when a rule is preserved as text but not expanded by the dependency-free core.
 - [ ] Decide which item types should recommend `elapsed:` beyond task-like records.
 - [ ] Finalize timezone-aware datetime round-trip rules for parser, JSON/CSV output, display, and filtering.
 - [ ] Define dependency semantics for `depends_on:` and `blocks:` beyond generic links.
@@ -84,7 +83,7 @@ Priority guide:
 
 - [ ] Decide the synchronization policy between root `readme.md`, `docs/en/*`, `docs/ja/*`, and `life_txt_format_spec.md`.
 - [ ] Add examples for `timer`, `stats`, `tui`, `fzf`, `git-hook`, and `completion`.
-- [ ] Add examples for RRULE, recurrence occurrence, and external integration.
+- [ ] Add examples for recurrence occurrence output and external integration.
 - [ ] Add recommended workflow docs: daily use, team status, messages, calendar sync, and weekly review.
 - [ ] Add migration notes for major format changes: `S`, `M`, `J`, multiline body, hierarchy, CSV, `elapsed:`, Markdown subset, and RRULE.
 - [ ] Add screenshots or terminal captures for Web UI, display mode, TUI, and stats output.
@@ -109,7 +108,7 @@ Priority guide:
 - [ ] Add cross-platform tests for paths, glob expansion, line endings, and shell completion output.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and `projects/**/*.life.txt`.
 - [ ] Add parser edge-case tests for escaping, quoted values, invalid continuation, indentation, duplicate IDs, and missing references.
-- [ ] Add tests for RRULE, recurrence occurrence, timezone normalization, and duration parsing.
+- [ ] Add broader tests for recurrence occurrence exports, timezone normalization, duration parsing, unsupported RRULE features, and long-range recurrence performance.
 - [ ] Add tests for W222 duration normalization warnings across more edge cases (bare integers, `1h00m`, unrecognized formats like `1.5h`).
 - [ ] Add snapshot tests for Markdown CLI HTML output and Web UI Markdown preview rendering.
 - [ ] Check performance for large files and duplicate ID detection across many files.

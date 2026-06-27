@@ -235,8 +235,9 @@ validator は重複IDを warning `W213` として報告します。id-based API 
 | `count` | 最大 occurrence 数 | `count:10` |
 
 simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays`
-を推奨します。`RRULE:...` は外部互換のため保存できますが、組み込み agenda
-の展開対象は simple repeat です。
+を推奨します。`RRULE:...` は外部互換のため保存でき、組み込み agenda と
+time filter は dependency-free な subset として `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`、
+`INTERVAL`、`COUNT`、`UNTIL`、daily/weekly の `BYDAY` を展開します。
 
 ### 7.7 Message keys
 
@@ -305,6 +306,7 @@ simple recurrence は `repeat:` と、任意の `interval:`、`until:`、`count:
 [ ] H Stretch repeat:daily at:18:00
 [ ] H Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31
 [ ] H Workday_Checkin repeat:weekdays at:09:00 count:10
+[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6 from:2026-06-01T09:00 to:2026-06-01T10:00
 ```
 
 agenda と time filter は、`from/to`、`at` + `on`、bounded range 内の floating
@@ -312,7 +314,11 @@ agenda と time filter は、`from/to`、`at` + `on`、bounded range 内の floa
 simple repeat を展開します。`interval:2` は 2 単位ごとの繰り返し、`count:`
 は anchor から数えた最大 occurrence 数、`until:` は inclusive な終了日時です。
 `on:` のない floating `at:` は安定した日付 anchor がないため、片側だけの
-time filter では一致対象にしません。
+time filter では一致対象にしません。`repeat:RRULE:...` では `FREQ`、
+`INTERVAL`、`COUNT`、`UNTIL` を読み、`FREQ=DAILY` / `FREQ=WEEKLY` では
+`BYDAY` も利用できます。`UNTIL` は life.txt の datetime 構文または
+`20260630`、`20260630T090000` のような iCalendar basic 形式を使えます。
+より複雑な RRULE は text として保持しますが、dependency-free core では展開しません。
 
 ## 9. type 別 recommended keys
 

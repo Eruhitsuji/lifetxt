@@ -25,6 +25,22 @@ _DURATION_RE = re.compile(r"^(\d+)([a-z]*)$")
 
 _POINT_KEYS = ("due", "do", "moved_to", "notify_at")
 _MAX_REPEAT_MATCHES = 1000
+_RRULE_PREFIX = "RRULE:"
+_RRULE_FREQ_TO_REPEAT = {
+    "DAILY": "daily",
+    "WEEKLY": "weekly",
+    "MONTHLY": "monthly",
+    "YEARLY": "yearly",
+}
+_RRULE_WEEKDAYS = {
+    "MO": 0,
+    "TU": 1,
+    "WE": 2,
+    "TH": 3,
+    "FR": 4,
+    "SA": 5,
+    "SU": 6,
+}
 _TABLE_COLUMNS = (
     ("when", "when"),
     ("key", "key"),
@@ -486,7 +502,8 @@ def _add_on_matches(matches, item, range_start, range_end):
 
 def _add_repeat_matches(matches, item, range_start, range_end):
     repeat_value = _first_detail_value(item, "repeat")
-    if repeat_value not in ("daily", "weekly", "monthly", "yearly", "weekdays"):
+    rule = _repeat_rule(item, repeat_value)
+    if rule is None:
         return
 
     anchor = _repeat_anchor(item, range_start, range_end)
@@ -499,9 +516,10 @@ def _add_repeat_matches(matches, item, range_start, range_end):
     if anchor_end < anchor_start:
         anchor_end = anchor_start
 
-    interval = _positive_int_detail(item, "interval", 1)
-    count = _positive_int_detail(item, "count", None)
-    until = _repeat_until(item)
+    repeat_name = rule["repeat"]
+    interval = rule["interval"]
+    count = rule["count"]
+    until = rule["until"]
     effective_start = anchor_start if range_start == datetime.min else range_start
     effective_end = range_end
     if range_end == datetime.max:
@@ -509,8 +527,27 @@ def _add_repeat_matches(matches, item, range_start, range_end):
     if until is not None and until < effective_end:
         effective_end = until
 
+    byday = rule.get("byday")
+    if byday:
+        _add_rrule_byday_matches(
+            matches,
+            key,
+            anchor_start,
+            anchor_end,
+            repeat_name,
+            byday,
+            interval,
+            count,
+            until,
+            effective_end,
+            range_start,
+            range_end,
+            rule["label"],
+        )
+        return
+
     current, occurrence_index = _align_repeat_start(
-        repeat_value,
+        repeat_name,
         anchor_start,
         anchor_end,
         interval,
@@ -525,14 +562,200 @@ def _add_repeat_matches(matches, item, range_start, range_end):
             break
 
         current_end = current + (anchor_end - anchor_start)
-        _add_match(matches, "repeat:%s" % key, current, current_end, range_start, range_end)
+        _add_match(
+            matches,
+            "repeat:%s" % key,
+            current,
+            current_end,
+            range_start,
+            range_end,
+            repeat=rule["label"],
+            occurrence_index=occurrence_index,
+        )
         emitted += 1
 
-        next_current = _next_repeat_datetime(current, repeat_value, interval)
+        next_current = _next_repeat_datetime(current, repeat_name, interval)
         if next_current <= current:
             break
         current = next_current
         occurrence_index += 1
+
+
+def _repeat_rule(item, repeat_value):
+    if repeat_value in ("daily", "weekly", "monthly", "yearly", "weekdays"):
+        return OrderedDict(
+            [
+                ("label", repeat_value),
+                ("repeat", repeat_value),
+                ("interval", _positive_int_detail(item, "interval", 1)),
+                ("count", _positive_int_detail(item, "count", None)),
+                ("until", _repeat_until(item)),
+                ("byday", ()),
+            ]
+        )
+
+    text = str(repeat_value or "")
+    if not text.upper().startswith(_RRULE_PREFIX):
+        return None
+
+    parts = _parse_rrule_parts(text)
+    repeat_name = _RRULE_FREQ_TO_REPEAT.get(parts.get("FREQ", ""))
+    if repeat_name is None:
+        return None
+
+    byday = _parse_rrule_byday(parts.get("BYDAY"))
+    if byday and repeat_name not in ("daily", "weekly"):
+        return None
+
+    return OrderedDict(
+        [
+            ("label", text),
+            ("repeat", repeat_name),
+            ("interval", _positive_int_text(parts.get("INTERVAL"), _positive_int_detail(item, "interval", 1))),
+            ("count", _positive_int_text(parts.get("COUNT"), _positive_int_detail(item, "count", None))),
+            ("until", _parse_rrule_until(parts.get("UNTIL")) or _repeat_until(item)),
+            ("byday", byday),
+        ]
+    )
+
+
+def _parse_rrule_parts(value):
+    text = str(value or "")
+    if text.upper().startswith(_RRULE_PREFIX):
+        text = text[len(_RRULE_PREFIX):]
+    parts = OrderedDict()
+    for raw_part in text.split(";"):
+        if "=" not in raw_part:
+            continue
+        key, raw_value = raw_part.split("=", 1)
+        key = key.strip().upper()
+        if key:
+            parts[key] = raw_value.strip().upper()
+    return parts
+
+
+def _parse_rrule_byday(value):
+    if not value:
+        return ()
+    weekdays = []
+    for raw_part in str(value).split(","):
+        code = raw_part.strip().upper()
+        # Ignore positional BYDAY forms such as 1MO or -1FR in the dependency-free subset.
+        if len(code) != 2:
+            return ()
+        weekday = _RRULE_WEEKDAYS.get(code)
+        if weekday is None:
+            return ()
+        if weekday not in weekdays:
+            weekdays.append(weekday)
+    return tuple(sorted(weekdays))
+
+
+def _parse_rrule_until(value):
+    if not value:
+        return None
+
+    parsed = parse_date_or_datetime(value, is_end=True)
+    if parsed is not None:
+        return parsed
+
+    text = str(value).strip().upper()
+    try:
+        if re.match(r"^\d{8}$", text):
+            parsed_date = datetime.strptime(text, "%Y%m%d").date()
+            return datetime.combine(parsed_date, time(23, 59, 59))
+        if re.match(r"^\d{8}T\d{6}Z$", text):
+            return datetime.strptime(text[:-1] + "+0000", "%Y%m%dT%H%M%S%z").astimezone().replace(tzinfo=None)
+        if re.match(r"^\d{8}T\d{6}[+-]\d{4}$", text):
+            return datetime.strptime(text, "%Y%m%dT%H%M%S%z").astimezone().replace(tzinfo=None)
+        if re.match(r"^\d{8}T\d{6}$", text):
+            return datetime.strptime(text, "%Y%m%dT%H%M%S")
+    except ValueError:
+        return None
+    return None
+
+
+def _positive_int_text(value, default):
+    if value is None:
+        return default
+    try:
+        number = int(str(value))
+    except (TypeError, ValueError):
+        return default
+    if number <= 0:
+        return default
+    return number
+
+
+def _add_rrule_byday_matches(
+    matches,
+    key,
+    anchor_start,
+    anchor_end,
+    repeat_name,
+    byday,
+    interval,
+    count,
+    until,
+    effective_end,
+    range_start,
+    range_end,
+    repeat_label,
+):
+    duration = anchor_end - anchor_start
+    emitted = 0
+    occurrence_index = 1
+    for current in _rrule_byday_candidates(
+        anchor_start,
+        repeat_name,
+        byday,
+        interval,
+    ):
+        if current > effective_end:
+            break
+        if count is not None and occurrence_index > count:
+            break
+        if until is not None and current > until:
+            break
+
+        current_end = current + duration
+        _add_match(
+            matches,
+            "repeat:%s" % key,
+            current,
+            current_end,
+            range_start,
+            range_end,
+            repeat=repeat_label,
+            occurrence_index=occurrence_index,
+        )
+        if _overlaps(current, current_end, range_start, range_end):
+            emitted += 1
+            if emitted >= _MAX_REPEAT_MATCHES:
+                break
+        occurrence_index += 1
+
+
+def _rrule_byday_candidates(anchor_start, repeat_name, byday, interval):
+    if repeat_name == "daily":
+        current = anchor_start
+        while True:
+            if current >= anchor_start and current.weekday() in byday:
+                yield current
+            current = current + timedelta(days=interval)
+
+    elif repeat_name == "weekly":
+        anchor_week_start = anchor_start.date() - timedelta(days=anchor_start.weekday())
+        week_start = anchor_week_start
+        while True:
+            for weekday in byday:
+                candidate = datetime.combine(
+                    week_start + timedelta(days=weekday),
+                    anchor_start.time(),
+                )
+                if candidate >= anchor_start:
+                    yield candidate
+            week_start = week_start + timedelta(weeks=interval)
 
 
 def _repeat_anchor(item, range_start, range_end):
@@ -676,7 +899,7 @@ def _first_detail_value(item, key):
     return None
 
 
-def _add_match(matches, key, start, end, range_start, range_end):
+def _add_match(matches, key, start, end, range_start, range_end, repeat=None, occurrence_index=None):
     if start is None:
         return
     if _overlaps(start, end, range_start, range_end):
@@ -687,6 +910,10 @@ def _add_match(matches, key, start, end, range_start, range_end):
             match["end"] = _format_datetime(end)
         elif end is None:
             match["end"] = ""
+        if repeat is not None:
+            match["repeat"] = repeat
+        if occurrence_index is not None:
+            match["occurrence_index"] = occurrence_index
         matches.append(match)
 
 

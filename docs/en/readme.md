@@ -167,7 +167,10 @@ The `agenda` command prints items related to a datetime range. `from/to`,
 Datetime values may include seconds, fractional seconds, and explicit
 timezones, such as `2026-06-06T13:00:30.25+09:00`. Simple `repeat:` values
 (`daily`, `weekly`, `monthly`, `yearly`, `weekdays`) are expanded by agenda and
-time filters, with optional `interval:`, `until:`, and `count:`.
+time filters, with optional `interval:`, `until:`, and `count:`. A small
+dependency-free `repeat:RRULE:...` subset is also expanded for
+`FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and
+daily/weekly `BYDAY`.
 
 Agenda filters can be combined:
 

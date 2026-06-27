@@ -483,7 +483,8 @@ python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJ
 - `TZID` 付きのローカル時刻は書かれている壁時計時刻をそのまま使います。
   UTC の `Z` 付き日時は、実行環境のローカルタイムゾーンへ変換して
   `YYYY-MM-DDTHH:MM` で出力します。
-- `RRULE` は保持しますが、個別の予定へ展開しません。
+- `RRULE` は `repeat:RRULE:...` として保持します。対応している subset は
+  import 時ではなく、`agenda` と time filter で後から展開します。
 
 例:
 
@@ -666,6 +667,9 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 - `at:HH:MM` は `on:` があればその日付と組み合わせ、なければ指定範囲内の各日付と組み合わせます。
 - simple `repeat:` の `daily`、`weekly`、`monthly`、`yearly`、`weekdays` は展開します。
 - `interval:`、`until:`、`count:` は simple repeat の展開を制限します。
+- `repeat:RRULE:...` は dependency-free subset として
+  `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`、`INTERVAL`、`COUNT`、`UNTIL`、
+  daily/weekly の `BYDAY` を展開します。
 - `on:` のない floating `at:` repeat は、両端がある bounded agenda range の中だけで展開します。
 
 ### 9.1 範囲オプション

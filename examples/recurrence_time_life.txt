@@ -3,6 +3,7 @@
 [ ] H Stretch repeat:daily at:18:00:30.5+09:00 project:health tag:daily
 [ ] H Weekly_Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31 count:14 project:life
 [ ] H Workday_Checkin repeat:weekdays at:09:00 count:10 project:work
+[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6 from:2026-06-01T09:00 to:2026-06-01T10:00 project:work
 [ ] E "Remote meeting" from:2026-06-08T13:00:30.25+09:00 to:2026-06-08T14:30:00.5+09:00 attendee:alice service:meet
 [ ] T Write_Report id:rt_task_report due:2026-06-12 depends_on:rt_task_outline project:university
 | Include the method section and references.

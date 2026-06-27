@@ -225,8 +225,10 @@ ownership, filtering, or routing.
 | `count` | Maximum number of occurrences | `count:10` |
 
 Supported simple `repeat:` values are `daily`, `weekly`, `monthly`, `yearly`,
-and `weekdays`. `RRULE:...` values may be stored for interoperability; built-in
-agenda expansion currently expands the simple values above.
+and `weekdays`. `RRULE:...` values may be stored for interoperability. Built-in
+agenda and time-filter expansion supports a dependency-free RRULE subset:
+`FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and
+daily/weekly `BYDAY`.
 
 ### 7.7 Message Keys
 
@@ -294,16 +296,18 @@ digits.
 ## 8.1 Recurrence Semantics
 
 Simple recurrence is expressed with `repeat:` and optional `interval:`,
-`until:`, and `count:`.
+`until:`, and `count:`. iCalendar-compatible recurrence can also be stored as
+`repeat:RRULE:...`.
 
 ```txt
 [ ] H Stretch repeat:daily at:18:00
 [ ] H Review repeat:weekly interval:2 on:2026-06-01 until:2026-12-31
 [ ] H Workday_Checkin repeat:weekdays at:09:00 count:10
+[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6 from:2026-06-01T09:00 to:2026-06-01T10:00
 ```
 
-Agenda and time filters expand simple recurrences from the first available
-anchor, in this order:
+Agenda and time filters expand simple recurrences and the supported RRULE
+subset from the first available anchor, in this order:
 
 | Anchor | Meaning |
 |---|---|
@@ -317,6 +321,12 @@ anchor, in this order:
 the number of generated occurrences from the anchor. `until:` is an inclusive
 end date/datetime. One-sided filters intentionally ignore floating `at:` values
 without `on:` because they have no stable date anchor.
+
+For `repeat:RRULE:...`, the built-in subset reads `FREQ`, `INTERVAL`, `COUNT`,
+and `UNTIL`; `BYDAY` is supported for `FREQ=DAILY` and `FREQ=WEEKLY`. `UNTIL`
+may use life.txt datetime syntax or iCalendar basic forms such as `20260630`
+and `20260630T090000`. More complex RRULE features are preserved as text but
+are not expanded by the dependency-free core.
 
 ## 9. Type-Specific Recommended Keys
 

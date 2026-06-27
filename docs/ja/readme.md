@@ -154,7 +154,9 @@ python -m lifetxt assist --update life.txt --line 3 --title "New Title" --add-de
 日時値は `2026-06-06T13:00:30.25+09:00` のように、秒、小数秒、明示的な
 timezone を含められます。simple `repeat:` の `daily`、`weekly`、`monthly`、
 `yearly`、`weekdays` は agenda と時刻 filter で展開され、`interval:`、
-`until:`、`count:` で制限できます。
+`until:`、`count:` で制限できます。`repeat:RRULE:...` も
+`FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`、`INTERVAL`、`COUNT`、`UNTIL`、
+daily/weekly の `BYDAY` の dependency-free subset を展開します。
 
 agenda filter は組み合わせて使えます。
 

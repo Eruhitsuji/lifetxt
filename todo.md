@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x29)
+Last updated: 2026-06-27 (updated x30)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -204,9 +204,9 @@ CLI-native charts without external dependencies.
 
 ### Record Display (Web UI)
 
-- [ ] Enhance item detail side-drawer: add a miniature link graph preview
-  (D3-force) inside the drawer showing direct dependencies and blocks
-  for the current item. Clicking a node in the preview navigates to that item.
+- [ ] Enhance item detail dependency view: expand the current row-based dep
+  view into a mini force-directed graph (D3.js, CDN) inside the drawer showing
+  multi-hop dependency chains, not just direct links.
 
 ### ID Links & Cross-References (Web UI)
 

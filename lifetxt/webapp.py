@@ -1995,6 +1995,22 @@ HTML_PAGE = r"""<!doctype html>
     .notif-perm-denied  { color: #991b1b; }
     .notif-perm-default { color: #7a5200; }
     mark { background: #fff9c4; border-radius: .2rem; padding: 0 .1rem; }
+    /* ── Button active state ─────────────────────────────────────── */
+    .secondary.btn-active {
+      background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; font-weight: 600;
+    }
+    /* ── Dependency graph rows ───────────────────────────────────── */
+    .dep-graph { display: grid; gap: .3rem; }
+    .dep-group-label { font-size: .73rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: .15rem; }
+    .dep-row { display: flex; align-items: center; gap: .35rem; padding: .25rem .4rem; border-radius: .35rem; background: var(--bg); border: 1px solid var(--line); }
+    .dep-row:hover { border-color: #93c5fd; }
+    .dep-arrow { font-weight: 700; font-size: .9rem; min-width: 1.2rem; text-align: center; }
+    .dep-out { color: #0c4a6e; }
+    .dep-in  { color: #7c3aed; }
+    .dep-rel { font-size: .72rem; color: var(--muted); min-width: 5.5rem; }
+    .dep-missing { color: #9ca3af; font-style: italic; font-size: .85rem; }
+    a.drawer-link { color: var(--accent); text-decoration: none; font-size: .88rem; }
+    a.drawer-link:hover { text-decoration: underline; }
     .source { color: var(--muted); font-size: .78rem; white-space: nowrap; }
     .side { display: grid; gap: 1rem; align-content: start; min-width: 0; }
     form.stack { grid-template-columns: 1fr 1fr; }
@@ -2107,9 +2123,9 @@ HTML_PAGE = r"""<!doctype html>
       <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
     </div>
     <div class="toolbar">
-      <button class="secondary" onclick="toggleStats()">Stats</button>
-      <button class="secondary" onclick="enableBrowserNotifications()">Notifications</button>
-      <button class="secondary" onclick="refreshAll()">Refresh</button>
+      <button id="stats-btn" class="secondary" onclick="toggleStats()" title="Toggle statistics panel (s)">Stats</button>
+      <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
+      <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
       <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
     </div>
@@ -2761,6 +2777,8 @@ HTML_PAGE = r"""<!doctype html>
       }
       const permission = await Notification.requestPermission();
       browserNotificationsEnabled = permission === "granted";
+      updateNotifBtnLabel();
+      updateNotifPermissionDisplay();
       if (browserNotificationsEnabled) await loadNotifications();
     }
     function showBrowserNotification(record) {
@@ -2883,7 +2901,7 @@ HTML_PAGE = r"""<!doctype html>
       for (const [key, values] of Object.entries(item.details || {})) {
         const valHtml = (values || []).map(v => {
           if (REF_KEYS.has(key)) {
-            return `<a class="drawer-link" onclick="drawerNavigate(${jsLiteral(String(v))})">${escapeHtml(String(v))}</a>`;
+            return `<a class="drawer-link" onclick="drawerNavigate(${escapeHtml(jsLiteral(String(v)))})">${escapeHtml(String(v))}</a>`;
           }
           return escapeHtml(String(v));
         }).join(", ");
@@ -2895,34 +2913,71 @@ HTML_PAGE = r"""<!doctype html>
       const sourceHtml = `<div class="drawer-section-title">Source</div>
         <div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
       body.innerHTML = fieldsHtml + bodyHtml +
-        `<div id="drawer-incoming"><div class="drawer-section-title">Incoming links</div><div class="empty">Loading…</div></div>` +
+        `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
         sourceHtml;
       drawer.classList.add("open");
-      loadIncomingLinks(item);
+      loadDependencyLinks(item);
     }
 
-    async function loadIncomingLinks(item) {
+    const DEP_RELATION_LABEL = {
+      depends_on: "depends on", blocks: "blocks", parent: "child of",
+      related: "related", ref: "ref",
+    };
+    const STATUS_ICON = {"[ ]": "○", "[x]": "✓", "[-]": "✕", "[/]": "◑", "[>]": "→", "[?]": "?", "[!]": "!"};
+
+    async function loadDependencyLinks(item) {
       const itemId = item?.id || (item?.details?.id?.[0]);
-      const container = document.getElementById("drawer-incoming");
+      const container = document.getElementById("drawer-deps");
       if (!container) return;
-      if (!itemId) { container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">No ID — cannot look up links.</div>`; return; }
+      if (!itemId) {
+        container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No ID — cannot look up links.</div>`;
+        return;
+      }
       try {
-        const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=incoming`);
+        const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=both`);
         const records = data.records || [];
         if (!records.length) {
-          container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">No incoming links.</div>`;
+          container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;
         }
-        let html = `<div class="drawer-section-title">Incoming links (${records.length})</div>`;
-        for (const rec of records) {
-          html += `<div class="incoming-link-row">
-            <span class="pill" style="font-size:.78rem">${escapeHtml(rec.relation)}</span>
-            <a class="drawer-link" onclick="drawerNavigate(${jsLiteral(rec.source_id || "")})">${escapeHtml(rec.source_title || rec.source_id || "")}</a>
+        const outgoing = records.filter(r => r.source_id === itemId);
+        const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
+        let html = `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div><div class="dep-graph">`;
+
+        function depRow(arrow, arrowCls, relLabel, otherId, otherTitle, otherStatus, otherType) {
+          const statusIcon = STATUS_ICON[otherStatus] || "·";
+          const statusCls = STATUS_CLASS[otherStatus] || "status-note";
+          const typeCls = "type-" + (otherType || "N");
+          const nav = escapeHtml(jsLiteral(otherId || ""));
+          return `<div class="dep-row">
+            <span class="dep-arrow ${arrowCls}">${arrow}</span>
+            <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(statusIcon)}</span>
+            <span class="type-badge ${typeCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(otherType || "?")}</span>
+            <span class="dep-rel">${escapeHtml(relLabel)}</span>
+            ${otherId
+              ? `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(otherTitle || otherId)}</a>`
+              : `<span class="dep-missing">${escapeHtml(otherTitle || otherId || "?")}</span>`}
           </div>`;
         }
+
+        if (outgoing.length) {
+          html += `<div class="dep-group-label">This item →</div>`;
+          for (const r of outgoing) {
+            const lbl = DEP_RELATION_LABEL[r.relation] || r.relation;
+            html += depRow("→", "dep-out", lbl, r.target_id, r.target_title, r.target_status, r.target_type);
+          }
+        }
+        if (incoming.length) {
+          html += `<div class="dep-group-label" style="margin-top:.5rem">← This item</div>`;
+          for (const r of incoming) {
+            const lbl = DEP_RELATION_LABEL[r.relation] || r.relation;
+            html += depRow("←", "dep-in", lbl, r.source_id, r.source_title, r.source_status, r.source_type);
+          }
+        }
+        html += `</div>`;
         container.innerHTML = html;
       } catch(e) {
-        if (container) container.innerHTML = `<div class="drawer-section-title">Incoming links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+        if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
       }
     }
 
@@ -3124,11 +3179,46 @@ HTML_PAGE = r"""<!doctype html>
     let mainChart = null;
     let statsVisible = false;
 
+    let notifPanelVisible = true;
+
     function toggleStats() {
       statsVisible = !statsVisible;
       const sec = document.querySelector(".stats-section");
       if (sec) sec.style.display = statsVisible ? "" : "none";
       if (statsVisible) loadChart("tasks");
+      const btn = document.getElementById("stats-btn");
+      if (btn) btn.classList.toggle("btn-active", statsVisible);
+    }
+
+    function toggleNotifPanel() {
+      const sec = document.querySelector(".notifications-section");
+      if (!sec) { enableBrowserNotifications(); return; }
+      notifPanelVisible = !notifPanelVisible;
+      sec.style.display = notifPanelVisible ? "" : "none";
+      const btn = document.getElementById("notif-btn");
+      if (btn) {
+        btn.classList.toggle("btn-active", notifPanelVisible);
+        updateNotifBtnLabel();
+      }
+      if (notifPanelVisible && Notification.permission === "default") {
+        enableBrowserNotifications();
+      }
+    }
+
+    function updateNotifBtnLabel() {
+      const btn = document.getElementById("notif-btn");
+      if (!btn) return;
+      const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+      const indicator = perm === "granted" ? " ●" : perm === "denied" ? " ✕" : " ○";
+      btn.textContent = "Notifications" + indicator;
+    }
+
+    async function triggerRefresh() {
+      const btn = document.getElementById("refresh-btn");
+      if (btn) { btn.classList.add("btn-active"); btn.textContent = "…"; btn.disabled = true; }
+      try { await refreshAll(); } finally {
+        if (btn) { btn.classList.remove("btn-active"); btn.textContent = "Refresh"; btn.disabled = false; }
+      }
     }
 
     async function loadChart(type) {
@@ -3196,6 +3286,7 @@ HTML_PAGE = r"""<!doctype html>
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();
+      updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
       startGitPolling();
       return refreshAll();

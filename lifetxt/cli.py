@@ -58,8 +58,10 @@ from .links import (
     dependency_blocker_records,
     format_link_table,
     link_records,
+    links_to_dot,
     links_to_json,
     links_to_jsonl,
+    links_to_mermaid,
     reference_diagnostics,
 )
 from .markdown import markdown_to_html, markdown_to_plain
@@ -284,7 +286,7 @@ def build_parser():
     )
     links_command.add_argument(
         "--format",
-        choices=("text", "json", "jsonl"),
+        choices=("text", "json", "jsonl", "mermaid", "dot"),
         default="text",
         help="Output format.",
     )
@@ -1472,6 +1474,10 @@ def command_links(args):
         if output:
             output += "\n"
         write_text(None, output)
+    elif args.format == "mermaid":
+        write_text(None, links_to_mermaid(records))
+    elif args.format == "dot":
+        write_text(None, links_to_dot(records))
     else:
         write_text(None, format_link_table(records))
 

@@ -4871,6 +4871,232 @@ class LifeTxtAssignFromUserTests(unittest.TestCase):
             self.assertIn("recipient:bob", content)
 
 
+class LifeTxtLinksMermaidTests(unittest.TestCase):
+    TEXT = (
+        "[ ] T Root id:root_001\n"
+        "[x] T Done id:done_001\n"
+        "[ ] T Child id:child_001 depends_on:root_001 parent:done_001\n"
+    )
+
+    def test_mermaid_starts_with_graph_lr(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertTrue(normalize_newlines(stdout).startswith("graph LR"))
+
+    def test_mermaid_contains_node_ids(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("root_001", out)
+        self.assertIn("child_001", out)
+
+    def test_mermaid_contains_relation_edges(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("depends_on", out)
+        self.assertIn("-->", out)
+
+    def test_mermaid_done_node_has_class(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn(":::done", out)
+        self.assertIn("classDef done", out)
+
+    def test_mermaid_no_links_still_outputs_graph(self):
+        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text="[ ] T Solo\n")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("graph LR", normalize_newlines(stdout))
+
+
+class LifeTxtLinksDotTests(unittest.TestCase):
+    TEXT = (
+        "[ ] T Task_A id:ta depends_on:tb\n"
+        "[x] T Task_B id:tb\n"
+    )
+
+    def test_dot_starts_with_digraph(self):
+        stdout, stderr, code = run_cli("links", "--format", "dot", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("digraph links", normalize_newlines(stdout))
+
+    def test_dot_contains_arrow_edges(self):
+        stdout, stderr, code = run_cli("links", "--format", "dot", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("->", out)
+        self.assertIn("depends_on", out)
+
+    def test_dot_done_node_has_dashed_style(self):
+        stdout, stderr, code = run_cli("links", "--format", "dot", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("style=dashed", normalize_newlines(stdout))
+
+    def test_dot_no_links_outputs_empty_digraph(self):
+        stdout, stderr, code = run_cli("links", "--format", "dot", input_text="[ ] T Solo\n")
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("digraph links", out)
+        self.assertNotIn("->", out)
+
+
+class LifeTxtW219Tests(unittest.TestCase):
+    def test_w219_no_warning_for_valid_interval(self):
+        _items, diags = parse_text("[ ] H Meditate repeat:daily interval:2\n")
+        self.assertFalse(any(d.code == "W219" for d in diags))
+
+    def test_w219_fires_for_non_integer_interval(self):
+        _items, diags = parse_text("[ ] H Meditate repeat:daily interval:every_other\n")
+        self.assertTrue(any(d.code == "W219" for d in diags))
+
+    def test_w219_no_warning_for_valid_count(self):
+        _items, diags = parse_text("[ ] H Meditate repeat:weekly count:5\n")
+        self.assertFalse(any(d.code == "W219" for d in diags))
+
+    def test_w219_fires_for_non_integer_count(self):
+        _items, diags = parse_text("[ ] H Meditate repeat:weekly count:five\n")
+        self.assertTrue(any(d.code == "W219" for d in diags))
+
+
+class LifeTxtReviewEdgeCaseTests(unittest.TestCase):
+    def _make_file(self, tmp, content):
+        path = os.path.join(tmp, "life.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return path
+
+    def test_review_custom_from_to_range(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            content = (
+                "[x] T Task_in_range done:2026-03-15 id:T001\n"
+                "[x] T Task_out_of_range done:2026-01-10 id:T002\n"
+            )
+            path = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli(
+                "review", path,
+                "--from", "2026-03-01", "--to", "2026-03-31",
+                "--format", "json",
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(1, data["completed_tasks"])
+
+    def test_review_empty_period_returns_zero_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            content = "[x] T Old_task done:2025-01-01 id:T001\n"
+            path = self._make_file(tmp, content)
+            stdout, stderr, code = run_cli(
+                "review", path,
+                "--from", "2026-05-01", "--to", "2026-05-31",
+                "--format", "json",
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(0, data["completed_tasks"])
+
+    def test_review_range_in_json_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._make_file(tmp, "[x] T Task done:2026-03-15 id:T001\n")
+            stdout, stderr, code = run_cli(
+                "review", path,
+                "--from", "2026-03-01", "--to", "2026-03-31",
+                "--format", "json",
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIn("range", data)
+            self.assertIn("2026-03-01", str(data["range"]))
+            self.assertIn("2026-03-31", str(data["range"]))
+
+    def test_review_multi_file_aggregates_tasks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p1 = os.path.join(tmp, "a.txt")
+            p2 = os.path.join(tmp, "b.txt")
+            with open(p1, "w", encoding="utf-8") as f:
+                f.write("[x] T Task_A done:2026-03-10 id:A001\n")
+            with open(p2, "w", encoding="utf-8") as f:
+                f.write("[x] T Task_B done:2026-03-12 id:B001\n")
+            stdout, stderr, code = run_cli(
+                "review", p1, p2,
+                "--from", "2026-03-01", "--to", "2026-03-31",
+                "--format", "json",
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(2, data["completed_tasks"])
+
+
+class LifeTxtCheckIgnoreEdgeCaseTests(unittest.TestCase):
+    def test_check_ignore_unknown_code_does_not_crash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Normal_task\n")
+            stdout, stderr, code = run_cli("check", path, "--ignore", "W999")
+            self.assertEqual(0, code, stderr)
+
+    def test_check_ignore_takes_precedence_over_code_filter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task est:90m\n")
+            stdout, stderr, code = run_cli(
+                "check", path, "--code", "W222", "--ignore", "W222"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W222", normalize_newlines(stdout))
+
+    def test_check_ignore_suppresses_in_json_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task est:90m\n")
+            stdout, stderr, code = run_cli(
+                "check", path, "--ignore", "W222", "--format", "json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIsInstance(data, list)
+            codes = [d["code"] for d in data]
+            self.assertNotIn("W222", codes)
+
+
+class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
+    def test_health_ignore_suppresses_w303(self):
+        import datetime as dt
+        today = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Overdue due:2020-01-01 updated:%s\n" % today)
+            stdout, stderr, code = run_cli("health", path, "--ignore", "W303")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W303", normalize_newlines(stdout))
+
+    def test_health_w301_not_fired_for_recently_updated_task(self):
+        import datetime as dt
+        today = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] T Ongoing updated:%s\n" % today)
+            stdout, stderr, code = run_cli("health", path)
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W301", normalize_newlines(stdout))
+
+    def test_health_w302_not_fired_for_recently_completed_habit(self):
+        import datetime as dt
+        today = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("[ ] H Morning_run\n[x] H Morning_run done:%s\n" % today)
+            stdout, stderr, code = run_cli("health", path)
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("W302", normalize_newlines(stdout))
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

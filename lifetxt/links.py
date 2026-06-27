@@ -1,4 +1,5 @@
 import json
+import re
 from collections import OrderedDict
 
 from .model import Diagnostic, REFERENCE_KEYS
@@ -209,6 +210,102 @@ def links_to_jsonl(records):
         json.dumps(record, ensure_ascii=False, separators=(",", ":"))
         for record in records
     )
+
+
+_DONE_STATUSES = ("[x]", "[-]")
+
+
+def links_to_mermaid(records):
+    """Serialize link graph as a Mermaid graph LR diagram."""
+    lines = ["graph LR"]
+    if not records:
+        lines.append("")
+        return "\n".join(lines)
+
+    nodes = {}
+    for record in records:
+        src_id = record["source_id"] or record["source_location"]
+        if src_id not in nodes:
+            nodes[src_id] = (record["source_title"], record.get("source_status", ""))
+        tgt_id = record["target_id"]
+        tgt_title = record.get("target_title", tgt_id)
+        tgt_status = record.get("target_status", "")
+        if tgt_id not in nodes:
+            nodes[tgt_id] = (tgt_title, tgt_status)
+
+    for node_id, (title, status) in nodes.items():
+        safe = _mermaid_node_id(node_id)
+        label = ("%s: %s" % (node_id, title)).replace('"', "'")
+        done_cls = ":::done" if status in _DONE_STATUSES else ""
+        lines.append('    %s["%s"]%s' % (safe, label, done_cls))
+
+    lines.append("")
+    for record in records:
+        src_safe = _mermaid_node_id(record["source_id"] or record["source_location"])
+        tgt_safe = _mermaid_node_id(record["target_id"])
+        lines.append("    %s -- %s --> %s" % (src_safe, record["relation"], tgt_safe))
+
+    has_done = any(
+        record.get("source_status", "") in _DONE_STATUSES
+        or record.get("target_status", "") in _DONE_STATUSES
+        for record in records
+    )
+    if has_done:
+        lines.append("")
+        lines.append("    classDef done stroke-dasharray:5 5")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def links_to_dot(records):
+    """Serialize link graph as a Graphviz DOT digraph."""
+    lines = ["digraph links {"]
+    if not records:
+        lines.append("}")
+        lines.append("")
+        return "\n".join(lines)
+
+    nodes = {}
+    for record in records:
+        src_id = record["source_id"] or record["source_location"]
+        if src_id not in nodes:
+            nodes[src_id] = (record["source_title"], record.get("source_status", ""))
+        tgt_id = record["target_id"]
+        tgt_title = record.get("target_title", tgt_id)
+        tgt_status = record.get("target_status", "")
+        if tgt_id not in nodes:
+            nodes[tgt_id] = (tgt_title, tgt_status)
+
+    for node_id, (title, status) in nodes.items():
+        label = _dot_quote("%s: %s" % (node_id, title))
+        attrs = "label=%s" % label
+        if status in _DONE_STATUSES:
+            attrs += " style=dashed"
+        lines.append("    %s [%s];" % (_dot_quote(node_id), attrs))
+
+    for record in records:
+        src_id = record["source_id"] or record["source_location"]
+        tgt_id = record["target_id"]
+        lines.append(
+            "    %s -> %s [label=%s];"
+            % (_dot_quote(src_id), _dot_quote(tgt_id), _dot_quote(record["relation"]))
+        )
+
+    lines.append("}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _mermaid_node_id(value):
+    return re.sub(r"[^A-Za-z0-9_]", "_", str(value))
+
+
+def _dot_quote(value):
+    text = str(value)
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", text):
+        return text
+    return '"%s"' % text.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _link_record(item, source_id, relation, target_id, index, key):

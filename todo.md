@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x24)
+Last updated: 2026-06-27 (updated x25)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -296,13 +296,6 @@ CLI-native charts without external dependencies.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
-- [ ] Add `--format mermaid` output to the CLI `links` command: serialize the
-  link graph as a Mermaid `graph LR` diagram. Each node is labeled with the
-  item ID and title; edges are labeled with the relation type (`parent`,
-  `depends_on`, `blocks`, `related`, `ref`). Completed items (`[x]`, `[-]`)
-  are rendered with a distinct node style. This output can be pasted into any
-  Markdown file that supports Mermaid rendering (GitHub, Obsidian, etc.).
-
 - [ ] Add graph API endpoint: `GET /api/graph` returns the full link graph as
   a stable JSON structure `{"nodes": [...], "edges": [...]}` where each node
   includes `id`, `title`, `status`, `type`, and each edge includes `source`,
@@ -316,9 +309,9 @@ CLI-native charts without external dependencies.
   the view from a specific item. The panel must be reachable from the item
   detail panel via a "Show graph" button and from a top-level nav link.
 
-- [ ] Add `--format dot` output to the CLI `links` command: serialize the link
-  graph as a Graphviz DOT file for users who prefer `dot`/`neato`/`fdp` for
-  layout. Allows offline rendering to SVG or PNG without a browser.
+- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
+  characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
+  with mermaid/dot output (verify only reachable subgraph is rendered).
 
 ### Recurrence & Notifications (Web UI)
 
@@ -681,8 +674,7 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `1.5h`, and unrecognized formats.
 
 - [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
-  is affected once timezone wiring is implemented. Current self/project wiring
-  tests already pass (LifeTxtDirectiveWiringTests).
+  is affected once timezone wiring is implemented.
 
 - [ ] Add `quick` tests: `write_file` config fallback (no `--append`),
   `--type E` generates event, validation error on malformed title.
@@ -711,9 +703,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   empty sections retained), all three `--orphan-children` modes, `--dry-run`
   for each mode, `--block-on-external-refs`, and cross-file reference warning.
 
-- [ ] Add W219 tests: explicit `parent:` with completed parent and open child,
-  inferred indentation-based parent, `--ignore W219` suppression, no false
-  positive when all children are also completed.
+- [ ] Add W219 tests: `--ignore W219` suppression via `check --ignore`; verify
+  no false positive when `interval:` is a valid positive integer string that
+  starts with a leading zero (e.g., `interval:02`).
 
 - [ ] Add `#!` directive parser tests: valid block at file start, block
   terminated by a non-`#!` line, unknown key handling, directives appearing
@@ -752,13 +744,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `summary` tests: counts match file contents for every type/status
   combination, missing-ID count is accurate, JSON schema is stable.
 
-- [ ] Add `review` edge-case tests: `--from/--to` custom range, empty period
-  (no items in range), mood trend ordering, elapsed normalization in JSON
-  output, multi-file input.
+- [ ] Add `review` edge-case tests: mood trend ordering (most common mood first),
+  elapsed normalization in JSON output (minutes integer, not raw string).
 
-- [ ] Add `health` edge-case tests: `--ignore CODE` suppresses correctly,
-  W301 not fired when item has a recent `updated:`, W302 passes when habit has
-  recent completion, W304 passes when assignee has active S record.
+- [ ] Add `health` edge-case tests: W304 passes when assignee has an active S
+  record within the `--since` window; W304 fires when S record is absent.
 
 - [ ] Add dependency edge-case tests: ambiguous and missing dependency IDs,
   cross-file blockers, duplicate `depends_on:` / `blocks:` pairs, and

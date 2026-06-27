@@ -3569,6 +3569,325 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertEqual(["project:"], matches)
 
 
+class LifeTxtDirectiveWiringTests(unittest.TestCase):
+    def test_quick_applies_project_directive_to_new_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("#! project: myproj\n\n")
+            stdout, stderr, code = run_cli("quick", "Buy_milk", "--append", life_file)
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("project:myproj", content)
+            self.assertIn("Buy_milk", content)
+
+    def test_quick_applies_self_directive_as_person_for_S_item(self):
+        import datetime
+        now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("#! self: alice\n\n")
+            stdout, stderr, code = run_cli(
+                "quick", "At_office", "--type", "S",
+                "--from", now, "--state", "working",
+                "--append", life_file,
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("person:alice", content)
+
+    def test_quick_explicit_project_overrides_directive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("#! project: defaultproj\n\n")
+            stdout, stderr, code = run_cli(
+                "quick", "Task_A", "--project", "explicit", "--append", life_file
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("project:explicit", content)
+            self.assertNotIn("project:defaultproj", content)
+
+
+class LifeTxtInitCliTests(unittest.TestCase):
+    def test_init_creates_life_txt_with_directives(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            cfg_file = os.path.join(tmp, ".lifetxt.json")
+            stdout, stderr, code = run_cli(
+                "init",
+                "--file", life_file,
+                "--config-output", cfg_file,
+                "--name", "alice",
+                "--timezone", "Asia/Tokyo",
+                "--project", "work",
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("#! self: alice", content)
+            self.assertIn("#! timezone: Asia/Tokyo", content)
+            self.assertIn("#! project: work", content)
+            self.assertIn("First_Task", content)
+            self.assertIn("project:work", content)
+
+    def test_init_creates_config_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            cfg_file = os.path.join(tmp, ".lifetxt.json")
+            run_cli(
+                "init",
+                "--file", life_file,
+                "--config-output", cfg_file,
+                "--name", "bob",
+                "--timezone", "UTC",
+            )
+            data = json.loads(open(cfg_file, encoding="utf-8").read())
+            self.assertEqual("bob", data["defaults"]["person"])
+            self.assertEqual("UTC", data["defaults"]["timezone"])
+
+    def test_init_interactive_prompts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            cfg_file = os.path.join(tmp, ".lifetxt.json")
+            stdin = "carol\nEurope/London\nresearch\n"
+            stdout, stderr, code = run_cli(
+                "init", "--file", life_file, "--config-output", cfg_file,
+                input_text=stdin,
+            )
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("#! self: carol", content)
+            self.assertIn("#! timezone: Europe/London", content)
+            self.assertIn("#! project: research", content)
+
+    def test_init_prompts_before_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            cfg_file = os.path.join(tmp, ".lifetxt.json")
+            open(life_file, "w").close()
+            stdout, stderr, code = run_cli(
+                "init", "--file", life_file, "--config-output", cfg_file,
+                "--name", "alice", "--timezone", "UTC",
+                input_text="n\n",
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Aborted", stdout)
+
+
+class LifeTxtDoctorCliTests(unittest.TestCase):
+    def test_doctor_ok_with_valid_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file)
+            normalized = normalize_newlines(stdout)
+            self.assertIn("[OK]", normalized)
+            self.assertIn("life.txt", normalized)
+
+    def test_doctor_fail_on_missing_file(self):
+        stdout, stderr, code = run_cli("doctor", "/nonexistent/no_such_file.life.txt")
+        normalized = normalize_newlines(stdout)
+        self.assertEqual(1, code)
+        self.assertIn("[XX]", normalized)
+
+    def test_doctor_json_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one\n")
+            stdout, stderr, code = run_cli("doctor", life_file, "--format", "json")
+            records = json.loads(stdout)
+            self.assertIsInstance(records, list)
+            self.assertTrue(len(records) > 0)
+            self.assertIn("status", records[0])
+            self.assertIn("check", records[0])
+            self.assertIn("message", records[0])
+
+    def test_doctor_fail_on_syntax_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("not a valid life.txt line\n")
+            stdout, stderr, code = run_cli("doctor", life_file)
+            normalized = normalize_newlines(stdout)
+            self.assertEqual(1, code)
+            self.assertIn("[XX]", normalized)
+
+
+class LifeTxtAssignCliTests(unittest.TestCase):
+    def test_assign_updates_assignee_by_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001 assignee:alice\n")
+            stdout, stderr, code = run_cli("assign", life_file, "T001", "--to", "bob")
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("assignee:bob", content)
+            self.assertNotIn("assignee:alice", content)
+
+    def test_assign_adds_assignee_when_none_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001\n")
+            stdout, stderr, code = run_cli("assign", life_file, "T001", "--to", "carol")
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("assignee:carol", content)
+
+    def test_assign_fails_on_missing_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001\n")
+            stdout, stderr, code = run_cli("assign", life_file, "T999", "--to", "bob")
+            self.assertEqual(1, code)
+            self.assertIn("T999", stderr)
+
+    def test_assign_notify_appends_M_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_login id:T001\n")
+            stdout, stderr, code = run_cli("assign", life_file, "T001", "--to", "dave", "--notify")
+            self.assertEqual(0, code, stderr)
+            content = open(life_file, encoding="utf-8").read()
+            self.assertIn("[ ] M", content)
+            self.assertIn("recipient:dave", content)
+
+
+class LifeTxtHealthCliTests(unittest.TestCase):
+    def test_health_clean_file_returns_ok(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("health", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK", normalize_newlines(stdout))
+
+    def test_health_w303_overdue_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Old_task due:2020-01-01\n")
+            stdout, stderr, code = run_cli("health", life_file)
+            self.assertEqual(1, code)
+            self.assertIn("W303", normalize_newlines(stdout))
+
+    def test_health_w303_upcoming_task(self):
+        import datetime
+        soon = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Upcoming_task due:%s\n" % soon)
+            stdout, stderr, code = run_cli("health", life_file)
+            self.assertEqual(1, code)
+            self.assertIn("W303", normalize_newlines(stdout))
+
+    def test_health_json_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Old_task due:2020-01-01\n")
+            stdout, stderr, code = run_cli("health", life_file, "--format", "json")
+            issues = json.loads(stdout)
+            self.assertIsInstance(issues, list)
+            self.assertTrue(len(issues) > 0)
+            self.assertIn("code", issues[0])
+            codes = [issue["code"] for issue in issues]
+            self.assertIn("W303", codes)
+
+    def test_health_w302_open_habit_no_completion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] H Daily_exercise repeat:daily\n")
+            stdout, stderr, code = run_cli("health", life_file)
+            self.assertEqual(1, code)
+            self.assertIn("W302", normalize_newlines(stdout))
+
+
+class LifeTxtInboxCliTests(unittest.TestCase):
+    def test_inbox_empty_when_all_classified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug project:work due:2026-12-01\n")
+            stdout, stderr, code = run_cli("inbox", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("empty", normalize_newlines(stdout).lower())
+
+    def test_inbox_shows_unclassified_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Buy_milk\n")
+            stdout, stderr, code = run_cli("inbox", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Buy_milk", normalize_newlines(stdout))
+
+    def test_inbox_excludes_task_with_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Buy_milk project:shopping\n[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("inbox", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("Buy_milk", normalize_newlines(stdout))
+            self.assertIn("Fix_bug", normalize_newlines(stdout))
+
+    def test_inbox_json_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Unclassified_task\n")
+            stdout, stderr, code = run_cli("inbox", life_file, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            items = json.loads(stdout)
+            self.assertEqual(1, len(items))
+            self.assertEqual("Unclassified_task", items[0]["title"])
+
+
+class LifeTxtCleanupCliTests(unittest.TestCase):
+    def test_cleanup_ok_with_clean_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug id:T001 project:work\n")
+            stdout, stderr, code = run_cli("cleanup", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK", normalize_newlines(stdout))
+
+    def test_cleanup_reports_missing_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T No_id_here project:work\n")
+            stdout, stderr, code = run_cli("cleanup", life_file)
+            self.assertEqual(0, code, stderr)
+            normalized = normalize_newlines(stdout)
+            self.assertIn("ids", normalized)
+            self.assertIn("missing", normalized)
+
+    def test_cleanup_json_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T No_id_here\n")
+            stdout, stderr, code = run_cli("cleanup", life_file, "--format", "json")
+            self.assertEqual(0, code, stderr)
+            suggestions = json.loads(stdout)
+            self.assertIsInstance(suggestions, list)
+            checks = [s["check"] for s in suggestions]
+            self.assertIn("ids", checks)
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")

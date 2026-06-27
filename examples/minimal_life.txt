@@ -6,19 +6,20 @@
 [ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] J "Research day" on:2026-06-23 mood:good tag:lab
 | Read papers in the morning.
-[N] N Research_Memo project:research
+|
+| ## homework
+| - Write a summary of the related work section.
+| - Write a summary of the methods section.
+| - Write a summary of the results section.
+| - Write a summary of the discussion section.
+| - Write a summary of the conclusion section.
+|  
+[N] N Research_Memo project:research note:"Should create a new program for conclusion section."
 
 [ ] T "My project" \
 id:my_project_root \
 on:2026-06-23 \
 due:2026-08-31
-| I worked on my project in the afternoon.
-| I Wrote `readme.md` for my project.
-| I added a new feature to my project.
-|
-| ## Next Steps
-| - Test the new feature.
-| - Write documentation for the new feature.
     [ ] T "Write documentation" due:2026-06-30 project:my_project assignee:self id:my_project_doc parent:my_project_root
     [ ] T "Prepare new content" due:2026-07-05 project:my_project assignee:self id:my_project_content parent:my_project_root
     [ ] T "Test new feature" due:2026-07-10 project:my_project assignee:self id:my_project_test parent:my_project_root

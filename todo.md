@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x15)
+Last updated: 2026-06-27 (updated x16)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -80,21 +80,14 @@ Resolve these before implementing features that depend on them.
 Settings that affect how values are resolved across CLI, config file, and
 file-level metadata. These must be consistent across all commands.
 
-- [ ] Wire `#!` directive values into command behavior: apply `self` as the
-  default `person:` for `S` items (when `--person self` or no `--person` is
-  given), apply `timezone` to datetime display and filtering, and apply
-  `project` as the default `project:` for items missing one. Currently
-  `parse_directives` extracts them and `sources --format json` exposes them,
-  but no command reads them yet.
+- [ ] Extend `#!` directive wiring to `timezone`: apply `timezone` directive
+  to datetime display (agenda, summary, stats) and filtering. Currently `self`
+  and `project` are wired for `quick` and `assist`; `timezone` remains unread.
 
-- [ ] Define and enforce the setting resolution order for all configurable
-  values, applied consistently by every command:
-  1. Explicit CLI flag (highest priority)
-  2. External config JSON `defaults` section
-  3. `#!` file-level metadata directives
-  4. Built-in defaults (`self="self"`, `timezone=UTC`)
-  Document this order in the format spec, in `config init` output comments,
-  and in a dedicated "Configuration" section of the CLI guide.
+- [ ] Document the four-level setting resolution order in the format spec and
+  in a dedicated "Configuration" section of the CLI guide: (1) CLI flag,
+  (2) config JSON defaults, (3) `#!` file-level directives, (4) built-in
+  defaults. Update `config init` output to include comments describing each level.
 
 ---
 
@@ -136,21 +129,9 @@ New commands that reduce the initial setup cost and protect against data loss.
 Implement before other new commands because they lower the barrier for all
 subsequent use.
 
-- [ ] Add `init` command for interactive first-time setup: prompt for user
-  name, timezone, and default project, then write `life.txt` with matching
-  `#!` directives and `.lifetxt.json` with matching `defaults`. Append a
-  starter task (`[ ] T First_Task due:TODAY`) so the file is non-empty and
-  immediately parseable by every other command. Prompt before overwriting
-  existing files. Intended to replace the manual setup steps currently
-  described in the README.
-
-- [ ] Add `doctor` command for environment diagnostics: check Python version,
-  presence and readability of `life.txt` and `.lifetxt.json`, availability of
-  optional dependencies (`fzf`, `peco`, `textual`, `watchdog`, `matplotlib`,
-  `cryptography`), and common data issues (missing IDs, W213 duplicates,
-  unresolved references). Print a `✓`/`!`/`✗` summary with a concrete
-  next-step command for each issue. Exit non-zero when any check fails so
-  `doctor` can be used in CI onboarding scripts.
+- [ ] Extend `init` command: add `--yes` flag to run fully non-interactively
+  with defaults (`self`, `UTC`, no project) without reading stdin; currently
+  prompts for omitted values. Add onboarding mention to README.
 
 - [ ] Add `undo` command to reverse the most recent write on a given file:
   before every successful write operation (`assist`, `done`, `archive`,
@@ -175,10 +156,9 @@ subsequent use.
 New commands for the most frequent daily actions. Each delegates to an
 existing command internally to reuse validation and atomic write behavior.
 
-- [ ] Add `assign` command for changing `assignee:` on an existing item:
-  `lifetxt assign FILE ID --to PERSON`. Optionally create a type `M`
-  notification to the new assignee when `--notify` is passed. Delegate to
-  `assist --update` internally.
+- [ ] Extend `assign` command: support `--text QUERY` item selection in
+  addition to positional ID (same approach as `done --text`); add `--notify`
+  sender name override (`--from-user`).
 
 ---
 
@@ -186,6 +166,22 @@ existing command internally to reuse validation and atomic write behavior.
 
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
+
+- [ ] Add `undo` command to reverse the most recent write on a given file:
+  before every successful write operation (`assist`, `done`, `archive`,
+  `quick`, `assign`, `encrypt`, `decrypt`), save a timestamped backup to
+  `.cache/lifetxt/undo/` (configurable via `undo.dir`). `lifetxt undo FILE`
+  restores the previous version; `--list` shows the undo stack with
+  timestamps and operation names. Limit stack depth via `undo.keep`
+  (default: 20). Document that `undo` is not a substitute for Git but provides
+  safety for users who do not use version control.
+
+- [ ] Add automatic backup configuration: when `backup.auto` is `true` in
+  config, save a timestamped copy of any modified file to `backup.dir`
+  (default: `.cache/lifetxt/backup/`) before each write. Retain the most
+  recent `backup.keep` copies (default: 20) per file and delete older ones.
+  Complements `undo` (operation-level) with file-level timestamped recovery
+  that survives process crashes and does not require an explicit undo step.
 
 - [ ] Add `review` command for human-readable period summaries: produce a
   structured report covering completed tasks, remaining open tasks, habit
@@ -195,29 +191,14 @@ what is overdue, and what the week looked like.
   to a pager) and `json` (structured for LLM input). The JSON schema must be
   stable so AI-assisted review workflows can rely on it.
 
-- [ ] Add `health` command for operational sanity checks beyond syntax
-  validation:
-  - W301: task open for more than `--since` days (default: 30) without update
-  - W302: habit with no completion record within `--since` days
-  - W303: deadline due within `--lookahead` days (default: 7) still open
-  - W304: `assignee:` or `owner:` with no recent `S` presence record
-  Support `--ignore CODE`, `--format text|json`, and `--since`/`--lookahead`
-  thresholds. Keep `health` separate from `check` so CI can gate on format
-  errors without failing on operational warnings.
+- [ ] Extend `health` command: add `--format jsonl`, add `--type` filter to
+  restrict checks to specific item types, and add W301 suppression when an
+  item has been explicitly marked `[>]` (deferred). Add `archive` suggestion
+  to `cleanup` output when many completed items are older than 90 days.
 
-- [ ] Add `inbox` command to surface unclassified items: list open tasks that
-  have no `project:`, no `due:`, and no `assignee:`. Options: `--process`
-  for interactive one-by-one triage (prompts for project, due, assignee using
-  `assist` completion helpers), `--fzf` to open matches in `fzf` for quick
-  editing. Intended as the GTD inbox-processing step for items captured via
-  `quick` or `assist` without full detail.
-
-- [ ] Add `cleanup` command as a guided file-maintenance navigator: run
-  `check`, `health`, `ids`, and `links` internally, then print a prioritized
-  action list (e.g., "3 items have no ID — run `ids --assign --dry-run`",
-  "5 completed items older than 90 days — consider `archive --before 90d`").
-  Never modifies the file; only reports and suggests next commands. Support
-  `--format text|json` and `--ignore CODE`.
+- [ ] Add `--process` mode to `inbox` command: interactive one-by-one triage
+  prompting for `project:`, `due:`, and `assignee:` using `assist` completion
+  helpers. Add `--fzf` to open inbox results in `fzf` for quick editing.
 
 ---
 
@@ -631,9 +612,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add duration normalization tests (W222): bare integers, `1h00m`,
   `1.5h`, and unrecognized formats.
 
-- [ ] Add `#!` directive wiring tests: verify that `self`, `timezone`, and
-  `project` directive values influence `S`-item person defaulting, datetime
-  display, and item project defaulting once wiring is implemented.
+- [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
+  is affected once timezone wiring is implemented. Current self/project wiring
+  tests already pass (LifeTxtDirectiveWiringTests).
 
 - [ ] Add `quick` tests: `write_file` config fallback (no `--append`),
   `--type E` generates event, validation error on malformed title.
@@ -706,18 +687,18 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `review` tests: all output sections present for `--week`, `--month`,
   `--from/--to`; JSON schema stability; empty period (no items).
 
-- [ ] Add `health` tests: W301–W304 each fire under the correct condition,
-  `--ignore CODE` suppresses correctly, no false positives on recently active
-  items.
+- [ ] Add `health` edge-case tests: `--ignore CODE` suppresses correctly,
+  W301 not fired when item has a recent `updated:`, W302 passes when habit has
+  recent completion, W304 passes when assignee has active S record.
 
-- [ ] Add `inbox` tests: items without all three qualifier fields are included;
-  items with any qualifier are excluded; `--process` prompts in sequence.
+- [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
+  each field correctly applied via `assist --update`.
 
-- [ ] Add `assign` tests: `assignee:` updated by ID, `--notify` generates
-  valid `M` item, `assist --update` validation applied.
+- [ ] Add `assign` edge-case tests: `--text` match selection, validation error
+  when resulting line is invalid, `--notify` M-item content verification.
 
-- [ ] Add `cleanup` tests: suggestions match actual findings from `check`,
-  `health`, `ids`, `links`; `--ignore CODE` suppresses; file is never modified.
+- [ ] Add `cleanup --ignore CODE` tests: suppressed codes absent from output;
+  JSON schema has `priority`, `check`, `count`, `action` keys.
 
 - [ ] Add `diff` tests: added, completed, canceled, status-changed,
   detail-changed items; filter scope; JSON output schema.

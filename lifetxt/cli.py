@@ -1004,6 +1004,145 @@ def build_parser():
     summary.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     summary.set_defaults(func=command_summary)
 
+    init_cmd = subparsers.add_parser(
+        "init",
+        help="Interactive first-time setup: create life.txt and .lifetxt.json.",
+    )
+    init_cmd.add_argument(
+        "--file",
+        default="life.txt",
+        help="life.txt file to create. Defaults to life.txt.",
+    )
+    init_cmd.add_argument(
+        "--config-output",
+        dest="config_output",
+        default=".lifetxt.json",
+        help="Config file to create. Defaults to .lifetxt.json.",
+    )
+    init_cmd.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing files without prompting.",
+    )
+    init_cmd.add_argument("--name", help="Your name (for #! self: directive).")
+    init_cmd.add_argument("--timezone", help="Your timezone (for #! timezone: directive).")
+    init_cmd.add_argument("--project", help="Default project name (for #! project: directive).")
+    init_cmd.set_defaults(func=command_init)
+
+    doctor_cmd = subparsers.add_parser(
+        "doctor",
+        help="Check Python version, files, dependencies, and data issues.",
+    )
+    doctor_cmd.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to check. Defaults to config paths or life.txt.",
+    )
+    doctor_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    doctor_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    doctor_cmd.set_defaults(func=command_doctor)
+
+    assign_cmd = subparsers.add_parser(
+        "assign",
+        help="Change the assignee: on an existing item.",
+    )
+    assign_cmd.add_argument("path", help="life.txt file containing the item.")
+    assign_cmd.add_argument("id", help="ID of the item to reassign.")
+    assign_cmd.add_argument(
+        "--to",
+        required=True,
+        metavar="PERSON",
+        help="New assignee name.",
+    )
+    assign_cmd.add_argument(
+        "--notify",
+        action="store_true",
+        help="Append an M notification item to the new assignee.",
+    )
+    assign_cmd.set_defaults(func=command_assign)
+
+    health_cmd = subparsers.add_parser(
+        "health",
+        help="Operational sanity checks: stale tasks, missed habits, upcoming deadlines.",
+    )
+    _add_input_paths(health_cmd)
+    health_cmd.add_argument(
+        "--since",
+        type=int,
+        default=30,
+        metavar="DAYS",
+        help="Days threshold for stale-task and habit checks. Defaults to 30.",
+    )
+    health_cmd.add_argument(
+        "--lookahead",
+        type=int,
+        default=7,
+        metavar="DAYS",
+        help="Days lookahead for upcoming deadlines. Defaults to 7.",
+    )
+    health_cmd.add_argument(
+        "--ignore",
+        action="append",
+        help="Suppress a health code, e.g. W301. Can be repeated or comma-separated.",
+    )
+    health_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    health_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    health_cmd.set_defaults(func=command_health)
+
+    inbox_cmd = subparsers.add_parser(
+        "inbox",
+        help="List open tasks with no project, due date, or assignee.",
+    )
+    _add_input_paths(inbox_cmd)
+    inbox_cmd.add_argument(
+        "--type",
+        dest="kinds",
+        action="append",
+        help="Filter by type. Defaults to T (task). Can be repeated or comma-separated.",
+    )
+    inbox_cmd.add_argument(
+        "--text",
+        help="Case-insensitive title substring filter.",
+    )
+    inbox_cmd.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    inbox_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    inbox_cmd.set_defaults(func=command_inbox)
+
+    cleanup_cmd = subparsers.add_parser(
+        "cleanup",
+        help="Guided file-maintenance navigator: report issues and suggest next commands.",
+    )
+    _add_input_paths(cleanup_cmd)
+    cleanup_cmd.add_argument(
+        "--ignore",
+        action="append",
+        help="Suppress a diagnostic code. Can be repeated or comma-separated.",
+    )
+    cleanup_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    cleanup_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    cleanup_cmd.set_defaults(func=command_cleanup)
+
     return parser
 
 
@@ -1630,6 +1769,38 @@ def _archive_item_date_before(item, before_date):
     return False
 
 
+def _parse_date_only(value):
+    """Parse a YYYY-MM-DD string to datetime.date, returning None on failure."""
+    s = str(value)
+    if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
+        try:
+            return datetime.date(int(s[:4]), int(s[5:7]), int(s[8:10]))
+        except (ValueError, IndexError):
+            pass
+    return None
+
+
+def _latest_item_date(item):
+    """Return the most recent parsed date from common date detail keys."""
+    best = None
+    for key in ("updated", "created", "done", "do", "due", "on"):
+        for val in item.details.get(key, []):
+            parsed = _parse_date_only(str(val))
+            if parsed and (best is None or parsed > best):
+                best = parsed
+    return best
+
+
+def _load_file_directives(path):
+    """Read #! directives from a file, returning an empty dict on any error."""
+    if not path or path == "-":
+        return {}
+    try:
+        return parse_directives(read_text(path))
+    except OSError:
+        return {}
+
+
 _RELATIVE_DATE_WEEKDAYS = {
     "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
     "friday": 4, "saturday": 5, "sunday": 6,
@@ -1686,7 +1857,9 @@ def command_quick(args):
         args.status = None
 
     item = build_item_from_args(args)
-    apply_config_defaults_to_item(item, args)
+    dest = args.append or config_write_file(config)
+    file_directives = _load_file_directives(dest)
+    apply_config_defaults_to_item(item, args, file_directives)
     apply_auto_id_to_item(item, args)
     line = item_to_assisted_line(item)
 
@@ -1699,7 +1872,6 @@ def command_quick(args):
             return 1
         _print_warnings(diagnostics)
 
-    dest = args.append or config_write_file(config)
     if not dest:
         raise ValueError("No output file. Use --append FILE or configure write_file in config.")
 
@@ -1877,6 +2049,455 @@ def command_summary(args):
     return 0
 
 
+def command_init(args):
+    life_file = getattr(args, "file", None) or "life.txt"
+    config_file = getattr(args, "config_output", None) or ".lifetxt.json"
+
+    life_exists = os.path.exists(life_file)
+    config_exists = os.path.exists(config_file)
+
+    if (life_exists or config_exists) and not args.force:
+        existing = [p for p in (life_file, config_file) if os.path.exists(p)]
+        sys.stdout.write("File(s) already exist: %s\n" % ", ".join(existing))
+        sys.stdout.write("Overwrite? [y/N] ")
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip().lower()
+        if answer not in ("y", "yes"):
+            sys.stdout.write("Aborted.\n")
+            return 0
+
+    name = getattr(args, "name", None)
+    if not name:
+        sys.stdout.write("Your name (for S presence records) [self]: ")
+        sys.stdout.flush()
+        name = sys.stdin.readline().strip() or "self"
+
+    timezone_val = getattr(args, "timezone", None)
+    if not timezone_val:
+        sys.stdout.write("Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ")
+        sys.stdout.flush()
+        timezone_val = sys.stdin.readline().strip() or "UTC"
+
+    project = getattr(args, "project", None)
+    if project is None:
+        sys.stdout.write("Default project name (leave blank to skip): ")
+        sys.stdout.flush()
+        project = sys.stdin.readline().strip()
+
+    today = datetime.date.today().isoformat()
+
+    life_lines = []
+    life_lines.append("#! self: %s" % name)
+    life_lines.append("#! timezone: %s" % timezone_val)
+    if project:
+        life_lines.append("#! project: %s" % project)
+    life_lines.append("")
+    project_detail = (" project:%s" % project) if project else ""
+    life_lines.append("[ ] T First_Task%s due:%s" % (project_detail, today))
+    life_text = "\n".join(life_lines) + "\n"
+
+    defaults = OrderedDict()
+    defaults["person"] = name
+    defaults["timezone"] = timezone_val
+    if project:
+        defaults["project"] = project
+    config_data = OrderedDict([("defaults", defaults)])
+    config_text = json.dumps(config_data, ensure_ascii=False, indent=2) + "\n"
+
+    write_text(life_file, life_text)
+    sys.stdout.write("Wrote %s\n" % life_file)
+    write_text(config_file, config_text)
+    sys.stdout.write("Wrote %s\n" % config_file)
+    sys.stdout.write("Next: python -m lifetxt check %s\n" % life_file)
+    return 0
+
+
+def command_doctor(args):
+    checks = []
+    any_fail = [False]
+
+    def add_check(symbol, label, message):
+        checks.append((symbol, label, message))
+        if symbol == "FAIL":
+            any_fail[0] = True
+
+    major, minor = sys.version_info[:2]
+    if (major, minor) >= (3, 10):
+        add_check("OK", "python", "Python %d.%d" % (major, minor))
+    else:
+        add_check("FAIL", "python", "Python %d.%d (3.10+ required)" % (major, minor))
+
+    config = _config(args)
+    arg_paths = getattr(args, "paths", None) or []
+    life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or ["life.txt"]
+    for path in life_paths:
+        if not os.path.exists(path):
+            add_check("FAIL", "life.txt", "Not found: %s -- run: lifetxt init" % path)
+        elif not os.access(path, os.R_OK):
+            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+        else:
+            add_check("OK", "life.txt", "Found: %s" % path)
+
+    config_path = getattr(args, "config", None) or ".lifetxt.json"
+    if not os.path.exists(config_path):
+        add_check("WARN", "config", "Not found: %s -- run: lifetxt config init" % config_path)
+    else:
+        add_check("OK", "config", "Found: %s" % config_path)
+
+    import shutil
+    for tool in ("fzf", "peco"):
+        if shutil.which(tool):
+            add_check("OK", tool, "Found in PATH")
+        else:
+            add_check("WARN", tool, "Not found (optional)")
+
+    for pkg in ("textual", "watchdog", "matplotlib", "cryptography"):
+        try:
+            __import__(pkg)
+            add_check("OK", pkg, "Installed")
+        except ImportError:
+            add_check("WARN", pkg, "Not installed (optional) -- pip install %s" % pkg)
+
+    existing_paths = [p for p in life_paths if os.path.exists(p)]
+    if existing_paths:
+        items, diagnostics = _parse_life_inputs(existing_paths, config)
+        errors = [d for d in diagnostics if d.severity == "error"]
+        warnings_list = [d for d in diagnostics if d.severity == "warning"]
+        if errors:
+            add_check("FAIL", "check", "%d error(s) -- run: lifetxt check %s" % (len(errors), existing_paths[0]))
+        elif warnings_list:
+            add_check("WARN", "check", "%d warning(s) -- run: lifetxt check %s" % (len(warnings_list), existing_paths[0]))
+        else:
+            add_check("OK", "check", "%d item(s), no errors" % len(items))
+
+        id_key = id_key_from_config(config)
+        missing_count = sum(1 for item in items if not item.details.get(id_key))
+        if missing_count:
+            add_check("WARN", "ids", "%d item(s) missing %s: -- run: lifetxt ids --assign --dry-run %s" % (missing_count, id_key, existing_paths[0]))
+        else:
+            add_check("OK", "ids", "All items have %s:" % id_key)
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        records = [OrderedDict([("status", s), ("check", l), ("message", m)]) for s, l, m in checks]
+        write_text(None, json.dumps(records, ensure_ascii=False, indent=2 if _pretty else None, separators=None if _pretty else (",", ":")) + "\n")
+    else:
+        symbols = {"OK": "[OK]", "WARN": "[!!]", "FAIL": "[XX]"}
+        for symbol, label, message in checks:
+            write_text(None, "%s %-12s %s\n" % (symbols.get(symbol, symbol), label, message))
+
+    return 1 if any_fail[0] else 0
+
+
+def command_assign(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("assign command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    matches = [
+        item for item in items
+        if args.id in [str(v) for v in item.details.get(id_key, [])]
+    ]
+    if not matches:
+        raise ValueError("No item with %s:%s." % (id_key, args.id))
+    if len(matches) > 1:
+        raise ValueError("Multiple items with %s:%s." % (id_key, args.id))
+    target = matches[0]
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        assignee=[args.to],
+        detail=None,
+        add_detail=None,
+        remove_detail=["assignee"],
+    )
+    for flag in DETAIL_FLAGS:
+        dest_attr = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest_attr):
+            setattr(update_args, dest_attr, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Assigned to %s: %s\n" % (args.to, updated_line))
+
+    if args.notify:
+        today = datetime.date.today().isoformat()
+        sender = config_user_name(config) or "self"
+        notif_line = "[ ] M Assigned_to_%s sender:%s recipient:%s ref:%s on:%s" % (
+            args.to.replace(" ", "_"), sender, args.to, args.id, today
+        )
+        append_text(path, notif_line + "\n")
+        sys.stdout.write("Notification: %s\n" % notif_line)
+
+    return 0
+
+
+def command_health(args):
+    config = _config(args)
+    items, diagnostics = _parse_or_exit(args.paths, config)
+    today = datetime.date.today()
+    since_days = getattr(args, "since", 30)
+    lookahead_days = getattr(args, "lookahead", 7)
+    ignore_codes = set(c.upper() for c in _split_csv_args(getattr(args, "ignore", None)))
+
+    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
+
+    habit_completions = {}
+    for item in items:
+        if item.kind == "H" and item.status == "[x]":
+            latest = _latest_item_date(item)
+            if latest:
+                title = item.title
+                if title not in habit_completions or latest > habit_completions[title]:
+                    habit_completions[title] = latest
+
+    recent_persons = set()
+    for item in items:
+        if item.kind == "S":
+            person_vals = item.details.get("person", [])
+            if not person_vals:
+                continue
+            person = str(person_vals[0])
+            latest = _latest_item_date(item)
+            if latest and (today - latest).days <= since_days:
+                recent_persons.add(person)
+            elif item.status in open_statuses and not item.details.get("to"):
+                recent_persons.add(person)
+
+    health_issues = []
+
+    for item in items:
+        location = getattr(item, "source", None)
+        line_no = item.line
+
+        if "W301" not in ignore_codes:
+            if item.kind == "T" and item.status in open_statuses:
+                latest = _latest_item_date(item)
+                if latest and (today - latest).days > since_days:
+                    health_issues.append(OrderedDict([
+                        ("code", "W301"),
+                        ("message", "Task open for %d days without update" % (today - latest).days),
+                        ("line", line_no),
+                        ("source", location),
+                        ("title", item.title),
+                    ]))
+
+        if "W302" not in ignore_codes:
+            if item.kind == "H" and item.status in open_statuses:
+                last_done = habit_completions.get(item.title)
+                if last_done is None or (today - last_done).days > since_days:
+                    health_issues.append(OrderedDict([
+                        ("code", "W302"),
+                        ("message", "Habit has no completion within %d days" % since_days),
+                        ("line", line_no),
+                        ("source", location),
+                        ("title", item.title),
+                    ]))
+
+        if "W303" not in ignore_codes:
+            if item.status in open_statuses:
+                for val in item.details.get("due", []):
+                    parsed = _parse_date_only(str(val))
+                    if parsed:
+                        days_until = (parsed - today).days
+                        if days_until < 0:
+                            health_issues.append(OrderedDict([
+                                ("code", "W303"),
+                                ("message", "Overdue by %d day(s) since %s" % (-days_until, val)),
+                                ("line", line_no),
+                                ("source", location),
+                                ("title", item.title),
+                            ]))
+                        elif days_until <= lookahead_days:
+                            health_issues.append(OrderedDict([
+                                ("code", "W303"),
+                                ("message", "Due in %d day(s) on %s" % (days_until, val)),
+                                ("line", line_no),
+                                ("source", location),
+                                ("title", item.title),
+                            ]))
+
+        if "W304" not in ignore_codes:
+            if item.status in open_statuses:
+                for key in ("assignee", "owner"):
+                    for val in item.details.get(key, []):
+                        person = str(val)
+                        if person not in recent_persons:
+                            health_issues.append(OrderedDict([
+                                ("code", "W304"),
+                                ("message", "%s:%s has no recent S presence record within %d days" % (key, person, since_days)),
+                                ("line", line_no),
+                                ("source", location),
+                                ("title", item.title),
+                            ]))
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(None, json.dumps(health_issues, ensure_ascii=False, indent=2 if _pretty else None, separators=None if _pretty else (",", ":")) + "\n")
+    else:
+        if not health_issues:
+            write_text(None, "OK: No health issues found.\n")
+        else:
+            for issue in health_issues:
+                prefix = ""
+                if issue.get("source"):
+                    prefix = "%s:" % issue["source"]
+                if issue.get("line"):
+                    prefix += "%d: " % issue["line"]
+                write_text(None, "%s%s %s %s\n" % (prefix, issue["code"], issue["title"], issue["message"]))
+
+    _print_warnings(diagnostics)
+    return 1 if health_issues else 0
+
+
+def command_inbox(args):
+    config = _config(args)
+    items, diagnostics = _parse_or_exit(args.paths, config)
+
+    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
+    kinds_filter = set(_split_csv_args(getattr(args, "kinds", None))) or {"T"}
+    text_filter = getattr(args, "text", None)
+
+    inbox_items = []
+    for item in items:
+        if item.status not in open_statuses:
+            continue
+        if item.kind not in kinds_filter:
+            continue
+        if item.details.get("project"):
+            continue
+        if item.details.get("due"):
+            continue
+        if item.details.get("assignee"):
+            continue
+        if text_filter and text_filter.lower() not in item.title.lower():
+            continue
+        inbox_items.append(item)
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(None, items_to_json(inbox_items, pretty=_pretty) + "\n")
+    elif _fmt == "jsonl":
+        output = items_to_jsonl(inbox_items)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        if not inbox_items:
+            write_text(None, "Inbox is empty.\n")
+        else:
+            rows = []
+            for item in inbox_items:
+                src = getattr(item, "source", None)
+                location = ("%s:%d" % (src, item.line)) if src else ("line:%d" % item.line)
+                rows.append(OrderedDict([
+                    ("location", location),
+                    ("type", item.kind),
+                    ("status", item.status),
+                    ("title", item.title),
+                ]))
+            lines = ["Inbox: %d unclassified item(s)" % len(inbox_items)]
+            lines.extend(_format_table(rows, ("location", "type", "status", "title")))
+            write_text(None, "\n".join(lines) + "\n")
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_cleanup(args):
+    config = _config(args)
+    ignore_codes = set(c.upper() for c in _split_csv_args(getattr(args, "ignore", None)))
+
+    items, diagnostics = _parse_life_inputs(args.paths, config)
+    errors = [d for d in diagnostics if d.severity == "error" and str(d.code).upper() not in ignore_codes]
+    warnings_list = [d for d in diagnostics if d.severity == "warning" and str(d.code).upper() not in ignore_codes]
+    path_label = " ".join(str(p) for p in (_normalize_paths(args.paths, config) or []))
+
+    suggestions = []
+
+    if errors:
+        suggestions.append(OrderedDict([
+            ("priority", 1), ("check", "errors"),
+            ("count", len(errors)),
+            ("message", "%d syntax/validation error(s)" % len(errors)),
+            ("action", "lifetxt check %s" % path_label),
+        ]))
+
+    if warnings_list:
+        suggestions.append(OrderedDict([
+            ("priority", 2), ("check", "warnings"),
+            ("count", len(warnings_list)),
+            ("message", "%d warning(s)" % len(warnings_list)),
+            ("action", "lifetxt check %s" % path_label),
+        ]))
+
+    id_key = id_key_from_config(config)
+    missing_id_items = [item for item in items if not item.details.get(id_key)]
+    if missing_id_items:
+        suggestions.append(OrderedDict([
+            ("priority", 3), ("check", "ids"),
+            ("count", len(missing_id_items)),
+            ("message", "%d item(s) missing %s:" % (len(missing_id_items), id_key)),
+            ("action", "lifetxt ids --assign --dry-run %s" % path_label),
+        ]))
+
+    ref_issue_codes = {"W215", "W216", "W217", "W218"}
+    ref_issues = [d for d in diagnostics if str(d.code).upper() in ref_issue_codes and str(d.code).upper() not in ignore_codes]
+    if ref_issues:
+        suggestions.append(OrderedDict([
+            ("priority", 2), ("check", "links"),
+            ("count", len(ref_issues)),
+            ("message", "%d broken reference(s)" % len(ref_issues)),
+            ("action", "lifetxt links %s" % path_label),
+        ]))
+
+    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
+    inbox_count = sum(
+        1 for item in items
+        if item.kind == "T" and item.status in open_statuses
+        and not item.details.get("project")
+        and not item.details.get("due")
+        and not item.details.get("assignee")
+    )
+    if inbox_count:
+        suggestions.append(OrderedDict([
+            ("priority", 4), ("check", "inbox"),
+            ("count", inbox_count),
+            ("message", "%d unclassified task(s) without project/due/assignee" % inbox_count),
+            ("action", "lifetxt inbox %s" % path_label),
+        ]))
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(None, json.dumps(suggestions, ensure_ascii=False, indent=2 if _pretty else None, separators=None if _pretty else (",", ":")) + "\n")
+    else:
+        if not suggestions:
+            write_text(None, "OK: No cleanup actions needed.\n")
+        else:
+            write_text(None, "Cleanup suggestions (%d):\n" % len(suggestions))
+            for sg in sorted(suggestions, key=lambda x: x["priority"]):
+                write_text(None, "  [%d] %s: %s\n" % (sg["priority"], sg["check"], sg["message"]))
+                write_text(None, "      Run: %s\n" % sg["action"])
+
+    return 0
+
+
 def command_filter(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
@@ -2038,7 +2659,8 @@ def command_assist(args):
         item = prompt_item(args)
     else:
         item = build_item_from_args(args)
-    apply_config_defaults_to_item(item, args)
+    file_directives = _load_file_directives(args.append or args.output)
+    apply_config_defaults_to_item(item, args, file_directives)
     apply_auto_id_to_item(item, args)
     line = item_to_assisted_line(item)
 
@@ -2573,14 +3195,27 @@ def _filter_items_from_args(items, args):
     )
 
 
-def apply_config_defaults_to_item(item, args):
+def apply_config_defaults_to_item(item, args, directives=None):
     config = _config(args)
+    directives = directives or {}
 
     if item.kind == "S" and "person" not in item.details:
         defaults = config_section(config, "defaults")
-        person = defaults.get("person") or config_user_name(config)
-        if person:
-            item.details["person"] = [str(person)]
+        user_section = config_section(config, "user")
+        message_section = config_section(config, "message")
+        configured_person = (
+            defaults.get("person")
+            or user_section.get("name")
+            or message_section.get("default_sender")
+        )
+        person = configured_person or directives.get("self") or "self"
+        item.details["person"] = [str(person)]
+
+    if "project" not in item.details:
+        defaults = config_section(config, "defaults")
+        project = defaults.get("project") or directives.get("project")
+        if project:
+            item.details["project"] = [str(project)]
 
     if item.kind == "M":
         message = config_section(config, "message")

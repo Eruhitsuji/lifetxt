@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x30)
+Last updated: 2026-06-27 (updated x31)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -192,15 +192,16 @@ CLI-native charts without external dependencies.
   `/api/chart/mood` — currently only `daily` is meaningful for those but
   the parameter is accepted without aggregation. Implement bucket merging.
 
-- [ ] Add habit streak calendar (heatmap) to the statistics dashboard panel:
-  render each habit as a GitHub-style heatmap grid instead of a line chart.
+- [ ] Add month/week labels to the habit heatmap: render month names above the
+  heatmap grid so users can identify which week/month each column belongs to.
+  Add a tooltip on hover (CSS title currently used; replace with JS tooltip for
+  better mobile support).
 
 ### Item Input Form (Web UI)
 
-- [ ] Improve `quick-add` bar further: parse the submitted raw line server-side
-  via `/api/check-line` before writing and show the error inline instead of
-  silently failing; add a `POST /api/items/raw` endpoint that accepts a raw
-  life.txt line string directly.
+- [ ] Add `POST /api/items/raw` support to the `editor` form as a paste-raw-line
+  shortcut: an "Import raw line" mode in the editor that accepts a full
+  life.txt-format string and auto-populates the form fields from it.
 
 ### Record Display (Web UI)
 
@@ -210,9 +211,9 @@ CLI-native charts without external dependencies.
 
 ### ID Links & Cross-References (Web UI)
 
-- [ ] Add clickable ID cross-reference links in the item list rows: render
-  `depends_on:`, `parent:`, `blocks:`, `related:`, `ref:` values in the meta
-  line of each row as inline links that open the target item in the side drawer.
+- [ ] Add count badge to ref-link chips in item rows: when multiple IDs are
+  listed in `depends_on:` etc., show a single chip `depends_on (3)` that
+  opens the drawer and scrolls to the dependency section.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
@@ -240,16 +241,29 @@ CLI-native charts without external dependencies.
   and visible delivery state (pending/delivered/snoozed/acknowledged) in the
   browser GUI.
 
-- [ ] Allow display-mode presets from config `views` to be selected by URL
-  parameter (`?view=NAME`) without duplicating the preset definition in the
-  URL. Currently presets are defined in config but must be re-specified as
-  URL parameters.
+- [ ] Persist the active view preset selection across page refresh: save the
+  last-used preset name to `localStorage` and restore it on next load if no
+  explicit URL params are set.
 
 ### Git Integration (Web API)
 
-- [ ] Improve Git commit modal: show `git status --short` output before
-  commit, add a "Pull first" button, and display the last 3 commit titles
-  to confirm the commit was created. Requires `git.enable_api: true`.
+- [ ] Show last 3 commit titles in the git modal after a successful commit
+  to confirm the commit was created. Add `POST /api/git/log` returning the
+  most recent N commits as `{"commits": [{"hash": "...", "message": "..."}]}`.
+
+### Quick-filter & Navigation (Web UI) — New
+
+- [ ] Sync the status quick-filter bar with the current URL state on page
+  load: highlight the correct active button when visiting a bookmarked URL
+  with `?status=...` already set.
+
+- [ ] Add keyboard shortcut for prev/next status filter (e.g., `<` / `>`)
+  to cycle through All → Open → In Progress → Done → Cancelled without mouse.
+
+- [ ] Add `?blocked=true` API support to `/api/items`: filter to open items
+  whose `depends_on:` references at least one other open item, so the
+  status quick-filter "Blocked" button can use a server-side filter instead
+  of a client-side workaround.
 
 ### MCP Support
 

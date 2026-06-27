@@ -379,6 +379,30 @@ def create_app(paths=None, writable_path=None, config=None):
             "datasets": [{"label": "elapsed (min)", "data": data}],
         }
 
+    @app.get("/api/chart/habits-heatmap")
+    def chart_habits_heatmap(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+    ):
+        from .stats import item_completion_dates, streak_days
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = stats_range(start, end)
+        habit_items = [item for item in items if item.kind == "H"]
+        result = []
+        for item in habit_items:
+            dates = item_completion_dates(item)
+            date_map = {d.isoformat(): 1 for d in dates if s <= d <= e}
+            result.append({
+                "title": item.title,
+                "dates": date_map,
+                "streak": streak_days(dates, e),
+            })
+        result.sort(key=lambda r: (-r["streak"], r["title"]))
+        return {
+            "habits": result,
+            "range": {"from": s.isoformat(), "to": e.isoformat()},
+        }
+
     def _git_guard(request):
         git_config = (app.state.config or {}).get("git", {})
         if not git_config.get("enable_api"):
@@ -777,6 +801,33 @@ def create_app(paths=None, writable_path=None, config=None):
                 app.state.writable_path,
                 id_key_from_config(app.state.config),
             ),
+        }
+
+    @app.post("/api/items/raw", status_code=201)
+    def create_item_raw(payload=Body(...)):
+        raw = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        raw = str(raw).strip()
+        if not raw:
+            raise HTTPException(status_code=400, detail={"error": "ERROR", "message": "line is required.", "detail": None})
+        text = raw.rstrip("\n") + "\n"
+        parsed_items, diagnostics = parse_text(text)
+        has_error = any(d.severity == "error" for d in diagnostics)
+        if has_error or not parsed_items:
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "VALIDATION_ERROR", "message": diagnostics[0].message if diagnostics else "Could not parse line.", "detail": [d.to_dict() for d in diagnostics]},
+            )
+        writable = app.state.writable_path
+        if not writable:
+            raise HTTPException(status_code=403, detail={"error": "READONLY", "message": "No writable file configured.", "detail": None})
+        ensure_parent_dir(writable)
+        existing = read_text(writable) if os.path.exists(writable) else ""
+        prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
+        write_text(writable, existing + prefix + raw + "\n")
+        line_no = len(existing.splitlines()) + 1
+        return {
+            "line": line_no,
+            "item": api_item(parsed_items[0], writable, id_key_from_config(app.state.config)),
         }
 
     @app.get("/api/items/id/{item_id}")
@@ -2011,6 +2062,34 @@ HTML_PAGE = r"""<!doctype html>
     .dep-missing { color: #9ca3af; font-style: italic; font-size: .85rem; }
     a.drawer-link { color: var(--accent); text-decoration: none; font-size: .88rem; }
     a.drawer-link:hover { text-decoration: underline; }
+    /* ── Status quick-filter bar ──────────────────────────────────── */
+    .filter-bar { display: flex; gap: .35rem; flex-wrap: wrap; margin: .4rem 0 .2rem; }
+    .filter-btn { padding: .2rem .6rem; border-radius: 1rem; font-size: .77rem; border: 1px solid var(--line); background: var(--bg); cursor: pointer; color: var(--text); transition: background .12s, border-color .12s; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+    /* ── Ref links in item rows ───────────────────────────────────── */
+    .ref-link { display: inline-block; color: var(--accent); font-size: .75rem; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .3rem; margin-left: .15rem; cursor: pointer; opacity: .85; }
+    .ref-link:hover { opacity: 1; text-decoration: underline; }
+    .parent-indicator { font-size: .73rem; color: var(--muted); margin-left: .3rem; }
+    /* ── Notification state badges ────────────────────────────────── */
+    .notif-state { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: .25rem; margin-left: .4rem; vertical-align: middle; }
+    .notif-state-ack      { background: #d1fae5; color: #065f46; }
+    .notif-state-snoozed  { background: #fef9c3; color: #713f12; }
+    .notif-state-pending  { background: #dbeafe; color: #1e40af; }
+    /* ── Habit heatmap ────────────────────────────────────────────── */
+    .heatmap-section { display: grid; gap: .9rem; }
+    .heatmap-habit { }
+    .heatmap-title { font-size: .82rem; font-weight: 600; margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
+    .heatmap-streak { font-size: .72rem; color: var(--muted); font-weight: 400; }
+    .heatmap-grid { display: grid; grid-template-columns: repeat(53, 1fr); gap: 2px; }
+    .heatmap-cell { width: 100%; aspect-ratio: 1; border-radius: 2px; background: var(--line); title: ""; }
+    .heatmap-cell.done { background: #22c55e; }
+    .heatmap-cell.today { outline: 1.5px solid var(--accent); }
+    .heatmap-month-labels { display: flex; font-size: .65rem; color: var(--muted); margin-bottom: .15rem; }
+    /* ── View preset dropdown ─────────────────────────────────────── */
+    #view-preset-select { font-size: .82rem; padding: .2rem .4rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--bg); color: var(--text); cursor: pointer; }
+    /* ── Search result count ──────────────────────────────────────── */
+    #search-count { font-size: .77rem; color: var(--muted); margin-left: .35rem; white-space: nowrap; }
     .source { color: var(--muted); font-size: .78rem; white-space: nowrap; }
     .side { display: grid; gap: 1rem; align-content: start; min-width: 0; }
     form.stack { grid-template-columns: 1fr 1fr; }
@@ -2123,6 +2202,9 @@ HTML_PAGE = r"""<!doctype html>
       <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
     </div>
     <div class="toolbar">
+      <select id="view-preset-select" title="Switch named view preset" onchange="applyViewPreset(this.value)">
+        <option value="">— View —</option>
+      </select>
       <button id="stats-btn" class="secondary" onclick="toggleStats()" title="Toggle statistics panel (s)">Stats</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
@@ -2135,7 +2217,7 @@ HTML_PAGE = r"""<!doctype html>
       <div class="section-head">
         <h2>Items</h2>
         <div class="toolbar">
-          <input id="search" placeholder="Search (/)">
+          <input id="search" placeholder="Search (/)"><span id="search-count"></span>
           <label class="inline"><input id="open-only" type="checkbox"> Open</label>
           <select id="kind">
             <option value="">All types</option>
@@ -2171,6 +2253,14 @@ HTML_PAGE = r"""<!doctype html>
         <button onclick="quickAddLine()">Add</button>
         <span class="hint">q or Escape to close</span>
       </div>
+      <div class="filter-bar" id="status-filter-bar">
+        <button class="filter-btn active" onclick="setStatusFilter('')">All</button>
+        <button class="filter-btn" onclick="setStatusFilter('[ ]')">○ Open</button>
+        <button class="filter-btn" onclick="setStatusFilter('[/]')">◑ In Progress</button>
+        <button class="filter-btn" onclick="setStatusFilter('[x]')">✓ Done</button>
+        <button class="filter-btn" onclick="setStatusFilter('[-]')">✕ Cancelled</button>
+        <button class="filter-btn" onclick="setBlockedFilter()">⚡ Blocked</button>
+      </div>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
       <div id="diagnostics"></div>
@@ -2184,6 +2274,7 @@ HTML_PAGE = r"""<!doctype html>
       <div class="chart-tabs">
         <button class="chart-tab active" onclick="showChart('tasks', this)">Tasks</button>
         <button class="chart-tab" onclick="showChart('habits', this)">Habits</button>
+        <button class="chart-tab" onclick="showChart('habits-heatmap', this)">Heatmap</button>
         <button class="chart-tab" onclick="showChart('mood', this)">Mood</button>
         <button class="chart-tab" onclick="showChart('elapsed', this)">Elapsed</button>
       </div>
@@ -2270,6 +2361,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>r</td><td>Refresh all</td></tr>
         <tr><td>s</td><td>Toggle statistics panel</td></tr>
         <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
+        <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
@@ -2281,11 +2373,13 @@ HTML_PAGE = r"""<!doctype html>
     <div class="modal">
       <h3 id="git-modal-title">Git</h3>
       <div id="git-modal-body" style="display:grid;gap:.75rem">
+        <pre id="git-status-output" style="font-size:.78rem;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:.35rem;padding:.4rem .7rem;min-height:2rem;max-height:8rem;overflow:auto;white-space:pre-wrap">Loading…</pre>
         <label>Commit message
           <input id="git-commit-msg" placeholder="Update life.txt">
         </label>
         <div class="actions">
           <button onclick="gitCommit()">Commit</button>
+          <button class="secondary" onclick="gitPull()">Pull</button>
           <button class="secondary" onclick="gitPush()">Push</button>
           <button class="secondary" onclick="closeGitModal()">Cancel</button>
         </div>
@@ -2378,6 +2472,11 @@ HTML_PAGE = r"""<!doctype html>
     }
     function applyPresetToUrl() {
       const params = query();
+      // Support ?view=NAME as alias for ?preset=NAME
+      if (params.get("view") && !params.get("preset")) {
+        params.set("preset", params.get("view"));
+        history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      }
       const presetName = params.get("preset");
       if (!presetName || params.get("_preset_applied") === presetName) return;
       const preset = appConfig?.views?.[presetName];
@@ -2576,6 +2675,7 @@ HTML_PAGE = r"""<!doctype html>
       root.innerHTML = items.length ? "" : `<div class="empty">No items found.</div>`;
       renderSummary(items);
       renderFilterChips();
+      updateSearchCount(items.length);
       for (const item of items) {
         const titleHtml = safeMarkdownHtml(item?.markdown?.title, item.title);
         const previewHtml = firstMarkdownDetail(item, "body") || firstMarkdownDetail(item, "note");
@@ -2584,19 +2684,24 @@ HTML_PAGE = r"""<!doctype html>
         const statusLabel = STATUS_LABEL[item.status] || item.status;
         const typeCls = "type-" + (item.type || "N");
         const dueCls = itemDueSoonClass(item);
+        const refLinks = buildRefLinksHtml(item.details);
+        const parentInd = buildParentIndicator(item.details);
         const node = document.createElement("button");
         node.type = "button";
         node.className = "item" + (dueCls ? " " + dueCls : "");
         if (selectedItem && item.line === selectedItem.line && item.editable === selectedItem.editable) {
           node.classList.add("selected");
         }
-        node.addEventListener("click", () => selectItem(item));
+        node.addEventListener("click", (e) => {
+          if (e.target.closest(".ref-link")) return;
+          selectItem(item);
+        });
         node.innerHTML = `
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
-            <div class="title markdown">${titleHtml}</div>
-            <div class="meta">${escapeHtml(detailText(item.details))}</div>
+            <div class="title markdown">${titleHtml}${parentInd}</div>
+            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}</div>
             ${preview}
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
@@ -2747,9 +2852,10 @@ HTML_PAGE = r"""<!doctype html>
             <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">Snooze ${escapeHtml(snoozeDefault)}</button>
           </div>
         ` : "";
+        const stateBadge = notifStateBadge(record);
         node.insertAdjacentHTML(
           "beforeend",
-          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} -> ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
+          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span>${stateBadge}<div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} → ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
         );
         showBrowserNotification(record);
       }
@@ -2816,21 +2922,24 @@ HTML_PAGE = r"""<!doctype html>
       const input = document.getElementById("quick-line");
       const line = input.value.trim();
       if (!line) return;
-      await api("/api/items", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({_raw_line: line, title: line.split(/\s+/).slice(2).join("_") || "item",
-          status: line.match(/^\[.\]/)?.[0] || "[ ]",
-          type: line.split(/\s+/)[1] || "T",
-          details: {}
-        }),
-      }).catch(async err => {
-        document.getElementById("diagnostics").innerHTML =
-          `<div class="diagnostic">Quick-add failed: ${escapeHtml(err.message)}</div>`;
-      });
-      input.value = "";
-      toggleQuickAdd(false);
-      await refreshAll();
+      const msgEl = document.getElementById("quick-check-msg");
+      try {
+        await api("/api/items/raw", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line}),
+        });
+        input.value = "";
+        input.className = "";
+        if (msgEl) { msgEl.textContent = ""; msgEl.className = "check-msg"; }
+        toggleQuickAdd(false);
+        showToast("Item added.", "success");
+        await refreshAll();
+      } catch(err) {
+        input.classList.add("err");
+        if (msgEl) { msgEl.textContent = err.message || "Invalid line"; msgEl.className = "check-msg err"; }
+        showToast("Add failed: " + (err.message || "invalid"), "error");
+      }
     }
 
     // ── Keyboard shortcuts ─────────────────────────────────────────
@@ -2847,6 +2956,8 @@ HTML_PAGE = r"""<!doctype html>
       }
       if (inInput) return;
       if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
+      if (e.key === "[" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerPrev(); return; }
+      if (e.key === "]" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerNext(); return; }
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         newItem();
@@ -3138,11 +3249,19 @@ HTML_PAGE = r"""<!doctype html>
         badge.textContent = "git: error";
       }
     }
-    function openGitModal() {
+    async function openGitModal() {
       document.getElementById("git-output").style.display = "none";
       document.getElementById("git-output").textContent = "";
       document.getElementById("git-modal").classList.add("open");
       document.getElementById("git-commit-msg").focus();
+      const statusEl = document.getElementById("git-status-output");
+      if (statusEl) {
+        statusEl.textContent = "Loading…";
+        try {
+          const data = await api("/api/git/status");
+          statusEl.textContent = (data.stdout || "(clean)").trim() || "(clean)";
+        } catch(e) { statusEl.textContent = "Could not load status: " + e.message; }
+      }
     }
     function closeGitModal() { document.getElementById("git-modal").classList.remove("open"); }
     async function gitCommit() {
@@ -3222,8 +3341,13 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     async function loadChart(type) {
-      await ensureChartJs();
       const container = document.getElementById("chart-container");
+      if (type === "habits-heatmap") {
+        renderHeatmap(container);
+        return;
+      }
+      await ensureChartJs();
+      container.innerHTML = `<div class="chart-panel"><canvas id="main-chart"></canvas></div>`;
       const canvas = document.getElementById("main-chart");
       if (mainChart) { mainChart.destroy(); mainChart = null; }
       try {
@@ -3257,6 +3381,39 @@ HTML_PAGE = r"""<!doctype html>
       }
     }
 
+    async function renderHeatmap(container) {
+      container.innerHTML = `<div class="empty">Loading heatmap…</div>`;
+      try {
+        const data = await api("/api/chart/habits-heatmap");
+        const today = new Date().toISOString().slice(0, 10);
+        const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
+        if (!data.habits?.length) { container.innerHTML = `<div class="empty">No habit data.</div>`; return; }
+        let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
+        for (const habit of data.habits) {
+          html += `<div class="heatmap-habit">
+            <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">streak: ${habit.streak} days</span></div>
+            <div class="heatmap-grid">`;
+          const start = new Date(rangeStart);
+          const startDay = start.getDay();
+          for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
+          const endDate = new Date();
+          const d = new Date(start);
+          while (d <= endDate) {
+            const ds = d.toISOString().slice(0, 10);
+            const isDone = !!(habit.dates && habit.dates[ds]);
+            const isToday = ds === today;
+            html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" title="${ds}"></div>`;
+            d.setDate(d.getDate() + 1);
+          }
+          html += `</div></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+      } catch(e) {
+        container.innerHTML = `<div class="diagnostic">Heatmap error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
     function showChart(type, btn) {
       document.querySelectorAll(".chart-tab").forEach(t => t.classList.remove("active"));
       if (btn) btn.classList.add("active");
@@ -3282,12 +3439,149 @@ HTML_PAGE = r"""<!doctype html>
       });
     }
 
+    // ── Status quick-filter buttons ───────────────────────────────
+    function setStatusFilter(statusValue) {
+      const params = query();
+      if (statusValue) {
+        params.set("status", statusValue);
+        params.delete("open_only");
+        document.getElementById("open-only").checked = false;
+      } else {
+        params.delete("status");
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+      syncStatusFilterBtns(statusValue);
+    }
+    function setBlockedFilter() {
+      const params = query();
+      params.delete("status");
+      params.set("open_only", "true");
+      params.delete("blocked"); // no built-in, use open_only + client filter
+      document.getElementById("open-only").checked = true;
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadItems();
+      syncStatusFilterBtns("__blocked__");
+    }
+    function syncStatusFilterBtns(activeValue) {
+      const btns = document.querySelectorAll("#status-filter-bar .filter-btn");
+      const values = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
+      btns.forEach((btn, i) => btn.classList.toggle("active", values[i] === activeValue));
+    }
+
+    // ── Search result count ────────────────────────────────────────
+    function updateSearchCount(count) {
+      const el = document.getElementById("search-count");
+      if (!el) return;
+      el.textContent = count != null ? `(${count})` : "";
+    }
+
+    // ── View preset selector ───────────────────────────────────────
+    function populateViewPresets() {
+      const sel = document.getElementById("view-preset-select");
+      if (!sel || !appConfig?.views) return;
+      for (const name of Object.keys(appConfig.views)) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      }
+      const current = query().get("preset") || query().get("view");
+      if (current) sel.value = current;
+    }
+    function applyViewPreset(name) {
+      if (!name) return;
+      const params = query();
+      const preset = appConfig?.views?.[name];
+      if (!preset) return;
+      const next = new URLSearchParams(params);
+      for (const [key, value] of Object.entries(preset)) next.set(key, value);
+      next.set("preset", name);
+      next.delete("_preset_applied");
+      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+      applyPresetToUrl();
+      applyUrlToControls();
+      refreshAll();
+    }
+
+    // ── Clickable ID refs in item rows ────────────────────────────
+    const ROW_REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
+    function detailTextWithRefs(details) {
+      const parts = [];
+      for (const [key, values] of Object.entries(details || {})) {
+        const vals = (values || []).map(v => {
+          if (ROW_REF_KEYS.has(key)) return String(v);
+          return String(v);
+        });
+        if (vals.length) parts.push(key + ":" + vals.join(","));
+      }
+      return parts.join("  ");
+    }
+    function buildRefLinksHtml(details) {
+      const parts = [];
+      for (const [key, values] of Object.entries(details || {})) {
+        if (!ROW_REF_KEYS.has(key)) continue;
+        for (const v of (values || [])) {
+          const nav = escapeHtml(jsLiteral(String(v)));
+          parts.push(`<span class="ref-link" onclick="event.stopPropagation();drawerNavigate(${nav})" title="${escapeHtml(key)}:${escapeHtml(String(v))}">${escapeHtml(key.slice(0,3))}:${escapeHtml(String(v))}</span>`);
+        }
+      }
+      return parts.join("");
+    }
+
+    // ── Parent indicator in item rows ─────────────────────────────
+    function buildParentIndicator(details) {
+      const parents = details?.parent;
+      if (!parents?.length) return "";
+      return `<span class="parent-indicator" title="parent: ${escapeHtml(parents[0])}">↳ ${escapeHtml(parents[0])}</span>`;
+    }
+
+    // ── Drawer keyboard navigation ([ / ]) ────────────────────────
+    function drawerPrev() {
+      if (!drawerItem || !currentItems.length) return;
+      const idx = currentItems.findIndex(i => i.line === drawerItem.line);
+      if (idx > 0) openDrawer(currentItems[idx - 1]);
+    }
+    function drawerNext() {
+      if (!drawerItem || !currentItems.length) return;
+      const idx = currentItems.findIndex(i => i.line === drawerItem.line);
+      if (idx >= 0 && idx < currentItems.length - 1) openDrawer(currentItems[idx + 1]);
+    }
+
+    // ── Notification row state display ────────────────────────────
+    function notifStateBadge(record) {
+      const ack = record?.details?.ack?.[0];
+      const snooze = record?.details?.snooze_until?.[0];
+      if (ack) return `<span class="notif-state notif-state-ack" title="Acked at ${escapeHtml(ack)}">✓ Acked</span>`;
+      if (snooze) return `<span class="notif-state notif-state-snoozed" title="Snoozed until ${escapeHtml(snooze)}">⏱ Snoozed</span>`;
+      return `<span class="notif-state notif-state-pending">● Pending</span>`;
+    }
+
+    async function gitPull() {
+      try {
+        const data = await api("/api/git/pull", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) showToast("Pulled.", "success");
+        else showToast("Pull failed — see output.", "error");
+        const statusEl = document.getElementById("git-status-output");
+        if (statusEl) {
+          const s = await api("/api/git/status");
+          statusEl.textContent = (s.stdout || "(clean)").trim() || "(clean)";
+        }
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();
       updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
+      populateViewPresets();
       startGitPolling();
       return refreshAll();
     }).catch(error => {

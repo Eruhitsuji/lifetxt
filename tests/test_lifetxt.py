@@ -3066,6 +3066,61 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         self.assertEqual(3, result["due_soon_days"])
 
 
+class LifeTxtItemsRawTests(unittest.TestCase):
+    def test_items_raw_parse_valid_line(self):
+        from lifetxt.parser import parse_text
+        text = "[ ] T Buy_milk due:2026-06-30 project:home\n"
+        items, diags = parse_text(text)
+        self.assertEqual(1, len(items))
+        self.assertFalse(any(d.severity == "error" for d in diags))
+
+    def test_items_raw_empty_line_parses_nothing(self):
+        from lifetxt.parser import parse_text
+        text = "\n"
+        items, diags = parse_text(text)
+        self.assertEqual(0, len(items))
+
+    def test_items_raw_invalid_line_has_no_items(self):
+        from lifetxt.parser import parse_text
+        text = "NOT A VALID LINE\n"
+        items, diags = parse_text(text)
+        self.assertEqual(0, len(items))
+
+    def test_items_raw_write_appends_newline(self):
+        import tempfile, os
+        from lifetxt.webapp import write_text, read_text, ensure_parent_dir
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
+            f.write("[ ] T Existing_task\n")
+            path = f.name
+        try:
+            existing = read_text(path)
+            raw = "[ ] T New_task"
+            prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
+            write_text(path, existing + prefix + raw + "\n")
+            content = read_text(path)
+            lines = content.splitlines()
+            self.assertIn("[ ] T New_task", lines)
+            self.assertEqual(2, len(lines))
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtHeatmapTests(unittest.TestCase):
+    def test_habit_completion_dates_returns_date_set(self):
+        from lifetxt.stats import item_completion_dates
+        from lifetxt.parser import parse_text
+        items, _ = parse_text("[x] H Exercise done:2026-06-20 done:2026-06-21\n")
+        if items:
+            dates = item_completion_dates(items[0])
+            self.assertIsInstance(dates, set)
+
+    def test_streak_days_zero_for_empty(self):
+        from lifetxt.stats import streak_days
+        import datetime
+        result = streak_days(set(), datetime.date.today())
+        self.assertEqual(0, result)
+
+
 class LifeTxtWebappHelperTests(unittest.TestCase):
     def test_subgraph_returns_reachable_nodes_only(self):
         from lifetxt.webapp import _subgraph

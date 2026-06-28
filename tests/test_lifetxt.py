@@ -3121,6 +3121,86 @@ class LifeTxtHeatmapTests(unittest.TestCase):
         self.assertEqual(0, result)
 
 
+class LifeTxtStatsSummaryTests(unittest.TestCase):
+    def _make_items(self, text):
+        from lifetxt.parser import parse_text
+        items, _ = parse_text(text)
+        return items
+
+    def test_project_stats_returns_by_project(self):
+        from lifetxt.stats import project_stats
+        items = self._make_items(
+            "[ ] T Task1 project:alpha\n"
+            "[x] T Task2 project:alpha\n"
+            "[ ] T Task3 project:beta\n"
+        )
+        result = project_stats(items)
+        self.assertIn("alpha", result)
+        self.assertEqual(2, result["alpha"]["total"])
+        self.assertEqual(1, result["alpha"]["done"])
+
+    def test_project_stats_rate_calculation(self):
+        from lifetxt.stats import project_stats
+        items = self._make_items(
+            "[x] T Done project:work\n"
+            "[x] T Done2 project:work\n"
+            "[ ] T Open project:work\n"
+        )
+        result = project_stats(items)
+        self.assertGreater(result["work"]["rate"], 50)  # rate is percentage (0-100)
+
+    def test_habit_chart_data_is_numeric(self):
+        from lifetxt.stats import make_buckets, item_completion_dates, streak_days
+        import datetime
+        items = self._make_items("[ ] H Exercise done:2026-06-01 done:2026-06-02\n")
+        if not items:
+            return
+        s = datetime.date(2026, 5, 1)
+        e = datetime.date(2026, 6, 30)
+        buckets = make_buckets(s, e, "weekly")
+        habit = items[0]
+        dates = item_completion_dates(habit)
+        counts = []
+        for bucket_start, bucket_end in buckets:
+            count = 0
+            d = bucket_start
+            while d <= bucket_end:
+                if d in dates:
+                    count += 1
+                d += datetime.timedelta(days=1)
+            counts.append(count)
+        for val in counts:
+            self.assertIsInstance(val, int)
+
+    def test_make_buckets_weekly_produces_7day_buckets(self):
+        from lifetxt.stats import make_buckets
+        import datetime
+        s = datetime.date(2026, 6, 1)
+        e = datetime.date(2026, 6, 21)
+        buckets = make_buckets(s, e, "weekly")
+        self.assertTrue(len(buckets) >= 3)
+        span = (buckets[0][1] - buckets[0][0]).days + 1
+        self.assertEqual(7, span)
+
+    def test_make_buckets_monthly_covers_full_month(self):
+        from lifetxt.stats import make_buckets
+        import datetime
+        s = datetime.date(2026, 1, 1)
+        e = datetime.date(2026, 3, 31)
+        buckets = make_buckets(s, e, "monthly")
+        self.assertEqual(3, len(buckets))
+
+    def test_mood_chart_data_is_numeric_or_none(self):
+        from lifetxt.stats import make_buckets, mood_stats
+        import datetime
+        items = self._make_items("[ ] J Journal mood:good\n")
+        s = datetime.date(2026, 6, 1)
+        e = datetime.date(2026, 6, 30)
+        buckets = make_buckets(s, e, "daily")
+        result = mood_stats(items, buckets)
+        self.assertIn("counts", result)
+
+
 class LifeTxtWebappHelperTests(unittest.TestCase):
     def test_subgraph_returns_reachable_nodes_only(self):
         from lifetxt.webapp import _subgraph

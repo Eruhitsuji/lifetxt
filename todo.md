@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28 (updated x32)
+Last updated: 2026-06-28 (updated x33)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -188,9 +188,9 @@ CLI-native charts without external dependencies.
 
 ### Statistics & Charts (Web UI)
 
-- [ ] Add `group=weekly|monthly` aggregation to `/api/chart/habits` and
-  `/api/chart/mood` backend: the `group` param is now forwarded from the UI;
-  implement bucket merging in the API response (daily is already correct).
+- [ ] Verify weekly/monthly chart rendering in the browser: the `/api/chart/habits`
+  now returns raw counts per bucket; confirm Chart.js renders bars correctly
+  and the Y-axis label is meaningful (e.g., "completions / week").
 
 ### Item Input Form (Web UI)
 
@@ -206,9 +206,9 @@ CLI-native charts without external dependencies.
 
 ### ID Links & Cross-References (Web UI)
 
-- [ ] Clicking a collapsed ref-link count badge (e.g., `dep(3)`) should open
-  the drawer to the dependency tab of that item, scrolling to the dependencies
-  section — currently it selects the item but does not jump to deps section.
+- [ ] Test ref-link badge scroll-to-deps on touch devices: the scroll
+  uses `scrollIntoView({behavior:'smooth'})` which may not work reliably
+  on iOS Safari — verify or replace with explicit `scrollTop` logic.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
@@ -231,26 +231,59 @@ CLI-native charts without external dependencies.
   to render conversation threads in the browser GUI. Ensure `ack:` and
   `snooze_until:` state is reflected in the UI without a page reload.
 
-- [ ] Add notification retry button in browser GUI: show a "Retry" button
-  when desktop notification delivery fails (Notification.permission is "denied"
-  or the push call throws) so the user can re-trigger without page reload.
+- [ ] Improve notification retry: when Notification.permission is "denied",
+  prompt the user to re-enable notifications in browser settings rather than
+  silently failing on the retry attempt.
 
-- [ ] Add a "clear preset" button / UI affordance when a stored view preset
-  is active, so users can return to the default view without manually editing
-  the URL (`localStorage.removeItem('lifetxt_preset')` + reload).
+- [ ] Improve "clear preset" × button visibility: currently the button is always
+  visible in the toolbar; hide it when no preset is stored in localStorage by
+  wiring `updatePresetClearBtn()` to `applyViewPreset` and page load.
 
 ### Git Integration (Web API)
 
 ### Quick-filter & Navigation (Web UI)
 
-- [ ] Add `<` / `>` keyboard cycle to the help modal (already added to
-  keyboard handler and help table — verify display is readable on mobile).
-
 - [ ] Add `GET /api/git/log` pagination: the current `?n=` cap is 50;
   add a "Show more" link in the git modal to load older commits.
 
-- [ ] Persist `?blocked=true` URL state in `applyUrlToControls` so the
-  "Blocked" active button survives navigation back from a detail page.
+### Context Menu & Dark Mode (Web UI) — New
+
+- [ ] Wire dark mode toggle to system color-scheme change events:
+  add a `matchMedia('prefers-color-scheme: dark').addEventListener('change',...)`
+  listener so the UI auto-switches when the OS theme changes at runtime.
+
+- [ ] Add keyboard shortcut for dark mode toggle (e.g., `d` key) and add
+  entry to help modal table.
+
+- [ ] Context menu: add "Copy line number" and "Open raw file" entries;
+  "Open raw file" could use `file://` URI on desktop or show a path toast.
+
+### Stats & Charts (Web UI) — New
+
+- [ ] Wire `/api/stats/summary` endpoint to the Stats panel: show by_type
+  and by_status breakdowns alongside the existing project mini-table.
+
+- [ ] Chart Y-axis label: when group=weekly/monthly, annotate the Y-axis
+  as "completions / week" or "completions / month" rather than raw count.
+
+- [ ] Add export button to charts: "Download CSV" that serializes the
+  current chart labels+datasets as a CSV file (client-side Blob download).
+
+### Drawer Improvements (Web UI) — New
+
+- [ ] Drawer: add "Share" button that copies a `?line=N` deep-link URL to
+  clipboard so the user can share a direct link to a specific item.
+
+- [ ] Drawer: show full item type name (e.g., "Task" not "T") next to the
+  type badge, with a tooltip explaining what each type does.
+
+### Agenda & Notifications (Web UI) — New
+
+- [ ] Agenda: add "view all" link below the truncated agenda list that
+  sets `agenda_limit` to 0 (unlimited) and reloads.
+
+- [ ] Notification: show delivery time relative to "now" (e.g., "5 min ago")
+  in the notification row pill instead of the raw timestamp.
 
 ### MCP Support
 
@@ -295,9 +328,9 @@ CLI-native charts without external dependencies.
   imported, which are exported, and which are read-only in life.txt because
   they are managed by the external tool.
 
-- [ ] Add pre-commit framework examples: provide `.pre-commit-hooks.yaml` so
-  `lifetxt check` can be used as a pre-commit hook without the built-in
-  `git-hook install` command.
+- [ ] Add usage example for `.pre-commit-hooks.yaml` to docs: show the
+  `.pre-commit-config.yaml` snippet that references the `lifetxt-check` hook,
+  and document which file patterns are matched by default.
 
 - [ ] Document that secret URLs and tokens (iCalendar feed URLs, API tokens)
   must not be stored in life.txt content. Reference the `--url-env` and

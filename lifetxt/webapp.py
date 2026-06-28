@@ -312,26 +312,32 @@ def create_app(paths=None, writable_path=None, config=None):
         end=Query(None, alias="to"),
         group="daily",
     ):
+        from .stats import item_completion_dates, streak_days as _streak
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
         habit_items = [item for item in items if item.kind == "H"]
         buckets = make_buckets(s, e, group)
-        habits = habit_stats(habit_items, s, e, buckets)
         labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
         datasets = []
-        for habit in habits:
-            sp = habit.get("sparkline", "")
-            from .stats import SPARK, MISSING
+        for habit in habit_items:
+            dates = item_completion_dates(habit)
             data = []
-            for ch in sp:
-                if ch == MISSING:
-                    data.append(0)
-                else:
-                    idx = SPARK.find(ch)
-                    data.append(max(0, idx))
-            if len(data) < len(labels):
-                data.extend([0] * (len(labels) - len(data)))
-            datasets.append({"label": habit["title"], "streak": habit["streak"], "data": data[:len(labels)]})
+            for bucket_start, bucket_end in buckets:
+                count = 0
+                d = bucket_start
+                while d <= bucket_end:
+                    if d in dates:
+                        count += 1
+                    d = d + __import__('datetime').timedelta(days=1)
+                data.append(count)
+            bucket_size = max(1, ((buckets[0][1] - buckets[0][0]).days + 1)) if buckets else 1
+            datasets.append({
+                "label": habit.title,
+                "streak": _streak(dates, e),
+                "data": data,
+                "bucket_size": bucket_size,
+            })
+        datasets.sort(key=lambda d: (-d["streak"], d["label"]))
         return {
             "labels": labels,
             "datasets": datasets,
@@ -344,28 +350,31 @@ def create_app(paths=None, writable_path=None, config=None):
         end=Query(None, alias="to"),
         group="daily",
     ):
+        from datetime import date as _date
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
         journal_items = [item for item in items if item.kind == "J"]
         buckets = make_buckets(s, e, group)
-        mood = mood_stats(journal_items, buckets)
         labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
-        from .stats import SPARK, MISSING
-        sp = mood.get("sparkline", "")
+        counts = {}
         data = []
-        for ch in sp:
-            if ch == MISSING:
-                data.append(None)
-            else:
-                idx = SPARK.find(ch)
-                data.append(round(1 + idx * (len(MOOD_VALUES) - 1) / max(1, len(SPARK) - 1), 2))
-        if len(data) < len(labels):
-            data.extend([None] * (len(labels) - len(data)))
+        for bucket_start, bucket_end in buckets:
+            bucket_values = []
+            for item in journal_items:
+                item_date = item_date_value(item)
+                if item_date is None or item_date < bucket_start or item_date > bucket_end:
+                    continue
+                mood_val = item.details.get("mood", [""])[0].lower() if item.details.get("mood") else ""
+                if mood_val:
+                    counts[mood_val] = counts.get(mood_val, 0) + 1
+                if mood_val in MOOD_VALUES:
+                    bucket_values.append(MOOD_VALUES[mood_val])
+            data.append(round(sum(bucket_values) / len(bucket_values), 2) if bucket_values else None)
         return {
             "labels": labels,
-            "datasets": [{"label": "mood", "data": data[:len(labels)]}],
+            "datasets": [{"label": "mood", "data": data}],
             "mood_scale": MOOD_VALUES,
-            "counts": dict(mood.get("counts", {})),
+            "counts": counts,
             "range": {"from": s.isoformat(), "to": e.isoformat(), "group": group},
         }
 
@@ -492,6 +501,33 @@ def create_app(paths=None, writable_path=None, config=None):
                 if len(parts) >= 2:
                     commits.append({"hash": parts[0][:8], "message": parts[1], "date": parts[2] if len(parts) > 2 else ""})
         return {"commits": commits, "ok": result.get("ok", False)}
+
+    @app.get("/api/stats/summary")
+    def stats_summary(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        project=None,
+    ):
+        from .stats import project_stats, stats_range as _sr
+        items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = _sr(start, end)
+        tasks = [item for item in items if item.kind == "T"]
+        if project:
+            tasks = [item for item in tasks if project in item.details.get("project", [])]
+        by_project = project_stats(tasks)
+        by_type = {}
+        by_status = {}
+        for item in items:
+            by_type[item.kind] = by_type.get(item.kind, 0) + 1
+            by_status[item.status] = by_status.get(item.status, 0) + 1
+        top_projects = sorted(by_project.items(), key=lambda x: -x[1]["total"])[:10]
+        return {
+            "total": len(items),
+            "by_type": by_type,
+            "by_status": by_status,
+            "by_project": [{"project": k or "(none)", "done": v["done"], "total": v["total"], "rate": v["rate"]} for k, v in top_projects],
+            "range": {"from": s.isoformat(), "to": e.isoformat()},
+        }
 
     @app.get("/api/agenda")
     def get_agenda(
@@ -1679,6 +1715,20 @@ HTML_PAGE = r"""<!doctype html>
       --danger: #a63c2f;
       --soft: #eef2ee;
     }
+    [data-theme="dark"] {
+      --bg: #1a1d1b;
+      --panel: #252a27;
+      --ink: #d8ddd8;
+      --muted: #8a9489;
+      --line: #2f3730;
+      --line-strong: #3f4840;
+      --accent: #4caf9a;
+      --danger: #e07070;
+      --soft: #1f2820;
+    }
+    [data-theme="dark"] button.secondary { background: var(--panel); color: var(--accent); border-color: var(--line-strong); }
+    [data-theme="dark"] .item:hover, [data-theme="dark"] .item.selected { background: #1f2920; }
+    [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background: var(--panel); color: var(--ink); border-color: var(--line-strong); }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -2119,8 +2169,30 @@ HTML_PAGE = r"""<!doctype html>
     #view-preset-select { font-size: .82rem; padding: .2rem .4rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--bg); color: var(--text); cursor: pointer; }
     /* ── Search result count ──────────────────────────────────────── */
     #search-count { font-size: .77rem; color: var(--muted); margin-left: .35rem; white-space: nowrap; }
+    /* ── Dark mode toggle button ─────────────────────────────────── */
+    #dark-btn { font-size:.85rem; padding:.25rem .5rem; }
     /* ── Heatmap tooltip ─────────────────────────────────────────── */
     .hm-tooltip { position:fixed; background:rgba(0,0,0,.78); color:#fff; font-size:.75rem; padding:.25rem .55rem; border-radius:.3rem; pointer-events:none; z-index:9999; display:none; }
+    /* ── Context menu ────────────────────────────────────────────── */
+    #ctx-menu { position:fixed; background:var(--panel); border:1px solid var(--line-strong); border-radius:.4rem; box-shadow:0 4px 12px rgba(0,0,0,.18); z-index:9998; display:none; min-width:10rem; padding:.25rem 0; }
+    .ctx-item { padding:.4rem .85rem; font-size:.85rem; cursor:pointer; white-space:nowrap; }
+    .ctx-item:hover { background:var(--soft); }
+    .ctx-sep { border:none; border-top:1px solid var(--line); margin:.25rem 0; }
+    /* ── Project stats mini-table ────────────────────────────────── */
+    .proj-stats-table { width:100%; font-size:.78rem; border-collapse:collapse; margin-top:.5rem; }
+    .proj-stats-table th { text-align:left; color:var(--muted); font-weight:500; padding:.1rem .3rem; }
+    .proj-stats-table td { padding:.1rem .3rem; vertical-align:middle; }
+    .proj-stats-bar { display:block; height:.4rem; background:var(--accent); border-radius:.2rem; min-width:2px; }
+    /* ── Agenda badge ────────────────────────────────────────────── */
+    .overdue-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--danger); color:#fff; border-radius:.9rem; font-size:.7rem; min-width:1.3rem; height:1.3rem; padding:0 .35rem; margin-left:.4rem; font-weight:600; }
+    /* ── Drawer copy ID button ───────────────────────────────────── */
+    #drawer-copy-id { font-size:.75rem; padding:.15rem .45rem; }
+    /* ── Drawer raw line section ─────────────────────────────────── */
+    .drawer-raw-details { margin:.4rem 0; font-size:.82rem; }
+    .drawer-raw-details summary { cursor:pointer; color:var(--muted); font-size:.78rem; padding:.15rem 0; }
+    .drawer-raw-pre { font-family:monospace; font-size:.77rem; white-space:pre-wrap; background:var(--soft); border-radius:.3rem; padding:.4rem .6rem; margin:.3rem 0 0; word-break:break-all; }
+    /* ── Preset clear button ─────────────────────────────────────── */
+    #preset-clear-btn { font-size:.75rem; padding:.2rem .4rem; display:none; }
     /* ── Chart group buttons ─────────────────────────────────────── */
     .chart-group-bar { display:flex; gap:.25rem; padding:.25rem 1rem; border-bottom:1px solid var(--line); }
     .chart-group-btn { font-size:.73rem; padding:.15rem .5rem; border:1px solid var(--line); border-radius:1rem; background:var(--bg); cursor:pointer; color:var(--text); }
@@ -2253,6 +2325,8 @@ HTML_PAGE = r"""<!doctype html>
       <select id="view-preset-select" title="Switch named view preset" onchange="applyViewPreset(this.value)">
         <option value="">— View —</option>
       </select>
+      <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
+      <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
       <button id="stats-btn" class="secondary" onclick="toggleStats()" title="Toggle statistics panel (s)">Stats</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
@@ -2265,7 +2339,7 @@ HTML_PAGE = r"""<!doctype html>
       <div class="section-head">
         <h2>Items</h2>
         <div class="toolbar">
-          <input id="search" placeholder="Search (/)"><span id="search-count"></span>
+          <input id="search" placeholder="Search (/)" list="tag-suggestions" autocomplete="off"><span id="search-count"></span>
           <label class="inline"><input id="open-only" type="checkbox"> Open</label>
           <select id="kind">
             <option value="">All types</option>
@@ -2296,9 +2370,10 @@ HTML_PAGE = r"""<!doctype html>
         </div>
       </div>
       <div class="quick-add-bar" id="quick-add-bar" style="display:none">
-        <input id="quick-line" placeholder="[ ] T My_task  due:tomorrow  project:work" autocomplete="off">
+        <input id="quick-line" placeholder="[ ] T My_task  due:tomorrow  project:work" autocomplete="off" onkeydown="if((e=event).key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();quickAddLine();}">
         <span id="quick-check-msg" class="check-msg"></span>
         <button onclick="quickAddLine()">Add</button>
+        <span class="hint" style="font-size:.73rem;color:var(--muted)">Ctrl+↵</span>
         <span class="hint">q or Escape to close</span>
       </div>
       <div class="filter-bar" id="status-filter-bar">
@@ -2379,7 +2454,7 @@ HTML_PAGE = r"""<!doctype html>
         </form>
       </section>
       <section class="agenda-section">
-        <div class="section-head"><h2>Agenda</h2></div>
+        <div class="section-head"><h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2></div>
         <div id="agenda" class="stack"></div>
       </section>
       <section class="status-section">
@@ -2400,9 +2475,10 @@ HTML_PAGE = r"""<!doctype html>
   <aside id="detail-drawer" class="detail-drawer" role="complementary" aria-label="Item detail">
     <div class="drawer-head">
       <h3 id="drawer-title">Item Detail</h3>
-      <div style="display:flex;gap:.4rem">
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
         <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
         <button class="secondary" onclick="drawerEdit()">Edit</button>
+        <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
         <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
         <button class="secondary" onclick="closeDrawer()">✕</button>
       </div>
@@ -2413,6 +2489,17 @@ HTML_PAGE = r"""<!doctype html>
   <!-- Toast container -->
   <div id="toast-container"></div>
   <div id="hm-tooltip" class="hm-tooltip"></div>
+  <!-- Context menu -->
+  <div id="ctx-menu" role="menu" aria-label="Item context menu">
+    <div class="ctx-item" onclick="ctxMarkDone()" id="ctx-done">Mark Done</div>
+    <div class="ctx-item" onclick="ctxCopyTitle()">Copy Title</div>
+    <div class="ctx-item" onclick="ctxCopyId()">Copy ID</div>
+    <hr class="ctx-sep">
+    <div class="ctx-item" onclick="ctxOpenDrawer()">Open in Drawer</div>
+    <div class="ctx-item" onclick="ctxEdit()">Edit</div>
+  </div>
+  <!-- Tag datalist for quick filter -->
+  <datalist id="tag-suggestions"></datalist>
 
   <!-- Keyboard Help Modal -->
   <div class="modal-backdrop" id="help-modal" onclick="if(event.target===this)closeHelpModal()">
@@ -2564,7 +2651,7 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("kind").value = firstParam(params, ["kind", "type"], fallbackKind);
       document.getElementById("sort").value = firstParam(params, ["sort"], fallbackSort);
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
-      document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]);
+      document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]) || params.get("blocked") === "true";
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
       syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
@@ -2640,6 +2727,7 @@ HTML_PAGE = r"""<!doctype html>
       currentItems = data.items;
       renderDiagnostics(data.diagnostics);
       renderItems(data.items);
+      updateTagSuggestions(data.items);
       if (selectedItem) {
         const match = data.items.find(item => item.line === selectedItem.line && item.editable);
         if (match) selectItem(match);
@@ -2699,6 +2787,28 @@ HTML_PAGE = r"""<!doctype html>
         <div class="stats-count"><span class="n">${done}</span> done</div>
         <div class="stats-count overdue-count"><span class="n">${overdue}</span> overdue</div>
       `;
+      // Build per-project mini-table from current items
+      const projMap = {};
+      for (const item of items) {
+        if (item.type !== "T") continue;
+        const projs = item?.details?.project?.length ? item.details.project : ["(none)"];
+        for (const p of projs) {
+          if (!projMap[p]) projMap[p] = {done: 0, total: 0};
+          projMap[p].total++;
+          if (item.status === "[x]") projMap[p].done++;
+        }
+      }
+      const sorted = Object.entries(projMap).sort((a,b) => b[1].total - a[1].total).slice(0,6);
+      if (!sorted.length) return;
+      const maxT = Math.max(...sorted.map(([,v]) => v.total), 1);
+      let table = `<div style="margin-top:.45rem;overflow-x:auto"><table class="proj-stats-table"><thead><tr><th>Project</th><th>✓</th><th>N</th><th></th></tr></thead><tbody>`;
+      for (const [proj, v] of sorted) {
+        const barW = Math.round(v.total / maxT * 56);
+        const opacity = (0.4 + 0.6 * (v.done / Math.max(v.total, 1))).toFixed(2);
+        table += `<tr><td>${escapeHtml(proj)}</td><td>${v.done}</td><td>${v.total}</td><td><span class="proj-stats-bar" style="width:${barW}px;opacity:${opacity}"></span></td></tr>`;
+      }
+      table += `</tbody></table></div>`;
+      el.insertAdjacentHTML("beforeend", table);
     }
     function renderFilterChips() {
       const params = query();
@@ -2763,6 +2873,7 @@ HTML_PAGE = r"""<!doctype html>
           if (e.target.closest(".ref-link")) return;
           selectItem(item);
         });
+        node.addEventListener("contextmenu", (e) => openCtxMenu(e, item));
         node.innerHTML = `
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
@@ -2874,6 +2985,7 @@ HTML_PAGE = r"""<!doctype html>
           `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
         );
       }
+      updateAgendaOverdueBadge(data.records);
     }
     async function loadStatus() {
       const params = query();
@@ -2909,6 +3021,7 @@ HTML_PAGE = r"""<!doctype html>
       );
       if (lookahead) notificationParams.set("lookahead", lookahead);
       const data = await api(`/api/notifications?${notificationParams}`);
+      window._lastNotifRecords = data.records || [];
       const node = document.getElementById("notifications");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No notifications.</div>`;
       const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
@@ -2922,6 +3035,7 @@ HTML_PAGE = r"""<!doctype html>
             <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">Ack</button>
             <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">Snooze ${escapeHtml(snoozeDefault)}</button>
             <button class="secondary" type="button" onclick="document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display=document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display===''?'none':''" style="font-size:.73rem">Custom…</button>
+            <button class="secondary" type="button" onclick="retryBrowserNotification(${escapeHtml(jsLiteral(record.id || record.notification_id || ""))})" style="font-size:.73rem" title="Re-send browser notification">Retry</button>
           </div>
           <div id="${snoozeRowId}" class="snooze-inline" style="display:none">
             <input id="${snoozeInputId}" value="${escapeHtml(snoozeDefault)}" placeholder="30m / 1h / 2h">
@@ -3101,9 +3215,18 @@ HTML_PAGE = r"""<!doctype html>
         ? `<div class="drawer-section-title">Body</div><div class="markdown">${item.markdown.details.body[0]}</div>` : "";
       const sourceHtml = `<div class="drawer-section-title">Source</div>
         <div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
+      // Raw line section
+      const rawHtml = item?.raw
+        ? `<details class="drawer-raw-details"><summary>Raw line</summary><pre class="drawer-raw-pre">${escapeHtml(item.raw || "")}</pre></details>`
+        : "";
       body.innerHTML = fieldsHtml + bodyHtml +
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
-        sourceHtml;
+        sourceHtml + rawHtml;
+      // Copy ID button visibility
+      const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
+      const hasId = !!(item?.details?.[idKey]?.[0] || item?.id);
+      const copyBtn = document.getElementById("drawer-copy-id");
+      if (copyBtn) copyBtn.style.display = hasId ? "" : "none";
       drawer.classList.add("open");
       loadDependencyLinks(item);
     }
@@ -3780,8 +3903,8 @@ HTML_PAGE = r"""<!doctype html>
         const nav = count === 1 ? escapeHtml(jsLiteral(firstIds[key])) : escapeHtml(jsLiteral(""));
         const onclick = count === 1
           ? `event.stopPropagation();drawerNavigate(${nav})`
-          : `event.stopPropagation();selectItem(currentItems.find(i=>i.line===${Number(details?._line||0)})||drawerItem)`;
-        return `<span class="ref-link" onclick="${onclick}" title="${escapeHtml(key)}">${escapeHtml(label)}</span>`;
+          : `event.stopPropagation();(function(){const it=currentItems.find(i=>i.line===${Number(details?._line||0)});if(it)openDrawer(it);setTimeout(()=>{const d=document.getElementById('drawer-deps');if(d)d.scrollIntoView({behavior:'smooth'});},200);})()`;
+        return `<span class="ref-link" onclick="${onclick}" title="${escapeHtml(key)}: ${count} item(s)">${escapeHtml(label)}</span>`;
       }).join("");
     }
 
@@ -3839,6 +3962,181 @@ HTML_PAGE = r"""<!doctype html>
       }
     }
 
+    // ── Dark mode ─────────────────────────────────────────────────
+    (function initDarkMode() {
+      const stored = localStorage.getItem("lifetxt_dark");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const dark = stored !== null ? stored === "1" : prefersDark;
+      if (dark) document.documentElement.setAttribute("data-theme", "dark");
+      const btn = document.getElementById("dark-btn");
+      if (btn) btn.textContent = dark ? "☀️" : "🌙";
+    })();
+    function toggleDarkMode() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (isDark) {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("lifetxt_dark", "0");
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("lifetxt_dark", "1");
+      }
+      const btn = document.getElementById("dark-btn");
+      if (btn) btn.textContent = !isDark ? "☀️" : "🌙";
+    }
+
+    // ── Clear view preset ─────────────────────────────────────────
+    function clearViewPreset() {
+      try { localStorage.removeItem("lifetxt_preset"); } catch(_) {}
+      const sel = document.getElementById("view-preset-select");
+      if (sel) sel.value = "";
+      const params = query();
+      params.delete("preset");
+      params.delete("view");
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      const btn = document.getElementById("preset-clear-btn");
+      if (btn) btn.style.display = "none";
+      applyUrlToControls();
+      refreshAll();
+      showToast("View preset cleared.", "success");
+    }
+    function updatePresetClearBtn() {
+      const stored = loadPresetFromStorage();
+      const btn = document.getElementById("preset-clear-btn");
+      if (btn) btn.style.display = stored ? "" : "none";
+    }
+
+    // ── Drawer: copy ID to clipboard ──────────────────────────────
+    function drawerCopyId() {
+      if (!drawerItem) return;
+      const idKey = (appConfig?.ids?.key) || "id";
+      const idVal = drawerItem?.details?.[idKey]?.[0] || drawerItem?.id || "";
+      if (!idVal) { showToast("No ID on this item.", "error"); return; }
+      navigator.clipboard.writeText(String(idVal)).then(
+        () => showToast("Copied: " + idVal, "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+
+    // ── Context menu ──────────────────────────────────────────────
+    let ctxTarget = null;
+    function openCtxMenu(e, item) {
+      e.preventDefault();
+      ctxTarget = item;
+      const menu = document.getElementById("ctx-menu");
+      if (!menu) return;
+      menu.style.display = "";
+      menu.style.left = Math.min(e.clientX, window.innerWidth - 170) + "px";
+      menu.style.top = Math.min(e.clientY, window.innerHeight - 160) + "px";
+      const doneEl = document.getElementById("ctx-done");
+      if (doneEl) doneEl.style.display = (item?.editable && !["[x]","[-]"].includes(item?.status)) ? "" : "none";
+    }
+    function closeCtxMenu() {
+      const menu = document.getElementById("ctx-menu");
+      if (menu) menu.style.display = "none";
+      ctxTarget = null;
+    }
+    document.addEventListener("click", closeCtxMenu);
+    document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeCtxMenu(); }, true);
+    function ctxMarkDone() {
+      closeCtxMenu();
+      if (!ctxTarget) return;
+      selectItem(ctxTarget);
+      drawerMarkDone();
+    }
+    function ctxCopyTitle() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      navigator.clipboard.writeText(t.title || "").then(
+        () => showToast("Copied: " + (t.title || ""), "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+    function ctxCopyId() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      const idKey = appConfig?.ids?.key || "id";
+      const idVal = t?.details?.[idKey]?.[0] || t?.id || "";
+      if (!idVal) { showToast("No ID on this item.", "error"); return; }
+      navigator.clipboard.writeText(String(idVal)).then(
+        () => showToast("Copied: " + idVal, "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+    function ctxOpenDrawer() {
+      const t = ctxTarget; closeCtxMenu();
+      if (t) openDrawer(t);
+    }
+    function ctxEdit() {
+      const t = ctxTarget; closeCtxMenu();
+      if (t) selectItem(t);
+    }
+
+    // ── Tag datalist autocomplete ──────────────────────────────────
+    function updateTagSuggestions(items) {
+      const dl = document.getElementById("tag-suggestions");
+      if (!dl) return;
+      const tags = new Set();
+      for (const item of (items || [])) {
+        for (const t of (item?.details?.tag || [])) tags.add(String(t));
+      }
+      dl.innerHTML = [...tags].sort().map(t => `<option value="${escapeHtml(t)}">`).join("");
+    }
+
+    // ── Agenda overdue badge ──────────────────────────────────────
+    function updateAgendaOverdueBadge(records) {
+      const badge = document.getElementById("agenda-overdue-badge");
+      if (!badge) return;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const count = (records || []).filter(r => {
+        if (!r.when) return false;
+        const d = new Date(r.when); d.setHours(0,0,0,0);
+        return d < today && !["[x]","[-]"].includes(r.status);
+      }).length;
+      badge.textContent = count > 0 ? String(count) : "";
+      badge.style.display = count > 0 ? "" : "none";
+    }
+
+    // ── Stats summary: per-project mini-table ────────────────────
+    async function loadProjectStats() {
+      try {
+        const data = await api("/api/stats/summary");
+        const projects = (data.by_project || []).filter(p => p.total > 0);
+        if (!projects.length) return;
+        const el = document.getElementById("stats-summary");
+        if (!el || el.style.display === "none") return;
+        const maxTotal = Math.max(...projects.map(p => p.total), 1);
+        let table = `<div style="margin-top:.5rem"><div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.25rem">Top Projects</div>
+          <table class="proj-stats-table"><thead><tr><th>Project</th><th>Done</th><th>Total</th><th style="min-width:4rem"></th></tr></thead><tbody>`;
+        for (const p of projects.slice(0, 8)) {
+          const barW = Math.round(p.total / maxTotal * 60);
+          table += `<tr>
+            <td>${escapeHtml(p.project)}</td>
+            <td>${p.done}</td>
+            <td>${p.total}</td>
+            <td><span class="proj-stats-bar" style="width:${barW}px;opacity:${0.4 + 0.6*(p.done/Math.max(p.total,1))}"></span></td>
+          </tr>`;
+        }
+        table += `</tbody></table></div>`;
+        el.insertAdjacentHTML("beforeend", table);
+      } catch(_) {}
+    }
+
+    // ── Notification retry button ─────────────────────────────────
+    async function retryBrowserNotification(id) {
+      const record = (window._lastNotifRecords || []).find(r => r.id === id || r.notification_id === id);
+      if (!record) { showToast("Notification not found.", "error"); return; }
+      try {
+        if (Notification.permission !== "granted") {
+          await enableBrowserNotifications();
+        }
+        seenNotifications.delete(record.notification_id || record.id || record.text);
+        showBrowserNotification(record);
+        showToast("Notification resent.", "success");
+      } catch(e) {
+        showToast("Retry failed: " + e.message, "error");
+      }
+    }
+
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();
@@ -3847,6 +4145,7 @@ HTML_PAGE = r"""<!doctype html>
       updateTypeHints(document.getElementById("edit-type").value);
       populateViewPresets();
       syncStatusFilterBarsFromUrl();
+      updatePresetClearBtn();
       // Restore preset from localStorage if no URL param
       const storedPreset = loadPresetFromStorage();
       if (storedPreset && !query().get("preset") && !query().get("view") && appConfig?.views?.[storedPreset]) {

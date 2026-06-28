@@ -32,6 +32,7 @@ from .stats import (
     MOOD_VALUES,
     build_stats,
     habit_stats,
+    item_date_value,
     make_buckets,
     mood_stats,
     project_stats,
@@ -490,7 +491,7 @@ def create_app(paths=None, writable_path=None, config=None):
         return _run_git(["git", "push"])
 
     @app.get("/api/git/log")
-    def git_log(request: Request, n: int = 5):
+    def git_log(request: Request, n: int = 5, count: bool = False):
         _git_guard(request)
         n = min(max(1, n), 50)
         result = _run_git(["git", "log", "--pretty=format:%H\t%s\t%ai", "-%d" % n])
@@ -500,7 +501,15 @@ def create_app(paths=None, writable_path=None, config=None):
                 parts = line.split("\t", 2)
                 if len(parts) >= 2:
                     commits.append({"hash": parts[0][:8], "message": parts[1], "date": parts[2] if len(parts) > 2 else ""})
-        return {"commits": commits, "ok": result.get("ok", False)}
+        total = None
+        if count:
+            count_result = _run_git(["git", "rev-list", "--count", "HEAD"])
+            if count_result.get("ok") and count_result.get("stdout"):
+                try:
+                    total = int(count_result["stdout"].strip())
+                except ValueError:
+                    pass
+        return {"commits": commits, "ok": result.get("ok", False), "total": total}
 
     @app.get("/api/stats/summary")
     def stats_summary(
@@ -1827,7 +1836,7 @@ HTML_PAGE = r"""<!doctype html>
     .content, .stack { display: grid; gap: .65rem; padding: 1rem; }
     .item {
       display: grid;
-      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-columns: auto auto auto minmax(0, 1fr) auto;
       gap: .55rem;
       align-items: start;
       width: 100%;
@@ -1839,6 +1848,23 @@ HTML_PAGE = r"""<!doctype html>
       color: inherit;
     }
     .item:hover, .item.selected { border-color: var(--accent); background: #f7fbf9; }
+    .item-check { opacity: 0; cursor: pointer; width: 1rem; height: 1rem; align-self: center; transition: opacity .1s; }
+    .item:hover .item-check, .item.bulk-selected .item-check { opacity: 1; }
+    .item.bulk-selected { border-color: #5da87a; background: #f0faf5; }
+    [data-theme="dark"] .item.bulk-selected { border-color: #5da87a; background: #1a2e22; }
+    .bulk-toolbar {
+      display: none;
+      align-items: center;
+      gap: .5rem;
+      padding: .5rem .75rem;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: .5rem;
+      margin-bottom: .5rem;
+      flex-wrap: wrap;
+    }
+    .bulk-toolbar.visible { display: flex; }
+    .bulk-toolbar-count { font-size: .85rem; color: var(--muted); margin-right: auto; }
     .title { font-weight: 700; overflow-wrap: anywhere; }
     .meta { color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
     .markdown {
@@ -2214,20 +2240,10 @@ HTML_PAGE = r"""<!doctype html>
     .drawer-edit-form label { display:grid; gap:.25rem; font-size:.85rem; color:var(--muted); }
     .drawer-edit-form input, .drawer-edit-form select { width:100%; box-sizing:border-box; }
     .drawer-edit-form textarea { width:100%; box-sizing:border-box; min-height:6rem; font-family:monospace; font-size:.82rem; resize:vertical; }
-    /* ── Editor tab bar (New / Stats) ────────────────────────────── */
-    .editor-tab-bar { display:flex; border-bottom:1px solid var(--line); margin-bottom:.15rem; }
-    .editor-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; padding:.4rem .5rem; font-size:.8rem; cursor:pointer; color:var(--muted); }
-    .editor-tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
-    .editor-tab:hover:not(.active) { color:var(--text); }
-    /* ── Editor subheading & stats panel ─────────────────────────── */
-    .editor-subheading { font-size:.8rem; color:var(--muted); padding:.4rem 0 .1rem; font-weight:600; }
-    .editor-stats { padding:.5rem 0; display:grid; gap:.4rem; }
-    .editor-stats-title { font-size:.73rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:.15rem 0 .05rem; }
-    .editor-stats-row { display:flex; align-items:center; gap:.4rem; font-size:.8rem; }
-    .editor-stats-label { min-width:3.5rem; }
-    .editor-stats-bar-wrap { flex:1; background:var(--soft); border-radius:.2rem; height:.38rem; overflow:hidden; }
-    .editor-stats-bar { height:100%; background:var(--accent); border-radius:.2rem; min-width:2px; }
-    .editor-stats-count { font-size:.73rem; color:var(--muted); min-width:2rem; text-align:right; }
+    /* ── Collapsible side sections ───────────────────────────────── */
+    .side section.collapsed .section-body { display:none; }
+    .section-collapse-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.82rem; padding:.1rem .35rem; border-radius:.25rem; line-height:1.2; }
+    .section-collapse-btn:hover { background:var(--soft); color:var(--text); }
     /* ── Preset clear button ─────────────────────────────────────── */
     #preset-clear-btn { font-size:.75rem; padding:.2rem .4rem; display:none; }
     /* ── Chart group buttons ─────────────────────────────────────── */
@@ -2334,6 +2350,87 @@ HTML_PAGE = r"""<!doctype html>
     .display-mode .source,
     .display-mode .empty,
     .display-mode .note { color: #aebbb4; }
+    /* ── Kiosk mode (bulletin board / 掲示板) ─────────────────────── */
+    .kiosk-mode {
+      background: #060d0a;
+      color: #e8f2ec;
+      font-size: clamp(15px, 1.1vw, 22px);
+      overflow: hidden;
+    }
+    .kiosk-mode body { overflow: hidden; }
+    .kiosk-mode header {
+      max-width: none;
+      padding: .75rem 2rem;
+      border-bottom: 1px solid #1e3028;
+      background: #0a1511;
+    }
+    .kiosk-mode h1 { font-size: clamp(1.4rem, 2.5vw, 2.8rem); }
+    .kiosk-mode .subtitle { display: none; }
+    .kiosk-mode header .toolbar { gap: .5rem; }
+    .kiosk-mode header .toolbar > *:not(#kiosk-clock):not(#kiosk-exit-btn) { display: none; }
+    .kiosk-mode #kiosk-clock {
+      display: flex !important;
+      align-items: center;
+      gap: .5rem;
+      font-size: clamp(1.1rem, 2vw, 2rem);
+      font-variant-numeric: tabular-nums;
+      color: #9dd6b8;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .kiosk-mode #kiosk-exit-btn { display: inline-flex !important; }
+    .kiosk-mode main {
+      max-width: none;
+      grid-template-columns: 1fr;
+      padding: 0;
+      height: calc(100vh - 4rem);
+      overflow: hidden;
+    }
+    .kiosk-mode .side { display: none; }
+    .kiosk-mode .item-section { overflow: hidden; }
+    .kiosk-mode .item-section .section-head { display: none; }
+    .kiosk-mode #item-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      height: calc(100vh - 4.5rem);
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    .kiosk-mode #item-list::-webkit-scrollbar { display: none; }
+    .kiosk-mode .item {
+      background: #0e1e18;
+      border: 1px solid #1e3028;
+      border-radius: .6rem;
+      padding: .9rem 1.1rem;
+      font-size: clamp(13px, .95vw, 18px);
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      cursor: default;
+    }
+    .kiosk-mode .item .status { font-size: 1.1em; }
+    .kiosk-mode .item .title { font-size: 1em; font-weight: 600; color: #d8f0e4; }
+    .kiosk-mode .item .meta { font-size: .82em; color: #6a9e82; }
+    .kiosk-mode .toolbar { display: none; }
+    .kiosk-mode .kiosk-progress-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: #1e3028;
+    }
+    .kiosk-mode .kiosk-progress-bar::after {
+      content: "";
+      display: block;
+      height: 100%;
+      background: #4ec98a;
+      animation: kiosk-progress var(--kiosk-interval, 60s) linear infinite;
+    }
+    @keyframes kiosk-progress {
+      from { width: 0 } to { width: 100% }
+    }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
       .side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -2346,7 +2443,7 @@ HTML_PAGE = r"""<!doctype html>
       .section-head { align-items: stretch; flex-direction: column; }
       .toolbar > *, .actions > *, .section-head button { flex: 1 1 100%; }
       .side { grid-template-columns: 1fr; }
-      .item { grid-template-columns: auto auto minmax(0, 1fr); }
+      .item { grid-template-columns: auto auto auto minmax(0, 1fr); }
       .source { grid-column: 1 / -1; }
       form.stack { grid-template-columns: 1fr; }
     }
@@ -2365,11 +2462,12 @@ HTML_PAGE = r"""<!doctype html>
       <span id="preset-name-label" style="display:none;font-size:.78rem;color:var(--muted)"></span>
       <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
-      <button id="stats-btn" class="secondary" onclick="toggleStats()" title="Toggle statistics panel (s)">Stats</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
       <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
+      <span id="kiosk-clock" style="display:none"></span>
+      <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
   </header>
   <main>
@@ -2425,43 +2523,24 @@ HTML_PAGE = r"""<!doctype html>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
       <div id="diagnostics"></div>
+      <div id="bulk-toolbar" class="bulk-toolbar">
+        <span id="bulk-count" class="bulk-toolbar-count">0 selected</span>
+        <button class="secondary" onclick="bulkMarkDone()" title="Mark selected as done">✓ Done</button>
+        <button class="danger" onclick="bulkDelete()" title="Delete selected">Delete</button>
+        <button class="secondary" onclick="bulkClearSelection()" title="Clear selection">✕ Clear</button>
+      </div>
       <div id="items" class="content"></div>
-    </section>
-    <section class="stats-section" style="display:none">
-      <div class="section-head">
-        <h2>Statistics</h2>
-        <button class="secondary" onclick="refreshCharts()">Refresh</button>
-      </div>
-      <div class="chart-tabs">
-        <button class="chart-tab active" onclick="showChart('tasks', this)">Tasks</button>
-        <button class="chart-tab" onclick="showChart('habits', this)">Habits</button>
-        <button class="chart-tab" onclick="showChart('habits-heatmap', this)">Heatmap</button>
-        <button class="chart-tab" onclick="showChart('mood', this)">Mood</button>
-        <button class="chart-tab" onclick="showChart('elapsed', this)">Elapsed</button>
-      </div>
-      <div class="chart-group-bar" id="chart-group-bar" style="display:none">
-        <button class="chart-group-btn active" onclick="setChartGroup('daily',this)">Daily</button>
-        <button class="chart-group-btn" onclick="setChartGroup('weekly',this)">Weekly</button>
-        <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
-        <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV">↓ CSV</button>
-      </div>
-      <div id="chart-container" style="padding:.75rem 1rem">
-        <div class="chart-panel"><canvas id="main-chart"></canvas></div>
-      </div>
-      <div id="stats-breakdown" style="display:none;padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
     </section>
     <div class="side">
       <section class="editor-section">
         <div class="section-head">
-          <h2>Record</h2>
-          <button class="secondary" onclick="newItem()">New</button>
+          <h2 id="editor-heading">New Record</h2>
+          <div style="display:flex;gap:.35rem;align-items:center">
+            <button class="secondary" onclick="newItem()">New</button>
+            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Collapse">▾</button>
+          </div>
         </div>
-        <div class="editor-tab-bar">
-          <button class="editor-tab active" id="editor-tab-create" onclick="switchEditorTab('create')">New</button>
-          <button class="editor-tab" id="editor-tab-stats" onclick="switchEditorTab('stats')">Stats</button>
-        </div>
-        <div id="editor-panel-create">
-          <div class="editor-subheading" id="editor-heading">New Record</div>
+        <div class="section-body">
           <form class="stack" onsubmit="saveItem(event)">
             <label>Status
               <select id="edit-status">
@@ -2499,25 +2578,70 @@ HTML_PAGE = r"""<!doctype html>
             </div>
           </form>
         </div>
-        <div id="editor-panel-stats" style="display:none">
-          <div class="editor-stats" id="editor-stats-content"><div class="empty">Loading...</div></div>
+      </section>
+      <section class="stats-section collapsed">
+        <div class="section-head">
+          <h2>Statistics</h2>
+          <div style="display:flex;gap:.35rem;align-items:center">
+            <button class="secondary" onclick="refreshCharts()" title="Refresh statistics">↺</button>
+            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="chart-tabs">
+            <button class="chart-tab active" onclick="showChart('tasks', this)">Tasks</button>
+            <button class="chart-tab" onclick="showChart('habits', this)">Habits</button>
+            <button class="chart-tab" onclick="showChart('habits-heatmap', this)">Heatmap</button>
+            <button class="chart-tab" onclick="showChart('mood', this)">Mood</button>
+            <button class="chart-tab" onclick="showChart('elapsed', this)">Elapsed</button>
+          </div>
+          <div class="chart-group-bar" id="chart-group-bar" style="display:none">
+            <button class="chart-group-btn active" onclick="setChartGroup('daily',this)">Daily</button>
+            <button class="chart-group-btn" onclick="setChartGroup('weekly',this)">Weekly</button>
+            <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
+            <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV">&#x2193; CSV</button>
+          </div>
+          <div id="chart-container" style="padding:.75rem 1rem">
+            <div class="chart-panel"><canvas id="main-chart"></canvas></div>
+          </div>
+          <div style="padding:.25rem 1rem 0;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+            <label style="font-size:.76rem;color:var(--muted)">From<input type="date" id="breakdown-from" oninput="loadStatsBreakdown()" style="margin-left:.3rem;font-size:.76rem;padding:.12rem .3rem"></label>
+            <label style="font-size:.76rem;color:var(--muted)">To<input type="date" id="breakdown-to" oninput="loadStatsBreakdown()" style="margin-left:.3rem;font-size:.76rem;padding:.12rem .3rem"></label>
+            <button class="secondary" style="font-size:.74rem;padding:.12rem .4rem" onclick="document.getElementById('breakdown-from').value='';document.getElementById('breakdown-to').value='';loadStatsBreakdown()">All</button>
+          </div>
+          <div id="stats-breakdown" style="padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
         </div>
       </section>
       <section class="agenda-section">
-        <div class="section-head"><h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2></div>
-        <div id="agenda" class="stack"></div>
+        <div class="section-head">
+          <h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
+          <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Collapse">▾</button>
+        </div>
+        <div class="section-body">
+          <div id="agenda" class="stack"></div>
+        </div>
       </section>
-      <section class="status-section">
-        <div class="section-head"><h2>Status</h2></div>
-        <div id="status" class="stack"></div>
+      <section class="status-section collapsed">
+        <div class="section-head">
+          <h2>Status</h2>
+          <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
+        </div>
+        <div class="section-body">
+          <div id="status" class="stack"></div>
+        </div>
       </section>
-      <section class="notifications-section">
+      <section class="notifications-section collapsed">
         <div class="section-head">
           <h2>Notifications</h2>
-          <div id="notif-permission-badge"></div>
+          <div style="display:flex;gap:.35rem;align-items:center">
+            <div id="notif-permission-badge"></div>
+            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
+          </div>
         </div>
-        <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
-        <div id="notifications" class="stack"></div>
+        <div class="section-body">
+          <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
+          <div id="notifications" class="stack"></div>
+        </div>
       </section>
     </div>
   </main>
@@ -2601,6 +2725,7 @@ HTML_PAGE = r"""<!doctype html>
   <script>
     let currentItems = [];
     let selectedItem = null;
+    let bulkSelectedLines = new Set();
     let refreshTimer = null;
     let notificationTimer = null;
     let browserNotificationsEnabled = false;
@@ -2674,10 +2799,14 @@ HTML_PAGE = r"""<!doctype html>
       const params = query();
       return firstParam(params, ["mode", "view"], "").toLowerCase() === "display";
     }
+    function isKioskMode() {
+      const params = query();
+      return firstParam(params, ["mode", "view"], "").toLowerCase() === "kiosk";
+    }
     function currentView() {
       const params = query();
       const value = firstParam(params, ["view", "mode"], "").toLowerCase();
-      if (["messages", "status", "display"].includes(value)) return value;
+      if (["messages", "status", "display", "kiosk"].includes(value)) return value;
       return "";
     }
     function applyPresetToUrl() {
@@ -2703,6 +2832,8 @@ HTML_PAGE = r"""<!doctype html>
       document.body.classList.toggle("display-mode", isDisplayMode());
       document.body.classList.toggle("messages-mode", currentView() === "messages");
       document.body.classList.toggle("status-mode", currentView() === "status");
+      document.body.classList.toggle("kiosk-mode", isKioskMode());
+      _kioskApply();
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       const fallbackKind = currentView() === "messages" ? "M" : (currentView() === "status" ? "S" : "");
       const fallbackSort = currentView() === "messages" || currentView() === "status" ? "time" : (appConfig?.web?.default_sort || "line");
@@ -2717,7 +2848,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     function configureAutoRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
-      const seconds = Number(firstParam(query(), ["refresh"], isDisplayMode() ? "60" : ""));
+      const seconds = Number(firstParam(query(), ["refresh"], (isDisplayMode() || isKioskMode()) ? "60" : ""));
       if (Number.isFinite(seconds) && seconds > 0) {
         refreshTimer = setInterval(refreshAll, seconds * 1000);
       }
@@ -2935,11 +3066,15 @@ HTML_PAGE = r"""<!doctype html>
         }
         node.addEventListener("click", (e) => {
           if (e.target.closest(".ref-link")) return;
+          if (e.target.classList.contains("item-check")) return;
           selectItem(item);
           openDrawer(item);
         });
         node.addEventListener("contextmenu", (e) => openCtxMenu(e, item));
+        const isBulkSelected = bulkSelectedLines.has(String(item.line) + (item.source || ""));
+        if (isBulkSelected) node.classList.add("bulk-selected");
         node.innerHTML = `
+          <input type="checkbox" class="item-check" title="Select for bulk action" ${isBulkSelected ? "checked" : ""}>
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
@@ -2949,6 +3084,14 @@ HTML_PAGE = r"""<!doctype html>
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
         `;
+        node.querySelector(".item-check").addEventListener("change", (ev) => {
+          ev.stopPropagation();
+          const key = String(item.line) + (item.source || "");
+          if (ev.target.checked) bulkSelectedLines.add(key);
+          else bulkSelectedLines.delete(key);
+          node.classList.toggle("bulk-selected", ev.target.checked);
+          _updateBulkToolbar();
+        });
         root.appendChild(node);
       }
       const queryText = document.getElementById("search").value.trim();
@@ -2958,10 +3101,51 @@ HTML_PAGE = r"""<!doctype html>
         });
       }
     }
+    function _updateBulkToolbar() {
+      const bar = document.getElementById("bulk-toolbar");
+      const cnt = document.getElementById("bulk-count");
+      if (!bar) return;
+      const n = bulkSelectedLines.size;
+      bar.classList.toggle("visible", n > 0);
+      if (cnt) cnt.textContent = `${n} selected`;
+    }
+    function bulkClearSelection() {
+      bulkSelectedLines.clear();
+      renderItems(currentItems);
+    }
+    async function bulkMarkDone() {
+      const keys = new Set(bulkSelectedLines);
+      const targets = currentItems.filter(i => keys.has(String(i.line) + (i.source || "")) && i.editable && !["[x]","[-]"].includes(i.status));
+      if (!targets.length) { showToast("No editable open items selected.", "warning"); return; }
+      let done = 0;
+      for (const item of targets) {
+        try {
+          await api(`/api/items/${item.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: "[x]", type: item.type, title: item.title, details: item.details }) });
+          done++;
+        } catch(e) { /* skip */ }
+      }
+      bulkSelectedLines.clear();
+      showToast(`Marked ${done} item(s) done.`, "success");
+      await refreshAll();
+    }
+    async function bulkDelete() {
+      const keys = new Set(bulkSelectedLines);
+      const targets = currentItems.filter(i => keys.has(String(i.line) + (i.source || "")) && i.editable);
+      if (!targets.length) { showToast("No editable items selected.", "warning"); return; }
+      if (!confirm(`Delete ${targets.length} item(s)?`)) return;
+      targets.sort((a,b) => b.line - a.line);
+      let done = 0;
+      for (const item of targets) {
+        try { await api(`/api/items/${item.line}`, { method: "DELETE" }); done++; }
+        catch(e) { /* skip */ }
+      }
+      bulkSelectedLines.clear();
+      showToast(`Deleted ${done} item(s).`, "success");
+      await refreshAll();
+    }
     function selectItem(item) {
       if (isDisplayMode()) return;
       selectedItem = item;
-      switchEditorTab("create");
       document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only record";
       document.getElementById("edit-status").value = item.status;
       document.getElementById("edit-type").value = item.type;
@@ -2977,7 +3161,6 @@ HTML_PAGE = r"""<!doctype html>
     }
     function newItem() {
       selectedItem = null;
-      switchEditorTab("create");
       document.getElementById("editor-heading").textContent = "New Record";
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = "T";
@@ -2988,54 +3171,6 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("editor-note").textContent = "Create a new record or select an editable row.";
       setEditorDisabled(false);
       renderItems(currentItems);
-    }
-    function switchEditorTab(tab) {
-      const tabC = document.getElementById("editor-tab-create");
-      const tabS = document.getElementById("editor-tab-stats");
-      const panC = document.getElementById("editor-panel-create");
-      const panS = document.getElementById("editor-panel-stats");
-      if (!tabC || !panC) return;
-      if (tab === "stats") {
-        tabC.classList.remove("active"); tabS.classList.add("active");
-        panC.style.display = "none"; panS.style.display = "";
-        renderEditorStats();
-      } else {
-        tabC.classList.add("active"); tabS.classList.remove("active");
-        panC.style.display = ""; panS.style.display = "none";
-      }
-    }
-    function renderEditorStats() {
-      const el = document.getElementById("editor-stats-content");
-      if (!el) return;
-      const items = currentItems || [];
-      if (!items.length) { el.innerHTML = '<div class="empty">No records loaded.</div>'; return; }
-      const typeC = {}, statC = {};
-      for (const it of items) {
-        typeC[it.type] = (typeC[it.type] || 0) + 1;
-        statC[it.status] = (statC[it.status] || 0) + 1;
-      }
-      const total = items.length;
-      let h = `<div class="editor-stats-title">Total: ${total} records</div>`;
-      const maxS = Math.max(...Object.values(statC), 1);
-      h += `<div class="editor-stats-title" style="margin-top:.4rem">By Status</div>`;
-      for (const s of ["[ ]","[/]","[x]","[-]","[>]","[?]","[N]"]) {
-        const n = statC[s] || 0; if (!n) continue;
-        const cls = STATUS_CLASS[s] || "status-note";
-        const lbl = STATUS_LABEL[s] || s;
-        h += `<div class="editor-stats-row"><span class="status-badge ${cls} editor-stats-label" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(lbl)}</span>` +
-          `<div class="editor-stats-bar-wrap"><div class="editor-stats-bar" style="width:${Math.round(n/maxS*100)}%"></div></div>` +
-          `<span class="editor-stats-count">${n}</span></div>`;
-      }
-      const maxT = Math.max(...Object.values(typeC), 1);
-      h += `<div class="editor-stats-title" style="margin-top:.4rem">By Type</div>`;
-      for (const t of ["T","E","D","R","H","N","S","M","J"]) {
-        const n = typeC[t] || 0; if (!n) continue;
-        const name = (ITEM_TYPE_NAMES || {})[t] || t;
-        h += `<div class="editor-stats-row"><span class="type-badge type-${t} editor-stats-label" style="font-size:.7rem;padding:.1rem .35rem" title="${escapeHtml(name)}">${escapeHtml(t)}</span>` +
-          `<div class="editor-stats-bar-wrap"><div class="editor-stats-bar" style="width:${Math.round(n/maxT*100)}%"></div></div>` +
-          `<span class="editor-stats-count">${n}</span></div>`;
-      }
-      el.innerHTML = h;
     }
     function setEditorDisabled(disabled) {
       for (const id of ["edit-status", "edit-type", "edit-title", "edit-details", "save-button"]) {
@@ -3264,6 +3399,7 @@ HTML_PAGE = r"""<!doctype html>
       const active = document.activeElement;
       const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
       if (e.key === "Escape") {
+        if (isKioskMode()) { toggleKioskMode(); return; }
         if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
         if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
         if (document.getElementById("detail-drawer").classList.contains("open")) { closeDrawer(); return; }
@@ -3293,6 +3429,7 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
       if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
       if (e.key === "g" || e.key === "G") { e.preventDefault(); jumpToLine(); return; }
+      if (e.key === "k" || e.key === "K") { e.preventDefault(); toggleKioskMode(); return; }
     });
 
     // ── Help modal ─────────────────────────────────────────────────
@@ -3685,24 +3822,140 @@ HTML_PAGE = r"""<!doctype html>
     // ── Statistics / Chart.js panel ────────────────────────────────
     let chartJsLoaded = false;
     let mainChart = null;
-    let statsVisible = false;
+    let statsLoaded = false;
 
     let notifPanelVisible = true;
 
+    function toggleSideSection(btn) {
+      const sec = btn.closest("section");
+      const nowCollapsed = sec.classList.toggle("collapsed");
+      btn.textContent = nowCollapsed ? "▸" : "▾";
+      btn.title = nowCollapsed ? "Expand" : "Collapse";
+      if (!nowCollapsed && sec.classList.contains("stats-section") && !statsLoaded) {
+        statsLoaded = true;
+        loadChart("tasks");
+        loadStatsBreakdown();
+      }
+    }
+
+    // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
+    let _kioskClockTimer = null;
+    let _kioskScrollTimer = null;
+    let _kioskAutoScroll = null;
+
+    function _kioskApply() {
+      const active = isKioskMode();
+      const clock = document.getElementById("kiosk-clock");
+      const exitBtn = document.getElementById("kiosk-exit-btn");
+      if (!clock || !exitBtn) return;
+      clock.style.display = active ? "flex" : "none";
+      exitBtn.style.display = active ? "inline-flex" : "none";
+      if (active) {
+        _kioskStartClock();
+        _kioskStartScroll();
+        _kioskAddProgressBar();
+      } else {
+        _kioskStopClock();
+        _kioskStopScroll();
+        _kioskRemoveProgressBar();
+      }
+    }
+
+    function _kioskStartClock() {
+      if (_kioskClockTimer) clearInterval(_kioskClockTimer);
+      const update = () => {
+        const now = new Date();
+        const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+        const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+        const el = document.getElementById("kiosk-clock");
+        if (el) el.textContent = date + "  " + time;
+      };
+      update();
+      _kioskClockTimer = setInterval(update, 1000);
+    }
+
+    function _kioskStopClock() {
+      if (_kioskClockTimer) { clearInterval(_kioskClockTimer); _kioskClockTimer = null; }
+      const el = document.getElementById("kiosk-clock");
+      if (el) el.textContent = "";
+    }
+
+    function _kioskStartScroll() {
+      _kioskStopScroll();
+      const list = document.getElementById("item-list");
+      if (!list) return;
+      const intervalMs = Number(document.documentElement.style.getPropertyValue("--kiosk-interval") || "60") * 1000;
+      const scrollStep = () => {
+        if (!isKioskMode()) { _kioskStopScroll(); return; }
+        const { scrollTop, scrollHeight, clientHeight } = list;
+        if (scrollTop + clientHeight >= scrollHeight - 2) {
+          list.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          list.scrollBy({ top: Math.ceil(clientHeight * 0.8), behavior: "smooth" });
+        }
+      };
+      _kioskScrollTimer = setInterval(scrollStep, intervalMs);
+    }
+
+    function _kioskStopScroll() {
+      if (_kioskScrollTimer) { clearInterval(_kioskScrollTimer); _kioskScrollTimer = null; }
+    }
+
+    function _kioskAddProgressBar() {
+      if (document.querySelector(".kiosk-progress-bar")) return;
+      const bar = document.createElement("div");
+      bar.className = "kiosk-progress-bar";
+      document.body.appendChild(bar);
+      const secs = firstParam(query(), ["refresh"], "60");
+      document.documentElement.style.setProperty("--kiosk-interval", secs + "s");
+    }
+
+    function _kioskRemoveProgressBar() {
+      const bar = document.querySelector(".kiosk-progress-bar");
+      if (bar) bar.remove();
+    }
+
+    function toggleKioskMode() {
+      const params = query();
+      const active = isKioskMode();
+      if (active) {
+        params.delete("mode");
+        params.delete("view");
+      } else {
+        params.set("mode", "kiosk");
+      }
+      history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      applyUrlToControls();
+      refreshAll();
+    }
+
     function toggleStats() {
-      statsVisible = !statsVisible;
       const sec = document.querySelector(".stats-section");
-      if (sec) sec.style.display = statsVisible ? "" : "none";
-      if (statsVisible) { loadChart("tasks"); loadStatsBreakdown(); }
-      const btn = document.getElementById("stats-btn");
-      if (btn) btn.classList.toggle("btn-active", statsVisible);
+      if (!sec) return;
+      const willExpand = sec.classList.contains("collapsed");
+      if (willExpand) {
+        sec.classList.remove("collapsed");
+        const btn = sec.querySelector(".section-collapse-btn");
+        if (btn) { btn.textContent = "▾"; btn.title = "Collapse"; }
+        if (!statsLoaded) { statsLoaded = true; loadChart("tasks"); loadStatsBreakdown(); }
+        sec.scrollIntoView({behavior: "smooth", block: "nearest"});
+      } else {
+        sec.classList.add("collapsed");
+        const btn = sec.querySelector(".section-collapse-btn");
+        if (btn) { btn.textContent = "▸"; btn.title = "Expand"; }
+      }
+      const headerBtn = document.getElementById("stats-btn");
+      if (headerBtn) headerBtn.classList.toggle("btn-active", willExpand);
     }
 
     async function loadStatsBreakdown() {
       const el = document.getElementById("stats-breakdown");
       if (!el) return;
       try {
-        const data = await api("/api/stats/summary");
+        const fromVal = (document.getElementById("breakdown-from") || {}).value || "";
+        const toVal = (document.getElementById("breakdown-to") || {}).value || "";
+        const qs = (fromVal ? `from=${encodeURIComponent(fromVal)}&` : "") + (toVal ? `to=${encodeURIComponent(toVal)}` : "");
+        const data = await api("/api/stats/summary" + (qs ? "?" + qs : ""));
         const STATUS_EMOJI = {"[ ]": "○", "[/]": "◑", "[x]": "✓", "[-]": "✕", "[>]": "→"};
         const typeRows = Object.entries(data.by_type || {})
           .sort((a,b) => b[1]-a[1])
@@ -3730,8 +3983,11 @@ HTML_PAGE = r"""<!doctype html>
     function toggleNotifPanel() {
       const sec = document.querySelector(".notifications-section");
       if (!sec) { enableBrowserNotifications(); return; }
-      notifPanelVisible = !notifPanelVisible;
-      sec.style.display = notifPanelVisible ? "" : "none";
+      const wasCollapsed = sec.classList.contains("collapsed");
+      notifPanelVisible = wasCollapsed;
+      sec.classList.toggle("collapsed", !notifPanelVisible);
+      const colBtn = sec.querySelector(".section-collapse-btn");
+      if (colBtn) { colBtn.textContent = notifPanelVisible ? "▾" : "▸"; colBtn.title = notifPanelVisible ? "Collapse" : "Expand"; }
       const btn = document.getElementById("notif-btn");
       if (btn) {
         btn.classList.toggle("btn-active", notifPanelVisible);
@@ -4189,16 +4445,19 @@ HTML_PAGE = r"""<!doctype html>
       if (reset !== false) _gitLogOffset = 0;
       try {
         const n = _gitLogOffset + GIT_LOG_PAGE;
-        const data = await api(`/api/git/log?n=${n}`);
+        const data = await api(`/api/git/log?n=${n}&count=true`);
         const commits = data.commits || [];
         if (!commits.length) return;
         const shown = commits.slice(0, n);
         const hasMore = commits.length >= n;
+        const totalLabel = data.total != null ? ` / ${data.total} total` : "";
+        const titleEl = document.getElementById("git-modal-title");
+        if (titleEl) titleEl.textContent = `Git${data.total != null ? ` (${data.total} commits)` : ""}`;
         const container = document.getElementById("git-log-container");
         const target = container || document.getElementById("git-output");
         if (!target) return;
         let html = `<div id="git-log-container" style="margin-top:.5rem">
-          <div class="drawer-section-title" style="font-size:.72rem">Recent commits (${shown.length})</div>`;
+          <div class="drawer-section-title" style="font-size:.72rem">Recent commits (${shown.length}${totalLabel})</div>`;
         for (const c of shown) {
           html += `<div class="git-log-entry"><span class="git-log-hash">${escapeHtml(c.hash)}</span><span class="git-log-msg">${escapeHtml(c.message)}</span></div>`;
         }
@@ -4503,7 +4762,6 @@ HTML_PAGE = r"""<!doctype html>
     function ctxDuplicate() {
       const t = ctxTarget; closeCtxMenu();
       if (!t) return;
-      switchEditorTab("create");
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = t.type || "T";
       document.getElementById("edit-title").value = t.title || "";

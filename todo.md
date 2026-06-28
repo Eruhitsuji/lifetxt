@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28T23:30 (updated x36)
+Last updated: 2026-06-29T00:00 (updated x37)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -189,6 +189,9 @@ CLI-native charts without external dependencies.
   now returns raw counts per bucket; confirm Chart.js renders bars correctly
   and the Y-axis label is meaningful (e.g., "completions / week").
 
+- [ ] Add chart API tests: `/api/chart/mood` now correctly imports `item_date_value`;
+  add test coverage for empty date range returning null data points without error.
+
 ### Item Input Form (Web UI)
 
 - [ ] Improve `importRawLine()` further: call `/api/items/parse` (or inline
@@ -237,23 +240,33 @@ CLI-native charts without external dependencies.
 - [ ] Add item search highlight: wrap matched search terms in `<mark>` tags in
   the item title and detail text when a `?text=` filter is active.
 
-- [ ] Add bulk-action toolbar: when multiple items are selected (checkbox on
-  hover), show a "Mark done" / "Delete" / "Set project" action bar above the
-  list. Implement selection state in JS without modifying the API.
+- [x] Bulk-action toolbar: checkbox on hover, "Mark done" / "Delete" action bar
+  above the list. Selection state managed in JS; uses existing PUT/DELETE API.
 
 ### Git Integration (Web API)
 
 ### Quick-filter & Navigation (Web UI)
 
-- [ ] Git log modal: add a commit-count badge in the modal header showing
-  the total number of commits (requires a `?count=true` API parameter).
+- [x] Git log modal: commit-count badge added to modal header via `?count=true`
+  API parameter using `git rev-list --count HEAD`.
 
 ### Context Menu & Dark Mode (Web UI) — New
 
 ### Stats & Charts (Web UI) — New
 
-- [ ] Stats breakdown: add date-range filter (`from`/`to`) inputs to the stats
-  breakdown panel so by_type/by_status counts reflect the current filter window.
+- [x] Stats breakdown: date-range filter (`from`/`to`) inputs added to the stats
+  breakdown panel; by_type/by_status counts now reflect the current filter window.
+
+### Kiosk Mode (Web UI) — New
+
+- [ ] Add kiosk mode configuration options: `?kiosk_cols=3` to fix the number
+  of columns, `?kiosk_filter=kind:T` to show only specific item types, and a
+  `?kiosk_title=TEXT` overlay to display a custom title in the header. Store
+  kiosk presets in config `views` so teams can bookmark a ready-made URL.
+
+- [ ] Add kiosk mode per-item card animations: subtle entrance animation when
+  items are added or updated during auto-refresh, so viewers notice changes
+  without the full screen flickering.
 
 ### Drawer Improvements (Web UI) — New
 
@@ -278,24 +291,21 @@ CLI-native charts without external dependencies.
 
 ## P1: CLI — New Commands (Proposed from Session 4)
 
-- [ ] Add `deps` command: show dependency chains (`depends_on:` / `blocks:`)
-  as an indented tree or flat list. Options: `--blocked` (only show items
-  with unresolved blockers), `--root ID` (trace from a specific item),
-  `--format text|json`. Complements `links --format mermaid` for quick
-  terminal inspection without generating a full graph.
+- [x] `deps` command: dependency chains as indented tree. `--blocked`, `--root ID`,
+  `--format text|json` implemented.
 
-- [ ] Add `tag` command for tag management: `tag list` (all tags with counts),
-  `tag rename OLD NEW` (renames in-place across all items), `tag merge OLD NEW`
-  (alias rename that also updates config tag_aliases). Reuses atomic write
-  and pre-write backup infrastructure.
+- [x] `tag list` (all tags with counts) and `tag rename OLD NEW path [--dry-run]`
+  implemented. `tag merge` (config alias update) remains.
+
+- [ ] Add `tag merge OLD NEW` that also updates `config tag_aliases` after the
+  simple `tag rename` is confirmed stable in real use.
 
 - [ ] Add `from-markdown` preset support: `--preset github` maps GitHub
   Issues Markdown export format (checkbox lists with `#NNN` references) to
   life.txt items with `ref:` set to the issue number.
 
-- [ ] Add `watch` command: poll one or more life.txt files for changes and
-  re-run a command (e.g., `summary`, `health`) on each change. Useful for
-  live dashboard without launching the full web server.
+- [x] `watch` command: polls files for changes, re-runs a sub-command. Options:
+  `--run CMD`, `--interval SEC`, `--clear`. Uses only the standard library (no watchdog).
 
 ---
 
@@ -349,16 +359,18 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
 
-- [ ] Add `lint --ruleset FILE` support: load custom rules from a JSON
-  ruleset file so teams can enforce project-specific key conventions beyond
-  the built-in 38 typo variants. Define ruleset schema and document.
+- [x] `lint --ruleset FILE` support: loads custom rules from a JSON array
+  (pattern/replacement/message). Reports as code L100 alongside built-in rules.
+  Ruleset schema: `[{"pattern":"regex","replacement":"key","message":"..."}]`.
 
-- [ ] Add `diff --status` filter: limit diff output to specific change
-  types (added, removed, completed, canceled, status-changed, detail-changed).
-  Add `--since DATE` flag to compute diff against a snapshot from that date.
+- [x] `diff --status` filter: limits output to specific change types
+  (added, removed, completed, canceled, status-changed, detail-changed). Repeatable.
 
-- [ ] Add `snapshot --diff` flag to compare the new snapshot to the previous
-  one using `diff` command. Document recommended naming convention in docs.
+- [ ] Add `diff --since DATE` flag: auto-select a snapshot from that date as the
+  base file, avoiding the need to manually specify the `before` argument.
+
+- [x] `snapshot --diff` flag: after writing, shows semantic diff against the
+  most recent previous snapshot in the same directory.
 
 - [ ] Extend `migrate` with additional migrations: `normalize-status` (alias
   → canonical bracket form), `strip-empty-details` (remove keys with blank

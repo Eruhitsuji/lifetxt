@@ -1357,6 +1357,11 @@ def build_parser():
         default=None,
         help="Directory to write the snapshot. Defaults to a 'snapshots/' subdir next to the source.",
     )
+    snapshot_cmd.add_argument(
+        "--diff",
+        action="store_true",
+        help="Show a semantic diff between the new snapshot and the most recent previous snapshot in the same directory.",
+    )
     snapshot_cmd.set_defaults(func=command_snapshot)
 
     lint_cmd = subparsers.add_parser(
@@ -1379,6 +1384,12 @@ def build_parser():
         "--pretty",
         action="store_true",
         help="Pretty-print JSON output.",
+    )
+    lint_cmd.add_argument(
+        "--ruleset",
+        dest="ruleset",
+        metavar="FILE",
+        help="JSON file with custom rules (list of {pattern, replacement, message}).",
     )
     lint_cmd.set_defaults(func=command_lint)
 
@@ -1406,6 +1417,13 @@ def build_parser():
         "--project",
         action="append",
         help="Filter diff by project. Can be repeated.",
+    )
+    diff_cmd.add_argument(
+        "--status",
+        dest="change_types",
+        action="append",
+        choices=("added", "removed", "completed", "canceled", "status-changed", "detail-changed"),
+        help="Limit output to specific change types. Can be repeated.",
     )
     diff_cmd.set_defaults(func=command_diff)
 
@@ -1482,6 +1500,67 @@ def build_parser():
     )
     frommd_cmd.add_argument("--append", action="store_true", help="Append to output file instead of overwrite.")
     frommd_cmd.set_defaults(func=command_from_markdown)
+
+    # deps command
+    deps_cmd = subparsers.add_parser(
+        "deps",
+        help="Show dependency chains (depends_on:/blocks:) as an indented tree.",
+    )
+    _add_input_paths(deps_cmd)
+    deps_cmd.add_argument(
+        "--blocked",
+        action="store_true",
+        help="Only show items with unresolved (open) blockers.",
+    )
+    deps_cmd.add_argument(
+        "--root",
+        metavar="ID",
+        help="Trace dependency chain from a specific item ID.",
+    )
+    deps_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    deps_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    deps_cmd.set_defaults(func=command_deps)
+
+    # tag command
+    tag_cmd = subparsers.add_parser("tag", help="Tag management: list, rename.")
+    tag_subparsers = tag_cmd.add_subparsers(dest="tag_action")
+    tag_list_cmd = tag_subparsers.add_parser("list", help="List all tags with counts.")
+    _add_input_paths(tag_list_cmd)
+    tag_list_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    tag_list_cmd.set_defaults(func=command_tag_list)
+    tag_rename_cmd = tag_subparsers.add_parser("rename", help="Rename a tag in-place.")
+    tag_rename_cmd.add_argument("old", help="Old tag value.")
+    tag_rename_cmd.add_argument("new", help="New tag value.")
+    tag_rename_cmd.add_argument("path", help="File to update.")
+    tag_rename_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    tag_rename_cmd.set_defaults(func=command_tag_rename)
+    tag_cmd.set_defaults(func=lambda args: tag_cmd.print_help())
+
+    # watch command
+    watch_cmd = subparsers.add_parser(
+        "watch",
+        help="Watch life.txt files for changes and re-run a command on each change.",
+    )
+    _add_input_paths(watch_cmd)
+    watch_cmd.add_argument(
+        "--run",
+        metavar="CMD",
+        default="summary",
+        help="lifetxt sub-command to re-run on change (default: summary).",
+    )
+    watch_cmd.add_argument(
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Polling interval in seconds (default: 1.0).",
+    )
+    watch_cmd.add_argument("--clear", action="store_true", help="Clear screen before each re-run.")
+    watch_cmd.set_defaults(func=command_watch)
 
     return parser
 
@@ -3645,6 +3724,7 @@ def command_diff(args):
 
     kind_filter = set(_split_csv_args(getattr(args, "kinds", None)))
     proj_filter = set(_split_csv_args(getattr(args, "project", None)))
+    change_type_filter = set(getattr(args, "change_types", None) or [])
 
     def _item_key(item):
         id_vals = item.details.get(id_key, [])
@@ -3728,6 +3808,9 @@ def command_diff(args):
                 ("line", a.line),
                 ("source", getattr(a, "source", None)),
             ]))
+
+    if change_type_filter:
+        changes = [c for c in changes if c.get("change") in change_type_filter]
 
     fmt = getattr(args, "format", "text")
     if fmt == "json":
@@ -4081,8 +4164,34 @@ def command_snapshot(args):
     if os.path.abspath(dest) == os.path.abspath(src):
         sys.stderr.write("ERROR: Destination is the same as source: %s\n" % dest)
         return 1
+    do_diff = getattr(args, "diff", False)
+    prev_snapshot = None
+    if do_diff:
+        snap_dir_for_diff = os.path.dirname(dest)
+        basename_for_diff = os.path.basename(src)
+        candidates = sorted(
+            (f for f in os.listdir(snap_dir_for_diff)
+             if f.endswith("_" + basename_for_diff) and f != os.path.basename(dest)),
+            reverse=True,
+        )
+        if candidates:
+            prev_snapshot = os.path.join(snap_dir_for_diff, candidates[0])
     shutil.copy2(src, dest)
     sys.stdout.write("Snapshot: %s -> %s\n" % (src, dest))
+    if do_diff and prev_snapshot:
+        sys.stdout.write("Diff vs %s:\n" % prev_snapshot)
+
+        class _FakeArgs:
+            before = prev_snapshot
+            after = dest
+            format = "text"
+            pretty = False
+            kinds = None
+            project = None
+            change_types = None
+        command_diff(_FakeArgs())
+    elif do_diff:
+        sys.stdout.write("(No previous snapshot found to diff against.)\n")
     return 0
 
 
@@ -4172,6 +4281,39 @@ def command_lint(args):
                         ("fix", None),
                         ("key", key),
                     ]))
+
+    # --ruleset: load custom rules from a JSON file
+    ruleset_file = getattr(args, "ruleset", None)
+    if ruleset_file:
+        try:
+            with open(ruleset_file, encoding="utf-8") as _rf:
+                custom_rules = json.load(_rf)
+            if not isinstance(custom_rules, list):
+                sys.stderr.write("ERROR: Ruleset must be a JSON array.\n")
+                return 2
+        except (OSError, ValueError) as exc:
+            sys.stderr.write("ERROR: Cannot load ruleset %r: %s\n" % (ruleset_file, exc))
+            return 2
+        for path in paths:
+            text = path_texts.get(path, read_text(path))
+            path_items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+            for item in path_items:
+                for key in item.details.keys():
+                    for rule in custom_rules:
+                        pattern = rule.get("pattern", "")
+                        replacement = rule.get("replacement")
+                        message = rule.get("message", "Key %r matches custom rule." % key)
+                        import re as _re2
+                        if _re2.fullmatch(pattern, key):
+                            issues.append(OrderedDict([
+                                ("source", getattr(item, "source", path) or path),
+                                ("line", item.line),
+                                ("code", "L100"),
+                                ("severity", "warning"),
+                                ("message", message.replace("{key}", key)),
+                                ("fix", replacement),
+                                ("key", key),
+                            ]))
 
     # --fix: auto-rename typo keys in fixable issues (L001, L002)
     if do_fix:
@@ -5487,3 +5629,184 @@ def _print_warnings(diagnostics):
     for diagnostic in diagnostics:
         if diagnostic.severity == "warning":
             sys.stderr.write(diagnostic.format() + "\n")
+
+
+def command_deps(args):
+    from .links import build_id_index, item_id_values
+    config = _config(args)
+    id_key = id_key_from_config(config)
+    paths = args.paths if args.paths else ["-"]
+    items, diags = _parse_or_exit(paths, config)
+    _print_warnings(diags)
+    id_index = build_id_index(items, id_key=id_key)
+
+    def _id(item):
+        vals = item_id_values(item, id_key)
+        return vals[0] if vals else None
+
+    def _deps(item):
+        return list(item.details.get("depends_on", []))
+
+    def _is_open(item):
+        return item.status not in ("[x]", "[-]")
+
+    all_ids = {_id(i): i for i in items if _id(i)}
+    root_id = getattr(args, "root", None)
+    blocked_only = getattr(args, "blocked", False)
+
+    def _collect(item_id, visited=None):
+        if visited is None:
+            visited = set()
+        if item_id in visited:
+            return []
+        visited.add(item_id)
+        item = all_ids.get(item_id)
+        if not item:
+            return [{"id": item_id, "title": "(unknown)", "status": "?", "type": "?", "deps": []}]
+        dep_ids = _deps(item)
+        dep_nodes = []
+        for dep_id in dep_ids:
+            dep_nodes.extend(_collect(dep_id, visited))
+        return [{"id": item_id, "title": item.title, "status": item.status,
+                 "type": item.kind, "deps": dep_nodes}]
+
+    if root_id:
+        roots = _collect(root_id)
+    else:
+        roots = []
+        for item in items:
+            if blocked_only and not any(_is_open(all_ids[d]) for d in _deps(item) if d in all_ids):
+                continue
+            item_id = _id(item)
+            if not item_id:
+                continue
+            dep_ids = _deps(item)
+            if not dep_ids:
+                continue
+            roots.append(_collect(item_id)[0])
+
+    if args.format == "json":
+        write_text(None, json.dumps(roots, ensure_ascii=False,
+                                    indent=2 if args.pretty else None,
+                                    separators=None if args.pretty else (",", ":")) + "\n")
+        return 0
+
+    def _print_node(node, depth=0):
+        indent = "  " * depth
+        status = node.get("status", "?")
+        title = node.get("title", "")
+        item_id = node.get("id", "")
+        sys.stdout.write("%s%s [%s] %s\n" % (indent, item_id, status, title))
+        for dep in node.get("deps", []):
+            _print_node(dep, depth + 1)
+
+    if not roots:
+        sys.stdout.write("No dependency chains found.\n")
+    else:
+        for root in roots:
+            _print_node(root)
+    return 0
+
+
+def command_tag_list(args):
+    config = _config(args)
+    paths = args.paths if args.paths else ["-"]
+    items, diags = _parse_or_exit(paths, config)
+    _print_warnings(diags)
+    counts = {}
+    for item in items:
+        for tag in item.details.get("tag", []):
+            counts[tag] = counts.get(tag, 0) + 1
+    sorted_tags = sorted(counts.items(), key=lambda x: (-x[1], x[0]))
+    fmt = getattr(args, "format", "text")
+    if fmt == "json":
+        write_text(None, json.dumps([{"tag": t, "count": c} for t, c in sorted_tags],
+                                     ensure_ascii=False, indent=2) + "\n")
+    else:
+        if not sorted_tags:
+            sys.stdout.write("No tags found.\n")
+        else:
+            for tag, count in sorted_tags:
+                sys.stdout.write("%4d  %s\n" % (count, tag))
+    return 0
+
+
+def command_tag_rename(args):
+    old_tag = args.old
+    new_tag = args.new
+    path = args.path
+    dry_run = getattr(args, "dry_run", False)
+    text = read_text(path)
+    id_key = id_key_from_config(_config(args) if hasattr(args, "config") else {})
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    lines = text.splitlines(keepends=True)
+    changed = 0
+    import re as _re
+    for item in items:
+        if old_tag in item.details.get("tag", []):
+            ln = item.line
+            if ln and 0 < ln <= len(lines):
+                new_line = _re.sub(
+                    r'(\btag:\s*)' + _re.escape(old_tag) + r'(\b|$)',
+                    r'\g<1>' + new_tag,
+                    lines[ln - 1],
+                )
+                if new_line != lines[ln - 1]:
+                    lines[ln - 1] = new_line
+                    changed += 1
+    if changed == 0:
+        sys.stdout.write("Tag %r not found in %s.\n" % (old_tag, path))
+        return 0
+    new_text = "".join(lines)
+    if dry_run:
+        sys.stdout.write("Would rename %d occurrence(s) of tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
+    else:
+        atomic_write_text(path, new_text)
+        sys.stdout.write("Renamed %d occurrence(s) of tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
+    return 0
+
+
+def command_watch(args):
+    import time
+    paths = args.paths if args.paths else ["-"]
+    run_cmd = getattr(args, "run", "summary")
+    interval = getattr(args, "interval", 1.0)
+    do_clear = getattr(args, "clear", False)
+
+    if "-" in paths:
+        sys.stderr.write("ERROR: watch does not support stdin. Specify file paths.\n")
+        return 1
+
+    def _mtimes():
+        result = {}
+        for p in paths:
+            try:
+                result[p] = os.path.getmtime(p)
+            except OSError:
+                result[p] = None
+        return result
+
+    def _rerun():
+        if do_clear:
+            sys.stdout.write("\033[2J\033[H")
+            sys.stdout.flush()
+        import subprocess
+        cmd = [sys.executable, "-m", "lifetxt"] + [run_cmd] + paths
+        try:
+            subprocess.run(cmd)
+        except Exception as exc:
+            sys.stderr.write("Watch run error: %s\n" % exc)
+
+    sys.stdout.write("Watching %s (Ctrl-C to stop)...\n" % ", ".join(paths))
+    last_mtimes = _mtimes()
+    _rerun()
+    try:
+        while True:
+            time.sleep(interval)
+            current_mtimes = _mtimes()
+            if current_mtimes != last_mtimes:
+                last_mtimes = current_mtimes
+                _rerun()
+    except KeyboardInterrupt:
+        sys.stdout.write("\nStopped.\n")
+    return 0

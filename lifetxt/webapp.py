@@ -2206,6 +2206,28 @@ HTML_PAGE = r"""<!doctype html>
     .drawer-raw-details { margin:.4rem 0; font-size:.82rem; }
     .drawer-raw-details summary { cursor:pointer; color:var(--muted); font-size:.78rem; padding:.15rem 0; }
     .drawer-raw-pre { font-family:monospace; font-size:.77rem; white-space:pre-wrap; background:var(--soft); border-radius:.3rem; padding:.4rem .6rem; margin:.3rem 0 0; word-break:break-all; }
+    /* ── Drawer close button (fixed top-right, always visible) ──── */
+    .drawer-close-btn { flex-shrink:0; background:none; border:1px solid var(--line); border-radius:.3rem; cursor:pointer; font-size:.95rem; padding:.18rem .52rem; color:var(--muted); line-height:1; margin-left:.25rem; }
+    .drawer-close-btn:hover { background:var(--soft); color:var(--text); }
+    /* ── Drawer inline edit form ─────────────────────────────────── */
+    .drawer-edit-form { display:grid; gap:.75rem; }
+    .drawer-edit-form label { display:grid; gap:.25rem; font-size:.85rem; color:var(--muted); }
+    .drawer-edit-form input, .drawer-edit-form select { width:100%; box-sizing:border-box; }
+    .drawer-edit-form textarea { width:100%; box-sizing:border-box; min-height:6rem; font-family:monospace; font-size:.82rem; resize:vertical; }
+    /* ── Editor tab bar (New / Stats) ────────────────────────────── */
+    .editor-tab-bar { display:flex; border-bottom:1px solid var(--line); margin-bottom:.15rem; }
+    .editor-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; padding:.4rem .5rem; font-size:.8rem; cursor:pointer; color:var(--muted); }
+    .editor-tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+    .editor-tab:hover:not(.active) { color:var(--text); }
+    /* ── Editor subheading & stats panel ─────────────────────────── */
+    .editor-subheading { font-size:.8rem; color:var(--muted); padding:.4rem 0 .1rem; font-weight:600; }
+    .editor-stats { padding:.5rem 0; display:grid; gap:.4rem; }
+    .editor-stats-title { font-size:.73rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:.15rem 0 .05rem; }
+    .editor-stats-row { display:flex; align-items:center; gap:.4rem; font-size:.8rem; }
+    .editor-stats-label { min-width:3.5rem; }
+    .editor-stats-bar-wrap { flex:1; background:var(--soft); border-radius:.2rem; height:.38rem; overflow:hidden; }
+    .editor-stats-bar { height:100%; background:var(--accent); border-radius:.2rem; min-width:2px; }
+    .editor-stats-count { font-size:.73rem; color:var(--muted); min-width:2rem; text-align:right; }
     /* ── Preset clear button ─────────────────────────────────────── */
     #preset-clear-btn { font-size:.75rem; padding:.2rem .4rem; display:none; }
     /* ── Chart group buttons ─────────────────────────────────────── */
@@ -2431,45 +2453,55 @@ HTML_PAGE = r"""<!doctype html>
     <div class="side">
       <section class="editor-section">
         <div class="section-head">
-          <h2 id="editor-heading">New Item</h2>
+          <h2>Record</h2>
           <button class="secondary" onclick="newItem()">New</button>
         </div>
-        <form class="stack" onsubmit="saveItem(event)">
-          <label>Status
-            <select id="edit-status">
-              <option>[ ]</option><option>[/]</option><option>[x]</option>
-              <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
-            </select>
-          </label>
-          <label>Type
-            <select id="edit-type">
-              <option>T</option><option>E</option><option>D</option><option>R</option>
-              <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
-            </select>
-          </label>
-          <label class="wide">Title
-            <input id="edit-title" required>
-          </label>
-          <label class="wide">Details
-            <div id="type-hints" class="type-hints" style="display:none"></div>
-            <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
-          </label>
-          <div id="editor-note" class="note wide">Create a new item or select an editable row.</div>
-          <div id="import-raw-row">
-            <label class="wide" style="margin-top:.35rem">Import raw line
-              <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
+        <div class="editor-tab-bar">
+          <button class="editor-tab active" id="editor-tab-create" onclick="switchEditorTab('create')">New</button>
+          <button class="editor-tab" id="editor-tab-stats" onclick="switchEditorTab('stats')">Stats</button>
+        </div>
+        <div id="editor-panel-create">
+          <div class="editor-subheading" id="editor-heading">New Record</div>
+          <form class="stack" onsubmit="saveItem(event)">
+            <label>Status
+              <select id="edit-status">
+                <option>[ ]</option><option>[/]</option><option>[x]</option>
+                <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
+              </select>
             </label>
-            <div class="actions" style="margin-top:.25rem">
-              <button type="button" onclick="importRawLine()">Import</button>
-              <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
+            <label>Type
+              <select id="edit-type">
+                <option>T</option><option>E</option><option>D</option><option>R</option>
+                <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
+              </select>
+            </label>
+            <label class="wide">Title
+              <input id="edit-title" required>
+            </label>
+            <label class="wide">Details
+              <div id="type-hints" class="type-hints" style="display:none"></div>
+              <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
+            </label>
+            <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
+            <div id="import-raw-row">
+              <label class="wide" style="margin-top:.35rem">Import raw line
+                <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
+              </label>
+              <div class="actions" style="margin-top:.25rem">
+                <button type="button" onclick="importRawLine()">Import</button>
+                <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
+              </div>
             </div>
-          </div>
-          <div class="actions">
-            <button id="save-button">Create</button>
-            <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
-            <button type="button" class="secondary" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
-          </div>
-        </form>
+            <div class="actions">
+              <button id="save-button">Create</button>
+              <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
+              <button type="button" class="secondary" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
+            </div>
+          </form>
+        </div>
+        <div id="editor-panel-stats" style="display:none">
+          <div class="editor-stats" id="editor-stats-content"><div class="empty">Loading...</div></div>
+        </div>
       </section>
       <section class="agenda-section">
         <div class="section-head"><h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2></div>
@@ -2490,18 +2522,18 @@ HTML_PAGE = r"""<!doctype html>
     </div>
   </main>
   <!-- Detail Side Drawer -->
-  <aside id="detail-drawer" class="detail-drawer" role="complementary" aria-label="Item detail">
+  <aside id="detail-drawer" class="detail-drawer" role="complementary" aria-label="Record detail">
     <div class="drawer-head">
-      <h3 id="drawer-title">Item Detail</h3>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <h3 id="drawer-title">Record Detail</h3>
+      <div id="drawer-head-btns" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
         <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
-        <button class="secondary" onclick="drawerEdit()">Edit</button>
+        <button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()">Edit</button>
         <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
         <button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>
         <button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>
         <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
-        <button class="secondary" onclick="closeDrawer()">✕</button>
       </div>
+      <button class="drawer-close-btn" onclick="closeDrawer()" title="Close (Esc)">✕</button>
     </div>
     <div class="drawer-body" id="drawer-body"></div>
   </aside>
@@ -2929,7 +2961,8 @@ HTML_PAGE = r"""<!doctype html>
     function selectItem(item) {
       if (isDisplayMode()) return;
       selectedItem = item;
-      document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only item";
+      switchEditorTab("create");
+      document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only record";
       document.getElementById("edit-status").value = item.status;
       document.getElementById("edit-type").value = item.type;
       document.getElementById("edit-title").value = item.title;
@@ -2937,25 +2970,72 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("save-button").textContent = "Save";
       document.getElementById("delete-button").disabled = !item.editable;
       document.getElementById("editor-note").textContent = item.editable
-        ? "Editing the writable file. Save replaces this item line."
-        : "This item comes from a read-only input or generated file.";
+        ? "Editing the writable file. Save replaces this record line."
+        : "This record comes from a read-only source.";
       setEditorDisabled(!item.editable);
       renderItems(currentItems);
-      // NOTE: openDrawer is NOT called here intentionally.
-      // Callers that want to open the drawer should call openDrawer() explicitly.
     }
     function newItem() {
       selectedItem = null;
-      document.getElementById("editor-heading").textContent = "New Item";
+      switchEditorTab("create");
+      document.getElementById("editor-heading").textContent = "New Record";
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = "T";
       document.getElementById("edit-title").value = "";
       document.getElementById("edit-details").value = "";
       document.getElementById("save-button").textContent = "Create";
       document.getElementById("delete-button").disabled = true;
-      document.getElementById("editor-note").textContent = "Create a new item or select an editable row.";
+      document.getElementById("editor-note").textContent = "Create a new record or select an editable row.";
       setEditorDisabled(false);
       renderItems(currentItems);
+    }
+    function switchEditorTab(tab) {
+      const tabC = document.getElementById("editor-tab-create");
+      const tabS = document.getElementById("editor-tab-stats");
+      const panC = document.getElementById("editor-panel-create");
+      const panS = document.getElementById("editor-panel-stats");
+      if (!tabC || !panC) return;
+      if (tab === "stats") {
+        tabC.classList.remove("active"); tabS.classList.add("active");
+        panC.style.display = "none"; panS.style.display = "";
+        renderEditorStats();
+      } else {
+        tabC.classList.add("active"); tabS.classList.remove("active");
+        panC.style.display = ""; panS.style.display = "none";
+      }
+    }
+    function renderEditorStats() {
+      const el = document.getElementById("editor-stats-content");
+      if (!el) return;
+      const items = currentItems || [];
+      if (!items.length) { el.innerHTML = '<div class="empty">No records loaded.</div>'; return; }
+      const typeC = {}, statC = {};
+      for (const it of items) {
+        typeC[it.type] = (typeC[it.type] || 0) + 1;
+        statC[it.status] = (statC[it.status] || 0) + 1;
+      }
+      const total = items.length;
+      let h = `<div class="editor-stats-title">Total: ${total} records</div>`;
+      const maxS = Math.max(...Object.values(statC), 1);
+      h += `<div class="editor-stats-title" style="margin-top:.4rem">By Status</div>`;
+      for (const s of ["[ ]","[/]","[x]","[-]","[>]","[?]","[N]"]) {
+        const n = statC[s] || 0; if (!n) continue;
+        const cls = STATUS_CLASS[s] || "status-note";
+        const lbl = STATUS_LABEL[s] || s;
+        h += `<div class="editor-stats-row"><span class="status-badge ${cls} editor-stats-label" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(lbl)}</span>` +
+          `<div class="editor-stats-bar-wrap"><div class="editor-stats-bar" style="width:${Math.round(n/maxS*100)}%"></div></div>` +
+          `<span class="editor-stats-count">${n}</span></div>`;
+      }
+      const maxT = Math.max(...Object.values(typeC), 1);
+      h += `<div class="editor-stats-title" style="margin-top:.4rem">By Type</div>`;
+      for (const t of ["T","E","D","R","H","N","S","M","J"]) {
+        const n = typeC[t] || 0; if (!n) continue;
+        const name = (ITEM_TYPE_NAMES || {})[t] || t;
+        h += `<div class="editor-stats-row"><span class="type-badge type-${t} editor-stats-label" style="font-size:.7rem;padding:.1rem .35rem" title="${escapeHtml(name)}">${escapeHtml(t)}</span>` +
+          `<div class="editor-stats-bar-wrap"><div class="editor-stats-bar" style="width:${Math.round(n/maxT*100)}%"></div></div>` +
+          `<span class="editor-stats-count">${n}</span></div>`;
+      }
+      el.innerHTML = h;
     }
     function setEditorDisabled(disabled) {
       for (const id of ["edit-status", "edit-type", "edit-title", "edit-details", "save-button"]) {
@@ -3231,25 +3311,37 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Detail side-drawer ─────────────────────────────────────────
     let drawerItem = null;
+    let drawerEditing = false;
+
+    function _drawerRestoreButtons(item) {
+      const isDone = ["[x]", "[-]"].includes(item.status);
+      const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
+      const hasId = !!(item?.details?.[idKey]?.[0] || item?.id);
+      document.getElementById("drawer-head-btns").innerHTML =
+        `<button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn"${!item.editable || isDone ? " disabled" : ""}>Done</button>` +
+        `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
+        `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
+        `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
+        `<button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>` +
+        `<button class="danger" onclick="drawerDelete()" id="drawer-delete-btn"${!item.editable ? " disabled" : ""}>Delete</button>`;
+    }
 
     function openDrawer(item) {
+      drawerEditing = false;
       drawerItem = item;
       const drawer = document.getElementById("detail-drawer");
       const body = document.getElementById("drawer-body");
       const title = document.getElementById("drawer-title");
-      const doneBt = document.getElementById("drawer-done-btn");
-      const delBt = document.getElementById("drawer-delete-btn");
       const isDone = ["[x]", "[-]"].includes(item.status);
       const statusCls = STATUS_CLASS[item.status] || "status-note";
       const statusLbl = STATUS_LABEL[item.status] || item.status;
       const typeCls = "type-" + (item.type || "N");
       const typeFullName = ITEM_TYPE_NAMES[item.type] || item.type;
-      title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(statusLbl)}</span>
-        <span class="type-badge ${typeCls}" style="margin-left:.35rem" title="${escapeHtml(typeFullName)}">${escapeHtml(item.type)}</span>
-        <span style="margin-left:.25rem;font-size:.78rem;color:var(--muted)">${escapeHtml(typeFullName)}</span>
-        <span style="margin-left:.4rem;font-weight:700">${escapeHtml(item.title)}</span>`;
-      doneBt.disabled = !item.editable || isDone;
-      delBt.disabled = !item.editable;
+      title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(statusLbl)}</span>` +
+        `<span class="type-badge ${typeCls}" style="margin-left:.35rem" title="${escapeHtml(typeFullName)}">${escapeHtml(item.type)}</span>` +
+        `<span style="margin-left:.25rem;font-size:.78rem;color:var(--muted)">${escapeHtml(typeFullName)}</span>` +
+        `<span style="margin-left:.4rem;font-weight:700">${escapeHtml(item.title)}</span>`;
+      _drawerRestoreButtons(item);
       const REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
       let fieldsHtml = `<div class="drawer-section-title">Fields</div><div class="drawer-fields">`;
       for (const [key, values] of Object.entries(item.details || {})) {
@@ -3264,20 +3356,14 @@ HTML_PAGE = r"""<!doctype html>
       fieldsHtml += `</div>`;
       const bodyHtml = item?.markdown?.details?.body?.[0]
         ? `<div class="drawer-section-title">Body</div><div class="markdown">${item.markdown.details.body[0]}</div>` : "";
-      const sourceHtml = `<div class="drawer-section-title">Source</div>
-        <div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
-      // Raw line section
+      const sourceHtml = `<div class="drawer-section-title">Source</div>` +
+        `<div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
       const rawHtml = item?.raw
         ? `<details class="drawer-raw-details"><summary>Raw line</summary><pre class="drawer-raw-pre">${escapeHtml(item.raw || "")}</pre></details>`
         : "";
       body.innerHTML = fieldsHtml + bodyHtml +
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
         sourceHtml + rawHtml;
-      // Copy ID button visibility
-      const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
-      const hasId = !!(item?.details?.[idKey]?.[0] || item?.id);
-      const copyBtn = document.getElementById("drawer-copy-id");
-      if (copyBtn) copyBtn.style.display = hasId ? "" : "none";
       drawer.classList.add("open");
       loadDependencyLinks(item);
     }
@@ -3351,8 +3437,56 @@ HTML_PAGE = r"""<!doctype html>
 
     function drawerEdit() {
       if (!drawerItem) return;
-      selectItem(drawerItem);
-      closeDrawer();
+      if (!drawerItem.editable) { showToast("This record is read-only.", "warning"); return; }
+      drawerEditing = true;
+      document.getElementById("drawer-head-btns").innerHTML =
+        `<button class="primary" onclick="drawerSaveEdit()">Save</button>` +
+        `<button class="secondary" onclick="drawerCancelEdit()">Cancel</button>`;
+      const item = drawerItem;
+      const statusOpts = ["[ ]","[/]","[x]","[-]","[>]","[?]","[N]"]
+        .map(s => `<option${s === item.status ? " selected" : ""}>${s}</option>`).join("");
+      const typeOpts = ["T","E","D","R","H","N","S","M","J"]
+        .map(t => `<option${t === item.type ? " selected" : ""}>${t}</option>`).join("");
+      document.getElementById("drawer-body").innerHTML =
+        `<form class="drawer-edit-form" onsubmit="event.preventDefault();drawerSaveEdit()">` +
+        `<label>Status<select id="drawer-edit-status">${statusOpts}</select></label>` +
+        `<label>Type<select id="drawer-edit-type">${typeOpts}</select></label>` +
+        `<label>Title<input id="drawer-edit-title" value="${escapeHtml(item.title)}" required autocomplete="off"></label>` +
+        `<label>Details<textarea id="drawer-edit-details" rows="7" placeholder="due:2026-01-01&#10;project:work">${escapeHtml(detailsToText(item.details))}</textarea></label>` +
+        `</form>`;
+      document.getElementById("drawer-edit-title").focus();
+    }
+
+    function drawerCancelEdit() {
+      drawerEditing = false;
+      openDrawer(drawerItem);
+    }
+
+    async function drawerSaveEdit() {
+      if (!drawerItem || !drawerItem.editable) return;
+      const saveLine = drawerItem.line;
+      const titleEl = document.getElementById("drawer-edit-title");
+      if (!titleEl || !titleEl.value.trim()) { showToast("Title is required.", "warning"); return; }
+      const payload = {
+        status: document.getElementById("drawer-edit-status").value,
+        type: document.getElementById("drawer-edit-type").value,
+        title: titleEl.value.trim(),
+        details: parseDetails(document.getElementById("drawer-edit-details").value),
+      };
+      try {
+        await api(`/api/items/${saveLine}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+        });
+        drawerEditing = false;
+        showToast("Record saved.", "success");
+        await refreshAll();
+        const updated = (currentItems || []).find(i => i.line === saveLine && i.editable);
+        if (updated) openDrawer(updated);
+      } catch(e) {
+        showToast("Save failed: " + (e.message || e), "error");
+      }
     }
 
     async function drawerMarkDone() {
@@ -4369,12 +4503,13 @@ HTML_PAGE = r"""<!doctype html>
     function ctxDuplicate() {
       const t = ctxTarget; closeCtxMenu();
       if (!t) return;
+      switchEditorTab("create");
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = t.type || "T";
       document.getElementById("edit-title").value = t.title || "";
       document.getElementById("edit-details").value = detailsToText(t.details || {});
       selectedItem = null;
-      document.getElementById("editor-heading").textContent = "New Item (duplicate)";
+      document.getElementById("editor-heading").textContent = "New Record (duplicate)";
       document.getElementById("save-button").textContent = "Create";
       document.getElementById("delete-button").disabled = true;
       updateTypeHints(t.type || "T");

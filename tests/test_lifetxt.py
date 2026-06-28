@@ -6429,5 +6429,420 @@ class LifeTxtLintCommandTests(unittest.TestCase):
         self.assertIn("proj", out)
 
 
+class LifeTxtDiffCommandTests(unittest.TestCase):
+    """Tests for the diff command."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_diff_detects_added_item(self):
+        a = self._make_file("[ ] T Task_one\n")
+        b = self._make_file("[ ] T Task_one\n[x] T New_task  done:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("diff", a, b)
+            self.assertEqual(rc, 0)
+            self.assertIn("added", out)
+            self.assertIn("New_task", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_detects_removed_item(self):
+        a = self._make_file("[ ] T Task_one\n[ ] T Task_two\n")
+        b = self._make_file("[ ] T Task_one\n")
+        try:
+            out, err, rc = run_cli("diff", a, b)
+            self.assertEqual(rc, 0)
+            self.assertIn("removed", out)
+            self.assertIn("Task_two", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_detects_completed_item(self):
+        a = self._make_file("[ ] T Task_one\n")
+        b = self._make_file("[x] T Task_one  done:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("diff", a, b)
+            self.assertEqual(rc, 0)
+            self.assertIn("Task_one", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_detects_detail_change(self):
+        a = self._make_file("[ ] T Task_one  project:work\n")
+        b = self._make_file("[ ] T Task_one  project:work  due:2026-12-31\n")
+        try:
+            out, err, rc = run_cli("diff", a, b)
+            self.assertEqual(rc, 0)
+            self.assertIn("detail-changed", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_no_changes_empty_output(self):
+        a = self._make_file("[ ] T Task_one\n")
+        b = self._make_file("[ ] T Task_one\n")
+        try:
+            out, err, rc = run_cli("diff", a, b)
+            self.assertEqual(rc, 0)
+            self.assertIn("No differences", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_json_format(self):
+        a = self._make_file("[ ] T Task_one\n")
+        b = self._make_file("[ ] T Task_one\n[x] T New_item  done:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("diff", a, b, "--format", "json")
+            self.assertEqual(rc, 0)
+            data = json.loads(out)
+            self.assertIsInstance(data, list)
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0]["change"], "added")
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_diff_type_filter(self):
+        a = self._make_file("[ ] T Task_add\n")
+        b = self._make_file("[ ] T Task_add\n[x] H Habit_add  done:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("diff", a, b, "--format", "json", "--type", "T")
+            self.assertEqual(rc, 0)
+            data = json.loads(out)
+            # Only T items should appear
+            for item in data:
+                self.assertEqual(item["type"], "T")
+        finally:
+            os.unlink(a); os.unlink(b)
+
+
+class LifeTxtMigrateCommandTests(unittest.TestCase):
+    """Tests for the migrate command."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_rename_key_dry_run(self):
+        path = self._make_file("[ ] T Task  proj:work\n")
+        try:
+            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project", "--dry-run")
+            self.assertEqual(rc, 0)
+            self.assertIn("dry-run", out.lower())
+            self.assertIn("project", out)
+            # File unchanged
+            with open(path, encoding="utf-8") as f:
+                self.assertIn("proj:work", f.read())
+        finally:
+            os.unlink(path)
+
+    def test_rename_key_applies_change(self):
+        path = self._make_file("[ ] T Task  proj:work\n")
+        try:
+            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project")
+            self.assertEqual(rc, 0)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:work", content)
+            self.assertNotIn("proj:work", content)
+        finally:
+            os.unlink(path)
+
+    def test_normalize_elapsed_converts_minutes(self):
+        path = self._make_file("[ ] T Task  elapsed:90m\n")
+        try:
+            out, err, rc = run_cli("migrate", path, "--migration", "normalize-elapsed")
+            self.assertEqual(rc, 0)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("elapsed:1h30m", content)
+        finally:
+            os.unlink(path)
+
+    def test_backup_flag_creates_bak(self):
+        path = self._make_file("[ ] T Task  proj:work\n")
+        try:
+            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project", "--backup")
+            self.assertEqual(rc, 0)
+            self.assertTrue(os.path.exists(path + ".bak"))
+        finally:
+            os.unlink(path)
+            if os.path.exists(path + ".bak"):
+                os.unlink(path + ".bak")
+
+    def test_no_changes_exits_zero(self):
+        path = self._make_file("[ ] T Task  project:work\n")
+        try:
+            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project")
+            self.assertEqual(rc, 0)
+            self.assertIn("No changes", out)
+        finally:
+            os.unlink(path)
+
+    def test_missing_file_exits_nonzero(self):
+        out, err, rc = run_cli("migrate", "/nonexistent/path.txt", "--migration", "normalize-elapsed")
+        self.assertNotEqual(rc, 0)
+
+
+class LifeTxtLintFixTests(unittest.TestCase):
+    """Tests for lint --fix auto-correction."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_fix_renames_typo_key_in_place(self):
+        path = self._make_file("[ ] T Task  proj:work\n")
+        try:
+            out, err, rc = run_cli("lint", path, "--fix")
+            self.assertEqual(rc, 0)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:work", content)
+            self.assertNotIn("proj:work", content)
+        finally:
+            os.unlink(path)
+
+    def test_fix_reports_count(self):
+        path = self._make_file("[ ] T Task  proj:work\n[ ] T Another  date:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("lint", path, "--fix")
+            self.assertIn("Fixed", out)
+        finally:
+            os.unlink(path)
+
+    def test_fix_does_not_affect_clean_file(self):
+        path = self._make_file("[ ] T Task  project:work  due:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("lint", path, "--fix")
+            self.assertEqual(rc, 0)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:work", content)
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtReviewMarkdownTests(unittest.TestCase):
+    """Tests for review --format markdown."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_markdown_output_has_heading(self):
+        import datetime as _dt
+        today = _dt.date.today()
+        path = self._make_file(
+            "[x] T Completed_task  done:%s\n[ ] T Open_task\n" % today.isoformat()
+        )
+        try:
+            out, err, rc = run_cli("review", path, "--format", "markdown", "--week")
+            self.assertEqual(rc, 0)
+            self.assertTrue(out.startswith("#"))
+            self.assertIn("Tasks", out)
+        finally:
+            os.unlink(path)
+
+    def test_markdown_completed_section(self):
+        import datetime as _dt
+        today = _dt.date.today()
+        path = self._make_file("[x] T My_done_task  done:%s\n" % today.isoformat())
+        try:
+            out, err, rc = run_cli("review", path, "--format", "markdown", "--week")
+            self.assertEqual(rc, 0)
+            self.assertIn("Completed", out)
+            self.assertIn("My_done_task", out)
+        finally:
+            os.unlink(path)
+
+    def test_markdown_habit_bar(self):
+        path = self._make_file(
+            "[x] H Daily_habit\n[x] H Daily_habit\n[ ] H Daily_habit\n"
+        )
+        try:
+            out, err, rc = run_cli("review", path, "--format", "markdown")
+            self.assertEqual(rc, 0)
+            self.assertIn("Habits", out)
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtFilterLimitTests(unittest.TestCase):
+    """Tests for filter --limit N."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_limit_restricts_output(self):
+        text = "".join("[ ] T Task_%d\n" % i for i in range(10))
+        path = self._make_file(text)
+        try:
+            out, err, rc = run_cli("filter", path, "--limit", "3")
+            self.assertEqual(rc, 0)
+            lines = [l for l in out.strip().splitlines() if l.startswith("[")]
+            self.assertLessEqual(len(lines), 3)
+        finally:
+            os.unlink(path)
+
+    def test_limit_zero_returns_all(self):
+        text = "".join("[ ] T Task_%d\n" % i for i in range(5))
+        path = self._make_file(text)
+        try:
+            out, err, rc = run_cli("filter", path, "--limit", "0")
+            self.assertEqual(rc, 0)
+            lines = [l for l in out.strip().splitlines() if l.startswith("[")]
+            self.assertEqual(len(lines), 5)
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtSearchHighlightCountTests(unittest.TestCase):
+    """Tests for search --highlight and --count."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_count_returns_number(self):
+        path = self._make_file("[ ] T Apple_task\n[ ] T Banana_task\n[ ] T Another_apple\n")
+        try:
+            out, err, rc = run_cli("search", path, "apple", "--count")
+            self.assertEqual(rc, 0)
+            self.assertEqual(out.strip(), "2")
+        finally:
+            os.unlink(path)
+
+    def test_highlight_includes_ansi_codes(self):
+        path = self._make_file("[ ] T Find_this_item\n")
+        try:
+            out, err, rc = run_cli("search", path, "Find_this", "--highlight")
+            self.assertEqual(rc, 0)
+            self.assertIn("\033[", out)  # ANSI escape present
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtDoneDryRunTests(unittest.TestCase):
+    """Tests for done --dry-run."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_dry_run_does_not_write(self):
+        path = self._make_file("[ ] T Preview_task\n")
+        original = open(path, encoding="utf-8").read()
+        try:
+            out, err, rc = run_cli("done", path, "--line", "1", "--dry-run")
+            self.assertEqual(rc, 0)
+            self.assertIn("dry-run", out.lower())
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(f.read(), original)  # File unchanged
+        finally:
+            os.unlink(path)
+
+    def test_dry_run_shows_would_mark(self):
+        path = self._make_file("[ ] T My_pending_task\n")
+        try:
+            out, err, rc = run_cli("done", path, "--line", "1", "--dry-run")
+            self.assertEqual(rc, 0)
+            self.assertIn("My_pending_task", out)
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtFromMarkdownTests(unittest.TestCase):
+    """Tests for the from-markdown command."""
+
+    def test_converts_unchecked_task(self):
+        out, err, rc = run_cli("from-markdown", "-", input_text="- [ ] My open task\n")
+        self.assertEqual(rc, 0)
+        self.assertIn("[ ]", out)
+        self.assertIn("My_open_task", out)
+
+    def test_converts_checked_task(self):
+        out, err, rc = run_cli("from-markdown", "-", input_text="- [x] Done task\n")
+        self.assertEqual(rc, 0)
+        self.assertIn("[x]", out)
+
+    def test_converts_multiple_tasks(self):
+        text = "- [ ] Task one\n- [x] Task two\n- [ ] Task three\n"
+        out, err, rc = run_cli("from-markdown", "-", input_text=text)
+        self.assertEqual(rc, 0)
+        self.assertIn("Task_one", out)
+        self.assertIn("Task_two", out)
+        self.assertIn("Task_three", out)
+
+    def test_project_flag_applied(self):
+        out, err, rc = run_cli("from-markdown", "-", "--project", "myproject", input_text="- [ ] A task\n")
+        self.assertEqual(rc, 0)
+        self.assertIn("project:myproject", out)
+
+    def test_non_task_lines_ignored(self):
+        text = "# Heading\nSome paragraph.\n- [ ] Real task\n- Note without checkbox\n"
+        out, err, rc = run_cli("from-markdown", "-", input_text=text)
+        self.assertEqual(rc, 0)
+        items = [l for l in out.strip().splitlines() if l.startswith("[")]
+        self.assertEqual(len(items), 1)
+
+    def test_asterisk_bullet_supported(self):
+        out, err, rc = run_cli("from-markdown", "-", input_text="* [ ] Star task\n")
+        self.assertEqual(rc, 0)
+        self.assertIn("Star_task", out)
+
+
+class LifeTxtSummaryCompareTests(unittest.TestCase):
+    """Tests for summary --compare."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_compare_shows_both_files(self):
+        a = self._make_file("[ ] T Task_one\n[ ] T Task_two\n")
+        b = self._make_file("[ ] T Task_one\n[x] T Task_two  done:2026-01-01\n[ ] T Task_three\n")
+        try:
+            out, err, rc = run_cli("summary", a, "--compare", b)
+            self.assertEqual(rc, 0)
+            self.assertIn("Items", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_compare_shows_delta(self):
+        a = self._make_file("[ ] T Task_one\n")
+        b = self._make_file("[ ] T Task_one\n[ ] T Task_two\n[ ] T Task_three\n")
+        try:
+            out, err, rc = run_cli("summary", a, "--compare", b)
+            self.assertEqual(rc, 0)
+            self.assertIn("+2", out)
+        finally:
+            os.unlink(a); os.unlink(b)
+
+
 if __name__ == "__main__":
     unittest.main()

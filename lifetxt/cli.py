@@ -627,6 +627,13 @@ def build_parser():
         action="store_true",
         help="Regenerate unindented life.txt lines with explicit parent: links where inferable.",
     )
+    filter_command.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Return at most N items (0 = no limit).",
+    )
     filter_command.set_defaults(func=command_filter)
 
     status = subparsers.add_parser(
@@ -1038,6 +1045,11 @@ def build_parser():
     )
     done_cmd.add_argument("--line", type=int, default=None, help="Line number of the item.")
     done_cmd.add_argument("--text", default=None, help="Title substring to search for.")
+    done_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
     done_cmd.set_defaults(func=command_done)
 
     summary = subparsers.add_parser(
@@ -1057,6 +1069,11 @@ def build_parser():
         help="Output format.",
     )
     summary.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    summary.add_argument(
+        "--compare",
+        metavar="PATH",
+        help="Compare summary of this file against a second file side-by-side.",
+    )
     summary.set_defaults(func=command_summary)
 
     init_cmd = subparsers.add_parser(
@@ -1266,7 +1283,7 @@ def build_parser():
     )
     review_cmd.add_argument(
         "--format",
-        choices=("text", "json", "jsonl"),
+        choices=("text", "json", "jsonl", "markdown"),
         default="text",
         help="Output format.",
     )
@@ -1312,6 +1329,16 @@ def build_parser():
         help="Output format.",
     )
     search_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    search_cmd.add_argument(
+        "--highlight",
+        action="store_true",
+        help="Highlight matched text with ANSI color in text output.",
+    )
+    search_cmd.add_argument(
+        "--count",
+        action="store_true",
+        help="Print only the count of matching items, not the items themselves.",
+    )
     search_cmd.set_defaults(func=command_search)
 
     snapshot_cmd = subparsers.add_parser(
@@ -1354,6 +1381,107 @@ def build_parser():
         help="Pretty-print JSON output.",
     )
     lint_cmd.set_defaults(func=command_lint)
+
+    # diff command
+    diff_cmd = subparsers.add_parser(
+        "diff",
+        help="Semantic diff between two life.txt files: added, removed, status-changed, detail-changed.",
+    )
+    diff_cmd.add_argument("before", help="Base life.txt file (older state).")
+    diff_cmd.add_argument("after", help="Updated life.txt file (newer state).")
+    diff_cmd.add_argument(
+        "--format",
+        choices=("text", "json", "jsonl"),
+        default="text",
+        help="Output format.",
+    )
+    diff_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    diff_cmd.add_argument(
+        "--type",
+        dest="kinds",
+        action="append",
+        help="Filter diff by item type. Can be repeated.",
+    )
+    diff_cmd.add_argument(
+        "--project",
+        action="append",
+        help="Filter diff by project. Can be repeated.",
+    )
+    diff_cmd.set_defaults(func=command_diff)
+
+    # plot command
+    plot_cmd = subparsers.add_parser(
+        "plot",
+        help="Render task/habit/mood/elapsed statistics as Unicode bar charts.",
+    )
+    _add_input_paths(plot_cmd)
+    plot_cmd.add_argument(
+        "--chart",
+        choices=("tasks", "habits", "mood", "elapsed", "all"),
+        default="all",
+        help="Which chart to render (default: all).",
+    )
+    plot_cmd.add_argument(
+        "--group",
+        choices=("daily", "weekly", "monthly"),
+        default="weekly",
+        help="Time bucket size for trend charts.",
+    )
+    plot_cmd.add_argument("--from", dest="start", metavar="DATE", help="Start date (YYYY-MM-DD).")
+    plot_cmd.add_argument("--to", dest="end", metavar="DATE", help="End date (YYYY-MM-DD).")
+    plot_cmd.add_argument("--project", help="Restrict to a single project.")
+    plot_cmd.add_argument(
+        "--width",
+        type=int,
+        default=0,
+        help="Chart width in characters (0 = auto-detect terminal width).",
+    )
+    plot_cmd.set_defaults(func=command_plot)
+
+    # migrate command
+    migrate_cmd = subparsers.add_parser(
+        "migrate",
+        help="Apply in-place format migrations to a life.txt file.",
+    )
+    migrate_cmd.add_argument("path", help="File to migrate.")
+    migrate_cmd.add_argument(
+        "--migration",
+        action="append",
+        dest="migrations",
+        metavar="NAME[=ARG]",
+        help=(
+            "Migration to apply. Can be repeated. "
+            "Built-in names: normalize-elapsed, rename-key OLD=NEW, add-id."
+        ),
+    )
+    migrate_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without writing to the file.",
+    )
+    migrate_cmd.add_argument(
+        "--backup",
+        action="store_true",
+        help="Write a .bak file before modifying.",
+    )
+    migrate_cmd.set_defaults(func=command_migrate)
+
+    # from-markdown command
+    frommd_cmd = subparsers.add_parser(
+        "from-markdown",
+        help="Convert a Markdown task list (- [ ] title) to life.txt items.",
+    )
+    _add_input_paths(frommd_cmd)
+    frommd_cmd.add_argument("-o", "--output", help="Output file (default: stdout).")
+    frommd_cmd.add_argument("--project", help="Assign project: to all imported items.")
+    frommd_cmd.add_argument(
+        "--type",
+        dest="kind",
+        default="T",
+        help="Item type for imported items (default: T).",
+    )
+    frommd_cmd.add_argument("--append", action="store_true", help="Append to output file instead of overwrite.")
+    frommd_cmd.set_defaults(func=command_from_markdown)
 
     return parser
 
@@ -2398,6 +2526,11 @@ def command_done(args):
         _print_diagnostics(diagnostics)
         return 1
 
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+        return 0
+
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
     sys.stdout.write("Done: %s\n" % updated_line)
@@ -2406,6 +2539,12 @@ def command_done(args):
 
 def command_summary(args):
     config = _config(args)
+    compare_path = getattr(args, "compare", None)
+    if compare_path:
+        # Side-by-side comparison mode
+        primary_paths = args.paths if args.paths else ["-"]
+        _summary_compare(primary_paths, compare_path, _config(args))
+        return 0
     paths = args.paths if args.paths else ["-"]
     id_key = id_key_from_config(config)
     all_results = []
@@ -3200,6 +3339,44 @@ def command_review(args):
     if fmt == "jsonl":
         sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n")
         return 0
+    if fmt == "markdown":
+        lines = ["# Review: %s" % result["range"], ""]
+        lines.append("## Tasks")
+        lines.append("- Completed: **%d**" % result["completed_tasks"])
+        lines.append("- Open: %d" % result["open_tasks"])
+        if completed_tasks:
+            lines.append("")
+            lines.append("### Completed")
+            for t in completed_tasks:
+                done_val = str(t.details.get("done", [""])[0]) if t.details.get("done") else ""
+                lines.append("- [x] %s%s" % (t.title, (" (%s)" % done_val) if done_val else ""))
+        if result["habits"]:
+            lines.append("")
+            lines.append("## Habits")
+            for title, h in result["habits"].items():
+                bar = "#" * h["done"] + "." * h["open"]
+                lines.append("- **%s**: %d/%d (%d%%) %s" % (
+                    title, h["done"], h["done"] + h["open"], h["completion_rate"], bar,
+                ))
+        if result["journals"]:
+            lines.append("")
+            lines.append("## Journal (%d entries)" % result["journals"])
+            for entry in result["journal_entries"]:
+                lines.append("- **%s** %s" % (entry["date"], entry["title"]))
+                if entry["excerpt"]:
+                    lines.append("  > %s" % entry["excerpt"][:120])
+        if result["mood_trend"]:
+            lines.append("")
+            lines.append("## Mood")
+            for entry in result["mood_trend"]:
+                lines.append("- %s: %s" % (entry["date"], entry["mood"]))
+        if result["elapsed_by_project"]:
+            lines.append("")
+            lines.append("## Elapsed by Project")
+            for proj, elapsed in result["elapsed_by_project"].items():
+                lines.append("- **%s**: %s" % (proj, elapsed))
+        sys.stdout.write("\n".join(lines) + "\n")
+        return 0
 
     sys.stdout.write("Review: %s\n" % result["range"])
     sys.stdout.write("\nTasks:\n")
@@ -3238,6 +3415,9 @@ def command_filter(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     items = _filter_items_from_args(items, args)
     id_key = id_key_from_config(_config(args))
+    limit = getattr(args, "limit", 0)
+    if limit and limit > 0:
+        items = items[:limit]
 
     if args.format == "json":
         output = items_to_json(items, pretty=args.pretty)
@@ -3374,7 +3554,10 @@ def command_search(args):
         for item, _field in results:
             src = getattr(item, "source_text", None)
             write_text(None, (src if src is not None else item_to_line(item)) + "\n")
+    elif getattr(args, "count", False):
+        write_text(None, "%d\n" % len(results))
     else:
+        highlight = getattr(args, "highlight", False)
         if not results:
             write_text(None, "No matches found.\n")
         else:
@@ -3382,10 +3565,502 @@ def command_search(args):
                 source = getattr(item, "source", None)
                 line = item.line
                 loc = ("%s:%d" % (source, line)) if source and line else ("line %d" % line if line else "?")
-                write_text(None, "%s  %s %s %s\n" % (loc, item.status, item.kind, item.title))
+                title = item.title
+                if highlight:
+                    if use_regex:
+                        title = compiled.sub("\033[1;33m\\g<0>\033[0m", title)
+                    else:
+                        idx = title.lower().find(pat_lower)
+                        if idx >= 0:
+                            title = title[:idx] + "\033[1;33m" + title[idx:idx + len(pattern)] + "\033[0m" + title[idx + len(pattern):]
+                write_text(None, "%s  %s %s %s\n" % (loc, item.status, item.kind, title))
 
     _print_warnings(diagnostics)
     return 0 if results else 1
+
+
+def _summary_single(path, config):
+    """Compute summary data for one file path."""
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    type_counts = {}
+    status_counts = {}
+    ids_present = 0
+    ids_missing = 0
+    for item in items:
+        type_counts[item.kind] = type_counts.get(item.kind, 0) + 1
+        status_counts[item.status] = status_counts.get(item.status, 0) + 1
+        if item.details.get(id_key):
+            ids_present += 1
+        else:
+            ids_missing += 1
+    return {
+        "source": path,
+        "lines": len(text.splitlines()),
+        "items": len(items),
+        "type_counts": type_counts,
+        "status_counts": status_counts,
+        "ids_present": ids_present,
+        "ids_missing": ids_missing,
+    }
+
+
+def _summary_compare(primary_paths, compare_path, config):
+    a = _summary_single(primary_paths[0] if len(primary_paths) == 1 else primary_paths[0], config)
+    b = _summary_single(compare_path, config)
+
+    def _col(label, a_val, b_val):
+        delta = ""
+        try:
+            diff = int(b_val) - int(a_val)
+            delta = " (%+d)" % diff if diff != 0 else ""
+        except (TypeError, ValueError):
+            pass
+        sys.stdout.write("  %-14s %-20s %-20s%s\n" % (label, str(a_val), str(b_val), delta))
+
+    sys.stdout.write("%-14s %-20s %-20s\n" % ("", os.path.basename(a["source"]), os.path.basename(b["source"])))
+    sys.stdout.write("-" * 60 + "\n")
+    _col("Lines:", a["lines"], b["lines"])
+    _col("Items:", a["items"], b["items"])
+    all_types = sorted(set(list(a["type_counts"].keys()) + list(b["type_counts"].keys())))
+    for t in all_types:
+        _col("  Type %s:" % t, a["type_counts"].get(t, 0), b["type_counts"].get(t, 0))
+    all_statuses = sorted(set(list(a["status_counts"].keys()) + list(b["status_counts"].keys())))
+    for s in all_statuses:
+        label = s.strip("[]")
+        _col("  [%s]:" % label, a["status_counts"].get(s, 0), b["status_counts"].get(s, 0))
+    _col("IDs present:", a["ids_present"], b["ids_present"])
+    _col("IDs missing:", a["ids_missing"], b["ids_missing"])
+
+
+def command_diff(args):
+    config = _config(args)
+    id_key = id_key_from_config(config)
+
+    before_text = read_text(args.before)
+    after_text = read_text(args.after)
+    before_items, _ = parse_text(before_text, id_key=id_key, check_ids=False, check_references=False)
+    after_items, _ = parse_text(after_text, id_key=id_key, check_ids=False, check_references=False)
+
+    kind_filter = set(_split_csv_args(getattr(args, "kinds", None)))
+    proj_filter = set(_split_csv_args(getattr(args, "project", None)))
+
+    def _item_key(item):
+        id_vals = item.details.get(id_key, [])
+        if id_vals:
+            return ("id", str(id_vals[0]))
+        return ("title_type", "%s|%s" % (item.kind, item.title))
+
+    def _item_passes_filter(item):
+        if kind_filter and item.kind not in kind_filter:
+            return False
+        if proj_filter and not any(
+            str(v) in proj_filter for v in item.details.get("project", [])
+        ):
+            return False
+        return True
+
+    before_map = {_item_key(i): i for i in before_items}
+    after_map = {_item_key(i): i for i in after_items}
+    before_keys = set(before_map.keys())
+    after_keys = set(after_map.keys())
+
+    changes = []
+
+    for key in sorted(after_keys - before_keys, key=lambda k: k[1]):
+        item = after_map[key]
+        if not _item_passes_filter(item):
+            continue
+        changes.append(OrderedDict([
+            ("change", "added"),
+            ("title", item.title),
+            ("type", item.kind),
+            ("status", item.status),
+            ("line", item.line),
+            ("source", getattr(item, "source", None)),
+        ]))
+
+    for key in sorted(before_keys - after_keys, key=lambda k: k[1]):
+        item = before_map[key]
+        if not _item_passes_filter(item):
+            continue
+        changes.append(OrderedDict([
+            ("change", "removed"),
+            ("title", item.title),
+            ("type", item.kind),
+            ("status", item.status),
+            ("line", item.line),
+            ("source", getattr(item, "source", None)),
+        ]))
+
+    for key in sorted(before_keys & after_keys, key=lambda k: k[1]):
+        b = before_map[key]
+        a = after_map[key]
+        if not _item_passes_filter(b):
+            continue
+        if b.status != a.status:
+            change_type = "completed" if a.status == "[x]" else (
+                "canceled" if a.status == "[-]" else "status-changed"
+            )
+            changes.append(OrderedDict([
+                ("change", change_type),
+                ("title", a.title),
+                ("type", a.kind),
+                ("before", b.status),
+                ("after", a.status),
+                ("line", a.line),
+                ("source", getattr(a, "source", None)),
+            ]))
+        elif b.details != a.details:
+            changed_keys = []
+            all_keys = set(list(b.details.keys()) + list(a.details.keys()))
+            for dk in all_keys:
+                bv = b.details.get(dk, [])
+                av = a.details.get(dk, [])
+                if bv != av:
+                    changed_keys.append(dk)
+            changes.append(OrderedDict([
+                ("change", "detail-changed"),
+                ("title", a.title),
+                ("type", a.kind),
+                ("changed_keys", changed_keys),
+                ("line", a.line),
+                ("source", getattr(a, "source", None)),
+            ]))
+
+    fmt = getattr(args, "format", "text")
+    if fmt == "json":
+        write_text(None, json.dumps(changes, ensure_ascii=False, indent=2 if args.pretty else None,
+                                    separators=None if args.pretty else (",", ":")) + "\n")
+    elif fmt == "jsonl":
+        for c in changes:
+            write_text(None, json.dumps(c, ensure_ascii=False, separators=(",", ":")) + "\n")
+    else:
+        if not changes:
+            write_text(None, "No differences found.\n")
+        else:
+            _DIFF_COLORS = {
+                "added": "\033[32m+ ",
+                "removed": "\033[31m- ",
+                "completed": "\033[32m* ",
+                "canceled": "\033[33m~ ",
+                "status-changed": "\033[36m~ ",
+                "detail-changed": "\033[36m^ ",
+            }
+            for c in changes:
+                pfx = _DIFF_COLORS.get(c["change"], "  ")
+                title = c.get("title", "")
+                ctype = c.get("type", "")
+                change = c.get("change", "")
+                extra = ""
+                if "before" in c:
+                    extra = " (%s → %s)" % (c["before"], c["after"])
+                elif "changed_keys" in c:
+                    extra = " [%s]" % ", ".join(c["changed_keys"])
+                write_text(None, "%s[%s] %s (%s)%s\033[0m\n" % (pfx, change, title, ctype, extra))
+
+    return 0 if not changes else 0
+
+
+def _plot_bar(value, max_value, width=40, char="#"):
+    if max_value == 0:
+        return ""
+    filled = int(round(value / max_value * width))
+    return char * filled + "." * (width - filled)
+
+
+def command_plot(args):
+    from .timeutil import parse_elapsed as _parse_elapsed
+
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
+    items, _ = _parse_life_inputs(paths, config)
+
+    chart = getattr(args, "chart", "all")
+    group = getattr(args, "group", "weekly")
+    project_filter = getattr(args, "project", None)
+    term_width = getattr(args, "width", 0)
+    if not term_width:
+        try:
+            term_width = os.get_terminal_size().columns
+        except OSError:
+            term_width = 80
+    bar_width = max(10, min(40, term_width - 30))
+
+    start_str = getattr(args, "start", None)
+    end_str = getattr(args, "end", None)
+    today = datetime.date.today()
+    start = _parse_date_only(start_str) if start_str else (today - datetime.timedelta(days=90))
+    end = _parse_date_only(end_str) if end_str else today
+
+    if project_filter:
+        items = [i for i in items if project_filter in [str(v) for v in i.details.get("project", [])]]
+
+    def _bucket_key(d):
+        if group == "daily":
+            return d.isoformat()
+        elif group == "monthly":
+            return "%d-%02d" % (d.year, d.month)
+        else:
+            iso = d.isocalendar()
+            return "%d-W%02d" % (iso[0], iso[1])
+
+    def _print_bar_chart(title, data):
+        if not data:
+            return
+        sys.stdout.write("\n## %s\n" % title)
+        max_v = max(data.values()) if data else 1
+        for label, val in sorted(data.items()):
+            bar = _plot_bar(val, max_v, width=bar_width)
+            sys.stdout.write("  %-12s %s %d\n" % (label[:12], bar, val))
+
+    # tasks chart: completed tasks per bucket
+    if chart in ("tasks", "all"):
+        task_buckets = {}
+        for item in items:
+            if item.kind == "T" and item.status == "[x]":
+                for val in item.details.get("done", []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        k = _bucket_key(d)
+                        task_buckets[k] = task_buckets.get(k, 0) + 1
+        _print_bar_chart("Tasks Completed (%s)" % group, task_buckets)
+
+    # habits chart: completions per habit
+    if chart in ("habits", "all"):
+        habit_counts = {}
+        for item in items:
+            if item.kind == "H" and item.status == "[x]":
+                for val in item.details.get("done", []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        habit_counts[item.title] = habit_counts.get(item.title, 0) + 1
+        _print_bar_chart("Habit Completions (total, %s to %s)" % (start, end), habit_counts)
+
+    # mood chart: mood value distribution
+    if chart in ("mood", "all"):
+        mood_counts = {}
+        for item in items:
+            if item.kind == "J":
+                for val in item.details.get("mood", []):
+                    d = _latest_item_date(item) or today
+                    if start <= d <= end:
+                        m = str(val)
+                        mood_counts[m] = mood_counts.get(m, 0) + 1
+        _print_bar_chart("Mood Distribution (%s to %s)" % (start, end), mood_counts)
+
+    # elapsed chart: total elapsed per project
+    if chart in ("elapsed", "all"):
+        proj_elapsed = {}
+        for item in items:
+            for val in item.details.get("elapsed", []):
+                minutes = _parse_elapsed(str(val))
+                if minutes:
+                    proj = str(item.details.get("project", ["(no project)"])[0])
+                    proj_elapsed[proj] = proj_elapsed.get(proj, 0) + minutes
+        if proj_elapsed:
+            sys.stdout.write("\n## Elapsed Time by Project\n")
+            max_v = max(proj_elapsed.values())
+            for proj, minutes in sorted(proj_elapsed.items(), key=lambda x: -x[1]):
+                bar = _plot_bar(minutes, max_v, width=bar_width)
+                h, m = divmod(minutes, 60)
+                label = ("%dh%dm" % (h, m)) if h else ("%dm" % m)
+                sys.stdout.write("  %-14s %s %s\n" % (proj[:14], bar, label))
+
+    sys.stdout.write("\n")
+    return 0
+
+
+def command_migrate(args):
+    """Apply in-place format migrations to a life.txt file."""
+    import re as _re
+    from .timeutil import parse_elapsed as _parse_elapsed, format_elapsed as _format_elapsed
+
+    path = args.path
+    if not os.path.exists(path):
+        sys.stderr.write("ERROR: File not found: %s\n" % path)
+        return 1
+    migrations = args.migrations or []
+    if not migrations:
+        sys.stderr.write("ERROR: No --migration specified.\n")
+        return 1
+
+    text = read_text(path)
+    original_text = text
+    total_changes = 0
+
+    for migration_spec in migrations:
+        name, _, arg = migration_spec.partition("=")
+        name = name.strip()
+
+        if name == "normalize-elapsed":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                def _repl_elapsed(m):
+                    raw = m.group(1)
+                    minutes = _parse_elapsed(raw)
+                    if minutes is None:
+                        return m.group(0)
+                    normalized = _format_elapsed(minutes)
+                    return "elapsed:" + normalized
+                new_line = _re.sub(r'elapsed:(\S+)', _repl_elapsed, line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "rename-key":
+            if "=" not in migration_spec:
+                sys.stderr.write("ERROR: rename-key requires OLD=NEW format.\n")
+                return 1
+            _, _, rest = migration_spec.partition("=")
+            if "=" in rest:
+                old_key, _, new_key = rest.partition("=")
+            else:
+                old_key = arg
+                new_key = rest.replace(arg + "=", "")
+            # Get old_key=new_key from full spec: rename-key=old_key=new_key
+            parts = migration_spec.split("=", 1)
+            if len(parts) < 2:
+                sys.stderr.write("ERROR: rename-key requires OLD=NEW argument.\n")
+                return 1
+            kv = parts[1]
+            if "=" not in kv:
+                sys.stderr.write("ERROR: rename-key argument must be OLD=NEW.\n")
+                return 1
+            old_key, _, new_key = kv.partition("=")
+            old_key = old_key.strip()
+            new_key = new_key.strip()
+            if not old_key or not new_key:
+                sys.stderr.write("ERROR: rename-key OLD and NEW must not be empty.\n")
+                return 1
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = _re.sub(
+                    r'\b' + _re.escape(old_key) + r':',
+                    new_key + ":",
+                    line,
+                )
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "add-id":
+            config = _config(args)
+            id_key = id_key_from_config(config)
+            parsed_items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+            lines = text.splitlines(keepends=True)
+            import secrets as _secrets
+            for item in parsed_items:
+                if not item.details.get(id_key):
+                    if item.line and 0 < item.line <= len(lines):
+                        new_id = _secrets.token_hex(4)
+                        lines[item.line - 1] = lines[item.line - 1].rstrip("\n").rstrip("\r") + (
+                            "  %s:%s\n" % (id_key, new_id)
+                        )
+                        total_changes += 1
+            text = "".join(lines)
+
+        else:
+            sys.stderr.write("ERROR: Unknown migration %r. Known: normalize-elapsed, rename-key OLD=NEW, add-id.\n" % name)
+            return 1
+
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        if text == original_text:
+            sys.stdout.write("No changes would be made.\n")
+        else:
+            import difflib
+            diff = list(difflib.unified_diff(
+                original_text.splitlines(keepends=True),
+                text.splitlines(keepends=True),
+                fromfile=path + " (before)",
+                tofile=path + " (after)",
+            ))
+            sys.stdout.write("".join(diff[:60]))
+            if len(diff) > 60:
+                sys.stdout.write("... (%d more lines)\n" % (len(diff) - 60))
+        sys.stdout.write("[dry-run] %d change(s) would be applied.\n" % total_changes)
+        return 0
+
+    if text == original_text:
+        sys.stdout.write("No changes made.\n")
+        return 0
+
+    if getattr(args, "backup", False):
+        import shutil as _shutil
+        backup_path = path + ".bak"
+        _shutil.copy2(path, backup_path)
+        sys.stdout.write("Backup: %s\n" % backup_path)
+
+    atomic_write_text(path, text)
+    sys.stdout.write("Applied %d change(s) to %s\n" % (total_changes, path))
+    return 0
+
+
+def command_from_markdown(args):
+    """Convert Markdown task list items (- [ ] title) to life.txt items."""
+    import re as _re
+    paths = args.paths if args.paths else ["-"]
+    project = getattr(args, "project", None)
+    kind = getattr(args, "kind", "T") or "T"
+    do_append = getattr(args, "append", False)
+    output_path = getattr(args, "output", None)
+
+    STATUS_MAP = {
+        " ": "[ ]",
+        "x": "[x]",
+        "X": "[x]",
+        "-": "[-]",
+        "/": "[/]",
+    }
+    MD_TASK_RE = _re.compile(
+        r'^(?P<indent>\s*)[-*+]\s+\[(?P<check>[xX \-/])\]\s+(?P<title>.+)$'
+    )
+
+    items = []
+    for path in paths:
+        text = read_text(path)
+        for line in text.splitlines():
+            m = MD_TASK_RE.match(line)
+            if not m:
+                continue
+            check = m.group("check")
+            title = m.group("title").strip()
+            status = STATUS_MAP.get(check, "[ ]")
+            title_slug = title.replace(" ", "_")
+            details = {}
+            if project:
+                details["project"] = [project]
+            items.append(Item(status, kind, title_slug, details))
+
+    if not items:
+        sys.stderr.write("WARNING: No Markdown task list items found.\n")
+        return 0
+
+    life_lines = []
+    for item in items:
+        parts = ["%s %s %s" % (item.status, item.kind, item.title)]
+        for k, vals in item.details.items():
+            for v in vals:
+                parts[0] += "  %s:%s" % (k, v)
+        life_lines.append(parts[0])
+    output = "\n".join(life_lines) + "\n"
+
+    if output_path:
+        if do_append:
+            append_text(output_path, output)
+        else:
+            write_text(output_path, output)
+    else:
+        write_text(None, output)
+
+    sys.stdout.write("Imported %d item(s).\n" % len(items))
+    return 0
 
 
 def command_snapshot(args):
@@ -3451,10 +4126,13 @@ def command_lint(args):
     paths = args.paths if args.paths else ["-"]
     config = _config(args)
     id_key = id_key_from_config(config)
+    do_fix = getattr(args, "fix", False)
     issues = []
 
+    path_texts = {}
     for path in paths:
         text = read_text(path)
+        path_texts[path] = text
         items, parse_diags = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
         for item in items:
             for key in list(item.details.keys()):
@@ -3494,6 +4172,40 @@ def command_lint(args):
                         ("fix", None),
                         ("key", key),
                     ]))
+
+    # --fix: auto-rename typo keys in fixable issues (L001, L002)
+    if do_fix:
+        fixable = [i for i in issues if i.get("fix") and i.get("code") in ("L001", "L002")]
+        fixed_count = 0
+        # Group by source file
+        by_path = {}
+        for issue in fixable:
+            src = issue.get("source") or "-"
+            by_path.setdefault(src, []).append(issue)
+        for path, path_issues in by_path.items():
+            if path == "-":
+                sys.stderr.write("WARNING: Cannot fix stdin; skipping.\n")
+                continue
+            text = path_texts.get(path, read_text(path))
+            lines = text.splitlines(keepends=True)
+            for issue in path_issues:
+                ln = issue.get("line")
+                old_key = issue.get("key", "")
+                new_key = issue.get("fix", "")
+                if ln and 0 < ln <= len(lines):
+                    import re as _re
+                    lines[ln - 1] = _re.sub(
+                        r'\b' + _re.escape(old_key) + r':',
+                        new_key + ":",
+                        lines[ln - 1],
+                    )
+                    fixed_count += 1
+            new_text = "".join(lines)
+            atomic_write_text(path, new_text)
+        sys.stdout.write("Fixed %d issue(s) in %d file(s).\n" % (fixed_count, len(by_path)))
+        # Re-run lint to report remaining issues
+        remaining = [i for i in issues if i.get("code") == "L003" or not i.get("fix")]
+        return 1 if remaining else 0
 
     if args.format == "json":
         write_text(None, json.dumps(

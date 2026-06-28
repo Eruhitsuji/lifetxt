@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28T22:00 (updated x35)
+Last updated: 2026-06-28T23:30 (updated x36)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -167,13 +167,10 @@ Field-level encryption for sensitive content (journal bodies, messages).
 
 CLI-native charts without external dependencies.
 
-- [ ] Add `plot` command: render task completion trends, habit streaks, mood
-  timelines, elapsed time by project, and deadline density as Unicode bar
-  charts and sparklines. No dependencies beyond the Python standard library
-  for the default text output. Accept the same `--type`, `--project`,
-  `--from`, `--to`, `--group daily|weekly|monthly` filters as `stats`. Add
-  optional `--format svg|png` via `matplotlib` (opt-in dependency); the
-  dependency-free text output remains the default and is always available.
+- [ ] Extend `plot` command: add deadline density chart (`--chart deadlines`
+  showing items due per bucket), sparkline trend output mode (`--sparkline`),
+  and optional `--format svg|png` via `matplotlib`. Currently supports
+  tasks/habits/mood/elapsed with ASCII bars.
 
 ---
 
@@ -279,6 +276,29 @@ CLI-native charts without external dependencies.
 
 ---
 
+## P1: CLI — New Commands (Proposed from Session 4)
+
+- [ ] Add `deps` command: show dependency chains (`depends_on:` / `blocks:`)
+  as an indented tree or flat list. Options: `--blocked` (only show items
+  with unresolved blockers), `--root ID` (trace from a specific item),
+  `--format text|json`. Complements `links --format mermaid` for quick
+  terminal inspection without generating a full graph.
+
+- [ ] Add `tag` command for tag management: `tag list` (all tags with counts),
+  `tag rename OLD NEW` (renames in-place across all items), `tag merge OLD NEW`
+  (alias rename that also updates config tag_aliases). Reuses atomic write
+  and pre-write backup infrastructure.
+
+- [ ] Add `from-markdown` preset support: `--preset github` maps GitHub
+  Issues Markdown export format (checkbox lists with `#NNN` references) to
+  life.txt items with `ref:` set to the issue number.
+
+- [ ] Add `watch` command: poll one or more life.txt files for changes and
+  re-run a command (e.g., `summary`, `health`) on each change. Useful for
+  live dashboard without launching the full web server.
+
+---
+
 ## P1: Multiple Files / Sync / External Tools
 
 - [ ] Document the recommended directory layout for a typical user:
@@ -329,28 +349,21 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
 
-- [ ] Add `lint --fix` auto-correction: currently lint reports issues;
-  implement the `--fix` flag to auto-rename typo keys in-place
-  (e.g., `proj:` → `project:`) with atomic write and `--dry-run` preview.
-  Load custom rules from a JSON ruleset file (`--ruleset FILE`).
+- [ ] Add `lint --ruleset FILE` support: load custom rules from a JSON
+  ruleset file so teams can enforce project-specific key conventions beyond
+  the built-in 38 typo variants. Define ruleset schema and document.
 
-- [ ] Add `diff` command for semantic diffing between two life.txt inputs
-  (files, glob sets, or snapshots): report added, completed, canceled,
-  status-changed, and detail-changed items grouped by change type. Support
-  `--format text|json|jsonl` and `--type`, `--project`, `--status` filters.
-  Primary use cases: weekly progress review, pre/post archive comparison,
-  team file change summaries.
+- [ ] Add `diff --status` filter: limit diff output to specific change
+  types (added, removed, completed, canceled, status-changed, detail-changed).
+  Add `--since DATE` flag to compute diff against a snapshot from that date.
 
 - [ ] Add `snapshot --diff` flag to compare the new snapshot to the previous
-  one using `diff` command (once `diff` is implemented). Document recommended
-  naming convention in docs.
+  one using `diff` command. Document recommended naming convention in docs.
 
-- [ ] Add `migrate` command for in-place format upgrades: apply a named
-  migration (e.g., `--migration normalize-elapsed`, `--migration rename-key
-  old=new`) to all items in a file. Options: `--dry-run` to preview changes,
-  `--backup` to write a `.bak` before modifying. Implement migrations as
-  versioned, composable transformations so multiple can be chained. Document
-  each migration name, the change it applies, and the spec version it targets.
+- [ ] Extend `migrate` with additional migrations: `normalize-status` (alias
+  → canonical bracket form), `strip-empty-details` (remove keys with blank
+  values), and `canonicalize-dates` (normalize date formats to YYYY-MM-DD).
+  Document each migration name and the spec version it targets.
 
 - [ ] Add `template` command for reusable item sets: store named templates in
   config JSON or in a `templates.life.txt` file using a reserved `TEMPLATE`
@@ -635,15 +648,15 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `assign` edge-case tests: ambiguous `--text` match (interactive
   confirm prompt), validation error when resulting line is invalid.
 
-- [ ] Add `diff` tests: added, completed, canceled, status-changed,
-  detail-changed items; filter scope; JSON output schema.
+- [ ] Add `diff` cross-file and glob tests: pass glob sets to diff,
+  verify cycle-safe behavior, and test `--status` filter (once added).
 
 - [ ] Add `search` cross-file glob tests: pass a glob pattern covering multiple
-  files and verify results aggregate correctly. Add highlighted-match tests
-  once `--highlight` flag is implemented.
+  files and verify results aggregate correctly.
 
-- [ ] Add `migrate` tests: `--dry-run`, `--backup`, chained migrations,
-  idempotency.
+- [ ] Add `migrate` chained-migration tests: two migrations applied in sequence,
+  idempotency (running twice produces same result), and `add-id` collision
+  avoidance when file already has some IDs.
 
 - [ ] Add `share` tests: HTML is a single self-contained file; Markdown
   renders correctly; filters narrow output.

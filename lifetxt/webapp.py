@@ -2226,6 +2226,9 @@ HTML_PAGE = r"""<!doctype html>
     .proj-stats-bar { display:block; height:.4rem; background:var(--accent); border-radius:.2rem; min-width:2px; }
     /* ── Agenda badge ────────────────────────────────────────────── */
     .overdue-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--danger); color:#fff; border-radius:.9rem; font-size:.7rem; min-width:1.3rem; height:1.3rem; padding:0 .35rem; margin-left:.4rem; font-weight:600; }
+    .agenda-limit-ctrl { display:flex; align-items:center; gap:.25rem; margin-left:auto; font-size:.75rem; color:var(--text-muted); }
+    .agenda-limit-ctrl input[type="number"] { font-size:.75rem; padding:.1rem .2rem; border:1px solid var(--border); border-radius:.25rem; background:var(--bg); color:var(--text); text-align:center; }
+    .agenda-limit-ctrl input[type="number"]:focus { outline:1px solid var(--accent); }
     /* ── Drawer copy ID button ───────────────────────────────────── */
     #drawer-copy-id { font-size:.75rem; padding:.15rem .45rem; }
     /* ── Drawer raw line section ─────────────────────────────────── */
@@ -2350,21 +2353,21 @@ HTML_PAGE = r"""<!doctype html>
     .display-mode .source,
     .display-mode .empty,
     .display-mode .note { color: #aebbb4; }
-    /* ── Kiosk mode (bulletin board / 掲示板) ─────────────────────── */
+    /* ── Kiosk mode (bulletin board / 掲示板) — high-contrast light theme ── */
     .kiosk-mode {
-      background: #060d0a;
-      color: #e8f2ec;
-      font-size: clamp(15px, 1.1vw, 22px);
+      background: #f5f7f6;
+      color: #111714;
+      font-size: clamp(15px, 1.05vw, 20px);
       overflow: hidden;
     }
-    .kiosk-mode body { overflow: hidden; }
     .kiosk-mode header {
       max-width: none;
-      padding: .75rem 2rem;
-      border-bottom: 1px solid #1e3028;
-      background: #0a1511;
+      padding: .65rem 2rem;
+      border-bottom: 2px solid #1a7a4a;
+      background: #1a7a4a;
+      color: #fff;
     }
-    .kiosk-mode h1 { font-size: clamp(1.4rem, 2.5vw, 2.8rem); }
+    .kiosk-mode h1 { font-size: clamp(1.3rem, 2.2vw, 2.4rem); color: #fff; }
     .kiosk-mode .subtitle { display: none; }
     .kiosk-mode header .toolbar { gap: .5rem; }
     .kiosk-mode header .toolbar > *:not(#kiosk-clock):not(#kiosk-exit-btn) { display: none; }
@@ -2372,60 +2375,70 @@ HTML_PAGE = r"""<!doctype html>
       display: flex !important;
       align-items: center;
       gap: .5rem;
-      font-size: clamp(1.1rem, 2vw, 2rem);
+      font-size: clamp(1rem, 1.8vw, 1.8rem);
       font-variant-numeric: tabular-nums;
-      color: #9dd6b8;
-      font-weight: 600;
-      letter-spacing: .04em;
+      color: #d0f5e4;
+      font-weight: 700;
+      letter-spacing: .05em;
     }
-    .kiosk-mode #kiosk-exit-btn { display: inline-flex !important; }
+    .kiosk-mode #kiosk-exit-btn {
+      display: inline-flex !important;
+      background: rgba(255,255,255,.15);
+      border-color: rgba(255,255,255,.4);
+      color: #fff;
+    }
+    .kiosk-mode #kiosk-exit-btn:hover { background: rgba(255,255,255,.28); }
     .kiosk-mode main {
       max-width: none;
       grid-template-columns: 1fr;
       padding: 0;
-      height: calc(100vh - 4rem);
+      height: calc(100vh - 3.5rem);
       overflow: hidden;
     }
     .kiosk-mode .side { display: none; }
-    .kiosk-mode .item-section { overflow: hidden; }
+    .kiosk-mode .toolbar { display: none; }
+    .kiosk-mode .item-section { overflow: hidden; background: transparent; border: none; }
     .kiosk-mode .item-section .section-head { display: none; }
     .kiosk-mode #item-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
-      gap: 1rem;
-      padding: 1rem 1.5rem;
-      height: calc(100vh - 4.5rem);
+      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+      gap: .75rem;
+      padding: .75rem 1.25rem;
+      height: calc(100vh - 3.8rem);
       overflow-y: auto;
       overflow-x: hidden;
-      scrollbar-width: none;
+      scrollbar-width: thin;
+      scrollbar-color: #b2d8c4 transparent;
     }
-    .kiosk-mode #item-list::-webkit-scrollbar { display: none; }
     .kiosk-mode .item {
-      background: #0e1e18;
-      border: 1px solid #1e3028;
-      border-radius: .6rem;
-      padding: .9rem 1.1rem;
-      font-size: clamp(13px, .95vw, 18px);
+      background: #fff;
+      border: 1.5px solid #c5e0d0;
+      border-radius: .55rem;
+      padding: .85rem 1rem;
+      font-size: clamp(12px, .88vw, 16px);
       display: flex;
       flex-direction: column;
-      gap: .4rem;
+      gap: .35rem;
       cursor: default;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
     }
-    .kiosk-mode .item .status { font-size: 1.1em; }
-    .kiosk-mode .item .title { font-size: 1em; font-weight: 600; color: #d8f0e4; }
-    .kiosk-mode .item .meta { font-size: .82em; color: #6a9e82; }
-    .kiosk-mode .toolbar { display: none; }
+    .kiosk-mode .item:hover { border-color: #1a7a4a; }
+    .kiosk-mode .item .status-badge { font-weight: 700; }
+    .kiosk-mode .item .title { font-weight: 700; color: #0d2b1a; font-size: 1em; }
+    .kiosk-mode .item .meta { font-size: .8em; color: #4a7a5e; }
+    .kiosk-mode .item .source { display: none; }
+    .kiosk-mode .item-check { display: none !important; }
     .kiosk-mode .kiosk-progress-bar {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      height: 3px;
-      background: #1e3028;
+      height: 4px;
+      background: #c5e0d0;
     }
     .kiosk-mode .kiosk-progress-bar::after {
       content: "";
       display: block;
       height: 100%;
-      background: #4ec98a;
+      background: #1a7a4a;
       animation: kiosk-progress var(--kiosk-interval, 60s) linear infinite;
     }
     @keyframes kiosk-progress {
@@ -2443,7 +2456,8 @@ HTML_PAGE = r"""<!doctype html>
       .section-head { align-items: stretch; flex-direction: column; }
       .toolbar > *, .actions > *, .section-head button { flex: 1 1 100%; }
       .side { grid-template-columns: 1fr; }
-      .item { grid-template-columns: auto auto auto minmax(0, 1fr); }
+      .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
+      .item-check { display: none; }
       .source { grid-column: 1 / -1; }
       form.stack { grid-template-columns: 1fr; }
     }
@@ -2615,6 +2629,10 @@ HTML_PAGE = r"""<!doctype html>
       <section class="agenda-section">
         <div class="section-head">
           <h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
+          <label class="agenda-limit-ctrl" title="Max agenda rows (0 = all)">
+            <span class="agenda-limit-label">Rows</span>
+            <input type="number" id="agenda-limit-spinner" min="0" max="100" step="1" value="8" style="width:3.2rem">
+          </label>
           <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Collapse">▾</button>
         </div>
         <div class="section-body">
@@ -3064,14 +3082,15 @@ HTML_PAGE = r"""<!doctype html>
         if (selectedItem && item.line === selectedItem.line && item.editable === selectedItem.editable) {
           node.classList.add("selected");
         }
+        const _bulkKey = String(item.line) + "|" + (item.source || "");
         node.addEventListener("click", (e) => {
           if (e.target.closest(".ref-link")) return;
-          if (e.target.classList.contains("item-check")) return;
+          if (e.target.closest(".item-check")) return;
           selectItem(item);
           openDrawer(item);
         });
         node.addEventListener("contextmenu", (e) => openCtxMenu(e, item));
-        const isBulkSelected = bulkSelectedLines.has(String(item.line) + (item.source || ""));
+        const isBulkSelected = bulkSelectedLines.has(_bulkKey);
         if (isBulkSelected) node.classList.add("bulk-selected");
         node.innerHTML = `
           <input type="checkbox" class="item-check" title="Select for bulk action" ${isBulkSelected ? "checked" : ""}>
@@ -3086,11 +3105,13 @@ HTML_PAGE = r"""<!doctype html>
         `;
         node.querySelector(".item-check").addEventListener("change", (ev) => {
           ev.stopPropagation();
-          const key = String(item.line) + (item.source || "");
-          if (ev.target.checked) bulkSelectedLines.add(key);
-          else bulkSelectedLines.delete(key);
+          if (ev.target.checked) bulkSelectedLines.add(_bulkKey);
+          else bulkSelectedLines.delete(_bulkKey);
           node.classList.toggle("bulk-selected", ev.target.checked);
           _updateBulkToolbar();
+        });
+        node.querySelector(".item-check").addEventListener("click", (ev) => {
+          ev.stopPropagation();
         });
         root.appendChild(node);
       }
@@ -3115,7 +3136,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     async function bulkMarkDone() {
       const keys = new Set(bulkSelectedLines);
-      const targets = currentItems.filter(i => keys.has(String(i.line) + (i.source || "")) && i.editable && !["[x]","[-]"].includes(i.status));
+      const targets = currentItems.filter(i => keys.has(String(i.line) + "|" + (i.source || "")) && i.editable && !["[x]","[-]"].includes(i.status));
       if (!targets.length) { showToast("No editable open items selected.", "warning"); return; }
       let done = 0;
       for (const item of targets) {
@@ -3130,7 +3151,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     async function bulkDelete() {
       const keys = new Set(bulkSelectedLines);
-      const targets = currentItems.filter(i => keys.has(String(i.line) + (i.source || "")) && i.editable);
+      const targets = currentItems.filter(i => keys.has(String(i.line) + "|" + (i.source || "")) && i.editable);
       if (!targets.length) { showToast("No editable items selected.", "warning"); return; }
       if (!confirm(`Delete ${targets.length} item(s)?`)) return;
       targets.sort((a,b) => b.line - a.line);
@@ -3666,6 +3687,21 @@ HTML_PAGE = r"""<!doctype html>
         qInput.addEventListener("input", () => {
           clearTimeout(_checkTimer);
           _checkTimer = setTimeout(() => liveCheckLine(qInput.value), 280);
+        });
+      }
+      // Sync agenda limit spinner from URL and wire change handler
+      const spinner = document.getElementById("agenda-limit-spinner");
+      if (spinner) {
+        const raw = new URLSearchParams(location.search).get("agenda_limit");
+        if (raw !== null) spinner.value = raw === "0" ? "0" : String(Number(raw) || 8);
+        spinner.addEventListener("change", () => {
+          const n = parseInt(spinner.value, 10);
+          const params = new URLSearchParams(location.search);
+          if (!n || n === 8) params.delete("agenda_limit");
+          else params.set("agenda_limit", String(n < 0 ? 0 : n));
+          const qs = params.toString();
+          history.replaceState(null, "", qs ? "?" + qs : location.pathname);
+          refresh();
         });
       }
     });

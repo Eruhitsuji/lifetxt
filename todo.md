@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-29T00:00 (updated x37)
+Last updated: 2026-06-28T23:00 (updated x38)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -100,10 +100,13 @@ Improvements to existing commands that affect daily workflow.
   in `--format json` and `--format jsonl` output. Define how filtered
   occurrence sets are exported to JSON, JSONL, CSV, and life.txt.
 
-- [ ] Add terminal width adaptation: commands that render tables (`agenda`,
-  `status`, `stats`, `tui`) must detect terminal width and switch to a compact
-  single-line-per-item format when the terminal is too narrow for a full table.
-  Support `--width N` to override auto-detection.
+- [x] Add terminal width adaptation: `agenda` and `summary` now detect terminal
+  width via `shutil.get_terminal_size()` and switch to compact single-line
+  format when narrower than 80 columns.
+
+- [ ] Extend terminal width adaptation to `stats`, `tui`, and `filter` table
+  output; add `--width N` flag to override auto-detection in all affected
+  commands.
 
 - [ ] Keep CLI help synchronized with docs: after every change to `tui`,
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
@@ -135,9 +138,12 @@ existing command internally to reuse validation and atomic write behavior.
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
 
-- [ ] Add `--process` mode to `inbox` command: interactive one-by-one triage
-  prompting for `project:`, `due:`, and `assignee:` using `assist` completion
-  helpers. Add `--fzf` to open inbox results in `fzf` for quick editing.
+- [x] Add `--process` mode to `inbox` command: interactive one-by-one triage
+  prompting for `project:`, `due:`, and `assignee:`; each update applied
+  in-place via atomic write. `--fzf` remains deferred.
+
+- [ ] Add `--fzf` flag to `inbox`: pipe unprocessed items to `fzf` for quick
+  editing, after `--process` mode is confirmed stable in real use.
 
 ---
 
@@ -151,15 +157,14 @@ Commands and behaviors for moving old items out of active files.
 
 Field-level encryption for sensitive content (journal bodies, messages).
 
-- [ ] Add `encrypt` and `decrypt` commands: `encrypt` rewrites selected field
-  values as tagged ciphertext in-place using a passphrase or key file;
-  `decrypt` restores them. Options: `--field FIELD` (e.g., `body`, `note`),
-  `--type TYPE` (e.g., `J`, `M`), `--dry-run`, `--key-env ENVVAR`. Core
-  implementation uses only Python standard-library primitives (`hashlib`,
-  `hmac`, `secrets`, `base64`); document an optional stronger path using the
-  `cryptography` package. Ciphertext tag format: `enc:ALG:BASE64` (e.g.,
-  `enc:AES256GCM:...`) so the parser can detect encrypted values without
-  decrypting and skip them in `check`, `filter`, and `to-json`.
+- [x] Add `encrypt` and `decrypt` commands: in-place PBKDF2-HMAC-SHA256 +
+  XOR-stream cipher using only stdlib (`hashlib`, `hmac`, `secrets`, `base64`).
+  Ciphertext tag format: `enc:XSK:BASE64`. Options: `--field`, `--type`,
+  `--dry-run`, `--backup`, `--key-env`.
+
+- [ ] Document `encrypt`/`decrypt` key management: passphrase strength
+  recommendations, rotating passphrases, and optional `cryptography` package
+  upgrade path for AES-GCM. Update `docs/en/cli.md` and `docs/ja/cli.md`.
 
 ---
 
@@ -167,10 +172,12 @@ Field-level encryption for sensitive content (journal bodies, messages).
 
 CLI-native charts without external dependencies.
 
-- [ ] Extend `plot` command: add deadline density chart (`--chart deadlines`
-  showing items due per bucket), sparkline trend output mode (`--sparkline`),
-  and optional `--format svg|png` via `matplotlib`. Currently supports
-  tasks/habits/mood/elapsed with ASCII bars.
+- [x] Extend `plot` command: `--chart deadlines` (items due per bucket) and
+  `--sparkline` (Unicode block-char trend line) implemented. ASCII bar charts
+  for tasks/habits/mood/elapsed already present.
+
+- [ ] Add `--format svg|png` to `plot` via `matplotlib` (optional dependency);
+  fall back gracefully when not installed. Document in CLI guide.
 
 ---
 
@@ -259,21 +266,32 @@ CLI-native charts without external dependencies.
 
 ### Kiosk Mode (Web UI) — New
 
+- [x] Redesigned kiosk mode color scheme: replaced near-black green palette
+  with high-contrast light theme (white cards, green header `#1a7a4a`,
+  `#f5f7f6` background) for improved readability on large displays.
+
 - [ ] Add kiosk mode configuration options: `?kiosk_cols=3` to fix the number
   of columns, `?kiosk_filter=kind:T` to show only specific item types, and a
   `?kiosk_title=TEXT` overlay to display a custom title in the header. Store
   kiosk presets in config `views` so teams can bookmark a ready-made URL.
 
-- [ ] Add kiosk mode per-item card animations: subtle entrance animation when
-  items are added or updated during auto-refresh, so viewers notice changes
-  without the full screen flickering.
+- [ ] Add kiosk mode per-item card entrance animation: fade-in or slide-in
+  on auto-refresh changes so viewers notice new or updated items without a
+  full-screen flicker.
+
+### Item Selection (Web UI) — New
+
+- [x] Fixed bulk-selection checkbox behavior: normalized bulk key to
+  `line|source` format, used `closest(".item-check")` to prevent click
+  propagation from triggering the drawer, added explicit `click` stop-
+  propagation on the checkbox, and corrected mobile grid column count.
 
 ### Drawer Improvements (Web UI) — New
 
 ### Agenda & Notifications (Web UI) — New
 
-- [ ] Agenda: add a compact "agenda_limit" spinner in the toolbar so users
-  can set the cap without editing the URL manually.
+- [x] Agenda: added `agenda_limit` number spinner to the Agenda section header;
+  syncs with `?agenda_limit=` URL param on change, triggers refresh.
 
 ### MCP Support
 
@@ -289,23 +307,40 @@ CLI-native charts without external dependencies.
 
 ---
 
+## P1: CLI — New Commands (Proposed from Session 5)
+
+- [ ] Add `batch` command: apply a single-item command (`done`, `assign`,
+  `tag rename`) across multiple files matched by a glob pattern. Useful for
+  bulk-closing tasks in large multi-file repositories without writing a shell
+  loop.
+
+- [ ] Add `export-heatmap` command: write a standalone SVG or HTML heatmap of
+  habit/task activity to a file. Reuses `stats` bucket logic; no external
+  dependency required for the SVG path.
+
+- [ ] Add `review --format html`: produce a self-contained single-file HTML
+  digest (summary, overdue items, top projects, weekly mood chart) for sharing
+  without running the server.
+
+- [ ] Add `--key-file` option to `encrypt`/`decrypt` as an alternative to
+  `--key-env`: read the passphrase from a file path (respects `chmod 600`).
+  Warn on startup if the key file has world-readable permissions.
+
 ## P1: CLI — New Commands (Proposed from Session 4)
 
 - [x] `deps` command: dependency chains as indented tree. `--blocked`, `--root ID`,
   `--format text|json` implemented.
 
-- [x] `tag list` (all tags with counts) and `tag rename OLD NEW path [--dry-run]`
-  implemented. `tag merge` (config alias update) remains.
+- [x] `tag list` (all tags with counts), `tag rename OLD NEW path [--dry-run]`,
+  and `tag merge OLD NEW path` (renames in file + writes `tag_aliases` to
+  config JSON) all implemented.
 
-- [ ] Add `tag merge OLD NEW` that also updates `config tag_aliases` after the
-  simple `tag rename` is confirmed stable in real use.
-
-- [ ] Add `from-markdown` preset support: `--preset github` maps GitHub
-  Issues Markdown export format (checkbox lists with `#NNN` references) to
-  life.txt items with `ref:` set to the issue number.
+- [x] `from-markdown --preset github`: maps GitHub Issues Markdown export format
+  (checkbox lists with `#NNN` references) to life.txt items with `ref:` set
+  to the issue number.
 
 - [x] `watch` command: polls files for changes, re-runs a sub-command. Options:
-  `--run CMD`, `--interval SEC`, `--clear`. Uses only the standard library (no watchdog).
+  `--run CMD`, `--interval SEC`, `--clear`. Uses only the standard library.
 
 ---
 
@@ -366,16 +401,16 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [x] `diff --status` filter: limits output to specific change types
   (added, removed, completed, canceled, status-changed, detail-changed). Repeatable.
 
-- [ ] Add `diff --since DATE` flag: auto-select a snapshot from that date as the
-  base file, avoiding the need to manually specify the `before` argument.
+- [x] Add `diff --since DATE` flag: auto-selects a snapshot from that date as
+  the base file; scans the snapshot directory for matching filename prefix.
 
 - [x] `snapshot --diff` flag: after writing, shows semantic diff against the
   most recent previous snapshot in the same directory.
 
-- [ ] Extend `migrate` with additional migrations: `normalize-status` (alias
-  → canonical bracket form), `strip-empty-details` (remove keys with blank
-  values), and `canonicalize-dates` (normalize date formats to YYYY-MM-DD).
-  Document each migration name and the spec version it targets.
+- [x] Extend `migrate` with additional migrations: `normalize-status` (alias
+  to canonical bracket form), `strip-empty-details` (remove blank-value keys),
+  and `canonicalize-dates` (normalize dates to YYYY-MM-DD). All three
+  implemented and idempotent.
 
 - [ ] Add `template` command for reusable item sets: store named templates in
   config JSON or in a `templates.life.txt` file using a reserved `TEMPLATE`

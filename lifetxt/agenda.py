@@ -341,9 +341,30 @@ def item_time_matches(item, range_start, range_end):
     return matches
 
 
-def format_agenda_table(records):
+def format_agenda_table(records, width=None):
     if not records:
         return "No agenda items found.\n"
+
+    if width is None:
+        try:
+            import shutil as _shutil
+            width = _shutil.get_terminal_size((80, 24)).columns
+        except Exception:
+            width = 80
+
+    # Compact single-line format for narrow terminals (< 80 cols)
+    if width < 80:
+        lines = []
+        for record in records:
+            when = _table_cell(record.get("when", ""))
+            status = _table_cell(record.get("status", ""))
+            title = record.get("title", "")
+            # Truncate title to fit remaining width
+            max_title = max(10, width - len(when) - len(status) - 4)
+            if len(title) > max_title:
+                title = title[:max_title - 1] + "…"
+            lines.append("%s %s %s" % (when, status, title))
+        return "\n".join(lines) + "\n"
 
     rows = []
     for record in records:
@@ -360,14 +381,14 @@ def format_agenda_table(records):
 
     widths = []
     for key, heading in _TABLE_COLUMNS:
-        width = len(heading)
+        col_width = len(heading)
         for row in rows:
-            width = max(width, len(row[key]))
-        widths.append(width)
+            col_width = max(col_width, len(row[key]))
+        widths.append(col_width)
 
     lines = []
     lines.append(_format_table_row([heading for _key, heading in _TABLE_COLUMNS], widths))
-    lines.append(_format_table_row(["-" * width for width in widths], widths))
+    lines.append(_format_table_row(["-" * w for w in widths], widths))
     for row in rows:
         lines.append(
             _format_table_row(

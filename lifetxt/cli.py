@@ -1217,6 +1217,11 @@ def build_parser():
         help="Output format.",
     )
     inbox_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    inbox_cmd.add_argument(
+        "--process",
+        action="store_true",
+        help="Interactive one-by-one triage: prompts for project, due, and assignee for each inbox item.",
+    )
     inbox_cmd.set_defaults(func=command_inbox)
 
     cleanup_cmd = subparsers.add_parser(
@@ -1425,6 +1430,11 @@ def build_parser():
         choices=("added", "removed", "completed", "canceled", "status-changed", "detail-changed"),
         help="Limit output to specific change types. Can be repeated.",
     )
+    diff_cmd.add_argument(
+        "--since",
+        metavar="DATE",
+        help="Auto-select the most recent snapshot from this date (YYYY-MM-DD) as the base file.",
+    )
     diff_cmd.set_defaults(func=command_diff)
 
     # plot command
@@ -1435,9 +1445,14 @@ def build_parser():
     _add_input_paths(plot_cmd)
     plot_cmd.add_argument(
         "--chart",
-        choices=("tasks", "habits", "mood", "elapsed", "all"),
+        choices=("tasks", "habits", "mood", "elapsed", "deadlines", "all"),
         default="all",
         help="Which chart to render (default: all).",
+    )
+    plot_cmd.add_argument(
+        "--sparkline",
+        action="store_true",
+        help="Output sparklines (single-row Unicode trend) instead of full bar charts.",
     )
     plot_cmd.add_argument(
         "--group",
@@ -1469,7 +1484,8 @@ def build_parser():
         metavar="NAME[=ARG]",
         help=(
             "Migration to apply. Can be repeated. "
-            "Built-in names: normalize-elapsed, rename-key OLD=NEW, add-id."
+            "Built-in names: normalize-elapsed, rename-key OLD=NEW, add-id, "
+            "normalize-status, strip-empty-details, canonicalize-dates."
         ),
     )
     migrate_cmd.add_argument(
@@ -1499,6 +1515,11 @@ def build_parser():
         help="Item type for imported items (default: T).",
     )
     frommd_cmd.add_argument("--append", action="store_true", help="Append to output file instead of overwrite.")
+    frommd_cmd.add_argument(
+        "--preset",
+        choices=("github",),
+        help="Source format preset. 'github' maps GitHub Issues Markdown (checkbox lists with #NNN refs) to life.txt items with ref: set to the issue number.",
+    )
     frommd_cmd.set_defaults(func=command_from_markdown)
 
     # deps command
@@ -1539,6 +1560,12 @@ def build_parser():
     tag_rename_cmd.add_argument("path", help="File to update.")
     tag_rename_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     tag_rename_cmd.set_defaults(func=command_tag_rename)
+    tag_merge_cmd = tag_subparsers.add_parser("merge", help="Rename a tag in-place and record alias in config.")
+    tag_merge_cmd.add_argument("old", help="Old tag value to merge away.")
+    tag_merge_cmd.add_argument("new", help="Canonical tag value to merge into.")
+    tag_merge_cmd.add_argument("path", help="File to update.")
+    tag_merge_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    tag_merge_cmd.set_defaults(func=command_tag_merge)
     tag_cmd.set_defaults(func=lambda args: tag_cmd.print_help())
 
     # watch command
@@ -1561,6 +1588,46 @@ def build_parser():
     )
     watch_cmd.add_argument("--clear", action="store_true", help="Clear screen before each re-run.")
     watch_cmd.set_defaults(func=command_watch)
+
+    # encrypt command
+    encrypt_cmd = subparsers.add_parser(
+        "encrypt",
+        help="Encrypt selected field values in-place using a passphrase (stdlib only).",
+    )
+    encrypt_cmd.add_argument("path", help="File to encrypt.")
+    encrypt_cmd.add_argument(
+        "--field", action="append", dest="fields", metavar="FIELD",
+        help="Field key to encrypt (e.g. body, note). Can be repeated.",
+    )
+    encrypt_cmd.add_argument(
+        "--type", action="append", dest="kinds", metavar="TYPE",
+        help="Only encrypt items of this type (e.g. J, M). Can be repeated.",
+    )
+    encrypt_cmd.add_argument(
+        "--key-env", metavar="ENVVAR", default="LIFETXT_KEY",
+        help="Environment variable containing the passphrase (default: LIFETXT_KEY).",
+    )
+    encrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    encrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
+    encrypt_cmd.set_defaults(func=command_encrypt)
+
+    # decrypt command
+    decrypt_cmd = subparsers.add_parser(
+        "decrypt",
+        help="Decrypt enc:-tagged field values in-place using a passphrase.",
+    )
+    decrypt_cmd.add_argument("path", help="File to decrypt.")
+    decrypt_cmd.add_argument(
+        "--field", action="append", dest="fields", metavar="FIELD",
+        help="Field key to decrypt. Can be repeated (default: all enc: fields).",
+    )
+    decrypt_cmd.add_argument(
+        "--key-env", metavar="ENVVAR", default="LIFETXT_KEY",
+        help="Environment variable containing the passphrase (default: LIFETXT_KEY).",
+    )
+    decrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    decrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
+    decrypt_cmd.set_defaults(func=command_decrypt)
 
     return parser
 
@@ -2686,27 +2753,40 @@ def command_summary(args):
             ) + "\n",
         )
     else:
+        try:
+            import shutil as _shutil
+            term_width = _shutil.get_terminal_size((80, 24)).columns
+        except Exception:
+            term_width = 80
+        compact = term_width < 60
         for result in all_results:
-            lines = ["Summary: %s" % result["source"]]
-            lines.append("  Lines:    %d" % result["line_count"])
-            lines.append("  Items:    %d" % result["item_count"])
-            if result["type_counts"]:
-                lines.append("  Types:    " + "  ".join(
-                    "%s:%d" % (k, v) for k, v in sorted(result["type_counts"].items())
+            if compact:
+                type_str = " ".join("%s:%d" % (k, v) for k, v in sorted(result["type_counts"].items()))
+                status_str = " ".join("%s:%d" % (k.strip("[]"), v) for k, v in sorted(result["status_counts"].items()))
+                lines = [
+                    "%s  %d items  %s  [%s]" % (result["source"], result["item_count"], type_str, status_str)
+                ]
+            else:
+                lines = ["Summary: %s" % result["source"]]
+                lines.append("  Lines:    %d" % result["line_count"])
+                lines.append("  Items:    %d" % result["item_count"])
+                if result["type_counts"]:
+                    lines.append("  Types:    " + "  ".join(
+                        "%s:%d" % (k, v) for k, v in sorted(result["type_counts"].items())
+                    ))
+                if result["status_counts"]:
+                    lines.append("  Statuses: " + "  ".join(
+                        "%s:%d" % (k.strip("[]"), v) for k, v in sorted(result["status_counts"].items())
+                    ))
+                lines.append("  IDs (%s):  %d present, %d missing" % (
+                    result["id_key"], result["ids_present"], result["ids_missing"],
                 ))
-            if result["status_counts"]:
-                lines.append("  Statuses: " + "  ".join(
-                    "%s:%d" % (k.strip("[]"), v) for k, v in sorted(result["status_counts"].items())
-                ))
-            lines.append("  IDs (%s):  %d present, %d missing" % (
-                result["id_key"], result["ids_present"], result["ids_missing"],
-            ))
-            if result["date_min"] or result["date_max"]:
-                lines.append("  Dates:    %s .. %s" % (
-                    result["date_min"] or "?", result["date_max"] or "?",
-                ))
-            if result["modified"]:
-                lines.append("  Modified: %s" % result["modified"])
+                if result["date_min"] or result["date_max"]:
+                    lines.append("  Dates:    %s .. %s" % (
+                        result["date_min"] or "?", result["date_max"] or "?",
+                    ))
+                if result["modified"]:
+                    lines.append("  Modified: %s" % result["modified"])
             write_text(None, "\n".join(lines) + "\n")
     return 0
 
@@ -3193,6 +3273,54 @@ def command_inbox(args):
             lines = ["Inbox: %d unclassified item(s)" % len(inbox_items)]
             lines.extend(_format_table(rows, ("location", "type", "status", "title")))
             write_text(None, "\n".join(lines) + "\n")
+
+    if getattr(args, "process", False):
+        writable_path = None
+        for p in (args.paths if args.paths else []):
+            if p != "-" and os.path.exists(p):
+                writable_path = p
+                break
+        if not writable_path:
+            sys.stderr.write("ERROR: --process requires a writable file path.\n")
+            return 1
+        if not inbox_items:
+            sys.stdout.write("Inbox is empty. Nothing to process.\n")
+            return 0
+        sys.stdout.write("Processing %d inbox item(s). Press Enter to skip a field.\n\n" % len(inbox_items))
+        processed = 0
+        for item in inbox_items:
+            sys.stdout.write("  [%s %s] %s\n" % (item.status, item.kind, item.title))
+            try:
+                project = input("    project: ").strip()
+                due = input("    due:     ").strip()
+                assignee = input("    assignee:").strip()
+            except (EOFError, KeyboardInterrupt):
+                sys.stdout.write("\nAborted.\n")
+                break
+            if not project and not due and not assignee:
+                sys.stdout.write("    (skipped)\n\n")
+                continue
+            # Build update using assign command internals
+            text = read_text(writable_path)
+            lines_list = text.splitlines(keepends=True)
+            ln = item.line
+            if ln and 0 < ln <= len(lines_list):
+                import re as _re
+                line = lines_list[ln - 1].rstrip("\n").rstrip("\r")
+                if project:
+                    line = line + "  project:%s" % project
+                if due:
+                    line = line + "  due:%s" % due
+                if assignee:
+                    line = line + "  assignee:%s" % assignee
+                lines_list[ln - 1] = line + "\n"
+                atomic_write_text(writable_path, "".join(lines_list))
+                sys.stdout.write("    updated.\n\n")
+                processed += 1
+            else:
+                sys.stdout.write("    (could not locate line)\n\n")
+        sys.stdout.write("Processed %d/%d item(s).\n" % (processed, len(inbox_items)))
+        return 0
 
     _print_warnings(diagnostics)
     return 0
@@ -3717,6 +3845,25 @@ def command_diff(args):
     config = _config(args)
     id_key = id_key_from_config(config)
 
+    since_date = getattr(args, "since", None)
+    if since_date:
+        after_path = args.after
+        after_dir = os.path.dirname(os.path.abspath(after_path))
+        basename = os.path.basename(after_path)
+        since_prefix = since_date[:10] if since_date else ""
+        try:
+            candidates = sorted(
+                f for f in os.listdir(after_dir)
+                if f.startswith(since_prefix) and f.endswith("_" + basename) and f != basename
+            )
+        except OSError:
+            candidates = []
+        if not candidates:
+            sys.stderr.write("ERROR: No snapshot found for date %s in %s\n" % (since_date, after_dir))
+            return 1
+        args.before = os.path.join(after_dir, candidates[-1])
+        sys.stdout.write("Using snapshot: %s\n" % args.before)
+
     before_text = read_text(args.before)
     after_text = read_text(args.after)
     before_items, _ = parse_text(before_text, id_key=id_key, check_ids=False, check_references=False)
@@ -3951,6 +4098,46 @@ def command_plot(args):
                 label = ("%dh%dm" % (h, m)) if h else ("%dm" % m)
                 sys.stdout.write("  %-14s %s %s\n" % (proj[:14], bar, label))
 
+    # deadlines chart: items due per bucket
+    if chart in ("deadlines", "all"):
+        deadline_buckets = {}
+        for item in items:
+            for key in ("due", "do"):
+                for val in item.details.get(key, []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        k = _bucket_key(d)
+                        deadline_buckets[k] = deadline_buckets.get(k, 0) + 1
+        if deadline_buckets:
+            _print_bar_chart("Deadline Density (%s)" % group, deadline_buckets)
+
+    # sparkline output: single row of Unicode block chars
+    if getattr(args, "sparkline", False):
+        SPARKS = " ▁▂▃▄▅▆▇█"
+        def _sparkline(data_dict):
+            if not data_dict:
+                return "(empty)"
+            keys = sorted(data_dict.keys())
+            vals = [data_dict.get(k, 0) for k in keys]
+            max_v = max(vals) or 1
+            spark = "".join(SPARKS[int(v / max_v * (len(SPARKS) - 1))] for v in vals)
+            return spark + "  (%d..%d)" % (min(vals), max(vals))
+        sys.stdout.write("\n## Sparklines\n")
+        if chart in ("tasks", "all"):
+            sys.stdout.write("  Tasks:     %s\n" % _sparkline(task_buckets if 'task_buckets' in locals() else {}))
+        if chart in ("habits", "all"):
+            habit_agg = {}
+            for item in items:
+                if item.kind == "H":
+                    for val in item.details.get("done", []):
+                        d = _parse_date_only(str(val))
+                        if d and start <= d <= end:
+                            k = _bucket_key(d)
+                            habit_agg[k] = habit_agg.get(k, 0) + 1
+            sys.stdout.write("  Habits:    %s\n" % _sparkline(habit_agg))
+        if chart in ("deadlines", "all"):
+            sys.stdout.write("  Deadlines: %s\n" % _sparkline(deadline_buckets if 'deadline_buckets' in locals() else {}))
+
     sys.stdout.write("\n")
     return 0
 
@@ -4048,8 +4235,65 @@ def command_migrate(args):
                         total_changes += 1
             text = "".join(lines)
 
+        elif name == "normalize-status":
+            from .model import VALID_STATUSES, STATUS_ALIASES
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = line
+                for alias, canonical in STATUS_ALIASES.items():
+                    new_line = _re.sub(
+                        r'\[' + _re.escape(alias) + r'\]',
+                        canonical,
+                        new_line,
+                    )
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "strip-empty-details":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = _re.sub(r'\s+\w[\w-]*:\s*(?=\s+\w[\w-]*:|$)', '', line).rstrip() + '\n' if line.strip() and not line.strip().startswith('#') else line
+                # more precise: remove detail key:value pairs where value is empty
+                new_line = _re.sub(r'(\s{2,})(\w[\w-]*):\s+(?=(\s{2,}|$))', '', line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "canonicalize-dates":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            def _normalize_date_str(s):
+                # Try to parse and reformat common non-standard date formats
+                for fmt in ("%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y.%m.%d", "%d-%m-%Y"):
+                    try:
+                        return datetime.datetime.strptime(s, fmt).date().isoformat()
+                    except ValueError:
+                        pass
+                return None
+            date_key_pattern = _re.compile(
+                r'(?<!\w)((?:due|do|on|created|updated|done|from|to|at|notify_at|notify_from|notify_to|ack|snooze_until|until|moved_to):)(\S+)'
+            )
+            def _repl_date(m):
+                key = m.group(1)
+                val = m.group(2)
+                normed = _normalize_date_str(val)
+                if normed and normed != val:
+                    return key + normed
+                return m.group(0)
+            for line in lines:
+                new_line = date_key_pattern.sub(_repl_date, line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
         else:
-            sys.stderr.write("ERROR: Unknown migration %r. Known: normalize-elapsed, rename-key OLD=NEW, add-id.\n" % name)
+            sys.stderr.write("ERROR: Unknown migration %r. Known: normalize-elapsed, rename-key OLD=NEW, add-id, normalize-status, strip-empty-details, canonicalize-dates.\n" % name)
             return 1
 
     dry_run = getattr(args, "dry_run", False)
@@ -4093,6 +4337,7 @@ def command_from_markdown(args):
     kind = getattr(args, "kind", "T") or "T"
     do_append = getattr(args, "append", False)
     output_path = getattr(args, "output", None)
+    preset = getattr(args, "preset", None)
 
     STATUS_MAP = {
         " ": "[ ]",
@@ -4104,6 +4349,8 @@ def command_from_markdown(args):
     MD_TASK_RE = _re.compile(
         r'^(?P<indent>\s*)[-*+]\s+\[(?P<check>[xX \-/])\]\s+(?P<title>.+)$'
     )
+    # GitHub Issues Markdown: - [ ] title (#123) or - [ ] #123 title
+    GITHUB_REF_RE = _re.compile(r'#(\d+)')
 
     items = []
     for path in paths:
@@ -4115,10 +4362,17 @@ def command_from_markdown(args):
             check = m.group("check")
             title = m.group("title").strip()
             status = STATUS_MAP.get(check, "[ ]")
-            title_slug = title.replace(" ", "_")
             details = {}
             if project:
                 details["project"] = [project]
+            if preset == "github":
+                refs = GITHUB_REF_RE.findall(title)
+                title_clean = GITHUB_REF_RE.sub("", title).strip()
+                if refs:
+                    details["ref"] = refs
+                title_slug = title_clean.replace(" ", "_") if title_clean else ("issue" + refs[0] if refs else title.replace(" ", "_"))
+            else:
+                title_slug = title.replace(" ", "_")
             items.append(Item(status, kind, title_slug, details))
 
     if not items:
@@ -5810,3 +6064,188 @@ def command_watch(args):
     except KeyboardInterrupt:
         sys.stdout.write("\nStopped.\n")
     return 0
+
+
+def command_tag_merge(args):
+    old_tag = args.old
+    new_tag = args.new
+    path = args.path
+    dry_run = getattr(args, "dry_run", False)
+    text = read_text(path)
+    id_key = id_key_from_config({})
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    lines = text.splitlines(keepends=True)
+    changed = 0
+    import re as _re
+    for item in items:
+        if old_tag in item.details.get("tag", []):
+            ln = item.line
+            if ln and 0 < ln <= len(lines):
+                new_line = _re.sub(
+                    r"(\btag:\s*)" + _re.escape(old_tag) + r"(\b|$)",
+                    r"\g<1>" + new_tag,
+                    lines[ln - 1],
+                )
+                if new_line != lines[ln - 1]:
+                    lines[ln - 1] = new_line
+                    changed += 1
+    if changed == 0:
+        sys.stdout.write("Tag %r not found in %s.\n" % (old_tag, path))
+        return 0
+    new_text = "".join(lines)
+    if dry_run:
+        sys.stdout.write("Would merge %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
+        return 0
+    atomic_write_text(path, new_text)
+    sys.stdout.write("Merged %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
+    config_path = getattr(args, "config", None) or ".lifetxt.json"
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as _cf:
+                cfg = json.load(_cf)
+            cfg.setdefault("tag_aliases", {})[old_tag] = new_tag
+            with open(config_path, "w", encoding="utf-8") as _cf:
+                json.dump(cfg, _cf, ensure_ascii=False, indent=2)
+                _cf.write("\n")
+            sys.stdout.write("Added tag alias %r -> %r to %s.\n" % (old_tag, new_tag, config_path))
+        except Exception as exc:
+            sys.stdout.write("WARNING: Could not update config: %s\n" % exc)
+    return 0
+
+
+def _derive_key(passphrase, salt, length=32):
+    import hashlib
+    return hashlib.pbkdf2_hmac("sha256", passphrase.encode("utf-8"), salt, 100000, dklen=length)
+
+
+def _xsk_encrypt(plaintext, passphrase):
+    import hashlib, hmac as _hmac, secrets, base64
+    salt = secrets.token_bytes(16)
+    key = _derive_key(passphrase, salt)
+    pt = plaintext.encode("utf-8")
+    keystream = b""
+    counter = 0
+    while len(keystream) < len(pt):
+        keystream += hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
+        counter += 1
+    ciphertext = bytes(a ^ b for a, b in zip(pt, keystream[:len(pt)]))
+    payload = salt + ciphertext
+    mac = _hmac.new(key, payload, "sha256").digest()
+    encoded = base64.b64encode(mac + payload).decode("ascii")
+    return "enc:XSK:" + encoded
+
+
+def _xsk_decrypt(enc_value, passphrase):
+    import hashlib, hmac as _hmac, base64
+    parts = enc_value.split(":", 2)
+    if len(parts) != 3 or parts[0] != "enc" or parts[1] != "XSK":
+        raise ValueError("Not an XSK-encrypted value: %r" % enc_value)
+    raw = base64.b64decode(parts[2])
+    if len(raw) < 48:
+        raise ValueError("Truncated ciphertext.")
+    mac = raw[:32]
+    payload = raw[32:]
+    salt = payload[:16]
+    ciphertext = payload[16:]
+    key = _derive_key(passphrase, salt)
+    expected_mac = _hmac.new(key, payload, "sha256").digest()
+    if not _hmac.compare_digest(mac, expected_mac):
+        raise ValueError("MAC mismatch — wrong passphrase or tampered data.")
+    keystream = b""
+    counter = 0
+    while len(keystream) < len(ciphertext):
+        keystream += hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
+        counter += 1
+    return bytes(a ^ b for a, b in zip(ciphertext, keystream[:len(ciphertext)])).decode("utf-8")
+
+
+def command_encrypt(args):
+    import re as _re
+    path = args.path
+    fields = args.fields or ["body", "note"]
+    kinds = set(args.kinds or [])
+    key_env = getattr(args, "key_env", "LIFETXT_KEY")
+    dry_run = getattr(args, "dry_run", False)
+    do_backup = getattr(args, "backup", False)
+    passphrase = os.environ.get(key_env, "")
+    if not passphrase:
+        sys.stderr.write("ERROR: Passphrase not set. Set environment variable %s.\n" % key_env)
+        return 1
+    text = read_text(path)
+    id_key = id_key_from_config({})
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    lines = text.splitlines(keepends=True)
+    total_changed = 0
+    for item in items:
+        if kinds and item.kind not in kinds:
+            continue
+        for field in fields:
+            for val in item.details.get(field, []):
+                sv = str(val)
+                if sv.startswith("enc:"):
+                    continue
+                enc_val = _xsk_encrypt(sv, passphrase)
+                ln = item.line
+                if ln and 0 < ln <= len(lines):
+                    pattern = r"(\b" + _re.escape(field) + r":)" + _re.escape(sv)
+                    new_line = _re.sub(pattern, r"\g<1>" + enc_val, lines[ln - 1], count=1)
+                    if new_line != lines[ln - 1]:
+                        lines[ln - 1] = new_line
+                        total_changed += 1
+    if dry_run:
+        sys.stdout.write("[dry-run] Would encrypt %d field value(s) in %s.\n" % (total_changed, path))
+        return 0
+    if total_changed == 0:
+        sys.stdout.write("No fields to encrypt (already encrypted or not found).\n")
+        return 0
+    if do_backup:
+        import shutil as _sh
+        _sh.copy2(path, path + ".bak")
+    atomic_write_text(path, "".join(lines))
+    sys.stdout.write("Encrypted %d field value(s) in %s.\n" % (total_changed, path))
+    return 0
+
+
+def command_decrypt(args):
+    import re as _re
+    path = args.path
+    fields_filter = set(args.fields or [])
+    key_env = getattr(args, "key_env", "LIFETXT_KEY")
+    dry_run = getattr(args, "dry_run", False)
+    do_backup = getattr(args, "backup", False)
+    passphrase = os.environ.get(key_env, "")
+    if not passphrase:
+        sys.stderr.write("ERROR: Passphrase not set. Set environment variable %s.\n" % key_env)
+        return 1
+    text = read_text(path)
+    lines = text.splitlines(keepends=True)
+    total_changed = 0
+    errors = 0
+    ENC_RE = _re.compile(r"\b([\w-]+):(enc:XSK:[A-Za-z0-9+/=]+)")
+    for i, line in enumerate(lines):
+        new_line = line
+        for m in ENC_RE.finditer(line):
+            field_key = m.group(1)
+            enc_val = m.group(2)
+            if fields_filter and field_key not in fields_filter:
+                continue
+            try:
+                plaintext = _xsk_decrypt(enc_val, passphrase)
+                new_line = new_line.replace(enc_val, plaintext, 1)
+                total_changed += 1
+            except ValueError as exc:
+                sys.stderr.write("WARNING: line %d field %r: %s\n" % (i + 1, field_key, exc))
+                errors += 1
+        lines[i] = new_line
+    if dry_run:
+        sys.stdout.write("[dry-run] Would decrypt %d field value(s) in %s.\n" % (total_changed, path))
+        return 0
+    if total_changed == 0:
+        sys.stdout.write("No encrypted fields found.\n")
+        return 1 if errors else 0
+    if do_backup:
+        import shutil as _sh
+        _sh.copy2(path, path + ".bak")
+    atomic_write_text(path, "".join(lines))
+    sys.stdout.write("Decrypted %d field value(s) in %s.\n" % (total_changed, path))
+    return 1 if errors else 0

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28 (updated x33)
+Last updated: 2026-06-28T18:00 (updated x34)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -194,9 +194,9 @@ CLI-native charts without external dependencies.
 
 ### Item Input Form (Web UI)
 
-- [ ] Improve `importRawLine()` parser: handle all field types (multi-value,
-  quoted values, `body:` continuation) so complex raw lines populate the
-  form faithfully (current regex-based split is best-effort for simple lines).
+- [ ] Improve `importRawLine()` further: call `/api/items/parse` (or inline
+  parse via `/api/check-line` response) to return a fully parsed item object
+  and populate the form from that instead of client-side regex.
 
 ### Record Display (Web UI)
 
@@ -235,55 +235,59 @@ CLI-native charts without external dependencies.
   prompt the user to re-enable notifications in browser settings rather than
   silently failing on the retry attempt.
 
-- [ ] Improve "clear preset" × button visibility: currently the button is always
-  visible in the toolbar; hide it when no preset is stored in localStorage by
-  wiring `updatePresetClearBtn()` to `applyViewPreset` and page load.
+- [ ] Preset toolbar: show the currently active preset name as text next to
+  the × button so it is clear which preset is applied at a glance.
+
+### New WebUI Improvements (Web UI) — Proposed
+
+- [ ] Add item search highlight: wrap matched search terms in `<mark>` tags in
+  the item title and detail text when a `?text=` filter is active.
+
+- [ ] Add "Duplicate item" action to context menu and drawer: pre-fills the
+  editor with the selected item's fields and a blank status `[ ]` so the user
+  can tweak and save without re-typing.
+
+- [ ] Add bulk-action toolbar: when multiple items are selected (checkbox on
+  hover), show a "Mark done" / "Delete" / "Set project" action bar above the
+  list. Implement selection state in JS without modifying the API.
+
+- [ ] Add keyboard shortcut `g` to jump to a specific line number in the
+  current file — shows a small prompt input, then loads `?line=N` on Enter.
+
+- [ ] Add `?line=N` deep-link resolution on page load: if the URL contains
+  `?line=N`, automatically open the drawer for that item after the initial
+  load so shared links work immediately.
+
+- [ ] Add item-count badge to status filter buttons showing how many items
+  match each status (`○ Open (12)`, `✓ Done (45)`) — requires a lightweight
+  summary count from the API or computed client-side from current items.
 
 ### Git Integration (Web API)
 
 ### Quick-filter & Navigation (Web UI)
 
-- [ ] Add `GET /api/git/log` pagination: the current `?n=` cap is 50;
-  add a "Show more" link in the git modal to load older commits.
+- [ ] Git log modal: add a commit-count badge in the modal header showing
+  the total number of commits (requires a `?count=true` API parameter).
 
 ### Context Menu & Dark Mode (Web UI) — New
 
-- [ ] Wire dark mode toggle to system color-scheme change events:
-  add a `matchMedia('prefers-color-scheme: dark').addEventListener('change',...)`
-  listener so the UI auto-switches when the OS theme changes at runtime.
-
-- [ ] Add keyboard shortcut for dark mode toggle (e.g., `d` key) and add
-  entry to help modal table.
-
-- [ ] Context menu: add "Copy line number" and "Open raw file" entries;
-  "Open raw file" could use `file://` URI on desktop or show a path toast.
+- [ ] Context menu: add "Open raw file" entry that shows the file path in a
+  toast (or `file://` URI on desktop browsers).
 
 ### Stats & Charts (Web UI) — New
 
-- [ ] Wire `/api/stats/summary` endpoint to the Stats panel: show by_type
-  and by_status breakdowns alongside the existing project mini-table.
-
-- [ ] Chart Y-axis label: when group=weekly/monthly, annotate the Y-axis
-  as "completions / week" or "completions / month" rather than raw count.
-
-- [ ] Add export button to charts: "Download CSV" that serializes the
-  current chart labels+datasets as a CSV file (client-side Blob download).
+- [ ] Stats breakdown: add date-range filter (`from`/`to`) inputs to the stats
+  breakdown panel so by_type/by_status counts reflect the current filter window.
 
 ### Drawer Improvements (Web UI) — New
 
-- [ ] Drawer: add "Share" button that copies a `?line=N` deep-link URL to
-  clipboard so the user can share a direct link to a specific item.
-
-- [ ] Drawer: show full item type name (e.g., "Task" not "T") next to the
-  type badge, with a tooltip explaining what each type does.
+- [ ] Drawer: add a "Copy as Markdown" button that formats the item as a
+  Markdown checklist entry (`- [x] Title — due: DATE, project: P`) for pasting.
 
 ### Agenda & Notifications (Web UI) — New
 
-- [ ] Agenda: add "view all" link below the truncated agenda list that
-  sets `agenda_limit` to 0 (unlimited) and reloads.
-
-- [ ] Notification: show delivery time relative to "now" (e.g., "5 min ago")
-  in the notification row pill instead of the raw timestamp.
+- [ ] Agenda: add a compact "agenda_limit" spinner in the toolbar so users
+  can set the cap without editing the URL manually.
 
 ### MCP Support
 

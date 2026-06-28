@@ -2377,12 +2377,12 @@ HTML_PAGE = r"""<!doctype html>
         <span class="hint">q or Escape to close</span>
       </div>
       <div class="filter-bar" id="status-filter-bar">
-        <button class="filter-btn active" onclick="setStatusFilter('')">All</button>
-        <button class="filter-btn" onclick="setStatusFilter('[ ]')">○ Open</button>
-        <button class="filter-btn" onclick="setStatusFilter('[/]')">◑ In Progress</button>
-        <button class="filter-btn" onclick="setStatusFilter('[x]')">✓ Done</button>
-        <button class="filter-btn" onclick="setStatusFilter('[-]')">✕ Cancelled</button>
-        <button class="filter-btn" onclick="setBlockedFilter()" title="Items blocked by open dependencies">⚡ Blocked</button>
+        <button class="filter-btn" data-status="" onclick="setStatusFilter('')">All</button>
+        <button class="filter-btn" data-status="[ ]" onclick="toggleStatusFilter('[ ]')">○ Open</button>
+        <button class="filter-btn" data-status="[/]" onclick="toggleStatusFilter('[/]')">◑ In Progress</button>
+        <button class="filter-btn" data-status="[x]" onclick="toggleStatusFilter('[x]')">✓ Done</button>
+        <button class="filter-btn" data-status="[-]" onclick="toggleStatusFilter('[-]')">✕ Cancelled</button>
+        <button class="filter-btn" data-status="__blocked__" onclick="toggleBlockedFilter()" title="Items blocked by open dependencies">⚡ Blocked</button>
       </div>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
@@ -2405,10 +2405,12 @@ HTML_PAGE = r"""<!doctype html>
         <button class="chart-group-btn active" onclick="setChartGroup('daily',this)">Daily</button>
         <button class="chart-group-btn" onclick="setChartGroup('weekly',this)">Weekly</button>
         <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
+        <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV">↓ CSV</button>
       </div>
       <div id="chart-container" style="padding:.75rem 1rem">
         <div class="chart-panel"><canvas id="main-chart"></canvas></div>
       </div>
+      <div id="stats-breakdown" style="display:none;padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
     </section>
     <div class="side">
       <section class="editor-section">
@@ -2479,6 +2481,7 @@ HTML_PAGE = r"""<!doctype html>
         <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
         <button class="secondary" onclick="drawerEdit()">Edit</button>
         <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
+        <button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>
         <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
         <button class="secondary" onclick="closeDrawer()">✕</button>
       </div>
@@ -2494,6 +2497,8 @@ HTML_PAGE = r"""<!doctype html>
     <div class="ctx-item" onclick="ctxMarkDone()" id="ctx-done">Mark Done</div>
     <div class="ctx-item" onclick="ctxCopyTitle()">Copy Title</div>
     <div class="ctx-item" onclick="ctxCopyId()">Copy ID</div>
+    <div class="ctx-item" onclick="ctxCopyLineNumber()">Copy Line Number</div>
+    <div class="ctx-item" onclick="ctxShareLink()">Copy Link</div>
     <hr class="ctx-sep">
     <div class="ctx-item" onclick="ctxOpenDrawer()">Open in Drawer</div>
     <div class="ctx-item" onclick="ctxEdit()">Edit</div>
@@ -2511,6 +2516,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
         <tr><td>r</td><td>Refresh all</td></tr>
         <tr><td>s</td><td>Toggle statistics panel</td></tr>
+        <tr><td>d</td><td>Toggle dark mode</td></tr>
         <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
         <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
@@ -2758,6 +2764,11 @@ HTML_PAGE = r"""<!doctype html>
       "[ ]": "open", "[/]": "active", "[x]": "done",
       "[-]": "cancelled", "[>]": "deferred", "[?]": "maybe", "[N]": "note",
     };
+    const ITEM_TYPE_NAMES = {
+      T: "Task", H: "Habit", E: "Event", R: "Reminder",
+      J: "Journal", S: "Status", M: "Message", N: "Note",
+      G: "Goal", P: "Project", K: "Checklist", L: "Log",
+    };
     function dueSoonDays() {
       return Number((appConfig?.web?.due_soon_days) ?? 3);
     }
@@ -2872,6 +2883,7 @@ HTML_PAGE = r"""<!doctype html>
         node.addEventListener("click", (e) => {
           if (e.target.closest(".ref-link")) return;
           selectItem(item);
+          openDrawer(item);
         });
         node.addEventListener("contextmenu", (e) => openCtxMenu(e, item));
         node.innerHTML = `
@@ -2908,7 +2920,8 @@ HTML_PAGE = r"""<!doctype html>
         : "This item comes from a read-only input or generated file.";
       setEditorDisabled(!item.editable);
       renderItems(currentItems);
-      openDrawer(item);
+      // NOTE: openDrawer is NOT called here intentionally.
+      // Callers that want to open the drawer should call openDrawer() explicitly.
     }
     function newItem() {
       selectedItem = null;
@@ -2976,13 +2989,24 @@ HTML_PAGE = r"""<!doctype html>
       const data = await api(`/api/agenda?${agendaParams}`);
       const node = document.getElementById("agenda");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No agenda items.</div>`;
-      const maxAgenda = Number(firstParam(query(), ["agenda_limit"], "8"));
-      for (const record of data.records.slice(0, Number.isFinite(maxAgenda) ? maxAgenda : 8)) {
+      const agendaLimitRaw = firstParam(query(), ["agenda_limit"], "8");
+      const maxAgenda = Number(agendaLimitRaw);
+      const unlimitedAgenda = agendaLimitRaw === "0" || maxAgenda === 0;
+      const limit = unlimitedAgenda ? Infinity : (Number.isFinite(maxAgenda) && maxAgenda > 0 ? maxAgenda : 8);
+      const shown = unlimitedAgenda ? data.records : data.records.slice(0, limit);
+      for (const record of shown) {
         const dueCls = agendaDueSoonClass(record);
         const borderStyle = dueCls === "overdue" ? "border-left:3px solid #c0392b;" : dueCls === "due-soon" ? "border-left:3px solid #e67e22;" : "";
         node.insertAdjacentHTML(
           "beforeend",
           `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
+        );
+      }
+      if (!unlimitedAgenda && data.records.length > limit) {
+        const remaining = data.records.length - limit;
+        node.insertAdjacentHTML(
+          "beforeend",
+          `<div style="padding:.3rem .45rem"><a href="#" class="drawer-link" onclick="event.preventDefault();setAgendaLimit(0)">View all ${data.records.length} (${remaining} more)</a></div>`
         );
       }
       updateAgendaOverdueBadge(data.records);
@@ -3043,9 +3067,11 @@ HTML_PAGE = r"""<!doctype html>
           </div>
         ` : "";
         const stateBadge = notifStateBadge(record);
+        const relTime = record.when ? relativeTime(record.when) : "";
+        const whenDisplay = relTime ? `${escapeHtml(record.when)} <span style="color:var(--muted);font-size:.8em">(${escapeHtml(relTime)})</span>` : escapeHtml(record.when);
         node.insertAdjacentHTML(
           "beforeend",
-          `<div class="notification-row"><span class="pill">${escapeHtml(record.when)}</span>${stateBadge}<div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} → ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
+          `<div class="notification-row"><span class="pill">${whenDisplay}</span>${stateBadge}<div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} → ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
         );
         showBrowserNotification(record);
       }
@@ -3164,6 +3190,7 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "q") { e.preventDefault(); toggleQuickAdd(); return; }
       if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
+      if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
     });
 
     // ── Help modal ─────────────────────────────────────────────────
@@ -3194,8 +3221,10 @@ HTML_PAGE = r"""<!doctype html>
       const statusCls = STATUS_CLASS[item.status] || "status-note";
       const statusLbl = STATUS_LABEL[item.status] || item.status;
       const typeCls = "type-" + (item.type || "N");
+      const typeFullName = ITEM_TYPE_NAMES[item.type] || item.type;
       title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(statusLbl)}</span>
-        <span class="type-badge ${typeCls}" style="margin-left:.35rem">${escapeHtml(item.type)}</span>
+        <span class="type-badge ${typeCls}" style="margin-left:.35rem" title="${escapeHtml(typeFullName)}">${escapeHtml(item.type)}</span>
+        <span style="margin-left:.25rem;font-size:.78rem;color:var(--muted)">${escapeHtml(typeFullName)}</span>
         <span style="margin-left:.4rem;font-weight:700">${escapeHtml(item.title)}</span>`;
       doneBt.disabled = !item.editable || isDone;
       delBt.disabled = !item.editable;
@@ -3415,11 +3444,14 @@ HTML_PAGE = r"""<!doctype html>
     // ── Notification permission state display ──────────────────────
     function updateNotifPermissionDisplay() {
       const bar = document.getElementById("notif-permission-bar");
-      const badge = document.getElementById("notif-permission-badge");
       if (!("Notification" in window)) { if (bar) { bar.textContent = "Browser notifications not supported."; bar.style.display = ""; } return; }
       const perm = Notification.permission;
       const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
-      const labels = {granted: "Notifications: granted", denied: "Notifications: denied — check browser settings", default: "Notifications: not yet requested"};
+      const labels = {
+        granted: "Notifications: granted",
+        denied: "Notifications: blocked — open browser settings → Site permissions → Notifications to re-enable",
+        default: "Notifications: not yet requested",
+      };
       if (bar) {
         bar.className = "notif-permission " + (classes[perm] || "");
         bar.textContent = labels[perm] || perm;
@@ -3505,9 +3537,38 @@ HTML_PAGE = r"""<!doctype html>
       statsVisible = !statsVisible;
       const sec = document.querySelector(".stats-section");
       if (sec) sec.style.display = statsVisible ? "" : "none";
-      if (statsVisible) loadChart("tasks");
+      if (statsVisible) { loadChart("tasks"); loadStatsBreakdown(); }
       const btn = document.getElementById("stats-btn");
       if (btn) btn.classList.toggle("btn-active", statsVisible);
+    }
+
+    async function loadStatsBreakdown() {
+      const el = document.getElementById("stats-breakdown");
+      if (!el) return;
+      try {
+        const data = await api("/api/stats/summary");
+        const STATUS_EMOJI = {"[ ]": "○", "[/]": "◑", "[x]": "✓", "[-]": "✕", "[>]": "→"};
+        const typeRows = Object.entries(data.by_type || {})
+          .sort((a,b) => b[1]-a[1])
+          .map(([k,v]) => `<div style="display:flex;justify-content:space-between"><span>${escapeHtml(ITEM_TYPE_NAMES[k]||k)}</span><span style="color:var(--muted)">${v}</span></div>`)
+          .join("");
+        const statusRows = Object.entries(data.by_status || {})
+          .sort((a,b) => b[1]-a[1])
+          .map(([k,v]) => `<div style="display:flex;justify-content:space-between"><span>${escapeHtml(STATUS_EMOJI[k]||"")} ${escapeHtml(STATUS_LABEL[k]||k)}</span><span style="color:var(--muted)">${v}</span></div>`)
+          .join("");
+        el.innerHTML = `
+          <div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Type</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${typeRows || "<em>none</em>"}</div>
+          </div>
+          <div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Status</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${statusRows || "<em>none</em>"}</div>
+          </div>`;
+        el.style.display = "grid";
+      } catch(e) {
+        if (el) el.style.display = "none";
+      }
     }
 
     function toggleNotifPanel() {
@@ -3575,7 +3636,16 @@ HTML_PAGE = r"""<!doctype html>
             responsive: true,
             maintainAspectRatio: false,
             plugins: {legend: {position: "top"}},
-            scales: {y: {beginAtZero: true}},
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: GROUP_SUPPORTED.has(type) && currentChartGroup !== "daily",
+                  text: currentChartGroup === "weekly" ? "completions / week"
+                      : currentChartGroup === "monthly" ? "completions / month" : "",
+                },
+              },
+            },
           },
         });
       } catch(err) {
@@ -3655,6 +3725,24 @@ HTML_PAGE = r"""<!doctype html>
       await loadChart(type);
     }
 
+    function exportChartCsv() {
+      if (!mainChart) { showToast("No chart data to export.", "error"); return; }
+      const labels = mainChart.data.labels || [];
+      const datasets = mainChart.data.datasets || [];
+      const header = ["label", ...labels].join(",");
+      const rows = datasets.map(ds => {
+        const vals = (ds.data || []).map(v => v == null ? "" : String(v));
+        return [JSON.stringify(ds.label || ""), ...vals].join(",");
+      });
+      const csv = [header, ...rows].join("\n");
+      const blob = new Blob([csv], {type: "text/csv"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `lifetxt-chart-${currentChartType}-${currentChartGroup}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
     const CHART_COLORS = ["#256b5f","#e07b54","#4a7db5","#8e6bbf","#b5a14a","#5aa876","#c0524a"];
 
     function ensureChartJs() {
@@ -3668,11 +3756,24 @@ HTML_PAGE = r"""<!doctype html>
       });
     }
 
-    // ── Status quick-filter buttons ───────────────────────────────
-    function syncStatusFilterBtns(activeValue) {
-      const btns = document.querySelectorAll("#status-filter-bar .filter-btn");
-      const values = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
-      btns.forEach((btn, i) => btn.classList.toggle("active", values[i] === activeValue));
+    // ── Status quick-filter buttons (multi-select) ────────────────
+    function syncStatusFilterBtns(activeValues) {
+      // activeValues: string (single legacy) OR Set/Array of strings OR "__blocked__"
+      const params = query();
+      const isBlocked = params.get("blocked") === "true";
+      const rawStatus = params.get("status") || "";
+      const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
+      document.querySelectorAll("#status-filter-bar .filter-btn").forEach(btn => {
+        const sv = btn.dataset.status;
+        if (sv === "") {
+          // "All" is active when nothing else is selected and not blocked
+          btn.classList.toggle("active", !isBlocked && selected.size === 0);
+        } else if (sv === "__blocked__") {
+          btn.classList.toggle("active", isBlocked);
+        } else {
+          btn.classList.toggle("active", selected.has(sv));
+        }
+      });
     }
 
     // ── Search result count ────────────────────────────────────────
@@ -3709,6 +3810,7 @@ HTML_PAGE = r"""<!doctype html>
       applyPresetToUrl();
       applyUrlToControls();
       syncStatusFilterBarsFromUrl();
+      updatePresetClearBtn();
       refreshAll();
     }
 
@@ -3742,6 +3844,25 @@ HTML_PAGE = r"""<!doctype html>
       if (!drawerItem || !currentItems.length) return;
       const idx = currentItems.findIndex(i => i.line === drawerItem.line);
       if (idx >= 0 && idx < currentItems.length - 1) openDrawer(currentItems[idx + 1]);
+    }
+
+    // ── Relative time display ─────────────────────────────────────
+    function relativeTime(isoString) {
+      if (!isoString) return "";
+      const d = new Date(isoString);
+      if (isNaN(d)) return "";
+      const diff = Date.now() - d.getTime();
+      const absDiff = Math.abs(diff);
+      const future = diff < 0;
+      const mins = Math.floor(absDiff / 60000);
+      const hours = Math.floor(absDiff / 3600000);
+      const days = Math.floor(absDiff / 86400000);
+      let label;
+      if (mins < 1) label = "just now";
+      else if (mins < 60) label = `${mins} min${mins > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      else if (hours < 24) label = `${hours} hr${hours > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      else label = `${days} day${days > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      return label;
     }
 
     // ── Notification row state display ────────────────────────────
@@ -3811,71 +3932,117 @@ HTML_PAGE = r"""<!doctype html>
     // ── Status filter bar URL sync + `<`/`>` keyboard cycle ──────
     const STATUS_CYCLE = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
     function syncStatusFilterBarsFromUrl() {
-      const params = query();
-      const statusParam = params.get("status");
-      const isBlocked = params.get("blocked") === "true";
-      const active = isBlocked ? "__blocked__" : (statusParam || "");
-      syncStatusFilterBtns(active);
+      syncStatusFilterBtns();
     }
     function cycleStatusFilter(direction) {
       const params = query();
-      const statusParam = params.get("status");
+      const rawStatus = params.get("status") || "";
       const isBlocked = params.get("blocked") === "true";
-      const current = isBlocked ? "__blocked__" : (statusParam || "");
+      // For cycling, treat multi-select as the first active value (or "All")
+      const selected = rawStatus.split(",").map(s => s.trim()).filter(Boolean);
+      const current = isBlocked ? "__blocked__" : (selected.length === 1 ? selected[0] : "");
       const idx = STATUS_CYCLE.indexOf(current);
       const next = STATUS_CYCLE[(idx + direction + STATUS_CYCLE.length) % STATUS_CYCLE.length];
       if (next === "__blocked__") {
-        setBlockedFilter();
+        // Force blocked on (not toggle) for keyboard cycling
+        const params = query();
+        params.delete("status");
+        params.set("blocked", "true");
+        params.set("open_only", "true");
+        document.getElementById("open-only").checked = true;
+        history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+        loadItems();
+        syncStatusFilterBtns();
       } else {
         setStatusFilter(next);
       }
     }
 
-    // ── Blocked filter: use server-side ?blocked=true ─────────────
-    function setBlockedFilter() {
-      const params = query();
-      params.delete("status");
-      params.set("blocked", "true");
-      params.set("open_only", "true");
-      document.getElementById("open-only").checked = true;
-      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-      loadItems();
-      syncStatusFilterBtns("__blocked__");
-    }
-
-    // ── setStatusFilter: clear blocked when switching to non-blocked ──
+    // ── setStatusFilter: "All" button — clears everything ────────
     function setStatusFilter(statusValue) {
       const params = query();
       params.delete("blocked");
-      if (statusValue) {
-        params.set("status", statusValue);
-        params.delete("open_only");
-        document.getElementById("open-only").checked = false;
+      params.delete("status");
+      params.delete("open_only");
+      document.getElementById("open-only").checked = false;
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    // ── toggleStatusFilter: multi-select individual statuses ──────
+    function toggleStatusFilter(statusValue) {
+      const params = query();
+      params.delete("blocked");
+      params.delete("open_only");
+      document.getElementById("open-only").checked = false;
+      const rawStatus = params.get("status") || "";
+      const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
+      if (selected.has(statusValue)) {
+        selected.delete(statusValue);
       } else {
+        selected.add(statusValue);
+      }
+      if (selected.size === 0) {
         params.delete("status");
+      } else {
+        params.set("status", [...selected].join(","));
       }
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       applyUrlToControls();
       loadItems();
-      syncStatusFilterBtns(statusValue);
+      syncStatusFilterBtns();
     }
 
-    // ── Git log display after commit ──────────────────────────────
-    async function loadGitLog() {
+    // ── toggleBlockedFilter: toggle blocked filter ────────────────
+    function toggleBlockedFilter() {
+      const params = query();
+      const isBlocked = params.get("blocked") === "true";
+      if (isBlocked) {
+        // Turn off blocked filter → go to All
+        params.delete("blocked");
+        params.delete("status");
+        params.delete("open_only");
+        document.getElementById("open-only").checked = false;
+      } else {
+        params.delete("status");
+        params.set("blocked", "true");
+        params.set("open_only", "true");
+        document.getElementById("open-only").checked = true;
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    // ── Git log display ───────────────────────────────────────────
+    let _gitLogOffset = 0;
+    const GIT_LOG_PAGE = 10;
+    async function loadGitLog(reset) {
       if (!appConfig?.git?.enable_api) return;
+      if (reset !== false) _gitLogOffset = 0;
       try {
-        const data = await api("/api/git/log?n=3");
+        const n = _gitLogOffset + GIT_LOG_PAGE;
+        const data = await api(`/api/git/log?n=${n}`);
         const commits = data.commits || [];
         if (!commits.length) return;
-        let html = `<div style="margin-top:.5rem"><div class="drawer-section-title" style="font-size:.72rem">Recent commits</div>`;
-        for (const c of commits) {
+        const shown = commits.slice(0, n);
+        const hasMore = commits.length >= n;
+        const container = document.getElementById("git-log-container");
+        const target = container || document.getElementById("git-output");
+        if (!target) return;
+        let html = `<div id="git-log-container" style="margin-top:.5rem">
+          <div class="drawer-section-title" style="font-size:.72rem">Recent commits (${shown.length})</div>`;
+        for (const c of shown) {
           html += `<div class="git-log-entry"><span class="git-log-hash">${escapeHtml(c.hash)}</span><span class="git-log-msg">${escapeHtml(c.message)}</span></div>`;
         }
-        html += `</div>`;
-        const out = document.getElementById("git-output");
-        if (out) {
-          out.insertAdjacentHTML("afterend", html);
+        if (hasMore) {
+          html += `<div style="margin-top:.3rem"><a href="#" class="drawer-link" onclick="event.preventDefault();_gitLogOffset+=10;loadGitLog(false)">Show more…</a></div>`;
         }
+        html += `</div>`;
+        if (container) container.outerHTML = html;
+        else target.insertAdjacentHTML("afterend", html);
       } catch(_) {}
     }
 
@@ -3944,15 +4111,33 @@ HTML_PAGE = r"""<!doctype html>
           showToast("Invalid: " + (errs[0]?.message || "parse error"), "error");
           return;
         }
-        // Parse fields from the raw line
-        const m = line.match(/^(\[.\])\s+(\w+)\s+(\S+)([\s\S]*)$/);
+        // Parse status + type + title from head; rest is detail key:value pairs
+        const m = line.match(/^(\[.\])\s+(\w+)\s+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\S+)([\s\S]*)$/);
         if (!m) { showToast("Could not parse line structure.", "error"); return; }
-        const [, status, type, title, rest] = m;
+        const [, status, type, titleRaw, rest] = m;
+        // Strip surrounding quotes from title if present
+        const title = titleRaw.startsWith('"') || titleRaw.startsWith("'")
+          ? titleRaw.slice(1, -1).replace(/\\_/g, "_").replace(/_/g, " ")
+          : titleRaw.replace(/_/g, " ");
         document.getElementById("edit-status").value = status;
         document.getElementById("edit-type").value = type;
-        document.getElementById("edit-title").value = title.replace(/_/g, " ");
-        const detailsRaw = rest.trim().replace(/\s{2,}/g, "\n").trim();
-        document.getElementById("edit-details").value = detailsRaw.replace(/(\w+):(?=\S)/g, "$1:");
+        document.getElementById("edit-title").value = title;
+        // Parse detail fields: split on whitespace-separated key:value, handling quoted values
+        const fieldTokens = rest.trim().match(/\w+:(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\S+)/g) || [];
+        const detailLines = [];
+        let bodyLines = [];
+        for (const tok of fieldTokens) {
+          const colon = tok.indexOf(":");
+          const key = tok.slice(0, colon);
+          let val = tok.slice(colon + 1);
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (key === "body") { bodyLines.push(val.replace(/\\n/g, "\n")); }
+          else { detailLines.push(`${key}:${val}`); }
+        }
+        if (bodyLines.length) detailLines.push("body:" + bodyLines.join(" ").split("\n").join("\n| "));
+        document.getElementById("edit-details").value = detailLines.join("\n");
         updateTypeHints(type);
         toggleImportRaw(false);
         if (input) input.value = "";
@@ -3970,6 +4155,15 @@ HTML_PAGE = r"""<!doctype html>
       if (dark) document.documentElement.setAttribute("data-theme", "dark");
       const btn = document.getElementById("dark-btn");
       if (btn) btn.textContent = dark ? "☀️" : "🌙";
+      // Auto-follow OS theme when user has not explicitly set a preference
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(ev) {
+        if (localStorage.getItem("lifetxt_dark") !== null) return;
+        const wantsDark = ev.matches;
+        if (wantsDark) document.documentElement.setAttribute("data-theme", "dark");
+        else document.documentElement.removeAttribute("data-theme");
+        const b = document.getElementById("dark-btn");
+        if (b) b.textContent = wantsDark ? "☀️" : "🌙";
+      });
     })();
     function toggleDarkMode() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
@@ -4017,6 +4211,44 @@ HTML_PAGE = r"""<!doctype html>
       );
     }
 
+    // ── Drawer: share deep-link ────────────────────────────────────
+    function drawerShareLink() {
+      if (!drawerItem) return;
+      const url = location.origin + location.pathname + "?line=" + encodeURIComponent(drawerItem.line);
+      navigator.clipboard.writeText(url).then(
+        () => showToast("Link copied: ?line=" + drawerItem.line, "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+
+    // ── Context menu: copy line number + share link ───────────────
+    function ctxCopyLineNumber() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      navigator.clipboard.writeText(String(t.line)).then(
+        () => showToast("Line " + t.line + " copied.", "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+    function ctxShareLink() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      const url = location.origin + location.pathname + "?line=" + encodeURIComponent(t.line);
+      navigator.clipboard.writeText(url).then(
+        () => showToast("Link copied: ?line=" + t.line, "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+
+    // ── Agenda: "view all" — set agenda_limit to 0 ───────────────
+    function setAgendaLimit(n) {
+      const params = query();
+      if (n === 0) params.delete("agenda_limit");
+      else params.set("agenda_limit", String(n));
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadAgenda();
+    }
+
     // ── Context menu ──────────────────────────────────────────────
     let ctxTarget = null;
     function openCtxMenu(e, item) {
@@ -4035,13 +4267,29 @@ HTML_PAGE = r"""<!doctype html>
       if (menu) menu.style.display = "none";
       ctxTarget = null;
     }
-    document.addEventListener("click", closeCtxMenu);
+    document.addEventListener("click", function(e) {
+      const menu = document.getElementById("ctx-menu");
+      if (menu && !menu.contains(e.target)) closeCtxMenu();
+    });
+    document.addEventListener("contextmenu", function(e) {
+      // Close menu if right-clicking outside of an item row
+      if (!e.target.closest(".item")) closeCtxMenu();
+    });
     document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeCtxMenu(); }, true);
-    function ctxMarkDone() {
-      closeCtxMenu();
-      if (!ctxTarget) return;
-      selectItem(ctxTarget);
-      drawerMarkDone();
+    async function ctxMarkDone() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t || !t.editable) return;
+      try {
+        await api(`/api/items/${t.line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({status: "[x]", type: t.type, title: t.title, details: t.details || {}}),
+        });
+        showToast("Marked done.", "success");
+        await refreshAll();
+      } catch(e) {
+        showToast("Failed: " + e.message, "error");
+      }
     }
     function ctxCopyTitle() {
       const t = ctxTarget; closeCtxMenu();

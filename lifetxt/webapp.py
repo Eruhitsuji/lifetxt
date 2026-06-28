@@ -141,6 +141,7 @@ def create_app(paths=None, writable_path=None, config=None):
     @app.get("/api/items")
     def get_items(
         open_only=False,
+        blocked=False,
         status=None,
         kind=None,
         type_value=Query(None, alias="type"),
@@ -168,7 +169,7 @@ def create_app(paths=None, writable_path=None, config=None):
         range_start, range_end = parse_optional_time_range(after, before)
         filtered = filter_items(
             items,
-            open_only=open_only,
+            open_only=open_only or bool(blocked and blocked != "false"),
             statuses=_csv_values(status),
             kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
@@ -191,6 +192,21 @@ def create_app(paths=None, writable_path=None, config=None):
             team_aliases=config_team_aliases(app.state.config),
             tag_aliases=config_tag_aliases(app.state.config),
         )
+        if blocked and blocked != "false":
+            from .links import dependency_blocker_records
+            key = id_key_from_config(app.state.config)
+            blocker_records = dependency_blocker_records(items, key=key)
+            blocked_item_ids = set(
+                r["blocked_id"] for r in blocker_records if r.get("blocked_id")
+            )
+            blocked_lines = set(
+                r["blocked_line"] for r in blocker_records if r.get("blocked_line") is not None
+            )
+            filtered = [
+                item for item in filtered
+                if (item.details.get(key) and str(item.details[key][0]) in blocked_item_ids)
+                or (item.line is not None and item.line in blocked_lines)
+            ]
         filtered = sort_items(filtered, sort, order)
         filtered = limit_items(filtered, limit)
         return items_response(
@@ -463,6 +479,19 @@ def create_app(paths=None, writable_path=None, config=None):
     def git_push(request: Request):
         _git_guard(request)
         return _run_git(["git", "push"])
+
+    @app.get("/api/git/log")
+    def git_log(request: Request, n: int = 5):
+        _git_guard(request)
+        n = min(max(1, n), 50)
+        result = _run_git(["git", "log", "--pretty=format:%H\t%s\t%ai", "-%d" % n])
+        commits = []
+        if result.get("ok") and result.get("stdout"):
+            for line in result["stdout"].strip().splitlines():
+                parts = line.split("\t", 2)
+                if len(parts) >= 2:
+                    commits.append({"hash": parts[0][:8], "message": parts[1], "date": parts[2] if len(parts) > 2 else ""})
+        return {"commits": commits, "ok": result.get("ok", False)}
 
     @app.get("/api/agenda")
     def get_agenda(
@@ -2090,6 +2119,25 @@ HTML_PAGE = r"""<!doctype html>
     #view-preset-select { font-size: .82rem; padding: .2rem .4rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--bg); color: var(--text); cursor: pointer; }
     /* ── Search result count ──────────────────────────────────────── */
     #search-count { font-size: .77rem; color: var(--muted); margin-left: .35rem; white-space: nowrap; }
+    /* ── Heatmap tooltip ─────────────────────────────────────────── */
+    .hm-tooltip { position:fixed; background:rgba(0,0,0,.78); color:#fff; font-size:.75rem; padding:.25rem .55rem; border-radius:.3rem; pointer-events:none; z-index:9999; display:none; }
+    /* ── Chart group buttons ─────────────────────────────────────── */
+    .chart-group-bar { display:flex; gap:.25rem; padding:.25rem 1rem; border-bottom:1px solid var(--line); }
+    .chart-group-btn { font-size:.73rem; padding:.15rem .5rem; border:1px solid var(--line); border-radius:1rem; background:var(--bg); cursor:pointer; color:var(--text); }
+    .chart-group-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    /* ── Notification inline snooze ──────────────────────────────── */
+    .snooze-inline { display:inline-flex; gap:.25rem; align-items:center; margin-left:.25rem; }
+    .snooze-inline input { width:4.5rem; font-size:.77rem; padding:.1rem .35rem; border:1px solid var(--line); border-radius:.3rem; background:var(--bg); }
+    /* ── Git log in modal ───────────────────────────────────────── */
+    .git-log-entry { display:flex; gap:.5rem; font-size:.77rem; padding:.15rem 0; border-bottom:1px dashed var(--line); }
+    .git-log-hash { font-family:monospace; color:var(--muted); min-width:4.5rem; }
+    .git-log-msg { flex:1; }
+    /* ── Editor import raw ───────────────────────────────────────── */
+    #import-raw-row { display:none; margin-top:.5rem; }
+    #import-raw-input { width:100%; font-family:monospace; font-size:.8rem; }
+    /* ── Heatmap month labels ────────────────────────────────────── */
+    .heatmap-months { display:grid; grid-template-columns:repeat(53,1fr); gap:2px; margin-bottom:.2rem; }
+    .heatmap-month-cell { font-size:.6rem; color:var(--muted); text-align:center; }
     .source { color: var(--muted); font-size: .78rem; white-space: nowrap; }
     .side { display: grid; gap: 1rem; align-content: start; min-width: 0; }
     form.stack { grid-template-columns: 1fr 1fr; }
@@ -2259,7 +2307,7 @@ HTML_PAGE = r"""<!doctype html>
         <button class="filter-btn" onclick="setStatusFilter('[/]')">◑ In Progress</button>
         <button class="filter-btn" onclick="setStatusFilter('[x]')">✓ Done</button>
         <button class="filter-btn" onclick="setStatusFilter('[-]')">✕ Cancelled</button>
-        <button class="filter-btn" onclick="setBlockedFilter()">⚡ Blocked</button>
+        <button class="filter-btn" onclick="setBlockedFilter()" title="Items blocked by open dependencies">⚡ Blocked</button>
       </div>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
@@ -2277,6 +2325,11 @@ HTML_PAGE = r"""<!doctype html>
         <button class="chart-tab" onclick="showChart('habits-heatmap', this)">Heatmap</button>
         <button class="chart-tab" onclick="showChart('mood', this)">Mood</button>
         <button class="chart-tab" onclick="showChart('elapsed', this)">Elapsed</button>
+      </div>
+      <div class="chart-group-bar" id="chart-group-bar" style="display:none">
+        <button class="chart-group-btn active" onclick="setChartGroup('daily',this)">Daily</button>
+        <button class="chart-group-btn" onclick="setChartGroup('weekly',this)">Weekly</button>
+        <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
       </div>
       <div id="chart-container" style="padding:.75rem 1rem">
         <div class="chart-panel"><canvas id="main-chart"></canvas></div>
@@ -2309,9 +2362,19 @@ HTML_PAGE = r"""<!doctype html>
             <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
           </label>
           <div id="editor-note" class="note wide">Create a new item or select an editable row.</div>
+          <div id="import-raw-row">
+            <label class="wide" style="margin-top:.35rem">Import raw line
+              <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
+            </label>
+            <div class="actions" style="margin-top:.25rem">
+              <button type="button" onclick="importRawLine()">Import</button>
+              <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
+            </div>
+          </div>
           <div class="actions">
             <button id="save-button">Create</button>
             <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
+            <button type="button" class="secondary" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
           </div>
         </form>
       </section>
@@ -2349,6 +2412,7 @@ HTML_PAGE = r"""<!doctype html>
 
   <!-- Toast container -->
   <div id="toast-container"></div>
+  <div id="hm-tooltip" class="hm-tooltip"></div>
 
   <!-- Keyboard Help Modal -->
   <div class="modal-backdrop" id="help-modal" onclick="if(event.target===this)closeHelpModal()">
@@ -2362,6 +2426,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>s</td><td>Toggle statistics panel</td></tr>
         <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
         <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
+        <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
@@ -2501,6 +2566,7 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]);
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
+      syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
       configureNotificationPolling();
     }
@@ -2542,6 +2608,7 @@ HTML_PAGE = r"""<!doctype html>
       if (document.getElementById("open-only").checked || boolParam(params, ["open", "open_only"])) {
         result.set("open_only", "true");
       }
+      if (params.get("blocked") === "true") result.set("blocked", "true");
       return result;
     }
     function updateUrlFromControls() {
@@ -2845,11 +2912,20 @@ HTML_PAGE = r"""<!doctype html>
       const node = document.getElementById("notifications");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No notifications.</div>`;
       const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
+      let notifIdx = 0;
       for (const record of data.records) {
+        notifIdx++;
+        const snoozeInputId = `snooze-input-${notifIdx}`;
+        const snoozeRowId = `snooze-row-${notifIdx}`;
         const actions = record.id ? `
-          <div class="actions">
+          <div class="actions" style="flex-wrap:wrap;gap:.3rem">
             <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">Ack</button>
             <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">Snooze ${escapeHtml(snoozeDefault)}</button>
+            <button class="secondary" type="button" onclick="document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display=document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display===''?'none':''" style="font-size:.73rem">Custom…</button>
+          </div>
+          <div id="${snoozeRowId}" class="snooze-inline" style="display:none">
+            <input id="${snoozeInputId}" value="${escapeHtml(snoozeDefault)}" placeholder="30m / 1h / 2h">
+            <button class="secondary" type="button" onclick="snoozeMessageCustom(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeInputId))})">Go</button>
           </div>
         ` : "";
         const stateBadge = notifStateBadge(record);
@@ -2958,6 +3034,8 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
       if (e.key === "[" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerPrev(); return; }
       if (e.key === "]" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerNext(); return; }
+      if (e.key === "<" || e.key === ",") { e.preventDefault(); cycleStatusFilter(-1); return; }
+      if (e.key === ">" || e.key === ".") { e.preventDefault(); cycleStatusFilter(1); return; }
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         newItem();
@@ -3276,7 +3354,7 @@ HTML_PAGE = r"""<!doctype html>
         const out = document.getElementById("git-output");
         out.textContent = (data.stdout || "") + (data.stderr || "");
         out.style.display = out.textContent ? "" : "none";
-        if (data.ok) showToast("Committed.", "success");
+        if (data.ok) { showToast("Committed.", "success"); await loadGitLog(); }
         else showToast("Commit failed — see output.", "error");
         loadGitStatus();
       } catch(e) { showToast(e.message, "error"); }
@@ -3351,7 +3429,8 @@ HTML_PAGE = r"""<!doctype html>
       const canvas = document.getElementById("main-chart");
       if (mainChart) { mainChart.destroy(); mainChart = null; }
       try {
-        const data = await api("/api/chart/" + encodeURIComponent(type));
+        const groupParam = GROUP_SUPPORTED.has(type) ? `?group=${encodeURIComponent(currentChartGroup)}` : "";
+        const data = await api("/api/chart/" + encodeURIComponent(type) + groupParam);
         const ctx = canvas.getContext("2d");
         const isBar = ["tasks", "habits", "elapsed"].includes(type);
         mainChart = new Chart(ctx, {
@@ -3388,21 +3467,45 @@ HTML_PAGE = r"""<!doctype html>
         const today = new Date().toISOString().slice(0, 10);
         const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
         if (!data.habits?.length) { container.innerHTML = `<div class="empty">No habit data.</div>`; return; }
+
+        // Build month labels array (one per week column)
+        const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        function buildMonthLabels(start, end) {
+          const labels = [];
+          let col = 0;
+          const d = new Date(start);
+          const startPad = d.getDay();
+          for (let pad = 0; pad < startPad; pad++) { labels.push(""); col++; }
+          let lastMonth = -1;
+          while (d <= end) {
+            const mo = d.getMonth();
+            if (d.getDay() === 0) {
+              labels.push(mo !== lastMonth ? MONTHS[mo] : "");
+              lastMonth = mo;
+            }
+            d.setDate(d.getDate() + 1);
+          }
+          return labels;
+        }
+
+        const endDate = new Date();
+        const monthLabels = buildMonthLabels(new Date(rangeStart), endDate);
+
         let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
         for (const habit of data.habits) {
           html += `<div class="heatmap-habit">
-            <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">streak: ${habit.streak} days</span></div>
+            <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} day streak</span></div>
+            <div class="heatmap-months">${monthLabels.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
             <div class="heatmap-grid">`;
           const start = new Date(rangeStart);
           const startDay = start.getDay();
           for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
-          const endDate = new Date();
           const d = new Date(start);
           while (d <= endDate) {
             const ds = d.toISOString().slice(0, 10);
             const isDone = !!(habit.dates && habit.dates[ds]);
             const isToday = ds === today;
-            html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" title="${ds}"></div>`;
+            html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" data-date="${ds}"></div>`;
             d.setDate(d.getDate() + 1);
           }
           html += `</div></div>`;
@@ -3417,6 +3520,9 @@ HTML_PAGE = r"""<!doctype html>
     function showChart(type, btn) {
       document.querySelectorAll(".chart-tab").forEach(t => t.classList.remove("active"));
       if (btn) btn.classList.add("active");
+      currentChartType = type;
+      const groupBar = document.getElementById("chart-group-bar");
+      if (groupBar) groupBar.style.display = GROUP_SUPPORTED.has(type) ? "" : "none";
       loadChart(type);
     }
 
@@ -3440,30 +3546,6 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     // ── Status quick-filter buttons ───────────────────────────────
-    function setStatusFilter(statusValue) {
-      const params = query();
-      if (statusValue) {
-        params.set("status", statusValue);
-        params.delete("open_only");
-        document.getElementById("open-only").checked = false;
-      } else {
-        params.delete("status");
-      }
-      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-      applyUrlToControls();
-      loadItems();
-      syncStatusFilterBtns(statusValue);
-    }
-    function setBlockedFilter() {
-      const params = query();
-      params.delete("status");
-      params.set("open_only", "true");
-      params.delete("blocked"); // no built-in, use open_only + client filter
-      document.getElementById("open-only").checked = true;
-      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-      loadItems();
-      syncStatusFilterBtns("__blocked__");
-    }
     function syncStatusFilterBtns(activeValue) {
       const btns = document.querySelectorAll("#status-filter-bar .filter-btn");
       const values = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
@@ -3500,8 +3582,10 @@ HTML_PAGE = r"""<!doctype html>
       next.set("preset", name);
       next.delete("_preset_applied");
       history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+      savePresetToStorage(name);
       applyPresetToUrl();
       applyUrlToControls();
+      syncStatusFilterBarsFromUrl();
       refreshAll();
     }
 
@@ -3518,18 +3602,6 @@ HTML_PAGE = r"""<!doctype html>
       }
       return parts.join("  ");
     }
-    function buildRefLinksHtml(details) {
-      const parts = [];
-      for (const [key, values] of Object.entries(details || {})) {
-        if (!ROW_REF_KEYS.has(key)) continue;
-        for (const v of (values || [])) {
-          const nav = escapeHtml(jsLiteral(String(v)));
-          parts.push(`<span class="ref-link" onclick="event.stopPropagation();drawerNavigate(${nav})" title="${escapeHtml(key)}:${escapeHtml(String(v))}">${escapeHtml(key.slice(0,3))}:${escapeHtml(String(v))}</span>`);
-        }
-      }
-      return parts.join("");
-    }
-
     // ── Parent indicator in item rows ─────────────────────────────
     function buildParentIndicator(details) {
       const parents = details?.parent;
@@ -3575,6 +3647,198 @@ HTML_PAGE = r"""<!doctype html>
       } catch(e) { showToast(e.message, "error"); }
     }
 
+    // ── Heatmap: month labels + JS tooltip ───────────────────────
+    (function setupHeatmapTooltip() {
+      document.addEventListener("mouseover", function(e) {
+        const cell = e.target.closest(".heatmap-cell");
+        if (!cell || !cell.dataset.date) return;
+        const tip = document.getElementById("hm-tooltip");
+        if (!tip) return;
+        tip.textContent = cell.dataset.date + (cell.classList.contains("done") ? " ✓" : "");
+        tip.style.display = "";
+        tip.style.left = (e.clientX + 12) + "px";
+        tip.style.top = (e.clientY - 28) + "px";
+      });
+      document.addEventListener("mousemove", function(e) {
+        const tip = document.getElementById("hm-tooltip");
+        if (tip && tip.style.display !== "none") {
+          tip.style.left = (e.clientX + 12) + "px";
+          tip.style.top = (e.clientY - 28) + "px";
+        }
+      });
+      document.addEventListener("mouseout", function(e) {
+        if (!e.target.closest(".heatmap-cell")) return;
+        const tip = document.getElementById("hm-tooltip");
+        if (tip) tip.style.display = "none";
+      });
+    })();
+
+    // ── Chart group selector (daily/weekly/monthly) ───────────────
+    let currentChartType = "tasks";
+    let currentChartGroup = "daily";
+    const GROUP_SUPPORTED = new Set(["tasks", "habits", "mood"]);
+
+    function setChartGroup(group, btn) {
+      currentChartGroup = group;
+      document.querySelectorAll(".chart-group-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      loadChart(currentChartType);
+    }
+
+    // ── Status filter bar URL sync + `<`/`>` keyboard cycle ──────
+    const STATUS_CYCLE = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
+    function syncStatusFilterBarsFromUrl() {
+      const params = query();
+      const statusParam = params.get("status");
+      const isBlocked = params.get("blocked") === "true";
+      const active = isBlocked ? "__blocked__" : (statusParam || "");
+      syncStatusFilterBtns(active);
+    }
+    function cycleStatusFilter(direction) {
+      const params = query();
+      const statusParam = params.get("status");
+      const isBlocked = params.get("blocked") === "true";
+      const current = isBlocked ? "__blocked__" : (statusParam || "");
+      const idx = STATUS_CYCLE.indexOf(current);
+      const next = STATUS_CYCLE[(idx + direction + STATUS_CYCLE.length) % STATUS_CYCLE.length];
+      if (next === "__blocked__") {
+        setBlockedFilter();
+      } else {
+        setStatusFilter(next);
+      }
+    }
+
+    // ── Blocked filter: use server-side ?blocked=true ─────────────
+    function setBlockedFilter() {
+      const params = query();
+      params.delete("status");
+      params.set("blocked", "true");
+      params.set("open_only", "true");
+      document.getElementById("open-only").checked = true;
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadItems();
+      syncStatusFilterBtns("__blocked__");
+    }
+
+    // ── setStatusFilter: clear blocked when switching to non-blocked ──
+    function setStatusFilter(statusValue) {
+      const params = query();
+      params.delete("blocked");
+      if (statusValue) {
+        params.set("status", statusValue);
+        params.delete("open_only");
+        document.getElementById("open-only").checked = false;
+      } else {
+        params.delete("status");
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+      syncStatusFilterBtns(statusValue);
+    }
+
+    // ── Git log display after commit ──────────────────────────────
+    async function loadGitLog() {
+      if (!appConfig?.git?.enable_api) return;
+      try {
+        const data = await api("/api/git/log?n=3");
+        const commits = data.commits || [];
+        if (!commits.length) return;
+        let html = `<div style="margin-top:.5rem"><div class="drawer-section-title" style="font-size:.72rem">Recent commits</div>`;
+        for (const c of commits) {
+          html += `<div class="git-log-entry"><span class="git-log-hash">${escapeHtml(c.hash)}</span><span class="git-log-msg">${escapeHtml(c.message)}</span></div>`;
+        }
+        html += `</div>`;
+        const out = document.getElementById("git-output");
+        if (out) {
+          out.insertAdjacentHTML("afterend", html);
+        }
+      } catch(_) {}
+    }
+
+    // ── Persist view preset in localStorage ──────────────────────
+    function savePresetToStorage(name) {
+      try { localStorage.setItem("lifetxt_preset", name); } catch(_) {}
+    }
+    function loadPresetFromStorage() {
+      try { return localStorage.getItem("lifetxt_preset") || ""; } catch(_) { return ""; }
+    }
+
+    // ── Ref-link count badge (multiple refs → dep_on(2)) ─────────
+    function buildRefLinksHtml(details) {
+      const counts = {};
+      const firstIds = {};
+      for (const [key, values] of Object.entries(details || {})) {
+        if (!ROW_REF_KEYS.has(key)) continue;
+        const valid = (values || []).filter(v => String(v).trim());
+        if (!valid.length) continue;
+        counts[key] = valid.length;
+        firstIds[key] = String(valid[0]);
+      }
+      return Object.entries(counts).map(([key, count]) => {
+        const label = count > 1 ? `${key.slice(0,3)}(${count})` : `${key.slice(0,3)}:${firstIds[key]}`;
+        const nav = count === 1 ? escapeHtml(jsLiteral(firstIds[key])) : escapeHtml(jsLiteral(""));
+        const onclick = count === 1
+          ? `event.stopPropagation();drawerNavigate(${nav})`
+          : `event.stopPropagation();selectItem(currentItems.find(i=>i.line===${Number(details?._line||0)})||drawerItem)`;
+        return `<span class="ref-link" onclick="${onclick}" title="${escapeHtml(key)}">${escapeHtml(label)}</span>`;
+      }).join("");
+    }
+
+    // ── Notification: inline snooze with custom duration ─────────
+    function snoozeInline(id) {
+      const row = document.querySelector(`.notif-snooze-${CSS.escape(id)}`);
+      if (!row) return;
+      row.style.display = row.style.display === "none" ? "" : "none";
+    }
+    async function snoozeMessageCustom(id, inputId) {
+      const input = document.getElementById(inputId);
+      const duration = input ? input.value.trim() : "10m";
+      if (!duration) { showToast("Enter a duration (e.g. 30m, 1h)", "error"); return; }
+      await snoozeMessage(id, duration);
+    }
+
+    // ── Editor: Import raw line ───────────────────────────────────
+    function toggleImportRaw(show) {
+      const row = document.getElementById("import-raw-row");
+      if (!row) return;
+      const visible = show !== undefined ? show : row.style.display === "none";
+      row.style.display = visible ? "" : "none";
+      if (visible) document.getElementById("import-raw-input").focus();
+    }
+    async function importRawLine() {
+      const input = document.getElementById("import-raw-input");
+      const line = input ? input.value.trim() : "";
+      if (!line) return;
+      try {
+        const checkData = await api("/api/check-line", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line}),
+        });
+        if (!checkData.ok) {
+          const errs = (checkData.diagnostics || []).filter(d => d.severity === "error");
+          showToast("Invalid: " + (errs[0]?.message || "parse error"), "error");
+          return;
+        }
+        // Parse fields from the raw line
+        const m = line.match(/^(\[.\])\s+(\w+)\s+(\S+)([\s\S]*)$/);
+        if (!m) { showToast("Could not parse line structure.", "error"); return; }
+        const [, status, type, title, rest] = m;
+        document.getElementById("edit-status").value = status;
+        document.getElementById("edit-type").value = type;
+        document.getElementById("edit-title").value = title.replace(/_/g, " ");
+        const detailsRaw = rest.trim().replace(/\s{2,}/g, "\n").trim();
+        document.getElementById("edit-details").value = detailsRaw.replace(/(\w+):(?=\S)/g, "$1:");
+        updateTypeHints(type);
+        toggleImportRaw(false);
+        if (input) input.value = "";
+        showToast("Form populated from raw line.", "success");
+      } catch(e) {
+        showToast("Import error: " + e.message, "error");
+      }
+    }
+
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();
@@ -3582,6 +3846,12 @@ HTML_PAGE = r"""<!doctype html>
       updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
       populateViewPresets();
+      syncStatusFilterBarsFromUrl();
+      // Restore preset from localStorage if no URL param
+      const storedPreset = loadPresetFromStorage();
+      if (storedPreset && !query().get("preset") && !query().get("view") && appConfig?.views?.[storedPreset]) {
+        applyViewPreset(storedPreset);
+      }
       startGitPolling();
       return refreshAll();
     }).catch(error => {

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-27 (updated x31)
+Last updated: 2026-06-28 (updated x32)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -188,20 +188,15 @@ CLI-native charts without external dependencies.
 
 ### Statistics & Charts (Web UI)
 
-- [ ] Add `group=weekly|monthly` support to `/api/chart/habits` and
-  `/api/chart/mood` — currently only `daily` is meaningful for those but
-  the parameter is accepted without aggregation. Implement bucket merging.
-
-- [ ] Add month/week labels to the habit heatmap: render month names above the
-  heatmap grid so users can identify which week/month each column belongs to.
-  Add a tooltip on hover (CSS title currently used; replace with JS tooltip for
-  better mobile support).
+- [ ] Add `group=weekly|monthly` aggregation to `/api/chart/habits` and
+  `/api/chart/mood` backend: the `group` param is now forwarded from the UI;
+  implement bucket merging in the API response (daily is already correct).
 
 ### Item Input Form (Web UI)
 
-- [ ] Add `POST /api/items/raw` support to the `editor` form as a paste-raw-line
-  shortcut: an "Import raw line" mode in the editor that accepts a full
-  life.txt-format string and auto-populates the form fields from it.
+- [ ] Improve `importRawLine()` parser: handle all field types (multi-value,
+  quoted values, `body:` continuation) so complex raw lines populate the
+  form faithfully (current regex-based split is best-effort for simple lines).
 
 ### Record Display (Web UI)
 
@@ -211,9 +206,9 @@ CLI-native charts without external dependencies.
 
 ### ID Links & Cross-References (Web UI)
 
-- [ ] Add count badge to ref-link chips in item rows: when multiple IDs are
-  listed in `depends_on:` etc., show a single chip `depends_on (3)` that
-  opens the drawer and scrolls to the dependency section.
+- [ ] Clicking a collapsed ref-link count badge (e.g., `dep(3)`) should open
+  the drawer to the dependency tab of that item, scrolling to the dependencies
+  section — currently it selects the item but does not jump to deps section.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
@@ -236,34 +231,26 @@ CLI-native charts without external dependencies.
   to render conversation threads in the browser GUI. Ensure `ack:` and
   `snooze_until:` state is reflected in the UI without a page reload.
 
-- [ ] Improve Web notification UX: show permission state (granted/denied/
-  default), acknowledgement button, snooze control, retry on delivery failure,
-  and visible delivery state (pending/delivered/snoozed/acknowledged) in the
-  browser GUI.
+- [ ] Add notification retry button in browser GUI: show a "Retry" button
+  when desktop notification delivery fails (Notification.permission is "denied"
+  or the push call throws) so the user can re-trigger without page reload.
 
-- [ ] Persist the active view preset selection across page refresh: save the
-  last-used preset name to `localStorage` and restore it on next load if no
-  explicit URL params are set.
+- [ ] Add a "clear preset" button / UI affordance when a stored view preset
+  is active, so users can return to the default view without manually editing
+  the URL (`localStorage.removeItem('lifetxt_preset')` + reload).
 
 ### Git Integration (Web API)
 
-- [ ] Show last 3 commit titles in the git modal after a successful commit
-  to confirm the commit was created. Add `POST /api/git/log` returning the
-  most recent N commits as `{"commits": [{"hash": "...", "message": "..."}]}`.
+### Quick-filter & Navigation (Web UI)
 
-### Quick-filter & Navigation (Web UI) — New
+- [ ] Add `<` / `>` keyboard cycle to the help modal (already added to
+  keyboard handler and help table — verify display is readable on mobile).
 
-- [ ] Sync the status quick-filter bar with the current URL state on page
-  load: highlight the correct active button when visiting a bookmarked URL
-  with `?status=...` already set.
+- [ ] Add `GET /api/git/log` pagination: the current `?n=` cap is 50;
+  add a "Show more" link in the git modal to load older commits.
 
-- [ ] Add keyboard shortcut for prev/next status filter (e.g., `<` / `>`)
-  to cycle through All → Open → In Progress → Done → Cancelled without mouse.
-
-- [ ] Add `?blocked=true` API support to `/api/items`: filter to open items
-  whose `depends_on:` references at least one other open item, so the
-  status quick-filter "Blocked" button can use a server-side filter instead
-  of a client-side workaround.
+- [ ] Persist `?blocked=true` URL state in `applyUrlToControls` so the
+  "Blocked" active button survives navigation back from a detail page.
 
 ### MCP Support
 

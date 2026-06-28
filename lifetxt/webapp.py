@@ -949,6 +949,21 @@ def create_app(paths=None, writable_path=None, config=None):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"id": item_id, "deleted": deleted}
 
+    @app.get("/api/items/{line_no}")
+    def get_item_by_line(line_no: int):
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        matches = [i for i in items if i.line == line_no]
+        if not matches:
+            raise HTTPException(status_code=404, detail="No item at line %d." % line_no)
+        return {
+            "item": api_item(
+                matches[0],
+                app.state.writable_path,
+                id_key_from_config(app.state.config),
+            )
+        }
+
     @app.put("/api/items/{line_no}")
     def update_item(line_no, payload=Body(...)):
         try:
@@ -2325,6 +2340,7 @@ HTML_PAGE = r"""<!doctype html>
       <select id="view-preset-select" title="Switch named view preset" onchange="applyViewPreset(this.value)">
         <option value="">— View —</option>
       </select>
+      <span id="preset-name-label" style="display:none;font-size:.78rem;color:var(--muted)"></span>
       <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
       <button id="stats-btn" class="secondary" onclick="toggleStats()" title="Toggle statistics panel (s)">Stats</button>
@@ -2482,6 +2498,7 @@ HTML_PAGE = r"""<!doctype html>
         <button class="secondary" onclick="drawerEdit()">Edit</button>
         <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
         <button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>
+        <button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>
         <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
         <button class="secondary" onclick="closeDrawer()">✕</button>
       </div>
@@ -2499,6 +2516,8 @@ HTML_PAGE = r"""<!doctype html>
     <div class="ctx-item" onclick="ctxCopyId()">Copy ID</div>
     <div class="ctx-item" onclick="ctxCopyLineNumber()">Copy Line Number</div>
     <div class="ctx-item" onclick="ctxShareLink()">Copy Link</div>
+    <div class="ctx-item" onclick="ctxShowRawPath()">Show File Path</div>
+    <div class="ctx-item" onclick="ctxDuplicate()">Duplicate</div>
     <hr class="ctx-sep">
     <div class="ctx-item" onclick="ctxOpenDrawer()">Open in Drawer</div>
     <div class="ctx-item" onclick="ctxEdit()">Edit</div>
@@ -2517,6 +2536,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>r</td><td>Refresh all</td></tr>
         <tr><td>s</td><td>Toggle statistics panel</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
+        <tr><td>g</td><td>Jump to line number (opens drawer)</td></tr>
         <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
         <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
@@ -2734,6 +2754,7 @@ HTML_PAGE = r"""<!doctype html>
       renderDiagnostics(data.diagnostics);
       renderItems(data.items);
       updateTagSuggestions(data.items);
+      syncStatusFilterBtns();
       if (selectedItem) {
         const match = data.items.find(item => item.line === selectedItem.line && item.editable);
         if (match) selectItem(match);
@@ -3191,6 +3212,7 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
       if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
+      if (e.key === "g" || e.key === "G") { e.preventDefault(); jumpToLine(); return; }
     });
 
     // ── Help modal ─────────────────────────────────────────────────
@@ -3758,20 +3780,29 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Status quick-filter buttons (multi-select) ────────────────
     function syncStatusFilterBtns(activeValues) {
-      // activeValues: string (single legacy) OR Set/Array of strings OR "__blocked__"
       const params = query();
       const isBlocked = params.get("blocked") === "true";
       const rawStatus = params.get("status") || "";
       const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
+      // Count items per status from current loaded items
+      const counts = {};
+      for (const item of (currentItems || [])) {
+        counts[item.status] = (counts[item.status] || 0) + 1;
+      }
+      const total = (currentItems || []).length;
       document.querySelectorAll("#status-filter-bar .filter-btn").forEach(btn => {
         const sv = btn.dataset.status;
+        const label = btn.dataset.label || btn.textContent.replace(/\s*\(\d+\)$/, "").trim();
+        btn.dataset.label = label;
         if (sv === "") {
-          // "All" is active when nothing else is selected and not blocked
           btn.classList.toggle("active", !isBlocked && selected.size === 0);
+          btn.textContent = total ? `${label} (${total})` : label;
         } else if (sv === "__blocked__") {
           btn.classList.toggle("active", isBlocked);
         } else {
           btn.classList.toggle("active", selected.has(sv));
+          const n = counts[sv] || 0;
+          btn.textContent = n ? `${label} (${n})` : label;
         }
       });
     }
@@ -4197,6 +4228,8 @@ HTML_PAGE = r"""<!doctype html>
       const stored = loadPresetFromStorage();
       const btn = document.getElementById("preset-clear-btn");
       if (btn) btn.style.display = stored ? "" : "none";
+      const lbl = document.getElementById("preset-name-label");
+      if (lbl) { lbl.textContent = stored ? stored : ""; lbl.style.display = stored ? "" : "none"; }
     }
 
     // ── Drawer: copy ID to clipboard ──────────────────────────────
@@ -4207,6 +4240,21 @@ HTML_PAGE = r"""<!doctype html>
       if (!idVal) { showToast("No ID on this item.", "error"); return; }
       navigator.clipboard.writeText(String(idVal)).then(
         () => showToast("Copied: " + idVal, "success"),
+        () => showToast("Copy failed.", "error")
+      );
+    }
+
+    // ── Drawer: copy as Markdown ───────────────────────────────────
+    function drawerCopyMarkdown() {
+      if (!drawerItem) return;
+      const item = drawerItem;
+      const tick = item.status === "[x]" ? "x" : item.status === "[-]" ? "-" : " ";
+      const due = item?.details?.due?.[0] ? ` — due: ${item.details.due[0]}` : "";
+      const proj = item?.details?.project?.[0] ? ` — project: ${item.details.project[0]}` : "";
+      const tags = (item?.details?.tag || []).map(t => `#${t}`).join(" ");
+      const md = `- [${tick}] ${item.title}${due}${proj}${tags ? " " + tags : ""}`;
+      navigator.clipboard.writeText(md).then(
+        () => showToast("Copied as Markdown.", "success"),
         () => showToast("Copy failed.", "error")
       );
     }
@@ -4318,6 +4366,43 @@ HTML_PAGE = r"""<!doctype html>
       const t = ctxTarget; closeCtxMenu();
       if (t) selectItem(t);
     }
+    function ctxDuplicate() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      document.getElementById("edit-status").value = "[ ]";
+      document.getElementById("edit-type").value = t.type || "T";
+      document.getElementById("edit-title").value = t.title || "";
+      document.getElementById("edit-details").value = detailsToText(t.details || {});
+      selectedItem = null;
+      document.getElementById("editor-heading").textContent = "New Item (duplicate)";
+      document.getElementById("save-button").textContent = "Create";
+      document.getElementById("delete-button").disabled = true;
+      updateTypeHints(t.type || "T");
+      setEditorDisabled(false);
+      document.getElementById("edit-title").focus();
+      showToast("Duplicated — edit and save to create.", "info");
+    }
+    function ctxShowRawPath() {
+      const t = ctxTarget; closeCtxMenu();
+      if (!t) return;
+      const path = t.source || "(unknown source)";
+      showToast("File: " + path, "info", 5000);
+    }
+
+    // ── Jump to line number ───────────────────────────────────────
+    function jumpToLine() {
+      const n = prompt("Go to line number:");
+      if (!n || !n.trim()) return;
+      const lineNum = parseInt(n.trim(), 10);
+      if (!isNaN(lineNum)) openItemByLine(lineNum);
+    }
+    async function openItemByLine(lineNum) {
+      try {
+        const data = await api(`/api/items/${lineNum}`);
+        if (data?.item) { openDrawer(data.item); selectItem(data.item); }
+        else showToast("No item at line " + lineNum, "error");
+      } catch(e) { showToast("Line " + lineNum + ": " + e.message, "error"); }
+    }
 
     // ── Tag datalist autocomplete ──────────────────────────────────
     function updateTagSuggestions(items) {
@@ -4400,7 +4485,14 @@ HTML_PAGE = r"""<!doctype html>
         applyViewPreset(storedPreset);
       }
       startGitPolling();
-      return refreshAll();
+      return refreshAll().then(() => {
+        // Auto-open drawer for ?line=N deep links
+        const lineParam = query().get("line");
+        if (lineParam) {
+          const lineNum = parseInt(lineParam, 10);
+          if (!isNaN(lineNum)) openItemByLine(lineNum);
+        }
+      });
     }).catch(error => {
       document.body.insertAdjacentHTML("beforeend", `<pre class="diagnostic">${escapeHtml(error.message)}</pre>`);
     });

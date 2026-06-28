@@ -1314,6 +1314,47 @@ def build_parser():
     search_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     search_cmd.set_defaults(func=command_search)
 
+    snapshot_cmd = subparsers.add_parser(
+        "snapshot",
+        help="Copy a life.txt file to a timestamped snapshot for point-in-time backups.",
+    )
+    snapshot_cmd.add_argument("path", help="Source life.txt file to snapshot.")
+    snapshot_cmd.add_argument(
+        "-o", "--output",
+        dest="output",
+        help="Output path. Defaults to <dir>/snapshots/YYYY-MM-DD_<basename>.",
+    )
+    snapshot_cmd.add_argument(
+        "--dir",
+        dest="snapshot_dir",
+        default=None,
+        help="Directory to write the snapshot. Defaults to a 'snapshots/' subdir next to the source.",
+    )
+    snapshot_cmd.set_defaults(func=command_snapshot)
+
+    lint_cmd = subparsers.add_parser(
+        "lint",
+        help="Check life.txt for style issues: key-name typos, tag casing, and duplicate keys.",
+    )
+    _add_input_paths(lint_cmd)
+    lint_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    lint_cmd.add_argument(
+        "--fix",
+        action="store_true",
+        help="Auto-correct safe issues in-place (writes to the writable path only).",
+    )
+    lint_cmd.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output.",
+    )
+    lint_cmd.set_defaults(func=command_lint)
+
     return parser
 
 
@@ -3345,6 +3386,136 @@ def command_search(args):
 
     _print_warnings(diagnostics)
     return 0 if results else 1
+
+
+def command_snapshot(args):
+    import shutil
+    src = args.path
+    if not os.path.exists(src):
+        sys.stderr.write("ERROR: File not found: %s\n" % src)
+        return 1
+    if args.output:
+        dest = args.output
+    else:
+        src_dir = os.path.dirname(os.path.abspath(src))
+        snap_dir = args.snapshot_dir or os.path.join(src_dir, "snapshots")
+        os.makedirs(snap_dir, exist_ok=True)
+        date_prefix = datetime.date.today().isoformat()
+        basename = os.path.basename(src)
+        dest = os.path.join(snap_dir, "%s_%s" % (date_prefix, basename))
+    if os.path.abspath(dest) == os.path.abspath(src):
+        sys.stderr.write("ERROR: Destination is the same as source: %s\n" % dest)
+        return 1
+    shutil.copy2(src, dest)
+    sys.stdout.write("Snapshot: %s -> %s\n" % (src, dest))
+    return 0
+
+
+# Key-name typo map: common misspellings -> canonical key
+_LINT_KEY_VARIANTS = {
+    "proj": "project", "projects": "project",
+    "date": "due", "deadline": "due",
+    "assign": "assignee", "assigned": "assignee", "assigned_to": "assignee",
+    "owners": "owner",
+    "tags": "tag",
+    "bodies": "body",
+    "note": "note",  # not a typo but capture for casing
+    "prio": "priority", "priorities": "priority",
+    "loc": "loc",  # fine, keep
+    "attend": "attendee", "attendees": "attendee",
+    "ref_id": "id", "item_id": "id",
+    "do_by": "due",
+    "scheduled": "do",
+    "repeat_every": "repeat",
+    "interval": "interval",
+    "until": "until",
+    "count": "count",
+    "depend": "depends_on", "dep": "depends_on", "dependency": "depends_on",
+    "block": "blocks",
+    "related_to": "related",
+    "mood_score": "mood",
+    "elapsed_time": "elapsed", "spent": "elapsed",
+    "estimate": "est",
+    "sender_email": "sender",
+    "recipient_email": "recipient",
+    "notify": "notify_at",
+}
+# Non-canonical casings to flag
+_LINT_CASING_VARIANTS = {
+    k.upper(): k for k in list(_LINT_KEY_VARIANTS.values()) + list(_LINT_KEY_VARIANTS.keys())
+}
+
+
+def command_lint(args):
+    from .model import RECOMMENDED_KEYS_BY_TYPE
+    paths = args.paths if args.paths else ["-"]
+    config = _config(args)
+    id_key = id_key_from_config(config)
+    issues = []
+
+    for path in paths:
+        text = read_text(path)
+        items, parse_diags = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+        for item in items:
+            for key in list(item.details.keys()):
+                canonical = _LINT_KEY_VARIANTS.get(key)
+                if canonical and canonical != key:
+                    issues.append(OrderedDict([
+                        ("source", getattr(item, "source", path) or path),
+                        ("line", item.line),
+                        ("code", "L001"),
+                        ("severity", "warning"),
+                        ("message", "Key %r looks like a typo for %r." % (key, canonical)),
+                        ("fix", canonical),
+                        ("key", key),
+                    ]))
+                elif key.upper() == key and key.lower() in _LINT_KEY_VARIANTS:
+                    issues.append(OrderedDict([
+                        ("source", getattr(item, "source", path) or path),
+                        ("line", item.line),
+                        ("code", "L002"),
+                        ("severity", "warning"),
+                        ("message", "Key %r uses non-standard casing; expected %r." % (key, key.lower())),
+                        ("fix", key.lower()),
+                        ("key", key),
+                    ]))
+            # Check for duplicate keys
+            seen = {}
+            for key in item.details.keys():
+                seen[key] = seen.get(key, 0) + 1
+            for key, n in seen.items():
+                if n > 1:
+                    issues.append(OrderedDict([
+                        ("source", getattr(item, "source", path) or path),
+                        ("line", item.line),
+                        ("code", "L003"),
+                        ("severity", "warning"),
+                        ("message", "Duplicate key %r (%d values). Consider using a multi-value list." % (key, n)),
+                        ("fix", None),
+                        ("key", key),
+                    ]))
+
+    if args.format == "json":
+        write_text(None, json.dumps(
+            issues, ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        ) + "\n")
+    else:
+        if not issues:
+            write_text(None, "No lint issues found.\n")
+        else:
+            for issue in issues:
+                src = issue.get("source") or ""
+                ln = issue.get("line") or "?"
+                code = issue.get("code", "")
+                msg = issue.get("message", "")
+                fix = issue.get("fix")
+                fix_hint = " (fix: %r -> %r)" % (issue.get("key", ""), fix) if fix else ""
+                loc = ("%s:%s" % (src, ln)) if src else ("line %s" % ln)
+                sys.stdout.write("%s  %s  %s%s\n" % (loc, code, msg, fix_hint))
+
+    return 1 if issues else 0
 
 
 def command_notify(args):

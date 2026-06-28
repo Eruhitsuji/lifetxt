@@ -6060,5 +6060,374 @@ def normalize_newlines(text):
     return text.replace("\r\n", "\n")
 
 
+class LifeTxtCheckLineTests(unittest.TestCase):
+    """Tests for the /api/check-line logic via parse_text (pure function)."""
+
+    def _check_line(self, line):
+        """Mirror the /api/check-line endpoint logic."""
+        if not str(line).strip():
+            return {"ok": True, "item_count": 0, "diagnostics": []}
+        text = str(line).rstrip("\n") + "\n"
+        items, diagnostics = parse_text(text)
+        has_error = any(d.severity == "error" for d in diagnostics)
+        return {
+            "ok": not has_error,
+            "item_count": len(items),
+            "diagnostics": [d.to_dict() for d in diagnostics],
+        }
+
+    def test_valid_line_returns_ok_true(self):
+        result = self._check_line("[ ] T My_task due:2026-01-01")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["item_count"], 1)
+        errors = [d for d in result["diagnostics"] if d["severity"] == "error"]
+        self.assertEqual(errors, [])
+
+    def test_invalid_status_returns_ok_false(self):
+        result = self._check_line("[X] T Bad_status")
+        self.assertFalse(result["ok"])
+        self.assertGreater(len(result["diagnostics"]), 0)
+
+    def test_empty_line_returns_ok_true_zero_items(self):
+        result = self._check_line("")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["item_count"], 0)
+
+    def test_whitespace_only_returns_ok_true(self):
+        result = self._check_line("   \t  ")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["item_count"], 0)
+
+    def test_comment_line_is_valid(self):
+        result = self._check_line("# This is a comment")
+        self.assertTrue(result["ok"])
+
+    def test_valid_event_line(self):
+        result = self._check_line("[ ] E Team_standup  from:2026-01-01T09:00  to:2026-01-01T09:30")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["item_count"], 1)
+
+    def test_done_status_is_valid(self):
+        result = self._check_line("[x] T Completed_task  done:2026-01-01")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["item_count"], 1)
+
+
+class LifeTxtSummaryCommandTests(unittest.TestCase):
+    """Tests for the summary command output."""
+
+    def _run_summary(self, text, fmt="text"):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            fname = f.name
+        try:
+            out, err, rc = run_cli("summary", fname, "--format", fmt)
+        finally:
+            os.unlink(fname)
+        return out, err, rc
+
+    def test_summary_counts_match_file_content(self):
+        text = (
+            "[ ] T Task_one  project:work\n"
+            "[x] T Task_two  done:2026-01-01\n"
+            "[ ] H Daily_habit\n"
+        )
+        out, err, rc = self._run_summary(text)
+        self.assertEqual(rc, 0)
+        self.assertIn("Items:", out)
+        self.assertIn("3", out)
+
+    def test_summary_type_counts_shown(self):
+        text = (
+            "[ ] T Task_one\n"
+            "[ ] T Task_two\n"
+            "[ ] N Note_one\n"
+        )
+        out, err, rc = self._run_summary(text)
+        self.assertEqual(rc, 0)
+        self.assertIn("T:", out)
+        self.assertIn("N:", out)
+
+    def test_summary_json_schema_has_required_keys(self):
+        text = "[ ] T Task_one  project:work\n"
+        out, err, rc = self._run_summary(text, fmt="json")
+        self.assertEqual(rc, 0)
+        data = json.loads(out)
+        for key in ("source", "line_count", "item_count", "type_counts", "status_counts"):
+            self.assertIn(key, data)
+
+    def test_summary_status_counts_accurate(self):
+        text = (
+            "[ ] T Open_task\n"
+            "[x] T Done_task  done:2026-01-01\n"
+            "[-] T Cancelled_task\n"
+        )
+        out, err, rc = self._run_summary(text, fmt="json")
+        self.assertEqual(rc, 0)
+        data = json.loads(out)
+        self.assertEqual(data["status_counts"].get("[ ]"), 1)
+        self.assertEqual(data["status_counts"].get("[x]"), 1)
+        self.assertEqual(data["status_counts"].get("[-]"), 1)
+
+
+class LifeTxtDoneCommandTests(unittest.TestCase):
+    """Tests for the done command."""
+
+    def _run_done(self, text, *extra_args):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            fname = f.name
+        try:
+            out, err, rc = run_cli("done", fname, *extra_args)
+            with open(fname, encoding="utf-8") as fh:
+                new_text = fh.read()
+        finally:
+            os.unlink(fname)
+        return out, err, rc, new_text
+
+    def test_done_by_line_marks_item(self):
+        text = "[ ] T Task_to_complete\n"
+        out, err, rc, new_text = self._run_done(text, "--line", "1")
+        self.assertEqual(rc, 0)
+        self.assertIn("[x]", new_text)
+
+    def test_done_by_text_marks_item(self):
+        text = "[ ] T My_unique_task\n"
+        out, err, rc, new_text = self._run_done(text, "--text", "unique_task")
+        self.assertEqual(rc, 0)
+        self.assertIn("[x]", new_text)
+        self.assertIn("done:", new_text)
+
+    def test_done_already_done_prints_message(self):
+        text = "[x] T Already_done  done:2026-01-01\n"
+        out, err, rc, new_text = self._run_done(text, "--line", "1")
+        self.assertEqual(rc, 0)
+        self.assertIn("Already done", out)
+
+    def test_done_missing_line_exits_nonzero(self):
+        text = "[ ] T Task\n"
+        out, err, rc, new_text = self._run_done(text, "--line", "99")
+        self.assertNotEqual(rc, 0)
+
+    def test_done_writes_today_date(self):
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        text = "[ ] T Dateable_task\n"
+        out, err, rc, new_text = self._run_done(text, "--line", "1")
+        self.assertEqual(rc, 0)
+        self.assertIn("done:" + today, new_text)
+
+
+class LifeTxtParserEdgeCaseTests(unittest.TestCase):
+    """Edge-case tests for the parser."""
+
+    def test_unicode_title_is_preserved(self):
+        text = "[ ] T 日本語タイトル  project:work\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].title, "日本語タイトル")
+
+    def test_emoji_in_title(self):
+        text = "[ ] T 🎯_Goal_item\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 1)
+        self.assertIn("🎯", items[0].title)
+
+    def test_body_continuation_multiline(self):
+        text = "[ ] J Journal_entry  body:First_line\n| Second line\n| Third line\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 1)
+        body = items[0].details.get("body", [])
+        self.assertTrue(body)
+        self.assertIn("Second line", body[0])
+        self.assertIn("Third line", body[0])
+
+    def test_empty_file_parses_cleanly(self):
+        items, diags = parse_text("")
+        self.assertEqual(items, [])
+        errors = [d for d in diags if d.severity == "error"]
+        self.assertEqual(errors, [])
+
+    def test_comment_lines_ignored(self):
+        text = "# Comment line\n[ ] T Real_item\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].title, "Real_item")
+
+    def test_windows_line_endings(self):
+        text = "[ ] T Task_one\r\n[x] T Task_two\r\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 2)
+
+    def test_multiple_values_for_same_key(self):
+        text = "[ ] T Multi_tag  tag:a  tag:b  tag:c\n"
+        items, diags = parse_text(text)
+        self.assertEqual(len(items), 1)
+        tags = items[0].details.get("tag", [])
+        self.assertEqual(len(tags), 3)
+        self.assertIn("a", tags)
+
+    def test_directive_line_not_parsed_as_item(self):
+        text = "#! self:alice\n[ ] T Normal_item\n"
+        items, diags = parse_text(text)
+        item_titles = [i.title for i in items]
+        self.assertNotIn("self:alice", item_titles)
+        self.assertIn("Normal_item", item_titles)
+
+
+class LifeTxtSearchCommandTests(unittest.TestCase):
+    """Tests for the search command."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_search_finds_substring_in_title(self):
+        path = self._make_file("[ ] T My_special_task  project:work\n[x] T Other_task\n")
+        try:
+            out, err, rc = run_cli("search", path, "special")
+            self.assertEqual(rc, 0)
+            self.assertIn("special", out.lower())
+        finally:
+            os.unlink(path)
+
+    def test_search_no_match_returns_nonzero(self):
+        path = self._make_file("[ ] T Ordinary_task\n")
+        try:
+            out, err, rc = run_cli("search", path, "xyzzy_no_match")
+            self.assertNotEqual(rc, 0)
+        finally:
+            os.unlink(path)
+
+    def test_search_regex_mode(self):
+        path = self._make_file("[ ] T Task_2026\n[ ] T Another_2025\n")
+        try:
+            out, err, rc = run_cli("search", path, "Task_[0-9]+", "--regex")
+            self.assertEqual(rc, 0)
+            self.assertIn("Task_2026", out)
+        finally:
+            os.unlink(path)
+
+    def test_search_json_format(self):
+        path = self._make_file("[ ] T Find_me  project:work\n")
+        try:
+            out, err, rc = run_cli("search", path, "Find_me", "--format", "json")
+            self.assertEqual(rc, 0)
+            data = json.loads(out)
+            self.assertIsInstance(data, list)
+            self.assertEqual(len(data), 1)
+            self.assertIn("title", data[0])
+        finally:
+            os.unlink(path)
+
+    def test_search_in_field_scope(self):
+        path = self._make_file("[ ] T Task  project:targeted_project\n[ ] T Other  project:different\n")
+        try:
+            out, err, rc = run_cli("search", path, "targeted", "--in", "project", "--format", "json")
+            self.assertEqual(rc, 0)
+            data = json.loads(out)
+            # Only the item with project:targeted_project should match
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0]["title"], "Task")
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtSnapshotCommandTests(unittest.TestCase):
+    """Tests for the snapshot command."""
+
+    def test_snapshot_creates_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = os.path.join(tmpdir, "life.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T My_task\n")
+            snap_dir = os.path.join(tmpdir, "snaps")
+            out, err, rc = run_cli("snapshot", src, "--dir", snap_dir)
+            self.assertEqual(rc, 0)
+            snaps = os.listdir(snap_dir)
+            self.assertEqual(len(snaps), 1)
+            self.assertIn("life.txt", snaps[0])
+
+    def test_snapshot_content_matches_source(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = os.path.join(tmpdir, "data.txt")
+            content = "[ ] T Snapshot_test\n"
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(content)
+            out, err, rc = run_cli("snapshot", src)
+            self.assertEqual(rc, 0)
+            snap_dir = os.path.join(tmpdir, "snapshots")
+            snaps = os.listdir(snap_dir)
+            dest = os.path.join(snap_dir, snaps[0])
+            with open(dest, encoding="utf-8") as f:
+                self.assertEqual(f.read(), content)
+
+    def test_snapshot_custom_output_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = os.path.join(tmpdir, "life.txt")
+            dest = os.path.join(tmpdir, "my_snap.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            out, err, rc = run_cli("snapshot", src, "-o", dest)
+            self.assertEqual(rc, 0)
+            self.assertTrue(os.path.exists(dest))
+
+    def test_snapshot_missing_source_exits_nonzero(self):
+        out, err, rc = run_cli("snapshot", "/nonexistent/path/life.txt")
+        self.assertNotEqual(rc, 0)
+
+
+class LifeTxtLintCommandTests(unittest.TestCase):
+    """Tests for the lint command."""
+
+    def _make_file(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_lint_detects_key_typo(self):
+        path = self._make_file("[ ] T Task  proj:work\n")
+        try:
+            out, err, rc = run_cli("lint", path)
+            self.assertNotEqual(rc, 0)
+            self.assertIn("proj", out)
+        finally:
+            os.unlink(path)
+
+    def test_lint_clean_file_exits_zero(self):
+        path = self._make_file("[ ] T Task  project:work  due:2026-01-01\n")
+        try:
+            out, err, rc = run_cli("lint", path)
+            self.assertEqual(rc, 0)
+            self.assertIn("No lint issues", out)
+        finally:
+            os.unlink(path)
+
+    def test_lint_json_format(self):
+        path = self._make_file("[ ] T Task  proj:myproject\n")
+        try:
+            out, err, rc = run_cli("lint", path, "--format", "json")
+            self.assertNotEqual(rc, 0)
+            data = json.loads(out)
+            self.assertIsInstance(data, list)
+            self.assertGreater(len(data), 0)
+            self.assertIn("code", data[0])
+            self.assertIn("message", data[0])
+        finally:
+            os.unlink(path)
+
+    def test_lint_stdin_input(self):
+        out, err, rc = run_cli("lint", "-", input_text="[ ] T Task  proj:work\n")
+        self.assertNotEqual(rc, 0)
+        self.assertIn("proj", out)
+
+
 if __name__ == "__main__":
     unittest.main()

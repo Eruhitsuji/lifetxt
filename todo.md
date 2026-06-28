@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28T18:00 (updated x34)
+Last updated: 2026-06-28T22:00 (updated x35)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -235,32 +235,14 @@ CLI-native charts without external dependencies.
   prompt the user to re-enable notifications in browser settings rather than
   silently failing on the retry attempt.
 
-- [ ] Preset toolbar: show the currently active preset name as text next to
-  the × button so it is clear which preset is applied at a glance.
-
 ### New WebUI Improvements (Web UI) — Proposed
 
 - [ ] Add item search highlight: wrap matched search terms in `<mark>` tags in
   the item title and detail text when a `?text=` filter is active.
 
-- [ ] Add "Duplicate item" action to context menu and drawer: pre-fills the
-  editor with the selected item's fields and a blank status `[ ]` so the user
-  can tweak and save without re-typing.
-
 - [ ] Add bulk-action toolbar: when multiple items are selected (checkbox on
   hover), show a "Mark done" / "Delete" / "Set project" action bar above the
   list. Implement selection state in JS without modifying the API.
-
-- [ ] Add keyboard shortcut `g` to jump to a specific line number in the
-  current file — shows a small prompt input, then loads `?line=N` on Enter.
-
-- [ ] Add `?line=N` deep-link resolution on page load: if the URL contains
-  `?line=N`, automatically open the drawer for that item after the initial
-  load so shared links work immediately.
-
-- [ ] Add item-count badge to status filter buttons showing how many items
-  match each status (`○ Open (12)`, `✓ Done (45)`) — requires a lightweight
-  summary count from the API or computed client-side from current items.
 
 ### Git Integration (Web API)
 
@@ -271,18 +253,12 @@ CLI-native charts without external dependencies.
 
 ### Context Menu & Dark Mode (Web UI) — New
 
-- [ ] Context menu: add "Open raw file" entry that shows the file path in a
-  toast (or `file://` URI on desktop browsers).
-
 ### Stats & Charts (Web UI) — New
 
 - [ ] Stats breakdown: add date-range filter (`from`/`to`) inputs to the stats
   breakdown panel so by_type/by_status counts reflect the current filter window.
 
 ### Drawer Improvements (Web UI) — New
-
-- [ ] Drawer: add a "Copy as Markdown" button that formats the item as a
-  Markdown checklist entry (`- [x] Title — due: DATE, project: P`) for pasting.
 
 ### Agenda & Notifications (Web UI) — New
 
@@ -353,13 +329,10 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
 
-- [ ] Add `lint` command for style and convention checks separate from
-  `check`: detect key-name typos (e.g., `proj:` vs `project:`), non-standard
-  tag casing, priority values outside a configured set, and custom rules
-  loaded from a JSON ruleset file (`--ruleset FILE`). Support `--rule RULE`
-  to enable specific built-in rules and `--fix` to auto-correct safe issues
-  in-place. Exit behavior: exit 0 when only style issues are found so `lint`
-  does not block CI that already uses `check`.
+- [ ] Add `lint --fix` auto-correction: currently lint reports issues;
+  implement the `--fix` flag to auto-rename typo keys in-place
+  (e.g., `proj:` → `project:`) with atomic write and `--dry-run` preview.
+  Load custom rules from a JSON ruleset file (`--ruleset FILE`).
 
 - [ ] Add `diff` command for semantic diffing between two life.txt inputs
   (files, glob sets, or snapshots): report added, completed, canceled,
@@ -368,11 +341,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   Primary use cases: weekly progress review, pre/post archive comparison,
   team file change summaries.
 
-- [ ] Add `snapshot` command for point-in-time file copies:
-  `lifetxt snapshot life.txt -o snapshots/2026-06-27.life.txt`.
-  The output is a plain life.txt file with no special markers. Combine with
-  `diff` for progress comparisons. Document a recommended snapshot naming
-  convention (`YYYY-MM-DD` prefix) and directory layout.
+- [ ] Add `snapshot --diff` flag to compare the new snapshot to the previous
+  one using `diff` command (once `diff` is implemented). Document recommended
+  naming convention in docs.
 
 - [ ] Add `migrate` command for in-place format upgrades: apply a named
   migration (e.g., `--migration normalize-elapsed`, `--migration rename-key
@@ -577,9 +548,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and
   `projects/**/*.life.txt` across all file-reading commands.
 
-- [ ] Add parser edge-case tests: Unicode escaping, nested quotes, invalid
-  `|` continuation variants, indentation with mixed spaces and tabs, and
-  same-file duplicate-ID edge cases.
+- [ ] Add parser edge-case tests: nested quotes, invalid `|` continuation
+  variants, indentation with mixed spaces and tabs, and same-file
+  duplicate-ID edge cases. (Unicode, emoji, CRLF, multi-value already covered.)
 
 - [ ] Add canonical hierarchy edge-case tests: `from-jsonl --canonical`,
   `from-csv --canonical`, custom `ids.key`, a parent without an ID, and items
@@ -608,8 +579,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add FastAPI test-client coverage for all `/api/*` routes when optional
   web dependencies are installed, including `/api/check-line` and `/api/graph`.
 
-- [ ] Add `/api/check-line` tests: valid line returns `ok:true`; invalid line
-  returns `ok:false` with error diagnostics; empty line returns `ok:true`.
+- [ ] Add FastAPI test-client coverage for `/api/check-line` via httpx/testclient
+  (currently tested via parse_text directly; add end-to-end HTTP round-trip tests).
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that
@@ -650,8 +621,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 
 - [ ] Add `done` tests: ambiguous title match (interactive confirmation prompt).
 
-- [ ] Add `summary` tests: counts match file contents for every type/status
-  combination, missing-ID count is accurate, JSON schema is stable.
+- [ ] Add `summary` edge-case tests: missing-ID count is accurate, multiple-file
+  aggregation totals, and zero-item file returns empty counts without error.
 
 - [ ] Add `review` edge-case tests: mood trend most-common-first summary aggregation.
 
@@ -667,7 +638,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `diff` tests: added, completed, canceled, status-changed,
   detail-changed items; filter scope; JSON output schema.
 
-- [ ] Add `search` tests: cross-file glob, highlighted matches in text output.
+- [ ] Add `search` cross-file glob tests: pass a glob pattern covering multiple
+  files and verify results aggregate correctly. Add highlighted-match tests
+  once `--highlight` flag is implemented.
 
 - [ ] Add `migrate` tests: `--dry-run`, `--backup`, chained migrations,
   idempotency.

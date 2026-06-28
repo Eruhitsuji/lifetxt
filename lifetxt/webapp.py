@@ -50,7 +50,7 @@ from .timeutil import format_datetime as format_life_datetime, parse_date_or_dat
 from .validator import validate_item
 
 
-def create_app(paths=None, writable_path=None, config=None):
+def create_app(paths=None, writable_path=None, config=None, read_only=False):
     try:
         from fastapi import Body, FastAPI, HTTPException, Query, Request
         from fastapi.responses import HTMLResponse, JSONResponse
@@ -59,10 +59,31 @@ def create_app(paths=None, writable_path=None, config=None):
             "Web dependencies are not installed. Run: pip install -r requirements-web.txt"
         ) from exc
 
-    app = FastAPI(title="life.txt API", version="0.1.0")
+    app = FastAPI(
+        title="life.txt API",
+        version="0.1.0",
+        description="life.txt REST API" + (" — read-only demo" if read_only else ""),
+    )
     app.state.paths = normalize_server_paths(paths)
     app.state.writable_path = writable_path or app.state.paths[0]
     app.state.config = config or {}
+    app.state.read_only = read_only
+
+    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line"})
+
+    if read_only:
+        @app.middleware("http")
+        async def _read_only_guard(request: Request, call_next):
+            if request.method not in ("GET", "HEAD", "OPTIONS"):
+                if request.url.path not in _READ_ONLY_ALLOWED_PATHS:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "error": "READ_ONLY",
+                            "message": "This is a read-only demo instance. Write operations are disabled.",
+                        },
+                    )
+            return await call_next(request)
 
     _api_token = (config or {}).get("api", {}).get("token") if config else None
     if _api_token:
@@ -121,6 +142,7 @@ def create_app(paths=None, writable_path=None, config=None):
             "writable_path": app.state.writable_path,
             "config_path": app.state.config.get("_path"),
             "user": config_user_name(app.state.config),
+            "read_only": app.state.read_only,
         }
 
     @app.get("/api/config")
@@ -2464,6 +2486,9 @@ HTML_PAGE = r"""<!doctype html>
   </style>
 </head>
 <body>
+  <div id="read-only-banner" style="display:none;background:#d97706;color:#fff;text-align:center;font-size:.78rem;padding:.25rem .75rem;letter-spacing:.02em;">
+    ⚠️ Read-only demo — write operations are disabled.
+  </div>
   <header>
     <div>
       <h1>life.txt</h1>
@@ -3681,7 +3706,16 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Live syntax check for quick-add bar ───────────────────────
     let _checkTimer = null;
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Show read-only banner if server is in read-only mode
+      try {
+        const health = await api("/api/health");
+        if (health.read_only) {
+          const banner = document.getElementById("read-only-banner");
+          if (banner) banner.style.display = "";
+        }
+      } catch(_) {}
+
       const qInput = document.getElementById("quick-line");
       if (qInput) {
         qInput.addEventListener("input", () => {

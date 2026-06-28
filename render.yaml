@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: lifetxt-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8000"
+      - key: DEMO_FILE
+        value: "examples/tasks_life.txt"
+    healthCheckPath: /api/health

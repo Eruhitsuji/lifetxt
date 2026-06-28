@@ -445,6 +445,11 @@ def build_parser():
     )
     serve.add_argument("--host", help="Bind host.")
     serve.add_argument("--port", type=int, help="Bind port.")
+    serve.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
+    )
     serve.set_defaults(func=command_serve)
 
     config_command = subparsers.add_parser(
@@ -2256,7 +2261,8 @@ def command_serve(args):
     writable_path = args.write_file or config_write_file(_config(args)) or paths[0]
     host = args.host or web_config.get("host") or "127.0.0.1"
     port = args.port or int(web_config.get("port") or 8000)
-    app = create_app(paths=paths, writable_path=writable_path, config=_config(args))
+    read_only = getattr(args, "read_only", False) or bool(web_config.get("read_only"))
+    app = create_app(paths=paths, writable_path=writable_path, config=_config(args), read_only=read_only)
     uvicorn.run(app, host=host, port=port)
     return 0
 

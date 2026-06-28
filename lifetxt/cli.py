@@ -569,6 +569,7 @@ def build_parser():
         help="Aggregation bucket size.",
     )
     stats.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
+    stats.add_argument("--width", type=int, help="Render text output for a specific terminal width.")
     stats.set_defaults(func=command_stats)
 
     git_hook = subparsers.add_parser(
@@ -734,6 +735,11 @@ def build_parser():
         help="Half-width for --around, e.g. 30m, 2h, 1d, 1w, 1mo, or 1y.",
     )
     agenda.add_argument(
+        "--width",
+        type=int,
+        help="Render text output for a specific terminal width.",
+    )
+    agenda.add_argument(
         "--format",
         choices=("text", "life", "json", "jsonl"),
         default="text",
@@ -825,6 +831,16 @@ def build_parser():
     agenda.add_argument(
         "--text",
         help="Case-insensitive substring filter across title, line, and detail values.",
+    )
+    agenda.add_argument(
+        "--blocked",
+        action="store_true",
+        help="Show only items blocked by dependency records.",
+    )
+    agenda.add_argument(
+        "--unblocked",
+        action="store_true",
+        help="Show only items without dependency blockers.",
     )
     agenda.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     agenda.set_defaults(func=command_agenda)
@@ -1052,6 +1068,18 @@ def build_parser():
     )
     done_cmd.set_defaults(func=command_done)
 
+    batch_cmd = subparsers.add_parser(
+        "batch",
+        help="Apply a simple item command across multiple life.txt files.",
+    )
+    batch_cmd.add_argument("action", choices=("done", "assign"), help="Action to apply.")
+    batch_cmd.add_argument("paths", nargs="+", help="Input file(s), directories, or glob patterns.")
+    batch_cmd.add_argument("--id", action="append", dest="ids", help="Item ID to target. Can be repeated.")
+    batch_cmd.add_argument("--text", action="append", dest="texts", help="Title substring to target. Can be repeated.")
+    batch_cmd.add_argument("--to", help="Assignee for action=assign.")
+    batch_cmd.add_argument("--dry-run", action="store_true", help="Preview actions without writing.")
+    batch_cmd.set_defaults(func=command_batch)
+
     summary = subparsers.add_parser(
         "summary",
         help="Show a fast overview of a life.txt file.",
@@ -1222,6 +1250,11 @@ def build_parser():
         action="store_true",
         help="Interactive one-by-one triage: prompts for project, due, and assignee for each inbox item.",
     )
+    inbox_cmd.add_argument(
+        "--fzf",
+        action="store_true",
+        help="Select an inbox item with fzf or peco and print the selected record.",
+    )
     inbox_cmd.set_defaults(func=command_inbox)
 
     cleanup_cmd = subparsers.add_parser(
@@ -1288,7 +1321,7 @@ def build_parser():
     )
     review_cmd.add_argument(
         "--format",
-        choices=("text", "json", "jsonl", "markdown"),
+        choices=("text", "json", "jsonl", "markdown", "html"),
         default="text",
         help="Output format.",
     )
@@ -1469,7 +1502,33 @@ def build_parser():
         default=0,
         help="Chart width in characters (0 = auto-detect terminal width).",
     )
+    plot_cmd.add_argument(
+        "--format",
+        choices=("text", "svg", "png"),
+        default="text",
+        help="Output format. SVG is dependency-free; PNG requires matplotlib.",
+    )
+    plot_cmd.add_argument("-o", "--output", help="Output file for SVG/PNG. Text defaults to stdout.")
     plot_cmd.set_defaults(func=command_plot)
+
+    heatmap_cmd = subparsers.add_parser(
+        "export-heatmap",
+        help="Export task or habit activity as a dependency-free SVG heatmap.",
+    )
+    _add_input_paths(heatmap_cmd)
+    heatmap_cmd.add_argument("--from", dest="start", metavar="DATE", help="Start date (YYYY-MM-DD).")
+    heatmap_cmd.add_argument("--to", dest="end", metavar="DATE", help="End date (YYYY-MM-DD).")
+    heatmap_cmd.add_argument(
+        "--type",
+        dest="kind",
+        choices=("task", "habit", "all"),
+        default="all",
+        help="Activity source: task done dates, habit done dates, or all.",
+    )
+    heatmap_cmd.add_argument("--project", help="Restrict to a single project.")
+    heatmap_cmd.add_argument("--title", default="lifetxt activity", help="SVG title.")
+    heatmap_cmd.add_argument("-o", "--output", help="Output SVG file. Defaults to stdout.")
+    heatmap_cmd.set_defaults(func=command_export_heatmap)
 
     # migrate command
     migrate_cmd = subparsers.add_parser(
@@ -1607,6 +1666,10 @@ def build_parser():
         "--key-env", metavar="ENVVAR", default="LIFETXT_KEY",
         help="Environment variable containing the passphrase (default: LIFETXT_KEY).",
     )
+    encrypt_cmd.add_argument(
+        "--key-file",
+        help="Read the passphrase from a UTF-8 text file. Overrides --key-env.",
+    )
     encrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     encrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
     encrypt_cmd.set_defaults(func=command_encrypt)
@@ -1624,6 +1687,10 @@ def build_parser():
     decrypt_cmd.add_argument(
         "--key-env", metavar="ENVVAR", default="LIFETXT_KEY",
         help="Environment variable containing the passphrase (default: LIFETXT_KEY).",
+    )
+    decrypt_cmd.add_argument(
+        "--key-file",
+        help="Read the passphrase from a UTF-8 text file. Overrides --key-env.",
     )
     decrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     decrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
@@ -2143,6 +2210,7 @@ def command_sync_ics(args):
             )
         )
 
+    items = _dedupe_items_by_detail_id(items)
     output = _validated_life_text_or_exit(items)
     if output is None:
         return 1
@@ -2154,6 +2222,19 @@ def command_sync_ics(args):
             ensure_parent_dir(output_path)
         write_text(output_path, output)
     return 0
+
+
+def _dedupe_items_by_detail_id(items, id_key="id"):
+    by_id = OrderedDict()
+    no_id = []
+    for item in items:
+        values = item.details.get(id_key, [])
+        item_id = str(values[0]) if values else ""
+        if not item_id:
+            no_id.append(item)
+            continue
+        by_id[item_id] = item
+    return no_id + list(by_id.values())
 
 
 def command_serve(args):
@@ -2681,6 +2762,68 @@ def command_done(args):
     atomic_write_text(path, updated_text)
     sys.stdout.write("Done: %s\n" % updated_line)
     return 0
+
+
+def command_batch(args):
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config)
+    selectors = []
+    selectors.extend(("id", value) for value in (getattr(args, "ids", None) or []))
+    selectors.extend(("text", value) for value in (getattr(args, "texts", None) or []))
+    if not selectors:
+        raise ValueError("batch requires at least one --id or --text selector.")
+    action = getattr(args, "action", "")
+    if action == "assign" and not getattr(args, "to", None):
+        raise ValueError("batch assign requires --to.")
+    if not paths:
+        raise ValueError("batch requires at least one file path.")
+
+    status_code = 0
+    applied = 0
+    for path in paths:
+        if path == "-":
+            raise ValueError("batch does not support stdin.")
+        for selector_kind, selector_value in selectors:
+            if action == "done":
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    id=selector_value if selector_kind == "id" else None,
+                    line=None,
+                    text=selector_value if selector_kind == "text" else None,
+                    dry_run=getattr(args, "dry_run", False),
+                    config_data=config,
+                )
+                result = command_done(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            if action == "assign":
+                if getattr(args, "dry_run", False):
+                    sys.stdout.write(
+                        "[dry-run] Would assign %s=%s to %s in %s.\n"
+                        % (selector_kind, selector_value, args.to, path)
+                    )
+                    applied += 1
+                    continue
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    id=selector_value if selector_kind == "id" else None,
+                    text=selector_value if selector_kind == "text" else None,
+                    to=args.to,
+                    notify=False,
+                    from_user=None,
+                    config_data=config,
+                )
+                result = command_assign(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            raise ValueError("Unsupported batch action: %s" % action)
+    if getattr(args, "dry_run", False):
+        sys.stdout.write("[dry-run] Planned %d batch operation(s).\n" % applied)
+    else:
+        sys.stdout.write("Applied %d batch operation(s).\n" % applied)
+    return status_code
 
 
 def command_summary(args):
@@ -3247,6 +3390,9 @@ def command_inbox(args):
             continue
         inbox_items.append(item)
 
+    if getattr(args, "fzf", False):
+        return _run_inbox_selector(inbox_items)
+
     _fmt = getattr(args, "format", "text")
     _pretty = getattr(args, "pretty", False)
     if _fmt == "json":
@@ -3323,6 +3469,38 @@ def command_inbox(args):
         return 0
 
     _print_warnings(diagnostics)
+    return 0
+
+
+def _run_inbox_selector(inbox_items):
+    import shutil
+    import subprocess
+
+    if not inbox_items:
+        write_text(None, "Inbox is empty.\n")
+        return 0
+    selector = shutil.which("fzf") or shutil.which("peco")
+    if not selector:
+        sys.stderr.write("ERROR: --fzf requires fzf or peco in PATH.\n")
+        return 1
+    rows = []
+    for item in inbox_items:
+        src = getattr(item, "source", None)
+        location = ("%s:%d" % (src, item.line)) if src else ("line:%d" % item.line)
+        ids = item.details.get("id", [])
+        item_id = str(ids[0]) if ids else ""
+        rows.append("%s\t%s\t%s\t%s\t%s" % (location, item.kind, item.status, item_id, item.title))
+    proc = subprocess.run(
+        [selector],
+        input="\n".join(rows) + "\n",
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        return proc.returncode
+    selected = proc.stdout.strip()
+    if selected:
+        write_text(None, selected + "\n")
     return 0
 
 
@@ -3582,6 +3760,68 @@ def command_review(args):
             lines.append("## Elapsed by Project")
             for proj, elapsed in result["elapsed_by_project"].items():
                 lines.append("- **%s**: %s" % (proj, elapsed))
+        sys.stdout.write("\n".join(lines) + "\n")
+        return 0
+    if fmt == "html":
+        def esc(value):
+            return html.escape(str(value), quote=True)
+
+        lines = [
+            "<!doctype html>",
+            '<html lang="en">',
+            "<head>",
+            '<meta charset="utf-8">',
+            "<title>lifetxt review</title>",
+            "<style>",
+            "body{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;max-width:900px;margin:32px auto;padding:0 16px;color:#1f2937}",
+            "h1,h2{line-height:1.2} table{border-collapse:collapse;width:100%;margin:12px 0}",
+            "th,td{border:1px solid #d1d5db;padding:6px 8px;text-align:left} th{background:#f3f4f6}",
+            ".meta{color:#6b7280}.card{border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:12px 0}",
+            "</style>",
+            "</head>",
+            "<body>",
+            "<h1>Review</h1>",
+            '<p class="meta">%s</p>' % esc(result["range"]),
+            "<h2>Tasks</h2>",
+            "<ul>",
+            "<li>Completed: <strong>%d</strong></li>" % result["completed_tasks"],
+            "<li>Open: %d</li>" % result["open_tasks"],
+            "</ul>",
+        ]
+        if completed_tasks:
+            lines.extend(["<h3>Completed</h3>", "<ul>"])
+            for task in completed_tasks:
+                done_val = str(task.details.get("done", [""])[0]) if task.details.get("done") else ""
+                suffix = " (%s)" % esc(done_val) if done_val else ""
+                lines.append("<li>%s%s</li>" % (esc(task.title), suffix))
+            lines.append("</ul>")
+        if result["habits"]:
+            lines.extend(["<h2>Habits</h2>", "<table><thead><tr><th>Habit</th><th>Done</th><th>Total</th><th>Rate</th></tr></thead><tbody>"])
+            for title, habit in result["habits"].items():
+                total = habit["done"] + habit["open"]
+                lines.append(
+                    "<tr><td>%s</td><td>%d</td><td>%d</td><td>%d%%</td></tr>"
+                    % (esc(title), habit["done"], total, habit["completion_rate"])
+                )
+            lines.append("</tbody></table>")
+        if result["journal_entries"]:
+            lines.append("<h2>Journal</h2>")
+            for entry in result["journal_entries"]:
+                lines.append('<article class="card"><h3>%s %s</h3>' % (esc(entry["date"]), esc(entry["title"])))
+                if entry["excerpt"]:
+                    lines.append("<p>%s</p>" % esc(entry["excerpt"]))
+                lines.append("</article>")
+        if result["mood_trend"]:
+            lines.extend(["<h2>Mood</h2>", "<ul>"])
+            for entry in result["mood_trend"]:
+                lines.append("<li>%s: %s</li>" % (esc(entry["date"]), esc(entry["mood"])))
+            lines.append("</ul>")
+        if result["elapsed_by_project"]:
+            lines.extend(["<h2>Elapsed by Project</h2>", "<ul>"])
+            for project, elapsed in result["elapsed_by_project"].items():
+                lines.append("<li><strong>%s</strong>: %s</li>" % (esc(project), esc(elapsed)))
+            lines.append("</ul>")
+        lines.extend(["</body>", "</html>"])
         sys.stdout.write("\n".join(lines) + "\n")
         return 0
 
@@ -4000,6 +4240,71 @@ def _plot_bar(value, max_value, width=40, char="#"):
     return char * filled + "." * (width - filled)
 
 
+def _plot_data_to_svg(plot_data, title="lifetxt plot"):
+    chart_items = [(chart_title, data) for chart_title, data in plot_data.items() if data]
+    width = 900
+    row_height = 24
+    chart_gap = 46
+    margin = 24
+    title_height = 38
+    height = title_height + margin
+    for _chart_title, data in chart_items:
+        height += 32 + max(1, len(data)) * row_height + chart_gap
+    height = max(height, 160)
+
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">'
+        % (width, height, width, height),
+        "<style>text{font-family:Arial,sans-serif;font-size:13px;fill:#1f2937}.title{font-size:20px;font-weight:700}.section{font-size:15px;font-weight:700}.axis{fill:#6b7280}.bar{fill:#2563eb}.track{fill:#e5e7eb}</style>",
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<text class="title" x="%d" y="30">%s</text>' % (margin, html.escape(title, quote=True)),
+    ]
+    y = 64
+    label_width = 190
+    bar_x = margin + label_width
+    bar_max_width = width - bar_x - 80
+    for chart_title, data in chart_items:
+        parts.append('<text class="section" x="%d" y="%d">%s</text>' % (margin, y, html.escape(chart_title, quote=True)))
+        y += 22
+        max_value = max(data.values()) or 1
+        for label, value in data.items():
+            bar_width = int(round((value / float(max_value)) * bar_max_width))
+            safe_label = html.escape(str(label), quote=True)
+            parts.append('<text x="%d" y="%d">%s</text>' % (margin, y + 15, safe_label[:42]))
+            parts.append('<rect class="track" x="%d" y="%d" width="%d" height="14" rx="3"/>' % (bar_x, y + 3, bar_max_width))
+            parts.append('<rect class="bar" x="%d" y="%d" width="%d" height="14" rx="3"/>' % (bar_x, y + 3, bar_width))
+            parts.append('<text class="axis" x="%d" y="%d">%s</text>' % (bar_x + bar_max_width + 10, y + 15, value))
+            y += row_height
+        y += chart_gap
+    if not chart_items:
+        parts.append('<text x="%d" y="%d">No plot data.</text>' % (margin, y))
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def _plot_data_to_png(plot_data, output_path):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ValueError("--format png requires matplotlib. Install matplotlib or use --format svg.")
+
+    chart_items = [(chart_title, data) for chart_title, data in plot_data.items() if data]
+    if not chart_items:
+        chart_items = [("No plot data", OrderedDict([("none", 0)]))]
+    fig, axes = plt.subplots(len(chart_items), 1, figsize=(10, max(3, len(chart_items) * 3)))
+    if len(chart_items) == 1:
+        axes = [axes]
+    for axis, (chart_title, data) in zip(axes, chart_items):
+        labels = list(data.keys())
+        values = list(data.values())
+        axis.barh(labels, values, color="#2563eb")
+        axis.set_title(chart_title)
+        axis.invert_yaxis()
+    fig.tight_layout()
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 def command_plot(args):
     from .timeutil import parse_elapsed as _parse_elapsed
 
@@ -4010,6 +4315,8 @@ def command_plot(args):
     chart = getattr(args, "chart", "all")
     group = getattr(args, "group", "weekly")
     project_filter = getattr(args, "project", None)
+    output_format = getattr(args, "format", "text")
+    plot_data = OrderedDict()
     term_width = getattr(args, "width", 0)
     if not term_width:
         try:
@@ -4038,6 +4345,9 @@ def command_plot(args):
 
     def _print_bar_chart(title, data):
         if not data:
+            return
+        plot_data[title] = OrderedDict((str(label), int(value)) for label, value in sorted(data.items()))
+        if output_format != "text":
             return
         sys.stdout.write("\n## %s\n" % title)
         max_v = max(data.values()) if data else 1
@@ -4090,6 +4400,11 @@ def command_plot(args):
                     proj = str(item.details.get("project", ["(no project)"])[0])
                     proj_elapsed[proj] = proj_elapsed.get(proj, 0) + minutes
         if proj_elapsed:
+            plot_data["Elapsed Time by Project"] = OrderedDict(
+                (str(project), int(minutes))
+                for project, minutes in sorted(proj_elapsed.items(), key=lambda x: -x[1])
+            )
+        if proj_elapsed and output_format == "text":
             sys.stdout.write("\n## Elapsed Time by Project\n")
             max_v = max(proj_elapsed.values())
             for proj, minutes in sorted(proj_elapsed.items(), key=lambda x: -x[1]):
@@ -4112,7 +4427,7 @@ def command_plot(args):
             _print_bar_chart("Deadline Density (%s)" % group, deadline_buckets)
 
     # sparkline output: single row of Unicode block chars
-    if getattr(args, "sparkline", False):
+    if getattr(args, "sparkline", False) and output_format == "text":
         SPARKS = " ▁▂▃▄▅▆▇█"
         def _sparkline(data_dict):
             if not data_dict:
@@ -4138,8 +4453,110 @@ def command_plot(args):
         if chart in ("deadlines", "all"):
             sys.stdout.write("  Deadlines: %s\n" % _sparkline(deadline_buckets if 'deadline_buckets' in locals() else {}))
 
+    if output_format == "svg":
+        svg = _plot_data_to_svg(plot_data, title="lifetxt plot")
+        write_text(getattr(args, "output", None), svg + "\n")
+        return 0
+    if output_format == "png":
+        output = getattr(args, "output", None)
+        if not output:
+            raise ValueError("--format png requires -o/--output.")
+        _plot_data_to_png(plot_data, output)
+        return 0
+
     sys.stdout.write("\n")
     return 0
+
+
+def command_export_heatmap(args):
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
+    items, _ = _parse_life_inputs(paths, config)
+    today = datetime.date.today()
+    end = _parse_date_only(getattr(args, "end", None)) if getattr(args, "end", None) else today
+    start = _parse_date_only(getattr(args, "start", None)) if getattr(args, "start", None) else end - datetime.timedelta(days=364)
+    if end < start:
+        raise ValueError("--to must not be earlier than --from.")
+    project = getattr(args, "project", None)
+    kind = getattr(args, "kind", "all")
+    counts = _activity_counts(items, start, end, kind=kind, project=project)
+    svg = _activity_heatmap_svg(counts, start, end, title=getattr(args, "title", "lifetxt activity"))
+    write_text(getattr(args, "output", None), svg + "\n")
+    return 0
+
+
+def _activity_counts(items, start, end, kind="all", project=None):
+    counts = OrderedDict()
+    current = start
+    while current <= end:
+        counts[current] = 0
+        current += datetime.timedelta(days=1)
+
+    for item in items:
+        if project and project not in [str(value) for value in item.details.get("project", [])]:
+            continue
+        include_task = kind in ("all", "task") and item.kind == "T"
+        include_habit = kind in ("all", "habit") and item.kind == "H"
+        if not include_task and not include_habit:
+            continue
+        for value in item.details.get("done", []):
+            day = _parse_date_only(str(value))
+            if day and start <= day <= end:
+                counts[day] += 1
+        if item.status == "[x]" and not item.details.get("done"):
+            day = _latest_item_date(item)
+            if day and start <= day <= end:
+                counts[day] += 1
+    return counts
+
+
+def _activity_heatmap_svg(counts, start, end, title="lifetxt activity"):
+    cell = 12
+    gap = 3
+    left = 42
+    top = 54
+    days = list(counts.keys())
+    weeks = ((len(days) + start.weekday()) + 6) // 7
+    width = left + weeks * (cell + gap) + 24
+    height = top + 7 * (cell + gap) + 42
+    max_count = max(counts.values()) if counts else 0
+
+    def color(value):
+        if value <= 0 or max_count <= 0:
+            return "#ebedf0"
+        ratio = value / float(max_count)
+        if ratio < 0.25:
+            return "#9be9a8"
+        if ratio < 0.5:
+            return "#40c463"
+        if ratio < 0.75:
+            return "#30a14e"
+        return "#216e39"
+
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">'
+        % (width, height, width, height),
+        "<style>text{font-family:Arial,sans-serif;font-size:12px;fill:#374151}.title{font-size:18px;font-weight:700}.meta{fill:#6b7280}</style>",
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<text class="title" x="16" y="28">%s</text>' % html.escape(str(title), quote=True),
+        '<text class="meta" x="16" y="46">%s to %s</text>' % (start.isoformat(), end.isoformat()),
+    ]
+    for row, label in enumerate(("Mon", "", "Wed", "", "Fri", "", "Sun")):
+        if label:
+            parts.append('<text x="12" y="%d">%s</text>' % (top + row * (cell + gap) + 10, label))
+    for day, value in counts.items():
+        offset = (day - start).days + start.weekday()
+        week = offset // 7
+        row = day.weekday()
+        x = left + week * (cell + gap)
+        y = top + row * (cell + gap)
+        parts.append(
+            '<rect x="%d" y="%d" width="%d" height="%d" rx="2" fill="%s">'
+            "<title>%s: %d</title></rect>"
+            % (x, y, cell, cell, color(value), day.isoformat(), value)
+        )
+    parts.append("</svg>")
+    return "\n".join(parts)
 
 
 def command_migrate(args):
@@ -4670,6 +5087,8 @@ def command_notify(args):
 
 
 def command_agenda(args):
+    if args.blocked and args.unblocked:
+        raise ValueError("Use either --blocked or --unblocked, not both.")
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     range_start, range_end = parse_agenda_range(
         start_text=args.start,
@@ -4697,6 +5116,7 @@ def command_agenda(args):
         teams=args.team,
         detail_filters=args.detail,
         text=args.text,
+        blocked=True if args.blocked else False if args.unblocked else None,
         user_aliases=config_user_aliases(_config(args)),
         team_members=config_team_members(_config(args)),
         team_aliases=config_team_aliases(_config(args)),
@@ -4717,7 +5137,7 @@ def command_agenda(args):
             output += "\n"
         write_text(args.output, output)
     else:
-        write_text(args.output, format_agenda_table(records))
+        write_text(args.output, format_agenda_table(records, width=args.width))
 
     _print_warnings(diagnostics)
     return 0
@@ -6159,17 +6579,30 @@ def _xsk_decrypt(enc_value, passphrase):
     return bytes(a ^ b for a, b in zip(ciphertext, keystream[:len(ciphertext)])).decode("utf-8")
 
 
+def _read_passphrase_arg(args):
+    key_file = getattr(args, "key_file", None)
+    key_env = getattr(args, "key_env", "LIFETXT_KEY")
+    if key_file:
+        passphrase = read_text(key_file).strip()
+        if not passphrase:
+            sys.stderr.write("ERROR: Passphrase file is empty: %s\n" % key_file)
+            return ""
+        return passphrase
+    passphrase = os.environ.get(key_env, "")
+    if not passphrase:
+        sys.stderr.write("ERROR: Passphrase not set. Set environment variable %s or use --key-file.\n" % key_env)
+    return passphrase
+
+
 def command_encrypt(args):
     import re as _re
     path = args.path
     fields = args.fields or ["body", "note"]
     kinds = set(args.kinds or [])
-    key_env = getattr(args, "key_env", "LIFETXT_KEY")
     dry_run = getattr(args, "dry_run", False)
     do_backup = getattr(args, "backup", False)
-    passphrase = os.environ.get(key_env, "")
+    passphrase = _read_passphrase_arg(args)
     if not passphrase:
-        sys.stderr.write("ERROR: Passphrase not set. Set environment variable %s.\n" % key_env)
         return 1
     text = read_text(path)
     id_key = id_key_from_config({})
@@ -6210,12 +6643,10 @@ def command_decrypt(args):
     import re as _re
     path = args.path
     fields_filter = set(args.fields or [])
-    key_env = getattr(args, "key_env", "LIFETXT_KEY")
     dry_run = getattr(args, "dry_run", False)
     do_backup = getattr(args, "backup", False)
-    passphrase = os.environ.get(key_env, "")
+    passphrase = _read_passphrase_arg(args)
     if not passphrase:
-        sys.stderr.write("ERROR: Passphrase not set. Set environment variable %s.\n" % key_env)
         return 1
     text = read_text(path)
     lines = text.splitlines(keepends=True)

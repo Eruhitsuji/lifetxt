@@ -6844,5 +6844,154 @@ class LifeTxtSummaryCompareTests(unittest.TestCase):
             os.unlink(a); os.unlink(b)
 
 
+class LifeTxtCliExpansionTests(unittest.TestCase):
+    def _make_file(self, text):
+        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        handle.write(text)
+        handle.flush()
+        handle.close()
+        return handle.name
+
+    def test_agenda_json_includes_occurrence_metadata(self):
+        path = self._make_file("[ ] T Daily_check from:2026-06-01T09:00 repeat:daily id:t-daily\n")
+        try:
+            out, err, rc = run_cli(
+                "agenda",
+                path,
+                "--from",
+                "2026-06-03",
+                "--to",
+                "2026-06-03",
+                "--format",
+                "json",
+            )
+            self.assertEqual(rc, 0, err)
+            data = json.loads(out)
+            self.assertEqual("t-daily", data[0]["source_id"])
+            self.assertEqual("daily", data[0]["repeat_rule"])
+            self.assertEqual("2026-06-03T09:00", data[0]["occurrence_start"])
+            self.assertEqual(3, data[0]["occurrence_index"])
+        finally:
+            os.unlink(path)
+
+    def test_agenda_blocked_filter_and_width(self):
+        path = self._make_file(
+            "[ ] T Parent do:2026-06-01 id:p1\n"
+            "[ ] T Child do:2026-06-01 depends_on:p1 id:c1\n"
+        )
+        try:
+            out, err, rc = run_cli(
+                "agenda",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-01",
+                "--blocked",
+                "--width",
+                "60",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Child", out)
+            self.assertNotIn("Parent", out)
+        finally:
+            os.unlink(path)
+
+    def test_stats_width_compact_output(self):
+        path = self._make_file("[x] T Done done:2026-06-10 project:work\n")
+        try:
+            out, err, rc = run_cli("stats", path, "--from", "2026-06-01", "--to", "2026-06-30", "--width", "50")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("tasks done", out)
+            self.assertLessEqual(max(len(line) for line in out.splitlines()), 50)
+        finally:
+            os.unlink(path)
+
+    def test_encrypt_decrypt_key_file(self):
+        path = self._make_file("[N] N Secret note:hidden\n")
+        key_path = self._make_file("passphrase\n")
+        try:
+            out, err, rc = run_cli("encrypt", path, "--field", "note", "--key-file", key_path)
+            self.assertEqual(rc, 0, err)
+            encrypted = Path(path).read_text(encoding="utf-8")
+            self.assertIn("note:enc:XSK:", encrypted)
+            out, err, rc = run_cli("decrypt", path, "--field", "note", "--key-file", key_path)
+            self.assertEqual(rc, 0, err)
+            self.assertIn("note:hidden", Path(path).read_text(encoding="utf-8"))
+        finally:
+            os.unlink(path)
+            os.unlink(key_path)
+
+    def test_review_html_output(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "review",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
+                "--format",
+                "html",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("<!doctype html>", out)
+            self.assertIn("<h1>Review</h1>", out)
+        finally:
+            os.unlink(path)
+
+    def test_plot_svg_output(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "plot",
+                path,
+                "--chart",
+                "tasks",
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
+                "--format",
+                "svg",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("<svg", out)
+            self.assertIn("Tasks Completed", out)
+        finally:
+            os.unlink(path)
+
+    def test_export_heatmap_svg_output(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "export-heatmap",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
+                "--title",
+                "Work heatmap",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("<svg", out)
+            self.assertIn("Work heatmap", out)
+            self.assertIn("2026-06-10: 1", out)
+        finally:
+            os.unlink(path)
+
+    def test_batch_done_dry_run(self):
+        path = self._make_file("[ ] T Task id:t1\n")
+        try:
+            out, err, rc = run_cli("batch", "done", path, "--id", "t1", "--dry-run")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Planned 1 batch operation", out)
+            self.assertIn("[ ] T Task", Path(path).read_text(encoding="utf-8"))
+        finally:
+            os.unlink(path)
+
+
 if __name__ == "__main__":
     unittest.main()

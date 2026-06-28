@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28T23:00 (updated x38)
+Last updated: 2026-06-28 (updated x39)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -27,6 +27,14 @@ real environments. Each item must be tested manually before the next release.
 - [ ] Verify `lifetxt fzf` with actual `fzf` and `peco` on both Windows
   PowerShell and Unix-like shells: confirm preview command quoting, `done` and
   `delete` actions, and `edit` with `$EDITOR`.
+
+- [ ] Verify `inbox --fzf` with actual `fzf` and `peco` on Windows
+  PowerShell and Unix-like shells: confirm selector launch, selected-row output,
+  and behavior when no selector is installed.
+
+- [ ] Verify `plot --format png` on environments with and without
+  `matplotlib`: confirm PNG output when installed and clear fallback errors
+  when the optional dependency is missing.
 
 - [ ] Verify `timer start/pause/resume/status/stop/cancel` with a real state
   file path on all supported platforms: confirm `elapsed:` is written correctly
@@ -95,18 +103,13 @@ Improvements to existing commands that affect daily workflow.
   fields (`est:`, `elapsed:`), and link fields (`depends_on:`, `blocks:`,
   `related:`). Ensure Tab-completion covers these fields in interactive mode.
 
-- [ ] Add recurrence occurrence output to `agenda`: include source item ID,
-  occurrence datetime, and the recurrence rule that generated the occurrence
-  in `--format json` and `--format jsonl` output. Define how filtered
-  occurrence sets are exported to JSON, JSONL, CSV, and life.txt.
+- [ ] Extend occurrence-aware exports beyond `agenda --format json|jsonl`:
+  define how generated recurrence occurrences should be exported to CSV,
+  life.txt, Web API responses, and generated occurrence files without
+  overwriting stored source items.
 
-- [x] Add terminal width adaptation: `agenda` and `summary` now detect terminal
-  width via `shutil.get_terminal_size()` and switch to compact single-line
-  format when narrower than 80 columns.
-
-- [ ] Extend terminal width adaptation to `stats`, `tui`, and `filter` table
-  output; add `--width N` flag to override auto-detection in all affected
-  commands.
+- [ ] Extend terminal width adaptation to `tui` and `filter` table output; add
+  `--width N` flag to `filter` and verify `tui` behavior in narrow terminals.
 
 - [ ] Keep CLI help synchronized with docs: after every change to `tui`,
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
@@ -138,12 +141,9 @@ existing command internally to reuse validation and atomic write behavior.
 New commands that close the feedback loop: surfacing what is happening,
 what is overdue, and what the week looked like.
 
-- [x] Add `--process` mode to `inbox` command: interactive one-by-one triage
-  prompting for `project:`, `due:`, and `assignee:`; each update applied
-  in-place via atomic write. `--fzf` remains deferred.
-
-- [ ] Add `--fzf` flag to `inbox`: pipe unprocessed items to `fzf` for quick
-  editing, after `--process` mode is confirmed stable in real use.
+- [ ] Extend `inbox --fzf` from selection-only output to optional follow-up
+  actions (`show`, `assign`, `done`, `edit`) after real `fzf`/`peco`
+  verification confirms quoting and selector behavior.
 
 ---
 
@@ -157,14 +157,9 @@ Commands and behaviors for moving old items out of active files.
 
 Field-level encryption for sensitive content (journal bodies, messages).
 
-- [x] Add `encrypt` and `decrypt` commands: in-place PBKDF2-HMAC-SHA256 +
-  XOR-stream cipher using only stdlib (`hashlib`, `hmac`, `secrets`, `base64`).
-  Ciphertext tag format: `enc:XSK:BASE64`. Options: `--field`, `--type`,
-  `--dry-run`, `--backup`, `--key-env`.
-
-- [ ] Document `encrypt`/`decrypt` key management: passphrase strength
-  recommendations, rotating passphrases, and optional `cryptography` package
-  upgrade path for AES-GCM. Update `docs/en/cli.md` and `docs/ja/cli.md`.
+- [ ] Document `encrypt`/`decrypt` security model in more detail: current
+  `enc:XSK:` format, passphrase strength recommendations, rotation workflow,
+  and an optional `cryptography` package upgrade path for AES-GCM.
 
 ---
 
@@ -172,12 +167,8 @@ Field-level encryption for sensitive content (journal bodies, messages).
 
 CLI-native charts without external dependencies.
 
-- [x] Extend `plot` command: `--chart deadlines` (items due per bucket) and
-  `--sparkline` (Unicode block-char trend line) implemented. ASCII bar charts
-  for tasks/habits/mood/elapsed already present.
-
-- [ ] Add `--format svg|png` to `plot` via `matplotlib` (optional dependency);
-  fall back gracefully when not installed. Document in CLI guide.
+- [ ] Add optional self-contained HTML chart export that can combine `plot`,
+  `export-heatmap`, and `review` sections into one report file.
 
 ---
 
@@ -247,28 +238,15 @@ CLI-native charts without external dependencies.
 - [ ] Add item search highlight: wrap matched search terms in `<mark>` tags in
   the item title and detail text when a `?text=` filter is active.
 
-- [x] Bulk-action toolbar: checkbox on hover, "Mark done" / "Delete" action bar
-  above the list. Selection state managed in JS; uses existing PUT/DELETE API.
-
 ### Git Integration (Web API)
 
 ### Quick-filter & Navigation (Web UI)
-
-- [x] Git log modal: commit-count badge added to modal header via `?count=true`
-  API parameter using `git rev-list --count HEAD`.
 
 ### Context Menu & Dark Mode (Web UI) — New
 
 ### Stats & Charts (Web UI) — New
 
-- [x] Stats breakdown: date-range filter (`from`/`to`) inputs added to the stats
-  breakdown panel; by_type/by_status counts now reflect the current filter window.
-
 ### Kiosk Mode (Web UI) — New
-
-- [x] Redesigned kiosk mode color scheme: replaced near-black green palette
-  with high-contrast light theme (white cards, green header `#1a7a4a`,
-  `#f5f7f6` background) for improved readability on large displays.
 
 - [ ] Add kiosk mode configuration options: `?kiosk_cols=3` to fix the number
   of columns, `?kiosk_filter=kind:T` to show only specific item types, and a
@@ -281,17 +259,9 @@ CLI-native charts without external dependencies.
 
 ### Item Selection (Web UI) — New
 
-- [x] Fixed bulk-selection checkbox behavior: normalized bulk key to
-  `line|source` format, used `closest(".item-check")` to prevent click
-  propagation from triggering the drawer, added explicit `click` stop-
-  propagation on the checkbox, and corrected mobile grid column count.
-
 ### Drawer Improvements (Web UI) — New
 
 ### Agenda & Notifications (Web UI) — New
-
-- [x] Agenda: added `agenda_limit` number spinner to the Agenda section header;
-  syncs with `?agenda_limit=` URL param on change, triggers refresh.
 
 ### MCP Support
 
@@ -309,38 +279,14 @@ CLI-native charts without external dependencies.
 
 ## P1: CLI — New Commands (Proposed from Session 5)
 
-- [ ] Add `batch` command: apply a single-item command (`done`, `assign`,
-  `tag rename`) across multiple files matched by a glob pattern. Useful for
-  bulk-closing tasks in large multi-file repositories without writing a shell
-  loop.
-
-- [ ] Add `export-heatmap` command: write a standalone SVG or HTML heatmap of
-  habit/task activity to a file. Reuses `stats` bucket logic; no external
-  dependency required for the SVG path.
-
-- [ ] Add `review --format html`: produce a self-contained single-file HTML
-  digest (summary, overdue items, top projects, weekly mood chart) for sharing
-  without running the server.
-
-- [ ] Add `--key-file` option to `encrypt`/`decrypt` as an alternative to
-  `--key-env`: read the passphrase from a file path (respects `chmod 600`).
-  Warn on startup if the key file has world-readable permissions.
+- [ ] Extend `batch` beyond `done` and `assign`: add safe `tag rename`,
+  `tag merge`, and `migrate` wrappers with `--dry-run` previews and per-file
+  failure summaries.
 
 ## P1: CLI — New Commands (Proposed from Session 4)
 
-- [x] `deps` command: dependency chains as indented tree. `--blocked`, `--root ID`,
-  `--format text|json` implemented.
-
-- [x] `tag list` (all tags with counts), `tag rename OLD NEW path [--dry-run]`,
-  and `tag merge OLD NEW path` (renames in file + writes `tag_aliases` to
-  config JSON) all implemented.
-
-- [x] `from-markdown --preset github`: maps GitHub Issues Markdown export format
-  (checkbox lists with `#NNN` references) to life.txt items with `ref:` set
-  to the issue number.
-
-- [x] `watch` command: polls files for changes, re-runs a sub-command. Options:
-  `--run CMD`, `--interval SEC`, `--clear`. Uses only the standard library.
+- [ ] Add richer `watch` output modes: timestamped run headers, nonzero-exit
+  highlighting, and optional desktop notification on status changes.
 
 ---
 
@@ -356,10 +302,11 @@ CLI-native charts without external dependencies.
   in config `generated_paths` or marked read-only by the OS, and must report
   a clear error rather than silently failing or corrupting the file.
 
-- [ ] Improve `sync-ics` idempotency: use the iCalendar `UID` field as the
-  stable item ID so re-running `sync-ics` updates existing events rather than
-  duplicating them. Detect and soft-delete items whose UID no longer appears
-  in the feed. Store source metadata (`source:ics`, `uid:`) on generated items.
+- [ ] Add `sync-ics --merge-existing`: compare generated UID-backed `id:`
+  values against an existing output file, update matching records in place,
+  preserve local generated-file comments, and soft-delete items whose UID no
+  longer appears in the feed. Add explicit `source:ics` / `uid:` metadata
+  conventions to the format docs.
 
 - [ ] Extend `import-ics` with source-specific presets: add `--preset todoist`
   for Todoist CSV exports, `--preset github` for GitHub Issues JSON exports,
@@ -393,24 +340,6 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
-
-- [x] `lint --ruleset FILE` support: loads custom rules from a JSON array
-  (pattern/replacement/message). Reports as code L100 alongside built-in rules.
-  Ruleset schema: `[{"pattern":"regex","replacement":"key","message":"..."}]`.
-
-- [x] `diff --status` filter: limits output to specific change types
-  (added, removed, completed, canceled, status-changed, detail-changed). Repeatable.
-
-- [x] Add `diff --since DATE` flag: auto-selects a snapshot from that date as
-  the base file; scans the snapshot directory for matching filename prefix.
-
-- [x] `snapshot --diff` flag: after writing, shows semantic diff against the
-  most recent previous snapshot in the same directory.
-
-- [x] Extend `migrate` with additional migrations: `normalize-status` (alias
-  to canonical bracket form), `strip-empty-details` (remove blank-value keys),
-  and `canonicalize-dates` (normalize dates to YYYY-MM-DD). All three
-  implemented and idempotent.
 
 - [ ] Add `template` command for reusable item sets: store named templates in
   config JSON or in a `templates.life.txt` file using a reserved `TEMPLATE`
@@ -657,14 +586,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
   is affected once timezone wiring is implemented.
 
-- [ ] Add `encrypt`/`decrypt` round-trip tests: encrypt then decrypt restores
-  original value exactly, for all supported algorithms. Test `--dry-run`,
-  `--field`, `--type`, `--key-env`. Verify `check` emits no false positives
-  for encrypted values.
+- [ ] Expand `encrypt`/`decrypt` tests beyond the key-file round trip: cover
+  `--dry-run`, `--type`, `--key-env`, empty key files, wrong passphrase
+  failures, and `check` diagnostics for encrypted values.
 
-- [ ] Add `plot` output tests: text chart rendering for task, habit, mood,
-  and elapsed with each `--group` value. Snapshot tests for bar chart and
-  sparkline terminal output.
+- [ ] Expand `plot` output tests beyond SVG smoke coverage: text chart rendering
+  for task, habit, mood, elapsed, deadlines, each `--group` value, sparkline
+  terminal output, and optional PNG behavior when `matplotlib` is installed.
 
 - [ ] Add `init` tests: generated files contain valid directives and a starter
   item; `.lifetxt.json` matches prompted values; prompts before overwriting.
@@ -688,6 +616,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 
 - [ ] Add dependency edge-case tests: cross-file blockers, and source metadata
   in blocked agenda records.
+
+- [ ] Add CLI batch mutation tests: `batch done` writes across multiple files,
+  `batch assign` updates matching records, and partial failures produce a clear
+  per-file summary without corrupting unaffected files.
 
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.

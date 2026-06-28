@@ -143,6 +143,19 @@ def agenda_records(items, range_start, range_end):
         record["matches"] = matches
         record["details"] = _copy_details(item.details)
         record["text"] = _item_line_text(item)
+        source_ids = item.details.get("id", [])
+        if source_ids:
+            record["source_id"] = str(source_ids[0])
+        occurrence_start = primary.get("start")
+        occurrence_end = primary.get("end")
+        if occurrence_start:
+            record["occurrence_start"] = occurrence_start
+        if occurrence_end:
+            record["occurrence_end"] = occurrence_end
+        if "occurrence_index" in primary:
+            record["occurrence_index"] = primary["occurrence_index"]
+        if "repeat" in primary:
+            record["repeat_rule"] = primary["repeat"]
         records.append(record)
     records.sort(key=_record_sort_key)
     return records
@@ -257,6 +270,7 @@ def filter_agenda_records(
     teams=None,
     detail_filters=None,
     text=None,
+    blocked=None,
     user_aliases=None,
     team_members=None,
     team_aliases=None,
@@ -315,6 +329,10 @@ def filter_agenda_records(
             continue
         if text and text not in _record_search_text(record).lower():
             continue
+        if blocked is True and not record.get("blocked"):
+            continue
+        if blocked is False and record.get("blocked"):
+            continue
         filtered.append(record)
     return filtered
 
@@ -362,7 +380,7 @@ def format_agenda_table(records, width=None):
             # Truncate title to fit remaining width
             max_title = max(10, width - len(when) - len(status) - 4)
             if len(title) > max_title:
-                title = title[:max_title - 1] + "…"
+                title = title[: max_title - 3] + "..."
             lines.append("%s %s %s" % (when, status, title))
         return "\n".join(lines) + "\n"
 

@@ -758,6 +758,8 @@ python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 | `--attendee VALUE` | `attendee:` で絞り込み。複数回指定または comma-separated |
 | `--detail FILTER` | detail key または `key=value` で絞り込み。複数指定は AND |
 | `--text TEXT` | title、元行、detail 値に対する大文字小文字を区別しない部分一致 |
+| `--blocked` | dependency record により blocked な item のみ表示 |
+| `--unblocked` | blocker を持たない item のみ表示 |
 
 例:
 
@@ -768,6 +770,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project re
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked
 ```
 
 `--detail key` は key の存在を確認します。`--detail key=value` は detail value の完全一致です。
@@ -783,11 +786,13 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person ali
 | `--format jsonl` | JSONL で表示 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
+| `--width N` | text 出力を指定した terminal width 向けに整形 |
 
 agenda の JSON / JSONL record は、open item が open な `depends_on:` または
 `blocks:` 関係で block されている場合に `blocked: true` と `blocked_by` 配列を
-含めます。text 出力では短い `blocked` 列で同じ状態を表示します。`--format life`
-は保存されている元の item 行をそのまま出力します。
+含めます。repeat から生成された occurrence には、可能な場合 `source_id`、
+`occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule` も含めます。
+text 出力では短い `blocked` 列で同じ状態を表示します。`--format life` は保存されている元の item 行をそのまま出力します。
 
 例:
 
@@ -795,6 +800,7 @@ agenda の JSON / JSONL record は、open item が open な `depends_on:` また
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format life
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format json --pretty
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
+python -m lifetxt agenda life.txt --around now --window 1d --width 70
 ```
 
 ## 10. `assist`
@@ -1019,6 +1025,7 @@ python -m lifetxt stats life.txt
 python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
 python -m lifetxt stats life.txt --project research --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
+python -m lifetxt stats life.txt --width 60
 ```
 
 | Option | 意味 |
@@ -1029,11 +1036,52 @@ python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 | `--project PROJECT` | `project:` で絞り込み |
 | `--group daily|weekly|monthly` | mood trend の集計単位 |
 | `--format text|json` | 出力形式 |
+| `--width N` | 狭い terminal 向けの compact text 出力 |
 
 `weekly` / `monthly` では task bucket ごとの done / total / overdue と、
 bucket ごとの habit sparkline も表示します。
 
-### 13.5 `git-hook`
+### 13.5 report / chart / batch / encryption
+
+`review` は JSON、JSONL、Markdown、単体 HTML report を出力できます。
+
+```sh
+python -m lifetxt review life.txt --week --format html > weekly_review.html
+```
+
+`plot` は既定では terminal bar chart を表示します。`--format svg` は追加依存なし、
+`--format png` は `matplotlib` がある場合に利用できます。
+
+```sh
+python -m lifetxt plot life.txt --chart deadlines --from 2026-06-01 --to 2026-06-30
+python -m lifetxt plot life.txt --chart tasks --format svg -o tasks.svg
+python -m lifetxt plot life.txt --chart habits --format png -o habits.png
+```
+
+`export-heatmap` は task / habit activity を SVG heatmap として出力します。
+
+```sh
+python -m lifetxt export-heatmap life.txt --from 2026-01-01 --to 2026-12-31 -o activity.svg
+python -m lifetxt export-heatmap "projects/**/*.life.txt" --type habit --project research -o habits.svg
+```
+
+`batch` は複数ファイルに対して既存の `done` / `assign` 処理を反復実行します。
+
+```sh
+python -m lifetxt batch done "projects/**/*.life.txt" --id task_report
+python -m lifetxt batch assign life.txt team_life.txt --text Review --to alice --dry-run
+```
+
+`encrypt` / `decrypt` は環境変数または UTF-8 text file から passphrase を読み取れます。
+
+```sh
+python -m lifetxt encrypt life.txt --field body --type journal --key-file .secrets/lifetxt.key
+python -m lifetxt decrypt life.txt --field body --key-file .secrets/lifetxt.key
+```
+
+`inbox --fzf` は未分類 inbox item を `fzf` または `peco` に渡し、選択された行を出力します。
+
+### 13.6 `git-hook`
 
 `git-hook` は現在の repository に local Git hook を導入します。生成される `pre-commit`
 hook は `lifetxt check` を実行し、`commit-msg` hook は利用可能な場合に完了 task の要約を commit message に追記します。
@@ -1046,7 +1094,7 @@ python -m lifetxt git-hook uninstall
 
 既存の非 lifetxt hook は `--force` なしでは上書きしません。検証だけが必要なら `--no-commit-msg` を指定します。
 
-### 13.6 `completion`
+### 13.7 `completion`
 
 `completion` は shell completion script を生成します。
 

@@ -26,7 +26,7 @@ def cmd_stats(args):
     if args.format == "json":
         sys.stdout.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
     else:
-        sys.stdout.write(format_stats(data))
+        sys.stdout.write(format_stats(data, width=getattr(args, "width", None)))
     return 0
 
 
@@ -73,7 +73,10 @@ def build_stats(items, start, end, group, buckets=None):
     return data
 
 
-def format_stats(data):
+def format_stats(data, width=None):
+    if width is not None and width < 80:
+        return format_stats_compact(data, width)
+
     lines = []
     lines.append("lifetxt stats  %s - %s" % (data["range"]["from"], data["range"]["to"]))
     lines.append("=" * 39)
@@ -128,9 +131,51 @@ def format_stats(data):
     return "\n".join(lines).rstrip() + "\n"
 
 
+def format_stats_compact(data, width):
+    tasks = data["tasks"]
+    title = "lifetxt stats %s..%s" % (data["range"]["from"], data["range"]["to"])
+    lines = [_clip(title, width)]
+    lines.append(
+        _clip(
+            "tasks done %s/%s %s%% overdue %s"
+            % (tasks["done"], tasks["total"], tasks["rate"], tasks["overdue"]),
+            width,
+        )
+    )
+    if data["habits"]:
+        habits = ", ".join("%s:%sd" % (habit["title"], habit["streak"]) for habit in data["habits"][:4])
+        lines.append(_clip("habits " + habits, width))
+    else:
+        lines.append("habits none")
+    mood_counts = data["mood"]["counts"]
+    if mood_counts:
+        lines.append(_clip("mood " + " ".join("%s:%s" % pair for pair in mood_counts.items()), width))
+    else:
+        lines.append("mood none")
+    if data["by_project"]:
+        projects = ", ".join(
+            "%s:%s/%s" % (project or "(none)", values["done"], values["total"])
+            for project, values in list(data["by_project"].items())[:4]
+        )
+        lines.append(_clip("projects " + projects, width))
+    else:
+        lines.append("projects none")
+    lines.append(_clip("journal %s entries" % data["journal_entries"], width))
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def progress_bar(rate, width=28):
     filled = int((rate * width) / 100)
     return "[" + "#" * filled + "." * (width - filled) + "]"
+
+
+def _clip(value, width):
+    text = str(value)
+    if width is None or width <= 0 or len(text) <= width:
+        return text
+    if width <= 3:
+        return text[:width]
+    return text[: width - 3] + "..."
 
 
 def sparkline(values):

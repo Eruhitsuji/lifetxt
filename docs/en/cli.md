@@ -825,6 +825,8 @@ python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 | `--recipient VALUE` | Filter by `recipient:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
+| `--blocked` | Show only items blocked by dependency records |
+| `--unblocked` | Show only items without dependency blockers |
 
 Examples:
 
@@ -837,6 +839,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee a
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked
 ```
 
 `--detail key` checks that the key exists. `--detail key=value` checks for an
@@ -852,11 +855,14 @@ exact detail value. Multiple `--detail` filters are ANDed.
 | `--format jsonl` | Print JSONL |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON output |
+| `--width N` | Render text output for a specific terminal width |
 
 Agenda JSON / JSONL records include `blocked: true` and a `blocked_by` array
 when an open item is blocked by an open `depends_on:` or `blocks:` relation.
-Text output shows the same state with a compact `blocked` column. `--format
-life` still prints the original stored item lines.
+Repeated occurrences also include `source_id`, `occurrence_start`,
+`occurrence_end`, `occurrence_index`, and `repeat_rule` when available. Text
+output shows dependency state with a compact `blocked` column. `--format life`
+still prints the original stored item lines.
 
 Examples:
 
@@ -864,6 +870,7 @@ Examples:
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format life
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format json --pretty
 python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
+python -m lifetxt agenda life.txt --around now --window 1d --width 70
 ```
 
 ## 10. `assist`
@@ -1216,6 +1223,7 @@ python -m lifetxt stats life.txt
 python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
 python -m lifetxt stats life.txt --project research --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
+python -m lifetxt stats life.txt --width 60
 ```
 
 Options:
@@ -1228,11 +1236,56 @@ Options:
 | `--project PROJECT` | Restrict input items by `project:` |
 | `--group daily|weekly|monthly` | Bucket mood trend output |
 | `--format text|json` | Output format |
+| `--width N` | Use compact text output for narrow terminal widths |
 
 For `weekly` and `monthly`, task buckets are shown with done / total / overdue
 counts, and habit sparklines are bucketed by completion count.
 
-### 13.5 `git-hook`
+### 13.5 Reports, Charts, Batch, And Encryption
+
+`review` can emit JSON, JSONL, Markdown, or a self-contained HTML report:
+
+```sh
+python -m lifetxt review life.txt --week --format html > weekly_review.html
+```
+
+`plot` still renders terminal bar charts by default. It can also write SVG
+without extra dependencies, or PNG when `matplotlib` is installed:
+
+```sh
+python -m lifetxt plot life.txt --chart deadlines --from 2026-06-01 --to 2026-06-30
+python -m lifetxt plot life.txt --chart tasks --format svg -o tasks.svg
+python -m lifetxt plot life.txt --chart habits --format png -o habits.png
+```
+
+`export-heatmap` writes a dependency-free SVG calendar heatmap of task and habit
+activity:
+
+```sh
+python -m lifetxt export-heatmap life.txt --from 2026-01-01 --to 2026-12-31 -o activity.svg
+python -m lifetxt export-heatmap "projects/**/*.life.txt" --type habit --project research -o habits.svg
+```
+
+`batch` applies a simple existing item action across multiple files. It reuses
+the regular `done` and `assign` implementations:
+
+```sh
+python -m lifetxt batch done "projects/**/*.life.txt" --id task_report
+python -m lifetxt batch assign life.txt team_life.txt --text Review --to alice --dry-run
+```
+
+`encrypt` and `decrypt` can read the passphrase from either an environment
+variable or a UTF-8 text file:
+
+```sh
+python -m lifetxt encrypt life.txt --field body --type journal --key-file .secrets/lifetxt.key
+python -m lifetxt decrypt life.txt --field body --key-file .secrets/lifetxt.key
+```
+
+`inbox --fzf` sends unclassified inbox items to `fzf` or `peco` and prints the
+selected row. It returns an error if neither selector is installed.
+
+### 13.6 `git-hook`
 
 `git-hook` installs local Git hooks for the current repository. The generated
 `pre-commit` hook runs `lifetxt check` for the configured files. The generated
@@ -1247,7 +1300,7 @@ python -m lifetxt git-hook uninstall
 The installer refuses to overwrite non-lifetxt hooks unless `--force` is passed.
 Use `--no-commit-msg` when only validation is desired.
 
-### 13.6 `completion`
+### 13.7 `completion`
 
 `completion` emits shell completion scripts.
 

@@ -390,6 +390,12 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn("function switchWorkspace(", webapp.HTML_PAGE)
         self.assertIn('data-workspace="new"', webapp.HTML_PAGE)
         self.assertIn("Saved view", webapp.HTML_PAGE)
+        self.assertIn("Save View", webapp.HTML_PAGE)
+        self.assertIn("function saveCurrentViewPreset(", webapp.HTML_PAGE)
+        self.assertIn("function loadCustomViewPresets(", webapp.HTML_PAGE)
+        self.assertIn("function trapModalFocus(", webapp.HTML_PAGE)
+        self.assertIn("function fuzzyMatch(", webapp.HTML_PAGE)
+        self.assertIn("Recently Opened", webapp.HTML_PAGE)
         self.assertIn('class="modal-backdrop detail-drawer"', webapp.HTML_PAGE)
         self.assertIn('class="detail-modal"', webapp.HTML_PAGE)
 

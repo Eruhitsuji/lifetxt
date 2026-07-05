@@ -155,6 +155,8 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and display mode
+- Saving the current filter/sort/workspace state as a browser-local custom
+  view
 - A header workspace bar that combines view switching (Items, Messages,
   Status, Kiosk) and tools (New Record, Agenda, Notifications, Statistics,
   Graph)
@@ -165,6 +167,8 @@ The browser GUI supports:
 - Browser notifications after the user grants permission
 - Showing message threads in the record detail modal using `parent:`
 - Replying to message threads from the record detail modal
+- Keyboard-trapped modals for Help, Git, and record details
+- A fuzzy command palette with actions, saved views, and recently opened items
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
@@ -208,7 +212,7 @@ Supported parameters:
 | `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
 | `view=messages` | Message-focused layout with type `M` as the default item filter |
 | `view=status` | Status-focused layout with active status records emphasized |
-| `preset=NAME` | Apply URL parameters from config `views.NAME` |
+| `preset=NAME` | Apply URL parameters from config `views.NAME` or a browser-local custom view |
 | `workspace=new|agenda|status|notifications|stats|graph` | Open a workspace panel above the item list |
 | `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
 | `kind=E` or `type=E` | Filter by life.txt type |
@@ -231,6 +235,21 @@ Supported parameters:
 | `kiosk_filter=kind:T,status:[/]` | Kiosk-only compact filter expression |
 | `kiosk_title=TEXT` | Header title shown only in kiosk mode |
 | `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
+
+## Saved Views and Command Palette
+
+Use `Save View` in the header toolbar to store the current filters, search
+text, sort order, grouping, display mode, and workspace panel as a browser-local
+custom view. Custom views are stored in `localStorage`; they are available only
+in the current browser profile. Config-defined views from `views` are shown in
+the same selector but are read-only from the browser. Select a custom view and
+click `Delete` to remove it, or click `x` to clear the active preset without
+deleting it.
+
+Press `Ctrl+K` to open the command palette. It supports fuzzy matching, shows
+recently opened records when the query is empty, can apply saved views, and
+includes common actions such as quick-add, export, theme toggle, kiosk mode,
+and agenda blocked-filter toggling.
 
 ## Browser Notifications
 

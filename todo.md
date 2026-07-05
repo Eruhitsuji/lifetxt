@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x48)
+Last updated: 2026-07-05 (updated x49)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -178,18 +178,6 @@ CLI-native charts without external dependencies.
 
 ### Git Integration (Web API)
 
-### Quick-filter & Navigation (Web UI)
-
-- [ ] Let users save the current filter combination (search text, kind,
-  status, group-by, sort) as a named custom view preset from the toolbar,
-  stored in `localStorage` alongside the config-defined `views`, with a
-  delete/rename UI. Config-defined presets remain read-only.
-
-- [ ] Extend the command palette (Ctrl+K): fuzzy matching instead of
-  substring, a "recently opened items" section when the query is empty, and
-  palette entries for switching view presets and toggling the agenda blocked
-  filter.
-
 ### Design System & App Shell (Web UI) — New
 
 - [ ] Extract the Web UI design tokens (`--accent`, semantic soft colors,
@@ -223,14 +211,15 @@ CLI-native charts without external dependencies.
 
 ### Detail Modal Improvements (Web UI) — New
 
-- [ ] Add focus trapping and background inert behavior to the record detail
-  modal and keyboard-help modal. They now use centered modal presentation, but
-  focus is not yet constrained inside the active modal.
-
 - [ ] Add an inline timer control to the detail modal for task-like items: start /
   stop buttons that update `elapsed:` through the existing item update
   endpoint, reusing the CLI `timer` duration math, so the est/elapsed progress
   bar can be driven entirely from the browser.
+
+- [ ] Add import/export for browser-local custom view presets so users can
+  move saved Web UI views between browsers or share them with a team. The
+  in-browser save/delete flow is implemented, but custom views are currently
+  stored only in `localStorage`.
 
 ### Agenda & Notifications (Web UI) — New
 
@@ -524,7 +513,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   (Items/Messages/Status/Kiosk switching), density toggle persistence,
   skeleton-loading rows, contextual empty states ("clear filters" vs. "quick
   add"), the back-to-top button, `?theme=dark|light` forcing, and the
-  workspace tab layout at mobile, tablet, and wide desktop widths. Current
+  workspace tab layout at mobile, tablet, and wide desktop widths. Add coverage
+  for browser-local custom view save/apply/delete, command-palette fuzzy
+  matching and recently opened records, and modal focus trapping/background
+  inert behavior. Current
   tests cover static HTML hooks and API
   behavior, not real DOM interaction.
 

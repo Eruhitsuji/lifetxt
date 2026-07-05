@@ -165,7 +165,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
 | `view=messages` | Message専用に近いlayout。type `M` をdefault filterにする |
 | `view=status` | Status専用に近いlayout。active status表示を強調する |
-| `preset=NAME` | config `views.NAME` のURL parameterを適用 |
+| `preset=NAME` | config `views.NAME` または browser-local custom view のURL parameterを適用 |
 | `workspace=new|agenda|status|notifications|stats|graph` | item list 上部の workspace panel を開く |
 | `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
 | `kind=E` または `type=E` | life.txt type で filter |
@@ -188,6 +188,19 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `kiosk_filter=kind:T,status:[/]` | kiosk mode 専用の compact filter |
 | `kiosk_title=TEXT` | kiosk mode 時だけ表示する header title |
 | `graph_root=ID`、`graph_depth=N` | Graph panel の初期 root/depth |
+
+## Saved Views と Command Palette
+
+Header toolbar の `Save View` で、現在の filter、search text、sort、group-by、
+display mode、workspace panel を browser-local custom view として保存できます。
+custom view は `localStorage` に保存されるため、同じ browser profile 内で使えます。
+config の `views` から読み込まれた preset は同じ selector に表示されますが、Web UI
+からは read-only として扱います。custom view を選択して `Delete` を押すと削除でき、
+`x` は active preset の解除だけを行います。
+
+`Ctrl+K` で Command Palette を開けます。fuzzy matching、recently opened records、
+saved views の適用、quick-add、export、theme toggle、kiosk mode、agenda blocked
+filter の切り替えに対応しています。
 
 ## Browser notification
 

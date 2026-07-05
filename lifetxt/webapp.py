@@ -2534,6 +2534,7 @@ HTML_PAGE = r"""<!doctype html>
       justify-content: center;
     }
     .modal-backdrop.open { display: flex; }
+    body.modal-open { overflow: hidden; }
     .modal {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -2614,6 +2615,9 @@ HTML_PAGE = r"""<!doctype html>
     .heatmap-month-labels { display: flex; font-size: .65rem; color: var(--muted); margin-bottom: .15rem; }
     /* ── View preset dropdown ─────────────────────────────────────── */
     #view-preset-select { font-size: .82rem; padding: .2rem .4rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--bg); color: var(--text); cursor: pointer; }
+    .preset-actions { display: inline-flex; gap: .25rem; align-items: center; flex-wrap: wrap; }
+    .preset-actions button { padding: .23rem .48rem; font-size: .78rem; }
+    #preset-name-label { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* ── Search result count ──────────────────────────────────────── */
     #search-count { font-size: .77rem; color: var(--muted); margin-left: .35rem; white-space: nowrap; }
     /* ── Dark mode toggle button ─────────────────────────────────── */
@@ -3150,6 +3154,16 @@ HTML_PAGE = r"""<!doctype html>
       letter-spacing: .05em;
       min-width: 3.4rem;
     }
+    .cmdk-section {
+      padding: .55rem .65rem .18rem;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      border-top: 1px solid var(--line);
+    }
+    .cmdk-section:first-child { border-top: none; }
     .cmdk-empty { padding: .8rem 1rem; color: var(--muted); font-size: .88rem; }
     /* ── Print stylesheet ── */
     @media print {
@@ -3216,7 +3230,11 @@ HTML_PAGE = r"""<!doctype html>
         <option value="">Saved view…</option>
       </select>
       <span id="preset-name-label" style="display:none;font-size:.78rem;color:var(--muted)"></span>
-      <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
+      <span class="preset-actions" aria-label="Saved view actions">
+        <button id="preset-save-btn" class="secondary" onclick="saveCurrentViewPreset()" title="Save current filters, sort, view, and workspace">Save View</button>
+        <button id="preset-delete-btn" class="secondary" onclick="deleteCurrentViewPreset()" title="Delete selected custom view" style="display:none">Delete</button>
+        <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
+      </span>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
       <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
@@ -3581,6 +3599,9 @@ HTML_PAGE = r"""<!doctype html>
     let graphLoaded = false;
     let _kioskDefaultTitle = null;
     let _kioskLastFingerprints = null;
+    let _lastFocusedBeforeModal = null;
+    const CUSTOM_VIEW_STORAGE_KEY = "lifetxt_custom_views";
+    const RECENT_ITEMS_STORAGE_KEY = "lifetxt_recent_items";
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -3780,13 +3801,14 @@ HTML_PAGE = r"""<!doctype html>
     function applyPresetToUrl() {
       const params = query();
       // Support ?view=NAME as alias for ?preset=NAME
-      if (params.get("view") && !params.get("preset")) {
-        params.set("preset", params.get("view"));
+      const viewAlias = params.get("view") || "";
+      if (viewAlias && !["messages", "status", "display", "kiosk"].includes(viewAlias.toLowerCase()) && !params.get("preset")) {
+        params.set("preset", viewAlias);
         history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       }
       const presetName = params.get("preset");
       if (!presetName || params.get("_preset_applied") === presetName) return;
-      const preset = appConfig?.views?.[presetName];
+      const preset = getViewPreset(presetName);
       if (!preset) return;
       const next = new URLSearchParams(params);
       for (const [key, value] of Object.entries(preset)) {
@@ -3815,6 +3837,7 @@ HTML_PAGE = r"""<!doctype html>
       const groupSel = document.getElementById("group-by");
       if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
       syncStatusFilterBarsFromUrl();
+      updatePresetClearBtn();
       configureAutoRefresh();
       configureNotificationPolling();
     }
@@ -3865,6 +3888,7 @@ HTML_PAGE = r"""<!doctype html>
       const next = new URLSearchParams();
       for (const key of [
         "mode", "view", "refresh", "around", "window", "from", "to",
+        "workspace", "panel", "theme",
         "kiosk_cols", "kiosk_filter", "kiosk_title",
         "status", "project", "tag", "tag_all", "exclude_tag", "user", "team",
         "person", "owner", "assignee", "attendee",
@@ -4059,9 +4083,9 @@ HTML_PAGE = r"""<!doctype html>
           <div class="empty-title">${hasFilters ? "No items match the current filters" : "No items yet"}</div>
           <div class="empty-hint">${hasFilters
             ? "Try clearing the search text or status filters above."
-            : "Add your first record with the quick-add bar (press q) or the editor on the right."}</div>
+            : "Add your first record with the quick-add bar (press q) or the New workspace."}</div>
           ${isKioskMode() || isDisplayMode() ? "" : (hasFilters
-            ? `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>`
+            ? `<div class="actions"><button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button><button type="button" class="secondary" onclick="saveCurrentViewPreset()">Save view</button></div>`
             : `<button type="button" onclick="toggleQuickAdd(true)">＋ Quick add</button>`)}
         </div>`;
       renderSummary(items);
@@ -4634,6 +4658,80 @@ HTML_PAGE = r"""<!doctype html>
     function jsLiteral(value) {
       return JSON.stringify(String(value ?? ""));
     }
+    function focusableElements(container) {
+      if (!container) return [];
+      const selector = [
+        "a[href]", "button:not([disabled])", "input:not([disabled])",
+        "select:not([disabled])", "textarea:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])",
+      ].join(",");
+      return Array.from(container.querySelectorAll(selector))
+        .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+    function syncBackgroundInert() {
+      const hasOpenModal = !!document.querySelector(".modal-backdrop.open, .cmdk-backdrop.open");
+      document.body.classList.toggle("modal-open", hasOpenModal);
+      for (const el of [document.querySelector("header"), document.querySelector("main")]) {
+        if (!el) continue;
+        if (hasOpenModal) {
+          el.setAttribute("inert", "");
+          el.setAttribute("aria-hidden", "true");
+        } else {
+          el.removeAttribute("inert");
+          el.removeAttribute("aria-hidden");
+        }
+      }
+    }
+    function openManagedModal(backdrop, focusSelector) {
+      if (!backdrop) return;
+      _lastFocusedBeforeModal = document.activeElement;
+      backdrop.classList.add("open");
+      syncBackgroundInert();
+      window.setTimeout(() => {
+        const target = focusSelector ? backdrop.querySelector(focusSelector) : null;
+        const fallback = focusableElements(backdrop)[0];
+        (target || fallback || backdrop).focus?.();
+      }, 0);
+    }
+    function closeManagedModal(backdrop) {
+      if (!backdrop) return;
+      backdrop.classList.remove("open");
+      syncBackgroundInert();
+      const restore = _lastFocusedBeforeModal;
+      _lastFocusedBeforeModal = null;
+      const hiddenModal = restore?.closest?.(".modal-backdrop:not(.open), .cmdk-backdrop:not(.open)");
+      if (restore && document.contains(restore) && !hiddenModal) {
+        window.setTimeout(() => restore.focus?.(), 0);
+      }
+    }
+    function activeModalBackdrop() {
+      const open = Array.from(document.querySelectorAll(".modal-backdrop.open, .cmdk-backdrop.open"));
+      return open.length ? open[open.length - 1] : null;
+    }
+    function trapModalFocus(event) {
+      if (event.key !== "Tab") return false;
+      const modal = activeModalBackdrop();
+      if (!modal) return false;
+      const focusables = focusableElements(modal);
+      if (!focusables.length) {
+        event.preventDefault();
+        modal.focus?.();
+        return true;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+        return true;
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+        return true;
+      }
+      return false;
+    }
     async function refreshAll() {
       await Promise.all([loadItems(), loadAgenda(), loadStatus(), loadNotifications()]);
     }
@@ -4673,6 +4771,7 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Keyboard shortcuts ─────────────────────────────────────────
     document.addEventListener("keydown", function(e) {
+      if (trapModalFocus(e)) return;
       const active = document.activeElement;
       const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
       if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
@@ -4725,13 +4824,55 @@ HTML_PAGE = r"""<!doctype html>
     // ── Command palette (Ctrl+K) ───────────────────────────────────
     let _cmdkIndex = 0;
     let _cmdkEntries = [];
+    function fuzzyMatch(text, queryText) {
+      const textLower = String(text || "").toLowerCase();
+      const queryLower = String(queryText || "").toLowerCase();
+      if (!queryLower) return true;
+      if (textLower.includes(queryLower)) return true;
+      let j = 0;
+      for (let i = 0; i < textLower.length && j < queryLower.length; i++) {
+        if (textLower[i] === queryLower[j]) j++;
+      }
+      return j === queryLower.length;
+    }
+    function recentItemKey(item) {
+      return itemStableKey(item);
+    }
+    function loadRecentItems() {
+      try {
+        const raw = localStorage.getItem(RECENT_ITEMS_STORAGE_KEY);
+        const rows = raw ? JSON.parse(raw) : [];
+        return Array.isArray(rows) ? rows : [];
+      } catch(_) {
+        return [];
+      }
+    }
+    function rememberRecentItem(item) {
+      if (!item) return;
+      try {
+        const key = recentItemKey(item);
+        const row = {
+          key,
+          line: item.line,
+          source: item.source || "",
+          title: item.title || "",
+          type: item.type || "",
+          opened_at: Date.now(),
+        };
+        const next = [row, ...loadRecentItems().filter(r => r.key !== key)].slice(0, 8);
+        localStorage.setItem(RECENT_ITEMS_STORAGE_KEY, JSON.stringify(next));
+      } catch(_) {}
+    }
     const CMDK_ACTIONS = [
       {label: "New item", run: () => { newItem(); document.getElementById("edit-title").focus(); }},
       {label: "Toggle quick-add bar", run: () => toggleQuickAdd(true)},
+      {label: "Save current view", run: saveCurrentViewPreset},
+      {label: "Delete selected custom view", run: deleteCurrentViewPreset},
       {label: "Refresh all", run: refreshAll},
       {label: "Toggle dark mode", run: toggleDarkMode},
       {label: "Toggle statistics panel", run: toggleStats},
       {label: "Toggle kiosk mode", run: toggleKioskMode},
+      {label: "Toggle agenda blocked filter", run: toggleAgendaBlocked},
       {label: "Export items as CSV", run: () => exportItems("csv")},
       {label: "Export items as JSON", run: () => exportItems("json")},
       {label: "Export items as Markdown", run: () => exportItems("markdown")},
@@ -4742,27 +4883,44 @@ HTML_PAGE = r"""<!doctype html>
       const backdrop = document.getElementById("cmdk-backdrop");
       const input = document.getElementById("cmdk-input");
       backdrop.classList.add("open");
+      syncBackgroundInert();
       input.value = "";
       renderCmdk("");
       input.focus();
     }
     function closeCmdk() {
       document.getElementById("cmdk-backdrop").classList.remove("open");
+      syncBackgroundInert();
     }
     function renderCmdk(qText) {
       const list = document.getElementById("cmdk-list");
       const q = String(qText || "").trim().toLowerCase();
       const idKey = appConfig?.ids?.key || "id";
-      const actions = CMDK_ACTIONS.filter(a => !q || a.label.toLowerCase().includes(q));
+      const actions = CMDK_ACTIONS.filter(a => fuzzyMatch(a.label, q));
       const items = q
         ? (currentItems || []).filter(i =>
-            (i.title || "").toLowerCase().includes(q) ||
-            String(i?.details?.[idKey]?.[0] || i?.id || "").toLowerCase().includes(q)
+            fuzzyMatch(i.title || "", q) ||
+            fuzzyMatch(String(i?.details?.[idKey]?.[0] || i?.id || ""), q)
           ).slice(0, 8)
         : [];
+      const recent = q ? [] : loadRecentItems()
+        .map(r => (currentItems || []).find(i => recentItemKey(i) === r.key) || r)
+        .filter(Boolean)
+        .slice(0, 6);
+      const presetEntries = Object.keys(allViewPresets())
+        .filter(name => fuzzyMatch(name, q))
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, q ? 8 : 5)
+        .map(name => ({kind: isCustomViewPreset(name) ? "custom view" : "view", label: name, hint: "apply preset", section: "Saved Views", run: () => applyViewPreset(name)}));
       _cmdkEntries = [
-        ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, run: () => { selectItem(i); openDrawer(i); }})),
-        ...actions.map(a => ({kind: "action", label: a.label, hint: "", run: a.run})),
+        ...recent.map(i => ({kind: i.type || "recent", label: i.title || "(untitled)", hint: i?.details?.[idKey]?.[0] || (i.line ? `line ${i.line}` : "recent"), section: "Recently Opened", run: () => {
+          const live = (currentItems || []).find(x => recentItemKey(x) === (i.key || recentItemKey(i)));
+          if (live) { selectItem(live); openDrawer(live); }
+          else if (i.line) openItemByLine(Number(i.line));
+        }})),
+        ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, section: "Items", run: () => { selectItem(i); openDrawer(i); }})),
+        ...presetEntries,
+        ...actions.map(a => ({kind: "action", label: a.label, hint: "", section: "Actions", run: a.run})),
       ];
       _cmdkIndex = 0;
       if (!_cmdkEntries.length) {
@@ -4770,7 +4928,15 @@ HTML_PAGE = r"""<!doctype html>
         return;
       }
       list.innerHTML = "";
+      let lastSection = "";
       _cmdkEntries.forEach((entry, i) => {
+        if (entry.section && entry.section !== lastSection) {
+          const section = document.createElement("div");
+          section.className = "cmdk-section";
+          section.textContent = entry.section;
+          list.appendChild(section);
+          lastSection = entry.section;
+        }
         const row = document.createElement("div");
         row.className = "cmdk-row" + (i === _cmdkIndex ? " focus" : "");
         row.innerHTML = `<span class="cmdk-kind">${escapeHtml(entry.kind)}</span><span>${escapeHtml(entry.label)}</span>` +
@@ -4805,8 +4971,8 @@ HTML_PAGE = r"""<!doctype html>
     });
 
     // ── Help modal ─────────────────────────────────────────────────
-    function openHelpModal() { document.getElementById("help-modal").classList.add("open"); }
-    function closeHelpModal() { document.getElementById("help-modal").classList.remove("open"); }
+    function openHelpModal() { openManagedModal(document.getElementById("help-modal"), "button"); }
+    function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
 
     // ── Toast system ────────────────────────────────────────────────
     function showToast(message, type = "info", duration = 3500) {
@@ -4898,7 +5064,8 @@ HTML_PAGE = r"""<!doctype html>
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
         threadHtml + replyHtml +
         sourceHtml + rawHtml;
-      drawer.classList.add("open");
+      rememberRecentItem(item);
+      openManagedModal(drawer, ".drawer-close-btn");
       loadDependencyLinks(item);
       loadBlockerChain(item);
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);
@@ -5328,7 +5495,7 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     function closeDrawer() {
-      document.getElementById("detail-drawer").classList.remove("open");
+      closeManagedModal(document.getElementById("detail-drawer"));
       drawerItem = null;
     }
 
@@ -5709,8 +5876,7 @@ HTML_PAGE = r"""<!doctype html>
     async function openGitModal() {
       document.getElementById("git-output").style.display = "none";
       document.getElementById("git-output").textContent = "";
-      document.getElementById("git-modal").classList.add("open");
-      document.getElementById("git-commit-msg").focus();
+      openManagedModal(document.getElementById("git-modal"), "#git-commit-msg");
       const statusEl = document.getElementById("git-status-output");
       if (statusEl) {
         statusEl.textContent = "Loading…";
@@ -5720,7 +5886,7 @@ HTML_PAGE = r"""<!doctype html>
         } catch(e) { statusEl.textContent = "Could not load status: " + e.message; }
       }
     }
-    function closeGitModal() { document.getElementById("git-modal").classList.remove("open"); }
+    function closeGitModal() { closeManagedModal(document.getElementById("git-modal")); }
     async function gitCommit() {
       const msg = document.getElementById("git-commit-msg").value.trim();
       if (!msg) { showToast("Enter a commit message.", "error"); return; }
@@ -6139,22 +6305,59 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     // ── View preset selector ───────────────────────────────────────
+    function loadCustomViewPresets() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_VIEW_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      } catch(_) {
+        return {};
+      }
+    }
+    function saveCustomViewPresets(presets) {
+      localStorage.setItem(CUSTOM_VIEW_STORAGE_KEY, JSON.stringify(presets || {}));
+    }
+    function configViewPresets() {
+      return appConfig?.views && typeof appConfig.views === "object" ? appConfig.views : {};
+    }
+    function allViewPresets() {
+      return {...configViewPresets(), ...loadCustomViewPresets()};
+    }
+    function getViewPreset(name) {
+      return allViewPresets()[name];
+    }
+    function isCustomViewPreset(name) {
+      return Object.prototype.hasOwnProperty.call(loadCustomViewPresets(), name);
+    }
     function populateViewPresets() {
       const sel = document.getElementById("view-preset-select");
-      if (!sel || !appConfig?.views) return;
-      for (const name of Object.keys(appConfig.views)) {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      }
-      const current = query().get("preset") || query().get("view");
-      if (current) sel.value = current;
+      if (!sel) return;
+      const current = sel.value || query().get("preset") || "";
+      sel.innerHTML = `<option value="">Saved view…</option>`;
+      const config = configViewPresets();
+      const custom = loadCustomViewPresets();
+      const addGroup = (label, presets) => {
+        const names = Object.keys(presets || {}).sort((a, b) => a.localeCompare(b));
+        if (!names.length) return;
+        const group = document.createElement("optgroup");
+        group.label = label;
+        for (const name of names) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          group.appendChild(opt);
+        }
+        sel.appendChild(group);
+      };
+      addGroup("Config", config);
+      addGroup("Custom", custom);
+      if (current && getViewPreset(current)) sel.value = current;
+      updatePresetClearBtn();
     }
     function applyViewPreset(name) {
       if (!name) return;
       const params = query();
-      const preset = appConfig?.views?.[name];
+      const preset = getViewPreset(name);
       if (!preset) return;
       const next = new URLSearchParams(params);
       for (const [key, value] of Object.entries(preset)) next.set(key, value);
@@ -6318,8 +6521,16 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("search").value = "";
       document.getElementById("kind").value = "";
       document.getElementById("open-only").checked = false;
+      document.getElementById("limit").value = "";
+      const groupSel = document.getElementById("group-by");
+      if (groupSel) groupSel.value = "";
       const params = query();
-      for (const key of ["text", "q", "kind", "type", "status", "blocked", "open", "open_only"]) params.delete(key);
+      for (const key of [
+        "text", "q", "kind", "type", "status", "blocked", "open", "open_only",
+        "project", "tag", "tag_all", "exclude_tag", "user", "team", "person",
+        "owner", "assignee", "attendee", "sender", "recipient", "after", "before",
+        "limit", "group_by",
+      ]) params.delete(key);
       history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
       loadItems();
       syncStatusFilterBtns();
@@ -6419,6 +6630,7 @@ HTML_PAGE = r"""<!doctype html>
     // ── Persist view preset in localStorage ──────────────────────
     function savePresetToStorage(name) {
       try { localStorage.setItem("lifetxt_preset", name); } catch(_) {}
+      updatePresetClearBtn();
     }
     function loadPresetFromStorage() {
       try { return localStorage.getItem("lifetxt_preset") || ""; } catch(_) { return ""; }
@@ -6572,26 +6784,90 @@ HTML_PAGE = r"""<!doctype html>
     }, {passive: true});
 
     // ── Clear view preset ─────────────────────────────────────────
-    function clearViewPreset() {
+    function currentViewPresetState() {
+      updateUrlFromControls();
+      const params = query();
+      const keys = [
+        "mode", "refresh", "around", "window", "from", "to",
+        "workspace", "theme",
+        "status", "blocked", "project", "tag", "tag_all", "exclude_tag",
+        "user", "team", "person", "owner", "assignee", "attendee",
+        "sender", "recipient", "after", "before",
+        "text", "kind", "open_only", "limit", "group_by", "sort", "order",
+        "kiosk_cols", "kiosk_filter", "kiosk_title", "agenda_blocked",
+      ];
+      const state = {};
+      for (const key of keys) {
+        if (params.has(key)) state[key] = params.get(key);
+      }
+      state.workspace = currentWorkspace();
+      const mode = currentView();
+      if (mode) state.mode = mode;
+      return state;
+    }
+    function sanitizePresetName(value) {
+      return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
+    }
+    function saveCurrentViewPreset() {
+      const active = query().get("preset");
+      const initial = active && isCustomViewPreset(active) ? active : "";
+      const name = sanitizePresetName(prompt("Save current view as:", initial || "My view"));
+      if (!name) return;
+      if (Object.prototype.hasOwnProperty.call(configViewPresets(), name)) {
+        showToast("Config-defined view presets are read-only. Use another name.", "error");
+        return;
+      }
+      const custom = loadCustomViewPresets();
+      custom[name] = currentViewPresetState();
+      saveCustomViewPresets(custom);
+      populateViewPresets();
+      applyViewPreset(name);
+      showToast(`Saved view: ${name}`, "success");
+    }
+    function deleteCurrentViewPreset() {
+      const sel = document.getElementById("view-preset-select");
+      const name = sel?.value || query().get("preset") || loadPresetFromStorage();
+      if (!name) { showToast("No saved view selected.", "warning"); return; }
+      if (!isCustomViewPreset(name)) {
+        showToast("Config-defined view presets cannot be deleted here.", "warning");
+        return;
+      }
+      if (!confirm(`Delete custom view "${name}"?`)) return;
+      const custom = loadCustomViewPresets();
+      delete custom[name];
+      saveCustomViewPresets(custom);
+      populateViewPresets();
+      clearViewPreset(false);
+      showToast(`Deleted view: ${name}`, "success");
+    }
+    function clearViewPreset(showMessage = true) {
       try { localStorage.removeItem("lifetxt_preset"); } catch(_) {}
       const sel = document.getElementById("view-preset-select");
       if (sel) sel.value = "";
       const params = query();
       params.delete("preset");
-      params.delete("view");
+      const viewMode = (params.get("view") || "").toLowerCase();
+      if (!["messages", "status", "display", "kiosk"].includes(viewMode)) params.delete("view");
+      params.delete("_preset_applied");
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       const btn = document.getElementById("preset-clear-btn");
       if (btn) btn.style.display = "none";
+      const del = document.getElementById("preset-delete-btn");
+      if (del) del.style.display = "none";
       applyUrlToControls();
       refreshAll();
-      showToast("View preset cleared.", "success");
+      if (showMessage) showToast("View preset cleared.", "success");
     }
     function updatePresetClearBtn() {
-      const stored = loadPresetFromStorage();
+      const stored = query().get("preset") || loadPresetFromStorage();
       const btn = document.getElementById("preset-clear-btn");
       if (btn) btn.style.display = stored ? "" : "none";
+      const del = document.getElementById("preset-delete-btn");
+      if (del) del.style.display = stored && isCustomViewPreset(stored) ? "" : "none";
       const lbl = document.getElementById("preset-name-label");
       if (lbl) { lbl.textContent = stored ? stored : ""; lbl.style.display = stored ? "" : "none"; }
+      const sel = document.getElementById("view-preset-select");
+      if (sel && stored && getViewPreset(stored)) sel.value = stored;
     }
 
     // ── Drawer: copy ID to clipboard ──────────────────────────────
@@ -6871,7 +7147,7 @@ HTML_PAGE = r"""<!doctype html>
       _syncGraphLayoutBtns();
       // Restore preset from localStorage if no URL param
       const storedPreset = loadPresetFromStorage();
-      if (storedPreset && !query().get("preset") && !query().get("view") && appConfig?.views?.[storedPreset]) {
+      if (storedPreset && !query().get("preset") && !query().get("view") && getViewPreset(storedPreset)) {
         applyViewPreset(storedPreset);
       }
       startGitPolling();

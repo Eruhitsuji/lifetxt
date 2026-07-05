@@ -1103,9 +1103,18 @@ Options:
 | `--write-file FILE` | File used for create, update, and delete operations |
 | `--host HOST` | Bind host; defaults to `127.0.0.1` |
 | `--port PORT` | Bind port; defaults to `8000` |
+| `--read-only` | Disable write endpoints except `/api/check-line`; useful for public or wall-display deployments |
 
 The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.
+
+The browser GUI includes a header Workspace for item views and tool panels,
+a centered record detail modal, browser-local custom views via `Save View`,
+config-defined read-only view presets, `Ctrl+K` fuzzy command palette,
+recently opened records, browser notifications, graph review, display mode,
+and kiosk mode. When reading multiple files, combine `path ...` with
+`--write-file FILE` so generated or read-only files can be shown while edits
+go only to the hand-maintained file.
 
 ## 12. `config`
 

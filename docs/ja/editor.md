@@ -1,5 +1,19 @@
 # Editor Support
 
+## Latest Format Coverage
+
+現在の VS Code extension は、最新の format profile に含まれる item type を
+highlight 対象にします。
+
+```txt
+T E D R H N S M J
+```
+
+title は detail value とは別 scope で capture されるため、theme 側で title、
+detail key、quoted string を別色にできます。snippet は `status`、`message`、
+`journal`、`repeat-limited`、`dtz` などを含み、`S`、`M`、`J`、複数行 `body:`、
+秒・小数秒・timezone 付き datetime、simple repeat の制限 key に対応します。
+
 このプロジェクトには、VS Code 向けの基本的な editor support を
 [`editors/vscode/lifetxt`](../../editors/vscode/lifetxt) に含めています。
 
@@ -37,6 +51,14 @@ static snippet では以下を提供します。
 - `subtask`、`body`、`ibody`
 - `id`、`parent`、`depends_on`、`blocks`
 - `due`、`fromto`、`dtz`、`project`、`tag`
+
+snippet は現在の format profile に合わせています。
+
+- `status` は type `S` と `from:`、`state:`、`person:` を挿入します。
+- `message` は type `M` と `sender:`、`recipient:`、`notify_at:`、`body:` を挿入します。
+- `journal` は type `J` と `|` body continuation line を挿入します。
+- `repeat-limited` は `repeat:`、`interval:`、`until:`、`count:` を挿入します。
+- `dtz` は秒、小数秒、timezone 付き datetime を挿入します。
 
 より高度な補完は、Python parser / validator を再利用する optional language
 server として実装する方針が適しています。

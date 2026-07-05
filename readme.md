@@ -1,7 +1,9 @@
 # life.txt
 
 `life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, messages, notes, and journal / diary entries in a single human-readable file.
-Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the detailed grammar of the `life.txt`.
+Please refer to [docs/en/life_txt_format_spec.md](./docs/en/life_txt_format_spec.md)
+or [docs/ja/life_txt_format_spec.md](./docs/ja/life_txt_format_spec.md) for the
+current grammar of `life.txt`.
 
 ## Documentation
 
@@ -115,6 +117,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
 
@@ -163,6 +166,17 @@ An optional FastAPI REST API and browser GUI are available with:
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+The Web UI includes a header Workspace for Items, Messages, Status, Kiosk,
+New Record, Agenda, Notifications, Statistics, and Graph panels. Records open
+in a centered detail modal with thread replies, dependency links, due quick
+actions, and Markdown previews. The toolbar can save the current
+filter/sort/group/workspace state as a browser-local custom view via
+`Save View`; config-defined `views` appear in the same selector as read-only
+presets. Press `Ctrl+K` for the fuzzy command palette, recently opened records,
+saved views, exports, theme toggles, and common actions. Use `--read-only` for
+public or wall-display deployments and `--write-file FILE` when reading
+multiple files but writing to a single hand-maintained file.
 
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the

@@ -29,23 +29,39 @@ life.txt 風の `.txt` ファイルを読み込みます。
 ```sh
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt
 python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
+python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-only
 ```
+
+公開用 dashboard や常時表示 display など、閲覧と行 validation は許可しつつ
+source file を変更させたくない場合は `--read-only` を使います。
 
 ## REST API
 
 | Method | Path | 目的 |
 |---|---|---|
 | `GET` | `/api/health` | 読み込み path と書き込み先を表示 |
+| `GET` | `/api/config` | Web UI が使う公開 runtime config を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
-| `POST` | `/api/items` | 書き込み先ファイルに item を追記 |
-| `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
-| `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
+| `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |
+| `PUT` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を更新 |
+| `DELETE` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を削除 |
 | `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の ID link を表示 |
 | `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true` |
 | `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
-| `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を返す |
+| `GET` | `/api/messages` | type `M` message item を一覧表示。message filter 指定可能 |
+| `GET` | `/api/messages/id/{id}` | exact `id:` で Message を取得 |
+| `PUT` | `/api/messages/id/{id}` | writable file 内の exact `id:` 一致 Message を更新 |
+| `DELETE` | `/api/messages/id/{id}` | writable file 内の exact `id:` 一致 Message を削除 |
+| `POST` | `/api/messages/id/{id}/ack` | writable file 内の Message に `ack:` を設定 |
+| `POST` | `/api/messages/id/{id}/snooze` | writable file 内の Message に `snooze_until:` を設定 |
+| `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を取得 |
+| `POST` | `/api/messages/id/{id}/reply` | `parent:{id}` を持つ返信 Message を作成 |
+| `POST` | `/api/messages` | message-oriented payload から type `M` item を追記 |
+| `POST` | `/api/items` | 書き込み先ファイルに item を追記 |
+| `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
+| `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
 | `GET` | `/api/notifications` | Message 通知候補を表示 |
@@ -258,9 +274,10 @@ item grid を auto-scroll します。`kiosk_cols` で列数を固定し、`kios
 config の `sync_ics.generated_paths` または `sync_ics.output` に含まれるファイルは
 API response で `generated: true` になり、GUIではread-onlyとして扱われます。
 
-## 追加: Message API
+## Message API Details
 
-Message type (`M`) 用に以下の API も提供します。
+Message type (`M`) は main REST API table の endpoint に加え、以下のような
+message-oriented payload と filter を使えます。
 
 | Method | Path | 目的 |
 |---|---|---|
@@ -286,11 +303,13 @@ payload 例:
 ```
 
 GUI と `/api/items`、`/api/agenda` では `sender=VALUE` と `recipient=VALUE` の URL parameter でも絞り込めます。
-## Additional API: id, thread, notifications
 
-以下の endpoint を追加しています。
+## ID / Thread / Notification Notes
 
-| Method | Path | Purpose |
+主要 endpoint は main REST API table に含まれています。この節では、ID 操作、
+thread、notification の実用上の注意点をまとめます。
+
+| Method | Path | 目的 |
 |---|---|---|
 | `GET` | `/api/config` | Web UI が使う公開設定を返す |
 | `GET` | `/api/items/id/{id}` | `id:` で item を取得 |
@@ -316,7 +335,7 @@ id-based operation は曖昧なIDを拒否します。
 通知パネルの `Ack` / `Snooze ...` は writable file の対象 Message を更新します。
 Snooze duration は `notifications.snooze_default` で指定できます。
 
-## Additional API: links
+## Link API Details
 
 `GET /api/links` は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` の ID 参照を一覧表示します。
 

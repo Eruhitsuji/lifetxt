@@ -87,6 +87,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
 
@@ -99,7 +100,7 @@ lifetxt check examples/minimal_life.txt
 
 Most file-reading commands accept multiple input paths, glob patterns, and
 directories containing life.txt-like `.txt` files. The `filter`,
-`to-json`, `to-jsonl`, and `to-csv` commands support item filters such as `--open`,
+`to-json`, `to-jsonl`, `to-csv`, and `markdown` commands support item filters such as `--open`,
 `--status`, `--type`, `--project`, `--tag`, `--tag-all`, `--exclude-tag`,
 `--user`, `--team`, `--person`, `--owner`,
 `--assignee`, `--attendee`, `--sender`, `--recipient`, `--detail`, `--text`,
@@ -138,6 +139,19 @@ The optional web interface is installed separately:
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+The Web UI includes a header Workspace for Items, Messages, Status, Kiosk,
+New Record, Agenda, Notifications, Statistics, and Graph panels. Records open
+in a centered detail modal with thread replies, dependency links, due quick
+actions, and Markdown previews. The toolbar can save the current
+filter/sort/group/workspace state as a browser-local custom view via
+`Save View`; config-defined `views` appear in the same selector as read-only
+presets. Press `Ctrl+K` for the fuzzy command palette, recently opened records,
+saved views, exports, theme toggles, and common actions. Use `--read-only` for
+public or wall-display deployments and `--write-file FILE` when reading
+multiple files but writing to a single hand-maintained file. See
+[web.md](./web.md) for URL parameters, API routes, browser notifications, and
+kiosk/display modes.
 
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the

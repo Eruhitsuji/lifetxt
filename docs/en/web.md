@@ -29,7 +29,11 @@ files. Create, update, and delete operations use the first file unless
 ```sh
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt
 python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
+python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-only
 ```
+
+Use `--read-only` for public dashboards or always-on displays where users
+should be able to inspect and validate records but not change source files.
 
 ## REST API
 

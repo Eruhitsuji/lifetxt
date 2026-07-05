@@ -16,6 +16,15 @@ The current editor support is intentionally lightweight:
 This works without running a background process and can be copied into a local
 VS Code installation.
 
+The current grammar highlights all implemented item types:
+
+```txt
+T E D R H N S M J
+```
+
+The title capture uses a separate scope from detail values, so themes can color
+the title differently from detail keys and quoted strings.
+
 ## Local Installation
 
 Windows example:
@@ -39,6 +48,15 @@ Static snippets cover the common cases:
 - `subtask`, `body`, `ibody`
 - `id`, `parent`, `depends_on`, `blocks`
 - `due`, `fromto`, `dtz`, `project`, `tag`
+
+These snippets intentionally mirror the current format profile:
+
+- `status` inserts type `S` with `from:`, `state:`, and `person:`.
+- `message` inserts type `M` with `sender:`, `recipient:`, `notify_at:`, and
+  `body:`.
+- `journal` inserts type `J` with a `|` body continuation line.
+- `repeat-limited` inserts `repeat:`, `interval:`, `until:`, and `count:`.
+- `dtz` inserts a datetime with seconds, fractional seconds, and timezone.
 
 For richer completion, the recommended next step is an optional language server
 that reuses the Python parser and validator.

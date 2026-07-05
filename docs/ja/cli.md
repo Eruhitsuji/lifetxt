@@ -1019,9 +1019,17 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 | `--write-file FILE` | 作成、更新、削除に使うファイル |
 | `--host HOST` | bind host。既定値は `127.0.0.1` |
 | `--port PORT` | bind port。既定値は `8000` |
+| `--read-only` | `/api/check-line` 以外の write endpoint を無効化。公開用・常時表示用に便利 |
 
 REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
 詳細は [web.md](./web.md) を参照してください。
+
+Browser GUI には item view と tool panel をまとめた header Workspace、
+中央の record detail modal、`Save View` による browser-local custom view、
+config 由来の read-only view preset、`Ctrl+K` fuzzy Command Palette、
+recently opened records、browser notifications、Graph、display mode、kiosk mode
+があります。複数 file を読み込む場合は `path ...` と `--write-file FILE` を併用すると、
+generated/read-only file を表示しつつ、編集は hand-maintained file だけに限定できます。
 
 ## 12. `config`
 

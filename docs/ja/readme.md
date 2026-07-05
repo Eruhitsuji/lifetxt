@@ -84,6 +84,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
 
@@ -129,6 +130,17 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
+Web UI には Items、Messages、Status、Kiosk、New Record、Agenda、
+Notifications、Statistics、Graph をまとめた header Workspace があります。
+record は中央の detail modal で開き、thread reply、dependency link、due quick
+action、Markdown preview を確認できます。Toolbar の `Save View` で現在の
+filter / sort / group-by / workspace を browser-local custom view として保存でき、
+config の `views` は read-only preset として同じ selector に表示されます。
+`Ctrl+K` で fuzzy Command Palette を開き、recently opened records、saved views、
+export、theme toggle、kiosk mode などを実行できます。公開用や常時表示用途では
+`--read-only`、複数 file を読みつつ書き込み先を固定する場合は `--write-file FILE`
+を使ってください。詳細は [web.md](./web.md) を参照してください。
+
 端末向け補助機能として `tui`、`fzf`、`timer`、`stats`、`git-hook`、
 `completion` があります。`fzf` は `fzf` または `peco` が PATH に必要です。
 TUI は任意の `tui` extra を使えますが、依存なしの fallback 表示もあります。
@@ -140,6 +152,7 @@ TUI は任意の `tui` extra を使えますが、依存なしの fallback 表�
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university --tag report
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
 python -m lifetxt assist --type diary --title "Research day" --on 2026-06-23 --mood good --body "Read papers."
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --output new_life.txt
 python -m lifetxt assist --interactive --append life.txt

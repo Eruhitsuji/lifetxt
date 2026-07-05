@@ -684,7 +684,24 @@ note status `[N]` は通常 note type `N` または journal type `J` と組み�
 [N] J "Research day" on:2026-06-23
 ```
 
-## 15. 形式文法
+## 15. Reference Implementation Notes
+
+現在の reference implementation は、この grammar を CLI、JSON/JSONL/CSV
+converter、FastAPI API、browser GUI で共通利用します。多くの読み取り系 command
+は複数 file、directory、glob pattern、stdin を受け付けます。machine-readable
+record を出力する command は、file 由来の input に `_source_file`、
+`_source_line`、`_source_end_line` を付与する場合があります。これらの
+`_source_*` field は command output metadata であり、life.txt detail key では
+ありません。converter は life.txt に戻すとき、これらの metadata を無視します。
+
+Web UI は複数の life.txt file を同時に読み込めます。`.generated/*.life.txt`
+のような generated file は慣例的に read-only として扱い、
+`serve --write-file FILE` で create、update、message thread 操作用の書き込み先を
+指定します。`serve --read-only` は line validation 以外の write endpoint を
+無効化します。browser-local saved view と config-defined view preset は UI state
+であり、file syntax ではありません。
+
+## 16. 形式文法
 
 ```ebnf
 life_file         = { blank_line | comment_line | item_line | continuation_line } ;
@@ -722,7 +739,7 @@ text              = ? 行末までの任意の文字 ? ;
 - continuation line は item の直後に必要です。JSON/JSONL/CSV から life.txt に戻す場合、複数行 `body:` は `|` 継続行として出力されます。
 - `key=value` は CLI helper の入力だけで使える便宜記法です。ファイル構文には含めません。
 
-## 16. 完全な例
+## 17. 完全な例
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

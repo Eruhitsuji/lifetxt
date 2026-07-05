@@ -843,7 +843,24 @@ type `J`.
 [N] J "Research day" on:2026-06-23
 ```
 
-## 15. Formal Grammar
+## 15. Reference Implementation Notes
+
+The current reference implementation uses this grammar across the CLI,
+JSON/JSONL/CSV converters, the FastAPI API, and the browser GUI. Most read-only
+commands accept multiple files, directories, glob patterns, and stdin. Commands
+that emit machine-readable records may add `_source_file`, `_source_line`, and
+`_source_end_line` for file-backed input. These `_source_*` fields are command
+output metadata, not life.txt detail keys, and converters ignore them when
+writing records back to life.txt.
+
+The Web UI can load several life.txt files at once. Generated files such as
+`.generated/*.life.txt` are treated as read-only by convention, and
+`serve --write-file FILE` selects the writable file for create, update, and
+message-thread operations. `serve --read-only` disables write endpoints except
+line validation. Browser-local saved views and config-defined view presets are
+UI state, not file syntax.
+
+## 16. Formal Grammar
 
 ```ebnf
 life_file         = { blank_line | comment_line | item_line | continuation_line } ;
@@ -886,7 +903,7 @@ Notes:
 - `key=value` appears only in CLI helper input; it is intentionally excluded
   from the file grammar.
 
-## 16. Complete Example
+## 17. Complete Example
 
 ```txt
 [ ] T Write_Report do:2026-06-10 due:2026-06-12 project:university priority:A assignee:alice

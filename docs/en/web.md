@@ -44,7 +44,8 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
 | `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` |
-| `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI |
+| `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true` |
+| `GET` | `/api/blockers` | Return the transitive blocker chain for `?id=ID` (levels 1..N, `depth` caps traversal, default 5) |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
 | `PUT` | `/api/messages/id/{id}` | Replace a message by exact `id:` in the writable file |
@@ -77,7 +78,8 @@ the selected value as top-level `id` in API item responses.
 
 `GET /api/agenda` uses the same agenda records as the CLI. Records include
 `blocked: true` and `blocked_by` when an open item is blocked by an open
-`depends_on:` or `blocks:` relation. Repeated records that are expanded at
+`depends_on:` or `blocks:` relation, and `?blocked=only` / `?blocked=hide`
+keeps or removes blocked records. Repeated records that are expanded at
 request time include `generated: true`, `source_id`, `occurrence_start`,
 `occurrence_end`, `occurrence_index`, and `repeat_rule` when available; the API
 does not write generated occurrences back to the source file.

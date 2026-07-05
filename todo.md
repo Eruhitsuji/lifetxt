@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x44)
+Last updated: 2026-07-05 (updated x45)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -154,11 +154,23 @@ CLI-native charts without external dependencies.
 
 ### Record Display (Web UI)
 
-- [ ] Extend the drawer dependency mini graph beyond direct links: support
-  layout selection and clearer missing-node styling. Depth-2 multi-hop
-  expansion is implemented.
+- [ ] Preserve original line position when the Web UI Undo restores a deleted
+  item: undo currently re-appends the raw line at the end of the writable file
+  via `POST /api/items/raw`, so ordering and surrounding comments are not
+  restored. Consider a dedicated restore endpoint that remembers the original
+  line number.
 
 ### Dependency & Reference Graph (Web UI & CLI)
+
+- [ ] Add a `force` (physics-based) layout preset to the browser graph panel:
+  `ring`, `lr` (layered left-to-right), and `tb` (layered top-to-bottom) are
+  implemented with per-user persistence and SVG/PNG export; a force layout
+  would help non-hierarchical graphs but needs an iterative simulation.
+
+- [ ] Add `/api/blockers` edge-case tests: a `depends_on:` cycle between two
+  open items must terminate (the cycle guard is implemented but only tested
+  with acyclic chains), and `depth` clamping (values over 10, non-numeric)
+  should be asserted.
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
@@ -168,13 +180,32 @@ CLI-native charts without external dependencies.
 
 ### Quick-filter & Navigation (Web UI)
 
+- [ ] Let users save the current filter combination (search text, kind,
+  status, group-by, sort) as a named custom view preset from the toolbar,
+  stored in `localStorage` alongside the config-defined `views`, with a
+  delete/rename UI. Config-defined presets remain read-only.
+
+- [ ] Extend the command palette (Ctrl+K): fuzzy matching instead of
+  substring, a "recently opened items" section when the query is empty, and
+  palette entries for switching view presets and toggling the agenda blocked
+  filter.
+
 ### Context Menu & Dark Mode (Web UI) — New
 
 ### Stats & Charts (Web UI) — New
 
 ### Item Selection (Web UI) — New
 
+- [ ] Add a multi-level undo history to the Web UI: the undo toast currently
+  keeps only the most recent action; a small history (last 5 actions with
+  labels) surfaced from the command palette would make bulk edits safer.
+
 ### Drawer Improvements (Web UI) — New
+
+- [ ] Add an inline timer control to the drawer for task-like items: start /
+  stop buttons that update `elapsed:` through the existing item update
+  endpoint, reusing the CLI `timer` duration math, so the est/elapsed progress
+  bar can be driven entirely from the browser.
 
 ### Agenda & Notifications (Web UI) — New
 
@@ -238,11 +269,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `{next_monday}`, `{next_week}` placeholders resolved at apply time) is
   implemented; see CLI guide section 18.
 
-- [ ] Add dependency-focused views and filters: show only blocked or unblocked
-  items in `agenda`, expose blocker chains in `links` or a dedicated
-  `deps` view, and add Web UI affordances for quickly seeing why an item is
-  blocked. Keep this as a usability layer on top of the implemented
-  `depends_on:` / `blocks:` semantics.
+- [ ] Add CLI-side dependency-focused views: `agenda --blocked only|hide`
+  flags and a dedicated `deps` view (or `links --chain ID`) that prints the
+  transitive blocker chain in the terminal. The Web side is done: the agenda
+  API/UI filter (`blocked=only|hide` + ⚡ badge) and the drawer "Why is this
+  blocked?" chain backed by `GET /api/blockers` are implemented.
 
 ---
 
@@ -373,8 +404,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with worked examples for:
   statistics dashboard usage, chart panel workflows, item creation/editing,
   Git integration endpoints and security model, and the `quick-add` shortcut.
-  The REST table, parse endpoint, graph panel, kiosk parameters, and message
-  thread basics are now documented.
+  Also document the newer UI affordances: command palette (Ctrl+K), undo
+  toast, group-by, keyboard list navigation (j/k/x/Enter), inline status
+  cycling, item export, graph layout presets and SVG/PNG export, drawer due
+  quick-postpone, est/elapsed progress bar, and the agenda blocked filter.
+  The REST table (including `/api/blockers` and `agenda?blocked=`), parse
+  endpoint, graph panel, kiosk parameters, and message thread basics are now
+  documented.
 
 - [ ] Document the dependency graph feature end-to-end: explain the
   `links --format mermaid` and `links --format dot` CLI outputs, the
@@ -451,8 +487,14 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add browser-level Web UI smoke tests with Playwright or an equivalent
   driver: raw import live parse preview, drawer message replies, occurrence
   badges, kiosk change highlighting, explicit ref-link scroll fallback, and
-  search highlighting in detail/body previews. Current tests cover static HTML
-  hooks and API behavior, not real DOM interaction.
+  search highlighting in detail/body previews. Newly added interactive
+  features also need DOM-level coverage: command palette (Ctrl+K) matching and
+  execution, undo toast (status/delete restore), j/k/x/Enter keyboard
+  navigation, inline status-badge cycling, group-by section headers, item
+  CSV/JSON/Markdown export, graph layout switching plus SVG/PNG download, the
+  drawer due quick-postpone buttons, and the agenda blocked-filter cycle.
+  Current tests cover static HTML hooks and API behavior, not real DOM
+  interaction.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that
@@ -613,12 +655,10 @@ after the corresponding P1 or P2 feature is stable.
   worth implementing if the lightweight `/api/git/*` subprocess endpoints
   prove insufficient for multi-user workflows; defer until there is concrete
   demand.
-- [ ] Consider graph layout presets in the browser GUI graph panel: `LR`
-  (left-to-right hierarchy), `TB` (top-to-bottom), and `force` (physics-based
-  for non-hierarchical graphs). Let the user switch layouts without reloading.
-- [ ] Consider exporting the dependency graph as an SVG or PNG from the
-  browser GUI (using the Cytoscape.js export API) so users can share the graph
-  without running the server.
+- [ ] Consider server-side rendering of the exported graph (SVG generated by
+  the API rather than serialized from the DOM) so `share`/`digest` can attach
+  the same image without a browser. Browser-side SVG/PNG export and `ring`/
+  `lr`/`tb` layout switching are implemented.
 
 ### Security
 - [ ] Consider asymmetric encryption (public/private key) for `encrypt` to

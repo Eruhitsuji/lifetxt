@@ -3464,6 +3464,86 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(["msg_001", response.json()["item"]["id"]], [item["id"] for item in items])
             self.assertEqual(["msg_001"], response.json()["item"]["details"]["parent"])
 
+    def test_blockers_api_returns_transitive_chain(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Leaf id:task_leaf depends_on:task_mid\n"
+                "[ ] T Mid id:task_mid depends_on:task_root\n"
+                "[ ] T Root id:task_root\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/blockers?id=task_leaf")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertTrue(data["blocked"])
+            self.assertEqual(2, data["count"])
+            self.assertEqual(
+                [("task_mid", 1), ("task_root", 2)],
+                [(entry["blocker_id"], entry["level"]) for entry in data["chain"]],
+            )
+            self.assertNotIn("_blocked_item_key", data["chain"][0])
+
+    def test_blockers_api_unblocked_and_missing_item(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Free id:task_free\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            unblocked = client.get("/api/blockers?id=task_free")
+            missing = client.get("/api/blockers?id=task_nope")
+
+            self.assertEqual(200, unblocked.status_code)
+            self.assertFalse(unblocked.json()["blocked"])
+            self.assertEqual([], unblocked.json()["chain"])
+            self.assertEqual(404, missing.status_code)
+
+    def test_agenda_api_annotates_and_filters_blocked_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Blocked_task id:task_blocked due:2026-06-10 depends_on:task_pre\n"
+                "[ ] T Prerequisite id:task_pre due:2026-06-10\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            all_records = client.get("/api/agenda?from=2026-06-10&to=2026-06-10").json()["records"]
+            only = client.get("/api/agenda?from=2026-06-10&to=2026-06-10&blocked=only").json()["records"]
+            hidden = client.get("/api/agenda?from=2026-06-10&to=2026-06-10&blocked=hide").json()["records"]
+
+            by_title = {record["title"]: record for record in all_records}
+            self.assertTrue(by_title["Blocked_task"]["blocked"])
+            self.assertEqual(
+                ["task_pre"],
+                [b["id"] for b in by_title["Blocked_task"]["blocked_by"]],
+            )
+            self.assertFalse(by_title["Prerequisite"]["blocked"])
+            self.assertEqual(["Blocked_task"], [record["title"] for record in only])
+            self.assertEqual(["Prerequisite"], [record["title"] for record in hidden])
+
+    def test_graph_api_marks_missing_reference_targets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Child id:task_child depends_on:task_ghost\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/graph")
+
+            self.assertEqual(200, response.status_code)
+            nodes = {node["id"]: node for node in response.json()["nodes"]}
+            self.assertFalse(nodes["task_child"]["missing"])
+            self.assertTrue(nodes["task_ghost"]["missing"])
+
 
 class LifeTxtHeatmapTests(unittest.TestCase):
     def test_habit_completion_dates_returns_date_set(self):

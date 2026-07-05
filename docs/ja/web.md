@@ -43,7 +43,8 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の ID link を表示 |
-| `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す |
+| `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true` |
+| `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
 | `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を返す |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
@@ -56,7 +57,8 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 
 `GET /api/agenda` は CLI `agenda` と同じ record を返します。open item が
 open な `depends_on:` または `blocks:` 関係で block されている場合、
-record に `blocked: true` と `blocked_by` が含まれます。request 時に展開された
+record に `blocked: true` と `blocked_by` が含まれます。`?blocked=only` /
+`?blocked=hide` で blocked record のみ表示 / 非表示にできます。request 時に展開された
 repeat record には、可能な場合 `generated: true`、`source_id`、
 `occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule` が
 含まれます。API は生成された occurrence を source file へ書き戻しません。

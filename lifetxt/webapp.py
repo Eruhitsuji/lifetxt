@@ -27,7 +27,13 @@ from .ids import (
     id_key_from_config,
     id_prefix_for_item,
 )
-from .links import build_id_index, item_id_values, link_records, reference_diagnostics
+from .links import (
+    build_id_index,
+    dependency_blocker_records,
+    item_id_values,
+    link_records,
+    reference_diagnostics,
+)
 from .stats import (
     MOOD_VALUES,
     build_stats,
@@ -216,7 +222,6 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             tag_aliases=config_tag_aliases(app.state.config),
         )
         if blocked and blocked != "false":
-            from .links import dependency_blocker_records
             key = id_key_from_config(app.state.config)
             blocker_records = dependency_blocker_records(items, key=key)
             blocked_item_ids = set(
@@ -318,19 +323,69 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                     "title": rec["source_title"],
                     "status": rec["source_status"],
                     "type": rec["source_type"],
+                    "missing": False,
                 }
+            else:
+                nodes_map[src_id]["missing"] = False
             if tgt_id and tgt_id not in nodes_map:
                 nodes_map[tgt_id] = {
                     "id": tgt_id,
                     "title": rec.get("target_title", tgt_id),
                     "status": rec.get("target_status", ""),
                     "type": rec.get("target_type", ""),
+                    "missing": rec.get("status") == "missing",
                 }
             edges.append({"source": src_id, "target": tgt_id, "relation": rec["relation"]})
         nodes = list(nodes_map.values())
         if root:
             nodes, edges = _subgraph(nodes, edges, root, depth)
         return {"nodes": nodes, "edges": edges}
+
+    @app.get("/api/blockers")
+    def get_blockers(
+        item_id=Query(None, alias="id"),
+        depth=Query(None),
+    ):
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        key = id_key_from_config(app.state.config)
+        if not item_id:
+            raise HTTPException(status_code=422, detail="Query parameter 'id' is required.")
+        focus = find_item_by_id(items, item_id, key=key)
+        if focus is None:
+            raise HTTPException(status_code=404, detail=f"No item with id {item_id!r}.")
+        try:
+            max_depth = max(1, min(int(depth), 10)) if depth is not None else 5
+        except (TypeError, ValueError):
+            max_depth = 5
+        blocker_records = dependency_blocker_records(items, key=key)
+        by_blocked_key = {}
+        for rec in blocker_records:
+            by_blocked_key.setdefault(rec["_blocked_item_key"], []).append(rec)
+        chain = []
+        visited = {id(focus)}
+        frontier = [id(focus)]
+        for level in range(1, max_depth + 1):
+            next_frontier = []
+            for item_key in frontier:
+                for rec in by_blocked_key.get(item_key, []):
+                    entry = {
+                        k: v for k, v in rec.items() if not k.startswith("_")
+                    }
+                    entry["level"] = level
+                    chain.append(entry)
+                    blocker_key = rec["_blocker_item_key"]
+                    if blocker_key not in visited:
+                        visited.add(blocker_key)
+                        next_frontier.append(blocker_key)
+            if not next_frontier:
+                break
+            frontier = next_frontier
+        return {
+            "id": item_id,
+            "blocked": any(entry["level"] == 1 for entry in chain),
+            "count": len(chain),
+            "chain": chain,
+        }
 
     @app.get("/api/chart/tasks")
     def chart_tasks(
@@ -618,6 +673,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         text=None,
         q=None,
         limit=None,
+        blocked=None,
     ):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
@@ -662,6 +718,39 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         filtered_records = [
             record for record, item in record_items if id(item) in filtered_ids
         ]
+        key = id_key_from_config(app.state.config)
+        blocked_by_id = {}
+        blocked_by_line = {}
+        for rec in dependency_blocker_records(items, key=key):
+            info = {
+                "id": rec["blocker_id"],
+                "title": rec["blocker_title"],
+                "status": rec["blocker_status"],
+                "relation": rec["relation"],
+            }
+            if rec.get("blocked_id"):
+                blocked_by_id.setdefault(str(rec["blocked_id"]), []).append(info)
+            if rec.get("blocked_line") is not None:
+                blocked_by_line.setdefault(
+                    (rec.get("blocked_source"), rec["blocked_line"]), []
+                ).append(info)
+        for record in filtered_records:
+            record_id = None
+            details = record.get("details") or {}
+            if details.get(key):
+                record_id = str(details[key][0])
+            blockers = blocked_by_id.get(record_id) if record_id else None
+            if blockers is None:
+                blockers = blocked_by_line.get(
+                    (record.get("source"), record.get("line"))
+                )
+            record["blocked"] = bool(blockers)
+            record["blocked_by"] = blockers or []
+        blocked_mode = str(blocked or "").strip().lower()
+        if blocked_mode in ("only", "true", "1"):
+            filtered_records = [r for r in filtered_records if r["blocked"]]
+        elif blocked_mode in ("hide", "none"):
+            filtered_records = [r for r in filtered_records if not r["blocked"]]
         filtered_records = limit_items(filtered_records, limit)
         return {"count": len(filtered_records), "records": filtered_records}
 
@@ -2571,6 +2660,155 @@ HTML_PAGE = r"""<!doctype html>
       35% { transform: scale(1.012); background: #fff; }
       100% { transform: none; background: #fff; }
     }
+    /* ── Item grouping headers ── */
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin: .35rem 0 -.2rem;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .group-header::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+    .group-header .n { font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; }
+    /* ── Keyboard focus (j/k navigation) ── */
+    .item.kb-focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    /* ── Inline status cycling ── */
+    .status-badge.clickable { cursor: pointer; }
+    .status-badge.clickable:hover { box-shadow: 0 0 0 2px var(--accent); }
+    /* ── Relative due labels ── */
+    .due-rel { margin-left: .4rem; font-size: .78rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .due-rel.overdue { color: var(--danger); }
+    .due-rel.due-soon { color: #b45309; }
+    [data-theme="dark"] .due-rel.due-soon { color: #fbbf24; }
+    /* ── Undo toast ── */
+    .toast .undo-btn {
+      margin-left: .75rem;
+      padding: .15rem .6rem;
+      font-size: .8rem;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      border-radius: .35rem;
+    }
+    /* ── Blocked badges (items + agenda) ── */
+    .blocked-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: .35rem;
+      padding: .08rem .38rem;
+      border-radius: 999px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: .7rem;
+      font-weight: 700;
+      cursor: help;
+      vertical-align: middle;
+    }
+    [data-theme="dark"] .blocked-badge { background: #4c1d1d; color: #fca5a5; }
+    .agenda-blocked-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    /* ── Blocker chain ("Why blocked") in drawer ── */
+    .blocker-chain { display: grid; gap: .3rem; margin-bottom: .6rem; }
+    .blocker-chain-row {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .3rem .45rem;
+      border-radius: .35rem;
+      border: 1px solid #fca5a5;
+      background: #fff8f8;
+      font-size: .85rem;
+    }
+    [data-theme="dark"] .blocker-chain-row { background: #2d1f1f; border-color: #7f3535; }
+    /* ── Graph layout buttons + export ── */
+    .graph-layout-bar { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+    .graph-layout-btn, .graph-export-btn {
+      padding: .18rem .5rem;
+      font-size: .74rem;
+      border-radius: .35rem;
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .graph-layout-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .graph-node.missing circle { fill: var(--panel); stroke: #9ca3af; stroke-dasharray: 4 3; }
+    .graph-node.missing text { font-style: italic; fill: #9ca3af; }
+    /* ── est/elapsed progress bar (drawer) ── */
+    .progress-wrap { display: grid; gap: .25rem; }
+    .progress-track { height: .55rem; border-radius: 999px; background: var(--soft); overflow: hidden; border: 1px solid var(--line); }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .2s; }
+    .progress-fill.over { background: var(--danger); }
+    .progress-label { font-size: .78rem; color: var(--muted); }
+    /* ── Drawer due quick actions ── */
+    .due-quick-bar { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; }
+    .due-quick-bar button { padding: .18rem .55rem; font-size: .76rem; }
+    /* ── Command palette ── */
+    .cmdk-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 20, 18, .45);
+      z-index: 600;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 12vh;
+    }
+    .cmdk-backdrop.open { display: flex; }
+    .cmdk {
+      width: min(560px, 92vw);
+      background: var(--panel);
+      border: 1px solid var(--line-strong);
+      border-radius: .7rem;
+      box-shadow: 0 12px 48px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+    .cmdk input {
+      width: 100%;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      padding: .8rem 1rem;
+      font-size: 1rem;
+      background: var(--panel);
+      color: var(--ink);
+      outline: none;
+    }
+    .cmdk-list { max-height: 46vh; overflow-y: auto; padding: .35rem; }
+    .cmdk-row {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .5rem .65rem;
+      border-radius: .45rem;
+      cursor: pointer;
+      font-size: .9rem;
+    }
+    .cmdk-row.focus, .cmdk-row:hover { background: var(--soft); }
+    .cmdk-row .cmdk-kind {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      min-width: 3.4rem;
+    }
+    .cmdk-empty { padding: .8rem 1rem; color: var(--muted); font-size: .88rem; }
+    /* ── Print stylesheet ── */
+    @media print {
+      header .toolbar, .side, .detail-drawer, #toast-container, #ctx-menu,
+      .filter-bar, .quick-add-bar, .bulk-toolbar, .modal-backdrop, .cmdk-backdrop,
+      .item-check, .section-head .toolbar, #read-only-banner { display: none !important; }
+      body { background: #fff; color: #000; font-size: 12px; }
+      main { display: block; max-width: none; padding: 0; }
+      section { border: none; }
+      .item { border: none; border-bottom: 1px solid #ccc; border-radius: 0; break-inside: avoid; }
+      .item.overdue, .item.due-soon { border-left: 3px solid #888; }
+    }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
       .side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -2645,8 +2883,21 @@ HTML_PAGE = r"""<!doctype html>
             <option value="asc">Asc</option>
             <option value="desc">Desc</option>
           </select>
+          <select id="group-by" title="Group items" onchange="loadItems()">
+            <option value="">No grouping</option>
+            <option value="project">Group: Project</option>
+            <option value="type">Group: Type</option>
+            <option value="status">Group: Status</option>
+            <option value="source">Group: Source</option>
+          </select>
           <input id="limit" inputmode="numeric" placeholder="Limit">
           <button onclick="loadItems()">Apply</button>
+          <select id="export-select" title="Download the currently filtered items" onchange="if(this.value){exportItems(this.value);this.value='';}">
+            <option value="">Export…</option>
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+            <option value="markdown">Markdown</option>
+          </select>
         </div>
       </div>
       <div class="quick-add-bar" id="quick-add-bar" style="display:none">
@@ -2670,6 +2921,15 @@ HTML_PAGE = r"""<!doctype html>
       <div id="bulk-toolbar" class="bulk-toolbar">
         <span id="bulk-count" class="bulk-toolbar-count">0 selected</span>
         <button class="secondary" onclick="bulkMarkDone()" title="Mark selected as done">✓ Done</button>
+        <select id="bulk-status-select" title="Set status of selected items" onchange="if(this.value){bulkSetStatus(this.value);this.value='';}">
+          <option value="">Set status…</option>
+          <option value="[ ]">○ Open</option>
+          <option value="[/]">◑ In Progress</option>
+          <option value="[x]">✓ Done</option>
+          <option value="[-]">✕ Cancelled</option>
+          <option value="[>]">→ Deferred</option>
+        </select>
+        <button class="secondary" onclick="bulkSetProject()" title="Set project on selected items">Set project…</button>
         <button class="danger" onclick="bulkDelete()" title="Delete selected">Delete</button>
         <button class="secondary" onclick="bulkClearSelection()" title="Clear selection">✕ Clear</button>
       </div>
@@ -2771,12 +3031,21 @@ HTML_PAGE = r"""<!doctype html>
             <input id="graph-depth" placeholder="Depth" inputmode="numeric" style="max-width:4.2rem">
             <button class="secondary" onclick="loadGraphPanel()">Apply</button>
           </div>
+          <div class="graph-layout-bar" style="padding:.45rem 1rem;border-bottom:1px solid var(--line)">
+            <button class="graph-layout-btn" data-layout="ring" onclick="setGraphLayout('ring')" title="Ring layout (focus in center)">Ring</button>
+            <button class="graph-layout-btn" data-layout="lr" onclick="setGraphLayout('lr')" title="Layered left-to-right">LR</button>
+            <button class="graph-layout-btn" data-layout="tb" onclick="setGraphLayout('tb')" title="Layered top-to-bottom">TB</button>
+            <span style="flex:1"></span>
+            <button class="graph-export-btn" onclick="exportGraphSvg()" title="Download graph as SVG">⇩ SVG</button>
+            <button class="graph-export-btn" onclick="exportGraphPng()" title="Download graph as PNG">⇩ PNG</button>
+          </div>
           <div id="graph-panel" class="graph-panel"><div class="empty">Open this panel to load the ID graph.</div></div>
         </div>
       </section>
       <section class="agenda-section">
         <div class="section-head">
           <h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
+          <button id="agenda-blocked-btn" class="secondary agenda-blocked-btn" style="font-size:.72rem;padding:.18rem .5rem" onclick="toggleAgendaBlocked()" title="Cycle: show all / only blocked / hide blocked">⚡ All</button>
           <label class="agenda-limit-ctrl" title="Max agenda rows (0 = all)">
             <span class="agenda-limit-label">Rows</span>
             <input type="number" id="agenda-limit-spinner" min="0" max="100" step="1" value="8" style="width:3.2rem">
@@ -2828,6 +3097,14 @@ HTML_PAGE = r"""<!doctype html>
     <div class="drawer-body" id="drawer-body"></div>
   </aside>
 
+  <!-- Command palette -->
+  <div class="cmdk-backdrop" id="cmdk-backdrop" onclick="if(event.target===this)closeCmdk()">
+    <div class="cmdk" role="dialog" aria-label="Command palette">
+      <input id="cmdk-input" placeholder="Type a command or search items…" autocomplete="off">
+      <div id="cmdk-list" class="cmdk-list"></div>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container"></div>
   <div id="hm-tooltip" class="hm-tooltip"></div>
@@ -2853,13 +3130,18 @@ HTML_PAGE = r"""<!doctype html>
       <h3>Keyboard shortcuts</h3>
       <table>
         <tr><td>/</td><td>Focus search</td></tr>
+        <tr><td>Ctrl+K</td><td>Command palette (actions + jump to item)</td></tr>
+        <tr><td>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
+        <tr><td>Enter</td><td>Open focused item in drawer</td></tr>
+        <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (focus editor title)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
         <tr><td>r</td><td>Refresh all</td></tr>
         <tr><td>s</td><td>Toggle statistics panel</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
         <tr><td>g</td><td>Jump to line number (opens drawer)</td></tr>
-        <tr><td>Esc</td><td>Close drawer / blur input</td></tr>
+        <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
+        <tr><td>Esc</td><td>Close drawer / palette / blur input</td></tr>
         <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
@@ -3051,6 +3333,8 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]) || params.get("blocked") === "true";
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
+      const groupSel = document.getElementById("group-by");
+      if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
       syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
       configureNotificationPolling();
@@ -3112,12 +3396,15 @@ HTML_PAGE = r"""<!doctype html>
       const text = document.getElementById("search").value;
       const kind = document.getElementById("kind").value;
       const limit = document.getElementById("limit").value;
+      const groupBy = document.getElementById("group-by")?.value || "";
       if (text) next.set("text", text);
       if (kind) next.set("kind", kind);
       if (document.getElementById("open-only").checked) next.set("open_only", "true");
       if (limit) next.set("limit", limit);
+      if (groupBy) next.set("group_by", groupBy);
       next.set("sort", document.getElementById("sort").value);
       next.set("order", document.getElementById("order").value);
+      if (query().has("agenda_blocked")) next.set("agenda_blocked", query().get("agenda_blocked"));
       history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
     }
     async function loadItems() {
@@ -3253,6 +3540,29 @@ HTML_PAGE = r"""<!doctype html>
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       loadItems();
     }
+    function groupKeyFor(item, groupBy) {
+      if (groupBy === "project") return item?.details?.project?.[0] || "(no project)";
+      if (groupBy === "type") return ITEM_TYPE_NAMES[item.type] || item.type || "(none)";
+      if (groupBy === "status") return STATUS_LABEL[item.status] || item.status || "(none)";
+      if (groupBy === "source") return item.source || "(unknown source)";
+      return "";
+    }
+    function buildDueRelLabel(item) {
+      const due = item?.details?.due?.[0];
+      if (!due || ["[x]", "[-]"].includes(item.status)) return "";
+      const d = new Date(due);
+      if (isNaN(d)) return "";
+      const today = new Date(); today.setHours(0,0,0,0);
+      const dm = new Date(d); dm.setHours(0,0,0,0);
+      const diff = Math.round((dm - today) / 86400000);
+      let text, cls = "";
+      if (diff < 0) { text = `${-diff}d overdue`; cls = "overdue"; }
+      else if (diff === 0) { text = "due today"; cls = "due-soon"; }
+      else if (diff <= dueSoonDays()) { text = `in ${diff}d`; cls = "due-soon"; }
+      else if (diff <= 60) { text = `in ${diff}d`; }
+      else return "";
+      return `<span class="due-rel ${cls}">${escapeHtml(text)}</span>`;
+    }
     function renderItems(items) {
       const root = document.getElementById("items");
       root.innerHTML = items.length ? "" : `<div class="empty">No items found.</div>`;
@@ -3261,7 +3571,39 @@ HTML_PAGE = r"""<!doctype html>
       updateSearchCount(items.length);
       const kioskNow = isKioskMode();
       const nextFingerprints = new Map();
-      for (const item of items) {
+      _kbIndex = -1;
+      const groupBy = kioskNow ? "" : (document.getElementById("group-by")?.value || "");
+      const appendItem = (item) => {
+        const node = buildItemNode(item, kioskNow, nextFingerprints);
+        root.appendChild(node);
+      };
+      if (groupBy) {
+        const groups = new Map();
+        for (const item of items) {
+          const g = groupKeyFor(item, groupBy);
+          if (!groups.has(g)) groups.set(g, []);
+          groups.get(g).push(item);
+        }
+        for (const [name, groupItems] of groups) {
+          root.insertAdjacentHTML(
+            "beforeend",
+            `<div class="group-header">${escapeHtml(name)} <span class="n">(${groupItems.length})</span></div>`
+          );
+          for (const item of groupItems) appendItem(item);
+        }
+      } else {
+        for (const item of items) appendItem(item);
+      }
+      if (kioskNow) _kioskLastFingerprints = nextFingerprints;
+      else _kioskLastFingerprints = null;
+      const queryText = document.getElementById("search").value.trim();
+      if (queryText) {
+        root.querySelectorAll(".title.markdown, .meta, .body-preview").forEach(el => {
+          el.innerHTML = highlightText(el.innerHTML, queryText);
+        });
+      }
+    }
+    function buildItemNode(item, kioskNow, nextFingerprints) {
         const titleHtml = safeMarkdownHtml(item?.markdown?.title, item.title);
         const previewHtml = firstMarkdownDetail(item, "body") || firstMarkdownDetail(item, "note");
         const preview = previewHtml ? `<div class="markdown body-preview">${previewHtml}</div>` : "";
@@ -3277,6 +3619,7 @@ HTML_PAGE = r"""<!doctype html>
         const dueCls = itemDueSoonClass(item);
         const refLinks = buildRefLinksHtml(item.details);
         const parentInd = buildParentIndicator(item.details);
+        const dueRel = buildDueRelLabel(item);
         const stableKey = itemStableKey(item);
         const fingerprint = itemFingerprint(item);
         nextFingerprints.set(stableKey, fingerprint);
@@ -3305,7 +3648,7 @@ HTML_PAGE = r"""<!doctype html>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
             <div class="title markdown">${titleHtml}${parentInd}${occurrenceBadge}${generatedBadge}</div>
-            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}</div>
+            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}${dueRel}</div>
             ${preview}
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
@@ -3320,15 +3663,149 @@ HTML_PAGE = r"""<!doctype html>
         node.querySelector(".item-check").addEventListener("click", (ev) => {
           ev.stopPropagation();
         });
-        root.appendChild(node);
-      }
-      if (kioskNow) _kioskLastFingerprints = nextFingerprints;
-      else _kioskLastFingerprints = null;
-      const queryText = document.getElementById("search").value.trim();
-      if (queryText) {
-        root.querySelectorAll(".title.markdown, .meta, .body-preview").forEach(el => {
-          el.innerHTML = highlightText(el.innerHTML, queryText);
+        const statusBadge = node.querySelector(".status-badge");
+        if (statusBadge && item.editable && !kioskNow) {
+          statusBadge.classList.add("clickable");
+          statusBadge.title = `${item.status} — click to cycle status`;
+          statusBadge.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            cycleItemStatus(item);
+          });
+        }
+        node._lifetxtItem = item;
+        return node;
+    }
+
+    // ── Inline status cycling on item rows ─────────────────────────
+    const STATUS_INLINE_CYCLE = ["[ ]", "[/]", "[x]"];
+    async function cycleItemStatus(item) {
+      if (!item.editable) return;
+      const idx = STATUS_INLINE_CYCLE.indexOf(item.status);
+      const next = STATUS_INLINE_CYCLE[(idx + 1) % STATUS_INLINE_CYCLE.length];
+      const line = item.line;
+      const prevPayload = {status: item.status, type: item.type, title: item.title, details: item.details || {}};
+      try {
+        await api(`/api/items/${line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({...prevPayload, status: next}),
         });
+        registerUndo(`Status changed to ${next}.`, async () => {
+          await api(`/api/items/${line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
+        await refreshAll();
+      } catch(e) {
+        showToast("Status change failed: " + (e.message || e), "error");
+      }
+    }
+
+    // ── Keyboard focus navigation (j/k/x/Enter) ────────────────────
+    let _kbIndex = -1;
+    function _kbNodes() {
+      return [...document.querySelectorAll("#items .item")];
+    }
+    function kbMove(delta) {
+      const nodes = _kbNodes();
+      if (!nodes.length) return;
+      const next = _kbIndex === -1
+        ? (delta > 0 ? 0 : nodes.length - 1)
+        : Math.max(0, Math.min(nodes.length - 1, _kbIndex + delta));
+      nodes.forEach(n => n.classList.remove("kb-focus"));
+      _kbIndex = next;
+      nodes[next].classList.add("kb-focus");
+      nodes[next].scrollIntoView({block: "nearest", behavior: "smooth"});
+    }
+    function kbFocusedItem() {
+      const nodes = _kbNodes();
+      if (_kbIndex < 0 || _kbIndex >= nodes.length) return null;
+      return nodes[_kbIndex]._lifetxtItem || null;
+    }
+    function kbActivate() {
+      const item = kbFocusedItem();
+      if (!item) return false;
+      selectItem(item);
+      openDrawer(item);
+      return true;
+    }
+    function kbToggleSelect() {
+      const nodes = _kbNodes();
+      if (_kbIndex < 0 || _kbIndex >= nodes.length) return;
+      const check = nodes[_kbIndex].querySelector(".item-check");
+      if (check) check.click();
+    }
+
+    // ── Export filtered items (CSV / JSON / Markdown) ──────────────
+    function exportItems(format) {
+      const items = currentItems || [];
+      if (!items.length) { showToast("No items to export.", "warning"); return; }
+      let content, mime, ext;
+      if (format === "json") {
+        content = JSON.stringify(items.map(i => ({
+          line: i.line, source: i.source, status: i.status, type: i.type,
+          title: i.title, details: i.details || {},
+        })), null, 2);
+        mime = "application/json"; ext = "json";
+      } else if (format === "markdown") {
+        content = items.map(i => {
+          const tick = i.status === "[x]" ? "x" : i.status === "[-]" ? "-" : " ";
+          const due = i?.details?.due?.[0] ? ` (due: ${i.details.due[0]})` : "";
+          const proj = i?.details?.project?.[0] ? ` [${i.details.project[0]}]` : "";
+          return `- [${tick}] **${i.type}** ${i.title}${due}${proj}`;
+        }).join("\n");
+        mime = "text/markdown"; ext = "md";
+      } else {
+        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const header = ["line", "source", "status", "type", "title", "due", "project", "tags", "details"].join(",");
+        const rows = items.map(i => [
+          i.line ?? "", i.source ?? "", i.status, i.type, i.title,
+          i?.details?.due?.[0] || "",
+          (i?.details?.project || []).join(";"),
+          (i?.details?.tag || []).join(";"),
+          detailText(i.details),
+        ].map(esc).join(","));
+        content = [header, ...rows].join("\n");
+        mime = "text/csv"; ext = "csv";
+      }
+      const blob = new Blob([content], {type: mime});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `lifetxt-items-${new Date().toISOString().slice(0, 10)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(`Exported ${items.length} item(s) as ${ext.toUpperCase()}.`, "success");
+    }
+
+    // ── Undo for destructive actions ───────────────────────────────
+    let _undoAction = null;
+    function registerUndo(message, undoFn) {
+      _undoAction = undoFn;
+      const container = document.getElementById("toast-container");
+      const el = document.createElement("div");
+      el.className = "toast success";
+      const span = document.createElement("span");
+      span.textContent = message;
+      const btn = document.createElement("button");
+      btn.className = "undo-btn";
+      btn.textContent = "Undo";
+      btn.addEventListener("click", async () => { el.remove(); await performUndo(); });
+      el.append(span, btn);
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 8000);
+    }
+    async function performUndo() {
+      const fn = _undoAction;
+      _undoAction = null;
+      if (!fn) return;
+      try {
+        await fn();
+        showToast("Undone.", "success");
+        await refreshAll();
+      } catch(e) {
+        showToast("Undo failed: " + (e.message || e), "error");
       }
     }
     function _updateBulkToolbar() {
@@ -3343,34 +3820,87 @@ HTML_PAGE = r"""<!doctype html>
       bulkSelectedLines.clear();
       renderItems(currentItems);
     }
-    async function bulkMarkDone() {
+    function _bulkTargets(extraFilter) {
       const keys = new Set(bulkSelectedLines);
-      const targets = currentItems.filter(i => keys.has(String(i.line) + "|" + (i.source || "")) && i.editable && !["[x]","[-]"].includes(i.status));
-      if (!targets.length) { showToast("No editable open items selected.", "warning"); return; }
+      return currentItems.filter(i =>
+        keys.has(String(i.line) + "|" + (i.source || "")) && i.editable && (!extraFilter || extraFilter(i))
+      );
+    }
+    async function _bulkUpdateStatus(targets, statusValue, message) {
+      const restores = [];
       let done = 0;
       for (const item of targets) {
         try {
-          await api(`/api/items/${item.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: "[x]", type: item.type, title: item.title, details: item.details }) });
+          await api(`/api/items/${item.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: statusValue, type: item.type, title: item.title, details: item.details || {} }) });
+          restores.push({line: item.line, payload: {status: item.status, type: item.type, title: item.title, details: item.details || {}}});
           done++;
         } catch(e) { /* skip */ }
       }
       bulkSelectedLines.clear();
-      showToast(`Marked ${done} item(s) done.`, "success");
+      registerUndo(message.replace("{n}", String(done)), async () => {
+        for (const r of restores) {
+          await api(`/api/items/${r.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(r.payload) });
+        }
+      });
+      await refreshAll();
+    }
+    async function bulkMarkDone() {
+      const targets = _bulkTargets(i => !["[x]","[-]"].includes(i.status));
+      if (!targets.length) { showToast("No editable open items selected.", "warning"); return; }
+      await _bulkUpdateStatus(targets, "[x]", "Marked {n} item(s) done.");
+    }
+    async function bulkSetStatus(statusValue) {
+      const targets = _bulkTargets(i => i.status !== statusValue);
+      if (!targets.length) { showToast("No editable items selected (or already that status).", "warning"); return; }
+      await _bulkUpdateStatus(targets, statusValue, `Set {n} item(s) to ${statusValue}.`);
+    }
+    async function bulkSetProject() {
+      const targets = _bulkTargets();
+      if (!targets.length) { showToast("No editable items selected.", "warning"); return; }
+      const value = prompt(`Set project on ${targets.length} item(s) to (empty removes project):`);
+      if (value === null) return;
+      const proj = value.trim();
+      const restores = [];
+      let done = 0;
+      for (const item of targets) {
+        const details = JSON.parse(JSON.stringify(item.details || {}));
+        if (proj) details.project = [proj];
+        else delete details.project;
+        try {
+          await api(`/api/items/${item.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: item.status, type: item.type, title: item.title, details }) });
+          restores.push({line: item.line, payload: {status: item.status, type: item.type, title: item.title, details: item.details || {}}});
+          done++;
+        } catch(e) { /* skip */ }
+      }
+      bulkSelectedLines.clear();
+      registerUndo(proj ? `Set project:${proj} on ${done} item(s).` : `Removed project on ${done} item(s).`, async () => {
+        for (const r of restores) {
+          await api(`/api/items/${r.line}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(r.payload) });
+        }
+      });
       await refreshAll();
     }
     async function bulkDelete() {
-      const keys = new Set(bulkSelectedLines);
-      const targets = currentItems.filter(i => keys.has(String(i.line) + "|" + (i.source || "")) && i.editable);
+      const targets = _bulkTargets();
       if (!targets.length) { showToast("No editable items selected.", "warning"); return; }
       if (!confirm(`Delete ${targets.length} item(s)?`)) return;
       targets.sort((a,b) => b.line - a.line);
+      const rawLines = [];
       let done = 0;
       for (const item of targets) {
-        try { await api(`/api/items/${item.line}`, { method: "DELETE" }); done++; }
+        try {
+          await api(`/api/items/${item.line}`, { method: "DELETE" });
+          if (item.text) rawLines.unshift(item.text);
+          done++;
+        }
         catch(e) { /* skip */ }
       }
       bulkSelectedLines.clear();
-      showToast(`Deleted ${done} item(s).`, "success");
+      registerUndo(`Deleted ${done} item(s).`, async () => {
+        for (const line of rawLines) {
+          await api("/api/items/raw", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({line}) });
+        }
+      });
       await refreshAll();
     }
     function selectItem(item) {
@@ -3437,7 +3967,13 @@ HTML_PAGE = r"""<!doctype html>
     async function deleteSelected() {
       if (!selectedItem || !selectedItem.editable) return;
       if (!confirm(`Delete line ${selectedItem.line}?`)) return;
+      const rawLine = selectedItem.text;
       await api(`/api/items/${selectedItem.line}`, {method: "DELETE"});
+      if (rawLine) {
+        registerUndo("Item deleted.", async () => {
+          await api("/api/items/raw", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({line: rawLine})});
+        });
+      }
       newItem();
       await refreshAll();
     }
@@ -3452,6 +3988,9 @@ HTML_PAGE = r"""<!doctype html>
       if (document.getElementById("open-only").checked || boolParam(params, ["open", "open_only"])) {
         agendaParams.set("open_only", "true");
       }
+      const blockedMode = agendaBlockedMode();
+      if (blockedMode) agendaParams.set("blocked", blockedMode);
+      _syncAgendaBlockedBtn(blockedMode);
       const data = await api(`/api/agenda?${agendaParams}`);
       const node = document.getElementById("agenda");
       node.innerHTML = data.records.length ? "" : `<div class="empty">No agenda items.</div>`;
@@ -3466,10 +4005,13 @@ HTML_PAGE = r"""<!doctype html>
         const occ = record.occurrence_start || record.repeat_rule
           ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
           : "";
+        const blockedBadge = record.blocked
+          ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
+          : "";
         const source = record.source_id ? `<div class="meta">source: ${escapeHtml(record.source_id)}</div>` : "";
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}${blockedBadge}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
         );
       }
       if (!unlimitedAgenda && data.records.length > limit) {
@@ -3633,7 +4175,13 @@ HTML_PAGE = r"""<!doctype html>
     document.addEventListener("keydown", function(e) {
       const active = document.activeElement;
       const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        openCmdk();
+        return;
+      }
       if (e.key === "Escape") {
+        if (document.getElementById("cmdk-backdrop").classList.contains("open")) { closeCmdk(); return; }
         if (isKioskMode()) { toggleKioskMode(); return; }
         if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
         if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
@@ -3659,12 +4207,101 @@ HTML_PAGE = r"""<!doctype html>
         document.getElementById("search").focus();
         return;
       }
+      if (e.key === "j") { e.preventDefault(); kbMove(1); return; }
+      if (e.key === "k") { e.preventDefault(); kbMove(-1); return; }
+      if (e.key === "Enter") {
+        if (!document.getElementById("detail-drawer").classList.contains("open") && kbActivate()) e.preventDefault();
+        return;
+      }
+      if (e.key === "x") { e.preventDefault(); kbToggleSelect(); return; }
       if (e.key === "q") { e.preventDefault(); toggleQuickAdd(); return; }
       if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
       if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
       if (e.key === "g" || e.key === "G") { e.preventDefault(); jumpToLine(); return; }
-      if (e.key === "k" || e.key === "K") { e.preventDefault(); toggleKioskMode(); return; }
+      if (e.key === "K") { e.preventDefault(); toggleKioskMode(); return; }
+    });
+
+    // ── Command palette (Ctrl+K) ───────────────────────────────────
+    let _cmdkIndex = 0;
+    let _cmdkEntries = [];
+    const CMDK_ACTIONS = [
+      {label: "New item", run: () => { newItem(); document.getElementById("edit-title").focus(); }},
+      {label: "Toggle quick-add bar", run: () => toggleQuickAdd(true)},
+      {label: "Refresh all", run: refreshAll},
+      {label: "Toggle dark mode", run: toggleDarkMode},
+      {label: "Toggle statistics panel", run: toggleStats},
+      {label: "Toggle kiosk mode", run: toggleKioskMode},
+      {label: "Export items as CSV", run: () => exportItems("csv")},
+      {label: "Export items as JSON", run: () => exportItems("json")},
+      {label: "Export items as Markdown", run: () => exportItems("markdown")},
+      {label: "Jump to line number", run: jumpToLine},
+      {label: "Keyboard shortcuts help", run: openHelpModal},
+    ];
+    function openCmdk() {
+      const backdrop = document.getElementById("cmdk-backdrop");
+      const input = document.getElementById("cmdk-input");
+      backdrop.classList.add("open");
+      input.value = "";
+      renderCmdk("");
+      input.focus();
+    }
+    function closeCmdk() {
+      document.getElementById("cmdk-backdrop").classList.remove("open");
+    }
+    function renderCmdk(qText) {
+      const list = document.getElementById("cmdk-list");
+      const q = String(qText || "").trim().toLowerCase();
+      const idKey = appConfig?.ids?.key || "id";
+      const actions = CMDK_ACTIONS.filter(a => !q || a.label.toLowerCase().includes(q));
+      const items = q
+        ? (currentItems || []).filter(i =>
+            (i.title || "").toLowerCase().includes(q) ||
+            String(i?.details?.[idKey]?.[0] || i?.id || "").toLowerCase().includes(q)
+          ).slice(0, 8)
+        : [];
+      _cmdkEntries = [
+        ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, run: () => { selectItem(i); openDrawer(i); }})),
+        ...actions.map(a => ({kind: "action", label: a.label, hint: "", run: a.run})),
+      ];
+      _cmdkIndex = 0;
+      if (!_cmdkEntries.length) {
+        list.innerHTML = `<div class="cmdk-empty">No matches.</div>`;
+        return;
+      }
+      list.innerHTML = "";
+      _cmdkEntries.forEach((entry, i) => {
+        const row = document.createElement("div");
+        row.className = "cmdk-row" + (i === _cmdkIndex ? " focus" : "");
+        row.innerHTML = `<span class="cmdk-kind">${escapeHtml(entry.kind)}</span><span>${escapeHtml(entry.label)}</span>` +
+          (entry.hint ? `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.hint)}</span>` : "");
+        row.addEventListener("click", () => { closeCmdk(); entry.run(); });
+        list.appendChild(row);
+      });
+    }
+    function _cmdkMoveFocus(delta) {
+      if (!_cmdkEntries.length) return;
+      _cmdkIndex = (_cmdkIndex + delta + _cmdkEntries.length) % _cmdkEntries.length;
+      const rows = document.querySelectorAll("#cmdk-list .cmdk-row");
+      rows.forEach((row, i) => row.classList.toggle("focus", i === _cmdkIndex));
+      if (rows[_cmdkIndex]) rows[_cmdkIndex].scrollIntoView({block: "nearest"});
+    }
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("cmdk-input");
+      if (!input) return;
+      input.addEventListener("input", () => renderCmdk(input.value));
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") { e.preventDefault(); _cmdkMoveFocus(1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); _cmdkMoveFocus(-1); }
+        else if (e.key === "Enter") {
+          e.preventDefault();
+          const entry = _cmdkEntries[_cmdkIndex];
+          if (entry) { closeCmdk(); entry.run(); }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          closeCmdk();
+        }
+      });
     });
 
     // ── Help modal ─────────────────────────────────────────────────
@@ -3746,13 +4383,59 @@ HTML_PAGE = r"""<!doctype html>
           `<div class="actions"><button type="submit">Send Reply</button><button type="button" class="secondary" onclick="document.getElementById('message-reply-title').value='';document.getElementById('message-reply-body').value=''">Clear</button></div>` +
           `</form>`
         : "";
-      body.innerHTML = fieldsHtml + bodyHtml +
+      const progressHtml = buildEstProgressHtml(item);
+      const canDue = item.editable && ["T", "D", "R", "E", "H"].includes(item.type);
+      const dueQuickHtml = canDue
+        ? `<div class="due-quick-bar"><span style="font-size:.78rem;color:var(--muted)">Due:</span>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('today')" title="Set due to today">Today</button>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('+1d')" title="Postpone by one day">+1d</button>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('+1w')" title="Postpone by one week">+1w</button>` +
+          (item?.details?.due?.length ? `<button type="button" class="secondary" onclick="drawerPostpone('clear')" title="Remove due date">Clear</button>` : "") +
+          `</div>`
+        : "";
+      body.innerHTML = fieldsHtml + progressHtml + dueQuickHtml + bodyHtml +
+        `<div id="drawer-blockers"></div>` +
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
         threadHtml + replyHtml +
         sourceHtml + rawHtml;
       drawer.classList.add("open");
       loadDependencyLinks(item);
+      loadBlockerChain(item);
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);
+    }
+
+    // ── "Why is this blocked?" chain in drawer ──────────────────────
+    async function loadBlockerChain(item) {
+      const container = document.getElementById("drawer-blockers");
+      if (!container) return;
+      container.innerHTML = "";
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = item?.id || item?.details?.[idKey]?.[0];
+      if (!itemId || ["[x]", "[-]"].includes(item.status)) return;
+      try {
+        const data = await api(`/api/blockers?id=${encodeURIComponent(itemId)}`);
+        if (!data.blocked) return;
+        let html = `<div class="drawer-section-title" style="color:var(--danger)">⚡ Why is this blocked?</div><div class="blocker-chain">`;
+        for (const entry of data.chain || []) {
+          const indent = Math.min(entry.level - 1, 4) * 0.85;
+          const statusIcon = STATUS_ICON[entry.blocker_status] || "·";
+          const statusCls = STATUS_CLASS[entry.blocker_status] || "status-note";
+          const nav = escapeHtml(jsLiteral(entry.blocker_id || ""));
+          const relation = entry.level === 1
+            ? (entry.relation === "blocks" ? "blocked by" : "waiting on")
+            : "which waits on";
+          html += `<div class="blocker-chain-row" style="margin-left:${indent}rem">` +
+            `<span>${entry.level === 1 ? "⚡" : "↳"}</span>` +
+            `<span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(statusIcon)}</span>` +
+            `<span style="color:var(--muted);font-size:.78rem;white-space:nowrap">${escapeHtml(relation)}</span>` +
+            `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(entry.blocker_title || entry.blocker_id || "?")}</a>` +
+            `</div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+      } catch(_) {
+        container.innerHTML = "";
+      }
     }
 
     const DEP_RELATION_LABEL = {
@@ -3773,26 +4456,86 @@ HTML_PAGE = r"""<!doctype html>
       return text.length > maxLen ? text.slice(0, maxLen - 1) + "…" : text;
     }
 
+    function computeLayeredPositions(shownNodes, shownEdges, layout, w, h) {
+      const ids = shownNodes.map(n => String(n.id));
+      const idSet = new Set(ids);
+      const indeg = new Map(ids.map(id => [id, 0]));
+      const out = new Map(ids.map(id => [id, []]));
+      for (const e of shownEdges) {
+        const s = String(e.source), t = String(e.target);
+        if (!idSet.has(s) || !idSet.has(t) || s === t) continue;
+        out.get(s).push(t);
+        indeg.set(t, indeg.get(t) + 1);
+      }
+      // Kahn-style layering; cycles fall into the trailing layer.
+      const layer = new Map();
+      const seen = new Set();
+      let frontier = ids.filter(id => indeg.get(id) === 0);
+      if (!frontier.length && ids.length) frontier = [ids[0]];
+      let depth = 0;
+      const remaining = new Map(indeg);
+      while (frontier.length) {
+        const next = [];
+        for (const id of frontier) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+          layer.set(id, depth);
+          for (const t of out.get(id) || []) {
+            remaining.set(t, remaining.get(t) - 1);
+            if (remaining.get(t) <= 0 && !seen.has(t)) next.push(t);
+          }
+        }
+        frontier = next;
+        depth++;
+      }
+      for (const id of ids) if (!layer.has(id)) layer.set(id, depth);
+      const byLayer = new Map();
+      for (const id of ids) {
+        const l = layer.get(id);
+        if (!byLayer.has(l)) byLayer.set(l, []);
+        byLayer.get(l).push(id);
+      }
+      const layers = [...byLayer.keys()].sort((a, b) => a - b);
+      const main = layout === "lr" ? w : h;
+      const cross = layout === "lr" ? h : w;
+      const mainPad = 52, crossPad = 36;
+      const positions = {};
+      layers.forEach((l, li) => {
+        const layerIds = byLayer.get(l);
+        const mainPos = layers.length > 1 ? mainPad + (main - 2 * mainPad) * li / (layers.length - 1) : main / 2;
+        layerIds.forEach((id, i) => {
+          const crossPos = layerIds.length > 1 ? crossPad + (cross - 2 * crossPad) * i / (layerIds.length - 1) : cross / 2;
+          positions[id] = layout === "lr" ? {x: mainPos, y: crossPos} : {x: crossPos, y: mainPos};
+        });
+      });
+      return positions;
+    }
+
     function renderGraphSvg(nodes, edges, options = {}) {
       const compact = !!options.compact;
       const focusId = options.focusId || "";
+      const layout = options.layout || "ring";
       const maxNodes = compact ? 10 : 40;
       const shownNodes = (nodes || []).slice(0, maxNodes);
       const shown = new Set(shownNodes.map(n => String(n.id)));
       const shownEdges = (edges || []).filter(e => shown.has(String(e.source)) && shown.has(String(e.target)));
       const w = compact ? 360 : 640;
       const h = compact ? 180 : 300;
-      const cx = w / 2;
-      const cy = h / 2;
-      const r = compact ? 56 : 110;
-      const positions = {};
-      const focusIndex = shownNodes.findIndex(n => String(n.id) === String(focusId));
-      const ringNodes = focusIndex >= 0 ? shownNodes.filter((_, i) => i !== focusIndex) : shownNodes;
-      if (focusIndex >= 0) positions[String(focusId)] = {x: cx, y: cy};
-      ringNodes.forEach((node, i) => {
-        const angle = (Math.PI * 2 * i / Math.max(1, ringNodes.length)) - Math.PI / 2;
-        positions[String(node.id)] = {x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r};
-      });
+      let positions = {};
+      if (layout === "lr" || layout === "tb") {
+        positions = computeLayeredPositions(shownNodes, shownEdges, layout, w, h);
+      } else {
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = compact ? 56 : 110;
+        const focusIndex = shownNodes.findIndex(n => String(n.id) === String(focusId));
+        const ringNodes = focusIndex >= 0 ? shownNodes.filter((_, i) => i !== focusIndex) : shownNodes;
+        if (focusIndex >= 0) positions[String(focusId)] = {x: cx, y: cy};
+        ringNodes.forEach((node, i) => {
+          const angle = (Math.PI * 2 * i / Math.max(1, ringNodes.length)) - Math.PI / 2;
+          positions[String(node.id)] = {x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r};
+        });
+      }
       const defs = `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#94a3b8"/></marker></defs>`;
       const edgeHtml = shownEdges.map(e => {
         const a = positions[String(e.source)];
@@ -3807,12 +4550,14 @@ HTML_PAGE = r"""<!doctype html>
         const p = positions[String(node.id)];
         if (!p) return "";
         const id = String(node.id || "");
-        const label = truncateLabel(node.title || id, compact ? 12 : 18);
+        const missing = !!node.missing;
+        const label = truncateLabel(node.title || id, compact ? 12 : 18) + (missing ? " (?)" : "");
         const nav = escapeHtml(jsLiteral(id));
         const radius = id === String(focusId) ? (compact ? 18 : 24) : (compact ? 14 : 20);
-        return `<g class="graph-node" onclick="drawerNavigate(${nav})" transform="translate(${p.x},${p.y})">` +
-          `<title>${escapeHtml(id + " " + (node.title || ""))}</title>` +
-          `<circle r="${radius}" fill="${graphColor(node.type)}"></circle>` +
+        const tooltip = id + " " + (node.title || "") + (missing ? " — referenced but not found in loaded files" : "");
+        return `<g class="graph-node${missing ? " missing" : ""}" onclick="drawerNavigate(${nav})" transform="translate(${p.x},${p.y})">` +
+          `<title>${escapeHtml(tooltip)}</title>` +
+          `<circle r="${radius}"${missing ? "" : ` fill="${graphColor(node.type)}"`}></circle>` +
           `<text text-anchor="middle" y="${radius + 13}">${escapeHtml(label)}</text>` +
           `</g>`;
       }).join("");
@@ -3822,18 +4567,94 @@ HTML_PAGE = r"""<!doctype html>
       return `<svg class="graph-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="life.txt dependency graph">${defs}${edgeHtml}${nodeHtml}${more}</svg>`;
     }
 
+    // ── Graph layout presets + SVG/PNG export ─────────────────────
+    let _graphLayout = (function() {
+      try { return localStorage.getItem("lifetxt_graph_layout") || "ring"; } catch(_) { return "ring"; }
+    })();
+    function setGraphLayout(layout) {
+      _graphLayout = layout;
+      try { localStorage.setItem("lifetxt_graph_layout", layout); } catch(_) {}
+      _syncGraphLayoutBtns();
+      if (graphLoaded) loadGraphPanel();
+      if (drawerItem) loadDependencyLinks(drawerItem);
+    }
+    function _syncGraphLayoutBtns() {
+      document.querySelectorAll(".graph-layout-btn[data-layout]").forEach(b => {
+        b.classList.toggle("active", b.dataset.layout === _graphLayout);
+      });
+    }
+    const GRAPH_EXPORT_CSS = "svg{background:#ffffff;font-family:sans-serif}" +
+      ".graph-edge{stroke:#94a3b8;stroke-width:1.4;marker-end:url(#arrow);opacity:.8}" +
+      ".graph-edge-label{fill:#68706a;font-size:9px}" +
+      ".graph-node circle{stroke:#fff;stroke-width:2}" +
+      ".graph-node text{fill:#202421;font-size:10px;font-weight:700}" +
+      ".graph-node.missing circle{fill:#ffffff;stroke:#9ca3af;stroke-dasharray:4 3}" +
+      ".graph-node.missing text{font-style:italic;fill:#9ca3af}";
+    function _graphSvgForExport() {
+      const svg = document.querySelector("#graph-panel .graph-svg");
+      if (!svg) { showToast("Open and load the Graph panel first.", "warning"); return null; }
+      const clone = svg.cloneNode(true);
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+      style.textContent = GRAPH_EXPORT_CSS;
+      clone.insertBefore(style, clone.firstChild);
+      clone.querySelectorAll("[onclick]").forEach(el => el.removeAttribute("onclick"));
+      return clone;
+    }
+    function _downloadBlob(blob, filename) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function exportGraphSvg() {
+      const clone = _graphSvgForExport();
+      if (!clone) return;
+      const text = new XMLSerializer().serializeToString(clone);
+      _downloadBlob(new Blob([text], {type: "image/svg+xml"}), "lifetxt-graph.svg");
+      showToast("Graph exported as SVG.", "success");
+    }
+    function exportGraphPng() {
+      const clone = _graphSvgForExport();
+      if (!clone) return;
+      const vb = (clone.getAttribute("viewBox") || "0 0 640 300").split(/\s+/).map(Number);
+      clone.setAttribute("width", String(vb[2]));
+      clone.setAttribute("height", String(vb[3]));
+      const text = new XMLSerializer().serializeToString(clone);
+      const img = new Image();
+      const scale = 2;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = vb[2] * scale;
+        canvas.height = vb[3] * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          if (!blob) { showToast("PNG export failed.", "error"); return; }
+          _downloadBlob(blob, "lifetxt-graph.png");
+          showToast("Graph exported as PNG.", "success");
+        }, "image/png");
+      };
+      img.onerror = () => showToast("PNG export failed.", "error");
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(text);
+    }
+
     function graphFromLinkRecords(records, focusId) {
       const map = new Map();
       const edges = [];
-      const put = (id, title, status, type) => {
+      const put = (id, title, status, type, missing) => {
         if (!id) return;
         const key = String(id);
-        if (!map.has(key)) map.set(key, {id: key, title: title || key, status: status || "", type: type || ""});
+        if (!map.has(key)) map.set(key, {id: key, title: title || key, status: status || "", type: type || "", missing: !!missing});
+        else if (!missing) map.get(key).missing = false;
       };
-      put(focusId, focusId, "", "");
+      put(focusId, focusId, "", "", false);
       for (const r of records || []) {
-        put(r.source_id, r.source_title, r.source_status, r.source_type);
-        put(r.target_id, r.target_title, r.target_status, r.target_type);
+        put(r.source_id, r.source_title, r.source_status, r.source_type, false);
+        put(r.target_id, r.target_title, r.target_status, r.target_type, r.status === "missing");
         if (r.source_id && r.target_id) edges.push({source: r.source_id, target: r.target_id, relation: r.relation});
       }
       return {nodes: [...map.values()], edges};
@@ -3844,7 +4665,11 @@ HTML_PAGE = r"""<!doctype html>
         ? {nodes: graphData.nodes || [], edges: graphData.edges || []}
         : graphFromLinkRecords(records, focusId);
       if (graph.nodes.length <= 1) return "";
-      return `<div class="drawer-graph-mini">${renderGraphSvg(graph.nodes, graph.edges, {compact: true, focusId})}</div>`;
+      const layoutBar = `<div class="graph-layout-bar" style="margin:.1rem 0 .3rem">` +
+        ["ring", "lr", "tb"].map(l =>
+          `<button class="graph-layout-btn${l === _graphLayout ? " active" : ""}" type="button" onclick="setGraphLayout(${escapeHtml(jsLiteral(l))})" title="Switch mini-graph layout">${l.toUpperCase()}</button>`
+        ).join("") + `</div>`;
+      return `<div class="drawer-graph-mini">${layoutBar}${renderGraphSvg(graph.nodes, graph.edges, {compact: true, focusId, layout: _graphLayout})}</div>`;
     }
 
     async function loadGraphPanel() {
@@ -3867,8 +4692,10 @@ HTML_PAGE = r"""<!doctype html>
           panel.innerHTML = `<div class="empty">No ID links. Add id: plus parent:, ref:, depends_on:, blocks:, or related: details.</div>`;
           return;
         }
-        panel.innerHTML = renderGraphSvg(nodes, edges, {focusId: root}) +
-          `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.</div>`;
+        const missingCount = nodes.filter(n => n.missing).length;
+        const missingNote = missingCount ? ` ${missingCount} dashed node(s) are referenced but missing.` : "";
+        panel.innerHTML = renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
+          `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}</div>`;
       } catch(e) {
         panel.innerHTML = `<div class="diagnostic">Graph error: ${escapeHtml(e.message)}</div>`;
       }
@@ -4061,12 +4888,20 @@ HTML_PAGE = r"""<!doctype html>
 
     async function drawerMarkDone() {
       if (!drawerItem || !drawerItem.editable) return;
-      await api(`/api/items/${drawerItem.line}`, {
+      const line = drawerItem.line;
+      const prevPayload = {status: drawerItem.status, type: drawerItem.type, title: drawerItem.title, details: drawerItem.details || {}};
+      await api(`/api/items/${line}`, {
         method: "PUT",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({...drawerItem.details && {details: drawerItem.details}, status: "[x]", type: drawerItem.type, title: drawerItem.title}),
+        body: JSON.stringify({...prevPayload, status: "[x]"}),
       });
-      showToast("Marked done.", "success");
+      registerUndo("Marked done.", async () => {
+        await api(`/api/items/${line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(prevPayload),
+        });
+      });
       closeDrawer();
       await refreshAll();
     }
@@ -4074,11 +4909,99 @@ HTML_PAGE = r"""<!doctype html>
     async function drawerDelete() {
       if (!drawerItem || !drawerItem.editable) return;
       if (!confirm(`Delete "${drawerItem.title}"?`)) return;
+      const rawLine = drawerItem.text;
       await api(`/api/items/${drawerItem.line}`, {method: "DELETE"});
-      showToast("Item deleted.", "info");
+      if (rawLine) {
+        registerUndo("Item deleted.", async () => {
+          await api("/api/items/raw", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({line: rawLine})});
+        });
+      } else {
+        showToast("Item deleted.", "info");
+      }
       closeDrawer();
       newItem();
       await refreshAll();
+    }
+
+    // ── Drawer: due-date quick actions (postpone) ──────────────────
+    async function drawerPostpone(action) {
+      if (!drawerItem || !drawerItem.editable) return;
+      const line = drawerItem.line;
+      const prevPayload = {status: drawerItem.status, type: drawerItem.type, title: drawerItem.title, details: drawerItem.details || {}};
+      const details = JSON.parse(JSON.stringify(drawerItem.details || {}));
+      const current = details.due?.[0] || "";
+      const timePart = current.includes("T") ? current.split("T")[1] : "";
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let label;
+      if (action === "clear") {
+        delete details.due;
+        label = "Due date cleared.";
+      } else {
+        let base = current ? new Date(current.split("T")[0] + "T00:00:00") : new Date(today);
+        if (isNaN(base)) base = new Date(today);
+        base.setHours(0, 0, 0, 0);
+        let next;
+        if (action === "today") next = new Date(today);
+        else if (action === "+1d") { next = new Date(Math.max(+base, +today)); next.setDate(next.getDate() + 1); }
+        else if (action === "+1w") { next = new Date(Math.max(+base, +today)); next.setDate(next.getDate() + 7); }
+        else return;
+        const pad = n => String(n).padStart(2, "0");
+        const dateStr = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+        details.due = [timePart ? `${dateStr}T${timePart}` : dateStr];
+        label = `Due set to ${details.due[0]}.`;
+      }
+      try {
+        await api(`/api/items/${line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({...prevPayload, details}),
+        });
+        registerUndo(label, async () => {
+          await api(`/api/items/${line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
+        await refreshAll();
+        const updated = (currentItems || []).find(i => i.line === line && i.editable);
+        if (updated) openDrawer(updated);
+      } catch(e) {
+        showToast("Due update failed: " + (e.message || e), "error");
+      }
+    }
+
+    // ── est/elapsed progress bar ────────────────────────────────────
+    function parseDurationMinutes(value) {
+      const text = String(value || "").trim().toLowerCase();
+      if (!text) return null;
+      let total = 0;
+      let matched = false;
+      const re = /(\d+(?:\.\d+)?)\s*([dhm])/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        matched = true;
+        const n = parseFloat(m[1]);
+        total += m[2] === "d" ? n * 24 * 60 : m[2] === "h" ? n * 60 : n;
+      }
+      if (!matched) {
+        const n = parseFloat(text);
+        return isNaN(n) ? null : n;
+      }
+      return total;
+    }
+    function buildEstProgressHtml(item) {
+      const estRaw = item?.details?.est?.[0];
+      const est = parseDurationMinutes(estRaw);
+      if (!est || est <= 0) return "";
+      const elapsedRaw = item?.details?.elapsed?.[0];
+      const elapsed = parseDurationMinutes(elapsedRaw) || 0;
+      const pct = Math.round(elapsed / est * 100);
+      const width = Math.min(100, pct);
+      const over = pct > 100;
+      return `<div class="progress-wrap"><div class="drawer-section-title">Progress (elapsed vs est)</div>` +
+        `<div class="progress-track"><div class="progress-fill${over ? " over" : ""}" style="width:${width}%"></div></div>` +
+        `<div class="progress-label">${escapeHtml(elapsedRaw || "0m")} of ${escapeHtml(estRaw)} (${pct}%)${over ? " — over estimate" : ""}</div></div>`;
     }
 
     async function drawerNavigate(itemId) {
@@ -5202,6 +6125,26 @@ HTML_PAGE = r"""<!doctype html>
       );
     }
 
+    // ── Agenda: blocked-item filter (all / only / hide) ───────────
+    function agendaBlockedMode() {
+      return firstParam(query(), ["agenda_blocked"], "");
+    }
+    function _syncAgendaBlockedBtn(mode) {
+      const btn = document.getElementById("agenda-blocked-btn");
+      if (!btn) return;
+      btn.textContent = mode === "only" ? "⚡ Only" : mode === "hide" ? "⚡ Hidden" : "⚡ All";
+      btn.classList.toggle("active", !!mode);
+    }
+    function toggleAgendaBlocked() {
+      const modes = ["", "only", "hide"];
+      const next = modes[(modes.indexOf(agendaBlockedMode()) + 1) % modes.length];
+      const params = query();
+      if (next) params.set("agenda_blocked", next);
+      else params.delete("agenda_blocked");
+      history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      loadAgenda();
+    }
+
     // ── Agenda: "view all" — set agenda_limit to 0 ───────────────
     function setAgendaLimit(n) {
       const params = query();
@@ -5241,13 +6184,20 @@ HTML_PAGE = r"""<!doctype html>
     async function ctxMarkDone() {
       const t = ctxTarget; closeCtxMenu();
       if (!t || !t.editable) return;
+      const prevPayload = {status: t.status, type: t.type, title: t.title, details: t.details || {}};
       try {
         await api(`/api/items/${t.line}`, {
           method: "PUT",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({status: "[x]", type: t.type, title: t.title, details: t.details || {}}),
+          body: JSON.stringify({...prevPayload, status: "[x]"}),
         });
-        showToast("Marked done.", "success");
+        registerUndo("Marked done.", async () => {
+          await api(`/api/items/${t.line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
         await refreshAll();
       } catch(e) {
         showToast("Failed: " + e.message, "error");
@@ -5393,6 +6343,7 @@ HTML_PAGE = r"""<!doctype html>
       populateViewPresets();
       syncStatusFilterBarsFromUrl();
       updatePresetClearBtn();
+      _syncGraphLayoutBtns();
       // Restore preset from localStorage if no URL param
       const storedPreset = loadPresetFromStorage();
       if (storedPreset && !query().get("preset") && !query().get("view") && appConfig?.views?.[storedPreset]) {

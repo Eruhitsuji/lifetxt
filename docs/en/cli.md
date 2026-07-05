@@ -587,7 +587,7 @@ Convert iCalendar `.ics` files, such as Google Calendar exports, to life.txt
 event items.
 
 ```sh
-python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJECT] [--tag TAG]
+python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJECT] [--tag TAG] [--preset ics|markdown|todoist|github]
 ```
 
 Options:
@@ -599,6 +599,7 @@ Options:
 | `--append` | Append to `--output` instead of overwriting it |
 | `--project PROJECT` | Add `project:PROJECT` to every imported event |
 | `--tag TAG` | Add `tag:TAG` to every imported event; repeatable |
+| `--preset PRESET` | Input preset. `ics` is the default. `markdown`, `todoist`, and `github` import Markdown task lists, Todoist CSV exports, and GitHub Issues JSON exports as task items |
 
 Mapping:
 
@@ -606,7 +607,7 @@ Mapping:
 |---|---|
 | `VEVENT` | `E` item |
 | `SUMMARY` | title |
-| `UID` | `id:` |
+| `UID` | `id:`, `source:ics`, and `uid:` |
 | `DTSTART` / `DTEND` | `from:` / `to:` for timed events |
 | `DTSTART;VALUE=DATE` | `on:` for all-day events |
 | `LOCATION` | `loc:` |
@@ -622,6 +623,8 @@ Mapping:
 Notes:
 
 - Only `VEVENT` components are imported.
+- ICS-derived events include `source:ics` and `uid:UID` so later syncs can
+  distinguish external calendar records from hand-written records.
 - Google Calendar all-day `DTEND` values are exclusive. Multi-day all-day
   events become repeated `on:` values.
 - `TZID` local wall times are kept as written. UTC `Z` datetimes are converted
@@ -636,13 +639,24 @@ python -m lifetxt import-ics google_calendar.ics
 python -m lifetxt import-ics google_calendar.ics -o imported_events.life.txt
 python -m lifetxt import-ics google_calendar.ics -o life.txt --append --tag google
 python -m lifetxt import-ics work.ics personal.ics --project calendar
+python -m lifetxt import-ics tasks.md --preset markdown --project inbox
+python -m lifetxt import-ics todoist.csv --preset todoist --tag todoist
+python -m lifetxt import-ics github_issues.json --preset github --project repo
 ```
 
 Example output:
 
 ```txt
-[ ] E "Research Meeting" id:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
+[ ] E "Research Meeting" id:event-1@example.com source:ics uid:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
 ```
+
+Preset mapping:
+
+| Preset | Input | Output |
+|---|---|---|
+| `markdown` | Markdown task list lines such as `- [ ] title` | `T` items with `source:markdown` |
+| `todoist` | Todoist CSV columns such as `Content`, `Project`, `Date`, `Labels`, `Priority`, `Completed` | `T` items with `source:todoist`; source IDs become `uid:` and `id:todoist-...` |
+| `github` | GitHub Issues JSON array or an object containing `items`, `issues`, or `data` | `T` items with `source:github`; issue numbers become `id:github-N` and `ref:github-N`; pull requests are skipped |
 
 ### 5.2 `sync-ics`
 
@@ -663,6 +677,8 @@ Options:
 | `-o`, `--output` | Generated life.txt output; defaults to stdout |
 | `--cache-dir DIR` | Save raw downloaded `.ics` snapshots in this directory |
 | `--dry-run` | Fetch and print generated life.txt without writing output or cache files |
+| `--merge-existing` | Merge generated events into an existing output by `id:` instead of replacing the whole file |
+| `--soft-delete-missing` | With `--merge-existing`, mark existing `source:ics` events missing from the feed as `[-]` with `reason:missing_from_feed` |
 | `--project PROJECT` | Add `project:PROJECT` to every synced event |
 | `--tag TAG` | Add `tag:TAG` to every synced event; repeatable |
 | `--timeout SECONDS` | Fetch timeout; defaults to 30 |
@@ -677,6 +693,7 @@ PowerShell example:
 $env:LIFETXT_GOOGLE_CAL_ICS = "https://calendar.google.com/calendar/ical/..."
 New-Item -ItemType Directory -Force .generated, .cache/lifetxt
 python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --cache-dir .cache/lifetxt --tag google
+python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google_calendar.life.txt --merge-existing --soft-delete-missing
 python -m lifetxt check life.txt .generated/google_calendar.life.txt
 python -m lifetxt agenda life.txt .generated/google_calendar.life.txt --around now --window 1d
 ```
@@ -685,6 +702,9 @@ For periodic sync, put the same commands in a `.ps1` file and run it with
 Windows Task Scheduler. Keep manually edited items in your main `life.txt` and
 ICS-derived items in `.generated/*.life.txt`; pass both files to commands such
 as `agenda`, `filter`, `to-json`, and `check`.
+When using `--merge-existing`, comments and unmatched hand-written lines in the
+generated output are preserved. Matching records are replaced by UID-backed
+generated events, and missing `source:ics` events can be soft-deleted.
 
 ## 6. `filter`
 
@@ -1197,6 +1217,12 @@ operations and `ids --assign --key KEY` use the selected key. Config `users`,
 `teams`, and `tags` supply aliases and team membership for `--user`, `--team`,
 and tag filters.
 
+Files listed in top-level `generated_paths` or `sync_ics.generated_paths` are
+treated as generated/read-only by ordinary mutation commands such as `assist`,
+`done`, `archive`, `assign`, `tag`, `batch`, `migrate`, `encrypt`, and
+`decrypt`. `sync-ics` is the exception because generated files are its intended
+output target; it still refuses OS read-only output files.
+
 ### 12.1 Configuration Resolution Order
 
 The same setting (for example, which person's name is used as `self`, or
@@ -1363,19 +1389,42 @@ python -m lifetxt export-heatmap life.txt --from 2026-01-01 --to 2026-12-31 -o a
 python -m lifetxt export-heatmap "projects/**/*.life.txt" --type habit --project research -o habits.svg
 ```
 
-`batch` applies a simple existing item action across multiple files. It reuses
-the regular `done` and `assign` implementations:
+`batch` applies an existing item action across multiple files. It reuses the
+regular implementations so validation, atomic writes, and generated/read-only
+file refusal stay consistent:
 
 ```sh
 python -m lifetxt batch done "projects/**/*.life.txt" --id task_report
 python -m lifetxt batch assign life.txt team_life.txt --text Review --to alice --dry-run
+python -m lifetxt batch tag-rename "projects/**/*.life.txt" --old inbox --new triage --dry-run
+python -m lifetxt batch tag-merge team.life.txt archive.life.txt --old urgent_old --new urgent
+python -m lifetxt batch migrate "projects/**/*.life.txt" --migration normalize-status --migration strip-empty-details --backup
 ```
+
+Supported actions are `done`, `assign`, `tag-rename`, `tag-merge`, and
+`migrate`. `done` and `assign` require at least one `--id` or `--text`
+selector. `tag-rename` and `tag-merge` require `--old` and `--new`.
+`migrate` requires one or more `--migration NAME[=ARG]` flags. The summary
+reports how many per-file operations were applied and how many failed.
+
+`watch` reruns a lifetxt subcommand whenever the input files change:
+
+```sh
+python -m lifetxt watch life.txt --run agenda --timestamp
+python -m lifetxt watch life.txt .generated/google_calendar.life.txt --run "agenda --around now --window 2h" --notify
+```
+
+`--timestamp` prints a dated run header. Non-zero command exits are highlighted
+on terminals that support ANSI colors. `--notify` sends a desktop notification
+when the child command exit status changes; if desktop notification support is
+not available, it falls back to a terminal bell.
 
 `encrypt` and `decrypt` can read the passphrase from either an environment
 variable or a UTF-8 text file:
 
 ```sh
 python -m lifetxt encrypt life.txt --field body --type journal --key-file .secrets/lifetxt.key
+python -m lifetxt encrypt life.txt --field body --type journal --algorithm aesgcm --key-file .secrets/lifetxt.key
 python -m lifetxt decrypt life.txt --field body --key-file .secrets/lifetxt.key
 ```
 
@@ -1543,8 +1592,20 @@ machine-readable output.
 
 ## 17. `encrypt` and `decrypt`
 
-Field-level encryption for sensitive values (journal bodies, message text)
-using only the Python standard library — no extra dependency required.
+Current behavior: `encrypt` defaults to `--algorithm xsk`, which stores values
+as `enc:XSK:BASE64` and requires no extra package. If `cryptography` is
+installed, `encrypt --algorithm aesgcm` stores values as `enc:GCM:BASE64`
+using AES-GCM. `decrypt` defaults to `--algorithm auto` and dispatches from the
+stored `enc:` tag, so one file can contain both algorithms during migration.
+
+```sh
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt encrypt life.txt --field body --type J --algorithm aesgcm
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt decrypt life.txt --field body --algorithm auto
+```
+
+Field-level encryption for sensitive values such as journal bodies and message
+text. XSK needs no extra dependency; AES-GCM needs the optional
+`cryptography` package.
 
 ```sh
 LIFETXT_KEY="correct horse battery staple" python -m lifetxt encrypt life.txt --field body --type J
@@ -1565,6 +1626,11 @@ casual/local-file secrets out of plain sight (e.g. a private journal in a
 repo you otherwise trust), but it has not been audited and is not a
 substitute for a reviewed cryptographic library.
 
+AES-GCM uses `cryptography.hazmat.primitives.ciphers.aead.AESGCM`, a random
+16-byte salt, a random 12-byte nonce, and PBKDF2-HMAC-SHA256 with 200,000
+iterations. It is the recommended choice for new encrypted content when adding
+the optional dependency is acceptable.
+
 **Passphrase strength.** Since the key is derived entirely from the
 passphrase, passphrase strength is the only thing protecting the data.
 Use a long, unique passphrase (a multi-word passphrase, or output from a
@@ -1584,16 +1650,15 @@ discarding the old one. There is no in-place re-key operation, so both
 passphrases must be available during the rotation window.
 
 **Checking a partially encrypted file.** `check` and `filter` treat
-`enc:XSK:...` values as opaque strings — they do not attempt to decrypt them,
+`enc:XSK:...` and `enc:GCM:...` values as opaque strings — they do not attempt to decrypt them,
 so syntax validation and filtering by other fields work normally on a file
 that mixes encrypted and plaintext values. Filtering *by* an encrypted
 field's plaintext content is not possible without decrypting first.
 
-**Upgrade path.** If the optional `cryptography` package is installed
-(`pip install cryptography`), consider it for a standards-reviewed AES-GCM
-implementation instead of the built-in XSK scheme; `doctor` reports whether
-`cryptography` is available. `encrypt`/`decrypt` do not yet auto-detect and
-use it — this is a documented direction, not current behavior.
+**Upgrade path.** Existing `enc:XSK:` values remain readable. To move a file
+to AES-GCM, decrypt it with the current passphrase and then encrypt the target
+fields again with `--algorithm aesgcm`. `doctor` reports whether
+`cryptography` is installed.
 
 ## 18. `share`, `digest`, and `template`
 

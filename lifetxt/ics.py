@@ -129,6 +129,8 @@ def _event_to_item(event, project=None, tags=None):
     details = OrderedDict()
 
     _add_detail(details, "id", uid)
+    _add_detail(details, "source", "ics" if uid else None)
+    _add_detail(details, "uid", uid)
     _add_event_time_details(details, event)
     _add_detail(details, "loc", _first_value(event, "LOCATION"))
     _add_detail(details, "note", _first_value(event, "DESCRIPTION"))

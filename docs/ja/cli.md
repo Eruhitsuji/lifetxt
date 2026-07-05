@@ -588,7 +588,7 @@ python -m lifetxt import-ics work.ics personal.ics --project calendar
 出力例:
 
 ```txt
-[ ] E "Research Meeting" id:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
+[ ] E "Research Meeting" id:event-1@example.com source:ics uid:event-1@example.com from:2026-06-08T13:00 to:2026-06-08T14:30 loc:"Meeting Room A" owner:"Prof. Smith" attendee:Alice tag:google
 ```
 
 ### 5.2 `sync-ics`
@@ -630,6 +630,15 @@ python -m lifetxt agenda life.txt .generated/google_calendar.life.txt --around n
 手書きの item はメインの `life.txt` に残し、ICS 由来の item は
 `.generated/*.life.txt` に分離してください。`agenda`、`filter`、`to-json`、
 `check` などは両方のファイルを同時に渡せます。
+
+Current additions:
+
+- `import-ics --preset markdown|todoist|github` can import Markdown task lists,
+  Todoist CSV exports, and GitHub Issues JSON exports as `T` items.
+- ICS-derived records now include `source:ics` and `uid:` metadata.
+- `sync-ics --merge-existing --soft-delete-missing` preserves comments in the
+  generated output, updates matching UID-backed records, and marks missing
+  `source:ics` events as `[-] reason:missing_from_feed`.
 
 ## 6. `filter`
 
@@ -1012,6 +1021,12 @@ python -m lifetxt --config .lifetxt.json config show
 | `web.*` | `serve` と Web UI の既定値 |
 | `sync_ics.*` | `sync-ics` の default source / output / cache |
 
+top-level `generated_paths` または `sync_ics.generated_paths` に含まれる file は、
+通常の変更系 command (`assist`, `done`, `archive`, `assign`, `tag`, `batch`,
+`migrate`, `encrypt`, `decrypt`) では generated/read-only として扱われ、
+変更を拒否します。`sync-ics` は generated file を出力するための例外ですが、
+OS 上で read-only の file は拒否します。
+
 ### 12.1 設定値の解決順序
 
 同じ設定項目(例: `self` として使う名前や、`quick` で新規項目に付与する
@@ -1387,6 +1402,23 @@ filter するには、事前に復号する必要があります。
 `cryptography` の有無を報告します。ただし `encrypt`/`decrypt` は現時点で
 自動検出して使用することはありません — これは今後の方向性であり、
 現在の挙動ではありません。
+
+Current encryption and watch additions:
+
+```sh
+python -m lifetxt batch tag-rename "projects/**/*.life.txt" --old inbox --new triage --dry-run
+python -m lifetxt batch tag-merge team.life.txt archive.life.txt --old urgent_old --new urgent
+python -m lifetxt batch migrate "projects/**/*.life.txt" --migration normalize-status --backup
+python -m lifetxt watch life.txt --run agenda --timestamp
+python -m lifetxt watch life.txt --run "agenda --around now --window 2h" --notify
+python -m lifetxt encrypt life.txt --field body --algorithm aesgcm --key-file .secrets/lifetxt.key
+```
+
+`batch` now supports `done`, `assign`, `tag-rename`, `tag-merge`, and
+`migrate`. `watch --timestamp` prints run headers, and `watch --notify`
+notifies when the child command exit status changes. `encrypt --algorithm
+aesgcm` uses the optional `cryptography` package and writes `enc:GCM:` values;
+`decrypt` auto-detects both `enc:XSK:` and `enc:GCM:`.
 
 ## 18. `share`、`digest`、`template`
 

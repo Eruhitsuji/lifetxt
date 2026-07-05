@@ -380,6 +380,16 @@ def build_parser():
         default=[],
         help="Add this tag: detail to every imported event. Can be repeated.",
     )
+    import_ics.add_argument(
+        "--preset",
+        choices=("ics", "markdown", "todoist", "github"),
+        default="ics",
+        help=(
+            "Source preset. Default 'ics' converts VEVENT entries; "
+            "'markdown' imports Markdown task lists, 'todoist' imports Todoist CSV exports, "
+            "and 'github' imports GitHub Issues JSON exports."
+        ),
+    )
     import_ics.set_defaults(func=command_import_ics)
 
     sync_ics = subparsers.add_parser(
@@ -407,6 +417,16 @@ def build_parser():
         "--dry-run",
         action="store_true",
         help="Fetch and print generated life.txt without writing output or cache files.",
+    )
+    sync_ics.add_argument(
+        "--merge-existing",
+        action="store_true",
+        help="Merge generated events into the existing output file by id: instead of replacing the file.",
+    )
+    sync_ics.add_argument(
+        "--soft-delete-missing",
+        action="store_true",
+        help="With --merge-existing, mark existing source:ics events missing from the feed as canceled.",
     )
     sync_ics.add_argument(
         "--project",
@@ -1087,11 +1107,24 @@ def build_parser():
         "batch",
         help="Apply a simple item command across multiple life.txt files.",
     )
-    batch_cmd.add_argument("action", choices=("done", "assign"), help="Action to apply.")
+    batch_cmd.add_argument(
+        "action",
+        choices=("done", "assign", "tag-rename", "tag-merge", "migrate"),
+        help="Action to apply.",
+    )
     batch_cmd.add_argument("paths", nargs="+", help="Input file(s), directories, or glob patterns.")
     batch_cmd.add_argument("--id", action="append", dest="ids", help="Item ID to target. Can be repeated.")
     batch_cmd.add_argument("--text", action="append", dest="texts", help="Title substring to target. Can be repeated.")
     batch_cmd.add_argument("--to", help="Assignee for action=assign.")
+    batch_cmd.add_argument("--old", help="Old tag value for tag-rename/tag-merge.")
+    batch_cmd.add_argument("--new", help="New tag value for tag-rename/tag-merge.")
+    batch_cmd.add_argument(
+        "--migration",
+        action="append",
+        dest="migrations",
+        help="Migration to apply for action=migrate. Can be repeated.",
+    )
+    batch_cmd.add_argument("--backup", action="store_true", help="Write backups for actions that support it.")
     batch_cmd.add_argument("--dry-run", action="store_true", help="Preview actions without writing.")
     batch_cmd.set_defaults(func=command_batch)
 
@@ -1661,12 +1694,18 @@ def build_parser():
         help="Polling interval in seconds (default: 1.0).",
     )
     watch_cmd.add_argument("--clear", action="store_true", help="Clear screen before each re-run.")
+    watch_cmd.add_argument("--timestamp", action="store_true", help="Print a timestamped header before each run.")
+    watch_cmd.add_argument(
+        "--notify",
+        action="store_true",
+        help="Send a desktop notification or terminal bell when command exit status changes.",
+    )
     watch_cmd.set_defaults(func=command_watch)
 
     # encrypt command
     encrypt_cmd = subparsers.add_parser(
         "encrypt",
-        help="Encrypt selected field values in-place using a passphrase (stdlib only).",
+        help="Encrypt selected field values in-place using a passphrase.",
     )
     encrypt_cmd.add_argument("path", help="File to encrypt.")
     encrypt_cmd.add_argument(
@@ -1684,6 +1723,12 @@ def build_parser():
     encrypt_cmd.add_argument(
         "--key-file",
         help="Read the passphrase from a UTF-8 text file. Overrides --key-env.",
+    )
+    encrypt_cmd.add_argument(
+        "--algorithm",
+        choices=("xsk", "aesgcm"),
+        default="xsk",
+        help="Encryption algorithm. xsk is dependency-free; aesgcm requires cryptography.",
     )
     encrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     encrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
@@ -1706,6 +1751,12 @@ def build_parser():
     decrypt_cmd.add_argument(
         "--key-file",
         help="Read the passphrase from a UTF-8 text file. Overrides --key-env.",
+    )
+    decrypt_cmd.add_argument(
+        "--algorithm",
+        choices=("auto", "xsk", "aesgcm"),
+        default="auto",
+        help="Expected algorithm. auto dispatches from the enc: tag.",
     )
     decrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     decrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
@@ -2235,14 +2286,45 @@ def command_import_ics(args):
         raise ValueError("--append requires --output.")
 
     items = []
+    preset = getattr(args, "preset", "ics") or "ics"
     for path in _normalize_paths(args.paths):
-        items.extend(
-            items_from_ics_text(
-                read_text(path),
-                project=args.project,
-                tags=args.tag,
+        text = read_text(path)
+        if preset == "ics":
+            items.extend(
+                items_from_ics_text(
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                )
             )
-        )
+        elif preset == "markdown":
+            items.extend(
+                _items_from_markdown_task_text(
+                    text,
+                    project=args.project,
+                    kind="T",
+                    tags=args.tag,
+                    source="markdown",
+                )
+            )
+        elif preset == "todoist":
+            items.extend(
+                _items_from_todoist_csv_text(
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                )
+            )
+        elif preset == "github":
+            items.extend(
+                _items_from_github_issues_json_text(
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                )
+            )
+        else:
+            raise ValueError("Unsupported import preset: %s" % preset)
 
     diagnostics = []
     for item in items:
@@ -2254,10 +2336,224 @@ def command_import_ics(args):
 
     output = _items_to_life_text(items, canonical=True)
     if args.append:
+        _ensure_writable_path(args.output, _config(args), "import-ics")
         append_text(args.output, output)
     else:
+        _ensure_writable_path(args.output, _config(args), "import-ics")
         write_text(args.output, output)
     return 0
+
+
+def _items_from_markdown_task_text(text, project=None, kind="T", tags=None, source=None, github_refs=False):
+    import re as _re
+
+    status_map = {
+        " ": "[ ]",
+        "x": "[x]",
+        "X": "[x]",
+        "-": "[-]",
+        "/": "[/]",
+    }
+    task_re = _re.compile(r"^(?P<indent>\s*)[-*+]\s+\[(?P<check>[xX \-/])\]\s+(?P<title>.+)$")
+    github_ref_re = _re.compile(r"#(\d+)")
+    items = []
+    for line in text.splitlines():
+        match = task_re.match(line)
+        if not match:
+            continue
+        raw_title = match.group("title").strip()
+        title = raw_title
+        details = OrderedDict()
+        _add_preset_detail(details, "source", source)
+        if project:
+            _add_preset_detail(details, "project", project)
+        for tag in tags or []:
+            _add_preset_detail(details, "tag", tag)
+        if github_refs:
+            refs = github_ref_re.findall(raw_title)
+            title = github_ref_re.sub("", raw_title).strip()
+            for ref in refs:
+                _add_preset_detail(details, "ref", "github-%s" % ref if source == "github" else ref)
+        slug = title.replace(" ", "_") if title else raw_title.replace(" ", "_")
+        items.append(Item(status_map.get(match.group("check"), "[ ]"), kind, slug, details))
+    return items
+
+
+def _items_from_todoist_csv_text(text, project=None, tags=None):
+    import csv as _csv
+
+    reader = _csv.DictReader(text.splitlines())
+    items = []
+    for row in reader:
+        normalized = {_normalize_import_key(key): (value or "").strip() for key, value in row.items() if key is not None}
+        title = _first_import_value(normalized, "content", "task", "title", "name")
+        if not title:
+            continue
+        details = OrderedDict()
+        _add_preset_detail(details, "source", "todoist")
+        uid = _first_import_value(normalized, "id", "task_id", "uid")
+        _add_preset_detail(details, "uid", uid)
+        if uid:
+            _add_preset_detail(details, "id", "todoist-%s" % uid)
+        _add_preset_detail(details, "project", project or _first_import_value(normalized, "project", "project_name"))
+        _add_preset_detail(details, "note", _first_import_value(normalized, "description", "comment", "note"))
+        _add_preset_detail(details, "due", _first_import_value(normalized, "date", "due", "due_date", "deadline"))
+        _add_preset_detail(details, "assignee", _first_import_value(normalized, "responsible", "assignee", "assigned_to"))
+        _add_preset_detail(details, "owner", _first_import_value(normalized, "author", "creator", "created_by"))
+        _add_preset_detail(details, "priority", _todoist_priority(_first_import_value(normalized, "priority", "priority_name")))
+        for label in _split_preset_list(_first_import_value(normalized, "labels", "label", "tags")):
+            _add_preset_detail(details, "tag", label)
+        for tag in tags or []:
+            _add_preset_detail(details, "tag", tag)
+        _add_preset_detail(details, "created", _date_prefix(_first_import_value(normalized, "created", "created_at", "date_added")))
+        completed = _date_prefix(_first_import_value(normalized, "completed", "completed_at", "date_completed", "done"))
+        if completed:
+            _add_preset_detail(details, "done", completed)
+        status = "[x]" if completed or _looks_done(_first_import_value(normalized, "status", "state", "complete", "completed")) else "[ ]"
+        items.append(Item(status, "T", title.replace(" ", "_"), details))
+    return items
+
+
+def _items_from_github_issues_json_text(text, project=None, tags=None):
+    payload = json.loads(text)
+    if isinstance(payload, dict):
+        issues = payload.get("items") or payload.get("issues") or payload.get("data") or []
+    else:
+        issues = payload
+    if not isinstance(issues, list):
+        raise ValueError("GitHub preset expects a JSON array or an object containing items/issues/data.")
+
+    items = []
+    for issue in issues:
+        if not isinstance(issue, dict) or "pull_request" in issue:
+            continue
+        number = issue.get("number")
+        title = str(issue.get("title") or "").strip()
+        if not title:
+            continue
+        state = str(issue.get("state") or "open").lower()
+        status = "[x]" if state in ("closed", "completed", "done") else "[ ]"
+        details = OrderedDict()
+        _add_preset_detail(details, "source", "github")
+        if number is not None:
+            _add_preset_detail(details, "id", "github-%s" % number)
+            _add_preset_detail(details, "ref", "github-%s" % number)
+        _add_preset_detail(details, "url", issue.get("html_url") or issue.get("url"))
+        _add_preset_detail(details, "project", project)
+        _add_preset_detail(details, "note", issue.get("body"))
+        user = issue.get("user") if isinstance(issue.get("user"), dict) else None
+        _add_preset_detail(details, "owner", user.get("login") if user else None)
+        for assignee in _github_people(issue):
+            _add_preset_detail(details, "assignee", assignee)
+        for label in _github_labels(issue):
+            _add_preset_detail(details, "tag", label)
+        for tag in tags or []:
+            _add_preset_detail(details, "tag", tag)
+        _add_preset_detail(details, "created", _date_prefix(issue.get("created_at")))
+        _add_preset_detail(details, "updated", _date_prefix(issue.get("updated_at")))
+        closed_at = _date_prefix(issue.get("closed_at"))
+        if closed_at:
+            _add_preset_detail(details, "done", closed_at)
+        items.append(Item(status, "T", title.replace(" ", "_"), details))
+    return items
+
+
+def _normalize_import_key(key):
+    return str(key or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _first_import_value(row, *keys):
+    for key in keys:
+        value = row.get(key)
+        if value:
+            return value
+    return None
+
+
+def _split_preset_list(value):
+    if not value:
+        return []
+    parts = []
+    for raw in str(value).replace(";", ",").split(","):
+        cleaned = raw.strip()
+        if cleaned:
+            parts.append(cleaned)
+    return parts
+
+
+def _todoist_priority(value):
+    if not value:
+        return None
+    raw = str(value).strip().lower()
+    mapping = {
+        "p1": "A",
+        "4": "A",
+        "urgent": "A",
+        "p2": "B",
+        "3": "B",
+        "high": "B",
+        "p3": "C",
+        "2": "C",
+        "medium": "C",
+        "p4": "D",
+        "1": "D",
+        "low": "D",
+        "normal": "D",
+    }
+    return mapping.get(raw, str(value).strip())
+
+
+def _looks_done(value):
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "yes", "true", "done", "completed", "complete", "closed", "x")
+
+
+def _date_prefix(value):
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    if len(raw) >= 10 and raw[4:5] == "-" and raw[7:8] == "-":
+        if len(raw) >= 16 and ("T" in raw[:20] or " " in raw[:20]):
+            return raw.replace(" ", "T")[:16].rstrip("Z")
+        return raw[:10]
+    return raw
+
+
+def _github_people(issue):
+    people = []
+    assignee = issue.get("assignee")
+    if isinstance(assignee, dict) and assignee.get("login"):
+        people.append(assignee["login"])
+    for entry in issue.get("assignees") or []:
+        if isinstance(entry, dict) and entry.get("login") and entry["login"] not in people:
+            people.append(entry["login"])
+    return people
+
+
+def _github_labels(issue):
+    labels = []
+    for label in issue.get("labels") or []:
+        if isinstance(label, dict):
+            value = label.get("name")
+        else:
+            value = label
+        if value:
+            labels.append(str(value))
+    return labels
+
+
+def _add_preset_detail(details, key, value):
+    if value is None:
+        return
+    if isinstance(value, bool):
+        value = "true" if value else "false"
+    text = str(value).strip()
+    if not text:
+        return
+    details.setdefault(key, []).append(text)
 
 
 def command_sync_ics(args):
@@ -2287,12 +2583,23 @@ def command_sync_ics(args):
     output = _validated_life_text_or_exit(items)
     if output is None:
         return 1
+    output_path = args.output or _sync_config(args).get("output")
+    if getattr(args, "merge_existing", False):
+        if not output_path:
+            raise ValueError("--merge-existing requires --output or sync_ics.output in config.")
+        existing_text = read_text(output_path) if os.path.exists(output_path) else ""
+        output = _merge_generated_items_into_text(
+            existing_text,
+            items,
+            id_key=id_key_from_config(_config(args)),
+            soft_delete_missing=getattr(args, "soft_delete_missing", False),
+        )
     if args.dry_run:
         write_text(None, output)
     else:
-        output_path = args.output or _sync_config(args).get("output")
         if output_path:
             ensure_parent_dir(output_path)
+            _ensure_writable_path(output_path, _config(args), "sync-ics", allow_generated=True)
         write_text(output_path, output)
     return 0
 
@@ -2308,6 +2615,66 @@ def _dedupe_items_by_detail_id(items, id_key="id"):
             continue
         by_id[item_id] = item
     return no_id + list(by_id.values())
+
+
+def _merge_generated_items_into_text(existing_text, generated_items, id_key="id", soft_delete_missing=False):
+    if not existing_text:
+        return _items_to_life_text(generated_items, canonical=True)
+    existing_items, diagnostics = parse_text(existing_text, id_key=id_key, check_ids=False, check_references=False)
+    if _has_error(diagnostics):
+        raise ValueError("Existing sync output has parse errors; refusing to merge.")
+
+    generated_by_id = OrderedDict()
+    for item in generated_items:
+        item_ids = item.details.get(id_key, [])
+        if item_ids:
+            generated_by_id[str(item_ids[0])] = item
+
+    used_ids = set()
+    replacements = {}
+    for item in existing_items:
+        item_ids = item.details.get(id_key, [])
+        item_id = str(item_ids[0]) if item_ids else ""
+        if not item_id:
+            continue
+        if item_id in generated_by_id:
+            replacements[item.line] = (getattr(item, "end_line", item.line), item_to_line(generated_by_id[item_id]) + "\n")
+            used_ids.add(item_id)
+            continue
+        if soft_delete_missing and item.kind == "E" and "ics" in item.details.get("source", []):
+            from copy import deepcopy as _deepcopy
+
+            canceled = _deepcopy(item)
+            canceled.status = "[-]"
+            if not canceled.details.get("reason"):
+                canceled.details["reason"] = ["missing_from_feed"]
+            canceled.source_text = None
+            replacements[item.line] = (getattr(item, "end_line", item.line), item_to_line(canceled) + "\n")
+
+    lines = existing_text.splitlines(keepends=True)
+    merged = []
+    index = 1
+    while index <= len(lines):
+        replacement = replacements.get(index)
+        if replacement:
+            end_line, text = replacement
+            merged.append(text)
+            index = end_line + 1
+            continue
+        merged.append(lines[index - 1])
+        index += 1
+
+    new_lines = []
+    for item_id, item in generated_by_id.items():
+        if item_id not in used_ids:
+            new_lines.append(item_to_line(item))
+    if new_lines:
+        if merged and merged[-1] and not merged[-1].endswith(("\n", "\r")):
+            merged.append("\n")
+        if merged and any(line.strip() for line in merged):
+            merged.append("\n")
+        merged.append("\n".join(new_lines) + "\n")
+    return "".join(merged)
 
 
 def command_serve(args):
@@ -2574,6 +2941,7 @@ def command_archive(args):
         else:
             archive_text = _items_to_life_text(candidates)
 
+    _ensure_writable_path(args.dest, config, "archive")
     _pre_write_backup(args.dest, config, "archive")
     append_text(args.dest, archive_text)
 
@@ -2615,6 +2983,7 @@ def command_archive(args):
                 )
                 needs_write = bool(path_archive_ids) or bool(ro)
                 if needs_write:
+                    _ensure_writable_path(path, config, "archive")
                     _pre_write_backup(path, config, "archive")
                     atomic_write_text(path, remainder_text)
             else:
@@ -2624,6 +2993,7 @@ def command_archive(args):
                     id(r) != id(o) for r, o in zip(remaining, remaining_raw)
                 )
                 if needs_write:
+                    _ensure_writable_path(path, config, "archive")
                     _pre_write_backup(path, config, "archive")
                     atomic_write_text(path, _items_to_life_text(remaining))
 
@@ -2746,6 +3116,7 @@ def command_quick(args):
     if not dest:
         raise ValueError("No output file. Use --append FILE or configure write_file in config.")
 
+    _ensure_writable_path(dest, config, "quick")
     _pre_write_backup(dest, config, "quick")
     append_text(dest, line + "\n")
     sys.stdout.write("%s\n" % line)
@@ -2832,6 +3203,7 @@ def command_done(args):
         sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
         return 0
 
+    _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
     sys.stdout.write("Done: %s\n" % updated_line)
@@ -2844,59 +3216,106 @@ def command_batch(args):
     selectors = []
     selectors.extend(("id", value) for value in (getattr(args, "ids", None) or []))
     selectors.extend(("text", value) for value in (getattr(args, "texts", None) or []))
-    if not selectors:
-        raise ValueError("batch requires at least one --id or --text selector.")
     action = getattr(args, "action", "")
+    if action in ("done", "assign") and not selectors:
+        raise ValueError("batch requires at least one --id or --text selector.")
     if action == "assign" and not getattr(args, "to", None):
         raise ValueError("batch assign requires --to.")
+    if action in ("tag-rename", "tag-merge") and (not getattr(args, "old", None) or not getattr(args, "new", None)):
+        raise ValueError("batch %s requires --old and --new." % action)
+    if action == "migrate" and not getattr(args, "migrations", None):
+        raise ValueError("batch migrate requires at least one --migration.")
     if not paths:
         raise ValueError("batch requires at least one file path.")
 
     status_code = 0
     applied = 0
+    failed = 0
     for path in paths:
         if path == "-":
             raise ValueError("batch does not support stdin.")
-        for selector_kind, selector_value in selectors:
-            if action == "done":
+        try:
+            if action in ("done", "assign"):
+                for selector_kind, selector_value in selectors:
+                    if action == "done":
+                        child_args = types.SimpleNamespace(
+                            path=path,
+                            id=selector_value if selector_kind == "id" else None,
+                            line=None,
+                            text=selector_value if selector_kind == "text" else None,
+                            dry_run=getattr(args, "dry_run", False),
+                            config_data=config,
+                        )
+                        result = command_done(child_args)
+                        status_code = status_code or result
+                        applied += 1
+                        continue
+                    if getattr(args, "dry_run", False):
+                        sys.stdout.write(
+                            "[dry-run] Would assign %s=%s to %s in %s.\n"
+                            % (selector_kind, selector_value, args.to, path)
+                        )
+                        applied += 1
+                        continue
+                    child_args = types.SimpleNamespace(
+                        path=path,
+                        id=selector_value if selector_kind == "id" else None,
+                        text=selector_value if selector_kind == "text" else None,
+                        to=args.to,
+                        notify=False,
+                        from_user=None,
+                        config_data=config,
+                    )
+                    result = command_assign(child_args)
+                    status_code = status_code or result
+                    applied += 1
+                continue
+            if action == "tag-rename":
                 child_args = types.SimpleNamespace(
                     path=path,
-                    id=selector_value if selector_kind == "id" else None,
-                    line=None,
-                    text=selector_value if selector_kind == "text" else None,
+                    old=args.old,
+                    new=args.new,
                     dry_run=getattr(args, "dry_run", False),
                     config_data=config,
                 )
-                result = command_done(child_args)
+                result = command_tag_rename(child_args)
                 status_code = status_code or result
                 applied += 1
                 continue
-            if action == "assign":
-                if getattr(args, "dry_run", False):
-                    sys.stdout.write(
-                        "[dry-run] Would assign %s=%s to %s in %s.\n"
-                        % (selector_kind, selector_value, args.to, path)
-                    )
-                    applied += 1
-                    continue
+            if action == "tag-merge":
                 child_args = types.SimpleNamespace(
                     path=path,
-                    id=selector_value if selector_kind == "id" else None,
-                    text=selector_value if selector_kind == "text" else None,
-                    to=args.to,
-                    notify=False,
-                    from_user=None,
+                    old=args.old,
+                    new=args.new,
+                    dry_run=getattr(args, "dry_run", False),
+                    config=getattr(args, "config", None),
                     config_data=config,
                 )
-                result = command_assign(child_args)
+                result = command_tag_merge(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            if action == "migrate":
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    migrations=args.migrations,
+                    dry_run=getattr(args, "dry_run", False),
+                    backup=getattr(args, "backup", False),
+                    config_data=config,
+                )
+                result = command_migrate(child_args)
                 status_code = status_code or result
                 applied += 1
                 continue
             raise ValueError("Unsupported batch action: %s" % action)
+        except Exception as exc:
+            failed += 1
+            status_code = 1
+            sys.stderr.write("ERROR: batch %s failed for %s: %s\n" % (action, path, exc))
     if getattr(args, "dry_run", False):
-        sys.stdout.write("[dry-run] Planned %d batch operation(s).\n" % applied)
+        sys.stdout.write("[dry-run] Planned %d batch operation(s), %d failed.\n" % (applied, failed))
     else:
-        sys.stdout.write("Applied %d batch operation(s).\n" % applied)
+        sys.stdout.write("Applied %d batch operation(s), %d failed.\n" % (applied, failed))
     return status_code
 
 
@@ -3274,6 +3693,7 @@ def command_assign(args):
         _print_diagnostics(diagnostics)
         return 1
 
+    _ensure_writable_path(path, config, "assign")
     _pre_write_backup(path, config, "assign")
     atomic_write_text(path, updated_text)
     sys.stdout.write("Assigned to %s: %s\n" % (args.to, updated_line))
@@ -4873,6 +5293,7 @@ def command_migrate(args):
         sys.stdout.write("No changes made.\n")
         return 0
 
+    _ensure_writable_path(path, _config(args), "migrate")
     if getattr(args, "backup", False):
         import shutil as _shutil
         backup_path = path + ".bak"
@@ -4886,7 +5307,6 @@ def command_migrate(args):
 
 def command_from_markdown(args):
     """Convert Markdown task list items (- [ ] title) to life.txt items."""
-    import re as _re
     paths = args.paths if args.paths else ["-"]
     project = getattr(args, "project", None)
     kind = getattr(args, "kind", "T") or "T"
@@ -4894,56 +5314,26 @@ def command_from_markdown(args):
     output_path = getattr(args, "output", None)
     preset = getattr(args, "preset", None)
 
-    STATUS_MAP = {
-        " ": "[ ]",
-        "x": "[x]",
-        "X": "[x]",
-        "-": "[-]",
-        "/": "[/]",
-    }
-    MD_TASK_RE = _re.compile(
-        r'^(?P<indent>\s*)[-*+]\s+\[(?P<check>[xX \-/])\]\s+(?P<title>.+)$'
-    )
-    # GitHub Issues Markdown: - [ ] title (#123) or - [ ] #123 title
-    GITHUB_REF_RE = _re.compile(r'#(\d+)')
-
     items = []
     for path in paths:
         text = read_text(path)
-        for line in text.splitlines():
-            m = MD_TASK_RE.match(line)
-            if not m:
-                continue
-            check = m.group("check")
-            title = m.group("title").strip()
-            status = STATUS_MAP.get(check, "[ ]")
-            details = {}
-            if project:
-                details["project"] = [project]
-            if preset == "github":
-                refs = GITHUB_REF_RE.findall(title)
-                title_clean = GITHUB_REF_RE.sub("", title).strip()
-                if refs:
-                    details["ref"] = refs
-                title_slug = title_clean.replace(" ", "_") if title_clean else ("issue" + refs[0] if refs else title.replace(" ", "_"))
-            else:
-                title_slug = title.replace(" ", "_")
-            items.append(Item(status, kind, title_slug, details))
+        items.extend(
+            _items_from_markdown_task_text(
+                text,
+                project=project,
+                kind=kind,
+                github_refs=preset == "github",
+            )
+        )
 
     if not items:
         sys.stderr.write("WARNING: No Markdown task list items found.\n")
         return 0
 
-    life_lines = []
-    for item in items:
-        parts = ["%s %s %s" % (item.status, item.kind, item.title)]
-        for k, vals in item.details.items():
-            for v in vals:
-                parts[0] += "  %s:%s" % (k, v)
-        life_lines.append(parts[0])
-    output = "\n".join(life_lines) + "\n"
+    output = _items_to_life_text(items, canonical=True)
 
     if output_path:
+        _ensure_writable_path(output_path, _config(args), "from-markdown")
         if do_append:
             append_text(output_path, output)
         else:
@@ -5339,8 +5729,10 @@ def command_assist(args):
         _print_warnings(diagnostics)
 
     if args.append:
+        _ensure_writable_path(args.append, _config(args), "assist")
         append_line(args.append, line)
     if args.output:
+        _ensure_writable_path(args.output, _config(args), "assist")
         append_line(args.output, line)
     write_text(None, line + "\n")
     return 0
@@ -5426,6 +5818,7 @@ def command_assist_update(args):
         _print_warnings(diagnostics)
 
     output = args.output if args.output else args.update
+    _ensure_writable_path(output, _config(args), "assist --update")
     write_text(output, updated_text)
     write_text(None, updated_line + "\n")
     return 0
@@ -6048,6 +6441,62 @@ def _config(args):
     return getattr(args, "config_data", None) or {}
 
 
+def _config_generated_paths(config):
+    values = []
+    if config:
+        raw = config.get("generated_paths")
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, (list, tuple)):
+            values.extend(str(value) for value in raw if str(value))
+        sync_raw = config_section(config, "sync_ics").get("generated_paths")
+        if isinstance(sync_raw, str):
+            values.append(sync_raw)
+        elif isinstance(sync_raw, (list, tuple)):
+            values.extend(str(value) for value in sync_raw if str(value))
+    return values
+
+
+def _ensure_writable_path(path, config, operation, allow_generated=False):
+    if not path or path == "-":
+        return
+    abs_path = os.path.abspath(path)
+    if not allow_generated and _path_matches_config_patterns(abs_path, _config_generated_paths(config), config):
+        raise ValueError("%s refuses to modify generated file: %s" % (operation, path))
+    if os.path.exists(path):
+        import stat
+
+        mode = os.stat(path).st_mode
+        if not (mode & stat.S_IWRITE):
+            raise ValueError("%s refuses to modify read-only file: %s" % (operation, path))
+        if not os.access(path, os.W_OK):
+            raise ValueError("%s refuses to modify non-writable file: %s" % (operation, path))
+
+
+def _path_matches_config_patterns(abs_path, patterns, config):
+    if not patterns:
+        return False
+    import fnmatch
+
+    bases = [os.getcwd()]
+    config_path = config.get("_path") if config else None
+    if config_path:
+        bases.insert(0, os.path.dirname(os.path.abspath(config_path)) or os.getcwd())
+    target = os.path.normcase(abs_path)
+    for pattern in patterns:
+        candidates = []
+        if os.path.isabs(pattern):
+            candidates.append(os.path.abspath(pattern))
+        else:
+            for base in bases:
+                candidates.append(os.path.abspath(os.path.join(base, pattern)))
+        for candidate in candidates:
+            normalized = os.path.normcase(candidate)
+            if target == normalized or fnmatch.fnmatch(target, normalized):
+                return True
+    return False
+
+
 def _sync_config(args):
     return config_section(_config(args), "sync_ics")
 
@@ -6560,7 +7009,7 @@ def command_tag_rename(args):
     path = args.path
     dry_run = getattr(args, "dry_run", False)
     text = read_text(path)
-    id_key = id_key_from_config(_config(args) if hasattr(args, "config") else {})
+    id_key = id_key_from_config(_config(args))
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
     lines = text.splitlines(keepends=True)
     changed = 0
@@ -6584,6 +7033,7 @@ def command_tag_rename(args):
     if dry_run:
         sys.stdout.write("Would rename %d occurrence(s) of tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
     else:
+        _ensure_writable_path(path, _config(args), "tag rename")
         atomic_write_text(path, new_text)
         sys.stdout.write("Renamed %d occurrence(s) of tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
     return 0
@@ -6595,6 +7045,9 @@ def command_watch(args):
     run_cmd = getattr(args, "run", "summary")
     interval = getattr(args, "interval", 1.0)
     do_clear = getattr(args, "clear", False)
+    show_timestamp = getattr(args, "timestamp", False)
+    do_notify = getattr(args, "notify", False)
+    last_exit = [None]
 
     if "-" in paths:
         sys.stderr.write("ERROR: watch does not support stdin. Specify file paths.\n")
@@ -6615,10 +7068,27 @@ def command_watch(args):
             sys.stdout.flush()
         import subprocess
         cmd = [sys.executable, "-m", "lifetxt"] + [run_cmd] + paths
+        if show_timestamp:
+            sys.stdout.write(
+                "\n[watch] %s  running: %s\n"
+                % (datetime.datetime.now().isoformat(timespec="seconds"), " ".join(cmd))
+            )
+            sys.stdout.flush()
         try:
-            subprocess.run(cmd)
+            result = subprocess.run(cmd)
+            exit_code = result.returncode
+            if exit_code:
+                marker = "[watch] command exited with %d" % exit_code
+                if sys.stderr.isatty():
+                    marker = "\033[31m%s\033[0m" % marker
+                sys.stderr.write(marker + "\n")
+            if do_notify and last_exit[0] is not None and exit_code != last_exit[0]:
+                _watch_status_notify(run_cmd, exit_code)
+            last_exit[0] = exit_code
         except Exception as exc:
             sys.stderr.write("Watch run error: %s\n" % exc)
+            if do_notify:
+                _watch_status_notify(run_cmd, 1, message=str(exc))
 
     sys.stdout.write("Watching %s (Ctrl-C to stop)...\n" % ", ".join(paths))
     last_mtimes = _mtimes()
@@ -6635,13 +7105,26 @@ def command_watch(args):
     return 0
 
 
+def _watch_status_notify(command_name, exit_code, message=None):
+    text = message or ("lifetxt %s exited with %d" % (command_name, exit_code))
+    try:
+        from .notifier import notify_desktop
+
+        if notify_desktop({"title": "lifetxt watch", "body": text}):
+            return
+    except Exception:
+        pass
+    sys.stdout.write("\a")
+    sys.stdout.flush()
+
+
 def command_tag_merge(args):
     old_tag = args.old
     new_tag = args.new
     path = args.path
     dry_run = getattr(args, "dry_run", False)
     text = read_text(path)
-    id_key = id_key_from_config({})
+    id_key = id_key_from_config(_config(args))
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
     lines = text.splitlines(keepends=True)
     changed = 0
@@ -6665,6 +7148,7 @@ def command_tag_merge(args):
     if dry_run:
         sys.stdout.write("Would merge %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
         return 0
+    _ensure_writable_path(path, _config(args), "tag merge")
     atomic_write_text(path, new_text)
     sys.stdout.write("Merged %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
     config_path = getattr(args, "config", None) or ".lifetxt.json"
@@ -6728,6 +7212,79 @@ def _xsk_decrypt(enc_value, passphrase):
     return bytes(a ^ b for a, b in zip(ciphertext, keystream[:len(ciphertext)])).decode("utf-8")
 
 
+def _aesgcm_key(passphrase, salt):
+    try:
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    except ImportError as exc:
+        raise ValueError("AES-GCM requires the optional 'cryptography' package.") from exc
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=200000,
+    )
+    return kdf.derive(passphrase.encode("utf-8"))
+
+
+def _aesgcm_encrypt(plaintext, passphrase):
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    except ImportError as exc:
+        raise ValueError("AES-GCM requires the optional 'cryptography' package.") from exc
+    import base64
+    import secrets
+
+    salt = secrets.token_bytes(16)
+    nonce = secrets.token_bytes(12)
+    key = _aesgcm_key(passphrase, salt)
+    ciphertext = AESGCM(key).encrypt(nonce, plaintext.encode("utf-8"), None)
+    return "enc:GCM:" + base64.b64encode(salt + nonce + ciphertext).decode("ascii")
+
+
+def _aesgcm_decrypt(enc_value, passphrase):
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    except ImportError as exc:
+        raise ValueError("AES-GCM requires the optional 'cryptography' package.") from exc
+    import base64
+
+    parts = enc_value.split(":", 2)
+    if len(parts) != 3 or parts[0] != "enc" or parts[1] != "GCM":
+        raise ValueError("Not a GCM-encrypted value: %r" % enc_value)
+    raw = base64.b64decode(parts[2])
+    if len(raw) < 44:
+        raise ValueError("Truncated AES-GCM ciphertext.")
+    salt = raw[:16]
+    nonce = raw[16:28]
+    ciphertext = raw[28:]
+    key = _aesgcm_key(passphrase, salt)
+    return AESGCM(key).decrypt(nonce, ciphertext, None).decode("utf-8")
+
+
+def _encrypt_field_value(plaintext, passphrase, algorithm):
+    if algorithm == "xsk":
+        return _xsk_encrypt(plaintext, passphrase)
+    if algorithm == "aesgcm":
+        return _aesgcm_encrypt(plaintext, passphrase)
+    raise ValueError("Unsupported encryption algorithm: %s" % algorithm)
+
+
+def _decrypt_field_value(enc_value, passphrase, algorithm="auto"):
+    if algorithm == "auto":
+        if enc_value.startswith("enc:XSK:"):
+            algorithm = "xsk"
+        elif enc_value.startswith("enc:GCM:"):
+            algorithm = "aesgcm"
+        else:
+            raise ValueError("Unsupported encrypted value tag: %r" % enc_value)
+    if algorithm == "xsk":
+        return _xsk_decrypt(enc_value, passphrase)
+    if algorithm == "aesgcm":
+        return _aesgcm_decrypt(enc_value, passphrase)
+    raise ValueError("Unsupported encryption algorithm: %s" % algorithm)
+
+
 def _read_passphrase_arg(args):
     key_file = getattr(args, "key_file", None)
     key_env = getattr(args, "key_env", "LIFETXT_KEY")
@@ -6748,6 +7305,7 @@ def command_encrypt(args):
     path = args.path
     fields = args.fields or ["body", "note"]
     kinds = set(args.kinds or [])
+    algorithm = getattr(args, "algorithm", "xsk")
     dry_run = getattr(args, "dry_run", False)
     do_backup = getattr(args, "backup", False)
     passphrase = _read_passphrase_arg(args)
@@ -6766,7 +7324,11 @@ def command_encrypt(args):
                 sv = str(val)
                 if sv.startswith("enc:"):
                     continue
-                enc_val = _xsk_encrypt(sv, passphrase)
+                try:
+                    enc_val = _encrypt_field_value(sv, passphrase, algorithm)
+                except ValueError as exc:
+                    sys.stderr.write("ERROR: %s\n" % exc)
+                    return 1
                 ln = item.line
                 if ln and 0 < ln <= len(lines):
                     pattern = r"(\b" + _re.escape(field) + r":)" + _re.escape(sv)
@@ -6780,6 +7342,7 @@ def command_encrypt(args):
     if total_changed == 0:
         sys.stdout.write("No fields to encrypt (already encrypted or not found).\n")
         return 0
+    _ensure_writable_path(path, _config(args), "encrypt")
     if do_backup:
         import shutil as _sh
         _sh.copy2(path, path + ".bak")
@@ -6792,6 +7355,7 @@ def command_decrypt(args):
     import re as _re
     path = args.path
     fields_filter = set(args.fields or [])
+    algorithm = getattr(args, "algorithm", "auto")
     dry_run = getattr(args, "dry_run", False)
     do_backup = getattr(args, "backup", False)
     passphrase = _read_passphrase_arg(args)
@@ -6801,7 +7365,7 @@ def command_decrypt(args):
     lines = text.splitlines(keepends=True)
     total_changed = 0
     errors = 0
-    ENC_RE = _re.compile(r"\b([\w-]+):(enc:XSK:[A-Za-z0-9+/=]+)")
+    ENC_RE = _re.compile(r"\b([\w-]+):(enc:(?:XSK|GCM):[A-Za-z0-9+/=]+)")
     for i, line in enumerate(lines):
         new_line = line
         for m in ENC_RE.finditer(line):
@@ -6810,10 +7374,10 @@ def command_decrypt(args):
             if fields_filter and field_key not in fields_filter:
                 continue
             try:
-                plaintext = _xsk_decrypt(enc_val, passphrase)
+                plaintext = _decrypt_field_value(enc_val, passphrase, algorithm)
                 new_line = new_line.replace(enc_val, plaintext, 1)
                 total_changed += 1
-            except ValueError as exc:
+            except Exception as exc:
                 sys.stderr.write("WARNING: line %d field %r: %s\n" % (i + 1, field_key, exc))
                 errors += 1
         lines[i] = new_line
@@ -6823,6 +7387,7 @@ def command_decrypt(args):
     if total_changed == 0:
         sys.stdout.write("No encrypted fields found.\n")
         return 1 if errors else 0
+    _ensure_writable_path(path, _config(args), "decrypt")
     if do_backup:
         import shutil as _sh
         _sh.copy2(path, path + ".bak")

@@ -147,6 +147,19 @@ loc:"Meeting Room A"
 
 custom key は許可されます。パーサは未知の key を可能な限り保持します。
 
+Encrypted detail value は inline tagged string として保存します。tool は file
+を parse するために復号する必要はありません。現在の tag は次の通りです。
+
+```txt
+enc:XSK:BASE64
+enc:GCM:BASE64
+```
+
+`enc:XSK:` は `encrypt --algorithm xsk` の dependency-free built-in format、
+`enc:GCM:` は optional `cryptography` package を使う `encrypt --algorithm
+aesgcm` の AES-GCM format です。`check`, `filter`, converter はこれらを
+opaque な detail string として扱います。
+
 ## 5.1 入れ子 / 階層化 record
 
 item 行はスペースでインデントして、視覚的な階層を表せます。1 階層は 2
@@ -184,6 +197,8 @@ warning を出します。`parent:` を明示した場合は、明示値を優�
 | Key | 意味 | 例 |
 |---|---|---|
 | `id` | 安定した item ID | `id:task_001` |
+| `source` | 外部 tool または generated source | `source:ics` |
+| `uid` | 外部 source の元 ID | `uid:event-1@example.com` |
 | `project` | プロジェクト、作業領域 | `project:research` |
 | `tag` | 自由タグ。複数指定可 | `tag:important` |
 | `note` | 短い補足メモ | `note:"Check later"` |
@@ -193,6 +208,11 @@ warning を出します。`parent:` を明示した場合は、明示値を優�
 `id:` は読み込み対象の life.txt ファイル群の中で一意に保つことを推奨します。
 validator は重複IDを warning `W213` として報告します。id-based API や update は
 曖昧なIDを拒否する場合があります。
+
+import / sync 由来の record では `source:` と `uid:` を併用します。例として
+iCalendar sync は `source:ics uid:event-1@example.com` を書き、通常は同じ UID を
+`id:` として使います。Todoist や GitHub のように source 内でだけ一意な ID は
+`id:todoist-123` や `id:github-42` のように namespace を付けることを推奨します。
 
 ### 7.2 Link keys
 

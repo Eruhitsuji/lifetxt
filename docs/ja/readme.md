@@ -105,11 +105,22 @@ lifetxt check examples/minimal_life.txt
 `import-ics` コマンドは、Google Calendar の export などの iCalendar `.ics` を
 `E` event item に変換します。時刻付き予定は `from:` / `to:`、終日予定は `on:`、
 参加者は `attendee:` になり、`--append` で既存の `life.txt` に追記できます。
+Imported calendar events include `source:ics` and `uid:` metadata. Convenience
+presets can import Markdown task lists, Todoist CSV exports, and GitHub Issues
+JSON exports:
+
+```sh
+python -m lifetxt import-ics tasks.md --preset markdown --project inbox
+python -m lifetxt import-ics todoist.csv --preset todoist --tag todoist
+python -m lifetxt import-ics github_issues.json --preset github --project repo
+```
 
 定期的なカレンダー同期では、秘密 iCalendar URL を環境変数に入れて `sync-ics`
 を使います。手書きの item は `life.txt` に残し、ICS 由来の item は
 `.generated/google_calendar.life.txt` のような生成ファイルに分離し、`agenda` や
 `check` には両方のファイルを渡します。
+Use `--merge-existing --soft-delete-missing` to preserve comments in the
+generated output while updating UID-backed records in place.
 
 任意のWeb interfaceは別途依存を入れて起動します。
 

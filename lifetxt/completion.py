@@ -89,6 +89,8 @@ OPTION_VALUES = {
     "--format": "text life html json jsonl markdown table",
     "--window": "1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y",
     "--around": "now today",
+    "--preset": "ics markdown todoist github",
+    "--algorithm": "auto xsk aesgcm",
 }
 
 
@@ -119,6 +121,8 @@ def bash_completion():
     format_values = OPTION_VALUES["--format"]
     window_values = OPTION_VALUES["--window"]
     around_values = OPTION_VALUES["--around"]
+    preset_values = OPTION_VALUES["--preset"]
+    algorithm_values = OPTION_VALUES["--algorithm"]
     return """# lifetxt bash completion
 _lifetxt_completion() {
   local cur prev
@@ -132,6 +136,8 @@ _lifetxt_completion() {
     --format) COMPREPLY=( $(compgen -W "%(format_values)s" -- "$cur") ); return 0 ;;
     --window) COMPREPLY=( $(compgen -W "%(window_values)s" -- "$cur") ); return 0 ;;
     --around) COMPREPLY=( $(compgen -W "%(around_values)s" -- "$cur") ); return 0 ;;
+    --preset) COMPREPLY=( $(compgen -W "%(preset_values)s" -- "$cur") ); return 0 ;;
+    --algorithm) COMPREPLY=( $(compgen -W "%(algorithm_values)s" -- "$cur") ); return 0 ;;
   esac
 
   if [[ "$cur" == -* ]]; then
@@ -155,6 +161,8 @@ complete -F _lifetxt_completion lifetxt
         "format_values": format_values,
         "window_values": window_values,
         "around_values": around_values,
+        "preset_values": preset_values,
+        "algorithm_values": algorithm_values,
     }
 
 
@@ -167,6 +175,8 @@ def zsh_completion():
     format_values = OPTION_VALUES["--format"]
     window_values = OPTION_VALUES["--window"]
     around_values = OPTION_VALUES["--around"]
+    preset_values = OPTION_VALUES["--preset"]
+    algorithm_values = OPTION_VALUES["--algorithm"]
     return """#compdef lifetxt
 # lifetxt zsh completion
 _lifetxt() {
@@ -179,6 +189,8 @@ _lifetxt() {
     --format) _values 'format' %(format_values)s; return ;;
     --window) _values 'window' %(window_values)s; return ;;
     --around) _values 'around' %(around_values)s; return ;;
+    --preset) _values 'preset' %(preset_values)s; return ;;
+    --algorithm) _values 'algorithm' %(algorithm_values)s; return ;;
   esac
   if [[ CURRENT -eq 2 ]]; then
     _values 'command' $commands
@@ -198,6 +210,8 @@ _lifetxt "$@"
         "format_values": format_values,
         "window_values": window_values,
         "around_values": around_values,
+        "preset_values": preset_values,
+        "algorithm_values": algorithm_values,
     }
 
 
@@ -214,6 +228,8 @@ def fish_completion():
     lines.append("complete -c lifetxt -l format -a '%s'" % OPTION_VALUES["--format"])
     lines.append("complete -c lifetxt -l window -a '%s'" % OPTION_VALUES["--window"])
     lines.append("complete -c lifetxt -l around -a '%s'" % OPTION_VALUES["--around"])
+    lines.append("complete -c lifetxt -l preset -a '%s'" % OPTION_VALUES["--preset"])
+    lines.append("complete -c lifetxt -l algorithm -a '%s'" % OPTION_VALUES["--algorithm"])
     return "\n".join(lines) + "\n"
 
 
@@ -277,6 +293,8 @@ _STRUCTURAL_OPTIONS = (
     "--limit",
     "--canonical",
     "--format",
+    "--preset",
+    "--algorithm",
     "--pretty",
     "--output",
     "--append",
@@ -312,6 +330,13 @@ _STRUCTURAL_OPTIONS = (
     "--group",
     "--interval",
     "--clear",
+    "--timestamp",
+    "--notify",
+    "--old",
+    "--new",
+    "--migration",
+    "--merge-existing",
+    "--soft-delete-missing",
     "--path",
 )
 

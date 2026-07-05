@@ -140,12 +140,22 @@ accountability, and `attendee:` for event participants.
 The `import-ics` command converts iCalendar `.ics` files, such as Google
 Calendar exports, to `E` event items. Timed events become `from:` / `to:`,
 all-day events become `on:`, participants become `attendee:`, and `--append`
-can add imported events to an existing `life.txt`.
+can add imported events to an existing `life.txt`. Imported calendar events
+include `source:ics` and `uid:` metadata. Convenience presets also import
+Markdown task lists, Todoist CSV exports, and GitHub Issues JSON exports:
+
+```sh
+python -m lifetxt import-ics tasks.md --preset markdown --project inbox
+python -m lifetxt import-ics todoist.csv --preset todoist --tag todoist
+python -m lifetxt import-ics github_issues.json --preset github --project repo
+```
 
 For periodic calendar sync, use `sync-ics` with a secret iCalendar URL stored in
 an environment variable. Keep manually edited items in `life.txt`, write
 ICS-derived items to a generated file such as `.generated/google_calendar.life.txt`,
-and pass both files to commands such as `agenda` or `check`.
+and pass both files to commands such as `agenda` or `check`. Use
+`--merge-existing --soft-delete-missing` when you want to preserve comments in
+the generated output while updating UID-backed records in place.
 
 An optional FastAPI REST API and browser GUI are available with:
 

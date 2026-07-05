@@ -2439,6 +2439,7 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual(
             '[ ] E "Research Meeting" id:event-1@example.com '
+            "source:ics uid:event-1@example.com "
             "from:2026-06-08T13:00 to:2026-06-08T14:30 "
             'loc:"Meeting Room A" note:"Bring outline" '
             "url:https://example.com/meet "
@@ -2465,6 +2466,7 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual(
             "[ ] E Conference id:all-day@example.com "
+            "source:ics uid:all-day@example.com "
             "on:2026-06-08 on:2026-06-09\n",
             normalize_newlines(stdout),
         )
@@ -2488,7 +2490,8 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertEqual(
-            "[-] E Canceled id:cancel@example.com from:2026-06-08T13:00 "
+            "[-] E Canceled id:cancel@example.com source:ics uid:cancel@example.com "
+            "from:2026-06-08T13:00 "
             "repeat:RRULE:FREQ=WEEKLY;INTERVAL=1 "
             "tag:work tag:important reason:canceled\n",
             normalize_newlines(stdout),
@@ -2511,7 +2514,8 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertEqual(
-            "[?] E Tentative id:tentative@example.com from:2026-06-08T13:00\n",
+            "[?] E Tentative id:tentative@example.com source:ics uid:tentative@example.com "
+            "from:2026-06-08T13:00\n",
             normalize_newlines(stdout),
         )
 
@@ -2549,9 +2553,87 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
                 self.assertEqual(
                     "# existing\n"
                     "[ ] E Review id:event@example.com "
+                    "source:ics uid:event@example.com "
                     "from:2026-06-08T10:00 to:2026-06-08T10:30\n",
                     handle.read(),
                 )
+
+    def test_import_ics_markdown_preset_converts_task_list(self):
+        stdout, stderr, code = run_cli(
+            "import-ics",
+            "--preset",
+            "markdown",
+            "--project",
+            "inbox",
+            "--tag",
+            "imported",
+            input_text="- [ ] Review docs\n",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            "[ ] T Review_docs source:markdown project:inbox tag:imported\n",
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_todoist_preset_converts_csv(self):
+        csv_text = (
+            "ID,Content,Project,Description,Date,Priority,Labels,Completed\n"
+            '123,Write docs,Docs,Use spec,2026-06-12,4,"writing,docs",\n'
+        )
+
+        stdout, stderr, code = run_cli("import-ics", "--preset", "todoist", input_text=csv_text)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[ ] T Write_docs source:todoist uid:123 id:todoist-123 project:Docs '
+            'note:"Use spec" due:2026-06-12 priority:A tag:writing tag:docs\n',
+            normalize_newlines(stdout),
+        )
+
+    def test_import_ics_github_preset_converts_issues_json(self):
+        issues = [
+            {
+                "number": 42,
+                "title": "Fix import",
+                "state": "closed",
+                "body": "Handle edge case",
+                "html_url": "https://github.com/example/repo/issues/42",
+                "user": {"login": "alice"},
+                "assignees": [{"login": "bob"}],
+                "labels": [{"name": "bug"}, {"name": "cli"}],
+                "created_at": "2026-06-01T10:20:30Z",
+                "updated_at": "2026-06-02T11:00:00Z",
+                "closed_at": "2026-06-03T12:00:00Z",
+            },
+            {
+                "number": 43,
+                "title": "Skip PR",
+                "state": "open",
+                "pull_request": {},
+            },
+        ]
+
+        stdout, stderr, code = run_cli(
+            "import-ics",
+            "--preset",
+            "github",
+            "--project",
+            "repo",
+            input_text=json.dumps(issues),
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            '[x] T Fix_import source:github id:github-42 ref:github-42 '
+            'url:https://github.com/example/repo/issues/42 project:repo '
+            'note:"Handle edge case" owner:alice assignee:bob tag:bug tag:cli '
+            'created:2026-06-01T10:20 updated:2026-06-02T11:00 done:2026-06-03T12:00\n',
+            normalize_newlines(stdout),
+        )
 
 
 class LifeTxtIcsSyncCliTests(unittest.TestCase):
@@ -2592,6 +2674,7 @@ class LifeTxtIcsSyncCliTests(unittest.TestCase):
             with open(output_path, "r", encoding="utf-8") as handle:
                 self.assertEqual(
                     '[ ] E "Synced Event" id:sync-event@example.com '
+                    "source:ics uid:sync-event@example.com "
                     "from:2026-06-08T10:00 to:2026-06-08T10:30 tag:google\n",
                     handle.read(),
                 )
@@ -2628,11 +2711,70 @@ class LifeTxtIcsSyncCliTests(unittest.TestCase):
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertEqual(
-                '[ ] E "Dry Run" id:dry-run@example.com from:2026-06-08T10:00\n',
+                '[ ] E "Dry Run" id:dry-run@example.com source:ics uid:dry-run@example.com '
+                "from:2026-06-08T10:00\n",
                 normalize_newlines(stdout),
             )
             self.assertFalse(os.path.exists(output_path))
             self.assertFalse(os.path.exists(cache_dir))
+
+    def test_sync_ics_merge_existing_updates_preserves_comments_and_soft_deletes(self):
+        ics = (
+            "BEGIN:VCALENDAR\n"
+            "BEGIN:VEVENT\n"
+            "UID:keep@example.com\n"
+            "SUMMARY:Updated Event\n"
+            "DTSTART:20260608T100000\n"
+            "END:VEVENT\n"
+            "BEGIN:VEVENT\n"
+            "UID:new@example.com\n"
+            "SUMMARY:New Event\n"
+            "DTSTART:20260609T110000\n"
+            "END:VEVENT\n"
+            "END:VCALENDAR\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "calendar.ics")
+            output_path = os.path.join(temp_dir, "generated.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(ics)
+            with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "# generated calendar\n"
+                    "[ ] E Old_Event id:keep@example.com source:ics uid:keep@example.com from:2026-06-01T09:00\n"
+                    "[ ] E Gone_Event id:gone@example.com source:ics uid:gone@example.com from:2026-06-01T10:00\n"
+                    "# keep this comment\n"
+                )
+
+            stdout, stderr, code = run_cli(
+                "sync-ics",
+                "--url",
+                Path(input_path).as_uri(),
+                "-o",
+                output_path,
+                "--merge-existing",
+                "--soft-delete-missing",
+            )
+
+            self.assertEqual("", stdout)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            content = Path(output_path).read_text(encoding="utf-8")
+            self.assertIn("# generated calendar", content)
+            self.assertIn("# keep this comment", content)
+            self.assertIn(
+                '[ ] E "Updated Event" id:keep@example.com source:ics uid:keep@example.com from:2026-06-08T10:00',
+                content,
+            )
+            self.assertIn(
+                "[-] E Gone_Event id:gone@example.com source:ics uid:gone@example.com "
+                "from:2026-06-01T10:00 reason:missing_from_feed",
+                content,
+            )
+            self.assertIn(
+                '[ ] E "New Event" id:new@example.com source:ics uid:new@example.com from:2026-06-09T11:00',
+                content,
+            )
 
     def test_sync_ics_cli_requires_source(self):
         stdout, stderr, code = run_cli("sync-ics")
@@ -6922,6 +7064,53 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             os.unlink(path)
             os.unlink(key_path)
 
+    def test_encrypt_decrypt_aesgcm_when_cryptography_is_installed(self):
+        try:
+            import cryptography  # noqa: F401
+        except Exception:
+            self.skipTest("cryptography is not installed")
+
+        path = self._make_file("[N] N Secret note:hidden\n")
+        key_path = self._make_file("passphrase\n")
+        try:
+            out, err, rc = run_cli(
+                "encrypt",
+                path,
+                "--field",
+                "note",
+                "--key-file",
+                key_path,
+                "--algorithm",
+                "aesgcm",
+            )
+            self.assertEqual(rc, 0, err)
+            encrypted = Path(path).read_text(encoding="utf-8")
+            self.assertIn("note:enc:GCM:", encrypted)
+
+            out, err, rc = run_cli("decrypt", path, "--field", "note", "--key-file", key_path)
+            self.assertEqual(rc, 0, err)
+            self.assertIn("note:hidden", Path(path).read_text(encoding="utf-8"))
+        finally:
+            os.unlink(path)
+            os.unlink(key_path)
+
+    def test_done_refuses_configured_generated_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            life_path = os.path.join(temp_dir, "generated.life.txt")
+            config_path = os.path.join(temp_dir, ".lifetxt.json")
+            Path(life_path).write_text("[ ] T Task id:t1\n", encoding="utf-8")
+            Path(config_path).write_text(
+                json.dumps({"generated_paths": [life_path]}),
+                encoding="utf-8",
+            )
+
+            out, err, rc = run_cli("--config", config_path, "done", life_path, "t1")
+
+            self.assertEqual("", out)
+            self.assertEqual(1, rc)
+            self.assertIn("refuses to modify generated file", err)
+            self.assertEqual("[ ] T Task id:t1\n", Path(life_path).read_text(encoding="utf-8"))
+
     def test_review_html_output(self):
         path = self._make_file("[x] T Done done:2026-06-10\n")
         try:
@@ -6991,6 +7180,19 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             self.assertIn("[ ] T Task", Path(path).read_text(encoding="utf-8"))
         finally:
             os.unlink(path)
+
+    def test_batch_tag_rename_updates_multiple_files(self):
+        first = self._make_file("[ ] T Task_one tag:old\n")
+        second = self._make_file("[ ] T Task_two tag:old\n")
+        try:
+            out, err, rc = run_cli("batch", "tag-rename", first, second, "--old", "old", "--new", "new")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Applied 2 batch operation", out)
+            self.assertIn("tag:new", Path(first).read_text(encoding="utf-8"))
+            self.assertIn("tag:new", Path(second).read_text(encoding="utf-8"))
+        finally:
+            os.unlink(first)
+            os.unlink(second)
 
     def test_filter_table_output_and_width(self):
         path = self._make_file(

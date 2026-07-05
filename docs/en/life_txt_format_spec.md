@@ -120,6 +120,19 @@ Multiple values are represented by repeating the same key.
 
 Custom keys are allowed. Parsers should preserve unknown keys when possible.
 
+Encrypted detail values are stored inline as tagged strings. Tools do not need
+to decrypt them to parse the file. Current tags are:
+
+```txt
+enc:XSK:BASE64
+enc:GCM:BASE64
+```
+
+`enc:XSK:` is the dependency-free built-in format used by `encrypt
+--algorithm xsk`. `enc:GCM:` is the AES-GCM format used by `encrypt
+--algorithm aesgcm` when the optional `cryptography` package is installed.
+`check`, `filter`, and converters treat these values as opaque detail strings.
+
 ## 5.1 Nested / Hierarchical Records
 
 Item lines may be indented with spaces to express a visual hierarchy. Two
@@ -170,6 +183,8 @@ item.
 | Key | Meaning | Example |
 |---|---|---|
 | `id` | Stable item ID | `id:task_001` |
+| `source` | External or generated source marker | `source:ics` |
+| `uid` | Original external source identifier | `uid:event-1@example.com` |
 | `project` | Project or larger work area | `project:research` |
 | `tag` | Free tag; repeat for multiple tags | `tag:important` |
 | `note` | Short human note | `note:"Check later"` |
@@ -180,6 +195,12 @@ item.
 report duplicate IDs as warning `W213`; id-based API and update operations may
 reject ambiguous IDs. ID values should be compact ASCII tokens without spaces or
 quotes. External IDs such as iCalendar UIDs may contain symbols like `@`.
+
+Use `source:` and `uid:` together for imported or generated records. For
+example, iCalendar sync writes `source:ics uid:event-1@example.com` and usually
+uses the same UID as `id:` so later imports can merge or replace the record.
+Other adapters should namespace generated IDs when the external identifier is
+not globally unique, such as `id:todoist-123` or `id:github-42`.
 
 ### 7.2 Link Keys
 

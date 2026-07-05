@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x40)
+Last updated: 2026-07-05 (updated x41)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -60,12 +60,6 @@ Resolve these before implementing features that depend on them.
   specify expansion behavior for `stats`, occurrence exports (JSON/JSONL/CSV/
   life.txt), and Web API/UI. Define how generated occurrences should be
   represented without confusing them with stored source items.
-
-- [ ] Define encryption metadata conventions: specify whether encrypted field
-  values are stored inline as a tagged string (e.g., `note:enc:AES256GCM:BASE64`)
-  or in a separate sidecar file, and how the parser identifies encrypted values
-  without decrypting so that `check`, `filter`, and `to-json` can handle them
-  safely.
 
 ---
 
@@ -146,20 +140,6 @@ what is overdue, and what the week looked like.
 ## P1: CLI — Archive
 
 Commands and behaviors for moving old items out of active files.
-
----
-
-## P1: CLI — Encryption
-
-Field-level encryption for sensitive content (journal bodies, messages).
-
-- [ ] Implement the documented `cryptography`-based AES-GCM upgrade path for
-  `encrypt`/`decrypt` (currently documented as a direction in CLI guide
-  section 17 but not implemented; `doctor` already reports whether
-  `cryptography` is installed). Needs a `enc:` format tag distinct from
-  `enc:XSK:` (e.g. `enc:GCM:`) so `decrypt` can dispatch by algorithm, and a
-  decision on whether `encrypt` should auto-prefer AES-GCM when the package
-  is available or require an explicit `--algorithm` flag.
 
 ---
 
@@ -274,19 +254,6 @@ CLI-native charts without external dependencies.
 
 ---
 
-## P1: CLI — New Commands (Proposed from Session 5)
-
-- [ ] Extend `batch` beyond `done` and `assign`: add safe `tag rename`,
-  `tag merge`, and `migrate` wrappers with `--dry-run` previews and per-file
-  failure summaries.
-
-## P1: CLI — New Commands (Proposed from Session 4)
-
-- [ ] Add richer `watch` output modes: timestamped run headers, nonzero-exit
-  highlighting, and optional desktop notification on status changes.
-
----
-
 ## P1: Multiple Files / Sync / External Tools
 
 - [ ] Document the recommended directory layout for a typical user:
@@ -294,28 +261,15 @@ CLI-native charts without external dependencies.
   (archived items), `.cache/lifetxt/` (undo stack, backup, notification
   state). Explain which directories belong in `.gitignore`.
 
-- [ ] Make generated/read-only file handling consistent: commands that write
-  (`assist`, `done`, `archive`, `assign`) must refuse to modify a file listed
-  in config `generated_paths` or marked read-only by the OS, and must report
-  a clear error rather than silently failing or corrupting the file.
-
-- [ ] Add `sync-ics --merge-existing`: compare generated UID-backed `id:`
-  values against an existing output file, update matching records in place,
-  preserve local generated-file comments, and soft-delete items whose UID no
-  longer appears in the feed. Add explicit `source:ics` / `uid:` metadata
-  conventions to the format docs.
-
-- [ ] Extend `import-ics` with source-specific presets: add `--preset todoist`
-  for Todoist CSV exports, `--preset github` for GitHub Issues JSON exports,
-  and `--preset markdown` for Markdown task-list files (`- [ ] title`). Each
-  preset maps source fields to life.txt keys consistently and documents
-  unmapped fields. Keep `from-csv` and `from-json` as the generic low-level
-  path; presets are convenience wrappers.
-
 - [ ] Define integration boundaries for calendar sources beyond ICS and for
   presence/message tools (Teams, Discord, Slack): specify which fields are
   imported, which are exported, and which are read-only in life.txt because
   they are managed by the external tool.
+
+- [ ] Define conflict policy for `sync-ics --merge-existing`: decide whether
+  local edits inside generated records should be overwritten, preserved by
+  selected keys, or reported as conflicts before replacement. Current behavior
+  replaces matching UID-backed records and preserves comments/unmatched lines.
 
 - [ ] Add usage example for `.pre-commit-hooks.yaml` to docs: show the
   `.pre-commit-config.yaml` snippet that references the `lifetxt-check` hook,
@@ -531,6 +485,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   shapes, and long-range expansion performance (10 years of daily recurrence
   must complete under 500 ms).
 
+- [ ] Add real-export fixture tests for `import-ics --preset todoist` and
+  `--preset github`: cover multiple Todoist CSV dialects, GitHub search API
+  result objects, missing optional fields, labels with commas, and closed
+  issues without `closed_at`.
+
 - [ ] Add duration normalization tests (W222): `1h00m` simplification, elapsed
   accumulation across multiple items in the same project.
 
@@ -567,9 +526,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
   is affected once timezone wiring is implemented.
 
-- [ ] Expand `encrypt`/`decrypt` tests beyond the key-file round trip: cover
-  `--dry-run`, `--type`, `--key-env`, empty key files, wrong passphrase
-  failures, and `check` diagnostics for encrypted values.
+- [ ] Expand `encrypt`/`decrypt` tests beyond the key-file and AES-GCM round
+  trips: cover `--dry-run`, `--type`, `--key-env`, empty key files, wrong
+  passphrase failures, and `check` diagnostics for encrypted values.
 
 - [ ] Expand `plot` output tests beyond SVG smoke coverage: text chart rendering
   for task, habit, mood, elapsed, deadlines, each `--group` value, sparkline
@@ -598,9 +557,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add dependency edge-case tests: cross-file blockers, and source metadata
   in blocked agenda records.
 
-- [ ] Add CLI batch mutation tests: `batch done` writes across multiple files,
-  `batch assign` updates matching records, and partial failures produce a clear
-  per-file summary without corrupting unaffected files.
+- [ ] Add remaining CLI batch mutation tests: `batch done` writes across
+  multiple files, `batch assign` updates matching records, `batch migrate`
+  applies chained migrations, and partial failures produce a clear per-file
+  summary without corrupting unaffected files. `batch tag-rename` is covered.
 
 - [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
   each field correctly applied via `assist --update`.
@@ -723,7 +683,8 @@ after the corresponding P1 or P2 feature is stable.
   key holder can decrypt.
 
 ### Ecosystem
-- [ ] Consider import/export adapters beyond ICS: org-mode, Todoist CSV, and
-  mailbox/message logs, after the preset mechanism in `import-ics` is stable.
+- [ ] Consider import/export adapters beyond current ICS, Markdown, Todoist
+  CSV, and GitHub Issues presets: org-mode, mailbox/message logs, and richer
+  bidirectional calendar/status integrations.
 - [ ] Consider a static HTML export mode (`serve --export DIR`) that writes
   a read-only snapshot of the GUI without requiring the server to keep running.

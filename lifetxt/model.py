@@ -66,6 +66,8 @@ TYPE_ALIASES = {
 
 KNOWN_KEYS = (
     "id",
+    "source",
+    "uid",
     "parent",
     "ref",
     "depends_on",
@@ -146,7 +148,7 @@ MESSAGE_RECOMMENDED_KEYS = (
     "channel",
 )
 WORKFLOW_RECOMMENDED_KEYS = ("reason", "moved_to")
-SYSTEM_RECOMMENDED_KEYS = ("created", "updated")
+SYSTEM_RECOMMENDED_KEYS = ("source", "uid", "created", "updated")
 
 RECOMMENDED_KEY_GROUPS = (
     ("Common", COMMON_RECOMMENDED_KEYS),

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x45)
+Last updated: 2026-07-05 (updated x46)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -189,6 +189,27 @@ CLI-native charts without external dependencies.
   substring, a "recently opened items" section when the query is empty, and
   palette entries for switching view presets and toggling the agenda blocked
   filter.
+
+### Design System & App Shell (Web UI) — New
+
+- [ ] Extract the Web UI design tokens (`--accent`, semantic soft colors,
+  radii, shadows, spacing) into a documented theming hook: allow a config key
+  such as `web.theme.accent` to override the accent color without editing
+  `webapp.py`, and document the token list for custom deployments.
+
+- [ ] Audit the redesigned UI for WCAG AA contrast in both themes (badge
+  soft-background/foreground pairs, muted text on `--panel-2`, kiosk header)
+  and adjust token values where they fall below 4.5:1 for body-size text.
+
+- [ ] Consider persisting UI preferences (density, graph layout, dark mode,
+  collapsed side sections) server-side per user instead of `localStorage`,
+  so settings follow the user across browsers. Density toggle, theme, and
+  graph layout currently persist in `localStorage` only; collapsed side
+  sections reset on every reload.
+
+- [ ] Add a `?theme=dark|light` note to the kiosk documentation: the URL
+  parameter now forces the theme, which matters for wall-mounted displays
+  where `localStorage` cannot be pre-seeded.
 
 ### Context Menu & Dark Mode (Web UI) — New
 
@@ -408,6 +429,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   toast, group-by, keyboard list navigation (j/k/x/Enter), inline status
   cycling, item export, graph layout presets and SVG/PNG export, drawer due
   quick-postpone, est/elapsed progress bar, and the agenda blocked filter.
+  The redesigned app shell also needs a short section: top-bar view tabs,
+  density toggle, `?theme=` URL parameter, and the print stylesheet.
   The REST table (including `/api/blockers` and `agenda?blocked=`), parse
   endpoint, graph panel, kiosk parameters, and message thread basics are now
   documented.
@@ -493,8 +516,12 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   navigation, inline status-badge cycling, group-by section headers, item
   CSV/JSON/Markdown export, graph layout switching plus SVG/PNG download, the
   drawer due quick-postpone buttons, and the agenda blocked-filter cycle.
-  Current tests cover static HTML hooks and API behavior, not real DOM
-  interaction.
+  The 2026-07 redesign added more surfaces to cover: top-bar view tabs
+  (Items/Messages/Status/Kiosk switching), density toggle persistence,
+  skeleton-loading rows, contextual empty states ("clear filters" vs. "quick
+  add"), the back-to-top button, `?theme=dark|light` forcing, and sticky
+  side-column behavior. Current tests cover static HTML hooks and API
+  behavior, not real DOM interaction.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that

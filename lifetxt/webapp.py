@@ -69,7 +69,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     app.state.config = config or {}
     app.state.read_only = read_only
 
-    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line"})
+    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line", "/api/items/parse"})
 
     if read_only:
         @app.middleware("http")
@@ -268,6 +268,34 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {
             "ok": not has_error,
             "item_count": len(parsed_items),
+            "diagnostics": [d.to_dict() for d in diagnostics],
+        }
+
+    @app.post("/api/items/parse")
+    def parse_item_line(payload=Body(...)):
+        line = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        if not str(line).strip():
+            return {"ok": True, "item_count": 0, "diagnostics": [], "items": []}
+        text = str(line).rstrip("\n") + "\n"
+        id_key = id_key_from_config(app.state.config)
+        parsed_items, diagnostics = parse_text(
+            text,
+            id_key=id_key,
+            check_ids=False,
+            check_references=False,
+        )
+        has_error = any(d.severity == "error" for d in diagnostics)
+        response_items = []
+        for item in parsed_items:
+            data = api_item(item, None, id_key)
+            data["source"] = None
+            data["editable"] = False
+            data["generated"] = False
+            response_items.append(data)
+        return {
+            "ok": not has_error,
+            "item_count": len(parsed_items),
+            "items": response_items,
             "diagnostics": [d.to_dict() for d in diagnostics],
         }
 
@@ -2204,6 +2232,22 @@ HTML_PAGE = r"""<!doctype html>
     .dep-missing { color: #9ca3af; font-style: italic; font-size: .85rem; }
     a.drawer-link { color: var(--accent); text-decoration: none; font-size: .88rem; }
     a.drawer-link:hover { text-decoration: underline; }
+    .graph-toolbar { display: flex; gap: .35rem; align-items: center; padding: .65rem 1rem; border-bottom: 1px solid var(--line); }
+    .graph-toolbar input { min-width: 0; flex: 1; font-size: .82rem; }
+    .graph-panel { min-height: 12rem; padding: .75rem 1rem; overflow: auto; }
+    .graph-svg { width: 100%; height: auto; max-height: 22rem; border: 1px solid var(--line); border-radius: .55rem; background: linear-gradient(180deg, var(--panel), var(--soft)); }
+    .graph-edge { stroke: #94a3b8; stroke-width: 1.4; marker-end: url(#arrow); opacity: .8; }
+    .graph-edge-label { fill: var(--muted); font-size: 9px; pointer-events: none; }
+    .graph-node { cursor: pointer; }
+    .graph-node circle { stroke: #fff; stroke-width: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,.14)); }
+    .graph-node text { fill: var(--ink); font-size: 10px; font-weight: 700; pointer-events: none; }
+    .graph-node:hover circle { stroke: var(--accent); stroke-width: 3; }
+    .drawer-graph-mini { margin-bottom: .55rem; }
+    .drawer-graph-mini .graph-svg { max-height: 11rem; }
+    .message-thread { display: grid; gap: .35rem; }
+    .message-thread-row { border: 1px solid var(--line); border-radius: .45rem; padding: .45rem .55rem; background: var(--bg); font-size: .84rem; }
+    .message-thread-row.current { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+    .message-thread-meta { color: var(--muted); font-size: .74rem; margin-top: .15rem; }
     /* ── Status quick-filter bar ──────────────────────────────────── */
     .filter-bar { display: flex; gap: .35rem; flex-wrap: wrap; margin: .4rem 0 .2rem; }
     .filter-btn { padding: .2rem .6rem; border-radius: 1rem; font-size: .77rem; border: 1px solid var(--line); background: var(--bg); cursor: pointer; color: var(--text); transition: background .12s, border-color .12s; }
@@ -2421,7 +2465,7 @@ HTML_PAGE = r"""<!doctype html>
     .kiosk-mode .toolbar { display: none; }
     .kiosk-mode .item-section { overflow: hidden; background: transparent; border: none; }
     .kiosk-mode .item-section .section-head { display: none; }
-    .kiosk-mode #item-list {
+    .kiosk-mode #items {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
       gap: .75rem;
@@ -2443,7 +2487,10 @@ HTML_PAGE = r"""<!doctype html>
       gap: .35rem;
       cursor: default;
       box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      animation: kiosk-card-in .28s ease both;
     }
+    .kiosk-mode .item:nth-child(2n) { animation-delay: .04s; }
+    .kiosk-mode .item:nth-child(3n) { animation-delay: .08s; }
     .kiosk-mode .item:hover { border-color: #1a7a4a; }
     .kiosk-mode .item .status-badge { font-weight: 700; }
     .kiosk-mode .item .title { font-weight: 700; color: #0d2b1a; font-size: 1em; }
@@ -2465,6 +2512,10 @@ HTML_PAGE = r"""<!doctype html>
     }
     @keyframes kiosk-progress {
       from { width: 0 } to { width: 100% }
+    }
+    @keyframes kiosk-card-in {
+      from { opacity: 0; transform: translateY(10px) scale(.98); }
+      to { opacity: 1; transform: none; }
     }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
@@ -2651,6 +2702,23 @@ HTML_PAGE = r"""<!doctype html>
           <div id="stats-breakdown" style="padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
         </div>
       </section>
+      <section class="graph-section collapsed">
+        <div class="section-head">
+          <h2>Graph</h2>
+          <div style="display:flex;gap:.35rem;align-items:center">
+            <button class="secondary" onclick="loadGraphPanel()" title="Refresh dependency graph">Refresh</button>
+            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="graph-toolbar">
+            <input id="graph-root" placeholder="Root id (optional)" autocomplete="off">
+            <input id="graph-depth" placeholder="Depth" inputmode="numeric" style="max-width:4.2rem">
+            <button class="secondary" onclick="loadGraphPanel()">Apply</button>
+          </div>
+          <div id="graph-panel" class="graph-panel"><div class="empty">Open this panel to load the ID graph.</div></div>
+        </div>
+      </section>
       <section class="agenda-section">
         <div class="section-head">
           <h2>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
@@ -2774,6 +2842,8 @@ HTML_PAGE = r"""<!doctype html>
     let browserNotificationsEnabled = false;
     let seenNotifications = new Set();
     let appConfig = {};
+    let graphLoaded = false;
+    let _kioskDefaultTitle = null;
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -2837,6 +2907,33 @@ HTML_PAGE = r"""<!doctype html>
     function boolParam(params, names) {
       const value = firstParam(params, names, "");
       return ["1", "true", "yes", "on", "open"].includes(value.toLowerCase());
+    }
+    function parseKioskFilter(value) {
+      const result = {};
+      if (!value) return result;
+      const aliases = {type: "kind", q: "text", open: "open_only"};
+      for (const part of String(value).split(/[;,]/)) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const idx = Math.max(trimmed.indexOf(":"), trimmed.indexOf("="));
+        if (idx <= 0) continue;
+        const rawKey = trimmed.slice(0, idx).trim();
+        const key = aliases[rawKey] || rawKey;
+        const val = trimmed.slice(idx + 1).trim();
+        if (key && val) result[key] = val;
+      }
+      return result;
+    }
+    function applyKioskFilterParams(result, params) {
+      if (!isKioskMode()) return;
+      const filter = parseKioskFilter(firstParam(params, ["kiosk_filter"], ""));
+      for (const [key, value] of Object.entries(filter)) {
+        if (key === "open_only") {
+          if (["1", "true", "yes", "on", "open"].includes(value.toLowerCase())) result.set("open_only", "true");
+          continue;
+        }
+        if (!result.has(key)) result.set(key, value);
+      }
     }
     function isDisplayMode() {
       const params = query();
@@ -2928,6 +3025,7 @@ HTML_PAGE = r"""<!doctype html>
         result.set("open_only", "true");
       }
       if (params.get("blocked") === "true") result.set("blocked", "true");
+      applyKioskFilterParams(result, params);
       return result;
     }
     function updateUrlFromControls() {
@@ -2935,6 +3033,7 @@ HTML_PAGE = r"""<!doctype html>
       const next = new URLSearchParams();
       for (const key of [
         "mode", "view", "refresh", "around", "window", "from", "to",
+        "kiosk_cols", "kiosk_filter", "kiosk_title",
         "status", "project", "tag", "tag_all", "exclude_tag", "user", "team",
         "person", "owner", "assignee", "attendee",
         "sender", "recipient", "after", "before"
@@ -3384,6 +3483,7 @@ HTML_PAGE = r"""<!doctype html>
       updateNotifBtnLabel();
       updateNotifPermissionDisplay();
       if (browserNotificationsEnabled) await loadNotifications();
+      else if (permission === "denied") showNotificationSettingsHelp();
     }
     function showBrowserNotification(record) {
       if (!browserNotificationsEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
@@ -3544,11 +3644,18 @@ HTML_PAGE = r"""<!doctype html>
       const rawHtml = item?.raw
         ? `<details class="drawer-raw-details"><summary>Raw line</summary><pre class="drawer-raw-pre">${escapeHtml(item.raw || "")}</pre></details>`
         : "";
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = item?.id || item?.details?.[idKey]?.[0] || "";
+      const threadHtml = item.type === "M" && itemId
+        ? `<div id="drawer-thread"><div class="drawer-section-title">Message Thread</div><div class="empty">Loading…</div></div>`
+        : "";
       body.innerHTML = fieldsHtml + bodyHtml +
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
+        threadHtml +
         sourceHtml + rawHtml;
       drawer.classList.add("open");
       loadDependencyLinks(item);
+      if (item.type === "M" && itemId) loadDrawerMessageThread(item);
     }
 
     const DEP_RELATION_LABEL = {
@@ -3557,8 +3664,120 @@ HTML_PAGE = r"""<!doctype html>
     };
     const STATUS_ICON = {"[ ]": "○", "[x]": "✓", "[-]": "✕", "[/]": "◑", "[>]": "→", "[?]": "?", "[!]": "!"};
 
+    function graphColor(type) {
+      return {
+        T: "#2563eb", E: "#16a34a", D: "#dc2626", R: "#f59e0b",
+        H: "#7c3aed", N: "#64748b", S: "#0891b2", M: "#db2777", J: "#9333ea",
+      }[type || ""] || "#475569";
+    }
+
+    function truncateLabel(value, maxLen = 16) {
+      const text = String(value || "");
+      return text.length > maxLen ? text.slice(0, maxLen - 1) + "…" : text;
+    }
+
+    function renderGraphSvg(nodes, edges, options = {}) {
+      const compact = !!options.compact;
+      const focusId = options.focusId || "";
+      const maxNodes = compact ? 10 : 40;
+      const shownNodes = (nodes || []).slice(0, maxNodes);
+      const shown = new Set(shownNodes.map(n => String(n.id)));
+      const shownEdges = (edges || []).filter(e => shown.has(String(e.source)) && shown.has(String(e.target)));
+      const w = compact ? 360 : 640;
+      const h = compact ? 180 : 300;
+      const cx = w / 2;
+      const cy = h / 2;
+      const r = compact ? 56 : 110;
+      const positions = {};
+      const focusIndex = shownNodes.findIndex(n => String(n.id) === String(focusId));
+      const ringNodes = focusIndex >= 0 ? shownNodes.filter((_, i) => i !== focusIndex) : shownNodes;
+      if (focusIndex >= 0) positions[String(focusId)] = {x: cx, y: cy};
+      ringNodes.forEach((node, i) => {
+        const angle = (Math.PI * 2 * i / Math.max(1, ringNodes.length)) - Math.PI / 2;
+        positions[String(node.id)] = {x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r};
+      });
+      const defs = `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#94a3b8"/></marker></defs>`;
+      const edgeHtml = shownEdges.map(e => {
+        const a = positions[String(e.source)];
+        const b = positions[String(e.target)];
+        if (!a || !b) return "";
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        return `<line class="graph-edge" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"></line>` +
+          `<text class="graph-edge-label" x="${mx}" y="${my - 4}" text-anchor="middle">${escapeHtml(truncateLabel(e.relation, compact ? 8 : 12))}</text>`;
+      }).join("");
+      const nodeHtml = shownNodes.map(node => {
+        const p = positions[String(node.id)];
+        if (!p) return "";
+        const id = String(node.id || "");
+        const label = truncateLabel(node.title || id, compact ? 12 : 18);
+        const nav = escapeHtml(jsLiteral(id));
+        const radius = id === String(focusId) ? (compact ? 18 : 24) : (compact ? 14 : 20);
+        return `<g class="graph-node" onclick="drawerNavigate(${nav})" transform="translate(${p.x},${p.y})">` +
+          `<title>${escapeHtml(id + " " + (node.title || ""))}</title>` +
+          `<circle r="${radius}" fill="${graphColor(node.type)}"></circle>` +
+          `<text text-anchor="middle" y="${radius + 13}">${escapeHtml(label)}</text>` +
+          `</g>`;
+      }).join("");
+      const more = (nodes || []).length > shownNodes.length
+        ? `<text x="${w - 10}" y="${h - 10}" text-anchor="end" fill="#64748b" font-size="10">+${(nodes || []).length - shownNodes.length} more</text>`
+        : "";
+      return `<svg class="graph-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="life.txt dependency graph">${defs}${edgeHtml}${nodeHtml}${more}</svg>`;
+    }
+
+    function graphFromLinkRecords(records, focusId) {
+      const map = new Map();
+      const edges = [];
+      const put = (id, title, status, type) => {
+        if (!id) return;
+        const key = String(id);
+        if (!map.has(key)) map.set(key, {id: key, title: title || key, status: status || "", type: type || ""});
+      };
+      put(focusId, focusId, "", "");
+      for (const r of records || []) {
+        put(r.source_id, r.source_title, r.source_status, r.source_type);
+        put(r.target_id, r.target_title, r.target_status, r.target_type);
+        if (r.source_id && r.target_id) edges.push({source: r.source_id, target: r.target_id, relation: r.relation});
+      }
+      return {nodes: [...map.values()], edges};
+    }
+
+    function renderDependencyMiniGraph(records, focusId) {
+      const graph = graphFromLinkRecords(records, focusId);
+      if (graph.nodes.length <= 1) return "";
+      return `<div class="drawer-graph-mini">${renderGraphSvg(graph.nodes, graph.edges, {compact: true, focusId})}</div>`;
+    }
+
+    async function loadGraphPanel() {
+      const panel = document.getElementById("graph-panel");
+      if (!panel) return;
+      graphLoaded = true;
+      const rootInput = document.getElementById("graph-root");
+      const depthInput = document.getElementById("graph-depth");
+      const root = (rootInput && rootInput.value) || firstParam(query(), ["graph_root", "root"], "");
+      const depth = (depthInput && depthInput.value) || firstParam(query(), ["graph_depth", "depth"], "");
+      const params = new URLSearchParams();
+      if (root) params.set("root", root);
+      if (depth) params.set("depth", depth);
+      panel.innerHTML = `<div class="empty">Loading graph…</div>`;
+      try {
+        const data = await api(`/api/graph?${params.toString()}`);
+        const nodes = data.nodes || [];
+        const edges = data.edges || [];
+        if (!nodes.length) {
+          panel.innerHTML = `<div class="empty">No ID links. Add id: plus parent:, ref:, depends_on:, blocks:, or related: details.</div>`;
+          return;
+        }
+        panel.innerHTML = renderGraphSvg(nodes, edges, {focusId: root}) +
+          `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.</div>`;
+      } catch(e) {
+        panel.innerHTML = `<div class="diagnostic">Graph error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
     async function loadDependencyLinks(item) {
-      const itemId = item?.id || (item?.details?.id?.[0]);
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = item?.id || (item?.details?.[idKey]?.[0]);
       const container = document.getElementById("drawer-deps");
       if (!container) return;
       if (!itemId) {
@@ -3574,7 +3793,9 @@ HTML_PAGE = r"""<!doctype html>
         }
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div><div class="dep-graph">`;
+        let html = `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
+          renderDependencyMiniGraph(records, itemId) +
+          `<div class="dep-graph">`;
 
         function depRow(arrow, arrowCls, relLabel, otherId, otherTitle, otherStatus, otherType) {
           const statusIcon = STATUS_ICON[otherStatus] || "·";
@@ -3610,6 +3831,40 @@ HTML_PAGE = r"""<!doctype html>
         container.innerHTML = html;
       } catch(e) {
         if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    async function loadDrawerMessageThread(item) {
+      const container = document.getElementById("drawer-thread");
+      if (!container) return;
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = item?.id || item?.details?.[idKey]?.[0];
+      if (!itemId) return;
+      try {
+        const data = await api(`/api/messages/thread/${encodeURIComponent(itemId)}`);
+        const rows = data.items || [];
+        if (!rows.length) {
+          container.innerHTML = `<div class="drawer-section-title">Message Thread</div><div class="empty">No related messages.</div>`;
+          return;
+        }
+        let html = `<div class="drawer-section-title">Message Thread (${rows.length})</div><div class="message-thread">`;
+        for (const row of rows) {
+          const rowId = row?.id || row?.details?.[idKey]?.[0] || "";
+          const current = rowId === itemId ? " current" : "";
+          const sender = row?.details?.sender?.[0] || "";
+          const recipients = (row?.details?.recipient || []).join(", ");
+          const when = row?.details?.notify_at?.[0] || row?.details?.created?.[0] || "";
+          const nav = escapeHtml(jsLiteral(rowId));
+          const actions = rowId
+            ? `<div class="actions" style="margin-top:.3rem;gap:.25rem"><button class="secondary" type="button" onclick="drawerNavigate(${nav})">Open</button><button class="secondary" type="button" onclick="ackMessage(${nav})">Ack</button></div>`
+            : "";
+          html += `<div class="message-thread-row${current}"><div><strong>${escapeHtml(row.title || "")}</strong></div>` +
+            `<div class="message-thread-meta">${escapeHtml(sender)} -> ${escapeHtml(recipients)}${when ? " / " + escapeHtml(when) : ""}</div>${actions}</div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+      } catch(e) {
+        container.innerHTML = `<div class="drawer-section-title">Message Thread</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
       }
     }
 
@@ -3812,14 +4067,21 @@ HTML_PAGE = r"""<!doctype html>
       const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
       const labels = {
         granted: "Notifications: granted",
-        denied: "Notifications: blocked — open browser settings → Site permissions → Notifications to re-enable",
+        denied: "Notifications: blocked. Re-enable them from the browser site settings for this page.",
         default: "Notifications: not yet requested",
       };
       if (bar) {
         bar.className = "notif-permission " + (classes[perm] || "");
-        bar.textContent = labels[perm] || perm;
+        if (perm === "denied") {
+          bar.innerHTML = `<span>${escapeHtml(labels.denied)}</span><button class="secondary" type="button" onclick="showNotificationSettingsHelp()">How</button>`;
+        } else {
+          bar.textContent = labels[perm] || perm;
+        }
         bar.style.display = "";
       }
+    }
+    function showNotificationSettingsHelp() {
+      showToast("Use the browser lock/site icon, open Site settings, and allow Notifications for this URL.", "info", 8000);
     }
 
     // ── Git status badge + modal ─────────────────────────────────
@@ -3906,6 +4168,9 @@ HTML_PAGE = r"""<!doctype html>
         loadChart("tasks");
         loadStatsBreakdown();
       }
+      if (!nowCollapsed && sec.classList.contains("graph-section") && !graphLoaded) {
+        loadGraphPanel();
+      }
     }
 
     // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
@@ -3917,14 +4182,27 @@ HTML_PAGE = r"""<!doctype html>
       const active = isKioskMode();
       const clock = document.getElementById("kiosk-clock");
       const exitBtn = document.getElementById("kiosk-exit-btn");
+      const list = document.getElementById("items");
+      const h1 = document.querySelector("header h1");
       if (!clock || !exitBtn) return;
       clock.style.display = active ? "flex" : "none";
       exitBtn.style.display = active ? "inline-flex" : "none";
       if (active) {
+        if (h1 && _kioskDefaultTitle === null) _kioskDefaultTitle = h1.textContent;
+        const title = firstParam(query(), ["kiosk_title"], "");
+        if (h1 && title) h1.textContent = title;
+        const cols = parseInt(firstParam(query(), ["kiosk_cols"], ""), 10);
+        if (list && Number.isFinite(cols) && cols > 0) {
+          list.style.gridTemplateColumns = `repeat(${Math.min(cols, 8)}, minmax(0, 1fr))`;
+        } else if (list) {
+          list.style.gridTemplateColumns = "";
+        }
         _kioskStartClock();
         _kioskStartScroll();
         _kioskAddProgressBar();
       } else {
+        if (h1 && _kioskDefaultTitle !== null) h1.textContent = _kioskDefaultTitle;
+        if (list) list.style.gridTemplateColumns = "";
         _kioskStopClock();
         _kioskStopScroll();
         _kioskRemoveProgressBar();
@@ -3952,9 +4230,10 @@ HTML_PAGE = r"""<!doctype html>
 
     function _kioskStartScroll() {
       _kioskStopScroll();
-      const list = document.getElementById("item-list");
+      const list = document.getElementById("items");
       if (!list) return;
-      const intervalMs = Number(document.documentElement.style.getPropertyValue("--kiosk-interval") || "60") * 1000;
+      const intervalValue = document.documentElement.style.getPropertyValue("--kiosk-interval") || "60";
+      const intervalMs = (parseFloat(intervalValue) || 60) * 1000;
       const scrollStep = () => {
         if (!isKioskMode()) { _kioskStopScroll(); return; }
         const { scrollTop, scrollHeight, clientHeight } = list;
@@ -4595,44 +4874,27 @@ HTML_PAGE = r"""<!doctype html>
       const line = input ? input.value.trim() : "";
       if (!line) return;
       try {
-        const checkData = await api("/api/check-line", {
+        const parseData = await api("/api/items/parse", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({line}),
         });
-        if (!checkData.ok) {
-          const errs = (checkData.diagnostics || []).filter(d => d.severity === "error");
+        if (!parseData.ok) {
+          const errs = (parseData.diagnostics || []).filter(d => d.severity === "error");
           showToast("Invalid: " + (errs[0]?.message || "parse error"), "error");
           return;
         }
-        // Parse status + type + title from head; rest is detail key:value pairs
-        const m = line.match(/^(\[.\])\s+(\w+)\s+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\S+)([\s\S]*)$/);
-        if (!m) { showToast("Could not parse line structure.", "error"); return; }
-        const [, status, type, titleRaw, rest] = m;
-        // Strip surrounding quotes from title if present
-        const title = titleRaw.startsWith('"') || titleRaw.startsWith("'")
-          ? titleRaw.slice(1, -1).replace(/\\_/g, "_").replace(/_/g, " ")
-          : titleRaw.replace(/_/g, " ");
-        document.getElementById("edit-status").value = status;
-        document.getElementById("edit-type").value = type;
-        document.getElementById("edit-title").value = title;
-        // Parse detail fields: split on whitespace-separated key:value, handling quoted values
-        const fieldTokens = rest.trim().match(/\w+:(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\S+)/g) || [];
-        const detailLines = [];
-        let bodyLines = [];
-        for (const tok of fieldTokens) {
-          const colon = tok.indexOf(":");
-          const key = tok.slice(0, colon);
-          let val = tok.slice(colon + 1);
-          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-            val = val.slice(1, -1);
-          }
-          if (key === "body") { bodyLines.push(val.replace(/\\n/g, "\n")); }
-          else { detailLines.push(`${key}:${val}`); }
-        }
-        if (bodyLines.length) detailLines.push("body:" + bodyLines.join(" ").split("\n").join("\n| "));
-        document.getElementById("edit-details").value = detailLines.join("\n");
-        updateTypeHints(type);
+        const item = (parseData.items || [])[0];
+        if (!item) { showToast("No item parsed from line.", "error"); return; }
+        document.getElementById("edit-status").value = item.status;
+        document.getElementById("edit-type").value = item.type;
+        document.getElementById("edit-title").value = item.title;
+        document.getElementById("edit-details").value = detailsToText(item.details || {});
+        selectedItem = null;
+        document.getElementById("editor-heading").textContent = "New Record";
+        document.getElementById("save-button").textContent = "Create";
+        document.getElementById("delete-button").disabled = true;
+        updateTypeHints(item.type);
         toggleImportRaw(false);
         if (input) input.value = "";
         showToast("Form populated from raw line.", "success");

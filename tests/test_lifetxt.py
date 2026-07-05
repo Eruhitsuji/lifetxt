@@ -368,6 +368,16 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertNotIn("_origRenderItems", webapp.HTML_PAGE)
         self.assertNotIn("_origSelectItem", webapp.HTML_PAGE)
 
+    def test_webapp_html_includes_graph_thread_parse_and_kiosk_hooks(self):
+        from lifetxt import webapp
+
+        self.assertIn('id="graph-panel"', webapp.HTML_PAGE)
+        self.assertIn("function loadGraphPanel(", webapp.HTML_PAGE)
+        self.assertIn('id="drawer-thread"', webapp.HTML_PAGE)
+        self.assertIn("/api/items/parse", webapp.HTML_PAGE)
+        self.assertIn("kiosk_cols", webapp.HTML_PAGE)
+        self.assertIn("kiosk_filter", webapp.HTML_PAGE)
+
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (
             "[ ] E Call from:2026-06-06T09:00:30.25+09:00 "
@@ -3245,6 +3255,122 @@ class LifeTxtItemsRawTests(unittest.TestCase):
             self.assertEqual(2, len(lines))
         finally:
             os.unlink(path)
+
+
+class LifeTxtWebApiTests(unittest.TestCase):
+    def _client(self, paths, writable_path=None, config=None, read_only=False):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        try:
+            return TestClient(
+                create_app(
+                    paths,
+                    writable_path=writable_path,
+                    config=config or {},
+                    read_only=read_only,
+                )
+            )
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client could not start: {exc}")
+
+    def test_items_parse_api_returns_parser_item(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.post(
+                "/api/items/parse",
+                json={"line": '[N] J "Research day" on:2026-06-23 tag:lab\n| Wrote notes'},
+            )
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertTrue(data["ok"])
+            self.assertEqual(1, data["item_count"])
+            self.assertEqual("J", data["items"][0]["type"])
+            self.assertEqual("Research day", data["items"][0]["title"])
+            self.assertEqual(["Wrote notes"], data["items"][0]["details"]["body"])
+            self.assertFalse(data["items"][0]["editable"])
+
+    def test_read_only_api_allows_parse_but_blocks_writes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path, read_only=True)
+
+            parse_response = client.post(
+                "/api/items/parse",
+                json={"line": "[ ] T Read_only_preview"},
+            )
+            write_response = client.post(
+                "/api/items",
+                json={"status": "[ ]", "type": "T", "title": "Blocked", "details": {}},
+            )
+
+            self.assertEqual(200, parse_response.status_code)
+            self.assertEqual(403, write_response.status_code)
+
+    def test_items_api_marks_mixed_writable_and_generated_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            writable = os.path.join(temp_dir, "life.txt")
+            generated = os.path.join(temp_dir, "generated.life.txt")
+            Path(writable).write_text("[ ] T Editable id:task_001\n", encoding="utf-8")
+            Path(generated).write_text(
+                "[ ] E Synced id:event_001 from:2026-06-08T10:00\n",
+                encoding="utf-8",
+            )
+            client = self._client(
+                [writable, generated],
+                writable_path=writable,
+                config={"sync_ics": {"generated_paths": [generated]}},
+            )
+
+            response = client.get("/api/items?sort=title")
+
+            self.assertEqual(200, response.status_code)
+            by_id = {item["id"]: item for item in response.json()["items"]}
+            self.assertTrue(by_id["task_001"]["editable"])
+            self.assertFalse(by_id["task_001"]["generated"])
+            self.assertFalse(by_id["event_001"]["editable"])
+            self.assertTrue(by_id["event_001"]["generated"])
+
+    def test_chart_mood_api_empty_range_returns_null_points(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[N] J Morning on:2026-06-01 mood:happy\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/chart/mood?from=2026-07-01&to=2026-07-03&group=daily")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual(["2026-07-01", "2026-07-02", "2026-07-03"], data["labels"])
+            self.assertEqual([None, None, None], data["datasets"][0]["data"])
+            self.assertEqual({}, data["counts"])
+
+    def test_graph_and_message_thread_api_use_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Root id:task_root\n"
+                "[ ] T Child id:task_child depends_on:task_root\n"
+                "[ ] M Ping id:msg_001 sender:alice recipient:self\n"
+                "[ ] M Reply id:msg_002 parent:msg_001 sender:self recipient:alice\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            graph = client.get("/api/graph?root=task_root").json()
+            thread = client.get("/api/messages/thread/msg_001").json()
+
+            self.assertEqual({"task_root", "task_child"}, {node["id"] for node in graph["nodes"]})
+            self.assertEqual([("task_child", "task_root")], [(edge["source"], edge["target"]) for edge in graph["edges"]])
+            self.assertEqual(["msg_001", "msg_002"], [item["id"] for item in thread["items"]])
 
 
 class LifeTxtHeatmapTests(unittest.TestCase):

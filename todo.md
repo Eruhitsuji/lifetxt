@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x41)
+Last updated: 2026-07-05 (updated x42)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -153,10 +153,9 @@ CLI-native charts without external dependencies.
 
 ### API Stability & Security
 
-- [ ] Add API tests for mixed writable and generated/read-only file sets.
-
-- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with current endpoint
-  request/response examples for every route.
+- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with full request and
+  response examples for the remaining less-common routes, especially Git
+  integration and chart endpoints.
 
 ### Statistics & Charts (Web UI)
 
@@ -164,20 +163,15 @@ CLI-native charts without external dependencies.
   now returns raw counts per bucket; confirm Chart.js renders bars correctly
   and the Y-axis label is meaningful (e.g., "completions / week").
 
-- [ ] Add chart API tests: `/api/chart/mood` now correctly imports `item_date_value`;
-  add test coverage for empty date range returning null data points without error.
-
 ### Item Input Form (Web UI)
 
-- [ ] Improve `importRawLine()` further: call `/api/items/parse` (or inline
-  parse via `/api/check-line` response) to return a fully parsed item object
-  and populate the form from that instead of client-side regex.
+- [ ] Add editor-side validation previews for parsed raw imports: show parser
+  warnings from `/api/items/parse` before the user creates the record.
 
 ### Record Display (Web UI)
 
-- [ ] Enhance item detail dependency view: expand the current row-based dep
-  view into a mini force-directed graph (D3.js, CDN) inside the drawer showing
-  multi-hop dependency chains, not just direct links.
+- [ ] Extend the drawer dependency mini graph beyond direct links: support
+  multi-hop expansion, layout selection, and clearer missing-node styling.
 
 ### ID Links & Cross-References (Web UI)
 
@@ -186,10 +180,6 @@ CLI-native charts without external dependencies.
   on iOS Safari — verify or replace with explicit `scrollTop` logic.
 
 ### Dependency & Reference Graph (Web UI & CLI)
-
-- [ ] Add a dependency/reference graph panel to the browser GUI: render the
-  `/api/graph` JSON using D3-force (loaded from CDN). Node color encodes type;
-  node border encodes status. Clicking a node opens the item in the side drawer.
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
@@ -202,18 +192,14 @@ CLI-native charts without external dependencies.
   time) in `/api/agenda` and the GUI calendar view. Never write generated
   occurrences back to the file.
 
-- [ ] Improve message thread UI: use `parent:` and `/api/messages/thread/{id}`
-  to render conversation threads in the browser GUI. Ensure `ack:` and
-  `snooze_until:` state is reflected in the UI without a page reload.
-
-- [ ] Improve notification retry: when Notification.permission is "denied",
-  prompt the user to re-enable notifications in browser settings rather than
-  silently failing on the retry attempt.
+- [ ] Add a message-thread reply form in the drawer: post to
+  `/api/messages/id/{id}/reply`, refresh the thread in-place, and preserve the
+  active drawer selection.
 
 ### New WebUI Improvements (Web UI) — Proposed
 
-- [ ] Add item search highlight: wrap matched search terms in `<mark>` tags in
-  the item title and detail text when a `?text=` filter is active.
+- [ ] Extend item search highlight to detail text/body previews; titles are
+  already highlighted when a search filter is active.
 
 ### Git Integration (Web API)
 
@@ -225,14 +211,8 @@ CLI-native charts without external dependencies.
 
 ### Kiosk Mode (Web UI) — New
 
-- [ ] Add kiosk mode configuration options: `?kiosk_cols=3` to fix the number
-  of columns, `?kiosk_filter=kind:T` to show only specific item types, and a
-  `?kiosk_title=TEXT` overlay to display a custom title in the header. Store
-  kiosk presets in config `views` so teams can bookmark a ready-made URL.
-
-- [ ] Add kiosk mode per-item card entrance animation: fade-in or slide-in
-  on auto-refresh changes so viewers notice new or updated items without a
-  full-screen flicker.
+- [ ] Add kiosk mode change highlighting: detect newly added or changed
+  records between refreshes and briefly emphasize only those cards.
 
 ### Item Selection (Web UI) — New
 
@@ -432,11 +412,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   table, but only `init`, `doctor`, `encrypt`, `decrypt`, `share`, `digest`,
   and `template` have a dedicated worked-example section (sections 16-18).
 
-- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with: current endpoint
-  request/response examples for every route, the statistics dashboard and
-  chart panel usage, the item creation and edit form, the dependency graph
-  panel (how to open it, how to navigate, how to use `?root=ID`), the Git
-  integration endpoints and security model, and the `quick-add` shortcut.
+- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with worked examples for:
+  statistics dashboard usage, chart panel workflows, item creation/editing,
+  Git integration endpoints and security model, and the `quick-add` shortcut.
+  The REST table, parse endpoint, graph panel, kiosk parameters, and message
+  thread basics are now documented.
 
 - [ ] Document the dependency graph feature end-to-end: explain the
   `links --format mermaid` and `links --format dot` CLI outputs, the
@@ -505,11 +485,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add large-file performance tests: parsing, filtering, and duplicate-ID
   detection on a 50,000-line file must each complete under 5 seconds.
 
-- [ ] Add FastAPI test-client coverage for all `/api/*` routes when optional
-  web dependencies are installed, including `/api/check-line` and `/api/graph`.
-
-- [ ] Add FastAPI test-client coverage for `/api/check-line` via httpx/testclient
-  (currently tested via parse_text directly; add end-to-end HTTP round-trip tests).
+- [ ] Add CI job with optional web dependencies installed and run FastAPI
+  test-client coverage for all `/api/*` routes. Local tests now include
+  TestClient cases for parse, generated/read-only, mood chart, graph, and
+  message threads, but they skip when `fastapi` is not installed.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that

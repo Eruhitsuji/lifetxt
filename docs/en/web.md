@@ -38,10 +38,13 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `GET` | `/api/health` | Show server paths and writable file |
 | `GET` | `/api/config` | Show public runtime config used by the GUI |
 | `GET` | `/api/items` | List items with optional filters |
+| `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
+| `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
 | `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` |
+| `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
 | `PUT` | `/api/messages/id/{id}` | Replace a message by exact `id:` in the writable file |
@@ -57,6 +60,11 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/status` | Show latest status / presence records |
 | `GET` | `/api/notifications` | Show due message notifications for a recipient |
+| `GET` | `/api/chart/tasks` | Task count chart data |
+| `GET` | `/api/chart/habits` | Habit completion chart data |
+| `GET` | `/api/chart/mood` | Journal mood chart data; empty buckets use `null` |
+| `GET` | `/api/chart/elapsed` | Elapsed time chart data |
+| `GET` | `/api/chart/habits-heatmap` | Habit heatmap data |
 
 If config has `ids.auto: true`, `POST /api/items`, `POST /api/messages`, and
 `POST /api/messages/id/{id}/reply` assign an `id:` when the payload does not
@@ -108,8 +116,12 @@ Examples:
 
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
+curl -X POST "http://127.0.0.1:8000/api/items/parse" \
+  -H "Content-Type: application/json" \
+  -d '{"line":"[N] J \"Research day\" on:2026-06-23\n| Wrote notes"}'
 curl "http://127.0.0.1:8000/api/items/id/task_001"
 curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
+curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
 curl "http://127.0.0.1:8000/api/links?relation=depends_on,blocks"
 curl "http://127.0.0.1:8000/api/items?team=research&tag_all=urgent,review"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
@@ -142,8 +154,13 @@ The browser GUI supports:
 - Showing active status / presence records
 - Showing due message notifications
 - Browser notifications after the user grants permission
+- Showing message threads in the detail drawer using `parent:`
+- Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
+  `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
 - Creating new items
+- Importing a raw life.txt line/body block into the editor through the server
+  parser
 - Selecting editable items and saving changes
 - Deleting editable item lines
 
@@ -171,6 +188,7 @@ Supported parameters:
 | Parameter | Meaning |
 |---|---|
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
+| `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
 | `view=messages` | Message-focused layout with type `M` as the default item filter |
 | `view=status` | Status-focused layout with active status records emphasized |
 | `preset=NAME` | Apply URL parameters from config `views.NAME` |
@@ -191,6 +209,10 @@ Supported parameters:
 | `after=VALUE`, `before=VALUE` | Item time filters |
 | `notify_refresh=SECONDS` | Notification polling interval |
 | `notify_lookahead=DURATION` | Future notification lookahead for browser notifications |
+| `kiosk_cols=N` | Fixed kiosk card columns, up to 8 |
+| `kiosk_filter=kind:T,status:[/]` | Kiosk-only compact filter expression |
+| `kiosk_title=TEXT` | Header title shown only in kiosk mode |
+| `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
 
 ## Browser Notifications
 
@@ -212,6 +234,25 @@ The notification panel shows `Ack` and `Snooze ...` actions for records with an
 `id:`. The snooze duration defaults to `notifications.snooze_default`; these
 actions write to the configured writable file.
 
+If notification permission is blocked, the GUI cannot request it again through
+JavaScript. The notification panel shows a short guide telling the user to open
+the browser site settings for the current URL and allow notifications there.
+
+## Graph And Threads
+
+The Graph side panel reads `/api/graph` and renders a compact SVG reference
+graph without external dependencies. Click a node to open that record in the
+detail drawer. The drawer also shows a smaller graph for the selected item when
+it has ID references.
+
+Message items (`type:M`) with an `id:` show a thread section in the drawer.
+Replies are records whose `parent:` points at the root message ID and are also
+available from:
+
+```sh
+curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
+```
+
 ## Display Mode
 
 Display mode is intended for always-on screens. It keeps the page read-only,
@@ -224,10 +265,17 @@ Recommended examples:
 /?mode=display&around=now&window=8h&sort=time&order=asc&limit=20
 /?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
 /?mode=display&type=S&active=true&refresh=30
+/?mode=kiosk&kiosk_cols=3&kiosk_filter=kind:T,status:[ ]&kiosk_title=Today&refresh=60
 /?view=messages&recipient=self&open_only=true
 /?view=status&active=true
 /?preset=my_messages
 ```
+
+Kiosk mode is optimized for a shared or always-on screen. It hides editor
+controls, auto-scrolls the item grid, supports fixed column counts through
+`kiosk_cols`, and can apply a compact display-only filter through
+`kiosk_filter`. Named view presets from config `views` can also set these
+parameters.
 
 Files listed in config `sync_ics.generated_paths` or `sync_ics.output` are
 marked as generated in API responses and are treated as read-only in the GUI.

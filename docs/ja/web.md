@@ -37,11 +37,22 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 |---|---|---|
 | `GET` | `/api/health` | 読み込み path と書き込み先を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
+| `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
+| `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
 | `POST` | `/api/items` | 書き込み先ファイルに item を追記 |
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
+| `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の ID link を表示 |
+| `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す |
+| `GET` | `/api/messages/thread/{id}` | `id:` または `parent:` が一致する Message thread を返す |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
+| `GET` | `/api/notifications` | Message 通知候補を表示 |
+| `GET` | `/api/chart/tasks` | task chart data |
+| `GET` | `/api/chart/habits` | habit chart data |
+| `GET` | `/api/chart/mood` | journal mood chart data。空 bucket は `null` |
+| `GET` | `/api/chart/elapsed` | elapsed time chart data |
+| `GET` | `/api/chart/habits-heatmap` | habit heatmap data |
 
 `GET /api/agenda` は CLI `agenda` と同じ record を返します。open item が
 open な `depends_on:` または `blocks:` 関係で block されている場合、
@@ -84,6 +95,11 @@ Markdown subset から生成され、raw HTML は escape されます。
 
 ```sh
 curl "http://127.0.0.1:8000/api/items?kind=T&open_only=true"
+curl -X POST "http://127.0.0.1:8000/api/items/parse" \
+  -H "Content-Type: application/json" \
+  -d '{"line":"[N] J \"Research day\" on:2026-06-23\n| Wrote notes"}'
+curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
+curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
 ```
@@ -97,8 +113,12 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - URL parameter による filter、順序、件数、表示mode指定
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
+- Message 通知候補と browser notification
+- drawer 内の Message thread 表示
+- `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
 - item 作成
+- raw life.txt 行を server parser で解析して editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除
 
@@ -127,6 +147,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | Parameter | 意味 |
 |---|---|
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
+| `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
 | `view=messages` | Message専用に近いlayout。type `M` をdefault filterにする |
 | `view=status` | Status専用に近いlayout。active status表示を強調する |
 | `preset=NAME` | config `views.NAME` のURL parameterを適用 |
@@ -144,6 +165,29 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
 | `after=VALUE`、`before=VALUE` | item の時刻filter |
+| `notify_refresh=SECONDS` | 通知 polling 間隔 |
+| `notify_lookahead=DURATION` | 通知の future lookahead |
+| `kiosk_cols=N` | kiosk card の固定列数。最大 8 |
+| `kiosk_filter=kind:T,status:[/]` | kiosk mode 専用の compact filter |
+| `kiosk_title=TEXT` | kiosk mode 時だけ表示する header title |
+| `graph_root=ID`、`graph_depth=N` | Graph panel の初期 root/depth |
+
+## Browser notification
+
+GUI は `/api/notifications` を polling し、due になった type `M` record を
+Notifications panel に表示します。browser notification はユーザが許可したあとに使えます。
+
+通知許可が blocked の場合、JavaScript から再許可ダイアログを出すことはできません。
+その場合は panel に browser の site settings から通知を許可し直す案内を表示します。
+
+## Graph と Message thread
+
+Graph panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。
+node をクリックすると該当 record を drawer で開けます。drawer 内にも選択 item の
+小さな依存 graph を表示します。
+
+Message item (`type:M`) で `id:` がある場合、drawer に thread section を表示します。
+返信は root message の `id:` を `parent:` に持つ record として扱います。
 
 ## Display mode
 
@@ -156,10 +200,16 @@ editor と filter controls を隠し、自動更新します。
 /?mode=display&around=now&window=8h&sort=time&order=asc&limit=20
 /?mode=display&kind=T&open_only=true&sort=time&order=asc&refresh=120
 /?mode=display&type=S&active=true&refresh=30
+/?mode=kiosk&kiosk_cols=3&kiosk_filter=kind:T,status:[ ]&kiosk_title=Today&refresh=60
 /?view=messages&recipient=self&open_only=true
 /?view=status&active=true
 /?preset=my_messages
 ```
+
+Kiosk mode は共有ディスプレイや常時表示ディスプレイ向けです。editor controls を隠し、
+item grid を auto-scroll します。`kiosk_cols` で列数を固定し、`kiosk_filter` で
+表示専用の短い filter を指定できます。config `views` の named preset からもこれらを
+設定できます。
 
 config の `sync_ics.generated_paths` または `sync_ics.output` に含まれるファイルは
 API response で `generated: true` になり、GUIではread-onlyとして扱われます。

@@ -143,6 +143,7 @@ def agenda_records(items, range_start, range_end):
         record["matches"] = matches
         record["details"] = _copy_details(item.details)
         record["text"] = _item_line_text(item)
+        record["generated"] = bool("occurrence_index" in primary or "repeat" in primary)
         source_ids = item.details.get("id", [])
         if source_ids:
             record["source_id"] = str(source_ids[0])

@@ -77,7 +77,10 @@ the selected value as top-level `id` in API item responses.
 
 `GET /api/agenda` uses the same agenda records as the CLI. Records include
 `blocked: true` and `blocked_by` when an open item is blocked by an open
-`depends_on:` or `blocks:` relation.
+`depends_on:` or `blocks:` relation. Repeated records that are expanded at
+request time include `generated: true`, `source_id`, `occurrence_start`,
+`occurrence_end`, `occurrence_index`, and `repeat_rule` when available; the API
+does not write generated occurrences back to the source file.
 
 Example item payload:
 
@@ -153,14 +156,17 @@ The browser GUI supports:
 - Showing near-current agenda records
 - Showing active status / presence records
 - Showing due message notifications
+- Showing repeated agenda occurrences with occurrence badges
 - Browser notifications after the user grants permission
 - Showing message threads in the detail drawer using `parent:`
+- Replying to message threads from the detail drawer
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
+- Highlighting search matches in titles, details, and body/note previews
 - Creating new items
 - Importing a raw life.txt line/body block into the editor through the server
-  parser
+  parser, with a live parse preview before writing
 - Selecting editable items and saving changes
 - Deleting editable item lines
 
@@ -243,14 +249,25 @@ the browser site settings for the current URL and allow notifications there.
 The Graph side panel reads `/api/graph` and renders a compact SVG reference
 graph without external dependencies. Click a node to open that record in the
 detail drawer. The drawer also shows a smaller graph for the selected item when
-it has ID references.
+it has ID references; the drawer graph loads a depth-2 subgraph so indirect
+blockers and related records are visible without leaving the drawer.
 
 Message items (`type:M`) with an `id:` show a thread section in the drawer.
-Replies are records whose `parent:` points at the root message ID and are also
-available from:
+The drawer also includes a reply form. Replies are records whose `parent:`
+points at the root message ID and are also available from:
 
 ```sh
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
+```
+
+## Charts
+
+Chart endpoints return stable `labels` and `datasets` arrays for browser
+rendering. `GET /api/chart/elapsed` accepts the same practical filters as the
+statistics view, including `from`, `to`, `project`, and `group`.
+
+```sh
+curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&project=research"
 ```
 
 ## Display Mode
@@ -275,7 +292,8 @@ Kiosk mode is optimized for a shared or always-on screen. It hides editor
 controls, auto-scrolls the item grid, supports fixed column counts through
 `kiosk_cols`, and can apply a compact display-only filter through
 `kiosk_filter`. Named view presets from config `views` can also set these
-parameters.
+parameters. When auto-refresh loads new or changed records, kiosk mode briefly
+highlights only the changed cards.
 
 Files listed in config `sync_ics.generated_paths` or `sync_ics.output` are
 marked as generated in API responses and are treated as read-only in the GUI.

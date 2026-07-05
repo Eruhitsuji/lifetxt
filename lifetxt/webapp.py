@@ -436,8 +436,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         project=None,
     ):
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
+        s, e = stats_range(start, end)
         elapsed_by_project = {}
         for item in items:
+            item_date = item_date_value(item)
+            if item_date is not None and (item_date < s or item_date > e):
+                continue
             for elapsed_val in item.details.get("elapsed", []):
                 minutes = _elapsed_to_minutes(elapsed_val)
                 if minutes is None:
@@ -453,6 +457,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {
             "labels": labels,
             "datasets": [{"label": "elapsed (min)", "data": data}],
+            "range": {"from": s.isoformat(), "to": e.isoformat()},
         }
 
     @app.get("/api/chart/habits-heatmap")
@@ -2358,6 +2363,45 @@ HTML_PAGE = r"""<!doctype html>
       font-family: Consolas, "Courier New", monospace;
       font-size: .86rem;
     }
+    .diagnostic.warning {
+      border-color: #f0d391;
+      color: #8a5a00;
+      background: #fff9e8;
+    }
+    .parse-preview {
+      margin-top: .35rem;
+      padding: .5rem .6rem;
+      border: 1px dashed var(--line);
+      border-radius: .45rem;
+      background: #fbfcfb;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.45;
+    }
+    .parse-preview.ok { border-color: #86efac; color: #166534; background: #f0fdf4; }
+    .parse-preview.err { border-color: #fca5a5; color: #991b1b; background: #fff8f8; }
+    .parse-preview.warn { border-color: #f0d391; color: #8a5a00; background: #fff9e8; }
+    .occurrence-badge {
+      display: inline-flex;
+      margin-left: .35rem;
+      padding: .08rem .36rem;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: .68rem;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+    .message-reply-form {
+      margin-top: .55rem;
+      display: grid;
+      gap: .35rem;
+    }
+    .message-reply-form textarea {
+      width: 100%;
+      min-height: 4.5rem;
+      resize: vertical;
+    }
     .notification-row {
       padding: .65rem;
       border: 1px solid var(--line);
@@ -2497,6 +2541,11 @@ HTML_PAGE = r"""<!doctype html>
     .kiosk-mode .item .meta { font-size: .8em; color: #4a7a5e; }
     .kiosk-mode .item .source { display: none; }
     .kiosk-mode .item-check { display: none !important; }
+    .kiosk-mode .item.kiosk-changed {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .25), 0 1px 6px rgba(0,0,0,.1);
+      animation: kiosk-change-pulse 1.4s ease both;
+    }
     .kiosk-mode .kiosk-progress-bar {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -2516,6 +2565,11 @@ HTML_PAGE = r"""<!doctype html>
     @keyframes kiosk-card-in {
       from { opacity: 0; transform: translateY(10px) scale(.98); }
       to { opacity: 1; transform: none; }
+    }
+    @keyframes kiosk-change-pulse {
+      0% { transform: scale(.985); background: #fff7ed; }
+      35% { transform: scale(1.012); background: #fff; }
+      100% { transform: none; background: #fff; }
     }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
@@ -2656,6 +2710,7 @@ HTML_PAGE = r"""<!doctype html>
               <label class="wide" style="margin-top:.35rem">Import raw line
                 <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
               </label>
+              <div id="import-raw-preview" class="parse-preview" style="display:none"></div>
               <div class="actions" style="margin-top:.25rem">
                 <button type="button" onclick="importRawLine()">Import</button>
                 <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
@@ -2844,6 +2899,7 @@ HTML_PAGE = r"""<!doctype html>
     let appConfig = {};
     let graphLoaded = false;
     let _kioskDefaultTitle = null;
+    let _kioskLastFingerprints = null;
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -2854,6 +2910,19 @@ HTML_PAGE = r"""<!doctype html>
       return Object.entries(details || {}).flatMap(([key, values]) =>
         values.map(value => `${key}:${value}`)
       ).join(" ");
+    }
+    function itemStableKey(item) {
+      const idKey = appConfig?.ids?.key || "id";
+      return String(item?.id || item?.details?.[idKey]?.[0] || `${item?.source || ""}:${item?.line || ""}:${item?.title || ""}`);
+    }
+    function itemFingerprint(item) {
+      return JSON.stringify({
+        status: item?.status || "",
+        type: item?.type || "",
+        title: item?.title || "",
+        details: item?.details || {},
+        raw: item?.raw || "",
+      });
     }
     function detailsToText(details) {
       const lines = [];
@@ -3190,19 +3259,33 @@ HTML_PAGE = r"""<!doctype html>
       renderSummary(items);
       renderFilterChips();
       updateSearchCount(items.length);
+      const kioskNow = isKioskMode();
+      const nextFingerprints = new Map();
       for (const item of items) {
         const titleHtml = safeMarkdownHtml(item?.markdown?.title, item.title);
         const previewHtml = firstMarkdownDetail(item, "body") || firstMarkdownDetail(item, "note");
         const preview = previewHtml ? `<div class="markdown body-preview">${previewHtml}</div>` : "";
+        const occurrenceBadge = item.occurrence_start
+          ? `<span class="occurrence-badge" title="${escapeHtml(item.occurrence_start)}">occurrence</span>`
+          : "";
+        const generatedBadge = item.generated && !item.occurrence_start
+          ? `<span class="occurrence-badge" title="generated/read-only source file">generated</span>`
+          : "";
         const statusCls = STATUS_CLASS[item.status] || "status-note";
         const statusLabel = STATUS_LABEL[item.status] || item.status;
         const typeCls = "type-" + (item.type || "N");
         const dueCls = itemDueSoonClass(item);
         const refLinks = buildRefLinksHtml(item.details);
         const parentInd = buildParentIndicator(item.details);
+        const stableKey = itemStableKey(item);
+        const fingerprint = itemFingerprint(item);
+        nextFingerprints.set(stableKey, fingerprint);
         const node = document.createElement("button");
         node.type = "button";
         node.className = "item" + (dueCls ? " " + dueCls : "");
+        if (kioskNow && _kioskLastFingerprints && _kioskLastFingerprints.get(stableKey) !== fingerprint) {
+          node.classList.add("kiosk-changed");
+        }
         if (selectedItem && item.line === selectedItem.line && item.editable === selectedItem.editable) {
           node.classList.add("selected");
         }
@@ -3221,7 +3304,7 @@ HTML_PAGE = r"""<!doctype html>
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
-            <div class="title markdown">${titleHtml}${parentInd}</div>
+            <div class="title markdown">${titleHtml}${parentInd}${occurrenceBadge}${generatedBadge}</div>
             <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}</div>
             ${preview}
           </div>
@@ -3239,9 +3322,11 @@ HTML_PAGE = r"""<!doctype html>
         });
         root.appendChild(node);
       }
+      if (kioskNow) _kioskLastFingerprints = nextFingerprints;
+      else _kioskLastFingerprints = null;
       const queryText = document.getElementById("search").value.trim();
       if (queryText) {
-        root.querySelectorAll(".title.markdown").forEach(el => {
+        root.querySelectorAll(".title.markdown, .meta, .body-preview").forEach(el => {
           el.innerHTML = highlightText(el.innerHTML, queryText);
         });
       }
@@ -3378,9 +3463,13 @@ HTML_PAGE = r"""<!doctype html>
       for (const record of shown) {
         const dueCls = agendaDueSoonClass(record);
         const borderStyle = dueCls === "overdue" ? "border-left:3px solid #c0392b;" : dueCls === "due-soon" ? "border-left:3px solid #e67e22;" : "";
+        const occ = record.occurrence_start || record.repeat_rule
+          ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
+          : "";
+        const source = record.source_id ? `<div class="meta">source: ${escapeHtml(record.source_id)}</div>` : "";
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span><div class="title">${escapeHtml(record.title)}</div></div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
         );
       }
       if (!unlimitedAgenda && data.records.length > limit) {
@@ -3649,9 +3738,17 @@ HTML_PAGE = r"""<!doctype html>
       const threadHtml = item.type === "M" && itemId
         ? `<div id="drawer-thread"><div class="drawer-section-title">Message Thread</div><div class="empty">Loading…</div></div>`
         : "";
+      const replyHtml = item.type === "M" && itemId
+        ? `<form class="message-reply-form" onsubmit="event.preventDefault();replyToMessage(${escapeHtml(jsLiteral(itemId))})">` +
+          `<div class="drawer-section-title">Reply</div>` +
+          `<input id="message-reply-title" placeholder="Reply title" autocomplete="off">` +
+          `<textarea id="message-reply-body" placeholder="Message body"></textarea>` +
+          `<div class="actions"><button type="submit">Send Reply</button><button type="button" class="secondary" onclick="document.getElementById('message-reply-title').value='';document.getElementById('message-reply-body').value=''">Clear</button></div>` +
+          `</form>`
+        : "";
       body.innerHTML = fieldsHtml + bodyHtml +
         `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
-        threadHtml +
+        threadHtml + replyHtml +
         sourceHtml + rawHtml;
       drawer.classList.add("open");
       loadDependencyLinks(item);
@@ -3742,8 +3839,10 @@ HTML_PAGE = r"""<!doctype html>
       return {nodes: [...map.values()], edges};
     }
 
-    function renderDependencyMiniGraph(records, focusId) {
-      const graph = graphFromLinkRecords(records, focusId);
+    function renderDependencyMiniGraph(records, focusId, graphData) {
+      const graph = graphData && (graphData.nodes || graphData.edges)
+        ? {nodes: graphData.nodes || [], edges: graphData.edges || []}
+        : graphFromLinkRecords(records, focusId);
       if (graph.nodes.length <= 1) return "";
       return `<div class="drawer-graph-mini">${renderGraphSvg(graph.nodes, graph.edges, {compact: true, focusId})}</div>`;
     }
@@ -3787,6 +3886,10 @@ HTML_PAGE = r"""<!doctype html>
       try {
         const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=both`);
         const records = data.records || [];
+        let graphData = null;
+        try {
+          graphData = await api(`/api/graph?root=${encodeURIComponent(itemId)}&depth=2`);
+        } catch(_) {}
         if (!records.length) {
           container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;
@@ -3794,7 +3897,7 @@ HTML_PAGE = r"""<!doctype html>
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
         let html = `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
-          renderDependencyMiniGraph(records, itemId) +
+          renderDependencyMiniGraph(records, itemId, graphData) +
           `<div class="dep-graph">`;
 
         function depRow(arrow, arrowCls, relLabel, otherId, otherTitle, otherStatus, otherType) {
@@ -3865,6 +3968,35 @@ HTML_PAGE = r"""<!doctype html>
         container.innerHTML = html;
       } catch(e) {
         container.innerHTML = `<div class="drawer-section-title">Message Thread</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    async function replyToMessage(messageId) {
+      const titleEl = document.getElementById("message-reply-title");
+      const bodyEl = document.getElementById("message-reply-body");
+      const title = (titleEl?.value || "").trim();
+      const body = (bodyEl?.value || "").trim();
+      if (!title && !body) {
+        showToast("Reply title or body is required.", "warning");
+        return;
+      }
+      try {
+        await api(`/api/messages/id/${encodeURIComponent(messageId)}/reply`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({title: title || body.slice(0, 60) || "Reply", body}),
+        });
+        if (titleEl) titleEl.value = "";
+        if (bodyEl) bodyEl.value = "";
+        showToast("Reply added.", "success");
+        await refreshAll();
+        if (drawerItem) {
+          const idKey = appConfig?.ids?.key || "id";
+          const currentId = drawerItem?.id || drawerItem?.details?.[idKey]?.[0] || messageId;
+          await drawerNavigate(currentId);
+        }
+      } catch(e) {
+        showToast("Reply failed: " + (e.message || e), "error");
       }
     }
 
@@ -3978,6 +4110,13 @@ HTML_PAGE = r"""<!doctype html>
           _checkTimer = setTimeout(() => liveCheckLine(qInput.value), 280);
         });
       }
+      const rawInput = document.getElementById("import-raw-input");
+      if (rawInput) {
+        rawInput.addEventListener("input", () => {
+          clearTimeout(_checkTimer);
+          _checkTimer = setTimeout(() => liveParseRawImport(rawInput.value), 280);
+        });
+      }
       // Sync agenda limit spinner from URL and wire change handler
       const spinner = document.getElementById("agenda-limit-spinner");
       if (spinner) {
@@ -4013,6 +4152,43 @@ HTML_PAGE = r"""<!doctype html>
           msg.className = "check-msg " + (data.ok ? "ok" : "err");
         }
       } catch(_) {}
+    }
+    async function liveParseRawImport(line) {
+      const preview = document.getElementById("import-raw-preview");
+      if (!preview) return;
+      const text = String(line || "").trim();
+      if (!text) {
+        preview.style.display = "none";
+        preview.className = "parse-preview";
+        preview.textContent = "";
+        return;
+      }
+      try {
+        const data = await api("/api/items/parse", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line: text}),
+        });
+        renderRawParsePreview(data);
+      } catch(e) {
+        preview.style.display = "";
+        preview.className = "parse-preview err";
+        preview.textContent = "Parse preview failed: " + (e.message || e);
+      }
+    }
+    function renderRawParsePreview(data) {
+      const preview = document.getElementById("import-raw-preview");
+      if (!preview) return;
+      const diagnostics = data?.diagnostics || [];
+      const errors = diagnostics.filter(d => d.severity === "error");
+      const warnings = diagnostics.filter(d => d.severity === "warning");
+      const item = (data?.items || [])[0];
+      preview.style.display = "";
+      preview.className = "parse-preview " + (errors.length ? "err" : warnings.length ? "warn" : "ok");
+      const diagLines = diagnostics.map(d => `${String(d.severity || "").toUpperCase()} ${d.code || ""}: ${d.message || ""}`);
+      const itemLine = item ? `Parsed: ${item.status} ${item.type} ${item.title}` : `Parsed item count: ${data?.item_count || 0}`;
+      preview.innerHTML = `<div>${escapeHtml(itemLine)}</div>` +
+        (diagLines.length ? `<ul>${diagLines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : `<div>No diagnostics.</div>`);
     }
 
     // ── Type-aware field hints in editor ────────────────────────────
@@ -4843,9 +5019,19 @@ HTML_PAGE = r"""<!doctype html>
         const nav = count === 1 ? escapeHtml(jsLiteral(firstIds[key])) : escapeHtml(jsLiteral(""));
         const onclick = count === 1
           ? `event.stopPropagation();drawerNavigate(${nav})`
-          : `event.stopPropagation();(function(){const it=currentItems.find(i=>i.line===${Number(details?._line||0)});if(it)openDrawer(it);setTimeout(()=>{const d=document.getElementById('drawer-deps');if(d)d.scrollIntoView({behavior:'smooth'});},200);})()`;
+          : `event.stopPropagation();(function(){const it=currentItems.find(i=>i.line===${Number(details?._line||0)});if(it)openDrawer(it);setTimeout(scrollDrawerDepsIntoView,200);})()`;
         return `<span class="ref-link" onclick="${onclick}" title="${escapeHtml(key)}: ${count} item(s)">${escapeHtml(label)}</span>`;
       }).join("");
+    }
+    function scrollDrawerDepsIntoView() {
+      const deps = document.getElementById("drawer-deps");
+      const body = document.getElementById("drawer-body");
+      if (!deps || !body) return;
+      try {
+        body.scrollTop = Math.max(0, deps.offsetTop - body.offsetTop - 12);
+      } catch(_) {
+        deps.scrollIntoView({behavior: "smooth", block: "start"});
+      }
     }
 
     // ── Notification: inline snooze with custom duration ─────────
@@ -4879,6 +5065,7 @@ HTML_PAGE = r"""<!doctype html>
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({line}),
         });
+        renderRawParsePreview(parseData);
         if (!parseData.ok) {
           const errs = (parseData.diagnostics || []).filter(d => d.severity === "error");
           showToast("Invalid: " + (errs[0]?.message || "parse error"), "error");
@@ -4897,6 +5084,8 @@ HTML_PAGE = r"""<!doctype html>
         updateTypeHints(item.type);
         toggleImportRaw(false);
         if (input) input.value = "";
+        const preview = document.getElementById("import-raw-preview");
+        if (preview) { preview.style.display = "none"; preview.textContent = ""; preview.className = "parse-preview"; }
         showToast("Form populated from raw line.", "success");
       } catch(e) {
         showToast("Import error: " + e.message, "error");

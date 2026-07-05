@@ -16,11 +16,20 @@ MOOD_VALUES = {"bad": 1, "neutral": 2, "ok": 2, "good": 3, "great": 4}
 def cmd_stats(args):
     start, end = stats_range(args.start, args.end)
     items = load_items(args.paths)
-    kind = normalize_type(args.kind) if args.kind else None
-    if kind:
-        items = [item for item in items if item.kind == kind]
-    if args.project:
-        items = [item for item in items if args.project in item.details.get("project", [])]
+    filter_func = getattr(args, "filter_items_func", None)
+    if filter_func is not None:
+        items = filter_func(items, args)
+    else:
+        kind = normalize_type(args.kind) if getattr(args, "kind", None) else None
+        if kind:
+            items = [item for item in items if item.kind == kind]
+        project = getattr(args, "project", None)
+        if project:
+            projects = project if isinstance(project, (list, tuple, set)) else [project]
+            items = [
+                item for item in items
+                if any(value in item.details.get("project", []) for value in projects)
+            ]
     buckets = make_buckets(start, end, args.group)
     data = build_stats(items, start, end, args.group, buckets)
     if args.format == "json":
@@ -351,8 +360,12 @@ def item_date_value(item):
 def load_items(paths):
     items = []
     for path in paths:
-        with open(path, "r", encoding="utf-8-sig") as handle:
-            path_items, diagnostics = parse_text(handle.read())
+        if path == "-":
+            text = sys.stdin.read()
+        else:
+            with open(path, "r", encoding="utf-8-sig") as handle:
+                text = handle.read()
+        path_items, diagnostics = parse_text(text)
         errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
         if errors:
             raise ValueError(errors[0].format())

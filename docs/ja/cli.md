@@ -224,7 +224,7 @@ CLI は [life_txt_format_spec.md](./life_txt_format_spec.md) のファイル文�
 - `key=value` は `assist -d`、`assist --add-detail`、対話 detail prompt などの helper 入力だけで使える便宜記法です。
 - JSON / JSONL では、detail は値が 1 つでも常に配列です。
 - CSV 変換では `status`、`type`、`title` 列が必須です。それ以外の非空列は detail になり、JSON 配列セルは同じ key の複数値になります。
-- `filter`、`agenda`、`to-json`、`to-jsonl`、`to-csv` は status、type、project、tag、user、team、detail、text、time filter の実装を共有します。
+- `filter`、`agenda`、`stats`、`to-json`、`to-jsonl`、`to-csv`、`markdown` は status、type、project、tag、user、team、detail、text、time filter の実装を共有します。
 - `check`、`ids`、`links`、各 converter は同じ parser を使うため、ある読み込み command が受け付ける構文は他の読み込み command でも受け付けます。
 - 複数入力ファイルは ID 重複と参照検査では 1 つの論理集合として扱われます。
 
@@ -246,7 +246,7 @@ command 対応表:
 | `tui` | yes | no | yes | dashboard 固有 |
 | `fzf` | yes | `done` と `delete` action | yes | yes |
 | `timer` | yes | `start` と `stop` が 1 item を更新 | yes | summary filter |
-| `stats` | yes | no | yes | type / project filter |
+| `stats` | yes | no | yes | yes |
 | `git-hook` | no | Git hook のみ | no | no |
 | `completion` | no | 任意の script output | no | no |
 | `serve` | yes | API/UI 経由で yes | yes | URL/API filter |
@@ -410,19 +410,29 @@ python -m lifetxt to-json [path ...] [-o output.json] [--pretty] [filter options
 | `path ...` | 入力 life.txt。`-` なら標準入力 |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
+| `--occurrences` | 保存済み item ではなく、計算された agenda occurrence record を出力 |
 | `filter options` | `filter` と同じ item filter |
 
 ファイル由来の入力では、各 JSON object に `_source_file` と `_source_line` が含まれます。複数行 record では `_source_end_line` も含まれます。これらは tool 用 metadata であり、`from-json` では life.txt の detail key として扱われません。
+
+`--occurrences` を指定すると、`to-json` は保存済み source item ではなく
+計算済み agenda record を出力します。この mode では `--after` と `--before` が
+両方必要です。範囲内の対応済み `repeat:` / `RRULE:` を展開し、`agenda` と同じ
+filter を適用します。生成された record には、可能な場合 `generated: true`、
+`source_id`、`occurrence_start`、`occurrence_end`、`occurrence_index`、
+`repeat_rule` が含まれます。
 
 ### 4.2 `to-jsonl`
 
 life.txt を JSONL へ変換します。
 
 ```sh
-python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [filter options]
+python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [--occurrences] [filter options]
 ```
 
 JSONL の各行は `to-json` と同じ shape で、ファイル由来の入力では `_source_file` と line metadata を含みます。
+`--occurrences` 時は各行が 1 つの計算済み agenda occurrence record になり、
+`--after` と `--before` が必要です。
 
 ### 4.3 `from-json`
 
@@ -449,9 +459,15 @@ python -m lifetxt from-jsonl [path ...] [-o life.txt]
 life.txt を CSV に変換します。CSV は `status`、`type`、`title` と、選択された item に含まれる detail key の列を持ちます。同じ detail key の複数値はセル内 JSON 配列として保存します。複数行の `body:` は quoted CSV cell として保存します。
 
 ```sh
-python -m lifetxt to-csv [path ...] [-o output.csv] [filter options]
+python -m lifetxt to-csv [path ...] [-o output.csv] [--occurrences] [filter options]
 python -m lifetxt to-csv life.txt --type journal --project research -o journal.csv
 ```
+
+`--occurrences` を指定すると、`to-csv` は安定した列 schema の agenda
+occurrence CSV を出力します。列は `when`、`key`、`line`、`source_id`、
+`occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule`、
+`status`、`type`、`title`、`blocked`、`blocked_by`、`details`、`text` です。
+この mode でも `--after` と `--before` が両方必要です。
 
 ### 4.6 `from-csv`
 
@@ -509,6 +525,7 @@ raw HTML は escape され、`javascript:` のような unsafe link は link と
 | `--text TEXT` | title、元行、detail 値に対する大文字小文字を区別しない部分一致 |
 | `--after VALUE` | この時刻以降に関連する item のみ |
 | `--before VALUE` | この時刻以前に関連する item のみ |
+| `--occurrences` | `to-json`、`to-jsonl`、`to-csv` で、保存済み item ではなく bounded agenda occurrence を出力 |
 
 `--after` と `--before` は `now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM`、
 `YYYY-MM-DDTHH:MM:SS`、`YYYY-MM-DDTHH:MM:SS.5`、
@@ -525,6 +542,8 @@ python -m lifetxt to-jsonl work.life.txt home.life.txt --project research
 python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json "projects/**/*.life.txt" --team research --tag-all urgent,review
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
+python -m lifetxt to-json life.txt --occurrences --after 2026-06-01 --before 2026-06-30 --pretty
+python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026-06-30 -o occurrences.csv
 ```
 
 ## 5. iCalendar import / sync
@@ -784,10 +803,13 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 |---|---|
 | `--from VALUE` | 範囲開始。`now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM` |
 | `--to VALUE` | 範囲終了。`now`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:MM` |
+| `--after VALUE` | `agenda` では `--from` の alias。filter preset と共有するときに便利 |
+| `--before VALUE` | `agenda` では `--to` の alias。filter preset と共有するときに便利 |
 | `--around VALUE` | 範囲中心。省略時は `now` |
 | `--window VALUE` | `--around` の半幅。省略時は `1h` |
 
-`--from/--to` と `--around` は同時には使いません。
+`--from/--to`、`--after/--before`、または `--around` のいずれかを使います。
+同じ command で `--from` と `--after`、または `--to` と `--before` は混在できません。
 範囲指定がない場合は `--around now --window 1h` と同じ扱いです。
 
 `--window` の duration:
@@ -807,6 +829,7 @@ python -m lifetxt agenda [path ...] [range options] [filter options] [output opt
 
 ```sh
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06
+python -m lifetxt agenda life.txt --after 2026-06-06 --before 2026-06-06
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30.25+09:00 --to 2026-06-06T18:00:00.5+09:00
 python -m lifetxt agenda life.txt --around now --window 2h
@@ -891,6 +914,9 @@ python -m lifetxt assist [options]
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify-at 2026-06-06T09:00
+python -m lifetxt assist --type journal --title "Research day" --on 2026-06-23 --body-file notes.md
+python -m lifetxt assist --type habit --title "Review" --rrule "FREQ=WEEKLY;BYDAY=MO;COUNT=4"
 ```
 
 基本オプション:
@@ -904,6 +930,9 @@ python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00
 | `-o`, `--output` | 生成行をファイルに追記 |
 | `--append` | 生成行をファイルに追記 |
 | `--no-check` | 生成行の validation を省略 |
+| `--body-file FILE` | UTF-8 text file から複数行 `body:` を読み込む |
+| `--body-stdin` | 標準入力から複数行 `body:` を読み込む |
+| `--rrule VALUE` | `repeat:RRULE:...` を設定する。`RRULE:` prefix は省略可能 |
 
 known detail key には直接フラグもあります。各フラグは複数回指定できます。
 
@@ -912,9 +941,12 @@ known detail key には直接フラグもあります。各フラグは複数回
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
 --interval --until --count
---project --context --loc --priority --est --tag --note --body --mood --weather --url
+--project --context --loc --priority --est --elapsed --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
+
+underscore を含む detail key には hyphen alias も使えます。例:
+`--notify-at`、`--notify-from`、`--snooze-until`。
 
 ### 10.2 対話で作成
 
@@ -933,6 +965,7 @@ python -m lifetxt assist --interactive --append life.txt
 | `?detail` | 推奨 detail key |
 | `?all` | known detail key 全体 |
 | `?due` | detail key 個別 help |
+| `body<<` | 複数行 `body:` 入力を開始。`.` だけの行で終了 |
 
 対応 terminal では、Tab で type、status、detail-key 候補を補完できます。
 Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と line editing を無効化できます。
@@ -1137,6 +1170,7 @@ python -m lifetxt timer summary life.txt --project research
 python -m lifetxt stats life.txt
 python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
 python -m lifetxt stats life.txt --project research --format json
+python -m lifetxt stats life.txt --tag focus --assignee alice --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 python -m lifetxt stats life.txt --width 60
 ```
@@ -1145,8 +1179,7 @@ python -m lifetxt stats life.txt --width 60
 |---|---|
 | `--from DATE` | 開始日。省略時は `--to` の 29 日前 |
 | `--to DATE` | 終了日。省略時は今日 |
-| `--type TYPE` | type または alias で入力 item を絞り込み |
-| `--project PROJECT` | `project:` で絞り込み |
+| `filter options` | `filter` と同じ item filter。status、type、project、tag、user、team、people、detail、text、time filter を含む |
 | `--group daily|weekly|monthly` | mood trend の集計単位 |
 | `--format text|json` | 出力形式 |
 | `--width N` | 狭い terminal 向けの compact text 出力 |

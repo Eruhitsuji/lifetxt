@@ -297,14 +297,22 @@ _STRUCTURAL_OPTIONS = (
     "--algorithm",
     "--pretty",
     "--output",
+    "--occurrences",
     "--append",
     "--update",
     "--line",
     "--match-id",
+    "--add-detail",
+    "--remove-detail",
     "--action",
     "--tool",
     "--preview",
     "--no-preview",
+    "--no-check",
+    "--no-completion",
+    "--body-file",
+    "--body-stdin",
+    "--rrule",
     "--id",
     "--repo-dir",
     "--files",
@@ -342,7 +350,12 @@ _STRUCTURAL_OPTIONS = (
 
 
 def _all_options():
-    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + ["--%s" % key for key in KNOWN_KEYS]))
+    detail_options = []
+    for key in KNOWN_KEYS:
+        detail_options.append("--%s" % key)
+        if "_" in key:
+            detail_options.append("--%s" % key.replace("_", "-"))
+    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + detail_options))
 
 
 def _write_text(path, text):

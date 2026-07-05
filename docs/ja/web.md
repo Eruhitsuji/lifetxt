@@ -56,7 +56,10 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt
 
 `GET /api/agenda` は CLI `agenda` と同じ record を返します。open item が
 open な `depends_on:` または `blocks:` 関係で block されている場合、
-record に `blocked: true` と `blocked_by` が含まれます。
+record に `blocked: true` と `blocked_by` が含まれます。request 時に展開された
+repeat record には、可能な場合 `generated: true`、`source_id`、
+`occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule` が
+含まれます。API は生成された occurrence を source file へ書き戻しません。
 
 item payload 例:
 
@@ -114,11 +117,14 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
+- repeat から生成された agenda occurrence の badge 表示
 - drawer 内の Message thread 表示
+- drawer からの Message thread 返信
 - `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
+- title、detail、body/note preview の検索語 highlight
 - item 作成
-- raw life.txt 行を server parser で解析して editor へ取り込み
+- raw life.txt 行を server parser で解析して preview してから editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除
 
@@ -159,6 +165,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `project=VALUE`、`tag=VALUE`、`tag_all=VALUE`、`exclude_tag=VALUE` | project / tag で filter |
 | `user=VALUE`、`team=VALUE`、`person=VALUE` | user / team / presence target で filter |
 | `owner=VALUE`、`assignee=VALUE`、`attendee=VALUE` | people detail で filter |
+| `sender=VALUE`、`recipient=VALUE` | message detail で filter |
 | `sort=line|time|title|type|status|source` | item 並び替え key |
 | `order=asc|desc` | item 並び順 |
 | `limit=N` | item と agenda の表示件数上限 |
@@ -184,10 +191,22 @@ Notifications panel に表示します。browser notification はユーザが許
 
 Graph panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。
 node をクリックすると該当 record を drawer で開けます。drawer 内にも選択 item の
-小さな依存 graph を表示します。
+小さな依存 graph を表示します。drawer graph は depth 2 の subgraph を読み込むため、
+間接的な blocker や related record も drawer 内で確認できます。
 
 Message item (`type:M`) で `id:` がある場合、drawer に thread section を表示します。
-返信は root message の `id:` を `parent:` に持つ record として扱います。
+drawer には返信 form も表示されます。返信は root message の `id:` を `parent:` に
+持つ record として扱います。
+
+## Chart
+
+Chart endpoint は browser 描画用に安定した `labels` と `datasets` 配列を返します。
+`GET /api/chart/elapsed` は `from`、`to`、`project`、`group` などの実用的な
+filter を受け付けます。
+
+```sh
+curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&project=research"
+```
 
 ## Display mode
 
@@ -209,7 +228,8 @@ editor と filter controls を隠し、自動更新します。
 Kiosk mode は共有ディスプレイや常時表示ディスプレイ向けです。editor controls を隠し、
 item grid を auto-scroll します。`kiosk_cols` で列数を固定し、`kiosk_filter` で
 表示専用の短い filter を指定できます。config `views` の named preset からもこれらを
-設定できます。
+設定できます。auto-refresh で新規または変更された record が入った場合、kiosk mode は
+変更された card だけを短時間強調表示します。
 
 config の `sync_ics.generated_paths` または `sync_ics.output` に含まれるファイルは
 API response で `generated: true` になり、GUIではread-onlyとして扱われます。

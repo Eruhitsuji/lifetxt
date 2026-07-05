@@ -1,3 +1,4 @@
+import sys
 from collections import OrderedDict
 
 from .model import Item, normalize_status, normalize_type
@@ -57,6 +58,7 @@ DETAIL_FLAGS = (
     "loc",
     "priority",
     "est",
+    "elapsed",
     "tag",
     "note",
     "body",
@@ -85,6 +87,21 @@ def build_item_from_args(args):
 def collect_details_from_args(args):
     details = OrderedDict()
     _add_detail_entries(details, getattr(args, "detail", None) or [])
+
+    for value in getattr(args, "rrule", None) or []:
+        details.setdefault("repeat", []).append(_normalize_rrule_value(value))
+
+    for path in getattr(args, "body_file", None) or []:
+        value = _read_body_file(path)
+        if value:
+            details.setdefault("body", []).append(value)
+
+    if getattr(args, "body_stdin", False):
+        value = sys.stdin.read().rstrip("\r\n")
+        if not value:
+            raise ValueError("--body-stdin did not receive body text.")
+        details.setdefault("body", []).append(value)
+
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
         values = getattr(args, dest, None)
@@ -154,6 +171,12 @@ def prompt_item(args):
         )
         if not raw:
             break
+        if raw.strip().lower() in ("body<<", "body:<<"):
+            body_value = _prompt_multiline_body(session)
+            if body_value:
+                details.setdefault("body", []).append(body_value)
+            print_short_rule(after_prompt=True)
+            continue
         _add_detail_entries(details, [raw])
         print_short_rule(after_prompt=True)
 
@@ -234,6 +257,12 @@ def has_update_fields(args):
         return True
     if getattr(args, "remove_detail", None):
         return True
+    if getattr(args, "rrule", None):
+        return True
+    if getattr(args, "body_file", None):
+        return True
+    if getattr(args, "body_stdin", False):
+        return True
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
         if getattr(args, dest, None):
@@ -287,6 +316,37 @@ def _split_detail_entry(entry):
     if not key:
         raise ValueError("Detail key must not be empty.")
     return key, value
+
+
+def _normalize_rrule_value(value):
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError("--rrule requires a non-empty value.")
+    lowered = text.lower()
+    if lowered.startswith("repeat:"):
+        text = text.split(":", 1)[1]
+    if text.upper().startswith("RRULE:"):
+        return text
+    return "RRULE:" + text
+
+
+def _read_body_file(path):
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read().rstrip("\r\n")
+    except OSError as exc:
+        raise ValueError("Could not read --body-file %s: %s" % (path, exc)) from exc
+
+
+def _prompt_multiline_body(session):
+    print("Enter body lines. Finish with a single '.' line.")
+    lines = []
+    while True:
+        line = session.read("body", "", help_topic="detail:body", allow_empty=True)
+        if line == ".":
+            break
+        lines.append(line)
+    return "\n".join(lines).rstrip("\r\n")
 
 
 def _split_line_ending(raw_line):

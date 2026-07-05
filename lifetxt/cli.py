@@ -32,6 +32,7 @@ from .agenda import (
     agenda_records_to_life,
     filter_agenda_records,
     filter_items,
+    format_match_time,
     format_agenda_table,
     parse_agenda_range,
     parse_optional_time_range,
@@ -324,18 +325,21 @@ def build_parser():
     to_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     to_json.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
     _add_item_filter_arguments(to_json)
+    _add_occurrence_export_arguments(to_json)
     to_json.set_defaults(func=command_to_json)
 
     to_jsonl = subparsers.add_parser("to-jsonl", help="Convert life.txt to JSONL.")
     _add_input_paths(to_jsonl)
     to_jsonl.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     _add_item_filter_arguments(to_jsonl)
+    _add_occurrence_export_arguments(to_jsonl)
     to_jsonl.set_defaults(func=command_to_jsonl)
 
     to_csv = subparsers.add_parser("to-csv", help="Convert life.txt to CSV.")
     _add_input_paths(to_csv)
     to_csv.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     _add_item_filter_arguments(to_csv)
+    _add_occurrence_export_arguments(to_csv)
     to_csv.set_defaults(func=command_to_csv)
 
     markdown_command = subparsers.add_parser(
@@ -588,8 +592,7 @@ def build_parser():
     _add_input_paths(stats)
     stats.add_argument("--from", dest="start", help="Start date. Defaults to 29 days before --to.")
     stats.add_argument("--to", dest="end", help="End date. Defaults to today.")
-    stats.add_argument("--type", dest="kind", help="Filter by type or alias.")
-    stats.add_argument("--project", help="Filter by project.")
+    _add_item_filter_arguments(stats)
     stats.add_argument(
         "--group",
         choices=("daily", "weekly", "monthly"),
@@ -781,92 +784,7 @@ def build_parser():
         help="Output format.",
     )
     agenda.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
-    agenda.add_argument(
-        "--open",
-        action="store_true",
-        help="Show unfinished workflow items only: [ ], [/], [>], or [?].",
-    )
-    agenda.add_argument(
-        "--status",
-        action="append",
-        help="Filter by status or alias. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--type",
-        dest="kinds",
-        action="append",
-        help="Filter by type or alias. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--project",
-        action="append",
-        help="Filter by project: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--tag",
-        action="append",
-        help="Filter by tag: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--tag-all",
-        action="append",
-        help="Require every listed tag value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--exclude-tag",
-        action="append",
-        help="Exclude items containing any listed tag value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--user",
-        action="append",
-        help="Filter by any user-related detail: user, person, owner, assignee, attendee, sender, or recipient.",
-    )
-    agenda.add_argument(
-        "--team",
-        action="append",
-        help="Filter by team/group detail or config-defined team membership.",
-    )
-    agenda.add_argument(
-        "--person",
-        action="append",
-        help="Filter by person: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--owner",
-        action="append",
-        help="Filter by owner: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--assignee",
-        action="append",
-        help="Filter by assignee: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--attendee",
-        action="append",
-        help="Filter by attendee: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--sender",
-        action="append",
-        help="Filter by sender: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--recipient",
-        action="append",
-        help="Filter by recipient: value. Can be repeated or comma-separated.",
-    )
-    agenda.add_argument(
-        "--detail",
-        action="append",
-        default=[],
-        help="Filter by detail key or key=value. Repeated filters are ANDed.",
-    )
-    agenda.add_argument(
-        "--text",
-        help="Case-insensitive substring filter across title, line, and detail values.",
-    )
+    _add_item_filter_arguments(agenda)
     agenda.add_argument(
         "--blocked",
         action="store_true",
@@ -963,10 +881,28 @@ def build_parser():
         action="store_true",
         help="Disable interactive completion and line editing helpers.",
     )
+    assist.add_argument(
+        "--body-file",
+        action="append",
+        help="Read a body: detail from a UTF-8 text file. Can be repeated.",
+    )
+    assist.add_argument(
+        "--body-stdin",
+        action="store_true",
+        help="Read a body: detail from standard input.",
+    )
+    assist.add_argument(
+        "--rrule",
+        action="append",
+        help="Set repeat:RRULE:...; accepts either FREQ=... or RRULE:FREQ=.... Can be repeated.",
+    )
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
+        option_strings = ["--" + key]
+        if "_" in key:
+            option_strings.append("--" + key.replace("_", "-"))
         assist.add_argument(
-            "--" + key,
+            *option_strings,
             dest=dest,
             action="append",
             help="Set %s: detail. Can be repeated." % key,
@@ -1929,6 +1865,17 @@ def _add_item_filter_arguments(parser):
     )
 
 
+def _add_occurrence_export_arguments(parser):
+    parser.add_argument(
+        "--occurrences",
+        action="store_true",
+        help=(
+            "Export generated agenda occurrence records instead of stored items. "
+            "Requires --after and --before to bound recurrence expansion."
+        ),
+    )
+
+
 _W225_GUIDANCE = (
     "  Hint: To resolve W225, either (1) close children manually, "
     "(2) run archive --orphan-children adopt, or (3) run archive --orphan-children promote."
@@ -2124,8 +2071,12 @@ def command_ids_assign(args):
 
 def command_to_json(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
-    items = _filter_items_from_args(items, args)
-    output = items_to_json(items, pretty=args.pretty)
+    if getattr(args, "occurrences", False):
+        records = _occurrence_export_records(items, args)
+        output = agenda_records_to_json(records, pretty=args.pretty)
+    else:
+        items = _filter_items_from_args(items, args)
+        output = items_to_json(items, pretty=args.pretty)
     write_text(args.output, output + "\n")
     _print_warnings(diagnostics)
     return 0
@@ -2133,8 +2084,12 @@ def command_to_json(args):
 
 def command_to_jsonl(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
-    items = _filter_items_from_args(items, args)
-    output = items_to_jsonl(items)
+    if getattr(args, "occurrences", False):
+        records = _occurrence_export_records(items, args)
+        output = agenda_records_to_jsonl(records)
+    else:
+        items = _filter_items_from_args(items, args)
+        output = items_to_jsonl(items)
     if output:
         output += "\n"
     write_text(args.output, output)
@@ -2144,8 +2099,13 @@ def command_to_jsonl(args):
 
 def command_to_csv(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
-    items = _filter_items_from_args(items, args)
-    write_text(args.output, items_to_csv(items))
+    if getattr(args, "occurrences", False):
+        records = _occurrence_export_records(items, args)
+        output = occurrence_records_to_csv(records)
+    else:
+        items = _filter_items_from_args(items, args)
+        output = items_to_csv(items)
+    write_text(args.output, output)
     _print_warnings(diagnostics)
     return 0
 
@@ -2178,6 +2138,118 @@ def command_markdown(args):
 
     _print_warnings(diagnostics)
     return 0
+
+
+def _occurrence_export_records(items, args):
+    if not getattr(args, "after", None) or not getattr(args, "before", None):
+        raise ValueError("--occurrences requires both --after and --before.")
+    range_start, range_end = parse_optional_time_range(args.after, args.before)
+    records = agenda_records(items, range_start, range_end)
+    filtered = filter_agenda_records(
+        records,
+        open_only=getattr(args, "open", False),
+        statuses=getattr(args, "status", None),
+        kinds=getattr(args, "kinds", None),
+        projects=getattr(args, "project", None),
+        tags=getattr(args, "tag", None),
+        tag_all=getattr(args, "tag_all", None),
+        exclude_tags=getattr(args, "exclude_tag", None),
+        users=getattr(args, "user", None),
+        persons=getattr(args, "person", None),
+        owners=getattr(args, "owner", None),
+        assignees=getattr(args, "assignee", None),
+        attendees=getattr(args, "attendee", None),
+        senders=getattr(args, "sender", None),
+        recipients=getattr(args, "recipient", None),
+        teams=getattr(args, "team", None),
+        detail_filters=getattr(args, "detail", None),
+        text=getattr(args, "text", None),
+        user_aliases=config_user_aliases(_config(args)),
+        team_members=config_team_members(_config(args)),
+        team_aliases=config_team_aliases(_config(args)),
+        tag_aliases=config_tag_aliases(_config(args)),
+    )
+    return _flatten_occurrence_records(filtered)
+
+
+def _flatten_occurrence_records(records):
+    flattened = []
+    occurrence_keys = {
+        "when",
+        "key",
+        "matches",
+        "generated",
+        "occurrence_start",
+        "occurrence_end",
+        "occurrence_index",
+        "repeat_rule",
+    }
+    for record in records:
+        matches = record.get("matches") or []
+        if not matches:
+            flattened.append(record)
+            continue
+        for match in matches:
+            occurrence = OrderedDict()
+            occurrence["when"] = format_match_time(match)
+            occurrence["key"] = match.get("key", record.get("key", ""))
+            for key, value in record.items():
+                if key not in occurrence_keys:
+                    occurrence[key] = value
+            occurrence["matches"] = [match]
+            occurrence["generated"] = bool("occurrence_index" in match or "repeat" in match)
+            start = match.get("start")
+            end = match.get("end")
+            if start:
+                occurrence["occurrence_start"] = start
+            if end:
+                occurrence["occurrence_end"] = end
+            if "occurrence_index" in match:
+                occurrence["occurrence_index"] = match["occurrence_index"]
+            if "repeat" in match:
+                occurrence["repeat_rule"] = match["repeat"]
+            flattened.append(occurrence)
+    flattened.sort(key=lambda record: (record.get("occurrence_start") or record.get("when") or "", record.get("line") or 0))
+    return flattened
+
+
+def occurrence_records_to_csv(records):
+    import csv as _csv
+    import io as _io
+
+    fields = (
+        "when",
+        "key",
+        "line",
+        "source_id",
+        "occurrence_start",
+        "occurrence_end",
+        "occurrence_index",
+        "repeat_rule",
+        "status",
+        "type",
+        "title",
+        "blocked",
+        "blocked_by",
+        "details",
+        "text",
+    )
+    output = _io.StringIO()
+    writer = _csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    for record in records:
+        row = OrderedDict()
+        for field in fields:
+            value = record.get(field, "")
+            if field in ("details", "blocked_by") and value:
+                value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            elif isinstance(value, bool):
+                value = "true" if value else "false"
+            elif value is None:
+                value = ""
+            row[field] = value
+        writer.writerow(row)
+    return output.getvalue()
 
 
 def markdown_records(items, fields=None):
@@ -5618,9 +5690,10 @@ def command_agenda(args):
     if args.blocked and args.unblocked:
         raise ValueError("Use either --blocked or --unblocked, not both.")
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    start_text, end_text = _agenda_range_texts(args)
     range_start, range_end = parse_agenda_range(
-        start_text=args.start,
-        end_text=args.end,
+        start_text=start_text,
+        end_text=end_text,
         around_text=args.around,
         window_text=args.window,
     )
@@ -5669,6 +5742,16 @@ def command_agenda(args):
 
     _print_warnings(diagnostics)
     return 0
+
+
+def _agenda_range_texts(args):
+    if getattr(args, "start", None) and getattr(args, "after", None):
+        raise ValueError("Use either --from or --after for agenda range start, not both.")
+    if getattr(args, "end", None) and getattr(args, "before", None):
+        raise ValueError("Use either --to or --before for agenda range end, not both.")
+    start_text = getattr(args, "start", None) or getattr(args, "after", None)
+    end_text = getattr(args, "end", None) or getattr(args, "before", None)
+    return start_text, end_text
 
 
 def command_from_json(args):
@@ -5787,6 +5870,7 @@ def command_timer(args):
 
 def command_stats(args):
     args.paths = _normalize_paths(args.paths, _config(args), stdin_when_empty=False) or ["life.txt"]
+    args.filter_items_func = _filter_items_from_args
     from .stats import cmd_stats
     return cmd_stats(args)
 

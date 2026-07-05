@@ -374,6 +374,12 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('id="graph-panel"', webapp.HTML_PAGE)
         self.assertIn("function loadGraphPanel(", webapp.HTML_PAGE)
         self.assertIn('id="drawer-thread"', webapp.HTML_PAGE)
+        self.assertIn('id="import-raw-preview"', webapp.HTML_PAGE)
+        self.assertIn("function liveParseRawImport(", webapp.HTML_PAGE)
+        self.assertIn("function replyToMessage(", webapp.HTML_PAGE)
+        self.assertIn("function scrollDrawerDepsIntoView(", webapp.HTML_PAGE)
+        self.assertIn("kiosk-changed", webapp.HTML_PAGE)
+        self.assertIn("occurrence-badge", webapp.HTML_PAGE)
         self.assertIn("/api/items/parse", webapp.HTML_PAGE)
         self.assertIn("kiosk_cols", webapp.HTML_PAGE)
         self.assertIn("kiosk_filter", webapp.HTML_PAGE)
@@ -724,6 +730,29 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertIn("Seminar", normalized)
         self.assertIn("Form", normalized)
         self.assertIn("Working", normalized)
+        self.assertNotIn("Future", normalized)
+
+    def test_agenda_cli_after_before_are_range_aliases(self):
+        text = (
+            "[ ] E Seminar from:2026-06-06T13:00 to:2026-06-06T14:30\n"
+            "[ ] T Future due:2026-06-07\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--after",
+            "2026-06-06",
+            "--before",
+            "2026-06-06",
+            "--format",
+            "life",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        normalized = normalize_newlines(stdout)
+        self.assertIn("Seminar", normalized)
         self.assertNotIn("Future", normalized)
 
     def test_agenda_cli_around_window(self):
@@ -3372,6 +3401,69 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual([("task_child", "task_root")], [(edge["source"], edge["target"]) for edge in graph["edges"]])
             self.assertEqual(["msg_001", "msg_002"], [item["id"] for item in thread["items"]])
 
+    def test_agenda_api_marks_recurrence_occurrences_generated(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3 "
+                "from:2026-06-01T09:00 to:2026-06-01T10:00 id:event_training\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/agenda?from=2026-06-03&to=2026-06-03")
+
+            self.assertEqual(200, response.status_code)
+            records = response.json()["records"]
+            self.assertEqual(1, len(records))
+            self.assertTrue(records[0]["generated"])
+            self.assertEqual("event_training", records[0]["source_id"])
+            self.assertEqual(2, records[0]["occurrence_index"])
+
+    def test_chart_elapsed_api_filters_by_range_and_project(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[x] T Old done:2026-06-01 elapsed:30m project:work\n"
+                "[x] T New done:2026-06-10 elapsed:1h project:work\n"
+                "[x] T Other done:2026-06-10 elapsed:2h project:home\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/chart/elapsed?from=2026-06-10&to=2026-06-10&project=work")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual(["work"], data["labels"])
+            self.assertEqual([60], data["datasets"][0]["data"])
+            self.assertEqual({"from": "2026-06-10", "to": "2026-06-10"}, data["range"])
+
+    def test_message_reply_api_appends_reply_and_keeps_thread(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] M Ping id:msg_001 sender:alice recipient:self\n",
+                encoding="utf-8",
+            )
+            client = self._client(
+                [path],
+                writable_path=path,
+                config={"ids": {"auto": True}, "user": {"name": "self"}},
+            )
+
+            response = client.post(
+                "/api/messages/id/msg_001/reply",
+                json={"title": "Reply", "body": "Received"},
+            )
+            thread = client.get("/api/messages/thread/msg_001")
+
+            self.assertEqual(201, response.status_code)
+            self.assertEqual(200, thread.status_code)
+            items = thread.json()["items"]
+            self.assertEqual(["msg_001", response.json()["item"]["id"]], [item["id"] for item in items])
+            self.assertEqual(["msg_001"], response.json()["item"]["details"]["parent"])
+
 
 class LifeTxtHeatmapTests(unittest.TestCase):
     def test_habit_completion_dates_returns_date_set(self):
@@ -4118,6 +4210,61 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             normalize_newlines(stdout),
         )
 
+    def test_assist_complex_detail_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            body_path = os.path.join(temp_dir, "body.md")
+            Path(body_path).write_text("First line\nSecond line\n", encoding="utf-8")
+
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--type",
+                "journal",
+                "--title",
+                "Research day",
+                "--on",
+                "2026-06-23",
+                "--body-file",
+                body_path,
+                "--elapsed",
+                "1h30m",
+                "--rrule",
+                "FREQ=WEEKLY;COUNT=2",
+            )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        normalized = normalize_newlines(stdout)
+        self.assertIn('[N] J "Research day"', normalized)
+        self.assertIn("on:2026-06-23", normalized)
+        self.assertIn("elapsed:1h30m", normalized)
+        self.assertIn("repeat:RRULE:FREQ=WEEKLY;COUNT=2", normalized)
+        self.assertIn("| First line", normalized)
+        self.assertIn("| Second line", normalized)
+
+    def test_assist_hyphenated_detail_aliases_and_body_stdin(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--type",
+            "message",
+            "--title",
+            "Ping",
+            "--sender",
+            "self",
+            "--recipient",
+            "alice",
+            "--notify-at",
+            "2026-06-06T09:00",
+            "--body-stdin",
+            input_text="Line one\nLine two\n",
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        normalized = normalize_newlines(stdout)
+        self.assertIn("notify_at:2026-06-06T09:00", normalized)
+        self.assertIn("| Line one", normalized)
+        self.assertIn("| Line two", normalized)
+
     def test_assist_update_by_id(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -4223,6 +4370,31 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertTrue(normalize_newlines(stdout).rstrip().endswith("[N] N Memo"))
+
+    def test_assist_interactive_multiline_body_command(self):
+        stdout, stderr, code = run_cli(
+            "assist",
+            "--interactive",
+            "--no-completion",
+            input_text=(
+                "J\n"
+                "N\n"
+                "Research_day\n"
+                "body<<\n"
+                "First line\n"
+                "Second line\n"
+                ".\n"
+                "\n"
+            ),
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Enter body lines. Finish with a single '.' line.", normalized)
+        self.assertTrue(
+            normalized.rstrip().endswith("[N] J Research_day\n| First line\n| Second line")
+        )
 
     def test_assist_interactive_detail_key_help(self):
         stdout, stderr, code = run_cli(
@@ -7174,6 +7346,131 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             self.assertLessEqual(max(len(line) for line in out.splitlines()), 50)
         finally:
             os.unlink(path)
+
+    def test_stats_uses_shared_item_filters(self):
+        path = self._make_file(
+            "[x] T Research done:2026-06-10 project:work tag:focus assignee:alice\n"
+            "[x] T Other done:2026-06-10 project:work tag:other assignee:bob\n"
+            "[N] J Notes on:2026-06-10 tag:focus\n"
+        )
+        try:
+            out, err, rc = run_cli(
+                "stats",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
+                "--tag",
+                "focus",
+                "--assignee",
+                "alice",
+                "--format",
+                "json",
+            )
+            self.assertEqual(rc, 0, err)
+            data = json.loads(out)
+            self.assertEqual(1, data["tasks"]["total"])
+            self.assertEqual(1, data["tasks"]["done"])
+            self.assertEqual({"work": {"done": 1, "total": 1, "rate": 100}}, data["by_project"])
+        finally:
+            os.unlink(path)
+
+    def test_stats_reads_stdin_path(self):
+        out, err, rc = run_cli(
+            "stats",
+            "-",
+            "--from",
+            "2026-06-01",
+            "--to",
+            "2026-06-30",
+            "--format",
+            "json",
+            input_text="[x] T Done done:2026-06-10\n",
+        )
+
+        self.assertEqual(rc, 0, err)
+        data = json.loads(out)
+        self.assertEqual(1, data["tasks"]["total"])
+
+    def test_to_json_occurrences_exports_generated_records(self):
+        text = (
+            "[ ] E Training repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3 "
+            "from:2026-06-01T09:00 to:2026-06-01T10:00 id:event_training\n"
+        )
+
+        out, err, rc = run_cli(
+            "to-json",
+            "--occurrences",
+            "--after",
+            "2026-06-01",
+            "--before",
+            "2026-06-03",
+            "--pretty",
+            input_text=text,
+        )
+
+        self.assertEqual(rc, 0, err)
+        data = json.loads(out)
+        self.assertEqual(2, len(data))
+        self.assertEqual(["2026-06-01T09:00", "2026-06-03T09:00"], [row["occurrence_start"] for row in data])
+        self.assertEqual(["Training", "Training"], [row["title"] for row in data])
+        self.assertEqual(["event_training", "event_training"], [row["source_id"] for row in data])
+        self.assertEqual([1, 2], [row["occurrence_index"] for row in data])
+
+    def test_to_csv_occurrences_exports_stable_columns(self):
+        text = (
+            "[ ] H Standup repeat:daily on:2026-06-01 at:09:00 "
+            "id:habit_standup project:work\n"
+        )
+
+        out, err, rc = run_cli(
+            "to-csv",
+            "--occurrences",
+            "--after",
+            "2026-06-02",
+            "--before",
+            "2026-06-03",
+            input_text=text,
+        )
+
+        self.assertEqual(rc, 0, err)
+        lines = normalize_newlines(out).splitlines()
+        self.assertEqual(3, len(lines))
+        self.assertIn("when,key,line,source_id,occurrence_start", lines[0])
+        self.assertIn("2026-06-02T09:00", lines[1])
+        self.assertIn("2026-06-03T09:00", lines[2])
+        self.assertIn("habit_standup", out)
+        self.assertIn("Standup", out)
+
+    def test_to_jsonl_occurrences_exports_one_row_per_occurrence(self):
+        text = "[ ] H Stretch repeat:daily on:2026-06-01 at:07:00 count:2 id:habit_stretch\n"
+
+        out, err, rc = run_cli(
+            "to-jsonl",
+            "--occurrences",
+            "--after",
+            "2026-06-01",
+            "--before",
+            "2026-06-02",
+            input_text=text,
+        )
+
+        self.assertEqual(rc, 0, err)
+        rows = [json.loads(line) for line in normalize_newlines(out).splitlines()]
+        self.assertEqual(["2026-06-01T07:00", "2026-06-02T07:00"], [row["occurrence_start"] for row in rows])
+        self.assertEqual(["habit_stretch", "habit_stretch"], [row["source_id"] for row in rows])
+
+    def test_to_json_occurrences_requires_bounded_range(self):
+        out, err, rc = run_cli(
+            "to-json",
+            "--occurrences",
+            input_text="[ ] H Stretch repeat:daily on:2026-06-01 at:07:00\n",
+        )
+
+        self.assertEqual("", out)
+        self.assertEqual(1, rc)
+        self.assertIn("--occurrences requires both --after and --before", err)
 
     def test_encrypt_decrypt_key_file(self):
         path = self._make_file("[N] N Secret note:hidden\n")

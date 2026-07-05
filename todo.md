@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x42)
+Last updated: 2026-07-05 (updated x44)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -56,10 +56,11 @@ Resolve these before implementing features that depend on them.
   and `J` journal entries should also record elapsed time, and add
   type-specific guidance to the spec.
 
-- [ ] Extend recurrence expansion beyond `agenda` and shared time filters:
-  specify expansion behavior for `stats`, occurrence exports (JSON/JSONL/CSV/
-  life.txt), and Web API/UI. Define how generated occurrences should be
-  represented without confusing them with stored source items.
+- [ ] Finalize occurrence materialization rules for life.txt output files:
+  CLI JSON/JSONL/CSV occurrence exports and Web agenda occurrence metadata are
+  implemented, but the format still needs explicit guidance for writing
+  generated occurrences back to `.life.txt` or `.generated/*.life.txt` files
+  without confusing them with stored source items.
 
 ---
 
@@ -83,22 +84,6 @@ file-level metadata. These must be consistent across all commands.
 
 Improvements to existing commands that affect daily workflow.
 
-- [ ] Unify filter options: `filter`, `agenda`, `stats`, `to-json`,
-  `to-jsonl`, `to-csv`, and `markdown` must share a single filter
-  implementation and accept identical option names and semantics. Any filter
-  added to one command must be available in all others without additional work.
-
-- [ ] Improve `assist` for complex fields: add flag support for Markdown `body:`
-  (multi-line input in interactive mode and `--body` flag for non-interactive),
-  `RRULE:` values, `repeat:` with `interval:`/`until:`/`count:`, duration
-  fields (`est:`, `elapsed:`), and link fields (`depends_on:`, `blocks:`,
-  `related:`). Ensure Tab-completion covers these fields in interactive mode.
-
-- [ ] Extend occurrence-aware exports beyond `agenda --format json|jsonl`:
-  define how generated recurrence occurrences should be exported to CSV,
-  life.txt, Web API responses, and generated occurrence files without
-  overwriting stored source items.
-
 - [ ] Verify `tui` behavior in narrow terminals with a real curses TTY.
   `filter` now has a `--width N` flag and a `--format table` output (bordered
   table, or a compact one-line form below 80 columns, matching `agenda` and
@@ -108,6 +93,10 @@ Improvements to existing commands that affect daily workflow.
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
   `docs/en/cli.md`, `docs/ja/cli.md`, and shell completion scripts in the
   same commit.
+
+- [ ] Add generated CLI reference checks: compare `argparse` help, shell
+  completion options, and `docs/en/cli.md` / `docs/ja/cli.md` examples so new
+  command flags cannot silently drift after future CLI changes.
 
 ---
 
@@ -155,7 +144,7 @@ CLI-native charts without external dependencies.
 
 - [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with full request and
   response examples for the remaining less-common routes, especially Git
-  integration and chart endpoints.
+  integration endpoints. Elapsed chart range examples are now documented.
 
 ### Statistics & Charts (Web UI)
 
@@ -163,43 +152,17 @@ CLI-native charts without external dependencies.
   now returns raw counts per bucket; confirm Chart.js renders bars correctly
   and the Y-axis label is meaningful (e.g., "completions / week").
 
-### Item Input Form (Web UI)
-
-- [ ] Add editor-side validation previews for parsed raw imports: show parser
-  warnings from `/api/items/parse` before the user creates the record.
-
 ### Record Display (Web UI)
 
 - [ ] Extend the drawer dependency mini graph beyond direct links: support
-  multi-hop expansion, layout selection, and clearer missing-node styling.
-
-### ID Links & Cross-References (Web UI)
-
-- [ ] Test ref-link badge scroll-to-deps on touch devices: the scroll
-  uses `scrollIntoView({behavior:'smooth'})` which may not work reliably
-  on iOS Safari — verify or replace with explicit `scrollTop` logic.
+  layout selection and clearer missing-node styling. Depth-2 multi-hop
+  expansion is implemented.
 
 ### Dependency & Reference Graph (Web UI & CLI)
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
   with mermaid/dot output (verify only reachable subgraph is rendered).
-
-### Recurrence & Notifications (Web UI)
-
-- [ ] Represent recurrence occurrences in the Web API/UI: distinguish source
-  items (stored in the file) from generated occurrences (computed at request
-  time) in `/api/agenda` and the GUI calendar view. Never write generated
-  occurrences back to the file.
-
-- [ ] Add a message-thread reply form in the drawer: post to
-  `/api/messages/id/{id}/reply`, refresh the thread in-place, and preserve the
-  active drawer selection.
-
-### New WebUI Improvements (Web UI) — Proposed
-
-- [ ] Extend item search highlight to detail text/body previews; titles are
-  already highlighted when a search filter is active.
 
 ### Git Integration (Web API)
 
@@ -208,11 +171,6 @@ CLI-native charts without external dependencies.
 ### Context Menu & Dark Mode (Web UI) — New
 
 ### Stats & Charts (Web UI) — New
-
-### Kiosk Mode (Web UI) — New
-
-- [ ] Add kiosk mode change highlighting: detect newly added or changed
-  records between refreshes and briefly emphasize only those cards.
 
 ### Item Selection (Web UI) — New
 
@@ -461,9 +419,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   that already have explicit `parent:` details.
 
 - [ ] Add recurrence tests: occurrence expansion for all five simple repeat
-  values, `interval:` / `until:` / `count:` edge cases, occurrence export
-  shapes, and long-range expansion performance (10 years of daily recurrence
-  must complete under 500 ms).
+  values, `interval:` / `until:` / `count:` edge cases, remaining occurrence
+  export shapes, and long-range expansion performance (10 years of daily
+  recurrence must complete under 500 ms).
 
 - [ ] Add real-export fixture tests for `import-ics --preset todoist` and
   `--preset github`: cover multiple Todoist CSV dialects, GitHub search API
@@ -489,6 +447,12 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   test-client coverage for all `/api/*` routes. Local tests now include
   TestClient cases for parse, generated/read-only, mood chart, graph, and
   message threads, but they skip when `fastapi` is not installed.
+
+- [ ] Add browser-level Web UI smoke tests with Playwright or an equivalent
+  driver: raw import live parse preview, drawer message replies, occurrence
+  badges, kiosk change highlighting, explicit ref-link scroll fallback, and
+  search highlighting in detail/body previews. Current tests cover static HTML
+  hooks and API behavior, not real DOM interaction.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that

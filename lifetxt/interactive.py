@@ -90,6 +90,7 @@ DETAIL_DESCRIPTIONS = {
     "loc": ("Location.", 'loc:"Meeting Room A"'),
     "priority": ("Priority.", "priority:A"),
     "est": ("Estimated duration.", "est:90m"),
+    "elapsed": ("Actual elapsed duration.", "elapsed:1h30m"),
     "tag": ("Tag. Repeat the key for multiple tags.", "tag:important"),
     "note": ("Short note.", 'note:"Check later"'),
     "body": ("Long body text for any type. Multiline life.txt uses continuation lines starting with |.", "body:short_text"),
@@ -271,9 +272,14 @@ def status_candidates():
 
 def detail_candidates(kind=None):
     keys = _detail_candidate_keys(kind)
-    return [key + ":" for key in keys] + ["?", "help", "?detail"] + [
-        "?" + key for key in keys
-    ] + ["?all"]
+    command_candidates = ["body<<"] if "body" in keys else []
+    return (
+        [key + ":" for key in keys]
+        + command_candidates
+        + ["?", "help", "?detail"]
+        + ["?" + key for key in keys]
+        + ["?all"]
+    )
 
 
 def print_help(topic=None):

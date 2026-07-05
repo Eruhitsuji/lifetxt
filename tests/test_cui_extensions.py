@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from lifetxt import cli, completion, fzf_helper, git_hook, stats, timer, tui
+from lifetxt.interactive import DETAIL_DESCRIPTIONS, detail_candidates
 from lifetxt.parser import parse_text
 
 
@@ -26,12 +27,63 @@ class CompletionTests(unittest.TestCase):
         self.assertIn("stats", script)
         self.assertIn("git-hook", script)
         self.assertIn("--type", script)
+        self.assertIn("--body-file", script)
+        self.assertIn("--body-stdin", script)
+        self.assertIn("--rrule", script)
+        self.assertIn("--notify-at", script)
+        self.assertIn("--occurrences", script)
 
     def test_prints_fish_install_instructions(self):
         text = completion.install_instructions("fish")
 
         self.assertIn("lifetxt.fish", text)
         self.assertIn("lifetxt completion fish", text)
+
+    def test_interactive_detail_candidates_include_multiline_body(self):
+        self.assertIn("body<<", detail_candidates("J"))
+        self.assertIn("elapsed", DETAIL_DESCRIPTIONS)
+
+
+class CliParserConsistencyTests(unittest.TestCase):
+    def test_filter_based_commands_share_item_filter_options(self):
+        parser = cli.build_parser()
+        expected = {
+            "--open",
+            "--status",
+            "--type",
+            "--project",
+            "--tag",
+            "--tag-all",
+            "--exclude-tag",
+            "--user",
+            "--team",
+            "--person",
+            "--owner",
+            "--assignee",
+            "--attendee",
+            "--sender",
+            "--recipient",
+            "--detail",
+            "--text",
+            "--after",
+            "--before",
+        }
+        for command in ("filter", "agenda", "stats", "to-json", "to-jsonl", "to-csv", "markdown"):
+            subparser = _subparser(parser, command)
+            options = {
+                option
+                for action in subparser._actions
+                for option in action.option_strings
+            }
+            missing = sorted(expected - options)
+            self.assertEqual([], missing, command)
+
+
+def _subparser(parser, name):
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices[name]
+    raise AssertionError("parser has no subcommands")
 
 
 class GitHookTests(unittest.TestCase):

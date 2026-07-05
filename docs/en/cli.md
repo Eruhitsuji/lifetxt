@@ -242,9 +242,9 @@ compatibility rules are:
   value for a key.
 - CSV conversion requires `status`, `type`, and `title` columns. Other non-empty
   columns become details; JSON array cells become repeated detail values.
-- `filter`, `agenda`, `to-json`, `to-jsonl`, and `to-csv` share the same item
-  filter implementation for status, type, project, tag, user, team, detail,
-  text, and time filters.
+- `filter`, `agenda`, `stats`, `to-json`, `to-jsonl`, `to-csv`, and
+  `markdown` share the same item filter implementation for status, type,
+  project, tag, user, team, detail, text, and time filters.
 - `check`, `ids`, `links`, and all converters use the same parser, so syntax
   accepted by one reading command is accepted by the others.
 - Multiple input files are parsed as one logical set for duplicate-ID and
@@ -268,7 +268,7 @@ CLI command coverage:
 | `tui` | yes | no | yes | dashboard-specific |
 | `fzf` | yes | `done` and `delete` actions | yes | yes |
 | `timer` | yes | `start` and `stop` update one item | yes | summary filters |
-| `stats` | yes | no | yes | type and project filters |
+| `stats` | yes | no | yes | yes |
 | `git-hook` | no | Git hooks only | no | no |
 | `completion` | no | optional script output | no | no |
 | `serve` | yes | yes through API/UI | yes | URL/API filters |
@@ -436,22 +436,32 @@ Options:
 | `path ...` | Input life.txt file(s), or `-` for stdin |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON |
+| `--occurrences` | Export computed agenda occurrence records instead of stored items |
 | `filter options` | Same item filters as `filter` |
 
 For file-backed input, each item object includes `_source_file` and
 `_source_line`. Multi-line records also include `_source_end_line`. These
 fields are metadata for tools and are ignored by `from-json`.
 
+With `--occurrences`, `to-json` exports computed agenda records instead of
+stored source items. This mode requires both `--after` and `--before`, expands
+supported `repeat:` / `RRULE:` records inside that bounded range, and keeps the
+same filters as `agenda`. Generated rows include `generated: true`,
+`source_id`, `occurrence_start`, `occurrence_end`, `occurrence_index`, and
+`repeat_rule` when available.
+
 ### 4.2 `to-jsonl`
 
 Convert life.txt to JSONL.
 
 ```sh
-python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [filter options]
+python -m lifetxt to-jsonl [path ...] [-o output.jsonl] [--occurrences] [filter options]
 ```
 
 JSONL rows use the same shape as `to-json`, including `_source_file` and line
-metadata when the input came from a file.
+metadata when the input came from a file. With `--occurrences`, each JSONL row
+is one computed agenda occurrence record and requires `--after` plus
+`--before`.
 
 ### 4.3 `from-json`
 
@@ -488,9 +498,15 @@ Repeated detail values are stored as a JSON array inside the cell. Multiline
 `body:` values are stored as normal quoted CSV cells.
 
 ```sh
-python -m lifetxt to-csv [path ...] [-o output.csv] [filter options]
+python -m lifetxt to-csv [path ...] [-o output.csv] [--occurrences] [filter options]
 python -m lifetxt to-csv life.txt --type journal --project research -o journal.csv
 ```
+
+With `--occurrences`, `to-csv` writes computed agenda occurrence rows with a
+stable schema: `when`, `key`, `line`, `source_id`, `occurrence_start`,
+`occurrence_end`, `occurrence_index`, `repeat_rule`, `status`, `type`, `title`,
+`blocked`, `blocked_by`, `details`, and `text`. This mode also requires both
+`--after` and `--before`.
 
 ### 4.6 `from-csv`
 
@@ -557,6 +573,7 @@ output.
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
 | `--after VALUE` | Keep items related to this time or later |
 | `--before VALUE` | Keep items related to this time or earlier |
+| `--occurrences` | For `to-json`, `to-jsonl`, and `to-csv`: export bounded agenda occurrences instead of stored items |
 
 `--after` and `--before` accept `now`, `YYYY-MM-DD`, or ISO-like datetimes such
 as `YYYY-MM-DDTHH:MM`, `YYYY-MM-DDTHH:MM:SS`,
@@ -577,6 +594,8 @@ python -m lifetxt to-json life.txt --assignee alice --pretty
 python -m lifetxt to-json life.txt --recipient alice --type message --pretty
 python -m lifetxt to-json life.txt --after now --type event -o future_events.json
 python -m lifetxt to-json "projects/**/*.life.txt" --team research --tag-all urgent,review
+python -m lifetxt to-json life.txt --occurrences --after 2026-06-01 --before 2026-06-30 --pretty
+python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026-06-30 -o occurrences.csv
 ```
 
 ## 5. iCalendar Import And Sync
@@ -860,11 +879,14 @@ Range matching rules:
 |---|---|
 | `--from VALUE` | Range start: `now`, date, or ISO-like datetime |
 | `--to VALUE` | Range end: `now`, date, or ISO-like datetime |
+| `--after VALUE` | Alias for `--from` in `agenda`; useful when sharing filter presets |
+| `--before VALUE` | Alias for `--to` in `agenda`; useful when sharing filter presets |
 | `--around VALUE` | Range center; defaults to `now` |
 | `--window VALUE` | Half-width for `--around`; defaults to `1h` |
 
-Use either `--from/--to` or `--around`. If no range is specified, the command
-uses `--around now --window 1h`.
+Use either `--from/--to`, `--after/--before`, or `--around`. Do not mix
+`--from` with `--after` or `--to` with `--before` in the same command. If no
+range is specified, the command uses `--around now --window 1h`.
 
 Duration values for `--window`:
 
@@ -883,6 +905,7 @@ Examples:
 
 ```sh
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06
+python -m lifetxt agenda life.txt --after 2026-06-06 --before 2026-06-06
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00 --to 2026-06-06T18:00
 python -m lifetxt agenda life.txt --from 2026-06-06T13:00:30.25+09:00 --to 2026-06-06T18:00:00.5+09:00
 python -m lifetxt agenda life.txt --around now --window 2h
@@ -972,8 +995,10 @@ python -m lifetxt assist [options]
 ```sh
 python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
 python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
-python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify_at 2026-06-06T09:00
+python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify-at 2026-06-06T09:00
 python -m lifetxt assist --type diary --title "Research day" --on 2026-06-23 --mood good --body "Read papers."
+python -m lifetxt assist --type journal --title "Research day" --on 2026-06-23 --body-file notes.md
+python -m lifetxt assist --type habit --title "Review" --rrule "FREQ=WEEKLY;BYDAY=MO;COUNT=4"
 ```
 
 Core options:
@@ -987,6 +1012,9 @@ Core options:
 | `-o`, `--output` | Append generated line to a file |
 | `--append` | Append generated line to a file |
 | `--no-check` | Skip validation of the generated line |
+| `--body-file FILE` | Read a multiline `body:` value from a UTF-8 file |
+| `--body-stdin` | Read a multiline `body:` value from standard input |
+| `--rrule VALUE` | Set `repeat:RRULE:...`; the `RRULE:` prefix is optional |
 
 Known detail keys also have direct flags. Each can be repeated:
 
@@ -994,9 +1022,12 @@ Known detail keys also have direct flags. Each can be repeated:
 --id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat --interval --until --count
---project --context --loc --priority --est --tag --note --body --mood --weather --url
+--project --context --loc --priority --est --elapsed --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
+
+For detail keys that contain underscores, hyphenated aliases are also accepted:
+for example `--notify-at`, `--notify-from`, and `--snooze-until`.
 
 ### 10.2 Interactive Create
 
@@ -1015,6 +1046,7 @@ Interactive help:
 | `?detail` | Suggested detail keys |
 | `?all` | All known detail keys |
 | `?due` | Help for a detail key |
+| `body<<` | Enter a multiline `body:` value; finish with a single `.` line |
 
 When the terminal supports it, Tab completes type, status, and detail-key
 candidates. Up/Down recall previous inputs. Use `--no-completion` to disable
@@ -1345,6 +1377,7 @@ and project completion rates.
 python -m lifetxt stats life.txt
 python -m lifetxt stats life.txt --from 2026-06-01 --to 2026-06-30
 python -m lifetxt stats life.txt --project research --format json
+python -m lifetxt stats life.txt --tag focus --assignee alice --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 python -m lifetxt stats life.txt --width 60
 ```
@@ -1355,8 +1388,7 @@ Options:
 |---|---|
 | `--from DATE` | Start date; defaults to 29 days before `--to` |
 | `--to DATE` | End date; defaults to today |
-| `--type TYPE` | Restrict input items by type or alias |
-| `--project PROJECT` | Restrict input items by `project:` |
+| `filter options` | Same item filters as `filter`, including status, type, project, tag, user, team, people, detail, text, and time filters |
 | `--group daily|weekly|monthly` | Bucket mood trend output |
 | `--format text|json` | Output format |
 | `--width N` | Use compact text output for narrow terminal widths |

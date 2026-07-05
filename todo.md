@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x46)
+Last updated: 2026-07-05 (updated x47)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -202,10 +202,10 @@ CLI-native charts without external dependencies.
   and adjust token values where they fall below 4.5:1 for body-size text.
 
 - [ ] Consider persisting UI preferences (density, graph layout, dark mode,
-  collapsed side sections) server-side per user instead of `localStorage`,
-  so settings follow the user across browsers. Density toggle, theme, and
-  graph layout currently persist in `localStorage` only; collapsed side
-  sections reset on every reload.
+  active workspace panel) server-side per user instead of `localStorage`, so
+  settings follow the user across browsers. Density toggle, theme, graph
+  layout, and the active workspace panel currently persist locally or through
+  URL parameters.
 
 - [ ] Add a `?theme=dark|light` note to the kiosk documentation: the URL
   parameter now forces the theme, which matters for wall-mounted displays
@@ -519,8 +519,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   The 2026-07 redesign added more surfaces to cover: top-bar view tabs
   (Items/Messages/Status/Kiosk switching), density toggle persistence,
   skeleton-loading rows, contextual empty states ("clear filters" vs. "quick
-  add"), the back-to-top button, `?theme=dark|light` forcing, and sticky
-  side-column behavior. Current tests cover static HTML hooks and API
+  add"), the back-to-top button, `?theme=dark|light` forcing, and the
+  workspace tab layout at mobile, tablet, and wide desktop widths. Current
+  tests cover static HTML hooks and API
   behavior, not real DOM interaction.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning

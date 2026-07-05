@@ -1970,6 +1970,7 @@ HTML_PAGE = r"""<!doctype html>
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 1rem;
       min-height: var(--topbar-h);
       padding: .45rem clamp(.75rem, 3vw, 1.5rem);
@@ -1981,7 +1982,7 @@ HTML_PAGE = r"""<!doctype html>
     @supports not (background: color-mix(in srgb, red 50%, blue)) {
       header { background: var(--panel); }
     }
-    .brand { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+    .brand { display: flex; align-items: center; gap: .6rem; min-width: 0; flex: 1 1 16rem; }
     .brand-mark {
       display: inline-flex;
       align-items: center;
@@ -1997,7 +1998,7 @@ HTML_PAGE = r"""<!doctype html>
       box-shadow: var(--shadow-1);
     }
     h1 { margin: 0; font-size: 1.15rem; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
-    .subtitle { margin: 0; color: var(--muted); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16rem; }
+    .subtitle { margin: 0; color: var(--muted); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(12rem, 24vw, 22rem); }
     /* ── View tabs ── */
     .view-tabs {
       display: flex;
@@ -2006,7 +2007,10 @@ HTML_PAGE = r"""<!doctype html>
       border: 1px solid var(--line);
       border-radius: 999px;
       background: var(--panel-2);
+      overflow-x: auto;
+      scrollbar-width: none;
     }
+    .view-tabs::-webkit-scrollbar { display: none; }
     .view-tab {
       border: none;
       background: none;
@@ -2023,9 +2027,9 @@ HTML_PAGE = r"""<!doctype html>
     .view-tab.active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
     main {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);
+      grid-template-columns: minmax(0, 1fr);
       gap: 1.1rem;
-      max-width: 1240px;
+      max-width: 1360px;
       margin: 0 auto;
       padding: 1.1rem clamp(.75rem, 3vw, 1.5rem) 2.5rem;
     }
@@ -2053,6 +2057,11 @@ HTML_PAGE = r"""<!doctype html>
       gap: .5rem;
       flex-wrap: wrap;
       align-items: center;
+    }
+    header > .toolbar {
+      flex: 1 1 22rem;
+      justify-content: flex-end;
+      min-width: 0;
     }
     /* ── Form controls ── */
     input, select, textarea, button {
@@ -2660,8 +2669,71 @@ HTML_PAGE = r"""<!doctype html>
     .drawer-edit-form label { display:grid; gap:.25rem; font-size:.85rem; color:var(--muted); }
     .drawer-edit-form input, .drawer-edit-form select { width:100%; box-sizing:border-box; }
     .drawer-edit-form textarea { width:100%; box-sizing:border-box; min-height:6rem; font-family:monospace; font-size:.82rem; resize:vertical; }
-    /* ── Collapsible side sections ───────────────────────────────── */
-    .side section.collapsed .section-body { display:none; }
+    /* ── Workspace panels ────────────────────────────────────────── */
+    .workspace {
+      order: -1;
+      display: grid;
+      gap: .75rem;
+      min-width: 0;
+    }
+    .workspace-head {
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) auto;
+      gap: .75rem;
+      align-items: center;
+      padding: .75rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      background: linear-gradient(135deg, var(--panel), var(--panel-2));
+      box-shadow: var(--shadow-1);
+    }
+    .workspace-title {
+      display: grid;
+      gap: .1rem;
+      min-width: 0;
+    }
+    .workspace-title h2 {
+      color: var(--ink);
+      letter-spacing: -.01em;
+      text-transform: none;
+      font-size: .98rem;
+    }
+    .workspace-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+    .workspace-tabs {
+      display: flex;
+      gap: .3rem;
+      align-items: center;
+      justify-content: flex-end;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      padding-bottom: .05rem;
+    }
+    .workspace-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      white-space: nowrap;
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: .38rem .72rem;
+      font-size: .82rem;
+      font-weight: 700;
+    }
+    .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+    .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+    .workspace-panel { display: none; }
+    .workspace-panel.workspace-active { display: block; animation: fadeSlideIn .14s ease; }
+    .workspace-panel.collapsed .section-body { display: block; }
+    .workspace-panel .section-collapse-btn { display: none; }
+    .workspace-panel .section-head {
+      padding-block: .65rem;
+    }
     .section-collapse-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.82rem; padding:.1rem .35rem; border-radius:.25rem; line-height:1.2; }
     .section-collapse-btn:hover { background:var(--soft); color:var(--text); }
     /* ── Preset clear button ─────────────────────────────────────── */
@@ -2687,15 +2759,14 @@ HTML_PAGE = r"""<!doctype html>
     .source { color: var(--muted); font-size: .74rem; white-space: nowrap; font-family: var(--font-mono); opacity: .85; }
     .side {
       display: grid;
-      gap: 1rem;
+      gap: .75rem;
       align-content: start;
       min-width: 0;
-      position: sticky;
-      top: calc(var(--topbar-h) + 1rem);
-      max-height: calc(100vh - var(--topbar-h) - 2rem);
-      overflow-y: auto;
+      position: static;
+      max-height: none;
+      overflow: visible;
       scrollbar-width: thin;
-      padding-right: 2px;
+      padding-right: 0;
     }
     form.stack { grid-template-columns: 1fr 1fr; }
     form.stack label, form.stack textarea, form.stack .actions, .wide { grid-column: 1 / -1; }
@@ -2766,28 +2837,8 @@ HTML_PAGE = r"""<!doctype html>
       border-radius: var(--r-md);
       background: var(--panel-2);
     }
-    .messages-mode main,
-    .status-mode main {
-      grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
-    }
-    .messages-mode .status-section,
-    .messages-mode .agenda-section,
-    .status-mode .item-section,
-    .status-mode .editor-section,
-    .status-mode .agenda-section,
-    .status-mode .notifications-section {
-      display: none;
-    }
-    .status-mode main {
-      grid-template-columns: minmax(0, 42rem);
-      justify-content: center;
-    }
-    .status-mode .side {
-      display: block;
-    }
-    .status-mode .status-section {
-      display: block;
-    }
+    .messages-mode .workspace-title p::after { content: " Message filters are active."; }
+    .status-mode .workspace-title p::after { content: " Status filters are active."; }
     .display-mode {
       background: #0f1412;
       color: #edf4ef;
@@ -2809,7 +2860,7 @@ HTML_PAGE = r"""<!doctype html>
     .display-mode .subtitle { color: #aebbb4; }
     .display-mode main {
       max-width: none;
-      grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+      grid-template-columns: minmax(0, 1fr);
       padding: 0 2rem 2rem;
     }
     .display-mode section,
@@ -2819,7 +2870,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     .display-mode .section-head { border-color: #31413b; }
     .display-mode .toolbar,
-    .display-mode .editor-section,
+    .display-mode .workspace,
     .display-mode header button { display: none; }
     .display-mode .pill {
       background: #23322d;
@@ -3097,18 +3148,20 @@ HTML_PAGE = r"""<!doctype html>
       .item.overdue, .item.due-soon { border-left: 3px solid #888; }
     }
     @media (max-width: 1080px) {
-      .view-tabs { display: none; }
       .subtitle { display: none; }
+      .view-tabs {
+        order: 3;
+        flex: 1 1 100%;
+      }
+      header > .toolbar {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+      }
     }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
-      .side {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        position: static;
-        max-height: none;
-        overflow: visible;
-      }
-      .side section:first-child { grid-column: 1 / -1; }
+      .workspace-head { grid-template-columns: 1fr; }
+      .workspace-tabs { justify-content: flex-start; }
       .display-mode main { grid-template-columns: 1fr; }
     }
     @media (max-width: 680px) {
@@ -3119,7 +3172,9 @@ HTML_PAGE = r"""<!doctype html>
       .search-wrap { flex: 1 1 100%; }
       .search-wrap input { width: 100%; }
       .items-controls > * { flex: 1 1 40%; }
-      .side { grid-template-columns: 1fr; }
+      .workspace-head { padding: .65rem; }
+      .workspace-tabs { margin-inline: -.15rem; }
+      .workspace-tab { padding: .32rem .6rem; font-size: .78rem; }
       .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
       .item-check { display: none; }
       .source { grid-column: 1 / -1; }
@@ -3148,8 +3203,8 @@ HTML_PAGE = r"""<!doctype html>
       <button class="view-tab" data-view="kiosk" onclick="switchView('kiosk')">🖥️ Kiosk</button>
     </nav>
     <div class="toolbar">
-      <select id="view-preset-select" title="Switch named view preset" onchange="applyViewPreset(this.value)">
-        <option value="">— View —</option>
+      <select id="view-preset-select" aria-label="Saved view preset" title="Saved URL presets from config" onchange="applyViewPreset(this.value)">
+        <option value="">Saved view…</option>
       </select>
       <span id="preset-name-label" style="display:none;font-size:.78rem;color:var(--muted)"></span>
       <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
@@ -3253,8 +3308,22 @@ HTML_PAGE = r"""<!doctype html>
       </div>
       <div id="items" class="content"></div>
     </section>
-    <div class="side">
-      <section class="editor-section">
+    <div class="side workspace" id="workspace">
+      <div class="workspace-head">
+        <div class="workspace-title">
+          <h2>Workspace</h2>
+          <p>Use these panels for editing, agenda, team state, notifications, charts, and graph review.</p>
+        </div>
+        <nav class="workspace-tabs" aria-label="Workspace panels">
+          <button type="button" class="workspace-tab" data-workspace="new" onclick="switchWorkspace('new')">＋ New</button>
+          <button type="button" class="workspace-tab" data-workspace="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
+          <button type="button" class="workspace-tab" data-workspace="status" onclick="switchWorkspace('status')">👥 Status</button>
+          <button type="button" class="workspace-tab" data-workspace="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
+          <button type="button" class="workspace-tab" data-workspace="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
+          <button type="button" class="workspace-tab" data-workspace="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+        </nav>
+      </div>
+      <section class="editor-section workspace-panel" data-workspace="new">
         <div class="section-head">
           <h2 id="editor-heading">New Record</h2>
           <div style="display:flex;gap:.35rem;align-items:center">
@@ -3302,7 +3371,7 @@ HTML_PAGE = r"""<!doctype html>
           </form>
         </div>
       </section>
-      <section class="stats-section collapsed">
+      <section class="stats-section collapsed workspace-panel" data-workspace="stats">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">📊</span>Statistics</h2>
           <div style="display:flex;gap:.35rem;align-items:center">
@@ -3335,7 +3404,7 @@ HTML_PAGE = r"""<!doctype html>
           <div id="stats-breakdown" style="padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
         </div>
       </section>
-      <section class="graph-section collapsed">
+      <section class="graph-section collapsed workspace-panel" data-workspace="graph">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">🕸️</span>Graph</h2>
           <div style="display:flex;gap:.35rem;align-items:center">
@@ -3360,7 +3429,7 @@ HTML_PAGE = r"""<!doctype html>
           <div id="graph-panel" class="graph-panel"><div class="empty">Open this panel to load the ID graph.</div></div>
         </div>
       </section>
-      <section class="agenda-section">
+      <section class="agenda-section workspace-panel" data-workspace="agenda">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">📅</span>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
           <button id="agenda-blocked-btn" class="secondary agenda-blocked-btn" style="font-size:.72rem;padding:.18rem .5rem" onclick="toggleAgendaBlocked()" title="Cycle: show all / only blocked / hide blocked">⚡ All</button>
@@ -3374,7 +3443,7 @@ HTML_PAGE = r"""<!doctype html>
           <div id="agenda" class="stack"></div>
         </div>
       </section>
-      <section class="status-section collapsed">
+      <section class="status-section collapsed workspace-panel" data-workspace="status">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">👥</span>Status</h2>
           <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
@@ -3383,7 +3452,7 @@ HTML_PAGE = r"""<!doctype html>
           <div id="status" class="stack"></div>
         </div>
       </section>
-      <section class="notifications-section collapsed">
+      <section class="notifications-section collapsed workspace-panel" data-workspace="notifications">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">🔔</span>Notifications</h2>
           <div style="display:flex;gap:.35rem;align-items:center">
@@ -3456,7 +3525,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>n</td><td>New item (focus editor title)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
         <tr><td>r</td><td>Refresh all</td></tr>
-        <tr><td>s</td><td>Toggle statistics panel</td></tr>
+        <tr><td>s</td><td>Open statistics workspace</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
         <tr><td>g</td><td>Jump to line number (opens drawer)</td></tr>
         <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
@@ -3610,6 +3679,8 @@ HTML_PAGE = r"""<!doctype html>
       const params = query();
       params.delete("mode");
       params.delete("view");
+      params.delete("workspace");
+      params.delete("panel");
       if (view) params.set("mode", view);
       history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
       applyUrlToControls();
@@ -3620,6 +3691,53 @@ HTML_PAGE = r"""<!doctype html>
       document.querySelectorAll(".view-tab").forEach(btn => {
         btn.classList.toggle("active", (btn.dataset.view || "") === v);
       });
+    }
+    const WORKSPACE_PANELS = new Set(["new", "agenda", "status", "notifications", "stats", "graph"]);
+    function currentWorkspace() {
+      const params = query();
+      const explicit = firstParam(params, ["workspace", "panel"], "").toLowerCase();
+      if (WORKSPACE_PANELS.has(explicit)) return explicit;
+      if (currentView() === "status") return "status";
+      if (currentView() === "messages") return "notifications";
+      const stored = localStorage.getItem("lifetxt.workspace") || "";
+      return WORKSPACE_PANELS.has(stored) ? stored : "new";
+    }
+    function switchWorkspace(panel, historyMode = "push") {
+      const name = WORKSPACE_PANELS.has(panel) ? panel : "new";
+      const params = query();
+      params.set("workspace", name);
+      const method = historyMode === "replace" ? "replaceState" : "pushState";
+      history[method](null, "", `${location.pathname}?${params.toString()}`);
+      localStorage.setItem("lifetxt.workspace", name);
+      activateWorkspace(name);
+    }
+    function activateWorkspace(panel) {
+      const name = WORKSPACE_PANELS.has(panel) ? panel : "new";
+      document.querySelectorAll(".workspace-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.workspace === name);
+      });
+      document.querySelectorAll(".workspace-panel").forEach(sec => {
+        const active = sec.dataset.workspace === name;
+        sec.classList.toggle("workspace-active", active);
+        if (active) {
+          sec.classList.remove("collapsed");
+          const btn = sec.querySelector(".section-collapse-btn");
+          if (btn) { btn.textContent = "▾"; btn.title = "Collapse"; }
+        }
+      });
+      if (name === "stats" && !statsLoaded) {
+        statsLoaded = true;
+        loadChart("tasks");
+        loadStatsBreakdown();
+      }
+      if (name === "graph" && !graphLoaded) loadGraphPanel();
+      if (name === "notifications") {
+        const btn = document.getElementById("notif-btn");
+        if (btn) btn.classList.add("btn-active");
+      } else {
+        const btn = document.getElementById("notif-btn");
+        if (btn) btn.classList.remove("btn-active");
+      }
     }
     function isDisplayMode() {
       const params = query();
@@ -3660,6 +3778,7 @@ HTML_PAGE = r"""<!doctype html>
       document.body.classList.toggle("status-mode", currentView() === "status");
       document.body.classList.toggle("kiosk-mode", isKioskMode());
       syncViewTabs();
+      activateWorkspace(currentWorkspace());
       _kioskApply();
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       const fallbackKind = currentView() === "messages" ? "M" : (currentView() === "status" ? "S" : "");
@@ -4260,6 +4379,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     function selectItem(item) {
       if (isDisplayMode()) return;
+      switchWorkspace("new", "replace");
       selectedItem = item;
       document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only record";
       document.getElementById("edit-status").value = item.status;
@@ -4275,6 +4395,7 @@ HTML_PAGE = r"""<!doctype html>
       renderItems(currentItems);
     }
     function newItem() {
+      switchWorkspace("new", "replace");
       selectedItem = null;
       document.getElementById("editor-heading").textContent = "New Record";
       document.getElementById("edit-status").value = "[ ]";
@@ -5733,22 +5854,11 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     function toggleStats() {
+      switchWorkspace("stats");
       const sec = document.querySelector(".stats-section");
-      if (!sec) return;
-      const willExpand = sec.classList.contains("collapsed");
-      if (willExpand) {
-        sec.classList.remove("collapsed");
-        const btn = sec.querySelector(".section-collapse-btn");
-        if (btn) { btn.textContent = "▾"; btn.title = "Collapse"; }
-        if (!statsLoaded) { statsLoaded = true; loadChart("tasks"); loadStatsBreakdown(); }
-        sec.scrollIntoView({behavior: "smooth", block: "nearest"});
-      } else {
-        sec.classList.add("collapsed");
-        const btn = sec.querySelector(".section-collapse-btn");
-        if (btn) { btn.textContent = "▸"; btn.title = "Expand"; }
-      }
+      if (sec) sec.scrollIntoView({behavior: "smooth", block: "nearest"});
       const headerBtn = document.getElementById("stats-btn");
-      if (headerBtn) headerBtn.classList.toggle("btn-active", willExpand);
+      if (headerBtn) headerBtn.classList.add("btn-active");
     }
 
     async function loadStatsBreakdown() {
@@ -5786,17 +5896,14 @@ HTML_PAGE = r"""<!doctype html>
     function toggleNotifPanel() {
       const sec = document.querySelector(".notifications-section");
       if (!sec) { enableBrowserNotifications(); return; }
-      const wasCollapsed = sec.classList.contains("collapsed");
-      notifPanelVisible = wasCollapsed;
-      sec.classList.toggle("collapsed", !notifPanelVisible);
-      const colBtn = sec.querySelector(".section-collapse-btn");
-      if (colBtn) { colBtn.textContent = notifPanelVisible ? "▾" : "▸"; colBtn.title = notifPanelVisible ? "Collapse" : "Expand"; }
+      notifPanelVisible = true;
+      switchWorkspace("notifications");
       const btn = document.getElementById("notif-btn");
       if (btn) {
-        btn.classList.toggle("btn-active", notifPanelVisible);
+        btn.classList.add("btn-active");
         updateNotifBtnLabel();
       }
-      if (notifPanelVisible && Notification.permission === "default") {
+      if (("Notification" in window) && Notification.permission === "default") {
         enableBrowserNotifications();
       }
     }

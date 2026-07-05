@@ -116,6 +116,8 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、表示mode指定
+- New Record、Agenda、Status、Notifications、Statistics、Graph を切り替える
+  上部 workspace bar
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
@@ -134,8 +136,10 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 `.generated/google_calendar.life.txt` など生成ファイル由来の item は read-only として
 表示します。
 
-layout は responsive です。広い画面では item 一覧と editor を横並びにし、狭い
-ブラウザウィンドウでは縦並びに切り替えます。
+layout は responsive です。item list は読みやすい 1 カラムに固定し、従来の右側
+tool 群は上部 workspace bar に集約しています。New Record、Statistics、Graph、
+Agenda、Status、Notifications は 1 つずつ開くため、狭い画面でも内容が隠れにくく
+なります。
 
 ## URL parameter
 
@@ -146,6 +150,7 @@ GUI は読み込み時に query parameter を読みます。bookmark、常時表
 
 ```txt
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
+http://127.0.0.1:8000/?workspace=agenda&around=now&window=1d
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 ```
@@ -159,6 +164,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `view=messages` | Message専用に近いlayout。type `M` をdefault filterにする |
 | `view=status` | Status専用に近いlayout。active status表示を強調する |
 | `preset=NAME` | config `views.NAME` のURL parameterを適用 |
+| `workspace=new|agenda|status|notifications|stats|graph` | item list 上部の workspace panel を開く |
 | `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
 | `kind=E` または `type=E` | life.txt type で filter |
 | `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
@@ -184,14 +190,15 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 ## Browser notification
 
 GUI は `/api/notifications` を polling し、due になった type `M` record を
-Notifications panel に表示します。browser notification はユーザが許可したあとに使えます。
+Notifications workspace panel に表示します。上部 toolbar の `Notifications` または
+workspace tab から開けます。browser notification はユーザが許可したあとに使えます。
 
 通知許可が blocked の場合、JavaScript から再許可ダイアログを出すことはできません。
 その場合は panel に browser の site settings から通知を許可し直す案内を表示します。
 
 ## Graph と Message thread
 
-Graph panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。
+Graph workspace panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。
 node をクリックすると該当 record を drawer で開けます。drawer 内にも選択 item の
 小さな依存 graph を表示します。drawer graph は depth 2 の subgraph を読み込むため、
 間接的な blocker や related record も drawer 内で確認できます。

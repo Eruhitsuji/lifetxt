@@ -155,6 +155,8 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and display mode
+- A top workspace bar for New Record, Agenda, Status, Notifications,
+  Statistics, and Graph panels
 - Showing near-current agenda records
 - Showing active status / presence records
 - Showing due message notifications
@@ -175,8 +177,10 @@ The browser GUI supports:
 Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
-The layout is responsive: the editor sits beside the item list on wide screens
-and moves below it on narrower browser windows.
+The layout is responsive: the main item list stays in one readable column, and
+the former right-side tools are collected into a top workspace bar. Only one
+workspace panel is open at a time, so New Record, Statistics, Graph, Agenda,
+Status, and Notifications remain visible on narrow and wide screens.
 
 ## URL Parameters
 
@@ -187,6 +191,7 @@ Examples:
 
 ```txt
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
+http://127.0.0.1:8000/?workspace=agenda&around=now&window=1d
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 ```
@@ -200,6 +205,7 @@ Supported parameters:
 | `view=messages` | Message-focused layout with type `M` as the default item filter |
 | `view=status` | Status-focused layout with active status records emphasized |
 | `preset=NAME` | Apply URL parameters from config `views.NAME` |
+| `workspace=new|agenda|status|notifications|stats|graph` | Open a workspace panel above the item list |
 | `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
 | `kind=E` or `type=E` | Filter by life.txt type |
 | `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
@@ -225,8 +231,9 @@ Supported parameters:
 ## Browser Notifications
 
 The GUI polls `/api/notifications` and shows due type `M` records in the
-Notifications panel. Click `Enable Notifications` to request browser permission
-and receive native browser notifications.
+Notifications workspace panel. Click `Notifications` in the top toolbar or the
+workspace tab to open it. Click `Enable Notifications` to request browser
+permission and receive native browser notifications.
 
 Notification selection uses:
 
@@ -248,7 +255,7 @@ the browser site settings for the current URL and allow notifications there.
 
 ## Graph And Threads
 
-The Graph side panel reads `/api/graph` and renders a compact SVG reference
+The Graph workspace panel reads `/api/graph` and renders a compact SVG reference
 graph without external dependencies. Click a node to open that record in the
 detail drawer. The drawer also shows a smaller graph for the selected item when
 it has ID references; the drawer graph loads a depth-2 subgraph so indirect

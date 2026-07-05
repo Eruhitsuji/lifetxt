@@ -1,34 +1,66 @@
 import os
 import sys
 
+from .model import KNOWN_KEYS, STATUS_ALIASES, TYPE_ALIASES, VALID_STATUSES, VALID_TYPES
+
 
 COMMANDS = (
     "check",
     "ids",
     "links",
     "sources",
-    "markdown",
     "to-json",
     "to-jsonl",
     "to-csv",
-    "from-json",
-    "from-jsonl",
-    "from-csv",
+    "markdown",
     "import-ics",
     "sync-ics",
     "filter",
+    "from-json",
+    "from-jsonl",
+    "from-csv",
     "status",
     "notify",
     "agenda",
     "assist",
-    "serve",
-    "config",
+    "archive",
+    "quick",
+    "done",
+    "batch",
+    "summary",
+    "init",
+    "doctor",
+    "assign",
+    "health",
+    "inbox",
+    "cleanup",
+    "undo",
+    "review",
+    "who",
+    "search",
+    "snapshot",
+    "lint",
+    "diff",
+    "plot",
+    "export-heatmap",
+    "migrate",
+    "from-markdown",
+    "deps",
+    "tag",
+    "watch",
+    "encrypt",
+    "decrypt",
+    "share",
+    "digest",
+    "template",
     "tui",
     "fzf",
     "timer",
     "stats",
     "git-hook",
     "completion",
+    "serve",
+    "config",
 )
 
 COMMON_OPTIONS = (
@@ -36,10 +68,25 @@ COMMON_OPTIONS = (
     "--help",
 )
 
+
+def _unique_ordered(values):
+    seen = []
+    for value in values:
+        if value not in seen:
+            seen.append(value)
+    return seen
+
+
+# Derived from lifetxt/model.py so completion candidates stay in sync with
+# the canonical type/status alias and detail-key definitions instead of a
+# hand-maintained, easily stale copy.
+_TYPE_ALIAS_WORDS = _unique_ordered(name for name in TYPE_ALIASES if len(name) > 1)
+_STATUS_ALIAS_WORDS = _unique_ordered(name for name in STATUS_ALIASES if len(name) > 1)
+
 OPTION_VALUES = {
-    "--type": "task event deadline reminder habit note status message journal T E D R H N S M J",
-    "--status": "todo done progress cancel defer pending note [ ] [x] [/] [-] [>] [?] [N]",
-    "--format": "text life html json jsonl",
+    "--type": " ".join(_TYPE_ALIAS_WORDS + list(VALID_TYPES)),
+    "--status": " ".join(_STATUS_ALIAS_WORDS + list(VALID_STATUSES)),
+    "--format": "text life html json jsonl markdown table",
     "--window": "1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y",
     "--around": "now today",
 }
@@ -114,6 +161,12 @@ complete -F _lifetxt_completion lifetxt
 def zsh_completion():
     commands = " ".join(COMMANDS)
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
+    type_values = OPTION_VALUES["--type"]
+    status_values = " ".join("'%s'" % value for value in VALID_STATUSES)
+    status_words = " ".join(_STATUS_ALIAS_WORDS)
+    format_values = OPTION_VALUES["--format"]
+    window_values = OPTION_VALUES["--window"]
+    around_values = OPTION_VALUES["--around"]
     return """#compdef lifetxt
 # lifetxt zsh completion
 _lifetxt() {
@@ -121,11 +174,11 @@ _lifetxt() {
   commands=(%(commands)s)
   options=(%(options)s)
   case "$words[CURRENT-1]" in
-    --type) _values 'type' task event deadline reminder habit note status message journal T E D R H N S M J; return ;;
-    --status) _values 'status' todo done progress cancel defer pending note '[ ]' '[x]' '[/]' '[-]' '[>]' '[?]' '[N]'; return ;;
-    --format) _values 'format' text life html json jsonl; return ;;
-    --window) _values 'window' 1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y; return ;;
-    --around) _values 'around' now today; return ;;
+    --type) _values 'type' %(type_values)s; return ;;
+    --status) _values 'status' %(status_words)s %(status_values)s; return ;;
+    --format) _values 'format' %(format_values)s; return ;;
+    --window) _values 'window' %(window_values)s; return ;;
+    --around) _values 'around' %(around_values)s; return ;;
   esac
   if [[ CURRENT -eq 2 ]]; then
     _values 'command' $commands
@@ -136,7 +189,16 @@ _lifetxt() {
   fi
 }
 _lifetxt "$@"
-""" % {"commands": commands, "options": options}
+""" % {
+        "commands": commands,
+        "options": options,
+        "type_values": type_values,
+        "status_words": status_words,
+        "status_values": status_values,
+        "format_values": format_values,
+        "window_values": window_values,
+        "around_values": around_values,
+    }
 
 
 def fish_completion():
@@ -146,11 +208,12 @@ def fish_completion():
     for option in sorted(set(COMMON_OPTIONS + _all_options())):
         if option.startswith("--"):
             lines.append("complete -c lifetxt -l %s" % option[2:])
-    lines.append("complete -c lifetxt -l type -a 'task event deadline reminder habit note status message journal T E D R H N S M J'")
-    lines.append("complete -c lifetxt -l status -a 'todo done progress cancel defer pending note \"[ ]\" \"[x]\" \"[/]\" \"[-]\" \"[>]\" \"[?]\" \"[N]\"'")
-    lines.append("complete -c lifetxt -l format -a 'text life html json jsonl'")
-    lines.append("complete -c lifetxt -l window -a '1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y'")
-    lines.append("complete -c lifetxt -l around -a 'now today'")
+    status_values = " ".join(['"%s"' % value for value in VALID_STATUSES])
+    lines.append("complete -c lifetxt -l type -a '%s'" % OPTION_VALUES["--type"])
+    lines.append("complete -c lifetxt -l status -a '%s %s'" % (" ".join(_STATUS_ALIAS_WORDS), status_values))
+    lines.append("complete -c lifetxt -l format -a '%s'" % OPTION_VALUES["--format"])
+    lines.append("complete -c lifetxt -l window -a '%s'" % OPTION_VALUES["--window"])
+    lines.append("complete -c lifetxt -l around -a '%s'" % OPTION_VALUES["--around"])
     return "\n".join(lines) + "\n"
 
 
@@ -184,63 +247,77 @@ lifetxt completion fish > ~/.config/fish/completions/lifetxt.fish
 """
 
 
+# Structural CLI flags that are not life.txt detail keys (those come from
+# lifetxt/model.py's KNOWN_KEYS below) and so cannot be derived from model.py.
+_STRUCTURAL_OPTIONS = (
+    "--open",
+    "--status",
+    "--type",
+    "--project",
+    "--tag",
+    "--tag-all",
+    "--exclude-tag",
+    "--user",
+    "--team",
+    "--person",
+    "--owner",
+    "--assignee",
+    "--attendee",
+    "--sender",
+    "--recipient",
+    "--detail",
+    "--text",
+    "--after",
+    "--before",
+    "--from",
+    "--to",
+    "--around",
+    "--window",
+    "--width",
+    "--limit",
+    "--canonical",
+    "--format",
+    "--pretty",
+    "--output",
+    "--append",
+    "--update",
+    "--line",
+    "--match-id",
+    "--action",
+    "--tool",
+    "--preview",
+    "--no-preview",
+    "--id",
+    "--repo-dir",
+    "--files",
+    "--force",
+    "--field",
+    "--week",
+    "--month",
+    "--title",
+    "--url-env",
+    "--key-env",
+    "--key-file",
+    "--dry-run",
+    "--backup",
+    "--yes",
+    "--name",
+    "--timezone",
+    "--config-output",
+    "--regex",
+    "--in",
+    "--highlight",
+    "--count",
+    "--compare",
+    "--group",
+    "--interval",
+    "--clear",
+    "--path",
+)
+
+
 def _all_options():
-    return (
-        "--open",
-        "--status",
-        "--type",
-        "--project",
-        "--tag",
-        "--tag-all",
-        "--exclude-tag",
-        "--user",
-        "--team",
-        "--person",
-        "--owner",
-        "--assignee",
-        "--attendee",
-        "--sender",
-        "--recipient",
-        "--detail",
-        "--due",
-        "--do",
-        "--done",
-        "--on",
-        "--at",
-        "--state",
-        "--notify_at",
-        "--notify_from",
-        "--notify_to",
-        "--elapsed",
-        "--est",
-        "--priority",
-        "--loc",
-        "--note",
-        "--body",
-        "--text",
-        "--after",
-        "--before",
-        "--from",
-        "--to",
-        "--around",
-        "--window",
-        "--format",
-        "--pretty",
-        "--output",
-        "--append",
-        "--update",
-        "--line",
-        "--match-id",
-        "--action",
-        "--tool",
-        "--preview",
-        "--no-preview",
-        "--id",
-        "--repo-dir",
-        "--files",
-        "--force",
-        "--field",
-    )
+    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + ["--%s" % key for key in KNOWN_KEYS]))
 
 
 def _write_text(path, text):

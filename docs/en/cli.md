@@ -44,6 +44,36 @@ python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
+python -m lifetxt init
+python -m lifetxt doctor
+python -m lifetxt quick "Title"
+python -m lifetxt done [path ...]
+python -m lifetxt assign [path ...]
+python -m lifetxt batch [path ...]
+python -m lifetxt archive [path ...]
+python -m lifetxt undo [path ...]
+python -m lifetxt summary [path ...]
+python -m lifetxt inbox [path ...]
+python -m lifetxt cleanup [path ...]
+python -m lifetxt health [path ...]
+python -m lifetxt review [path ...]
+python -m lifetxt who [path ...]
+python -m lifetxt search PATTERN [path ...]
+python -m lifetxt snapshot [path ...]
+python -m lifetxt lint [path ...]
+python -m lifetxt diff FILE_A FILE_B
+python -m lifetxt plot [path ...]
+python -m lifetxt export-heatmap [path ...]
+python -m lifetxt migrate [path ...]
+python -m lifetxt from-markdown [path ...]
+python -m lifetxt deps [path ...]
+python -m lifetxt tag list [path ...]
+python -m lifetxt watch [path ...] -- COMMAND
+python -m lifetxt encrypt [path ...]
+python -m lifetxt decrypt [path ...]
+python -m lifetxt share [path ...]
+python -m lifetxt digest [path ...]
+python -m lifetxt template list
 ```
 
 | Command | Purpose |
@@ -74,6 +104,36 @@ python -m lifetxt config show
 | `completion` | Generate shell completion scripts |
 | `serve` | Run the optional FastAPI REST API and browser GUI |
 | `config` | Create or inspect an external JSON config file |
+| `init` | Interactive first-time setup: create life.txt and .lifetxt.json |
+| `doctor` | Check Python version, files, dependencies, and data issues |
+| `quick` (`q`) | Quickly capture a new item and append it to a file |
+| `done` | Mark an item as complete and append `done:TODAY` |
+| `assign` | Change the `assignee:` on an existing item |
+| `batch` | Apply a simple item command across multiple life.txt files |
+| `archive` | Move or copy completed/canceled items to a separate archive file |
+| `undo` | Restore a file to its state before the most recent write operation |
+| `summary` | Show a fast overview of a life.txt file |
+| `inbox` | List open tasks with no project, due date, or assignee |
+| `cleanup` | Guided file-maintenance navigator: report issues and suggest next commands |
+| `health` | Operational sanity checks: stale tasks, missed habits, upcoming deadlines |
+| `review` | Human-readable period summary: completed tasks, habits, mood, elapsed time |
+| `who` | Team presence summary: latest active `S` item per person |
+| `search` | Search items by substring or regex match in title or field values |
+| `snapshot` | Copy a life.txt file to a timestamped snapshot for backups |
+| `lint` | Check life.txt for style issues: key-name typos, tag casing, duplicate keys |
+| `diff` | Semantic diff between two life.txt files |
+| `plot` | Render task/habit/mood/elapsed statistics as bar charts (text/SVG/PNG) |
+| `export-heatmap` | Export task or habit activity as a dependency-free SVG heatmap |
+| `migrate` | Apply in-place format migrations to a life.txt file |
+| `from-markdown` | Convert a Markdown task list (`- [ ] title`) to life.txt items |
+| `deps` | Show dependency chains (`depends_on:`/`blocks:`) as an indented tree |
+| `tag` | Tag management: list, rename, merge |
+| `watch` | Watch life.txt files for changes and re-run a command on each change |
+| `encrypt` | Encrypt selected field values in-place using a passphrase |
+| `decrypt` | Decrypt `enc:`-tagged field values in-place using a passphrase |
+| `share` | Export a self-contained HTML or Markdown report (filter + review + chart) |
+| `digest` | Send a `review` summary to Slack, email, or a local file |
+| `template` | List and apply reusable named item templates |
 
 ## 2. Common Conventions
 
@@ -644,6 +704,9 @@ Options:
 | `--format life` | Output matching life.txt lines; this is the default |
 | `--format json` | Output a JSON array |
 | `--format jsonl` | Output JSONL |
+| `--format table` | Output a bordered STATUS/TYPE/TITLE/PROJECT table (or a compact one-line-per-item form below `--width` 80) |
+| `--width N` | Table column width in characters for `--format table`. `0` (default) detects the terminal width |
+| `--limit N` | Return at most N items (`0` = no limit) |
 | `-o`, `--output` | Output file; defaults to stdout |
 | `--pretty` | Pretty-print JSON output |
 | `--canonical` | Regenerate normalized, unindented life.txt lines with explicit `parent:` links where inferable |
@@ -651,7 +714,10 @@ Options:
 Filter options are the same as the export filter options in section 4.8.
 With `--format life`, original matching item lines are preserved by default.
 Use `--canonical` when you want normalized quoting, spacing, and hierarchy
-represented as explicit `parent:` links rather than indentation.
+represented as explicit `parent:` links rather than indentation. Use
+`--format table` for a quick human-readable scan in a terminal — like
+`agenda`'s and `stats`'s tables, it switches to a compact single-line form
+automatically in narrow terminals (or below `--width 80`).
 
 Examples:
 
@@ -1131,6 +1197,37 @@ operations and `ids --assign --key KEY` use the selected key. Config `users`,
 `teams`, and `tags` supply aliases and team membership for `--user`, `--team`,
 and tag filters.
 
+### 12.1 Configuration Resolution Order
+
+The same setting (for example, which person's name is used as `self`, or
+which project a `quick` item is assigned to) can be supplied at four
+different levels. When more than one level supplies a value, lifetxt applies
+them in this order, highest priority first:
+
+1. **CLI flag** — a flag passed directly to the command you run, e.g.
+   `lifetxt quick "Buy milk" --project errands` or `lifetxt agenda --person alice`.
+2. **Config JSON defaults** — values under `defaults` (and related sections
+   like `user`, `message`) in the loaded `.lifetxt.json`, e.g.
+   `"defaults": {"person": "self", "timezone": "Asia/Tokyo"}`.
+3. **`#!` file-level directives** — directive lines at the top of a life.txt
+   file, e.g. `#! self: alice`, `#! project: research`, `#! timezone: UTC`.
+   These apply only to the file they appear in.
+4. **Built-in defaults** — hard-coded fallbacks used when nothing else
+   supplies a value, e.g. person `"self"` or timezone `"UTC"`.
+
+Example: if a life.txt file starts with `#! project: research` but you run
+`lifetxt quick "Draft outline" --project writing`, the item is filed under
+`writing` (CLI flag wins). If you omit `--project` but the config file sets
+`"defaults": {"project": "misc"}` and the file has no `#! project:` directive,
+the item is filed under `misc`. If none of the three higher levels supply a
+project, the item has no project.
+
+`lifetxt config init` prints this resolution order as a reminder after
+writing the config file. `lifetxt init` writes both a starter life.txt (with
+`#! self:` / `#! timezone:` / `#! project:` directives) and a matching
+`.lifetxt.json` (with `defaults.person` / `defaults.timezone`) so new users
+see all three configurable levels side by side.
+
 ## 13. CUI Extensions
 
 ### 13.1 `tui`
@@ -1398,3 +1495,188 @@ Run the browser GUI:
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+## 16. `init` and `doctor`
+
+These two commands are the recommended entry points for new users.
+
+```sh
+python -m lifetxt init
+python -m lifetxt init --yes
+python -m lifetxt doctor
+```
+
+`init` creates a starter `life.txt` and a matching `.lifetxt.json`:
+
+| Option | Meaning |
+|---|---|
+| `--file PATH` | life.txt file to create. Defaults to `life.txt` |
+| `--config-output PATH` | Config file to create. Defaults to `.lifetxt.json` |
+| `--force` | Overwrite existing files without prompting |
+| `--name NAME` | Your name, written as `#! self:` and `defaults.person` |
+| `--timezone TZ` | Your timezone, written as `#! timezone:` and `defaults.timezone` |
+| `--project NAME` | Default project, written as `#! project:` and `defaults.project` |
+| `--yes` | Run fully non-interactively using defaults (`self`, `UTC`, no project) — skips every prompt, including the overwrite confirmation when combined with `--force`. Use this in scripts and CI. |
+
+Without `--yes`, `init` prompts for your name, timezone, and default project,
+and asks before overwriting an existing `life.txt` or config file (unless
+`--force` is also given). With `--yes`, none of the three prompts are shown;
+any value not supplied via `--name`/`--timezone`/`--project` falls back to
+its built-in default.
+
+`doctor` reports pass/warn/fail checks and never modifies files:
+
+| Check | What it verifies |
+|---|---|
+| `python` | Python 3.10+ (fails below 3.10) |
+| `life.txt` | The configured or default life.txt file exists and is readable |
+| `config` | `.lifetxt.json` (or `--config` path) exists (warns if missing) |
+| `fzf`, `peco` | Optional selector tools found in `PATH` (warns if missing) |
+| `textual`, `watchdog`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing) |
+| `check` | Parses the life.txt file(s) and reports error/warning counts |
+| `ids` | Reports items missing an `id:` detail |
+
+`doctor` exits non-zero only when a `FAIL`-level check fails (Python version
+too old, or the file is missing/unreadable); missing optional dependencies
+are `WARN` and do not affect the exit code. Use `--format json` for
+machine-readable output.
+
+## 17. `encrypt` and `decrypt`
+
+Field-level encryption for sensitive values (journal bodies, message text)
+using only the Python standard library — no extra dependency required.
+
+```sh
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt encrypt life.txt --field body --type J
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt decrypt life.txt --field body
+```
+
+**Algorithm.** Values are tagged `enc:XSK:BASE64` in place, e.g.
+`body:"enc:XSK:AbCd..."`. XSK ("XOR stream cipher, keyed") derives a 32-byte
+key from the passphrase with PBKDF2-HMAC-SHA256 (100,000 iterations) and a
+random 16-byte salt per value, expands it into a keystream with repeated
+SHA-256 (`SHA256(key ‖ counter)`), and XORs it against the UTF-8 plaintext.
+An HMAC-SHA256 over `salt ‖ ciphertext`, keyed with the same derived key, is
+prepended for integrity — `decrypt` refuses to decode a value whose MAC does
+not match ("wrong passphrase or tampered data"), so passphrase typos fail
+loudly instead of producing garbled text. This is a from-scratch construction
+built only from `hashlib`/`hmac`/`secrets`; it is adequate for keeping
+casual/local-file secrets out of plain sight (e.g. a private journal in a
+repo you otherwise trust), but it has not been audited and is not a
+substitute for a reviewed cryptographic library.
+
+**Passphrase strength.** Since the key is derived entirely from the
+passphrase, passphrase strength is the only thing protecting the data.
+Use a long, unique passphrase (a multi-word passphrase, or output from a
+password manager) — not a word from a dictionary. Never commit the
+passphrase itself to the repository.
+
+**Key management.**
+
+| Method | Flag | Notes |
+|---|---|---|
+| Environment variable | `--key-env NAME` (default `LIFETXT_KEY`) | Convenient for local shells and CI secrets; avoid printing the shell history |
+| Key file | `--key-file PATH` | Overrides `--key-env`. Store the file outside the repo, or add it to `.gitignore` |
+
+**Rotation workflow.** To rotate a passphrase: `decrypt` every affected file
+with the old passphrase, then `encrypt` again with the new passphrase before
+discarding the old one. There is no in-place re-key operation, so both
+passphrases must be available during the rotation window.
+
+**Checking a partially encrypted file.** `check` and `filter` treat
+`enc:XSK:...` values as opaque strings — they do not attempt to decrypt them,
+so syntax validation and filtering by other fields work normally on a file
+that mixes encrypted and plaintext values. Filtering *by* an encrypted
+field's plaintext content is not possible without decrypting first.
+
+**Upgrade path.** If the optional `cryptography` package is installed
+(`pip install cryptography`), consider it for a standards-reviewed AES-GCM
+implementation instead of the built-in XSK scheme; `doctor` reports whether
+`cryptography` is available. `encrypt`/`decrypt` do not yet auto-detect and
+use it — this is a documented direction, not current behavior.
+
+## 18. `share`, `digest`, and `template`
+
+### `share`
+
+Export a self-contained HTML or Markdown report — filtered items, a bar
+chart, and a table — without running the server.
+
+```sh
+python -m lifetxt share life.txt --open --type task -o open_tasks.html
+python -m lifetxt share life.txt --week --format markdown -o weekly.md
+python -m lifetxt share life.txt --project research --title "Research report"
+```
+
+`share` accepts the same filter options as `filter`/`agenda` (see section 2),
+plus:
+
+| Option | Meaning |
+|---|---|
+| `--week` | Label the report with the current ISO week (Monday to today) |
+| `--month YYYY-MM` | Label the report with a specific calendar month |
+| `--format html\|markdown` | Output format. Defaults to `html` |
+| `-o, --output PATH` | Output file. Defaults to `share.html` or `share.md` |
+| `--title TEXT` | Report title. Defaults to "lifetxt share report" |
+
+`--week`/`--month` only set the label shown at the top of the report; combine
+them with `--after`/`--before` if you also want to restrict which items are
+included by date. The HTML output has no external dependencies (inline CSS,
+inline SVG chart) and can be opened directly in a browser or attached to an
+email.
+
+### `digest`
+
+Deliver a `review`-style period summary to Slack, email, or a local file.
+
+```sh
+python -m lifetxt digest life.txt --week --format slack-webhook --url-env SLACK_WEBHOOK_URL
+python -m lifetxt digest life.txt --month 2026-06 --format email --to team@example.com
+python -m lifetxt digest life.txt --week --format file --path digest-log.md
+```
+
+| Option | Meaning |
+|---|---|
+| `--week` / `--month YYYY-MM` | Same period selection as `review` |
+| `--project NAME` | Restrict to a specific project |
+| `--format slack-webhook\|email\|file` | Delivery channel (required) |
+| `--url-env ENVVAR` | Env var with the Slack incoming webhook URL (`slack-webhook`) |
+| `--to ADDRESS` | Recipient email address (`email`) |
+| `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | Env vars with SMTP host/username/password (`email`); default to `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
+| `--path PATH` | Local file to append Markdown to (`file`) |
+| `--dry-run` | Build the message and print it without making a network request or writing |
+
+Each channel validates its required environment variables (or `--to`/`--path`)
+**before** making any network request or writing any file, so a missing
+secret fails fast with a clear error rather than partway through delivery.
+
+### `template`
+
+List and apply reusable named item templates stored in config `templates`.
+
+```sh
+python -m lifetxt template list
+python -m lifetxt template apply weekly_review --append life.txt
+python -m lifetxt template apply weekly_review --append life.txt --dry-run
+```
+
+Define templates in `.lifetxt.json`:
+
+```json
+{
+  "templates": {
+    "weekly_review": {
+      "lines": [
+        "[ ] T Weekly_Review due:{next_monday} project:reflection",
+        "[ ] T Plan_Next_Week due:{next_monday} project:reflection"
+      ]
+    }
+  }
+}
+```
+
+Date placeholders are resolved when the template is applied (not when it is
+defined): `{today}`, `{next_monday}` (the next strictly-future Monday), and
+`{next_week}` (today + 7 days). Unlike `H` habits, a template's content is
+not re-scheduled automatically — running `apply` again appends another copy
+of the same lines with freshly resolved dates.

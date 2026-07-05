@@ -7,9 +7,10 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
-from datetime import datetime
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
-from lifetxt import completion, fzf_helper, git_hook, stats, timer, tui
+from lifetxt import cli, completion, fzf_helper, git_hook, stats, timer, tui
 from lifetxt.parser import parse_text
 
 
@@ -491,6 +492,201 @@ class TuiTests(unittest.TestCase):
 
             self.assertTrue(watcher.consume_changed())
             self.assertFalse(watcher.consume_changed())
+
+
+class TuiFallbackTests(unittest.TestCase):
+    """Stabilization coverage for the P0 item: confirm graceful fallback when
+    optional dependencies (textual, curses) are unavailable, on whatever
+    platform the tests run on."""
+
+    def _life_path(self, tmp):
+        path = os.path.join(tmp, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Sample project:work\n")
+        return path
+
+    def _with_module_forced_missing(self, name, body):
+        had_module = name in sys.modules
+        original = sys.modules.get(name)
+        sys.modules[name] = None
+        try:
+            return body()
+        finally:
+            if had_module:
+                sys.modules[name] = original
+            else:
+                sys.modules.pop(name, None)
+
+    def test_run_textual_falls_back_when_textual_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)])
+            output = io.StringIO()
+
+            def run():
+                with redirect_stdout(output):
+                    return tui.run_textual(args)
+
+            result = self._with_module_forced_missing("textual", run)
+
+        self.assertEqual(0, result)
+        self.assertIn("lifetxt TUI", output.getvalue())
+        self.assertIn("TASKS", output.getvalue())
+
+    def test_run_curses_or_plain_falls_back_to_plain_text_when_curses_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)])
+            output = io.StringIO()
+
+            def run():
+                with redirect_stdout(output):
+                    return tui.run_curses_or_plain(args)
+
+            result = self._with_module_forced_missing("curses", run)
+
+        self.assertEqual(0, result)
+        self.assertIn("lifetxt TUI", output.getvalue())
+        self.assertIn("Install textual for a richer TUI", output.getvalue())
+
+    def test_cmd_tui_never_crashes_regardless_of_optional_deps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)])
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = tui.cmd_tui(args)
+        self.assertEqual(0, result)
+        self.assertIn("lifetxt TUI", output.getvalue())
+
+
+class FzfPreviewQuotingTests(unittest.TestCase):
+    """Stabilization coverage for the P0 item: confirm fzf preview-command
+    quoting is correct for both POSIX shells and native Windows cmd.exe."""
+
+    def test_posix_shell_uses_shlex_quote_form(self):
+        with patch.object(fzf_helper.os, "name", "posix"):
+            command = fzf_helper._preview_command()
+        self.assertIn("fzf-preview {1}", command)
+        self.assertFalse(command.startswith('"'))
+
+    def test_native_windows_without_shell_uses_double_quote_form(self):
+        with patch.object(fzf_helper.os, "name", "nt"), patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SHELL", None)
+            command = fzf_helper._preview_command()
+        self.assertTrue(command.startswith('"'))
+        self.assertIn("fzf-preview {1}", command)
+
+    def test_windows_with_posix_shell_uses_shlex_quote_form(self):
+        # git-bash / WSL / MSYS builds of fzf set $SHELL and run the preview
+        # command through a POSIX shell even on Windows.
+        with patch.object(fzf_helper.os, "name", "nt"), patch.dict(os.environ, {"SHELL": "/bin/bash"}):
+            command = fzf_helper._preview_command()
+        self.assertFalse(command.startswith('"'))
+        self.assertIn("fzf-preview {1}", command)
+
+
+class FzfNotInstalledTests(unittest.TestCase):
+    """Stabilization coverage for the P0 item: confirm a clear, actionable
+    error when neither fzf nor peco is installed."""
+
+    def test_resolve_tool_raises_clear_error_when_missing(self):
+        with patch("shutil.which", return_value=None):
+            with self.assertRaises(ValueError) as ctx:
+                fzf_helper.resolve_tool()
+        self.assertIn("fzf or peco was not found in PATH", str(ctx.exception))
+
+    def test_cmd_fzf_cli_reports_clear_error_and_nonzero_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Sample\n")
+            env = os.environ.copy()
+            env["PATH"] = tmp  # a directory guaranteed not to contain fzf/peco
+            process = subprocess.Popen(
+                [sys.executable, "-m", "lifetxt", "fzf", path],
+                cwd=ROOT_DIR,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = process.communicate()
+        self.assertEqual(1, process.returncode)
+        self.assertIn("fzf or peco was not found in PATH", stderr.decode("utf-8"))
+
+
+class PlotPngFallbackTests(unittest.TestCase):
+    """Stabilization coverage for the P0 item: confirm a clear error when
+    --format png is requested without matplotlib installed, and a real PNG
+    when it is."""
+
+    def test_missing_matplotlib_gives_clear_error(self):
+        had_module = "matplotlib" in sys.modules
+        original = sys.modules.get("matplotlib")
+        sys.modules["matplotlib"] = None
+        try:
+            with self.assertRaises(ValueError) as ctx:
+                cli._plot_data_to_png({"Tasks": {"done": 3}}, os.devnull)
+        finally:
+            if had_module:
+                sys.modules["matplotlib"] = original
+            else:
+                sys.modules.pop("matplotlib", None)
+        self.assertIn("--format png requires matplotlib", str(ctx.exception))
+        self.assertIn("--format svg", str(ctx.exception))
+
+    @unittest.skipUnless(
+        __import__("importlib").util.find_spec("matplotlib") is not None,
+        "matplotlib is not installed in this environment",
+    )
+    def test_png_output_written_when_matplotlib_installed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = os.path.join(tmp, "chart.png")
+            cli._plot_data_to_png({"Tasks": {"done": 3, "open": 1}}, output_path)
+            self.assertTrue(os.path.exists(output_path))
+            with open(output_path, "rb") as handle:
+                self.assertEqual(b"\x89PNG", handle.read(4))
+
+
+class TimerMultiCycleTests(unittest.TestCase):
+    """Extra stabilization coverage: several pause/resume cycles in a single
+    session must accumulate elapsed time correctly, not just one cycle."""
+
+    def test_three_pause_resume_cycles_accumulate_correctly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            state_file = os.path.join(tmp, "timer.json")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Deep_Work id:t1\n")
+            config_data = {"timer": {"state_file": state_file}}
+            start_args = argparse.Namespace(path=path, item_id="t1", note=None, config_data=config_data)
+            command_args = argparse.Namespace(config_data=config_data)
+            stop_args = argparse.Namespace(path=None, item_id=None, config_data=config_data)
+
+            # Three 10-minute work intervals separated by pauses: expect 30m total.
+            ticks = [
+                (0, "start"), (10, "pause"), (20, "resume"),
+                (30, "pause"), (40, "resume"), (50, "pause"), (60, "resume"), (70, "stop"),
+            ]
+            base = datetime(2026, 6, 10, 10, 0, 0)
+            original_now = timer._now
+            try:
+                for minute, action in ticks:
+                    timer._now = lambda m=minute: base + timedelta(minutes=m)
+                    with redirect_stdout(io.StringIO()):
+                        if action == "start":
+                            timer.start_timer(start_args)
+                        elif action == "pause":
+                            timer.pause_timer(command_args)
+                        elif action == "resume":
+                            timer.resume_timer(command_args)
+                        elif action == "stop":
+                            timer.stop_timer(stop_args)
+            finally:
+                timer._now = original_now
+
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            # Work intervals: 0-10, 20-30, 40-50, 60-70 = 40 minutes total.
+            self.assertIn("elapsed:40m", text)
+            self.assertFalse(os.path.exists(state_file))
 
 
 def run_lifetxt_cli(*args):

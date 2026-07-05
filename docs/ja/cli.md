@@ -44,6 +44,36 @@ python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
+python -m lifetxt init
+python -m lifetxt doctor
+python -m lifetxt quick "Title"
+python -m lifetxt done [path ...]
+python -m lifetxt assign [path ...]
+python -m lifetxt batch [path ...]
+python -m lifetxt archive [path ...]
+python -m lifetxt undo [path ...]
+python -m lifetxt summary [path ...]
+python -m lifetxt inbox [path ...]
+python -m lifetxt cleanup [path ...]
+python -m lifetxt health [path ...]
+python -m lifetxt review [path ...]
+python -m lifetxt who [path ...]
+python -m lifetxt search PATTERN [path ...]
+python -m lifetxt snapshot [path ...]
+python -m lifetxt lint [path ...]
+python -m lifetxt diff FILE_A FILE_B
+python -m lifetxt plot [path ...]
+python -m lifetxt export-heatmap [path ...]
+python -m lifetxt migrate [path ...]
+python -m lifetxt from-markdown [path ...]
+python -m lifetxt deps [path ...]
+python -m lifetxt tag list [path ...]
+python -m lifetxt watch [path ...] -- COMMAND
+python -m lifetxt encrypt [path ...]
+python -m lifetxt decrypt [path ...]
+python -m lifetxt share [path ...]
+python -m lifetxt digest [path ...]
+python -m lifetxt template list
 ```
 
 | Command | 目的 |
@@ -74,6 +104,36 @@ python -m lifetxt config show
 | `completion` | shell completion script を生成 |
 | `serve` | 任意機能の FastAPI REST API とブラウザGUIを起動 |
 | `config` | 外部 JSON config を作成または表示 |
+| `init` | 対話形式の初回セットアップ。life.txt と .lifetxt.json を作成 |
+| `doctor` | Python version、file、dependency、data の問題を検査 |
+| `quick` (`q`) | 新規 item をすばやく作成して file に追記 |
+| `done` | item を完了にし `done:TODAY` を追記 |
+| `assign` | 既存 item の `assignee:` を変更 |
+| `batch` | 複数の life.txt file に対して単純な操作を一括適用 |
+| `archive` | 完了/中止済み item を別 file へ移動またはコピー |
+| `undo` | 直前の書き込み操作前の状態に file を復元 |
+| `summary` | life.txt file の概要を素早く表示 |
+| `inbox` | project / due / assignee が未設定の open task を一覧表示 |
+| `cleanup` | 問題を報告し、次に実行すべき command を提案するガイド付きナビゲーター |
+| `health` | 停滞した task、未実施の habit、迫った deadline などの健全性チェック |
+| `review` | 完了 task、habit、mood、elapsed time の期間サマリーを表示 |
+| `who` | 各 person の最新 `S` item によるチーム presence サマリー |
+| `search` | title や field 値の部分一致・正規表現で item を検索 |
+| `snapshot` | life.txt file をタイムスタンプ付きで point-in-time backup |
+| `lint` | key 名の typo、tag の大小文字、重複 key など style を検査 |
+| `diff` | 2つの life.txt file の意味的な差分を表示 |
+| `plot` | task/habit/mood/elapsed の統計を bar chart で表示 (text/SVG/PNG) |
+| `export-heatmap` | task/habit の活動量を dependency-free SVG heatmap として出力 |
+| `migrate` | life.txt file に in-place で format migration を適用 |
+| `from-markdown` | Markdown task list (`- [ ] title`) を life.txt item に変換 |
+| `deps` | `depends_on:`/`blocks:` の依存関係を tree 表示 |
+| `tag` | tag 管理: list、rename、merge |
+| `watch` | life.txt file の変更を監視し、変更のたびに command を再実行 |
+| `encrypt` | passphrase で選択した field 値を in-place で暗号化 |
+| `decrypt` | `enc:` 付き field 値を in-place で復号 |
+| `share` | filter + review + chart をまとめた自己完結型 HTML/Markdown report を出力 |
+| `digest` | `review` のサマリーを Slack、email、または local file へ送信 |
+| `template` | 再利用可能な named item template を list / apply |
 
 ## 2. 共通仕様
 
@@ -586,6 +646,9 @@ python -m lifetxt filter [path ...] [filter options] [--format life|json|jsonl] 
 | `--format life` | 一致した life.txt 行を出力。既定値 |
 | `--format json` | JSON 配列で出力 |
 | `--format jsonl` | JSONL で出力 |
+| `--format table` | STATUS/TYPE/TITLE/PROJECT の table を出力 (`--width` 80 未満では compact な1行形式) |
+| `--width N` | `--format table` の列幅 (文字数)。既定値 `0` は terminal width を自動検出 |
+| `--limit N` | 出力する item を最大 N 件に制限 (`0` は無制限) |
 | `-o`, `--output` | 出力ファイル。省略時は標準出力 |
 | `--pretty` | JSON を整形して出力 |
 | `--canonical` | 元行ではなく、明示的な `parent:` を使う unindented life.txt 行を再生成 |
@@ -594,6 +657,9 @@ filter option は 4.8 の export filter option と同じです。
 `--format life` では、一致した item の元行を既定で保持します。
 引用や空白を正規化したい場合は `--canonical` を使います。
 階層も正規化したい場合は `--canonical` を使います。出力では indentation を使わず、推論済みまたは明示済みの `parent:` を detail として書きます。
+terminal で素早く確認したい場合は `--format table` が便利です。`agenda` や
+`stats` の table と同様、狭い terminal (または `--width 80` 未満) では
+自動的に compact な1行形式に切り替わります。
 
 例:
 
@@ -946,6 +1012,38 @@ python -m lifetxt --config .lifetxt.json config show
 | `web.*` | `serve` と Web UI の既定値 |
 | `sync_ics.*` | `sync-ics` の default source / output / cache |
 
+### 12.1 設定値の解決順序
+
+同じ設定項目(例: `self` として使う名前や、`quick` で新規項目に付与する
+project)は、最大4つのレベルで指定できます。複数レベルで値が指定された場合、
+lifetxt は優先度の高い順に次のように解決します。
+
+1. **CLI フラグ** — 実行するコマンドに直接渡すフラグ。
+   例: `lifetxt quick "牛乳を買う" --project errands`、
+   `lifetxt agenda --person alice`
+2. **Config JSON の defaults** — 読み込んだ `.lifetxt.json` の `defaults`
+   (および `user`、`message` など関連セクション)の値。
+   例: `"defaults": {"person": "self", "timezone": "Asia/Tokyo"}`
+3. **`#!` file-level directive** — life.txt file 先頭の directive 行。
+   例: `#! self: alice`、`#! project: research`、`#! timezone: UTC`。
+   その file 内でのみ有効です。
+4. **組み込みの既定値** — 他のどのレベルにも値がない場合に使われる
+   ハードコードされた fallback。例: person `"self"`、timezone `"UTC"`。
+
+例: life.txt file 先頭が `#! project: research` でも、
+`lifetxt quick "アウトライン作成" --project writing` を実行すると、
+CLI フラグが優先されるため item は `writing` に分類されます。
+`--project` を省略し、config file に `"defaults": {"project": "misc"}` が
+あり file 側に `#! project:` directive が無い場合は `misc` に分類されます。
+上位3レベルのいずれにも project の指定が無ければ、その item に project は
+付きません。
+
+`lifetxt config init` は config file 書き込み後にこの解決順序を
+リマインダーとして表示します。`lifetxt init` は starter life.txt
+(`#! self:` / `#! timezone:` / `#! project:` directive 付き)と対応する
+`.lifetxt.json` (`defaults.person` / `defaults.timezone` 付き)を同時に
+作成するため、新規ユーザーは3つの設定レベルを並べて確認できます。
+
 ## 13. CUI 拡張
 
 ### 13.1 `tui`
@@ -1190,3 +1288,188 @@ python -m lifetxt status life.txt --active
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+## 16. `init` と `doctor`
+
+この2つの command は新規ユーザー向けの推奨エントリーポイントです。
+
+```sh
+python -m lifetxt init
+python -m lifetxt init --yes
+python -m lifetxt doctor
+```
+
+`init` は starter life.txt と対応する `.lifetxt.json` を作成します。
+
+| Option | 意味 |
+|---|---|
+| `--file PATH` | 作成する life.txt file。省略時は `life.txt` |
+| `--config-output PATH` | 作成する config file。省略時は `.lifetxt.json` |
+| `--force` | 確認なしで既存 file を上書き |
+| `--name NAME` | 自分の名前。`#! self:` と `defaults.person` に書き込まれる |
+| `--timezone TZ` | timezone。`#! timezone:` と `defaults.timezone` に書き込まれる |
+| `--project NAME` | default project。`#! project:` と `defaults.project` に書き込まれる |
+| `--yes` | すべて既定値 (`self`、`UTC`、project なし) で非対話実行。`--force` と併用した場合の上書き確認プロンプトも省略される。script や CI 向け |
+
+`--yes` を付けない場合、`init` は名前・timezone・default project を尋ね、
+既存の `life.txt` や config file を上書きする前に確認します
+(`--force` 指定時を除く)。`--yes` を付けると3つのプロンプトはすべて
+スキップされ、`--name`/`--timezone`/`--project` で指定されなかった値は
+組み込みの既定値になります。
+
+`doctor` は pass/warn/fail の check を表示し、file は一切変更しません。
+
+| Check | 検査内容 |
+|---|---|
+| `python` | Python 3.10+ (未満は FAIL) |
+| `life.txt` | 設定または既定の life.txt file が存在し読み取り可能か |
+| `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
+| `fzf`, `peco` | optional selector tool が `PATH` にあるか (無ければ WARN) |
+| `textual`, `watchdog`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN) |
+| `check` | life.txt file を解析し error/warning 件数を報告 |
+| `ids` | `id:` が無い item を報告 |
+
+`doctor` は `FAIL` レベルの check がある場合のみ非ゼロで終了します
+(Python version が古い、または file が存在しない/読み取れない場合)。
+optional dependency の不足は `WARN` であり、終了コードには影響しません。
+機械可読な出力には `--format json` を使用してください。
+
+## 17. `encrypt` と `decrypt`
+
+標準ライブラリのみを使った field 単位の暗号化 (journal の body、message の
+本文など機密性の高い値向け)。追加 dependency は不要です。
+
+```sh
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt encrypt life.txt --field body --type J
+LIFETXT_KEY="correct horse battery staple" python -m lifetxt decrypt life.txt --field body
+```
+
+**アルゴリズム。** 値は in-place で `enc:XSK:BASE64` の形式にタグ付けされます
+(例: `body:"enc:XSK:AbCd..."`)。XSK ("XOR stream cipher, keyed") は
+PBKDF2-HMAC-SHA256 (100,000 iteration) と値ごとにランダムな 16 byte の
+salt から 32 byte の key を導出し、SHA-256 の繰り返し
+(`SHA256(key ‖ counter)`) で keystream を生成して UTF-8 平文と XOR します。
+`salt ‖ ciphertext` に対する HMAC-SHA256 (同じ導出 key を使用) を先頭に
+付与して整合性を保証しており、MAC が一致しない値は `decrypt` が復号を
+拒否します ("wrong passphrase or tampered data")。そのため passphrase の
+typo は文字化けではなく明確なエラーになります。これは `hashlib`/`hmac`/
+`secrets` のみで組んだ独自実装であり、リポジトリを信頼している前提での
+私的な journal など「カジュアルにローカルの秘密を隠す」用途には十分ですが、
+監査は受けておらず、レビュー済みの暗号 library の代替にはなりません。
+
+**Passphrase の強度。** key は passphrase のみから導出されるため、
+passphrase の強度がデータを守る唯一の要素です。辞書に載っている単語では
+なく、長く一意な passphrase (複数単語のフレーズや password manager の
+出力) を使ってください。passphrase 自体を repository に commit しては
+いけません。
+
+**Key の管理方法。**
+
+| 方法 | Flag | 備考 |
+|---|---|---|
+| 環境変数 | `--key-env NAME` (既定 `LIFETXT_KEY`) | ローカル shell や CI の secret に便利。shell の history に残さないよう注意 |
+| Key file | `--key-file PATH` | `--key-env` より優先。file は repository の外に置くか `.gitignore` に追加する |
+
+**Rotation workflow。** passphrase を rotate するには、影響するすべての
+file を古い passphrase で `decrypt` し、新しい passphrase で再度
+`encrypt` してから古い passphrase を破棄します。in-place の re-key
+操作は無いため、rotation 中は両方の passphrase が必要です。
+
+**部分的に暗号化された file の check。** `check` と `filter` は
+`enc:XSK:...` の値を不透明な文字列として扱い、復号を試みません。
+そのため暗号化済みの値と平文の値が混在する file でも、構文検証や他 field
+による filter は通常どおり動作します。暗号化された field の平文内容で
+filter するには、事前に復号する必要があります。
+
+**Upgrade path。** optional package の `cryptography` が導入されていれば
+(`pip install cryptography`)、組み込みの XSK 方式の代わりに標準的で
+レビュー済みの AES-GCM 実装を検討してください。`doctor` は
+`cryptography` の有無を報告します。ただし `encrypt`/`decrypt` は現時点で
+自動検出して使用することはありません — これは今後の方向性であり、
+現在の挙動ではありません。
+
+## 18. `share`、`digest`、`template`
+
+### `share`
+
+server を起動せずに、filter した item・bar chart・table をまとめた
+自己完結型の HTML または Markdown report を出力します。
+
+```sh
+python -m lifetxt share life.txt --open --type task -o open_tasks.html
+python -m lifetxt share life.txt --week --format markdown -o weekly.md
+python -m lifetxt share life.txt --project research --title "Research report"
+```
+
+`share` は `filter`/`agenda` と同じ filter option (2章参照) に加え、
+以下を受け付けます。
+
+| Option | 意味 |
+|---|---|
+| `--week` | report の見出しに現在の ISO week (月曜日〜今日) を表示 |
+| `--month YYYY-MM` | report の見出しに特定の calendar month を表示 |
+| `--format html\|markdown` | 出力形式。省略時は `html` |
+| `-o, --output PATH` | 出力先 file。省略時は `share.html` または `share.md` |
+| `--title TEXT` | report title。省略時は "lifetxt share report" |
+
+`--week`/`--month` は report 見出しの表示のみを変更します。日付で
+含める item を絞り込みたい場合は `--after`/`--before` を併用してください。
+HTML 出力は外部依存が無く (inline CSS、inline SVG chart)、ブラウザで
+直接開いたり email に添付したりできます。
+
+### `digest`
+
+`review` 相当の期間サマリーを Slack、email、または local file へ配信します。
+
+```sh
+python -m lifetxt digest life.txt --week --format slack-webhook --url-env SLACK_WEBHOOK_URL
+python -m lifetxt digest life.txt --month 2026-06 --format email --to team@example.com
+python -m lifetxt digest life.txt --week --format file --path digest-log.md
+```
+
+| Option | 意味 |
+|---|---|
+| `--week` / `--month YYYY-MM` | `review` と同じ期間選択 |
+| `--project NAME` | 特定 project に限定 |
+| `--format slack-webhook\|email\|file` | 配信 channel (必須) |
+| `--url-env ENVVAR` | Slack incoming webhook URL を格納した環境変数 (`slack-webhook`) |
+| `--to ADDRESS` | 送信先 email address (`email`) |
+| `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | SMTP host/username/password を格納した環境変数 (`email`)。既定は `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
+| `--path PATH` | Markdown を追記する local file (`file`) |
+| `--dry-run` | message を組み立てて表示するのみで、network request も書き込みも行わない |
+
+各 channel は、network request や書き込みを行う **前に** 必要な環境変数
+(または `--to`/`--path`) を検証します。そのため secret が不足している
+場合は配信途中でなく即座に明確なエラーで失敗します。
+
+### `template`
+
+config `templates` に定義した再利用可能な named item template を
+list / apply します。
+
+```sh
+python -m lifetxt template list
+python -m lifetxt template apply weekly_review --append life.txt
+python -m lifetxt template apply weekly_review --append life.txt --dry-run
+```
+
+`.lifetxt.json` で template を定義します。
+
+```json
+{
+  "templates": {
+    "weekly_review": {
+      "lines": [
+        "[ ] T Weekly_Review due:{next_monday} project:reflection",
+        "[ ] T Plan_Next_Week due:{next_monday} project:reflection"
+      ]
+    }
+  }
+}
+```
+
+日付 placeholder は template 定義時ではなく apply 実行時に解決されます:
+`{today}`、`{next_monday}` (直近の未来の月曜日)、`{next_week}`
+(今日 + 7日)。`H` habit と異なり、template の内容は自動で
+再スケジュールされません — `apply` を再実行すると、新しく解決された
+日付で同じ行がもう一度追記されます。

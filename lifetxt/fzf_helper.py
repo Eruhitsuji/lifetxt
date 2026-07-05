@@ -272,7 +272,15 @@ def write_delete_summary(records):
 
 
 def _preview_command():
-    return "%s -m lifetxt fzf-preview {1}" % shlex.quote(sys.executable)
+    python = sys.executable
+    # fzf runs the preview command through the shell it detects: POSIX sh/bash
+    # on Unix, WSL, and git-bash/MSYS on Windows (all set $SHELL), but native
+    # Windows builds of fzf fall back to cmd.exe, which does not understand
+    # POSIX single-quote escaping from shlex.quote and instead expects the
+    # whole path wrapped in double quotes.
+    if os.name == "nt" and not os.environ.get("SHELL"):
+        return '"%s" -m lifetxt fzf-preview {1}' % python
+    return "%s -m lifetxt fzf-preview {1}" % shlex.quote(python)
 
 
 def require_id(record):

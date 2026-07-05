@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-06-28 (updated x39)
+Last updated: 2026-07-05 (updated x40)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -21,25 +21,22 @@ Items in this section are already implemented but have not been verified in
 real environments. Each item must be tested manually before the next release.
 
 - [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native
-  macOS/Linux: confirm Vim-like keymap, curses colors, auto-reload, and
-  behavior when `textual` or `watchdog` is not installed (graceful fallback).
+  macOS/Linux: confirm Vim-like keymap, curses colors, and auto-reload with a
+  human at a real TTY. Automated regression tests now cover the fallback
+  logic itself (`textual` missing -> curses/plain, `curses` missing -> plain
+  text, `cmd_tui` never raises) in `tests/test_cui_extensions.py`
+  (`TuiFallbackTests`), so what remains is interactive verification, not the
+  fallback code path.
 
-- [ ] Verify `lifetxt fzf` with actual `fzf` and `peco` on both Windows
-  PowerShell and Unix-like shells: confirm preview command quoting, `done` and
-  `delete` actions, and `edit` with `$EDITOR`.
-
-- [ ] Verify `inbox --fzf` with actual `fzf` and `peco` on Windows
-  PowerShell and Unix-like shells: confirm selector launch, selected-row output,
-  and behavior when no selector is installed.
-
-- [ ] Verify `plot --format png` on environments with and without
-  `matplotlib`: confirm PNG output when installed and clear fallback errors
-  when the optional dependency is missing.
-
-- [ ] Verify `timer start/pause/resume/status/stop/cancel` with a real state
-  file path on all supported platforms: confirm `elapsed:` is written correctly
-  in compact form (`25m`, `1h30m`) and that pause/resume accumulates time
-  correctly across multiple sessions.
+- [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco`
+  binaries on both Windows PowerShell and Unix-like shells: confirm `done`,
+  `delete`, and `edit` (with `$EDITOR`) actions end-to-end. The preview
+  command quoting bug for native Windows `cmd.exe` (vs. git-bash/WSL/POSIX
+  shells, which set `$SHELL`) has been fixed in `fzf_helper._preview_command`
+  and is regression-tested (`FzfPreviewQuotingTests`), and the
+  no-selector-installed error path is also regression-tested
+  (`FzfNotInstalledTests`). What remains is verifying the actual selector UI
+  and its preview rendering with real `fzf`/`peco` installed.
 
 ---
 
@@ -80,11 +77,11 @@ file-level metadata. These must be consistent across all commands.
 - [ ] Extend `#!` directive wiring to `timezone`: apply `timezone` directive
   to datetime display (agenda, summary, stats) and filtering. Currently `self`
   and `project` are wired for `quick` and `assist`; `timezone` remains unread.
-
-- [ ] Document the four-level setting resolution order in the format spec and
-  in a dedicated "Configuration" section of the CLI guide: (1) CLI flag,
-  (2) config JSON defaults, (3) `#!` file-level directives, (4) built-in
-  defaults. Update `config init` output to include comments describing each level.
+  This needs care: `timeutil.parse_datetime` currently converts any
+  timezone-suffixed value to naive system-local time on parse, so wiring a
+  per-file `timezone` directive means deciding how it interacts with that
+  existing conversion without silently changing already-correct displayed
+  times (see the related P1 Format Semantics item below).
 
 ---
 
@@ -108,8 +105,10 @@ Improvements to existing commands that affect daily workflow.
   life.txt, Web API responses, and generated occurrence files without
   overwriting stored source items.
 
-- [ ] Extend terminal width adaptation to `tui` and `filter` table output; add
-  `--width N` flag to `filter` and verify `tui` behavior in narrow terminals.
+- [ ] Verify `tui` behavior in narrow terminals with a real curses TTY.
+  `filter` now has a `--width N` flag and a `--format table` output (bordered
+  table, or a compact one-line form below 80 columns, matching `agenda` and
+  `stats`); this part is done and documented in CLI guide section 6.
 
 - [ ] Keep CLI help synchronized with docs: after every change to `tui`,
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
@@ -123,9 +122,6 @@ Improvements to existing commands that affect daily workflow.
 New commands that reduce the initial setup cost and protect against data loss.
 Implement before other new commands because they lower the barrier for all
 subsequent use.
-
-- [ ] Add onboarding mention for `init` and `doctor` to README and verify
-  `--yes` behavior is documented in CLI guide.
 
 ---
 
@@ -157,18 +153,19 @@ Commands and behaviors for moving old items out of active files.
 
 Field-level encryption for sensitive content (journal bodies, messages).
 
-- [ ] Document `encrypt`/`decrypt` security model in more detail: current
-  `enc:XSK:` format, passphrase strength recommendations, rotation workflow,
-  and an optional `cryptography` package upgrade path for AES-GCM.
+- [ ] Implement the documented `cryptography`-based AES-GCM upgrade path for
+  `encrypt`/`decrypt` (currently documented as a direction in CLI guide
+  section 17 but not implemented; `doctor` already reports whether
+  `cryptography` is installed). Needs a `enc:` format tag distinct from
+  `enc:XSK:` (e.g. `enc:GCM:`) so `decrypt` can dispatch by algorithm, and a
+  decision on whether `encrypt` should auto-prefer AES-GCM when the package
+  is available or require an explicit `--algorithm` flag.
 
 ---
 
 ## P1: CLI — Visualization
 
 CLI-native charts without external dependencies.
-
-- [ ] Add optional self-contained HTML chart export that can combine `plot`,
-  `export-heatmap`, and `review` sections into one report file.
 
 ---
 
@@ -341,28 +338,13 @@ Diagnostics added to `check` and `health` that catch common mistakes.
 Additional commands for users who want deeper inspection, style enforcement,
 long-term file management, and sharing. Implement after P1 commands are stable.
 
-- [ ] Add `template` command for reusable item sets: store named templates in
-  config JSON or in a `templates.life.txt` file using a reserved `TEMPLATE`
-  type marker. `lifetxt template list` shows available templates; `lifetxt
-  template apply NAME --append FILE` expands the template, resolving date
-  placeholders (`{today}`, `{next_monday}`, `{next_week}`) at apply time, and
-  appends the result. Differs from `H` habits: template content varies each
-  time and is not scheduled automatically.
-
-- [ ] Add `share` command to generate self-contained read-only output:
-  combine `filter`, `plot`, and `review` output into a single HTML or Markdown
-  file for sharing without running the server. `--format html` must produce a
-  single file with no external dependencies (inline CSS and JS). `--format
-  markdown` produces a document suitable for pasting into a wiki or note tool.
-  Accept standard filter options and `--week`/`--month` shortcuts.
-
-- [ ] Add `digest` command for scheduled report delivery: read `review --format
-  json` output and POST it to a configured destination. Channels: `--format
-  slack-webhook` (Slack incoming webhook URL via `--url-env`), `--format
-  email` (SMTP with credentials from environment variables), `--format file`
-  (append Markdown to a local log). Transport dependencies are optional; the
-  command exits with a clear error if the required dependency or environment
-  variable is missing before making any network request.
+- [ ] Extend `template` beyond config-defined templates: consider also
+  supporting a `templates.life.txt` file using a reserved `TEMPLATE` type
+  marker as an alternative to config JSON, for teams that prefer templates to
+  live alongside their life.txt files under version control. The config-based
+  `template list` / `template apply NAME --append FILE` (with `{today}`,
+  `{next_monday}`, `{next_week}` placeholders resolved at apply time) is
+  implemented; see CLI guide section 18.
 
 - [ ] Add dependency-focused views and filters: show only blocked or unblocked
   items in `agenda`, expose blocker chains in `links` or a dedicated
@@ -382,10 +364,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `*.life.txt`, and `*_life.txt` in `docs/en/editor.md` and
   `docs/ja/editor.md`.
 
-- [ ] Generate Tab-completion candidates and snippet key lists directly from
-  `lifetxt/model.py` (`RECOMMENDED_KEYS_BY_TYPE`, status aliases, type
-  aliases) to prevent drift between the editor extension, CLI completion
-  scripts, and the spec.
+- [ ] Generate VS Code editor snippet key lists directly from
+  `lifetxt/model.py` (`RECOMMENDED_KEYS_BY_TYPE`, `KNOWN_KEYS`, status/type
+  aliases) to prevent drift between the editor extension and the spec.
+  `lifetxt/completion.py` (shell Tab-completion for bash/zsh/fish) already
+  derives its `--type`/`--status` value lists and detail-key flag list from
+  `lifetxt/model.py` and its `COMMANDS` tuple has been brought up to date
+  with every current subcommand; only the VS Code snippet side remains.
 
 - [ ] Add highlight snapshot tests for every grammar token: title, status,
   type, detail key, quoted value, body continuation (`|`), line continuation
@@ -455,10 +440,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `.generated/`, archives in `archive/`, and periodic archiving schedule.
   Clarify that the tool enforces nothing; these are operational recommendations.
 
-- [ ] Document `#!` metadata directive syntax: supported keys, placement
-  rules, and the full four-level resolution order with side-by-side examples
-  comparing directive-based, config-based, and CLI-flag-based configuration
-  for the same setting.
+- [ ] Document `#!` metadata directive placement rules in the format spec:
+  the parser (`parser.py`'s `parse_directives`) stops scanning for
+  directives at the first non-directive, non-blank line, so directives must
+  appear contiguously before the first item — this constraint is not
+  documented anywhere yet. The four-level resolution order with a worked
+  side-by-side example (CLI flag vs. config JSON vs. `#!` directive vs.
+  built-in default) is now documented in CLI guide section 12.1.
 
 - [ ] Document `archive` command and workflow: all `--orphan-children` modes
   with before/after examples, `--block-on-external-refs` for cross-file
@@ -468,21 +456,12 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   children manually, `archive --orphan-children adopt`, `archive
   --orphan-children promote`) and when `--ignore W219` is appropriate.
 
-- [ ] Document `encrypt`/`decrypt`: supported algorithms, key management
-  recommendations (passphrase vs key file vs environment variable), which
-  field types are good candidates, and how to run `check` safely on a
-  partially encrypted file.
-
 - [ ] Document `plot`: chart types, filter options, terminal rendering
   behavior, enabling SVG/PNG output, and piping text output to a pager.
 
 - [ ] Document `undo` and `backup.auto`: differences between the two safety
   mechanisms, recommended config for users without Git, and step-by-step
   recovery from an accidental write.
-
-- [ ] Document `init` and `doctor`: position as the recommended onboarding
-  entry points in the main README and installation guide, with an annotated
-  example of a first session from `init` through `quick` and `summary`.
 
 - [ ] Add `docs/en/ai-integration.md` and `docs/ja/ai-integration.md`:
   MCP server setup and tool reference, CLI pipe patterns (`to-json | llm
@@ -491,11 +470,13 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   workflow for automated AI summaries on push. Include annotated examples
   showing what life.txt data looks like from the AI's perspective.
 
-- [ ] Add all new command docs and workflow examples to `docs/en/cli.md` and
-  `docs/ja/cli.md`: `init`, `doctor`, `quick`, `done`, `undo`, `assign`,
-  `summary`, `review`, `health`, `inbox`, `cleanup`, `archive`, `encrypt`,
-  `decrypt`, `plot`, `search`, `lint`, `diff`, `snapshot`, `migrate`,
-  `template`, `share`, `digest`, `who`.
+- [ ] Add full command docs and workflow examples to `docs/en/cli.md` and
+  `docs/ja/cli.md` for: `quick`, `done`, `undo`, `assign`, `summary`,
+  `review`, `health`, `inbox`, `cleanup`, `archive`, `plot`, `search`, `lint`,
+  `diff`, `snapshot`, `migrate`, `who`. All of these (plus every other
+  subcommand) now have a one-line entry in the section 1 command-overview
+  table, but only `init`, `doctor`, `encrypt`, `decrypt`, `share`, `digest`,
+  and `template` have a dedicated worked-example section (sections 16-18).
 
 - [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with: current endpoint
   request/response examples for every route, the statistics dashboard and
@@ -637,11 +618,12 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   idempotency (running twice produces same result), and `add-id` collision
   avoidance when file already has some IDs.
 
-- [ ] Add `share` tests: HTML is a single self-contained file; Markdown
-  renders correctly; filters narrow output.
-
-- [ ] Add `digest` tests: Slack payload shape, `--format file` append,
-  missing env var exits before network request.
+- [ ] Add a `digest --format slack-webhook` payload-shape test: mock the
+  HTTP transport (e.g. monkeypatch `urllib.request.urlopen` or point
+  `--url-env` at a local `http.server` fixture) and assert the JSON body is
+  `{"text": ...}` with the expected summary content. `--format file` append
+  and the missing-env-var-exits-before-network-request path are already
+  covered in `tests/test_lifetxt.py` (`LifeTxtShareDigestTemplateTests`).
 
 - [ ] Add `undo` / `backup.auto` tests: backup created before each write,
   `backup.keep` eviction, directory auto-created.
@@ -701,10 +683,9 @@ after the corresponding P1 or P2 feature is stable.
 - [ ] Consider `template` variables beyond date placeholders (`{user}`,
   `{project}`) and a simple prompt mode that asks for variable values before
   expanding.
-- [ ] Consider `review --format markdown` for output suitable for pasting into
-  a note tool or Markdown wiki, after the text and JSON formats are stable.
 - [ ] Consider `digest` additional channels (Teams webhook, Discord webhook,
-  desktop notification) after the core Slack/email delivery is stable.
+  desktop notification) now that `digest` (Slack webhook / email / file) is
+  implemented and stable.
 - [ ] Consider `archive` rotation policy (e.g., yearly auto-archive via config
   `archive.auto`) after the basic `archive` command is stable.
 - [ ] Consider `--config paths` auto-load mode: when no file arguments are
@@ -714,13 +695,14 @@ after the corresponding P1 or P2 feature is stable.
   contribute standard style conventions.
 
 ### Web & API
-- [ ] Consider `plot` output as a self-contained HTML file with embedded
-  Chart.js for sharing without running the server.
 - [ ] Consider interactive `plot` mode in `tui` as a live-updating chart
   panel, after the basic `plot` command is stable.
 - [ ] Consider `who` integration into the `tui` sidebar panel showing team
   presence alongside tasks and agenda.
-- [ ] Consider `share` export as an email-ready HTML attachment via `digest`.
+- [ ] Consider attaching `share --format html` output as an email attachment
+  from `digest --format email` (currently `digest` sends only the plain-text
+  summary body; `share` and `digest` are both implemented but not wired
+  together).
 - [ ] Consider write-conflict detection using source-ownership metadata before
   `update` and `delete` operations when multiple writers share a file.
 - [ ] Consider a full Git server (e.g., Soft-serve or a Gitea-compatible

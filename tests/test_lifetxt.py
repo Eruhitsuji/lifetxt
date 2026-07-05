@@ -6992,6 +6992,158 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_filter_table_output_and_width(self):
+        path = self._make_file(
+            "[x] T Write_Report project:research\n"
+            "[ ] T Read_Papers project:research\n"
+        )
+        try:
+            out, err, rc = run_cli("filter", path, "--format", "table")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("STATUS", out)
+            self.assertIn("Write_Report", out)
+            self.assertIn("research", out)
+
+            out, err, rc = run_cli("filter", path, "--format", "table", "--width", "40")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Write_Report", out)
+            self.assertLessEqual(max(len(line) for line in out.splitlines()), 40)
+        finally:
+            os.unlink(path)
+
+
+class LifeTxtShareDigestTemplateTests(unittest.TestCase):
+    def _make_file(self, text):
+        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        handle.write(text)
+        handle.flush()
+        handle.close()
+        return handle.name
+
+    def test_share_html_output_is_self_contained(self):
+        path = self._make_file(
+            "[x] T Write_Report project:research elapsed:2h\n"
+            "[ ] T Read_Papers project:research\n"
+        )
+        out_path = path + ".html"
+        try:
+            out, err, rc = run_cli("share", path, "-o", out_path, "--title", "Weekly report")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Wrote", out)
+            html_text = Path(out_path).read_text(encoding="utf-8")
+            self.assertIn("<!doctype html>", html_text)
+            self.assertIn("Weekly report", html_text)
+            self.assertIn("Write_Report", html_text)
+            self.assertIn("<svg", html_text)
+        finally:
+            os.unlink(path)
+            if os.path.exists(out_path):
+                os.unlink(out_path)
+
+    def test_share_markdown_output_with_filters(self):
+        path = self._make_file(
+            "[x] T Write_Report project:research\n"
+            "[ ] T Read_Papers project:other\n"
+        )
+        out_path = path + ".md"
+        try:
+            out, err, rc = run_cli(
+                "share", path, "--project", "research", "--format", "markdown", "-o", out_path
+            )
+            self.assertEqual(rc, 0, err)
+            md_text = Path(out_path).read_text(encoding="utf-8")
+            self.assertIn("Write_Report", md_text)
+            self.assertNotIn("Read_Papers", md_text)
+        finally:
+            os.unlink(path)
+            if os.path.exists(out_path):
+                os.unlink(out_path)
+
+    def test_digest_dry_run_file_channel_makes_no_write(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        digest_path = path + ".digest.md"
+        try:
+            out, err, rc = run_cli(
+                "digest", path, "--month", "2026-06",
+                "--format", "file", "--path", digest_path, "--dry-run",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("[dry-run]", out)
+            self.assertFalse(os.path.exists(digest_path))
+        finally:
+            os.unlink(path)
+
+    def test_digest_file_channel_appends_markdown(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        digest_path = path + ".digest.md"
+        try:
+            out, err, rc = run_cli(
+                "digest", path, "--month", "2026-06",
+                "--format", "file", "--path", digest_path,
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertTrue(os.path.exists(digest_path))
+            text = Path(digest_path).read_text(encoding="utf-8")
+            self.assertIn("lifetxt digest", text)
+            self.assertIn("Completed tasks: 1", text)
+        finally:
+            os.unlink(path)
+            if os.path.exists(digest_path):
+                os.unlink(digest_path)
+
+    def test_digest_slack_webhook_requires_env_var_before_network(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "digest", path, "--format", "slack-webhook", "--url-env", "LIFETXT_TEST_MISSING_WEBHOOK_ENV",
+            )
+            self.assertEqual(rc, 1)
+            self.assertIn("LIFETXT_TEST_MISSING_WEBHOOK_ENV", err)
+        finally:
+            os.unlink(path)
+
+    def test_template_list_and_apply(self):
+        life_path = self._make_file("[ ] T Existing\n")
+        config_path = self._make_file(json.dumps({
+            "templates": {
+                "weekly_review": {
+                    "lines": [
+                        "[ ] T Weekly_Review due:{next_monday} project:reflection",
+                    ]
+                }
+            }
+        }))
+        try:
+            out, err, rc = run_cli("--config", config_path, "template", "list")
+            self.assertEqual(rc, 0, err)
+            self.assertIn("weekly_review", out)
+
+            out, err, rc = run_cli(
+                "--config", config_path, "template", "apply", "weekly_review",
+                "--append", life_path, "--dry-run",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("[dry-run]", out)
+            self.assertNotIn("Weekly_Review", Path(life_path).read_text(encoding="utf-8"))
+
+            out, err, rc = run_cli(
+                "--config", config_path, "template", "apply", "weekly_review", "--append", life_path,
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Weekly_Review", Path(life_path).read_text(encoding="utf-8"))
+        finally:
+            os.unlink(life_path)
+            os.unlink(config_path)
+
+    def test_template_apply_unknown_name_errors(self):
+        life_path = self._make_file("[ ] T Existing\n")
+        try:
+            out, err, rc = run_cli("template", "apply", "does_not_exist", "--append", life_path)
+            self.assertEqual(rc, 1)
+            self.assertIn("Template not found", err)
+        finally:
+            os.unlink(life_path)
+
 
 if __name__ == "__main__":
     unittest.main()

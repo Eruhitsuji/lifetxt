@@ -19,6 +19,7 @@ from .config import (
     config_template_text,
     config_team_aliases,
     config_team_members,
+    config_templates,
     config_user_aliases,
     config_user_name,
     config_write_file,
@@ -34,6 +35,8 @@ from .agenda import (
     format_agenda_table,
     parse_agenda_range,
     parse_optional_time_range,
+    _format_table_row as _agenda_format_table_row,
+    _table_cell as _agenda_table_cell,
 )
 from .assist import (
     DETAIL_FLAGS,
@@ -618,9 +621,16 @@ def build_parser():
     _add_item_filter_arguments(filter_command)
     filter_command.add_argument(
         "--format",
-        choices=("life", "json", "jsonl"),
+        choices=("life", "json", "jsonl", "table"),
         default="life",
         help="Output format. Defaults to life.",
+    )
+    filter_command.add_argument(
+        "--width",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Table column width in characters (0 = detect terminal width). Only used with --format table.",
     )
     filter_command.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     filter_command.add_argument(
@@ -1700,6 +1710,64 @@ def build_parser():
     decrypt_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
     decrypt_cmd.add_argument("--backup", action="store_true", help="Write .bak before modifying.")
     decrypt_cmd.set_defaults(func=command_decrypt)
+
+    # share command
+    share_cmd = subparsers.add_parser(
+        "share",
+        help="Export a self-contained HTML or Markdown report combining filtered items and charts.",
+    )
+    _add_input_paths(share_cmd)
+    _add_item_filter_arguments(share_cmd)
+    share_cmd.add_argument("--week", action="store_true", help="Restrict range label to the current ISO week (Monday to today).")
+    share_cmd.add_argument("--month", metavar="YYYY-MM", help="Restrict range label to a specific calendar month.")
+    share_cmd.add_argument(
+        "--format",
+        choices=("html", "markdown"),
+        default="html",
+        help="Output format. Defaults to html.",
+    )
+    share_cmd.add_argument("-o", "--output", help="Output file. Defaults to share.html or share.md.")
+    share_cmd.add_argument("--title", help="Report title. Defaults to 'lifetxt share report'.")
+    share_cmd.set_defaults(func=command_share)
+
+    # digest command
+    digest_cmd = subparsers.add_parser(
+        "digest",
+        help="Deliver a review summary to Slack, email, or a local file.",
+    )
+    _add_input_paths(digest_cmd)
+    digest_cmd.add_argument("--week", action="store_true", help="Digest the current ISO week (Monday to today).")
+    digest_cmd.add_argument("--month", metavar="YYYY-MM", help="Digest a specific calendar month.")
+    digest_cmd.add_argument("--project", help="Restrict digest to a specific project.")
+    digest_cmd.add_argument(
+        "--format",
+        dest="channel",
+        choices=("slack-webhook", "email", "file"),
+        required=True,
+        help="Delivery channel.",
+    )
+    digest_cmd.add_argument("--url-env", metavar="ENVVAR", help="Environment variable with the Slack incoming webhook URL (--format slack-webhook).")
+    digest_cmd.add_argument("--to", help="Recipient email address (--format email).")
+    digest_cmd.add_argument("--smtp-host-env", metavar="ENVVAR", default="LIFETXT_SMTP_HOST", help="Environment variable with the SMTP host (--format email).")
+    digest_cmd.add_argument("--smtp-user-env", metavar="ENVVAR", default="LIFETXT_SMTP_USER", help="Environment variable with the SMTP username (--format email).")
+    digest_cmd.add_argument("--smtp-pass-env", metavar="ENVVAR", default="LIFETXT_SMTP_PASS", help="Environment variable with the SMTP password (--format email).")
+    digest_cmd.add_argument("--path", dest="digest_path", help="Local file to append Markdown to (--format file).")
+    digest_cmd.add_argument("--dry-run", action="store_true", help="Build the digest and print what would be sent without making a network request or writing.")
+    digest_cmd.set_defaults(func=command_digest)
+
+    # template command
+    template_cmd = subparsers.add_parser(
+        "template",
+        help="List and apply reusable named item templates from config.",
+    )
+    template_subparsers = template_cmd.add_subparsers(dest="template_command")
+    template_list_cmd = template_subparsers.add_parser("list", help="List available templates.")
+    template_list_cmd.set_defaults(func=command_template_list)
+    template_apply_cmd = template_subparsers.add_parser("apply", help="Expand a template and append the result to a file.")
+    template_apply_cmd.add_argument("name", help="Template name (key under config templates).")
+    template_apply_cmd.add_argument("--append", metavar="FILE", required=True, help="File to append the expanded template to.")
+    template_apply_cmd.add_argument("--dry-run", action="store_true", help="Preview the expanded template without writing.")
+    template_apply_cmd.set_defaults(func=command_template_apply)
 
     return parser
 
@@ -3880,11 +3948,75 @@ def command_filter(args):
         if output:
             output += "\n"
         write_text(args.output, output)
+    elif args.format == "table":
+        write_text(args.output, _format_filter_table(items, width=getattr(args, "width", 0)))
     else:
         write_text(args.output, _items_to_life_text(items, canonical=args.canonical, key=id_key))
 
     _print_warnings(diagnostics)
     return 0
+
+
+_FILTER_TABLE_COLUMNS = (
+    ("status", "STATUS"),
+    ("kind", "TYPE"),
+    ("title", "TITLE"),
+    ("project", "PROJECT"),
+)
+
+
+def _format_filter_table(items, width=None):
+    if not items:
+        return "No matching items.\n"
+
+    width = int(width or 0)
+    if width <= 0:
+        try:
+            import shutil as _shutil
+            width = _shutil.get_terminal_size((80, 24)).columns
+        except Exception:
+            width = 80
+
+    rows = []
+    for item in items:
+        project = str(item.details.get("project", [""])[0]) if item.details.get("project") else ""
+        rows.append(
+            OrderedDict(
+                [
+                    ("status", _agenda_table_cell(item.status)),
+                    ("kind", _agenda_table_cell(item.kind)),
+                    ("title", _agenda_table_cell(item.title)),
+                    ("project", _agenda_table_cell(project)),
+                ]
+            )
+        )
+
+    # Narrow terminals: compact single-line form instead of a bordered table.
+    if width < 80:
+        lines = []
+        for row in rows:
+            prefix = "%s %s " % (row["status"], row["kind"])
+            max_title = max(10, width - len(prefix) - 1)
+            title = row["title"]
+            if len(title) > max_title:
+                title = title[: max_title - 3] + "..."
+            lines.append(prefix + title)
+        return "\n".join(lines) + "\n"
+
+    widths = []
+    for key, heading in _FILTER_TABLE_COLUMNS:
+        col_width = len(heading)
+        for row in rows:
+            col_width = max(col_width, len(row[key]))
+        widths.append(col_width)
+
+    lines = [
+        _agenda_format_table_row([heading for _key, heading in _FILTER_TABLE_COLUMNS], widths),
+        _agenda_format_table_row(["-" * w for w in widths], widths),
+    ]
+    for row in rows:
+        lines.append(_agenda_format_table_row([row[key] for key, _heading in _FILTER_TABLE_COLUMNS], widths))
+    return "\n".join(lines) + "\n"
 
 
 def command_status(args):
@@ -5214,11 +5346,22 @@ def command_assist(args):
     return 0
 
 
+_CONFIG_RESOLUTION_ORDER_NOTE = """\
+Settings are resolved in this order, highest priority first:
+  1. CLI flag (e.g. --project, --person) on the command you run.
+  2. This config file's JSON values (e.g. defaults.person, defaults.timezone).
+  3. `#!` file-level directives at the top of a life.txt file (e.g. #! self:, #! project:, #! timezone:).
+  4. Built-in defaults (e.g. person "self", timezone "UTC").
+See the "Configuration" section of docs/en/cli.md (or docs/ja/cli.md) for details.
+"""
+
+
 def command_config_init(args):
     if os.path.exists(args.output) and not args.force:
         raise ValueError("Config file already exists. Use --force to overwrite: %s" % args.output)
     write_text(args.output, config_template_text())
     write_text(None, "Wrote %s\n" % args.output)
+    write_text(None, "\n" + _CONFIG_RESOLUTION_ORDER_NOTE)
     return 0
 
 
@@ -6686,3 +6829,294 @@ def command_decrypt(args):
     atomic_write_text(path, "".join(lines))
     sys.stdout.write("Decrypted %d field value(s) in %s.\n" % (total_changed, path))
     return 1 if errors else 0
+
+
+def _share_range_label(args):
+    today = datetime.date.today()
+    if getattr(args, "week", False):
+        start = today - datetime.timedelta(days=today.weekday())
+        end = start + datetime.timedelta(days=6)
+        return "%s to %s" % (start.isoformat(), end.isoformat())
+    if getattr(args, "month", None):
+        import calendar as _calendar
+        try:
+            year_s, month_s = args.month.split("-")
+            year_i, month_i = int(year_s), int(month_s)
+            start = datetime.date(year_i, month_i, 1)
+            last_day = _calendar.monthrange(year_i, month_i)[1]
+            end = datetime.date(year_i, month_i, last_day)
+        except (ValueError, AttributeError):
+            raise ValueError("Invalid --month format. Use YYYY-MM.")
+        return "%s to %s" % (start.isoformat(), end.isoformat())
+    return "all matching items"
+
+
+def _share_plot_data(items):
+    from .timeutil import parse_elapsed as _parse_elapsed
+
+    status_counts = OrderedDict()
+    project_counts = OrderedDict()
+    elapsed_by_project = OrderedDict()
+    for item in items:
+        status_counts[item.status] = status_counts.get(item.status, 0) + 1
+        project = str(item.details.get("project", [""])[0]) if item.details.get("project") else "(no project)"
+        project_counts[project] = project_counts.get(project, 0) + 1
+        elapsed_vals = item.details.get("elapsed", [])
+        if elapsed_vals:
+            minutes = _parse_elapsed(str(elapsed_vals[0]))
+            if minutes:
+                elapsed_by_project[project] = elapsed_by_project.get(project, 0) + minutes
+
+    plot_data = OrderedDict()
+    if status_counts:
+        plot_data["Items by status"] = OrderedDict(sorted(status_counts.items(), key=lambda kv: -kv[1]))
+    if project_counts:
+        plot_data["Items by project"] = OrderedDict(sorted(project_counts.items(), key=lambda kv: -kv[1]))
+    if elapsed_by_project:
+        plot_data["Elapsed minutes by project"] = OrderedDict(sorted(elapsed_by_project.items(), key=lambda kv: -kv[1]))
+    return plot_data
+
+
+def _share_to_html(title, range_label, items, plot_data):
+    def esc(value):
+        return html.escape(str(value), quote=True)
+
+    lines = [
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        "<title>%s</title>" % esc(title),
+        "<style>",
+        "body{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;max-width:960px;margin:32px auto;padding:0 16px;color:#1f2937}",
+        "h1,h2{line-height:1.2} table{border-collapse:collapse;width:100%;margin:12px 0}",
+        "th,td{border:1px solid #d1d5db;padding:6px 8px;text-align:left} th{background:#f3f4f6}",
+        ".meta{color:#6b7280} svg{max-width:100%;height:auto}",
+        "</style>",
+        "</head>",
+        "<body>",
+        "<h1>%s</h1>" % esc(title),
+        '<p class="meta">%s &middot; %d item(s)</p>' % (esc(range_label), len(items)),
+    ]
+    if plot_data:
+        lines.append(_plot_data_to_svg(plot_data, title="Summary"))
+    lines.append("<h2>Items</h2>")
+    if items:
+        lines.append("<table><thead><tr><th>Status</th><th>Type</th><th>Title</th><th>Project</th></tr></thead><tbody>")
+        for item in items:
+            project = str(item.details.get("project", [""])[0]) if item.details.get("project") else ""
+            lines.append(
+                "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+                % (esc(item.status), esc(item.kind), esc(item.title), esc(project))
+            )
+        lines.append("</tbody></table>")
+    else:
+        lines.append("<p>No matching items.</p>")
+    lines.extend(["</body>", "</html>"])
+    return "\n".join(lines) + "\n"
+
+
+def _share_to_markdown(title, range_label, items, plot_data):
+    lines = ["# %s" % title, "", "%s — %d item(s)" % (range_label, len(items)), ""]
+    for chart_title, data in plot_data.items():
+        lines.append("## %s" % chart_title)
+        lines.append("")
+        max_value = max(data.values()) if data else 1
+        for label, value in data.items():
+            bar = _plot_bar(value, max_value, width=30)
+            lines.append("- `%s` %s %s" % (label, bar, value))
+        lines.append("")
+    lines.append("## Items")
+    lines.append("")
+    if items:
+        lines.append("| Status | Type | Title | Project |")
+        lines.append("|---|---|---|---|")
+        for item in items:
+            project = str(item.details.get("project", [""])[0]) if item.details.get("project") else ""
+            lines.append("| %s | %s | %s | %s |" % (item.status, item.kind, item.title.replace("|", "\\|"), project))
+    else:
+        lines.append("No matching items.")
+    return "\n".join(lines) + "\n"
+
+
+def command_share(args):
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config)
+    items, diagnostics = _parse_life_inputs(paths, config)
+    items = _filter_items_from_args(items, args)
+
+    range_label = _share_range_label(args)
+    plot_data = _share_plot_data(items)
+
+    fmt = getattr(args, "format", "html") or "html"
+    title = getattr(args, "title", None) or "lifetxt share report"
+    output_path = getattr(args, "output", None) or ("share.html" if fmt == "html" else "share.md")
+
+    if fmt == "markdown":
+        text = _share_to_markdown(title, range_label, items, plot_data)
+    else:
+        text = _share_to_html(title, range_label, items, plot_data)
+
+    write_text(output_path, text)
+    sys.stdout.write("Wrote %s (%d item(s)).\n" % (output_path, len(items)))
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_digest(args):
+    import contextlib
+    import io
+
+    review_args = argparse.Namespace(
+        paths=getattr(args, "paths", None) or [],
+        week=getattr(args, "week", False),
+        month=getattr(args, "month", None),
+        from_date=None,
+        to_date=None,
+        project=getattr(args, "project", None),
+        format="json",
+        pretty=False,
+        config=getattr(args, "config", None),
+        config_data=getattr(args, "config_data", None),
+    )
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        command_review(review_args)
+    result = json.loads(buffer.getvalue())
+
+    lines = ["*lifetxt digest: %s*" % result["range"], ""]
+    lines.append("Completed tasks: %d" % result["completed_tasks"])
+    lines.append("Open tasks: %d" % result["open_tasks"])
+    if result["habits"]:
+        lines.append("")
+        lines.append("Habits:")
+        for habit_title, habit in result["habits"].items():
+            lines.append(
+                "- %s: %d/%d (%d%%)"
+                % (habit_title, habit["done"], habit["done"] + habit["open"], habit["completion_rate"])
+            )
+    if result["elapsed_by_project"]:
+        lines.append("")
+        lines.append("Elapsed by project:")
+        for project, elapsed in result["elapsed_by_project"].items():
+            lines.append("- %s: %s" % (project, elapsed))
+    message = "\n".join(lines)
+
+    channel = args.channel
+    dry_run = getattr(args, "dry_run", False)
+
+    if channel == "slack-webhook":
+        url_env = getattr(args, "url_env", None)
+        if not url_env:
+            raise ValueError("--url-env is required with --format slack-webhook.")
+        webhook_url = os.environ.get(url_env, "")
+        if not webhook_url:
+            raise ValueError("Environment variable %s is not set." % url_env)
+        if dry_run:
+            sys.stdout.write("[dry-run] Would POST to Slack webhook from $%s:\n%s\n" % (url_env, message))
+            return 0
+        payload = json.dumps({"text": message}).encode("utf-8")
+        request = Request(webhook_url, data=payload, headers={"Content-Type": "application/json"})
+        try:
+            urlopen(request, timeout=10)
+        except (HTTPError, URLError) as exc:
+            raise ValueError("Slack webhook request failed: %s" % exc)
+        sys.stdout.write("Sent digest to Slack webhook.\n")
+        return 0
+
+    if channel == "email":
+        to_addr = getattr(args, "to", None)
+        if not to_addr:
+            raise ValueError("--to is required with --format email.")
+        host_env = getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST")
+        user_env = getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER")
+        pass_env = getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS")
+        smtp_host = os.environ.get(host_env, "")
+        smtp_user = os.environ.get(user_env, "")
+        smtp_pass = os.environ.get(pass_env, "")
+        if not smtp_host:
+            raise ValueError("Environment variable %s (SMTP host) is not set." % host_env)
+        if not smtp_user or not smtp_pass:
+            raise ValueError(
+                "Environment variables %s and %s (SMTP credentials) must be set." % (user_env, pass_env)
+            )
+        if dry_run:
+            sys.stdout.write("[dry-run] Would email digest to %s via %s:\n%s\n" % (to_addr, smtp_host, message))
+            return 0
+        import smtplib
+        from email.mime.text import MIMEText
+
+        mime = MIMEText(message, "plain", "utf-8")
+        mime["Subject"] = "lifetxt digest: %s" % result["range"]
+        mime["From"] = smtp_user
+        mime["To"] = to_addr
+        with smtplib.SMTP(smtp_host, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(smtp_user, smtp_pass)
+            smtp.sendmail(smtp_user, [to_addr], mime.as_string())
+        sys.stdout.write("Sent digest email to %s.\n" % to_addr)
+        return 0
+
+    if channel == "file":
+        digest_path = getattr(args, "digest_path", None)
+        if not digest_path:
+            raise ValueError("--path is required with --format file.")
+        if dry_run:
+            sys.stdout.write("[dry-run] Would append digest to %s:\n%s\n" % (digest_path, message))
+            return 0
+        existing = read_text(digest_path) if os.path.exists(digest_path) else ""
+        prefix = "\n" if existing and not existing.endswith("\n") else ""
+        with open(digest_path, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write(prefix + "\n" + message + "\n")
+        sys.stdout.write("Appended digest to %s.\n" % digest_path)
+        return 0
+
+    raise ValueError("Unsupported digest channel: %s" % channel)
+
+
+def _resolve_template_placeholders(text, today=None):
+    today = today or datetime.date.today()
+    days_to_next_monday = (7 - today.weekday()) % 7 or 7
+    next_monday = today + datetime.timedelta(days=days_to_next_monday)
+    next_week = today + datetime.timedelta(days=7)
+    replacements = (
+        ("{today}", today.isoformat()),
+        ("{next_monday}", next_monday.isoformat()),
+        ("{next_week}", next_week.isoformat()),
+    )
+    for placeholder, value in replacements:
+        text = text.replace(placeholder, value)
+    return text
+
+
+def command_template_list(args):
+    templates = config_templates(_config(args))
+    if not templates:
+        sys.stdout.write('No templates configured. Add a "templates" section to your config file.\n')
+        return 0
+    for name, lines in templates.items():
+        sys.stdout.write("%s (%d line(s))\n" % (name, len(lines)))
+    return 0
+
+
+def command_template_apply(args):
+    templates = config_templates(_config(args))
+    name = args.name
+    if name not in templates:
+        raise ValueError(
+            "Template not found: %s. Run `lifetxt template list` to see available templates." % name
+        )
+    expanded_lines = [_resolve_template_placeholders(line) for line in templates[name]]
+    expanded = "\n".join(expanded_lines) + "\n"
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write("[dry-run] Would append to %s:\n%s" % (args.append, expanded))
+        return 0
+
+    target = args.append
+    existing = read_text(target) if os.path.exists(target) else ""
+    prefix = "\n" if existing and not existing.endswith("\n") else ""
+    with open(target, "a", encoding="utf-8", newline="\n") as handle:
+        handle.write(prefix + expanded)
+    sys.stdout.write("Appended template %r (%d line(s)) to %s.\n" % (name, len(expanded_lines), target))
+    return 0

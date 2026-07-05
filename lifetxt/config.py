@@ -160,6 +160,24 @@ def config_template():
             ),
         ]
     )
+    data["templates"] = OrderedDict(
+        [
+            (
+                "weekly_review",
+                OrderedDict(
+                    [
+                        (
+                            "lines",
+                            [
+                                "[ ] T Weekly_Review due:{next_monday} project:reflection",
+                                "[ ] T Plan_Next_Week due:{next_monday} project:reflection",
+                            ],
+                        ),
+                    ]
+                ),
+            )
+        ]
+    )
     data["sync_ics"] = OrderedDict(
         [
             ("output", ".generated/google_calendar.life.txt"),
@@ -319,6 +337,17 @@ def config_tag_aliases(config):
                 if value not in expanded:
                     expanded.append(value)
     return aliases
+
+
+def config_templates(config):
+    templates = OrderedDict()
+    for name, value in config_section(config, "templates").items():
+        if isinstance(value, dict):
+            lines = value.get("lines")
+        else:
+            lines = value
+        templates[str(name)] = [str(line) for line in _as_list(lines)]
+    return templates
 
 
 def config_section(config, name):

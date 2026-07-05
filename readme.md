@@ -19,6 +19,28 @@ Please refer to [life_txt_format_spec.md](./life_txt_format_spec.md) for the det
 Use the format specification for file grammar and key semantics. Use the CLI
 guide for command compatibility, filters, output formats, and conversion rules.
 
+## Getting Started
+
+New to lifetxt? Start with `init` and `doctor`:
+
+```sh
+python -m lifetxt init                 # interactive: creates life.txt + .lifetxt.json
+python -m lifetxt init --yes           # non-interactive: accepts all defaults
+python -m lifetxt doctor               # checks your environment and files are set up correctly
+python -m lifetxt check life.txt       # validate syntax after your first edits
+python -m lifetxt summary life.txt     # see what init created
+```
+
+`init` writes a starter `life.txt` (with `#! self:`, `#! timezone:`, and
+optionally `#! project:` directives) and a matching `.lifetxt.json`, prompting
+for your name, timezone, and default project. Pass `--yes` to skip every
+prompt and accept the defaults (`self`, `UTC`, no project) — useful in
+scripts and CI. `doctor` then reports pass/warn/fail checks for your Python
+version, optional dependencies (`textual`, `watchdog`, `matplotlib`, `fzf`),
+and config/life.txt file health, so you know what to install next. See
+section 16 ("`init` and `doctor`") of the [CLI guide](./docs/en/cli.md) for
+the full flag reference.
+
 ## Minimal life.txt
 
 ```txt

@@ -155,15 +155,16 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and display mode
-- A top workspace bar for New Record, Agenda, Status, Notifications,
-  Statistics, and Graph panels
+- A header workspace bar that combines view switching (Items, Messages,
+  Status, Kiosk) and tools (New Record, Agenda, Notifications, Statistics,
+  Graph)
 - Showing near-current agenda records
 - Showing active status / presence records
 - Showing due message notifications
 - Showing repeated agenda occurrences with occurrence badges
 - Browser notifications after the user grants permission
-- Showing message threads in the detail drawer using `parent:`
-- Replying to message threads from the detail drawer
+- Showing message threads in the record detail modal using `parent:`
+- Replying to message threads from the record detail modal
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
@@ -178,9 +179,12 @@ Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
 The layout is responsive: the main item list stays in one readable column, and
-the former right-side tools are collected into a top workspace bar. Only one
-workspace panel is open at a time, so New Record, Statistics, Graph, Agenda,
-Status, and Notifications remain visible on narrow and wide screens.
+the former right-side tools are collected into the header workspace bar. The
+same bar also contains Items, Messages, Status, and Kiosk view switches. Only
+one workspace panel is open at a time, so New Record, Statistics, Graph,
+Agenda, Status, and Notifications remain visible on narrow and wide screens.
+Clicking an item opens a centered record detail modal instead of a right-side
+drawer.
 
 ## URL Parameters
 
@@ -257,12 +261,12 @@ the browser site settings for the current URL and allow notifications there.
 
 The Graph workspace panel reads `/api/graph` and renders a compact SVG reference
 graph without external dependencies. Click a node to open that record in the
-detail drawer. The drawer also shows a smaller graph for the selected item when
-it has ID references; the drawer graph loads a depth-2 subgraph so indirect
-blockers and related records are visible without leaving the drawer.
+record detail modal. The modal also shows a smaller graph for the selected item
+when it has ID references; the modal graph loads a depth-2 subgraph so indirect
+blockers and related records are visible without leaving the modal.
 
-Message items (`type:M`) with an `id:` show a thread section in the drawer.
-The drawer also includes a reply form. Replies are records whose `parent:`
+Message items (`type:M`) with an `id:` show a thread section in the detail
+modal. The modal also includes a reply form. Replies are records whose `parent:`
 points at the root message ID and are also available from:
 
 ```sh

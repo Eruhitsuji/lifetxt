@@ -116,14 +116,14 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、表示mode指定
-- New Record、Agenda、Status、Notifications、Statistics、Graph を切り替える
-  上部 workspace bar
+- Items、Messages、Status、Kiosk の view 切り替えと、New Record、Agenda、
+  Notifications、Statistics、Graph の tool を統合した header workspace bar
 - 現在時刻付近の agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
 - repeat から生成された agenda occurrence の badge 表示
-- drawer 内の Message thread 表示
-- drawer からの Message thread 返信
+- record detail modal 内の Message thread 表示
+- record detail modal からの Message thread 返信
 - `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
 - title、detail、body/note preview の検索語 highlight
@@ -137,9 +137,11 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 表示します。
 
 layout は responsive です。item list は読みやすい 1 カラムに固定し、従来の右側
-tool 群は上部 workspace bar に集約しています。New Record、Statistics、Graph、
+tool 群は header workspace bar に集約しています。同じ bar に Items、Messages、
+Status、Kiosk の view 切り替えも統合しています。New Record、Statistics、Graph、
 Agenda、Status、Notifications は 1 つずつ開くため、狭い画面でも内容が隠れにくく
-なります。
+なります。item をクリックした詳細表示は右側 drawer ではなく中央の record detail
+modal として表示します。
 
 ## URL parameter
 
@@ -199,12 +201,12 @@ workspace tab から開けます。browser notification はユーザが許可し
 ## Graph と Message thread
 
 Graph workspace panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。
-node をクリックすると該当 record を drawer で開けます。drawer 内にも選択 item の
-小さな依存 graph を表示します。drawer graph は depth 2 の subgraph を読み込むため、
-間接的な blocker や related record も drawer 内で確認できます。
+node をクリックすると該当 record を detail modal で開けます。modal 内にも選択 item の
+小さな依存 graph を表示します。modal graph は depth 2 の subgraph を読み込むため、
+間接的な blocker や related record も modal 内で確認できます。
 
-Message item (`type:M`) で `id:` がある場合、drawer に thread section を表示します。
-drawer には返信 form も表示されます。返信は root message の `id:` を `parent:` に
+Message item (`type:M`) で `id:` がある場合、detail modal に thread section を表示します。
+modal には返信 form も表示されます。返信は root message の `id:` を `parent:` に
 持つ record として扱います。
 
 ## Chart

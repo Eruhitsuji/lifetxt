@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x47)
+Last updated: 2026-07-05 (updated x48)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -221,9 +221,13 @@ CLI-native charts without external dependencies.
   keeps only the most recent action; a small history (last 5 actions with
   labels) surfaced from the command palette would make bulk edits safer.
 
-### Drawer Improvements (Web UI) — New
+### Detail Modal Improvements (Web UI) — New
 
-- [ ] Add an inline timer control to the drawer for task-like items: start /
+- [ ] Add focus trapping and background inert behavior to the record detail
+  modal and keyboard-help modal. They now use centered modal presentation, but
+  focus is not yet constrained inside the active modal.
+
+- [ ] Add an inline timer control to the detail modal for task-like items: start /
   stop buttons that update `elapsed:` through the existing item update
   endpoint, reusing the CLI `timer` duration math, so the est/elapsed progress
   bar can be driven entirely from the browser.
@@ -293,7 +297,7 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add CLI-side dependency-focused views: `agenda --blocked only|hide`
   flags and a dedicated `deps` view (or `links --chain ID`) that prints the
   transitive blocker chain in the terminal. The Web side is done: the agenda
-  API/UI filter (`blocked=only|hide` + ⚡ badge) and the drawer "Why is this
+  API/UI filter (`blocked=only|hide` + ⚡ badge) and the detail modal "Why is this
   blocked?" chain backed by `GET /api/blockers` are implemented.
 
 ---
@@ -427,9 +431,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   Git integration endpoints and security model, and the `quick-add` shortcut.
   Also document the newer UI affordances: command palette (Ctrl+K), undo
   toast, group-by, keyboard list navigation (j/k/x/Enter), inline status
-  cycling, item export, graph layout presets and SVG/PNG export, drawer due
+  cycling, item export, graph layout presets and SVG/PNG export, detail modal due
   quick-postpone, est/elapsed progress bar, and the agenda blocked filter.
-  The redesigned app shell also needs a short section: top-bar view tabs,
+  The redesigned app shell also needs a short section: header workspace view buttons,
   density toggle, `?theme=` URL parameter, and the print stylesheet.
   The REST table (including `/api/blockers` and `agenda?blocked=`), parse
   endpoint, graph panel, kiosk parameters, and message thread basics are now
@@ -508,15 +512,15 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   message threads, but they skip when `fastapi` is not installed.
 
 - [ ] Add browser-level Web UI smoke tests with Playwright or an equivalent
-  driver: raw import live parse preview, drawer message replies, occurrence
+  driver: raw import live parse preview, detail modal message replies, occurrence
   badges, kiosk change highlighting, explicit ref-link scroll fallback, and
   search highlighting in detail/body previews. Newly added interactive
   features also need DOM-level coverage: command palette (Ctrl+K) matching and
   execution, undo toast (status/delete restore), j/k/x/Enter keyboard
   navigation, inline status-badge cycling, group-by section headers, item
   CSV/JSON/Markdown export, graph layout switching plus SVG/PNG download, the
-  drawer due quick-postpone buttons, and the agenda blocked-filter cycle.
-  The 2026-07 redesign added more surfaces to cover: top-bar view tabs
+  detail modal due quick-postpone buttons, and the agenda blocked-filter cycle.
+  The 2026-07 redesign added more surfaces to cover: header workspace view buttons
   (Items/Messages/Status/Kiosk switching), density toggle persistence,
   skeleton-loading rows, contextual empty states ("clear filters" vs. "quick
   add"), the back-to-top button, `?theme=dark|light` forcing, and the

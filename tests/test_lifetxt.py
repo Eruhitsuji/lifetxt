@@ -384,10 +384,14 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn("kiosk_cols", webapp.HTML_PAGE)
         self.assertIn("kiosk_filter", webapp.HTML_PAGE)
         self.assertIn('id="workspace"', webapp.HTML_PAGE)
+        self.assertIn('id="workspace-tabs"', webapp.HTML_PAGE)
         self.assertIn('class="workspace-tab"', webapp.HTML_PAGE)
+        self.assertIn("function switchViewWorkspace(", webapp.HTML_PAGE)
         self.assertIn("function switchWorkspace(", webapp.HTML_PAGE)
         self.assertIn('data-workspace="new"', webapp.HTML_PAGE)
         self.assertIn("Saved view", webapp.HTML_PAGE)
+        self.assertIn('class="modal-backdrop detail-drawer"', webapp.HTML_PAGE)
+        self.assertIn('class="detail-modal"', webapp.HTML_PAGE)
 
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (

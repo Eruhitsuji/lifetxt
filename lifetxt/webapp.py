@@ -1999,18 +1999,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     h1 { margin: 0; font-size: 1.15rem; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
     .subtitle { margin: 0; color: var(--muted); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(12rem, 24vw, 22rem); }
-    /* ── View tabs ── */
-    .view-tabs {
-      display: flex;
-      gap: .2rem;
-      padding: .22rem;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--panel-2);
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .view-tabs::-webkit-scrollbar { display: none; }
+    /* ── Legacy view-tab button state; rendered inside the workspace nav. ── */
     .view-tab {
       border: none;
       background: none;
@@ -2438,30 +2427,23 @@ HTML_PAGE = r"""<!doctype html>
       margin: .2rem 0;
     }
     .detail-drawer {
-      position: fixed;
-      top: 0;
-      right: -480px;
-      width: min(470px, 94vw);
-      height: 100vh;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(.75rem, 3vw, 2rem);
+    }
+    .detail-modal {
+      width: min(900px, 96vw);
+      max-height: min(90vh, 900px);
       background: var(--panel);
-      border-left: 1px solid var(--line);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--accent);
+      border-radius: var(--r-lg);
       box-shadow: var(--shadow-3);
-      transition: right .24s cubic-bezier(.2, .8, .3, 1);
-      z-index: 400;
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      animation: fadeSlideIn .18s ease;
     }
-    .detail-drawer::before {
-      content: "";
-      position: sticky;
-      top: 0;
-      display: block;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-      z-index: 2;
-    }
-    .detail-drawer.open { right: 0; }
     .drawer-head {
       display: flex;
       align-items: center;
@@ -2469,8 +2451,6 @@ HTML_PAGE = r"""<!doctype html>
       padding: .8rem 1.1rem;
       border-bottom: 1px solid var(--line);
       gap: .5rem;
-      position: sticky;
-      top: 3px;
       background: var(--panel);
       z-index: 1;
       flex-wrap: wrap;
@@ -2478,7 +2458,7 @@ HTML_PAGE = r"""<!doctype html>
     .drawer-head h3 { margin: 0; font-size: .95rem; order: 0; flex: 1 1 calc(100% - 3.2rem); line-height: 1.45; }
     .drawer-head .drawer-close-btn { order: 1; }
     #drawer-head-btns { order: 2; flex: 1 1 100%; }
-    .drawer-body { padding: 1rem 1.1rem; display: grid; gap: 1rem; }
+    .drawer-body { padding: 1rem 1.1rem; display: grid; gap: 1rem; overflow-y: auto; min-height: 0; }
     .drawer-fields { display: grid; gap: .4rem; }
     .drawer-field { display: grid; grid-template-columns: 7rem 1fr; gap: .5rem; font-size: .88rem; }
     .drawer-field .key { color: var(--muted); }
@@ -2712,6 +2692,33 @@ HTML_PAGE = r"""<!doctype html>
       scrollbar-width: thin;
       padding-bottom: .05rem;
     }
+    .header-workspace-tabs {
+      order: 3;
+      flex: 1 1 100%;
+      justify-content: flex-start;
+      padding: .42rem .5rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      background: var(--panel-2);
+      box-shadow: var(--shadow-1);
+    }
+    .workspace-group-label {
+      align-self: center;
+      padding: 0 .25rem;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .workspace-divider {
+      align-self: stretch;
+      width: 1px;
+      min-width: 1px;
+      background: var(--line);
+      margin: .15rem .2rem;
+    }
     .workspace-tab {
       display: inline-flex;
       align-items: center;
@@ -2727,6 +2734,16 @@ HTML_PAGE = r"""<!doctype html>
     }
     .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+    .workspace-tab.view-tab {
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      padding: .38rem .72rem;
+    }
+    .workspace-tab.view-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
     .workspace-panel { display: none; }
     .workspace-panel.workspace-active { display: block; animation: fadeSlideIn .14s ease; }
     .workspace-panel.collapsed .section-body { display: block; }
@@ -2853,7 +2870,7 @@ HTML_PAGE = r"""<!doctype html>
       backdrop-filter: none;
       border-bottom: none;
     }
-    .display-mode .view-tabs, .kiosk-mode .view-tabs { display: none; }
+    .display-mode .header-workspace-tabs, .kiosk-mode .header-workspace-tabs { display: none; }
     .display-mode #back-to-top, .kiosk-mode #back-to-top { display: none !important; }
     .display-mode .brand-mark { background: #23322d; }
     .display-mode h1 { font-size: clamp(2.6rem, 6vw, 5rem); }
@@ -3139,7 +3156,7 @@ HTML_PAGE = r"""<!doctype html>
       header .toolbar, .side, .detail-drawer, #toast-container, #ctx-menu,
       .filter-bar, .quick-add-bar, .bulk-toolbar, .modal-backdrop, .cmdk-backdrop,
       .item-check, .section-head .toolbar, #read-only-banner,
-      .view-tabs, .items-controls, #back-to-top, .brand-mark { display: none !important; }
+      .header-workspace-tabs, .items-controls, #back-to-top, .brand-mark { display: none !important; }
       header { position: static; border-bottom: 1px solid #ccc; }
       body { background: #fff; color: #000; font-size: 12px; }
       main { display: block; max-width: none; padding: 0; }
@@ -3149,10 +3166,7 @@ HTML_PAGE = r"""<!doctype html>
     }
     @media (max-width: 1080px) {
       .subtitle { display: none; }
-      .view-tabs {
-        order: 3;
-        flex: 1 1 100%;
-      }
+      .header-workspace-tabs { order: 3; flex: 1 1 100%; }
       header > .toolbar {
         flex: 1 1 100%;
         justify-content: flex-start;
@@ -3179,7 +3193,8 @@ HTML_PAGE = r"""<!doctype html>
       .item-check { display: none; }
       .source { grid-column: 1 / -1; }
       form.stack { grid-template-columns: 1fr; }
-      .detail-drawer { width: 100vw; }
+      .detail-drawer { padding: .5rem; }
+      .detail-modal { width: 100%; max-height: 96vh; border-radius: var(--r-md); }
       #back-to-top { bottom: 1rem; left: 1rem; }
     }
   </style>
@@ -3196,12 +3211,6 @@ HTML_PAGE = r"""<!doctype html>
         <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
       </div>
     </div>
-    <nav class="view-tabs" id="view-tabs" aria-label="Views">
-      <button class="view-tab" data-view="" onclick="switchView('')">📋 Items</button>
-      <button class="view-tab" data-view="messages" onclick="switchView('messages')">💬 Messages</button>
-      <button class="view-tab" data-view="status" onclick="switchView('status')">👥 Status</button>
-      <button class="view-tab" data-view="kiosk" onclick="switchView('kiosk')">🖥️ Kiosk</button>
-    </nav>
     <div class="toolbar">
       <select id="view-preset-select" aria-label="Saved view preset" title="Saved URL presets from config" onchange="applyViewPreset(this.value)">
         <option value="">Saved view…</option>
@@ -3218,6 +3227,20 @@ HTML_PAGE = r"""<!doctype html>
       <span id="kiosk-clock" style="display:none"></span>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
+    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Workspace">
+      <span class="workspace-group-label">View</span>
+      <button type="button" class="workspace-tab view-tab" data-view="" onclick="switchViewWorkspace('', '')">📋 Items</button>
+      <button type="button" class="workspace-tab view-tab" data-view="messages" onclick="switchViewWorkspace('messages', 'notifications')">💬 Messages</button>
+      <button type="button" class="workspace-tab view-tab" data-view="status" data-workspace="status" onclick="switchViewWorkspace('status', 'status')">👥 Status</button>
+      <button type="button" class="workspace-tab view-tab" data-view="kiosk" onclick="switchViewWorkspace('kiosk', '')">🖥️ Kiosk</button>
+      <span class="workspace-divider" aria-hidden="true"></span>
+      <span class="workspace-group-label">Tools</span>
+      <button type="button" class="workspace-tab" data-workspace="new" onclick="switchWorkspace('new')">＋ New</button>
+      <button type="button" class="workspace-tab" data-workspace="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
+      <button type="button" class="workspace-tab" data-workspace="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
+      <button type="button" class="workspace-tab" data-workspace="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
+      <button type="button" class="workspace-tab" data-workspace="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+    </nav>
   </header>
   <main>
     <section class="item-section">
@@ -3309,20 +3332,6 @@ HTML_PAGE = r"""<!doctype html>
       <div id="items" class="content"></div>
     </section>
     <div class="side workspace" id="workspace">
-      <div class="workspace-head">
-        <div class="workspace-title">
-          <h2>Workspace</h2>
-          <p>Use these panels for editing, agenda, team state, notifications, charts, and graph review.</p>
-        </div>
-        <nav class="workspace-tabs" aria-label="Workspace panels">
-          <button type="button" class="workspace-tab" data-workspace="new" onclick="switchWorkspace('new')">＋ New</button>
-          <button type="button" class="workspace-tab" data-workspace="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
-          <button type="button" class="workspace-tab" data-workspace="status" onclick="switchWorkspace('status')">👥 Status</button>
-          <button type="button" class="workspace-tab" data-workspace="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
-          <button type="button" class="workspace-tab" data-workspace="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
-          <button type="button" class="workspace-tab" data-workspace="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
-        </nav>
-      </div>
       <section class="editor-section workspace-panel" data-workspace="new">
         <div class="section-head">
           <h2 id="editor-heading">New Record</h2>
@@ -3467,22 +3476,24 @@ HTML_PAGE = r"""<!doctype html>
       </section>
     </div>
   </main>
-  <!-- Detail Side Drawer -->
-  <aside id="detail-drawer" class="detail-drawer" role="complementary" aria-label="Record detail">
-    <div class="drawer-head">
-      <h3 id="drawer-title">Record Detail</h3>
-      <div id="drawer-head-btns" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
-        <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
-        <button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()">Edit</button>
-        <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
-        <button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>
-        <button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>
-        <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
+  <!-- Detail modal -->
+  <div id="detail-drawer" class="modal-backdrop detail-drawer" role="presentation" onclick="if(event.target===this)closeDrawer()">
+    <div class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <div class="drawer-head">
+        <h3 id="drawer-title">Record Detail</h3>
+        <div id="drawer-head-btns" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
+          <button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn" disabled>Done</button>
+          <button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()">Edit</button>
+          <button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard" style="display:none">Copy ID</button>
+          <button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>
+          <button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>
+          <button class="danger" onclick="drawerDelete()" id="drawer-delete-btn" disabled>Delete</button>
+        </div>
+        <button class="drawer-close-btn" onclick="closeDrawer()" title="Close (Esc)">✕</button>
       </div>
-      <button class="drawer-close-btn" onclick="closeDrawer()" title="Close (Esc)">✕</button>
+      <div class="drawer-body" id="drawer-body"></div>
     </div>
-    <div class="drawer-body" id="drawer-body"></div>
-  </aside>
+  </div>
 
   <!-- Command palette -->
   <div class="cmdk-backdrop" id="cmdk-backdrop" onclick="if(event.target===this)closeCmdk()">
@@ -3506,7 +3517,7 @@ HTML_PAGE = r"""<!doctype html>
     <div class="ctx-item" onclick="ctxShowRawPath()">Show File Path</div>
     <div class="ctx-item" onclick="ctxDuplicate()">Duplicate</div>
     <hr class="ctx-sep">
-    <div class="ctx-item" onclick="ctxOpenDrawer()">Open in Drawer</div>
+    <div class="ctx-item" onclick="ctxOpenDrawer()">Open Detail</div>
     <div class="ctx-item" onclick="ctxEdit()">Edit</div>
   </div>
   <!-- Tag datalist for quick filter -->
@@ -3520,17 +3531,17 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>/</td><td>Focus search</td></tr>
         <tr><td>Ctrl+K</td><td>Command palette (actions + jump to item)</td></tr>
         <tr><td>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
-        <tr><td>Enter</td><td>Open focused item in drawer</td></tr>
+        <tr><td>Enter</td><td>Open focused item in detail modal</td></tr>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (focus editor title)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
         <tr><td>r</td><td>Refresh all</td></tr>
         <tr><td>s</td><td>Open statistics workspace</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
-        <tr><td>g</td><td>Jump to line number (opens drawer)</td></tr>
+        <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
         <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
-        <tr><td>Esc</td><td>Close drawer / palette / blur input</td></tr>
-        <tr><td>[ / ]</td><td>Prev / next item in drawer</td></tr>
+        <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
+        <tr><td>[ / ]</td><td>Prev / next item in detail modal</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
@@ -3674,7 +3685,7 @@ HTML_PAGE = r"""<!doctype html>
         if (!result.has(key)) result.set(key, value);
       }
     }
-    // ── Top-level view tabs (Items / Messages / Status / Kiosk) ────
+    // ── Header workspace view buttons (Items / Messages / Status / Kiosk) ────
     function switchView(view) {
       const params = query();
       params.delete("mode");
@@ -3683,6 +3694,19 @@ HTML_PAGE = r"""<!doctype html>
       params.delete("panel");
       if (view) params.set("mode", view);
       history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      applyUrlToControls();
+      refreshAll();
+    }
+    function switchViewWorkspace(view, workspace) {
+      const params = query();
+      params.delete("mode");
+      params.delete("view");
+      params.delete("workspace");
+      params.delete("panel");
+      if (view) params.set("mode", view);
+      if (workspace && WORKSPACE_PANELS.has(workspace)) params.set("workspace", workspace);
+      history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      if (workspace && WORKSPACE_PANELS.has(workspace)) localStorage.setItem("lifetxt.workspace", workspace);
       applyUrlToControls();
       refreshAll();
     }
@@ -4794,7 +4818,7 @@ HTML_PAGE = r"""<!doctype html>
       setTimeout(() => el.remove(), duration);
     }
 
-    // ── Detail side-drawer ─────────────────────────────────────────
+    // ── Record detail modal ────────────────────────────────────────
     let drawerItem = null;
     let drawerEditing = false;
 
@@ -4880,7 +4904,7 @@ HTML_PAGE = r"""<!doctype html>
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);
     }
 
-    // ── "Why is this blocked?" chain in drawer ──────────────────────
+    // ── "Why is this blocked?" chain in detail modal ───────────────
     async function loadBlockerChain(item) {
       const container = document.getElementById("drawer-blockers");
       if (!container) return;
@@ -6852,7 +6876,7 @@ HTML_PAGE = r"""<!doctype html>
       }
       startGitPolling();
       return refreshAll().then(() => {
-        // Auto-open drawer for ?line=N deep links
+        // Auto-open detail modal for ?line=N deep links
         const lineParam = query().get("line");
         if (lineParam) {
           const lineNum = parseInt(lineParam, 10);

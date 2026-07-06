@@ -3617,6 +3617,179 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertFalse(nodes["task_child"]["missing"])
             self.assertTrue(nodes["task_ghost"]["missing"])
 
+    def test_blockers_api_handles_cycles_and_depth_limits(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b\n"
+                "[ ] T Beta id:task_b depends_on:task_a\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            depth_one = client.get("/api/blockers?id=task_a&depth=1")
+            clamped = client.get("/api/blockers?id=task_a&depth=20")
+            invalid = client.get("/api/blockers?id=task_a&depth=not-a-number")
+
+            self.assertEqual(200, depth_one.status_code)
+            self.assertEqual(1, depth_one.json()["count"])
+            self.assertEqual(["task_b"], [entry["blocker_id"] for entry in depth_one.json()["chain"]])
+            self.assertEqual(200, clamped.status_code)
+            self.assertEqual(2, clamped.json()["count"])
+            self.assertEqual(200, invalid.status_code)
+            self.assertEqual(2, invalid.json()["count"])
+
+    def test_graph_api_root_depth_handles_reachable_cycle(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b\n"
+                "[ ] T Beta id:task_b depends_on:task_c\n"
+                "[ ] T Gamma id:task_c depends_on:task_a\n"
+                "[ ] T Other id:task_other depends_on:task_ghost\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            depth_one = client.get("/api/graph?root=task_a&depth=1")
+            invalid_depth = client.get("/api/graph?root=task_a&depth=not-a-number")
+
+            self.assertEqual(200, depth_one.status_code)
+            self.assertEqual({"task_a", "task_b", "task_c"}, {node["id"] for node in depth_one.json()["nodes"]})
+            self.assertEqual(200, invalid_depth.status_code)
+            self.assertEqual({"task_a", "task_b", "task_c"}, {node["id"] for node in invalid_depth.json()["nodes"]})
+            self.assertNotIn("task_other", {node["id"] for node in invalid_depth.json()["nodes"]})
+
+
+class LifeTxtMcpTests(unittest.TestCase):
+    def test_mcp_jsonrpc_lists_tools_and_resources(self):
+        from lifetxt.mcp import McpContext, handle_request
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T Root id:task_root\n", encoding="utf-8")
+            context = McpContext(paths=[path], writable_path=path)
+
+            initialized = handle_request(
+                {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                context,
+            )
+            tools = handle_request(
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+                context,
+            )
+            resources = handle_request(
+                {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
+                context,
+            )
+            read = handle_request(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "resources/read",
+                    "params": {"uri": "lifetxt://source/0"},
+                },
+                context,
+            )
+
+            self.assertEqual("lifetxt-mcp", initialized["result"]["serverInfo"]["name"])
+            tool_names = {tool["name"] for tool in tools["result"]["tools"]}
+            self.assertIn("list_items", tool_names)
+            self.assertIn("get_agenda", tool_names)
+            self.assertIn("get_graph", tool_names)
+            self.assertEqual("lifetxt://source/0", resources["result"]["resources"][0]["uri"])
+            self.assertIn("task_root", read["result"]["contents"][0]["text"])
+
+    def test_mcp_read_tools_match_api_shapes(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Root id:task_root due:2026-06-10\n"
+                "[ ] T Child id:task_child depends_on:task_root due:2026-06-11\n"
+                "[/] S Focus from:2026-06-10T09:00 state:focus person:self\n"
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:2026-06-10T09:00\n",
+                encoding="utf-8",
+            )
+            context = McpContext(paths=[path], writable_path=path)
+
+            items = call_tool("list_items", {"type": "T", "open_only": True}, context)
+            graph = call_tool("get_graph", {"root": "task_child"}, context)
+            blockers = call_tool("get_blockers", {"id": "task_child"}, context)
+            status = call_tool("list_status", {"active": True}, context)
+            parsed = call_tool("check_line", {"line": "[ ] T Valid id:task_valid"}, context)
+
+            self.assertEqual(2, items["count"])
+            self.assertEqual({"task_child", "task_root"}, {node["id"] for node in graph["nodes"]})
+            self.assertTrue(blockers["blocked"])
+            self.assertEqual(["task_root"], [entry["blocker_id"] for entry in blockers["chain"]])
+            self.assertEqual("self", status["records"][0]["person"])
+            self.assertTrue(parsed["ok"])
+
+    def test_mcp_write_tools_create_update_done_and_delete(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            context = McpContext(paths=[path], writable_path=path)
+
+            created = call_tool(
+                "create_item",
+                {
+                    "status": "[ ]",
+                    "type": "T",
+                    "title": "Draft",
+                    "details": {"id": "task_draft", "project": "api"},
+                },
+                context,
+            )
+            updated = call_tool(
+                "update_item",
+                {
+                    "id": "task_draft",
+                    "title": "Draft updated",
+                    "set_details": {"tag": ["mcp", "api"]},
+                },
+                context,
+            )
+            done = call_tool("mark_done", {"id": "task_draft", "done": "2026-06-12"}, context)
+            deleted = call_tool("delete_item", {"id": "task_draft"}, context)
+
+            self.assertEqual(1, created["line"])
+            self.assertEqual("Draft updated", updated["item"]["title"])
+            self.assertEqual(["mcp", "api"], updated["item"]["details"]["tag"])
+            self.assertEqual("[x]", done["item"]["status"])
+            self.assertEqual(["2026-06-12"], done["item"]["details"]["done"])
+            self.assertIn("Draft updated", deleted["deleted"])
+            self.assertEqual("", Path(path).read_text(encoding="utf-8"))
+
+    def test_mcp_message_tools_create_reply_ack_and_snooze(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:2026-06-10T09:00\n",
+                encoding="utf-8",
+            )
+            context = McpContext(
+                paths=[path],
+                writable_path=path,
+                config={"ids": {"auto": True}, "user": {"name": "self"}},
+            )
+
+            listed = call_tool("list_messages", {"recipient": "self"}, context)
+            reply = call_tool("reply_message", {"id": "msg_001", "title": "Reply"}, context)
+            acked = call_tool("ack_message", {"id": "msg_001", "ack": "2026-06-10T09:05"}, context)
+            snoozed = call_tool("snooze_message", {"id": "msg_001", "duration": "10m"}, context)
+
+            self.assertEqual(1, listed["count"])
+            self.assertEqual(["msg_001"], reply["item"]["details"]["parent"])
+            self.assertEqual(["2026-06-10T09:05"], acked["item"]["details"]["ack"])
+            self.assertIn("snooze_until", snoozed["item"]["details"])
+
 
 class LifeTxtHeatmapTests(unittest.TestCase):
     def test_habit_completion_dates_returns_date_set(self):

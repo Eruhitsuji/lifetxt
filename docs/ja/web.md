@@ -35,6 +35,23 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 公開用 dashboard や常時表示 display など、閲覧と行 validation は許可しつつ
 source file を変更させたくない場合は `--read-only` を使います。
 
+## MCP Server
+
+MCP-compatible AI client から使う場合は、外部依存なしの stdio MCP server を起動できます。
+
+```sh
+python -m lifetxt mcp life.txt
+python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve life.txt --mcp
+```
+
+MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
+`mark_done`、`delete_item`、`get_agenda`、`get_graph`、`get_blockers`、
+`list_links`、`list_status`、`list_notifications`、type `M` message 操作を提供します。
+読み込んだ source file は `lifetxt://source/N` resource としても参照できます。
+複数 file を読み込む場合、read tool は全 file を走査し、write tool は `--write-file` のみを変更します。
+`--read-only` を付けると write tool は無効になります。
+
 ## REST API
 
 | Method | Path | 目的 |

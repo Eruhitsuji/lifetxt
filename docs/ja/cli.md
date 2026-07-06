@@ -42,6 +42,7 @@ python -m lifetxt stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
+python -m lifetxt mcp [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
 python -m lifetxt init
@@ -103,6 +104,7 @@ python -m lifetxt template list
 | `git-hook` | life.txt 検査用 Git hook を導入または確認 |
 | `completion` | shell completion script を生成 |
 | `serve` | 任意機能の FastAPI REST API とブラウザGUIを起動 |
+| `mcp` | AI client 向けの stdio MCP server を起動 |
 | `config` | 外部 JSON config を作成または表示 |
 | `init` | 対話形式の初回セットアップ。life.txt と .lifetxt.json を作成 |
 | `doctor` | Python version、file、dependency、data の問題を検査 |
@@ -1028,6 +1030,7 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 | `--host HOST` | bind host。既定値は `127.0.0.1` |
 | `--port PORT` | bind port。既定値は `8000` |
 | `--read-only` | `/api/check-line` 以外の write endpoint を無効化。公開用・常時表示用に便利 |
+| `--mcp` | FastAPI HTTP server の代わりに stdio MCP server を起動 |
 
 REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
 詳細は [web.md](./web.md) を参照してください。
@@ -1038,6 +1041,24 @@ config 由来の read-only view preset、`Ctrl+K` fuzzy Command Palette、
 recently opened records、browser notifications、Graph、display mode、kiosk mode
 があります。複数 file を読み込む場合は `path ...` と `--write-file FILE` を併用すると、
 generated/read-only file を表示しつつ、編集は hand-maintained file だけに限定できます。
+
+### 11.1 `mcp`
+
+MCP-compatible AI client から life.txt を操作するための JSON-RPC stdio server を起動します。
+core package だけで動作し、FastAPI / uvicorn は不要です。
+
+```sh
+python -m lifetxt mcp life.txt
+python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve life.txt --mcp
+python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
+```
+
+主な tool は `list_items`、`get_item`、`check_line`、`parse_item`、
+`create_item`、`update_item`、`mark_done`、`delete_item`、`get_agenda`、
+`get_graph`、`get_blockers`、`list_links`、`list_status`、`list_notifications`、
+および type `M` message 操作です。複数 file を読み込んだ場合、read tool は全 file を走査し、
+write tool は `--write-file` のみを変更します。`--read-only` を付けると write tool を無効化します。
 
 ## 12. `config`
 

@@ -484,7 +484,34 @@ def build_parser():
         action="store_true",
         help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
     )
+    serve.add_argument(
+        "--mcp",
+        action="store_true",
+        help="Run the stdio MCP server instead of the FastAPI HTTP server.",
+    )
     serve.set_defaults(func=command_serve)
+
+    mcp = subparsers.add_parser(
+        "mcp",
+        help="Run the stdio MCP server for AI clients.",
+        description="Run a JSON-RPC stdio MCP server exposing life.txt tools.",
+    )
+    mcp.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to read. Defaults to life.txt or config paths.",
+    )
+    mcp.add_argument(
+        "--write-file",
+        help="File used for create, update, and delete tools. Defaults to config write_file or the first path.",
+    )
+    mcp.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Disable MCP write tools.",
+    )
+    mcp.set_defaults(func=command_mcp)
 
     config_command = subparsers.add_parser(
         "config",
@@ -2785,6 +2812,8 @@ def _merge_generated_items_into_text(existing_text, generated_items, id_key="id"
 
 
 def command_serve(args):
+    if getattr(args, "mcp", False):
+        return command_mcp(args)
     try:
         import uvicorn
 
@@ -2807,6 +2836,12 @@ def command_serve(args):
     app = create_app(paths=paths, writable_path=writable_path, config=_config(args), read_only=read_only)
     uvicorn.run(app, host=host, port=port)
     return 0
+
+
+def command_mcp(args):
+    from .mcp import cmd_mcp
+
+    return cmd_mcp(args)
 
 
 def _split_archive_text(raw_text, items, archive_id_set,

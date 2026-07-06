@@ -117,6 +117,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+python -m lifetxt mcp life.txt
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
@@ -166,6 +167,19 @@ An optional FastAPI REST API and browser GUI are available with:
 pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
+
+For MCP-compatible AI clients, use the dependency-free stdio server:
+
+```sh
+python -m lifetxt mcp life.txt
+python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve life.txt --mcp
+```
+
+MCP tools cover item listing, item lookup, create/update/delete/done actions,
+agenda, graph, blockers, links, latest status, notifications, and message
+operations. With multiple input files, read tools scan all files and write
+tools modify only `--write-file`.
 
 The Web UI includes a header Workspace for Items, Messages, Status, Kiosk,
 New Record, Agenda, Notifications, Statistics, and Graph panels. Records open

@@ -1799,7 +1799,12 @@ def _format_datetime(value):
 
 
 def _subgraph(nodes, edges, root, depth):
-    max_depth = int(depth) if depth is not None else None
+    try:
+        max_depth = int(depth) if depth is not None else None
+    except (TypeError, ValueError):
+        max_depth = None
+    if max_depth is not None:
+        max_depth = max(0, min(max_depth, 10))
     node_ids = {n["id"] for n in nodes}
     if root not in node_ids:
         return [], []

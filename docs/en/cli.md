@@ -103,6 +103,7 @@ python -m lifetxt template list
 | `git-hook` | Install or inspect Git hooks that validate life.txt files |
 | `completion` | Generate shell completion scripts |
 | `serve` | Run the optional FastAPI REST API and browser GUI |
+| `mcp` | Run the stdio MCP server for AI clients |
 | `config` | Create or inspect an external JSON config file |
 | `init` | Interactive first-time setup: create life.txt and .lifetxt.json |
 | `doctor` | Check Python version, files, dependencies, and data issues |
@@ -1111,6 +1112,7 @@ Options:
 | `--host HOST` | Bind host; defaults to `127.0.0.1` |
 | `--port PORT` | Bind port; defaults to `8000` |
 | `--read-only` | Disable write endpoints except `/api/check-line`; useful for public or wall-display deployments |
+| `--mcp` | Run the stdio MCP server instead of the FastAPI HTTP server |
 
 The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.
@@ -1122,6 +1124,37 @@ recently opened records, browser notifications, graph review, display mode,
 and kiosk mode. When reading multiple files, combine `path ...` with
 `--write-file FILE` so generated or read-only files can be shown while edits
 go only to the hand-maintained file.
+
+### 11.1 `mcp`
+
+Run a JSON-RPC stdio MCP server for MCP-compatible AI clients. It has no extra
+dependency beyond the core package.
+
+```sh
+python -m lifetxt mcp life.txt
+python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve life.txt --mcp
+python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
+```
+
+The MCP server exposes these tools:
+
+| Tool | Purpose |
+|---|---|
+| `list_items` | List items with filters matching `/api/items` |
+| `get_item` | Read one item by ID |
+| `check_line` / `parse_item` | Validate or preview raw life.txt text |
+| `create_item` / `update_item` / `mark_done` / `delete_item` | Write item changes to the configured writable file |
+| `get_agenda` | Return agenda records for a range |
+| `get_graph` / `get_blockers` / `list_links` | Inspect ID references and dependency blockers |
+| `list_status` | Return latest `S` presence records |
+| `list_notifications` | Return due message notifications |
+| `list_messages` / `create_message` / `reply_message` / `ack_message` / `snooze_message` | Work with type `M` messages |
+
+It also exposes `lifetxt://source/N` resources so clients can read the loaded
+source files without writing. Use `--read-only` to disable all MCP write tools.
+When multiple files are loaded, read tools scan all files and write tools modify
+only `--write-file`.
 
 ## 12. `config`
 

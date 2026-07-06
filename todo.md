@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-06 (updated x51)
+Last updated: 2026-07-06 (updated x52)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -163,11 +163,6 @@ CLI-native charts without external dependencies.
   implemented with per-user persistence and SVG/PNG export; a force layout
   would help non-hierarchical graphs but needs an iterative simulation.
 
-- [ ] Add `/api/blockers` edge-case tests: a `depends_on:` cycle between two
-  open items must terminate (the cycle guard is implemented but only tested
-  with acyclic chains), and `depth` clamping (values over 10, non-numeric)
-  should be asserted.
-
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
   characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
   with mermaid/dot output (verify only reachable subgraph is rendered).
@@ -234,18 +229,6 @@ CLI-native charts without external dependencies.
   bar can be driven entirely from the browser.
 
 ### Agenda & Notifications (Web UI) — New
-
-### MCP Support
-
-- [ ] Add MCP (Model Context Protocol) server support via `serve --mcp`:
-  expose life.txt operations as MCP tools so MCP-compatible AI clients
-  (Claude Desktop, Cursor, etc.) can read and write items using natural
-  language. Minimum tool set: `list_items` (with filter parameters matching
-  `filter`), `get_item` (by ID), `create_item` (delegates to `assist`),
-  `update_item` (delegates to `assist --update`), `mark_done` (delegates to
-  `done`), `get_agenda` (delegates to `agenda`), `get_graph` (delegates to
-  `/api/graph`). Implement as an optional dependency separate from the
-  existing FastAPI server.
 
 ---
 
@@ -412,8 +395,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   recovery from an accidental write.
 
 - [ ] Add `docs/en/ai-integration.md` and `docs/ja/ai-integration.md`:
-  MCP server setup and tool reference, CLI pipe patterns (`to-json | llm
-  "..."`), example prompts for `review --format json` → LLM weekly review,
+  expand beyond the basic MCP setup already documented in README/CLI/Web docs
+  with client-specific configuration examples, CLI pipe patterns (`to-json |
+  llm "..."`), example prompts for `review --format json` → LLM weekly review,
   local LLM (Ollama) setup for privacy-sensitive files, and a GitHub Actions
   workflow for automated AI summaries on push. Include annotated examples
   showing what life.txt data looks like from the AI's perspective.
@@ -608,18 +592,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
 - [ ] Add `undo` / `backup.auto` tests: backup created before each write,
   `backup.keep` eviction, directory auto-created.
 
-- [ ] Add MCP server smoke tests: each tool returns the expected response
-  shape; write tools modify only the writable file.
-
 - [ ] Add chart API tests: `/api/chart/tasks`, `/api/chart/habits`,
   `/api/chart/mood`, `/api/chart/elapsed` each return a stable JSON structure
   with `labels` and `datasets` arrays; `from`/`to`/`project`/`group` query
   parameters filter results correctly; empty data range returns empty datasets
   without error.
-
-- [ ] Add graph API tests: `GET /api/graph` returns all nodes and edges for a
-  known fixture; `?root=ID` returns only the reachable subgraph; `?depth=N`
-  limits traversal; a fixture with a cycle does not cause infinite recursion.
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, titles
   with embedded quote characters.
@@ -694,6 +671,12 @@ after the corresponding P1 or P2 feature is stable.
   the API rather than serialized from the DOM) so `share`/`digest` can attach
   the same image without a browser. Browser-side SVG/PNG export and `ring`/
   `lr`/`tb` layout switching are implemented.
+- [ ] Consider an MCP HTTP/SSE transport with token auth for clients that
+  cannot launch stdio commands directly. The current MCP server is dependency-
+  free stdio and is intentionally separate from FastAPI.
+- [ ] Consider publishing ready-to-copy MCP client configuration snippets for
+  Claude Desktop, Cursor, and VS Code, including read-only and multi-file
+  examples.
 
 ### Security
 - [ ] Consider asymmetric encryption (public/private key) for `encrypt` to

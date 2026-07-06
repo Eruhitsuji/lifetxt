@@ -35,6 +35,24 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 Use `--read-only` for public dashboards or always-on displays where users
 should be able to inspect and validate records but not change source files.
 
+## MCP Server
+
+For MCP-compatible AI clients, run the dependency-free stdio MCP server:
+
+```sh
+python -m lifetxt mcp life.txt
+python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
+python -m lifetxt serve life.txt --mcp
+```
+
+The MCP server exposes tools for `list_items`, `get_item`, `create_item`,
+`update_item`, `mark_done`, `delete_item`, `get_agenda`, `get_graph`,
+`get_blockers`, `list_links`, `list_status`, `list_notifications`, and type `M`
+message operations. It also exposes `lifetxt://source/N` resources for the
+loaded source files. With multiple files, reads scan every configured path while
+write tools modify only `--write-file`; pass `--read-only` to disable write
+tools.
+
 ## REST API
 
 | Method | Path | Purpose |

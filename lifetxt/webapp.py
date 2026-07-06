@@ -1999,21 +1999,6 @@ HTML_PAGE = r"""<!doctype html>
     }
     h1 { margin: 0; font-size: 1.15rem; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
     .subtitle { margin: 0; color: var(--muted); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(12rem, 24vw, 22rem); }
-    /* ── Legacy view-tab button state; rendered inside the workspace nav. ── */
-    .view-tab {
-      border: none;
-      background: none;
-      color: var(--muted);
-      font-size: .82rem;
-      font-weight: 600;
-      padding: .3rem .8rem;
-      border-radius: 999px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background var(--t-fast), color var(--t-fast);
-    }
-    .view-tab:hover { color: var(--ink); background: var(--soft); }
-    .view-tab.active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
     main {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -2613,11 +2598,6 @@ HTML_PAGE = r"""<!doctype html>
     .heatmap-cell.done { background: #22c55e; }
     .heatmap-cell.today { outline: 1.5px solid var(--accent); }
     .heatmap-month-labels { display: flex; font-size: .65rem; color: var(--muted); margin-bottom: .15rem; }
-    /* ── View preset dropdown ─────────────────────────────────────── */
-    #view-preset-select { font-size: .82rem; padding: .2rem .4rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--bg); color: var(--text); cursor: pointer; }
-    .preset-actions { display: inline-flex; gap: .25rem; align-items: center; flex-wrap: wrap; }
-    .preset-actions button { padding: .23rem .48rem; font-size: .78rem; }
-    #preset-name-label { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* ── Search result count ──────────────────────────────────────── */
     #search-count { font-size: .77rem; color: var(--muted); margin-left: .35rem; white-space: nowrap; }
     /* ── Dark mode toggle button ─────────────────────────────────── */
@@ -2653,45 +2633,14 @@ HTML_PAGE = r"""<!doctype html>
     .drawer-edit-form label { display:grid; gap:.25rem; font-size:.85rem; color:var(--muted); }
     .drawer-edit-form input, .drawer-edit-form select { width:100%; box-sizing:border-box; }
     .drawer-edit-form textarea { width:100%; box-sizing:border-box; min-height:6rem; font-family:monospace; font-size:.82rem; resize:vertical; }
-    /* ── Workspace panels ────────────────────────────────────────── */
-    .workspace {
-      order: -1;
-      display: grid;
-      gap: .75rem;
-      min-width: 0;
-    }
-    .workspace-head {
-      display: grid;
-      grid-template-columns: minmax(12rem, 1fr) auto;
-      gap: .75rem;
-      align-items: center;
-      padding: .75rem 1rem;
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      background: linear-gradient(135deg, var(--panel), var(--panel-2));
-      box-shadow: var(--shadow-1);
-    }
-    .workspace-title {
-      display: grid;
-      gap: .1rem;
-      min-width: 0;
-    }
-    .workspace-title h2 {
-      color: var(--ink);
-      letter-spacing: -.01em;
-      text-transform: none;
-      font-size: .98rem;
-    }
-    .workspace-title p {
-      margin: 0;
-      color: var(--muted);
-      font-size: .8rem;
-    }
+    /* ── Single-content pages: exactly one visible at a time ────── */
+    .page { display: none; }
+    .page.page-active { display: block; animation: fadeSlideIn .14s ease; }
+    /* ── View tab bar ────────────────────────────────────────────── */
     .workspace-tabs {
       display: flex;
       gap: .3rem;
       align-items: center;
-      justify-content: flex-end;
       overflow-x: auto;
       scrollbar-width: thin;
       padding-bottom: .05rem;
@@ -2705,23 +2654,6 @@ HTML_PAGE = r"""<!doctype html>
       border-radius: var(--r-lg);
       background: var(--panel-2);
       box-shadow: var(--shadow-1);
-    }
-    .workspace-group-label {
-      align-self: center;
-      padding: 0 .25rem;
-      color: var(--muted);
-      font-size: .68rem;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .workspace-divider {
-      align-self: stretch;
-      width: 1px;
-      min-width: 1px;
-      background: var(--line);
-      margin: .15rem .2rem;
     }
     .workspace-tab {
       display: inline-flex;
@@ -2738,27 +2670,116 @@ HTML_PAGE = r"""<!doctype html>
     }
     .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
-    .workspace-tab.view-tab {
-      border: 1px solid var(--line-strong);
+    /* ── Dashboard view ──────────────────────────────────────────── */
+    .dashboard-body { display: grid; gap: 1rem; padding: 1rem; }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+      gap: .7rem;
+    }
+    .kpi-tile {
+      display: grid;
+      justify-items: start;
+      gap: .1rem;
+      padding: .8rem .95rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--panel-2);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+    }
+    .kpi-tile:hover { border-color: var(--accent); box-shadow: var(--shadow-2); background: var(--panel); }
+    .kpi-icon { font-size: .95rem; opacity: .8; }
+    .kpi-n { font-size: 1.7rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .kpi-label { font-size: .74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .kpi-tile.kpi-danger .kpi-n { color: var(--danger); }
+    .kpi-tile.kpi-warn .kpi-n { color: var(--warn); }
+    .kpi-tile.kpi-ok .kpi-n { color: var(--ok); }
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .dash-card {
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
       background: var(--panel);
-      padding: .38rem .72rem;
+      padding: .85rem 1rem;
+      min-width: 0;
     }
-    .workspace-tab.view-tab.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: var(--accent-ink);
+    .dash-card-title {
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .6rem;
     }
-    .workspace-panel { display: none; }
-    .workspace-panel.workspace-active { display: block; animation: fadeSlideIn .14s ease; }
-    .workspace-panel.collapsed .section-body { display: block; }
-    .workspace-panel .section-collapse-btn { display: none; }
-    .workspace-panel .section-head {
-      padding-block: .65rem;
+    .dash-list { display: grid; gap: .35rem; }
+    .dash-row {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .3rem .4rem;
+      border-radius: var(--r-sm);
+      font-size: .88rem;
+      min-width: 0;
     }
-    .section-collapse-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.82rem; padding:.1rem .35rem; border-radius:.25rem; line-height:1.2; }
-    .section-collapse-btn:hover { background:var(--soft); color:var(--text); }
-    /* ── Preset clear button ─────────────────────────────────────── */
-    #preset-clear-btn { font-size:.75rem; padding:.2rem .4rem; display:none; }
+    .dash-row:hover { background: var(--panel-2); }
+    .dash-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    a.dash-row-title { cursor: pointer; }
+    /* ── Focus view ──────────────────────────────────────────────── */
+    .focus-body { max-width: 46rem; margin: 0 auto; width: 100%; }
+    .focus-list { display: grid; gap: .45rem; padding: .35rem 0 1rem; }
+    .focus-group-label {
+      margin-top: .8rem;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .focus-group-label.focus-overdue { color: var(--danger); }
+    .focus-row {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .7rem .85rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--panel);
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .focus-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+    .focus-check {
+      flex-shrink: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0;
+      border-radius: 999px;
+      border: 2px solid var(--line-strong);
+      background: var(--panel);
+      cursor: pointer;
+      transition: border-color var(--t-fast), background var(--t-fast);
+    }
+    .focus-check:hover { border-color: var(--ok); background: var(--ok-soft); }
+    .focus-check:disabled { opacity: .4; cursor: not-allowed; }
+    .focus-row-main { flex: 1; min-width: 0; cursor: pointer; }
+    .focus-row-title { font-size: 1.02rem; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+    .focus-row-meta { display: flex; align-items: center; gap: .4rem; margin-top: .15rem; font-size: .78rem; color: var(--muted); }
+    .focus-readonly { opacity: .75; }
+    /* ── Record editor modal ─────────────────────────────────────── */
+    .editor-modal { max-width: 560px; }
+    .editor-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      margin-bottom: 1rem;
+    }
+    .editor-modal-head h3 { margin: 0; font-size: 1rem; }
     /* ── Chart group buttons ─────────────────────────────────────── */
     .chart-group-bar { display:flex; gap:.25rem; padding:.25rem 1rem; border-bottom:1px solid var(--line); }
     .chart-group-btn { font-size:.73rem; font-weight:600; padding:.15rem .55rem; border:1px solid var(--line); border-radius:999px; background:var(--panel-2); cursor:pointer; color:var(--muted); }
@@ -2778,17 +2799,6 @@ HTML_PAGE = r"""<!doctype html>
     .heatmap-months { display:grid; grid-template-columns:repeat(53,1fr); gap:2px; margin-bottom:.2rem; }
     .heatmap-month-cell { font-size:.6rem; color:var(--muted); text-align:center; }
     .source { color: var(--muted); font-size: .74rem; white-space: nowrap; font-family: var(--font-mono); opacity: .85; }
-    .side {
-      display: grid;
-      gap: .75rem;
-      align-content: start;
-      min-width: 0;
-      position: static;
-      max-height: none;
-      overflow: visible;
-      scrollbar-width: thin;
-      padding-right: 0;
-    }
     form.stack { grid-template-columns: 1fr 1fr; }
     form.stack label, form.stack textarea, form.stack .actions, .wide { grid-column: 1 / -1; }
     label { display: grid; gap: .3rem; color: var(--muted); font-size: .82rem; }
@@ -2858,8 +2868,6 @@ HTML_PAGE = r"""<!doctype html>
       border-radius: var(--r-md);
       background: var(--panel-2);
     }
-    .messages-mode .workspace-title p::after { content: " Message filters are active."; }
-    .status-mode .workspace-title p::after { content: " Status filters are active."; }
     .display-mode {
       background: #0f1412;
       color: #edf4ef;
@@ -2891,7 +2899,6 @@ HTML_PAGE = r"""<!doctype html>
     }
     .display-mode .section-head { border-color: #31413b; }
     .display-mode .toolbar,
-    .display-mode .workspace,
     .display-mode header button { display: none; }
     .display-mode .pill {
       background: #23322d;
@@ -2947,7 +2954,6 @@ HTML_PAGE = r"""<!doctype html>
       height: calc(100vh - 3.5rem);
       overflow: hidden;
     }
-    .kiosk-mode .side { display: none; }
     .kiosk-mode .toolbar { display: none; }
     .kiosk-mode .item-section { overflow: hidden; background: transparent; border: none; box-shadow: none; }
     .kiosk-mode .item-section .section-head { display: none; }
@@ -3167,7 +3173,7 @@ HTML_PAGE = r"""<!doctype html>
     .cmdk-empty { padding: .8rem 1rem; color: var(--muted); font-size: .88rem; }
     /* ── Print stylesheet ── */
     @media print {
-      header .toolbar, .side, .detail-drawer, #toast-container, #ctx-menu,
+      header .toolbar, .detail-drawer, #toast-container, #ctx-menu,
       .filter-bar, .quick-add-bar, .bulk-toolbar, .modal-backdrop, .cmdk-backdrop,
       .item-check, .section-head .toolbar, #read-only-banner,
       .header-workspace-tabs, .items-controls, #back-to-top, .brand-mark { display: none !important; }
@@ -3188,8 +3194,8 @@ HTML_PAGE = r"""<!doctype html>
     }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
-      .workspace-head { grid-template-columns: 1fr; }
       .workspace-tabs { justify-content: flex-start; }
+      .dash-grid { grid-template-columns: 1fr; }
       .display-mode main { grid-template-columns: 1fr; }
     }
     @media (max-width: 680px) {
@@ -3200,9 +3206,9 @@ HTML_PAGE = r"""<!doctype html>
       .search-wrap { flex: 1 1 100%; }
       .search-wrap input { width: 100%; }
       .items-controls > * { flex: 1 1 40%; }
-      .workspace-head { padding: .65rem; }
       .workspace-tabs { margin-inline: -.15rem; }
       .workspace-tab { padding: .32rem .6rem; font-size: .78rem; }
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
       .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
       .item-check { display: none; }
       .source { grid-column: 1 / -1; }
@@ -3226,18 +3232,10 @@ HTML_PAGE = r"""<!doctype html>
       </div>
     </div>
     <div class="toolbar">
-      <select id="view-preset-select" aria-label="Saved view preset" title="Saved URL presets from config" onchange="applyViewPreset(this.value)">
-        <option value="">Saved view…</option>
-      </select>
-      <span id="preset-name-label" style="display:none;font-size:.78rem;color:var(--muted)"></span>
-      <span class="preset-actions" aria-label="Saved view actions">
-        <button id="preset-save-btn" class="secondary" onclick="saveCurrentViewPreset()" title="Save current filters, sort, view, and workspace">Save View</button>
-        <button id="preset-delete-btn" class="secondary" onclick="deleteCurrentViewPreset()" title="Delete selected custom view" style="display:none">Delete</button>
-        <button id="preset-clear-btn" class="secondary" onclick="clearViewPreset()" title="Clear active view preset">×</button>
-      </span>
+      <button id="new-item-btn" data-workspace="new" onclick="newItem()" title="Create a new record (n)">＋ New</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
       <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
-      <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Toggle notifications / enable browser alerts">Notifications</button>
+      <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Open notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
       <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)">⌘</button>
       <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts (?)">?</button>
@@ -3245,25 +3243,23 @@ HTML_PAGE = r"""<!doctype html>
       <span id="kiosk-clock" style="display:none"></span>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
-    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Workspace">
-      <span class="workspace-group-label">View</span>
-      <button type="button" class="workspace-tab view-tab" data-view="" onclick="switchViewWorkspace('', '')">📋 Items</button>
-      <button type="button" class="workspace-tab view-tab" data-view="messages" onclick="switchViewWorkspace('messages', 'notifications')">💬 Messages</button>
-      <button type="button" class="workspace-tab view-tab" data-view="status" data-workspace="status" onclick="switchViewWorkspace('status', 'status')">👥 Status</button>
-      <button type="button" class="workspace-tab view-tab" data-view="kiosk" onclick="switchViewWorkspace('kiosk', '')">🖥️ Kiosk</button>
-      <span class="workspace-divider" aria-hidden="true"></span>
-      <span class="workspace-group-label">Tools</span>
-      <button type="button" class="workspace-tab" data-workspace="new" onclick="switchWorkspace('new')">＋ New</button>
-      <button type="button" class="workspace-tab" data-workspace="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
-      <button type="button" class="workspace-tab" data-workspace="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
-      <button type="button" class="workspace-tab" data-workspace="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
-      <button type="button" class="workspace-tab" data-workspace="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views">
+      <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
+      <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
+      <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
+      <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
+      <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
+      <button type="button" class="workspace-tab" data-view="status" onclick="switchWorkspace('status')">👥 Status</button>
+      <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
+      <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
+      <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+      <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
     </nav>
   </header>
-  <main>
-    <section class="item-section">
+  <main id="workspace">
+    <section class="item-section page" data-page="items">
       <div class="section-head">
-        <h2><span class="h2-icon" aria-hidden="true">📋</span>Items</h2>
+        <h2><span class="h2-icon" aria-hidden="true">📋</span><span id="items-heading-label">Items</span></h2>
         <div class="toolbar">
           <div class="search-wrap">
             <span class="search-icon" aria-hidden="true">🔍</span>
@@ -3349,62 +3345,46 @@ HTML_PAGE = r"""<!doctype html>
       </div>
       <div id="items" class="content"></div>
     </section>
-    <div class="side workspace" id="workspace">
-      <section class="editor-section workspace-panel" data-workspace="new">
-        <div class="section-head">
-          <h2 id="editor-heading">New Record</h2>
-          <div style="display:flex;gap:.35rem;align-items:center">
-            <button class="secondary" onclick="newItem()">New</button>
-            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Collapse">▾</button>
+    <section class="dashboard-section page" data-page="dashboard">
+      <div class="section-head">
+        <h2><span class="h2-icon" aria-hidden="true">🏠</span>Dashboard<span id="dash-date" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+        <button class="secondary" onclick="loadDashboard()" title="Refresh dashboard">↺</button>
+      </div>
+      <div class="section-body dashboard-body">
+        <div id="dash-kpis" class="kpi-row"><div class="empty">Loading…</div></div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-title">📅 Today</div>
+            <div id="dash-today" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">⚠️ Needs attention</div>
+            <div id="dash-overdue" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">📈 Completions (last 14 days)</div>
+            <div class="chart-panel" style="height:180px"><canvas id="dash-chart"></canvas></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">📁 Projects</div>
+            <div id="dash-projects" class="dash-list"><div class="empty">Loading…</div></div>
           </div>
         </div>
-        <div class="section-body">
-          <form class="stack" onsubmit="saveItem(event)">
-            <label>Status
-              <select id="edit-status">
-                <option>[ ]</option><option>[/]</option><option>[x]</option>
-                <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
-              </select>
-            </label>
-            <label>Type
-              <select id="edit-type">
-                <option>T</option><option>E</option><option>D</option><option>R</option>
-                <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
-              </select>
-            </label>
-            <label class="wide">Title
-              <input id="edit-title" required>
-            </label>
-            <label class="wide">Details
-              <div id="type-hints" class="type-hints" style="display:none"></div>
-              <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
-            </label>
-            <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
-            <div id="import-raw-row">
-              <label class="wide" style="margin-top:.35rem">Import raw line
-                <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
-              </label>
-              <div id="import-raw-preview" class="parse-preview" style="display:none"></div>
-              <div class="actions" style="margin-top:.25rem">
-                <button type="button" onclick="importRawLine()">Import</button>
-                <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
-              </div>
-            </div>
-            <div class="actions">
-              <button id="save-button">Create</button>
-              <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
-              <button type="button" class="secondary" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
-            </div>
-          </form>
-        </div>
-      </section>
-      <section class="stats-section collapsed workspace-panel" data-workspace="stats">
+      </div>
+    </section>
+    <section class="focus-section page" data-page="focus">
+      <div class="section-head">
+        <h2><span class="h2-icon" aria-hidden="true">🎯</span>Focus<span id="focus-date" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+        <button class="secondary" onclick="loadFocus()" title="Refresh focus list">↺</button>
+      </div>
+      <div class="section-body focus-body">
+        <div id="focus-list" class="focus-list"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+    <section class="stats-section page" data-page="stats">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">📊</span>Statistics</h2>
-          <div style="display:flex;gap:.35rem;align-items:center">
-            <button class="secondary" onclick="refreshCharts()" title="Refresh statistics">↺</button>
-            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
-          </div>
+          <button class="secondary" onclick="refreshCharts()" title="Refresh statistics">↺</button>
         </div>
         <div class="section-body">
           <div class="chart-tabs">
@@ -3431,13 +3411,10 @@ HTML_PAGE = r"""<!doctype html>
           <div id="stats-breakdown" style="padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
         </div>
       </section>
-      <section class="graph-section collapsed workspace-panel" data-workspace="graph">
+      <section class="graph-section page" data-page="graph">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">🕸️</span>Graph</h2>
-          <div style="display:flex;gap:.35rem;align-items:center">
-            <button class="secondary" onclick="loadGraphPanel()" title="Refresh dependency graph">Refresh</button>
-            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
-          </div>
+          <button class="secondary" onclick="loadGraphPanel()" title="Refresh dependency graph">Refresh</button>
         </div>
         <div class="section-body">
           <div class="graph-toolbar">
@@ -3456,7 +3433,7 @@ HTML_PAGE = r"""<!doctype html>
           <div id="graph-panel" class="graph-panel"><div class="empty">Open this panel to load the ID graph.</div></div>
         </div>
       </section>
-      <section class="agenda-section workspace-panel" data-workspace="agenda">
+      <section class="agenda-section page" data-page="agenda">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">📅</span>Agenda<span id="agenda-overdue-badge" class="overdue-badge" style="display:none"></span></h2>
           <button id="agenda-blocked-btn" class="secondary agenda-blocked-btn" style="font-size:.72rem;padding:.18rem .5rem" onclick="toggleAgendaBlocked()" title="Cycle: show all / only blocked / hide blocked">⚡ All</button>
@@ -3464,36 +3441,76 @@ HTML_PAGE = r"""<!doctype html>
             <span class="agenda-limit-label">Rows</span>
             <input type="number" id="agenda-limit-spinner" min="0" max="100" step="1" value="8" style="width:3.2rem">
           </label>
-          <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Collapse">▾</button>
         </div>
         <div class="section-body">
           <div id="agenda" class="stack"></div>
         </div>
       </section>
-      <section class="status-section collapsed workspace-panel" data-workspace="status">
+      <section class="status-section page" data-page="status">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">👥</span>Status</h2>
-          <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
         </div>
         <div class="section-body">
           <div id="status" class="stack"></div>
         </div>
       </section>
-      <section class="notifications-section collapsed workspace-panel" data-workspace="notifications">
+      <section class="notifications-section page" data-page="notifications">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">🔔</span>Notifications</h2>
-          <div style="display:flex;gap:.35rem;align-items:center">
-            <div id="notif-permission-badge"></div>
-            <button class="section-collapse-btn" onclick="toggleSideSection(this)" title="Expand">▸</button>
-          </div>
+          <div id="notif-permission-badge"></div>
         </div>
         <div class="section-body">
           <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
           <div id="notifications" class="stack"></div>
         </div>
       </section>
-    </div>
   </main>
+  <!-- Record editor modal -->
+  <div id="editor-modal" class="modal-backdrop" onclick="if(event.target===this)closeEditorModal()">
+    <div class="modal editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-heading">
+      <div class="editor-modal-head">
+        <h3 id="editor-heading">New Record</h3>
+        <button type="button" class="drawer-close-btn" onclick="closeEditorModal()" title="Close (Esc)">✕</button>
+      </div>
+      <form class="stack" onsubmit="saveItem(event)">
+        <label>Status
+          <select id="edit-status">
+            <option>[ ]</option><option>[/]</option><option>[x]</option>
+            <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
+          </select>
+        </label>
+        <label>Type
+          <select id="edit-type">
+            <option>T</option><option>E</option><option>D</option><option>R</option>
+            <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
+          </select>
+        </label>
+        <label class="wide">Title
+          <input id="edit-title" required>
+        </label>
+        <label class="wide">Details
+          <div id="type-hints" class="type-hints" style="display:none"></div>
+          <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
+        </label>
+        <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
+        <div id="import-raw-row">
+          <label class="wide" style="margin-top:.35rem">Import raw line
+            <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
+          </label>
+          <div id="import-raw-preview" class="parse-preview" style="display:none"></div>
+          <div class="actions" style="margin-top:.25rem">
+            <button type="button" onclick="importRawLine()">Import</button>
+            <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="save-button">Create</button>
+          <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
+          <button type="button" class="secondary" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
+        </div>
+      </form>
+    </div>
+  </div>
   <!-- Detail modal -->
   <div id="detail-drawer" class="modal-backdrop detail-drawer" role="presentation" onclick="if(event.target===this)closeDrawer()">
     <div class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -3551,10 +3568,10 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
         <tr><td>Enter</td><td>Open focused item in detail modal</td></tr>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
-        <tr><td>n</td><td>New item (focus editor title)</td></tr>
+        <tr><td>n</td><td>New item (opens the record editor)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
-        <tr><td>r</td><td>Refresh all</td></tr>
-        <tr><td>s</td><td>Open statistics workspace</td></tr>
+        <tr><td>r</td><td>Refresh current view</td></tr>
+        <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
         <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
         <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
@@ -3600,7 +3617,6 @@ HTML_PAGE = r"""<!doctype html>
     let _kioskDefaultTitle = null;
     let _kioskLastFingerprints = null;
     let _lastFocusedBeforeModal = null;
-    const CUSTOM_VIEW_STORAGE_KEY = "lifetxt_custom_views";
     const RECENT_ITEMS_STORAGE_KEY = "lifetxt_recent_items";
 
     async function api(path, options) {
@@ -3706,83 +3722,45 @@ HTML_PAGE = r"""<!doctype html>
         if (!result.has(key)) result.set(key, value);
       }
     }
-    // ── Header workspace view buttons (Items / Messages / Status / Kiosk) ────
-    function switchView(view) {
+    // ── Single-content page router ─────────────────────────────────
+    // Each view owns the whole screen: exactly one page section is shown.
+    const PAGE_VIEWS = ["dashboard", "agenda", "focus", "messages", "status", "notifications", "stats", "graph"];
+    const VIEW_PAGE = {
+      "": "items", "messages": "items", "kiosk": "items", "display": "items",
+      "dashboard": "dashboard", "agenda": "agenda", "focus": "focus",
+      "status": "status", "notifications": "notifications",
+      "stats": "stats", "graph": "graph",
+    };
+    function switchWorkspace(view, historyMode = "push") {
       const params = query();
       params.delete("mode");
       params.delete("view");
       params.delete("workspace");
       params.delete("panel");
-      if (view) params.set("mode", view);
-      history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      if (view === "kiosk" || view === "display") params.set("mode", view);
+      else if (view) params.set("view", view);
+      const method = historyMode === "replace" ? "replaceState" : "pushState";
+      history[method](null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
       applyUrlToControls();
       refreshAll();
     }
-    function switchViewWorkspace(view, workspace) {
-      const params = query();
-      params.delete("mode");
-      params.delete("view");
-      params.delete("workspace");
-      params.delete("panel");
-      if (view) params.set("mode", view);
-      if (workspace && WORKSPACE_PANELS.has(workspace)) params.set("workspace", workspace);
-      history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
-      if (workspace && WORKSPACE_PANELS.has(workspace)) localStorage.setItem("lifetxt.workspace", workspace);
-      applyUrlToControls();
-      refreshAll();
-    }
+    function switchView(view) { switchWorkspace(view); }
+    function switchViewWorkspace(view, workspace) { switchWorkspace(view || workspace || ""); }
     function syncViewTabs() {
       const v = currentView();
-      document.querySelectorAll(".view-tab").forEach(btn => {
+      document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
         btn.classList.toggle("active", (btn.dataset.view || "") === v);
       });
+      const notifBtn = document.getElementById("notif-btn");
+      if (notifBtn) notifBtn.classList.toggle("btn-active", v === "notifications");
     }
-    const WORKSPACE_PANELS = new Set(["new", "agenda", "status", "notifications", "stats", "graph"]);
-    function currentWorkspace() {
-      const params = query();
-      const explicit = firstParam(params, ["workspace", "panel"], "").toLowerCase();
-      if (WORKSPACE_PANELS.has(explicit)) return explicit;
-      if (currentView() === "status") return "status";
-      if (currentView() === "messages") return "notifications";
-      const stored = localStorage.getItem("lifetxt.workspace") || "";
-      return WORKSPACE_PANELS.has(stored) ? stored : "new";
-    }
-    function switchWorkspace(panel, historyMode = "push") {
-      const name = WORKSPACE_PANELS.has(panel) ? panel : "new";
-      const params = query();
-      params.set("workspace", name);
-      const method = historyMode === "replace" ? "replaceState" : "pushState";
-      history[method](null, "", `${location.pathname}?${params.toString()}`);
-      localStorage.setItem("lifetxt.workspace", name);
-      activateWorkspace(name);
-    }
-    function activateWorkspace(panel) {
-      const name = WORKSPACE_PANELS.has(panel) ? panel : "new";
-      document.querySelectorAll(".workspace-tab").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.workspace === name);
+    function syncPages() {
+      const page = VIEW_PAGE[currentView()] || "items";
+      document.querySelectorAll("main .page").forEach(sec => {
+        sec.classList.toggle("page-active", sec.dataset.page === page);
       });
-      document.querySelectorAll(".workspace-panel").forEach(sec => {
-        const active = sec.dataset.workspace === name;
-        sec.classList.toggle("workspace-active", active);
-        if (active) {
-          sec.classList.remove("collapsed");
-          const btn = sec.querySelector(".section-collapse-btn");
-          if (btn) { btn.textContent = "▾"; btn.title = "Collapse"; }
-        }
-      });
-      if (name === "stats" && !statsLoaded) {
-        statsLoaded = true;
-        loadChart("tasks");
-        loadStatsBreakdown();
-      }
-      if (name === "graph" && !graphLoaded) loadGraphPanel();
-      if (name === "notifications") {
-        const btn = document.getElementById("notif-btn");
-        if (btn) btn.classList.add("btn-active");
-      } else {
-        const btn = document.getElementById("notif-btn");
-        if (btn) btn.classList.remove("btn-active");
-      }
+      const label = document.getElementById("items-heading-label");
+      if (label) label.textContent = currentView() === "messages" ? "Messages" : "Items";
     }
     function isDisplayMode() {
       const params = query();
@@ -3795,15 +3773,19 @@ HTML_PAGE = r"""<!doctype html>
     function currentView() {
       const params = query();
       const value = firstParam(params, ["view", "mode"], "").toLowerCase();
-      if (["messages", "status", "display", "kiosk"].includes(value)) return value;
+      if (["display", "kiosk"].includes(value)) return value;
+      if (PAGE_VIEWS.includes(value)) return value;
+      // Back-compat: old ?workspace= / ?panel= parameters map onto page views.
+      const ws = firstParam(params, ["workspace", "panel"], "").toLowerCase();
+      if (PAGE_VIEWS.includes(ws)) return ws;
       return "";
     }
     function applyPresetToUrl() {
       const params = query();
-      // Support ?view=NAME as alias for ?preset=NAME
-      const viewAlias = params.get("view") || "";
-      if (viewAlias && !["messages", "status", "display", "kiosk"].includes(viewAlias.toLowerCase()) && !params.get("preset")) {
-        params.set("preset", viewAlias);
+      // Support ?view=NAME as alias for ?preset=NAME (config-defined presets)
+      const viewAlias = (params.get("view") || "").toLowerCase();
+      if (viewAlias && !PAGE_VIEWS.includes(viewAlias) && !["display", "kiosk"].includes(viewAlias) && !params.get("preset")) {
+        params.set("preset", params.get("view"));
         history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       }
       const presetName = params.get("preset");
@@ -3820,15 +3802,13 @@ HTML_PAGE = r"""<!doctype html>
     function applyUrlToControls() {
       const params = query();
       document.body.classList.toggle("display-mode", isDisplayMode());
-      document.body.classList.toggle("messages-mode", currentView() === "messages");
-      document.body.classList.toggle("status-mode", currentView() === "status");
       document.body.classList.toggle("kiosk-mode", isKioskMode());
       syncViewTabs();
-      activateWorkspace(currentWorkspace());
+      syncPages();
       _kioskApply();
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
-      const fallbackKind = currentView() === "messages" ? "M" : (currentView() === "status" ? "S" : "");
-      const fallbackSort = currentView() === "messages" || currentView() === "status" ? "time" : (appConfig?.web?.default_sort || "line");
+      const fallbackKind = currentView() === "messages" ? "M" : "";
+      const fallbackSort = currentView() === "messages" ? "time" : (appConfig?.web?.default_sort || "line");
       document.getElementById("kind").value = firstParam(params, ["kind", "type"], fallbackKind);
       document.getElementById("sort").value = firstParam(params, ["sort"], fallbackSort);
       document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
@@ -3837,7 +3817,6 @@ HTML_PAGE = r"""<!doctype html>
       const groupSel = document.getElementById("group-by");
       if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
       syncStatusFilterBarsFromUrl();
-      updatePresetClearBtn();
       configureAutoRefresh();
       configureNotificationPolling();
     }
@@ -4085,7 +4064,7 @@ HTML_PAGE = r"""<!doctype html>
             ? "Try clearing the search text or status filters above."
             : "Add your first record with the quick-add bar (press q) or the New workspace."}</div>
           ${isKioskMode() || isDisplayMode() ? "" : (hasFilters
-            ? `<div class="actions"><button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button><button type="button" class="secondary" onclick="saveCurrentViewPreset()">Save view</button></div>`
+            ? `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>`
             : `<button type="button" onclick="toggleQuickAdd(true)">＋ Quick add</button>`)}
         </div>`;
       renderSummary(items);
@@ -4425,9 +4404,14 @@ HTML_PAGE = r"""<!doctype html>
       });
       await refreshAll();
     }
+    function openEditorModal() {
+      openManagedModal(document.getElementById("editor-modal"), "#edit-title");
+    }
+    function closeEditorModal() {
+      closeManagedModal(document.getElementById("editor-modal"));
+    }
     function selectItem(item) {
       if (isDisplayMode()) return;
-      switchWorkspace("new", "replace");
       selectedItem = item;
       document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only record";
       document.getElementById("edit-status").value = item.status;
@@ -4443,7 +4427,7 @@ HTML_PAGE = r"""<!doctype html>
       renderItems(currentItems);
     }
     function newItem() {
-      switchWorkspace("new", "replace");
+      openEditorModal();
       selectedItem = null;
       document.getElementById("editor-heading").textContent = "New Record";
       document.getElementById("edit-status").value = "[ ]";
@@ -4472,20 +4456,28 @@ HTML_PAGE = r"""<!doctype html>
     async function saveItem(event) {
       event.preventDefault();
       const payload = editorPayload();
-      if (selectedItem && selectedItem.editable) {
-        await api(`/api/items/${selectedItem.line}`, {
-          method: "PUT",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await api("/api/items", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(payload),
-        });
-        newItem();
+      try {
+        if (selectedItem && selectedItem.editable) {
+          await api(`/api/items/${selectedItem.line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload),
+          });
+          showToast("Record saved.", "success");
+        } else {
+          await api("/api/items", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload),
+          });
+          showToast("Record created.", "success");
+        }
+      } catch(e) {
+        showToast("Save failed: " + (e.message || e), "error");
+        return;
       }
+      closeEditorModal();
+      selectedItem = null;
       await refreshAll();
     }
     async function deleteSelected() {
@@ -4498,7 +4490,8 @@ HTML_PAGE = r"""<!doctype html>
           await api("/api/items/raw", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({line: rawLine})});
         });
       }
-      newItem();
+      closeEditorModal();
+      selectedItem = null;
       await refreshAll();
     }
     async function loadAgenda() {
@@ -4733,7 +4726,22 @@ HTML_PAGE = r"""<!doctype html>
       return false;
     }
     async function refreshAll() {
-      await Promise.all([loadItems(), loadAgenda(), loadStatus(), loadNotifications()]);
+      // Refresh only what the active view needs; notifications always poll so
+      // browser alerts keep working from any view.
+      const v = currentView();
+      const tasks = [loadNotifications()];
+      if (VIEW_PAGE[v] === "items" || v === "") tasks.push(loadItems());
+      if (v === "agenda") tasks.push(loadAgenda());
+      if (v === "status") tasks.push(loadStatus());
+      if (v === "dashboard") tasks.push(loadDashboard());
+      if (v === "focus") tasks.push(loadFocus());
+      if (v === "graph") tasks.push(loadGraphPanel());
+      if (v === "stats") {
+        statsLoaded = true;
+        tasks.push(loadChart(currentChartType));
+        tasks.push(loadStatsBreakdown());
+      }
+      await Promise.all(tasks);
     }
 
     // ── Quick-add bar ──────────────────────────────────────────────
@@ -4784,6 +4792,7 @@ HTML_PAGE = r"""<!doctype html>
         if (isKioskMode()) { toggleKioskMode(); return; }
         if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
         if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
+        if (document.getElementById("editor-modal").classList.contains("open")) { closeEditorModal(); return; }
         if (document.getElementById("detail-drawer").classList.contains("open")) { closeDrawer(); return; }
         if (inInput) { active.blur(); return; }
         toggleQuickAdd(false);
@@ -4798,7 +4807,6 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         newItem();
-        document.getElementById("edit-title").focus();
         return;
       }
       if (e.key === "/") {
@@ -4864,13 +4872,19 @@ HTML_PAGE = r"""<!doctype html>
       } catch(_) {}
     }
     const CMDK_ACTIONS = [
-      {label: "New item", run: () => { newItem(); document.getElementById("edit-title").focus(); }},
+      {label: "New item", run: newItem},
+      {label: "Go to Dashboard", run: () => switchWorkspace("dashboard")},
+      {label: "Go to Items", run: () => switchWorkspace("")},
+      {label: "Go to Agenda", run: () => switchWorkspace("agenda")},
+      {label: "Go to Focus", run: () => switchWorkspace("focus")},
+      {label: "Go to Messages", run: () => switchWorkspace("messages")},
+      {label: "Go to Status", run: () => switchWorkspace("status")},
+      {label: "Go to Notifications", run: () => switchWorkspace("notifications")},
+      {label: "Go to Stats", run: () => switchWorkspace("stats")},
+      {label: "Go to Graph", run: () => switchWorkspace("graph")},
       {label: "Toggle quick-add bar", run: () => toggleQuickAdd(true)},
-      {label: "Save current view", run: saveCurrentViewPreset},
-      {label: "Delete selected custom view", run: deleteCurrentViewPreset},
       {label: "Refresh all", run: refreshAll},
       {label: "Toggle dark mode", run: toggleDarkMode},
-      {label: "Toggle statistics panel", run: toggleStats},
       {label: "Toggle kiosk mode", run: toggleKioskMode},
       {label: "Toggle agenda blocked filter", run: toggleAgendaBlocked},
       {label: "Export items as CSV", run: () => exportItems("csv")},
@@ -4907,11 +4921,6 @@ HTML_PAGE = r"""<!doctype html>
         .map(r => (currentItems || []).find(i => recentItemKey(i) === r.key) || r)
         .filter(Boolean)
         .slice(0, 6);
-      const presetEntries = Object.keys(allViewPresets())
-        .filter(name => fuzzyMatch(name, q))
-        .sort((a, b) => a.localeCompare(b))
-        .slice(0, q ? 8 : 5)
-        .map(name => ({kind: isCustomViewPreset(name) ? "custom view" : "view", label: name, hint: "apply preset", section: "Saved Views", run: () => applyViewPreset(name)}));
       _cmdkEntries = [
         ...recent.map(i => ({kind: i.type || "recent", label: i.title || "(untitled)", hint: i?.details?.[idKey]?.[0] || (i.line ? `line ${i.line}` : "recent"), section: "Recently Opened", run: () => {
           const live = (currentItems || []).find(x => recentItemKey(x) === (i.key || recentItemKey(i)));
@@ -4919,7 +4928,6 @@ HTML_PAGE = r"""<!doctype html>
           else if (i.line) openItemByLine(Number(i.line));
         }})),
         ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, section: "Items", run: () => { selectItem(i); openDrawer(i); }})),
-        ...presetEntries,
         ...actions.map(a => ({kind: "action", label: a.label, hint: "", section: "Actions", run: a.run})),
       ];
       _cmdkIndex = 0;
@@ -5921,23 +5929,6 @@ HTML_PAGE = r"""<!doctype html>
     let mainChart = null;
     let statsLoaded = false;
 
-    let notifPanelVisible = true;
-
-    function toggleSideSection(btn) {
-      const sec = btn.closest("section");
-      const nowCollapsed = sec.classList.toggle("collapsed");
-      btn.textContent = nowCollapsed ? "▸" : "▾";
-      btn.title = nowCollapsed ? "Expand" : "Collapse";
-      if (!nowCollapsed && sec.classList.contains("stats-section") && !statsLoaded) {
-        statsLoaded = true;
-        loadChart("tasks");
-        loadStatsBreakdown();
-      }
-      if (!nowCollapsed && sec.classList.contains("graph-section") && !graphLoaded) {
-        loadGraphPanel();
-      }
-    }
-
     // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
     let _kioskClockTimer = null;
     let _kioskScrollTimer = null;
@@ -6045,10 +6036,6 @@ HTML_PAGE = r"""<!doctype html>
 
     function toggleStats() {
       switchWorkspace("stats");
-      const sec = document.querySelector(".stats-section");
-      if (sec) sec.scrollIntoView({behavior: "smooth", block: "nearest"});
-      const headerBtn = document.getElementById("stats-btn");
-      if (headerBtn) headerBtn.classList.add("btn-active");
     }
 
     async function loadStatsBreakdown() {
@@ -6084,15 +6071,8 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     function toggleNotifPanel() {
-      const sec = document.querySelector(".notifications-section");
-      if (!sec) { enableBrowserNotifications(); return; }
-      notifPanelVisible = true;
       switchWorkspace("notifications");
-      const btn = document.getElementById("notif-btn");
-      if (btn) {
-        btn.classList.add("btn-active");
-        updateNotifBtnLabel();
-      }
+      updateNotifBtnLabel();
       if (("Notification" in window) && Notification.permission === "default") {
         enableBrowserNotifications();
       }
@@ -6304,72 +6284,12 @@ HTML_PAGE = r"""<!doctype html>
       el.textContent = count != null ? `(${count})` : "";
     }
 
-    // ── View preset selector ───────────────────────────────────────
-    function loadCustomViewPresets() {
-      try {
-        const raw = localStorage.getItem(CUSTOM_VIEW_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-      } catch(_) {
-        return {};
-      }
-    }
-    function saveCustomViewPresets(presets) {
-      localStorage.setItem(CUSTOM_VIEW_STORAGE_KEY, JSON.stringify(presets || {}));
-    }
+    // ── View presets (config-defined, applied via ?preset= URL) ────
     function configViewPresets() {
       return appConfig?.views && typeof appConfig.views === "object" ? appConfig.views : {};
     }
-    function allViewPresets() {
-      return {...configViewPresets(), ...loadCustomViewPresets()};
-    }
     function getViewPreset(name) {
-      return allViewPresets()[name];
-    }
-    function isCustomViewPreset(name) {
-      return Object.prototype.hasOwnProperty.call(loadCustomViewPresets(), name);
-    }
-    function populateViewPresets() {
-      const sel = document.getElementById("view-preset-select");
-      if (!sel) return;
-      const current = sel.value || query().get("preset") || "";
-      sel.innerHTML = `<option value="">Saved view…</option>`;
-      const config = configViewPresets();
-      const custom = loadCustomViewPresets();
-      const addGroup = (label, presets) => {
-        const names = Object.keys(presets || {}).sort((a, b) => a.localeCompare(b));
-        if (!names.length) return;
-        const group = document.createElement("optgroup");
-        group.label = label;
-        for (const name of names) {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          group.appendChild(opt);
-        }
-        sel.appendChild(group);
-      };
-      addGroup("Config", config);
-      addGroup("Custom", custom);
-      if (current && getViewPreset(current)) sel.value = current;
-      updatePresetClearBtn();
-    }
-    function applyViewPreset(name) {
-      if (!name) return;
-      const params = query();
-      const preset = getViewPreset(name);
-      if (!preset) return;
-      const next = new URLSearchParams(params);
-      for (const [key, value] of Object.entries(preset)) next.set(key, value);
-      next.set("preset", name);
-      next.delete("_preset_applied");
-      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
-      savePresetToStorage(name);
-      applyPresetToUrl();
-      applyUrlToControls();
-      syncStatusFilterBarsFromUrl();
-      updatePresetClearBtn();
-      refreshAll();
+      return configViewPresets()[name];
     }
 
     // ── Clickable ID refs in item rows ────────────────────────────
@@ -6627,14 +6547,6 @@ HTML_PAGE = r"""<!doctype html>
       } catch(_) {}
     }
 
-    // ── Persist view preset in localStorage ──────────────────────
-    function savePresetToStorage(name) {
-      try { localStorage.setItem("lifetxt_preset", name); } catch(_) {}
-      updatePresetClearBtn();
-    }
-    function loadPresetFromStorage() {
-      try { return localStorage.getItem("lifetxt_preset") || ""; } catch(_) { return ""; }
-    }
 
     // ── Ref-link count badge (multiple refs → dep_on(2)) ─────────
     function buildRefLinksHtml(details) {
@@ -6784,91 +6696,6 @@ HTML_PAGE = r"""<!doctype html>
     }, {passive: true});
 
     // ── Clear view preset ─────────────────────────────────────────
-    function currentViewPresetState() {
-      updateUrlFromControls();
-      const params = query();
-      const keys = [
-        "mode", "refresh", "around", "window", "from", "to",
-        "workspace", "theme",
-        "status", "blocked", "project", "tag", "tag_all", "exclude_tag",
-        "user", "team", "person", "owner", "assignee", "attendee",
-        "sender", "recipient", "after", "before",
-        "text", "kind", "open_only", "limit", "group_by", "sort", "order",
-        "kiosk_cols", "kiosk_filter", "kiosk_title", "agenda_blocked",
-      ];
-      const state = {};
-      for (const key of keys) {
-        if (params.has(key)) state[key] = params.get(key);
-      }
-      state.workspace = currentWorkspace();
-      const mode = currentView();
-      if (mode) state.mode = mode;
-      return state;
-    }
-    function sanitizePresetName(value) {
-      return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
-    }
-    function saveCurrentViewPreset() {
-      const active = query().get("preset");
-      const initial = active && isCustomViewPreset(active) ? active : "";
-      const name = sanitizePresetName(prompt("Save current view as:", initial || "My view"));
-      if (!name) return;
-      if (Object.prototype.hasOwnProperty.call(configViewPresets(), name)) {
-        showToast("Config-defined view presets are read-only. Use another name.", "error");
-        return;
-      }
-      const custom = loadCustomViewPresets();
-      custom[name] = currentViewPresetState();
-      saveCustomViewPresets(custom);
-      populateViewPresets();
-      applyViewPreset(name);
-      showToast(`Saved view: ${name}`, "success");
-    }
-    function deleteCurrentViewPreset() {
-      const sel = document.getElementById("view-preset-select");
-      const name = sel?.value || query().get("preset") || loadPresetFromStorage();
-      if (!name) { showToast("No saved view selected.", "warning"); return; }
-      if (!isCustomViewPreset(name)) {
-        showToast("Config-defined view presets cannot be deleted here.", "warning");
-        return;
-      }
-      if (!confirm(`Delete custom view "${name}"?`)) return;
-      const custom = loadCustomViewPresets();
-      delete custom[name];
-      saveCustomViewPresets(custom);
-      populateViewPresets();
-      clearViewPreset(false);
-      showToast(`Deleted view: ${name}`, "success");
-    }
-    function clearViewPreset(showMessage = true) {
-      try { localStorage.removeItem("lifetxt_preset"); } catch(_) {}
-      const sel = document.getElementById("view-preset-select");
-      if (sel) sel.value = "";
-      const params = query();
-      params.delete("preset");
-      const viewMode = (params.get("view") || "").toLowerCase();
-      if (!["messages", "status", "display", "kiosk"].includes(viewMode)) params.delete("view");
-      params.delete("_preset_applied");
-      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-      const btn = document.getElementById("preset-clear-btn");
-      if (btn) btn.style.display = "none";
-      const del = document.getElementById("preset-delete-btn");
-      if (del) del.style.display = "none";
-      applyUrlToControls();
-      refreshAll();
-      if (showMessage) showToast("View preset cleared.", "success");
-    }
-    function updatePresetClearBtn() {
-      const stored = query().get("preset") || loadPresetFromStorage();
-      const btn = document.getElementById("preset-clear-btn");
-      if (btn) btn.style.display = stored ? "" : "none";
-      const del = document.getElementById("preset-delete-btn");
-      if (del) del.style.display = stored && isCustomViewPreset(stored) ? "" : "none";
-      const lbl = document.getElementById("preset-name-label");
-      if (lbl) { lbl.textContent = stored ? stored : ""; lbl.style.display = stored ? "" : "none"; }
-      const sel = document.getElementById("view-preset-select");
-      if (sel && stored && getViewPreset(stored)) sel.value = stored;
-    }
 
     // ── Drawer: copy ID to clipboard ──────────────────────────────
     function drawerCopyId() {
@@ -7029,11 +6856,14 @@ HTML_PAGE = r"""<!doctype html>
     }
     function ctxEdit() {
       const t = ctxTarget; closeCtxMenu();
-      if (t) selectItem(t);
+      if (!t) return;
+      selectItem(t);
+      openEditorModal();
     }
     function ctxDuplicate() {
       const t = ctxTarget; closeCtxMenu();
       if (!t) return;
+      openEditorModal();
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = t.type || "T";
       document.getElementById("edit-title").value = t.title || "";
@@ -7135,22 +6965,238 @@ HTML_PAGE = r"""<!doctype html>
       }
     }
 
+    // ── Dashboard view ──────────────────────────────────────────────
+    let _dashChart = null;
+    function _fmtDate(d) {
+      const pad = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function _dashItemRow(item) {
+      const statusCls = STATUS_CLASS[item.status] || "status-note";
+      const statusIcon = STATUS_ICON[item.status] || "·";
+      const dueRel = buildDueRelLabel(item);
+      return `<div class="dash-row">
+        <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.08rem .4rem">${escapeHtml(statusIcon)}</span>
+        <span class="type-badge type-${escapeHtml(item.type || "N")}" style="font-size:.68rem;padding:.08rem .4rem">${escapeHtml(item.type || "?")}</span>
+        <a class="drawer-link dash-row-title" onclick="openItemByLine(${Number(item.line) || 0})">${escapeHtml(item.title)}</a>
+        ${dueRel}
+      </div>`;
+    }
+    async function loadDashboard() {
+      const dateEl = document.getElementById("dash-date");
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 13);
+      let openItems = [], blockedItems = [], agendaRecords = [], chartData = null, summary = null;
+      try {
+        [openItems, blockedItems, agendaRecords, chartData, summary] = await Promise.all([
+          api("/api/items?open_only=true").then(d => d.items || []).catch(() => []),
+          api("/api/items?blocked=true&open_only=true").then(d => d.items || []).catch(() => []),
+          api("/api/agenda?around=now&window=1d&open_only=true").then(d => d.records || []).catch(() => []),
+          api(`/api/chart/tasks?from=${_fmtDate(weekAgo)}&to=${_fmtDate(today)}&group=daily`).catch(() => null),
+          api("/api/stats/summary").catch(() => null),
+        ]);
+      } catch(_) {}
+      // KPI tiles
+      const overdue = openItems.filter(i => itemDueSoonClass(i) === "overdue");
+      const dueToday = openItems.filter(i => {
+        const due = i?.details?.due?.[0];
+        if (!due) return false;
+        const d = new Date(due); if (isNaN(d)) return false;
+        d.setHours(0, 0, 0, 0);
+        return +d === +today;
+      });
+      let doneRecent = 0;
+      if (chartData?.datasets?.length) {
+        for (const ds of chartData.datasets) {
+          if (/done/i.test(ds.label || "")) doneRecent = (ds.data || []).reduce((a, b) => a + (Number(b) || 0), 0);
+        }
+        if (!doneRecent) doneRecent = (chartData.datasets[0].data || []).reduce((a, b) => a + (Number(b) || 0), 0);
+      }
+      const kpis = [
+        {n: openItems.length, label: "Open", icon: "○", view: "", params: {open_only: "true"}},
+        {n: dueToday.length, label: "Due today", icon: "📅", view: "focus", params: {}},
+        {n: overdue.length, label: "Overdue", icon: "⚠️", cls: overdue.length ? "kpi-danger" : "", view: "focus", params: {}},
+        {n: blockedItems.length, label: "Blocked", icon: "⚡", cls: blockedItems.length ? "kpi-warn" : "", view: "", params: {blocked: "true", open_only: "true"}},
+        {n: doneRecent, label: "Done (14d)", icon: "✓", cls: "kpi-ok", view: "stats", params: {}},
+      ];
+      const kpiEl = document.getElementById("dash-kpis");
+      if (kpiEl) {
+        kpiEl.innerHTML = kpis.map((k, i) =>
+          `<button type="button" class="kpi-tile ${k.cls || ""}" onclick="dashNavigate(${i})">` +
+          `<span class="kpi-icon" aria-hidden="true">${k.icon}</span>` +
+          `<span class="kpi-n">${k.n}</span><span class="kpi-label">${escapeHtml(k.label)}</span></button>`
+        ).join("");
+        window._dashKpis = kpis;
+      }
+      // Today agenda
+      const todayEl = document.getElementById("dash-today");
+      if (todayEl) {
+        todayEl.innerHTML = agendaRecords.length
+          ? agendaRecords.slice(0, 7).map(r =>
+              `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
+              (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
+              `<span class="dash-row-title">${escapeHtml(r.title)}</span></div>`
+            ).join("") + (agendaRecords.length > 7 ? `<a class="drawer-link" onclick="switchWorkspace('agenda')">View all ${agendaRecords.length} →</a>` : "")
+          : `<div class="empty">Nothing scheduled around now.</div>`;
+      }
+      // Needs attention: overdue + blocked
+      const overdueEl = document.getElementById("dash-overdue");
+      if (overdueEl) {
+        const attention = [...overdue.map(i => ({...i, _why: "overdue"})),
+                           ...blockedItems.filter(b => !overdue.some(o => o.line === b.line && o.source === b.source)).map(i => ({...i, _why: "blocked"}))];
+        overdueEl.innerHTML = attention.length
+          ? attention.slice(0, 7).map(_dashItemRow).join("") +
+            (attention.length > 7 ? `<a class="drawer-link" onclick="switchWorkspace('focus')">View all ${attention.length} →</a>` : "")
+          : `<div class="empty">🎉 Nothing overdue or blocked.</div>`;
+      }
+      // Projects
+      const projEl = document.getElementById("dash-projects");
+      if (projEl) {
+        const projects = (summary?.by_project || []).filter(p => p.total > 0).slice(0, 7);
+        const maxTotal = Math.max(...projects.map(p => p.total), 1);
+        projEl.innerHTML = projects.length
+          ? projects.map(p =>
+              `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.project)}</span>` +
+              `<span style="color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums">${p.done}/${p.total}</span>` +
+              `<span class="proj-stats-bar" style="width:${Math.round(p.total / maxTotal * 70)}px;opacity:${(0.4 + 0.6 * (p.done / Math.max(p.total, 1))).toFixed(2)}"></span></div>`
+            ).join("")
+          : `<div class="empty">No project data.</div>`;
+      }
+      // Chart
+      if (chartData) {
+        try {
+          await ensureChartJs();
+          const canvas = document.getElementById("dash-chart");
+          if (canvas) {
+            if (_dashChart) { _dashChart.destroy(); _dashChart = null; }
+            _dashChart = new Chart(canvas.getContext("2d"), {
+              type: "bar",
+              data: {
+                labels: (chartData.labels || []).map(l => String(l).slice(5)),
+                datasets: (chartData.datasets || []).map((ds, i) => ({
+                  label: ds.label, data: ds.data,
+                  backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + "88",
+                  borderColor: CHART_COLORS[i % CHART_COLORS.length],
+                  borderWidth: 1.2,
+                })),
+              },
+              options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true}}},
+            });
+          }
+        } catch(_) {}
+      }
+    }
+    function dashNavigate(index) {
+      const kpi = (window._dashKpis || [])[index];
+      if (!kpi) return;
+      const params = query();
+      for (const key of ["text", "q", "status", "blocked", "open", "open_only", "kind", "type"]) params.delete(key);
+      for (const [key, value] of Object.entries(kpi.params || {})) params.set(key, value);
+      history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      switchWorkspace(kpi.view, "replace");
+    }
+
+    // ── Focus view (today's work, distraction-free) ────────────────
+    async function loadFocus() {
+      const listEl = document.getElementById("focus-list");
+      if (!listEl) return;
+      const dateEl = document.getElementById("focus-date");
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      let items = [];
+      try {
+        items = (await api("/api/items?open_only=true")).items || [];
+      } catch(e) {
+        listEl.innerHTML = `<div class="diagnostic">Focus error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dueDiff = (item) => {
+        const due = item?.details?.due?.[0];
+        if (!due) return null;
+        const d = new Date(due); if (isNaN(d)) return null;
+        d.setHours(0, 0, 0, 0);
+        return Math.round((d - today) / 86400000);
+      };
+      const workTypes = new Set(["T", "D", "R", "H"]);
+      const overdue = [], dueToday = [], inProgress = [];
+      for (const item of items) {
+        if (!workTypes.has(item.type)) continue;
+        const diff = dueDiff(item);
+        if (diff !== null && diff < 0) overdue.push(item);
+        else if (diff === 0) dueToday.push(item);
+        else if (item.status === "[/]") inProgress.push(item);
+      }
+      const groups = [
+        {label: "⚠️ Overdue", items: overdue, cls: "focus-overdue"},
+        {label: "📅 Due today", items: dueToday, cls: ""},
+        {label: "◑ In progress", items: inProgress, cls: ""},
+      ].filter(g => g.items.length);
+      if (!groups.length) {
+        listEl.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🎉</div>` +
+          `<div class="empty-title">All clear</div>` +
+          `<div class="empty-hint">Nothing overdue, due today, or in progress. Enjoy the calm — or pull something forward from Items.</div>` +
+          `<button type="button" class="secondary" onclick="switchWorkspace('')">Open Items</button></div>`;
+        return;
+      }
+      window._focusItems = [...overdue, ...dueToday, ...inProgress];
+      let idx = 0;
+      let html = "";
+      for (const group of groups) {
+        html += `<div class="focus-group-label ${group.cls}">${group.label} (${group.items.length})</div>`;
+        for (const item of group.items) {
+          const dueRel = buildDueRelLabel(item);
+          const proj = item?.details?.project?.[0] ? `<span class="pill">${escapeHtml(item.details.project[0])}</span>` : "";
+          html += `<div class="focus-row${item.editable ? "" : " focus-readonly"}">` +
+            `<button type="button" class="focus-check" title="${item.editable ? "Mark done" : "Read-only"}" ${item.editable ? `onclick="focusMarkDone(${idx})"` : "disabled"}></button>` +
+            `<div class="focus-row-main" onclick="focusOpen(${idx})">` +
+            `<div class="focus-row-title">${escapeHtml(item.title)}</div>` +
+            `<div class="focus-row-meta">${proj}${dueRel}</div>` +
+            `</div></div>`;
+          idx++;
+        }
+      }
+      listEl.innerHTML = html;
+    }
+    async function focusMarkDone(index) {
+      const item = (window._focusItems || [])[index];
+      if (!item || !item.editable) return;
+      const line = item.line;
+      const prevPayload = {status: item.status, type: item.type, title: item.title, details: item.details || {}};
+      try {
+        await api(`/api/items/${line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({...prevPayload, status: "[x]"}),
+        });
+        registerUndo(`Done: ${item.title}`, async () => {
+          await api(`/api/items/${line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
+        await loadFocus();
+      } catch(e) {
+        showToast("Mark done failed: " + (e.message || e), "error");
+      }
+    }
+    function focusOpen(index) {
+      const item = (window._focusItems || [])[index];
+      if (item) openDrawer(item);
+    }
+
     loadConfig().then(() => {
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();
       updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
-      populateViewPresets();
       syncStatusFilterBarsFromUrl();
-      updatePresetClearBtn();
       _syncGraphLayoutBtns();
-      // Restore preset from localStorage if no URL param
-      const storedPreset = loadPresetFromStorage();
-      if (storedPreset && !query().get("preset") && !query().get("view") && getViewPreset(storedPreset)) {
-        applyViewPreset(storedPreset);
-      }
       startGitPolling();
+      // Back-compat: ?workspace=new used to open the editor panel
+      if (firstParam(query(), ["workspace", "panel"], "").toLowerCase() === "new") newItem();
       return refreshAll().then(() => {
         // Auto-open detail modal for ?line=N deep links
         const lineParam = query().get("line");

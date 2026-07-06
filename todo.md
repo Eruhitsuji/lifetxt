@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-05 (updated x49)
+Last updated: 2026-07-06 (updated x50)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -189,15 +189,36 @@ CLI-native charts without external dependencies.
   soft-background/foreground pairs, muted text on `--panel-2`, kiosk header)
   and adjust token values where they fall below 4.5:1 for body-size text.
 
-- [ ] Consider persisting UI preferences (density, graph layout, dark mode,
-  active workspace panel) server-side per user instead of `localStorage`, so
-  settings follow the user across browsers. Density toggle, theme, graph
-  layout, and the active workspace panel currently persist locally or through
-  URL parameters.
+- [ ] Consider persisting UI preferences (density, graph layout, dark mode)
+  server-side per user instead of `localStorage`, so settings follow the user
+  across browsers. Density toggle, theme, and graph layout currently persist
+  locally; the active view is part of the URL by design.
 
-- [ ] Add a `?theme=dark|light` note to the kiosk documentation: the URL
-  parameter now forces the theme, which matters for wall-mounted displays
-  where `localStorage` cannot be pre-seeded.
+### Views: Dashboard & Focus (Web UI) — New
+
+- [ ] Make Dashboard cards configurable: a config key such as
+  `web.dashboard.cards` choosing which cards render (today, needs-attention,
+  completions chart, projects) and their order, plus per-card limits. The
+  fixed four-card layout with KPI tiles is implemented.
+
+- [ ] Add a quick-add input to the Focus view so a task due today can be
+  captured without leaving the view (delegate to the same
+  `POST /api/items/raw` used by the items quick-add bar, appending
+  `due:today`).
+
+- [ ] Include due-today Events and untimed Reminders in the Focus view's
+  partitions: the current filter covers `T`/`D`/`R`/`H` items with `due:` and
+  in-progress `[/]` items, so timed events for today only appear on the
+  Dashboard's Today card.
+
+- [ ] Consider a "Review" view as the next mode: last week's completed items,
+  journal entries with mood trend, and habit streaks in one read-only page,
+  reusing `review`/`stats` data. Would pair with the CLI weekly-review
+  workflow (`review` → LLM → `template apply`).
+
+- [ ] Deprecate the legacy `?workspace=` URL alias after one release: it now
+  maps onto `view=` (and `workspace=new` opens the editor modal); emit a
+  console warning first, then drop the mapping and the doc row.
 
 ### Context Menu & Dark Mode (Web UI) — New
 
@@ -215,11 +236,6 @@ CLI-native charts without external dependencies.
   stop buttons that update `elapsed:` through the existing item update
   endpoint, reusing the CLI `timer` duration math, so the est/elapsed progress
   bar can be driven entirely from the browser.
-
-- [ ] Add import/export for browser-local custom view presets so users can
-  move saved Web UI views between browsers or share them with a team. The
-  in-browser save/delete flow is implemented, but custom views are currently
-  stored only in `localStorage`.
 
 ### Agenda & Notifications (Web UI) — New
 
@@ -509,16 +525,16 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   navigation, inline status-badge cycling, group-by section headers, item
   CSV/JSON/Markdown export, graph layout switching plus SVG/PNG download, the
   detail modal due quick-postpone buttons, and the agenda blocked-filter cycle.
-  The 2026-07 redesign added more surfaces to cover: header workspace view buttons
-  (Items/Messages/Status/Kiosk switching), density toggle persistence,
-  skeleton-loading rows, contextual empty states ("clear filters" vs. "quick
-  add"), the back-to-top button, `?theme=dark|light` forcing, and the
-  workspace tab layout at mobile, tablet, and wide desktop widths. Add coverage
-  for browser-local custom view save/apply/delete, command-palette fuzzy
-  matching and recently opened records, and modal focus trapping/background
-  inert behavior. Current
-  tests cover static HTML hooks and API
-  behavior, not real DOM interaction.
+  The 2026-07 single-content router redesign added more surfaces to cover:
+  the ten-view tab bar (each view rendering exactly one page section),
+  Dashboard KPI tiles and their click-through navigation, Focus one-click
+  done with undo, the record editor modal (open via ＋ New / `n` /
+  `?workspace=new`, close on save), legacy `?workspace=` alias mapping,
+  density toggle persistence, skeleton-loading rows, contextual empty states,
+  the back-to-top button, `?theme=dark|light` forcing, command-palette fuzzy
+  matching and "Go to view" entries, and modal focus trapping/background
+  inert behavior. Current tests cover static HTML hooks and API behavior, not
+  real DOM interaction.
 
 - [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
   policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that

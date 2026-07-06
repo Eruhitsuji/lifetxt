@@ -131,19 +131,26 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
-- URL parameter による filter、順序、件数、表示mode指定
-- Items、Messages、Status、Kiosk の view 切り替えと、New Record、Agenda、
-  Notifications、Statistics、Graph の tool を統合した header workspace bar
-- 現在時刻付近の agenda 表示
+- URL parameter による filter、順序、件数、view 指定
+- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Focus、Messages、
+  Status、Notifications、Stats、Graph、Kiosk — 常に 1 つの view だけを全画面表示
+- Dashboard view: クリック可能な KPI tile(open / due today / overdue /
+  blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
+  project 別進捗
+- Focus view: overdue・今日期限・進行中の作業 item だけを表示し、ワンクリック
+  done(undo 付き)で処理
+- blocked filter 付きの agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
 - repeat から生成された agenda occurrence の badge 表示
 - record detail modal 内の Message thread 表示
 - record detail modal からの Message thread 返信
+- Help / Git / record detail / record editor の keyboard-trapped modal
+- fuzzy command palette(action、view 切替、最近開いた record)
 - `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
 - title、detail、body/note preview の検索語 highlight
-- item 作成
+- 中央の record editor modal での item 作成(`＋ New` または `n`)
 - raw life.txt 行を server parser で解析して preview してから editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除
@@ -152,12 +159,11 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 `.generated/google_calendar.life.txt` など生成ファイル由来の item は read-only として
 表示します。
 
-layout は responsive です。item list は読みやすい 1 カラムに固定し、従来の右側
-tool 群は header workspace bar に集約しています。同じ bar に Items、Messages、
-Status、Kiosk の view 切り替えも統合しています。New Record、Statistics、Graph、
-Agenda、Status、Notifications は 1 つずつ開くため、狭い画面でも内容が隠れにくく
-なります。item をクリックした詳細表示は右側 drawer ではなく中央の record detail
-modal として表示します。
+layout は「1画面1コンテンツ」を基本とします。header の view bar で選んだ
+1 つの page(Items、Dashboard、Agenda、Focus、Messages、Status、
+Notifications、Stats、Graph)だけが全幅で表示され、他のコンテンツと画面を
+奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
+クリックした詳細表示も中央の record detail modal として表示します。
 
 ## URL parameter
 
@@ -168,7 +174,9 @@ GUI は読み込み時に query parameter を読みます。bookmark、常時表
 
 ```txt
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
-http://127.0.0.1:8000/?workspace=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=dashboard&refresh=60
+http://127.0.0.1:8000/?view=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 ```
@@ -177,12 +185,11 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 
 | Parameter | 意味 |
 |---|---|
+| `view=dashboard\|agenda\|focus\|messages\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
 | `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
-| `view=messages` | Message専用に近いlayout。type `M` をdefault filterにする |
-| `view=status` | Status専用に近いlayout。active status表示を強調する |
-| `preset=NAME` | config `views.NAME` または browser-local custom view のURL parameterを適用 |
-| `workspace=new|agenda|status|notifications|stats|graph` | item list 上部の workspace panel を開く |
+| `preset=NAME` | config `views.NAME` のURL parameterを適用 |
+| `workspace=agenda\|status\|notifications\|stats\|graph` | `view=...` の旧alias。`workspace=new` は record editor modal を開く |
 | `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
 | `kind=E` または `type=E` | life.txt type で filter |
 | `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
@@ -192,8 +199,8 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `user=VALUE`、`team=VALUE`、`person=VALUE` | user / team / presence target で filter |
 | `owner=VALUE`、`assignee=VALUE`、`attendee=VALUE` | people detail で filter |
 | `sender=VALUE`、`recipient=VALUE` | message detail で filter |
-| `sort=line|time|title|type|status|source` | item 並び替え key |
-| `order=asc|desc` | item 並び順 |
+| `sort=line\|time\|title\|type\|status\|source` | item 並び替え key |
+| `order=asc\|desc` | item 並び順 |
 | `limit=N` | item と agenda の表示件数上限 |
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
@@ -203,26 +210,24 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `kiosk_cols=N` | kiosk card の固定列数。最大 8 |
 | `kiosk_filter=kind:T,status:[/]` | kiosk mode 専用の compact filter |
 | `kiosk_title=TEXT` | kiosk mode 時だけ表示する header title |
+| `theme=dark` または `theme=light` | theme を強制。`localStorage` を設定できない kiosk / 常時表示ディスプレイ向け |
 | `graph_root=ID`、`graph_depth=N` | Graph panel の初期 root/depth |
 
-## Saved Views と Command Palette
-
-Header toolbar の `Save View` で、現在の filter、search text、sort、group-by、
-display mode、workspace panel を browser-local custom view として保存できます。
-custom view は `localStorage` に保存されるため、同じ browser profile 内で使えます。
-config の `views` から読み込まれた preset は同じ selector に表示されますが、Web UI
-からは read-only として扱います。custom view を選択して `Delete` を押すと削除でき、
-`x` は active preset の解除だけを行います。
+## Command Palette
 
 `Ctrl+K` で Command Palette を開けます。fuzzy matching、recently opened records、
-saved views の適用、quick-add、export、theme toggle、kiosk mode、agenda blocked
-filter の切り替えに対応しています。
+view 切り替え(`Go to Dashboard` など)、quick-add、export、theme toggle、
+kiosk mode、agenda blocked filter の切り替えに対応しています。
+
+browser 側の「Save View」機能はありません。共有したい view はそのまま URL として
+共有でき(filter、sort、view 選択はすべて query string に反映されます)、再利用する
+preset は config `views.NAME` に定義して `?preset=NAME` で適用します。
 
 ## Browser notification
 
 GUI は `/api/notifications` を polling し、due になった type `M` record を
-Notifications workspace panel に表示します。上部 toolbar の `Notifications` または
-workspace tab から開けます。browser notification はユーザが許可したあとに使えます。
+Notifications view に表示します。上部 toolbar の `Notifications` または view tab
+から開けます。browser notification はユーザが許可したあとに使えます。
 
 通知許可が blocked の場合、JavaScript から再許可ダイアログを出すことはできません。
 その場合は panel に browser の site settings から通知を許可し直す案内を表示します。

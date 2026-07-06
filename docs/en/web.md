@@ -158,26 +158,31 @@ The browser GUI supports:
 
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
-- URL-driven filters, ordering, limits, and display mode
-- Saving the current filter/sort/workspace state as a browser-local custom
-  view
-- A header workspace bar that combines view switching (Items, Messages,
-  Status, Kiosk) and tools (New Record, Agenda, Notifications, Statistics,
-  Graph)
-- Showing near-current agenda records
+- URL-driven filters, ordering, limits, and view selection
+- A single-content view bar: Dashboard, Items, Agenda, Focus, Messages,
+  Status, Notifications, Stats, Graph, and Kiosk — exactly one view fills the
+  screen at a time
+- A Dashboard view with clickable KPI tiles (open, due today, overdue,
+  blocked, recent completions), today's agenda, a needs-attention list, a
+  14-day completion chart, and per-project progress
+- A Focus view showing only overdue, due-today, and in-progress work items
+  with one-click done buttons and undo
+- Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
 - Showing due message notifications
 - Showing repeated agenda occurrences with occurrence badges
 - Browser notifications after the user grants permission
 - Showing message threads in the record detail modal using `parent:`
 - Replying to message threads from the record detail modal
-- Keyboard-trapped modals for Help, Git, and record details
-- A fuzzy command palette with actions, saved views, and recently opened items
+- Keyboard-trapped modals for Help, Git, record details, and the record
+  editor
+- A fuzzy command palette with actions, view switching, and recently opened
+  items
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
 - Highlighting search matches in titles, details, and body/note previews
-- Creating new items
+- Creating new items in a centered record editor modal (`＋ New` or `n`)
 - Importing a raw life.txt line/body block into the editor through the server
   parser, with a live parse preview before writing
 - Selecting editable items and saving changes
@@ -186,13 +191,11 @@ The browser GUI supports:
 Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
-The layout is responsive: the main item list stays in one readable column, and
-the former right-side tools are collected into the header workspace bar. The
-same bar also contains Items, Messages, Status, and Kiosk view switches. Only
-one workspace panel is open at a time, so New Record, Statistics, Graph,
-Agenda, Status, and Notifications remain visible on narrow and wide screens.
-Clicking an item opens a centered record detail modal instead of a right-side
-drawer.
+The layout follows a one-screen-one-content rule: the header view bar picks a
+single full-width page (Items, Dashboard, Agenda, Focus, Messages, Status,
+Notifications, Stats, or Graph), and nothing else competes for space. The
+record editor opens as a centered modal from `＋ New`, and clicking an item
+opens a centered record detail modal.
 
 ## URL Parameters
 
@@ -203,7 +206,9 @@ Examples:
 
 ```txt
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
-http://127.0.0.1:8000/?workspace=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=dashboard&refresh=60
+http://127.0.0.1:8000/?view=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 ```
@@ -212,12 +217,11 @@ Supported parameters:
 
 | Parameter | Meaning |
 |---|---|
+| `view=dashboard\|agenda\|focus\|messages\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
 | `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
-| `view=messages` | Message-focused layout with type `M` as the default item filter |
-| `view=status` | Status-focused layout with active status records emphasized |
-| `preset=NAME` | Apply URL parameters from config `views.NAME` or a browser-local custom view |
-| `workspace=new|agenda|status|notifications|stats|graph` | Open a workspace panel above the item list |
+| `preset=NAME` | Apply URL parameters from config `views.NAME` |
+| `workspace=agenda\|status\|notifications\|stats\|graph` | Legacy alias for `view=...`; `workspace=new` opens the record editor modal |
 | `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
 | `kind=E` or `type=E` | Filter by life.txt type |
 | `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
@@ -227,8 +231,8 @@ Supported parameters:
 | `user=VALUE`, `team=VALUE`, `person=VALUE` | Filter by users, teams, or presence target |
 | `owner=VALUE`, `assignee=VALUE`, `attendee=VALUE` | Filter by people details |
 | `sender=VALUE`, `recipient=VALUE` | Filter by message details |
-| `sort=line|time|title|type|status|source` | Item sort key |
-| `order=asc|desc` | Item sort order |
+| `sort=line\|time\|title\|type\|status\|source` | Item sort key |
+| `order=asc\|desc` | Item sort order |
 | `limit=N` | Limit item and agenda results |
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
@@ -238,29 +242,28 @@ Supported parameters:
 | `kiosk_cols=N` | Fixed kiosk card columns, up to 8 |
 | `kiosk_filter=kind:T,status:[/]` | Kiosk-only compact filter expression |
 | `kiosk_title=TEXT` | Header title shown only in kiosk mode |
+| `theme=dark` or `theme=light` | Force the color theme; useful for kiosks and wall displays where `localStorage` cannot be pre-seeded |
 | `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
 
-## Saved Views and Command Palette
-
-Use `Save View` in the header toolbar to store the current filters, search
-text, sort order, grouping, display mode, and workspace panel as a browser-local
-custom view. Custom views are stored in `localStorage`; they are available only
-in the current browser profile. Config-defined views from `views` are shown in
-the same selector but are read-only from the browser. Select a custom view and
-click `Delete` to remove it, or click `x` to clear the active preset without
-deleting it.
+## Command Palette
 
 Press `Ctrl+K` to open the command palette. It supports fuzzy matching, shows
-recently opened records when the query is empty, can apply saved views, and
-includes common actions such as quick-add, export, theme toggle, kiosk mode,
-and agenda blocked-filter toggling.
+recently opened records when the query is empty, switches between views
+(`Go to Dashboard`, `Go to Focus`, ...), and includes common actions such as
+quick-add, export, theme toggle, kiosk mode, and agenda blocked-filter
+toggling.
+
+There is no browser-side "save view" feature: shareable views are plain URLs
+(every filter, sort, and view choice is reflected in the query string), and
+reusable presets are defined in config `views.NAME` and applied with
+`?preset=NAME`.
 
 ## Browser Notifications
 
 The GUI polls `/api/notifications` and shows due type `M` records in the
-Notifications workspace panel. Click `Notifications` in the top toolbar or the
-workspace tab to open it. Click `Enable Notifications` to request browser
-permission and receive native browser notifications.
+Notifications view. Click `Notifications` in the top toolbar or the view tab
+to open it. Click `Enable Notifications` to request browser permission and
+receive native browser notifications.
 
 Notification selection uses:
 

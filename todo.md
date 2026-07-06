@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-06 (updated x50)
+Last updated: 2026-07-06 (updated x51)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -93,10 +93,6 @@ Improvements to existing commands that affect daily workflow.
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
   `docs/en/cli.md`, `docs/ja/cli.md`, and shell completion scripts in the
   same commit.
-
-- [ ] Add generated CLI reference checks: compare `argparse` help, shell
-  completion options, and `docs/en/cli.md` / `docs/ja/cli.md` examples so new
-  command flags cannot silently drift after future CLI changes.
 
 ---
 
@@ -299,11 +295,10 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `{next_monday}`, `{next_week}` placeholders resolved at apply time) is
   implemented; see CLI guide section 18.
 
-- [ ] Add CLI-side dependency-focused views: `agenda --blocked only|hide`
-  flags and a dedicated `deps` view (or `links --chain ID`) that prints the
-  transitive blocker chain in the terminal. The Web side is done: the agenda
-  API/UI filter (`blocked=only|hide` + ⚡ badge) and the detail modal "Why is this
-  blocked?" chain backed by `GET /api/blockers` are implemented.
+- [ ] Add graph-oriented output for dependency chains: `deps --format mermaid`
+  and `deps --format dot`, plus an optional `--depth N` guard for very large
+  dependency trees. `links --chain ID`, `deps --root ID`, `deps --blocked`,
+  and `agenda --blocked only|hide|all` are implemented and tested.
 
 ---
 

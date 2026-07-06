@@ -1683,6 +1683,60 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         data = json.loads(stdout)
         self.assertEqual(["blocks", "depends_on"], sorted(record["relation"] for record in data))
 
+    def test_links_cli_chain_traces_depends_on_and_blocks(self):
+        text = (
+            "[ ] T Setup id:task_setup\n"
+            "[ ] T Gate id:task_gate blocks:task_report\n"
+            "[ ] T Report id:task_report depends_on:task_setup\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "links",
+            "--chain",
+            "task_report",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual("task_report", data[0]["id"])
+        relations = sorted(dep["relation"] for dep in data[0]["deps"])
+        self.assertEqual(["blocks", "depends_on"], relations)
+
+    def test_deps_cli_root_and_blocked_filter(self):
+        text = (
+            "[x] T Done_Setup id:task_done done:2026-06-01\n"
+            "[ ] T Open_Setup id:task_open\n"
+            "[ ] T Waiting id:task_waiting depends_on:task_open\n"
+            "[ ] T Not_Blocked id:task_not_blocked depends_on:task_done\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "deps",
+            "--root",
+            "task_waiting",
+            "--format",
+            "json",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        data = json.loads(stdout)
+        self.assertEqual("task_waiting", data[0]["id"])
+        self.assertEqual("task_open", data[0]["deps"][0]["id"])
+
+        stdout, stderr, code = run_cli("deps", "--blocked", input_text=text)
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        normalized = normalize_newlines(stdout)
+        self.assertIn("task_waiting", normalized)
+        self.assertNotIn("task_not_blocked", normalized)
+
     def test_multiple_life_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first.life.txt")
@@ -7433,6 +7487,43 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             self.assertEqual(rc, 0, err)
             self.assertIn("Child", out)
             self.assertNotIn("Parent", out)
+        finally:
+            os.unlink(path)
+
+    def test_agenda_blocked_mode_only_and_hide(self):
+        path = self._make_file(
+            "[ ] T Parent do:2026-06-01 id:p1\n"
+            "[ ] T Child do:2026-06-01 depends_on:p1 id:c1\n"
+            "[ ] T Free do:2026-06-01 id:f1\n"
+        )
+        try:
+            out, err, rc = run_cli(
+                "agenda",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-01",
+                "--blocked",
+                "only",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("Child", out)
+            self.assertNotIn("Free", out)
+
+            out, err, rc = run_cli(
+                "agenda",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-01",
+                "--blocked",
+                "hide",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertNotIn("Child", out)
+            self.assertIn("Free", out)
         finally:
             os.unlink(path)
 

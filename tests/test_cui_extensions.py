@@ -43,6 +43,19 @@ class CompletionTests(unittest.TestCase):
         self.assertIn("body<<", detail_candidates("J"))
         self.assertIn("elapsed", DETAIL_DESCRIPTIONS)
 
+    def test_completion_commands_match_argparse_subcommands(self):
+        parser = cli.build_parser()
+        commands = _subcommand_names(parser)
+
+        self.assertEqual(commands, completion._command_names())
+
+    def test_completion_options_cover_argparse_long_options(self):
+        parser = cli.build_parser()
+        expected = _long_options(parser)
+        actual = set(completion._all_options())
+
+        self.assertEqual([], sorted(expected - actual))
+
 
 class CliParserConsistencyTests(unittest.TestCase):
     def test_filter_based_commands_share_item_filter_options(self):
@@ -84,6 +97,29 @@ def _subparser(parser, name):
         if isinstance(action, argparse._SubParsersAction):
             return action.choices[name]
     raise AssertionError("parser has no subcommands")
+
+
+def _subcommand_names(parser):
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return tuple(action.choices.keys())
+    raise AssertionError("parser has no subcommands")
+
+
+def _long_options(parser):
+    options = set()
+
+    def walk(arg_parser):
+        for action in arg_parser._actions:
+            for option in action.option_strings:
+                if option.startswith("--"):
+                    options.add(option)
+            if isinstance(action, argparse._SubParsersAction):
+                for subparser in action.choices.values():
+                    walk(subparser)
+
+    walk(parser)
+    return options
 
 
 class GitHookTests(unittest.TestCase):

@@ -60,6 +60,8 @@ from .ids import (
 )
 from .links import (
     dependency_blocker_records,
+    dependency_chain_records,
+    format_dependency_chain,
     format_link_table,
     link_records,
     links_to_dot,
@@ -272,6 +274,11 @@ def build_parser():
         "--id",
         dest="item_id",
         help="Show links connected to this id. Defaults to all links.",
+    )
+    links_command.add_argument(
+        "--chain",
+        metavar="ID",
+        help="Show the dependency blocker chain for this item ID.",
     )
     links_command.add_argument(
         "--direction",
@@ -787,13 +794,19 @@ def build_parser():
     _add_item_filter_arguments(agenda)
     agenda.add_argument(
         "--blocked",
-        action="store_true",
-        help="Show only items blocked by dependency records.",
+        nargs="?",
+        const="only",
+        choices=("only", "hide", "all", "true", "false"),
+        help=(
+            "Filter dependency-blocked records: --blocked or --blocked only "
+            "shows blocked records, --blocked hide hides them, --blocked all "
+            "shows all records."
+        ),
     )
     agenda.add_argument(
         "--unblocked",
         action="store_true",
-        help="Show only items without dependency blockers.",
+        help="Backward-compatible alias for --blocked hide.",
     )
     agenda.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     agenda.set_defaults(func=command_agenda)
@@ -1953,6 +1966,28 @@ def command_ids(args):
 def command_links(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     key = args.key or id_key_from_config(_config(args))
+    if getattr(args, "chain", None):
+        if args.item_id:
+            raise ValueError("Use either --chain or --id, not both.")
+        if args.direction != "both":
+            raise ValueError("--direction is only valid with --id, not --chain.")
+        if args.relation:
+            raise ValueError("--relation is only valid for link records, not --chain.")
+        if args.format in ("mermaid", "dot"):
+            raise ValueError("--chain supports text, json, or jsonl output.")
+        chains = dependency_chain_records(items, key=key, root_id=args.chain)
+        if args.format == "json":
+            write_text(None, json.dumps(chains, ensure_ascii=False, indent=2 if args.pretty else None, separators=None if args.pretty else (",", ":")) + "\n")
+        elif args.format == "jsonl":
+            output = "\n".join(json.dumps(record, ensure_ascii=False, separators=(",", ":")) for record in chains)
+            if output:
+                output += "\n"
+            write_text(None, output)
+        else:
+            write_text(None, format_dependency_chain(chains))
+        _print_warnings(diagnostics)
+        return 0
+
     records = link_records(
         items,
         key=key,
@@ -5687,6 +5722,7 @@ def command_notify(args):
 
 
 def command_agenda(args):
+    blocked_filter = _agenda_blocked_filter(args.blocked, args.unblocked)
     if args.blocked and args.unblocked:
         raise ValueError("Use either --blocked or --unblocked, not both.")
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
@@ -5717,7 +5753,7 @@ def command_agenda(args):
         teams=args.team,
         detail_filters=args.detail,
         text=args.text,
-        blocked=True if args.blocked else False if args.unblocked else None,
+        blocked=blocked_filter,
         user_aliases=config_user_aliases(_config(args)),
         team_members=config_team_members(_config(args)),
         team_aliases=config_team_aliases(_config(args)),
@@ -5742,6 +5778,18 @@ def command_agenda(args):
 
     _print_warnings(diagnostics)
     return 0
+
+
+def _agenda_blocked_filter(blocked_value, unblocked):
+    if unblocked:
+        return False
+    if blocked_value in (None, "all", "false"):
+        return None
+    if blocked_value in (True, "only", "true"):
+        return True
+    if blocked_value == "hide":
+        return False
+    return None
 
 
 def _agenda_range_texts(args):
@@ -6988,58 +7036,17 @@ def _print_warnings(diagnostics):
 
 
 def command_deps(args):
-    from .links import build_id_index, item_id_values
     config = _config(args)
     id_key = id_key_from_config(config)
     paths = args.paths if args.paths else ["-"]
     items, diags = _parse_or_exit(paths, config)
     _print_warnings(diags)
-    id_index = build_id_index(items, id_key=id_key)
-
-    def _id(item):
-        vals = item_id_values(item, id_key)
-        return vals[0] if vals else None
-
-    def _deps(item):
-        return list(item.details.get("depends_on", []))
-
-    def _is_open(item):
-        return item.status not in ("[x]", "[-]")
-
-    all_ids = {_id(i): i for i in items if _id(i)}
-    root_id = getattr(args, "root", None)
-    blocked_only = getattr(args, "blocked", False)
-
-    def _collect(item_id, visited=None):
-        if visited is None:
-            visited = set()
-        if item_id in visited:
-            return []
-        visited.add(item_id)
-        item = all_ids.get(item_id)
-        if not item:
-            return [{"id": item_id, "title": "(unknown)", "status": "?", "type": "?", "deps": []}]
-        dep_ids = _deps(item)
-        dep_nodes = []
-        for dep_id in dep_ids:
-            dep_nodes.extend(_collect(dep_id, visited))
-        return [{"id": item_id, "title": item.title, "status": item.status,
-                 "type": item.kind, "deps": dep_nodes}]
-
-    if root_id:
-        roots = _collect(root_id)
-    else:
-        roots = []
-        for item in items:
-            if blocked_only and not any(_is_open(all_ids[d]) for d in _deps(item) if d in all_ids):
-                continue
-            item_id = _id(item)
-            if not item_id:
-                continue
-            dep_ids = _deps(item)
-            if not dep_ids:
-                continue
-            roots.append(_collect(item_id)[0])
+    roots = dependency_chain_records(
+        items,
+        key=id_key,
+        root_id=getattr(args, "root", None),
+        blocked_only=getattr(args, "blocked", False),
+    )
 
     if args.format == "json":
         write_text(None, json.dumps(roots, ensure_ascii=False,
@@ -7047,20 +7054,7 @@ def command_deps(args):
                                     separators=None if args.pretty else (",", ":")) + "\n")
         return 0
 
-    def _print_node(node, depth=0):
-        indent = "  " * depth
-        status = node.get("status", "?")
-        title = node.get("title", "")
-        item_id = node.get("id", "")
-        sys.stdout.write("%s%s [%s] %s\n" % (indent, item_id, status, title))
-        for dep in node.get("deps", []):
-            _print_node(dep, depth + 1)
-
-    if not roots:
-        sys.stdout.write("No dependency chains found.\n")
-    else:
-        for root in roots:
-            _print_node(root)
+    write_text(None, format_dependency_chain(roots))
     return 0
 
 

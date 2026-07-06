@@ -370,6 +370,8 @@ python -m lifetxt links [path ...]
 python -m lifetxt links life.txt --id task_report --direction incoming
 python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
 python -m lifetxt links life.txt --relation depends_on --relation blocks
+python -m lifetxt links life.txt --chain task_report
+python -m lifetxt links life.txt --chain task_report --format json --pretty
 ```
 
 Options:
@@ -377,10 +379,11 @@ Options:
 | Option | Meaning |
 |---|---|
 | `--id ID` | Show only links connected to this ID |
+| `--chain ID` | Show the dependency blocker chain for this item ID |
 | `--direction incoming|outgoing|both` | Direction when `--id` is used |
 | `--relation RELATION` | Limit to a relation key such as `depends_on`; repeatable or comma-separated |
 | `--key KEY` | ID detail key; defaults to config `ids.key`, `api.id_key`, or `id` |
-| `--format text|json|jsonl` | Output format |
+| `--format text|json|jsonl|mermaid|dot` | Output format. `--chain` supports `text`, `json`, and `jsonl` |
 | `--pretty` | Pretty-print JSON |
 
 `check` reports missing references (`W215`), self references (`W216`),
@@ -392,6 +395,9 @@ Dependency behavior:
 - `depends_on:ID` blocks the current item while `ID` is open.
 - `blocks:ID` independently marks `ID` as blocked while the current item is open.
 - `health` reports blocked open items as `W305`.
+- `links --chain ID` and `deps --root ID` print the same blocker chain in a
+  terminal-friendly tree. The chain includes both direct `depends_on:` blockers
+  and inverse `blocks:` blockers.
 
 ### 3.3 `sources`
 
@@ -934,8 +940,8 @@ python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 | `--recipient VALUE` | Filter by `recipient:`; repeatable or comma-separated |
 | `--detail FILTER` | Filter by detail key or `key=value`; repeatable and ANDed |
 | `--text TEXT` | Case-insensitive substring search over title, line, and details |
-| `--blocked` | Show only items blocked by dependency records |
-| `--unblocked` | Show only items without dependency blockers |
+| `--blocked [only|hide|all]` | Filter dependency-blocked records. Plain `--blocked` is the same as `--blocked only` |
+| `--unblocked` | Backward-compatible alias for `--blocked hide` |
 
 Examples:
 
@@ -949,6 +955,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --recipient 
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked hide
 ```
 
 `--detail key` checks that the key exists. `--detail key=value` checks for an
@@ -1500,6 +1507,29 @@ python -m lifetxt completion install --shell bash
 
 `completion install` prints commands only. It does not modify shell startup
 files automatically.
+
+### 13.8 `deps`
+
+`deps` prints unresolved or declared dependency chains as an indented terminal
+tree. It uses the same blocker semantics as `agenda` and `health`: a
+`depends_on:` target blocks the current item, and an item with `blocks:ID`
+blocks the target `ID`.
+
+```sh
+python -m lifetxt deps life.txt
+python -m lifetxt deps life.txt --blocked
+python -m lifetxt deps life.txt --root task_report
+python -m lifetxt deps life.txt --root task_report --format json --pretty
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--blocked` | Show only open items with open blockers |
+| `--root ID` | Trace the blocker chain for one item ID |
+| `--format text|json` | Output format |
+| `--pretty` | Pretty-print JSON |
 
 ## 14. Aliases
 

@@ -163,6 +163,146 @@ def dependency_blockers_by_item(items, key="id"):
     return blockers
 
 
+def dependency_chain_records(items, key="id", root_id=None, blocked_only=False):
+    """Return dependency chains rooted at blocked items.
+
+    The chain treats ``depends_on:ID`` and inverse ``blocks:ID`` as the same
+    user-facing concept: the root item is waiting on the child nodes in
+    ``deps``. Missing and ambiguous references are included as placeholder
+    nodes so CLI users can see why a chain cannot be resolved.
+    """
+    index = build_id_index(items, key)
+    unique = OrderedDict(
+        (value, matches[0])
+        for value, matches in index.items()
+        if len(matches) == 1
+    )
+    incoming_blocks = _incoming_blocks(items)
+
+    def item_id(item):
+        values = item_id_values(item, key)
+        return values[0] if values else _item_location(item)
+
+    def placeholder(reference_id, relation, status):
+        title = "(missing)" if status == "missing" else "(ambiguous)"
+        node = OrderedDict()
+        node["id"] = str(reference_id)
+        node["status"] = "?"
+        node["type"] = "?"
+        node["title"] = title
+        node["relation"] = relation
+        node["reference_status"] = status
+        node["deps"] = []
+        return node
+
+    def build_node(item, relation=None, path=None):
+        if path is None:
+            path = []
+        current_id = item_id(item)
+        node = OrderedDict()
+        node["id"] = current_id
+        node["status"] = item.status
+        node["type"] = item.kind
+        node["title"] = item.title
+        location = _item_location(item)
+        if location:
+            node["location"] = location
+        if relation:
+            node["relation"] = relation
+        if current_id in path:
+            node["cycle"] = True
+            node["deps"] = []
+            return node
+
+        deps = []
+        next_path = path + [current_id]
+        for target_id in item.details.get("depends_on", []):
+            target_id = str(target_id)
+            matches = index.get(target_id, [])
+            if target_id in unique and unique[target_id] is not item:
+                deps.append(build_node(unique[target_id], relation="depends_on", path=next_path))
+            elif len(matches) > 1:
+                deps.append(placeholder(target_id, "depends_on", "ambiguous"))
+            else:
+                deps.append(placeholder(target_id, "depends_on", "missing"))
+
+        for current_value in item_id_values(item, key):
+            for blocker in incoming_blocks.get(current_value, []):
+                if blocker is item:
+                    continue
+                deps.append(build_node(blocker, relation="blocks", path=next_path))
+
+        node["deps"] = deps
+        return node
+
+    def direct_open_blocker(node):
+        for dep in node.get("deps", []):
+            if dep.get("status") in OPEN_DEPENDENCY_STATUSES:
+                return True
+        return False
+
+    if root_id:
+        root_id = str(root_id)
+        matches = index.get(root_id, [])
+        if root_id in unique:
+            return [build_node(unique[root_id])]
+        if len(matches) > 1:
+            return [placeholder(root_id, None, "ambiguous")]
+        return [placeholder(root_id, None, "missing")]
+
+    records = []
+    seen_roots = set()
+    for item in items:
+        values = item_id_values(item, key)
+        if not values:
+            continue
+        node = build_node(item)
+        if not node.get("deps"):
+            continue
+        if blocked_only and (
+            item.status not in OPEN_DEPENDENCY_STATUSES or not direct_open_blocker(node)
+        ):
+            continue
+        root_key = (node["id"], node.get("location", ""))
+        if root_key in seen_roots:
+            continue
+        seen_roots.add(root_key)
+        records.append(node)
+    return records
+
+
+def format_dependency_chain(records):
+    if not records:
+        return "No dependency chains found.\n"
+
+    lines = []
+
+    def add_node(node, depth=0):
+        indent = "  " * depth
+        relation = node.get("relation")
+        suffix = " (%s)" % relation if relation else ""
+        if node.get("reference_status") in ("missing", "ambiguous"):
+            suffix += " %s" % node["reference_status"]
+        if node.get("cycle"):
+            suffix += " cycle"
+        lines.append(
+            "%s%s [%s] %s%s"
+            % (
+                indent,
+                node.get("id", ""),
+                node.get("status", "?"),
+                node.get("title", ""),
+                suffix,
+            )
+        )
+        for dep in node.get("deps", []):
+            add_node(dep, depth + 1)
+
+    for record in records:
+        add_node(record)
+    return "\n".join(lines) + "\n"
+
+
 def build_id_index(items, key="id"):
     index = OrderedDict()
     for item in items:
@@ -391,6 +531,14 @@ def _dependency_blocker_record(blocked, blocker, relation, reference_id, key):
     record["_blocked_item_key"] = id(blocked)
     record["_blocker_item_key"] = id(blocker)
     return record
+
+
+def _incoming_blocks(items):
+    incoming = OrderedDict()
+    for item in items:
+        for target_id in item.details.get("blocks", []):
+            incoming.setdefault(str(target_id), []).append(item)
+    return incoming
 
 
 def _unique_reference_target(index, target_id, item, key):

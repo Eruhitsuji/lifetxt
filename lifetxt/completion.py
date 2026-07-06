@@ -86,7 +86,7 @@ _STATUS_ALIAS_WORDS = _unique_ordered(name for name in STATUS_ALIASES if len(nam
 OPTION_VALUES = {
     "--type": " ".join(_TYPE_ALIAS_WORDS + list(VALID_TYPES)),
     "--status": " ".join(_STATUS_ALIAS_WORDS + list(VALID_STATUSES)),
-    "--format": "text life html json jsonl markdown table",
+    "--format": "text life html json jsonl markdown table csv mermaid dot svg png",
     "--window": "1h 2h 6h 1d 3d 1w 2w 1mo 3mo 1y",
     "--around": "now today",
     "--preset": "ics markdown todoist github",
@@ -114,7 +114,7 @@ def cmd_completion(args):
 
 
 def bash_completion():
-    commands = " ".join(COMMANDS)
+    commands = " ".join(_command_names())
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
     type_values = OPTION_VALUES["--type"]
     status_values = OPTION_VALUES["--status"]
@@ -167,7 +167,7 @@ complete -F _lifetxt_completion lifetxt
 
 
 def zsh_completion():
-    commands = " ".join(COMMANDS)
+    commands = " ".join(_command_names())
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
     type_values = OPTION_VALUES["--type"]
     status_values = " ".join("'%s'" % value for value in VALID_STATUSES)
@@ -217,7 +217,7 @@ _lifetxt "$@"
 
 def fish_completion():
     lines = ["# lifetxt fish completion"]
-    for command in COMMANDS:
+    for command in _command_names():
         lines.append("complete -c lifetxt -f -n '__fish_use_subcommand' -a '%s'" % command)
     for option in sorted(set(COMMON_OPTIONS + _all_options())):
         if option.startswith("--"):
@@ -355,7 +355,47 @@ def _all_options():
         detail_options.append("--%s" % key)
         if "_" in key:
             detail_options.append("--%s" % key.replace("_", "-"))
-    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + detail_options))
+    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + list(_parser_long_options()) + detail_options))
+
+
+def _command_names():
+    return tuple(_unique_ordered(list(_parser_command_names()) or list(COMMANDS)))
+
+
+def _parser_command_names():
+    try:
+        from . import cli
+
+        parser = cli.build_parser()
+    except Exception:
+        return ()
+    for action in parser._actions:
+        if action.__class__.__name__ == "_SubParsersAction":
+            return tuple(action.choices.keys())
+    return ()
+
+
+def _parser_long_options():
+    try:
+        from . import cli
+
+        parser = cli.build_parser()
+    except Exception:
+        return ()
+
+    options = []
+
+    def walk(arg_parser):
+        for action in arg_parser._actions:
+            for option in getattr(action, "option_strings", ()):
+                if option.startswith("--"):
+                    options.append(option)
+            if action.__class__.__name__ == "_SubParsersAction":
+                for subparser in action.choices.values():
+                    walk(subparser)
+
+    walk(parser)
+    return tuple(_unique_ordered(options))
 
 
 def _write_text(path, text):

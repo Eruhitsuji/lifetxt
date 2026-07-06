@@ -352,16 +352,21 @@ python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 ```sh
 python -m lifetxt links [path ...]
 python -m lifetxt links life.txt --id task_report --direction incoming
+python -m lifetxt links life.txt --id task_report --direction outgoing --format json --pretty
+python -m lifetxt links life.txt --relation depends_on --relation blocks
+python -m lifetxt links life.txt --chain task_report
+python -m lifetxt links life.txt --chain task_report --format json --pretty
 ```
 
 | Option | 意味 |
 |---|---|
 | `path ...` | 入力 life.txt。`-` なら標準入力 |
 | `--id ID` | この ID に接続する link だけ表示 |
+| `--chain ID` | この ID の dependency blocker chain を表示 |
 | `--direction incoming|outgoing|both` | `--id` 使用時の向き。既定値は `both` |
 | `--relation RELATION` | `depends_on` などの relation key で絞り込み。複数回指定または comma-separated |
 | `--key KEY` | ID として扱う detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
-| `--format text|json|jsonl` | 出力形式 |
+| `--format text|json|jsonl|mermaid|dot` | 出力形式。`--chain` は `text`、`json`、`jsonl` に対応 |
 | `--pretty` | JSON を整形して出力 |
 
 `check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`) も報告します。
@@ -371,6 +376,8 @@ python -m lifetxt links life.txt --id task_report --direction incoming
 - `depends_on:ID` は `ID` が open の間、現在の item を block します。
 - `blocks:ID` は現在の item が open の間、`ID` を block する独立した主張です。
 - `health` は block されている open item を `W305` として報告します。
+- `links --chain ID` と `deps --root ID` は同じ blocker chain を terminal 向け tree として表示します。
+  direct `depends_on:` blocker と inverse `blocks:` blocker の両方を含めます。
 
 ### 3.3 `sources`
 
@@ -856,8 +863,8 @@ python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 | `--attendee VALUE` | `attendee:` で絞り込み。複数回指定または comma-separated |
 | `--detail FILTER` | detail key または `key=value` で絞り込み。複数指定は AND |
 | `--text TEXT` | title、元行、detail 値に対する大文字小文字を区別しない部分一致 |
-| `--blocked` | dependency record により blocked な item のみ表示 |
-| `--unblocked` | blocker を持たない item のみ表示 |
+| `--blocked [only|hide|all]` | dependency-blocked record を絞り込み。単独の `--blocked` は `--blocked only` と同じ |
+| `--unblocked` | `--blocked hide` の後方互換 alias |
 
 例:
 
@@ -869,6 +876,7 @@ python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee a
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
 python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked hide
 ```
 
 `--detail key` は key の存在を確認します。`--detail key=value` は detail value の完全一致です。
@@ -1260,6 +1268,26 @@ python -m lifetxt completion install --shell bash
 ```
 
 `completion install` は導入手順を表示するだけで、shell startup file は自動変更しません。
+
+### 13.8 `deps`
+
+`deps` は宣言済みまたは未解決の dependency chain を indented tree として表示します。
+`agenda` や `health` と同じ blocker semantics を使い、`depends_on:` target は現在の
+item を block し、`blocks:ID` を持つ item は target `ID` を block します。
+
+```sh
+python -m lifetxt deps life.txt
+python -m lifetxt deps life.txt --blocked
+python -m lifetxt deps life.txt --root task_report
+python -m lifetxt deps life.txt --root task_report --format json --pretty
+```
+
+| Option | 意味 |
+|---|---|
+| `--blocked` | open blocker を持つ open item のみ表示 |
+| `--root ID` | 1つの item ID から blocker chain を辿る |
+| `--format text|json` | 出力形式 |
+| `--pretty` | JSON を整形して出力 |
 
 ## 14. alias
 

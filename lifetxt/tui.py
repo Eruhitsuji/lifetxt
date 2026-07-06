@@ -4,7 +4,10 @@ import threading
 import unicodedata
 
 from .agenda import agenda_records, filter_items, parse_agenda_range
+from .config import config_section
+from .ids import id_key_from_config
 from .parser import parse_text
+from .serializer import item_to_line
 from .status_summary import latest_status_records
 
 
@@ -25,13 +28,48 @@ TUI_COLOR_STYLES = (
     "error",
     "footer",
     "help",
+    "selected",
 )
+TUI_THEMES = ("auto", "dark", "light", "mono")
+TUI_KEYMAPS = ("vim", "arrows")
+DEFAULT_TUI_LIMIT = 10
+DEFAULT_TUI_AGENDA_WINDOW = "12h"
 
 
 def cmd_tui(args):
     if _textual_available():
         return run_textual(args)
     return run_curses_or_plain(args)
+
+
+def tui_options(args):
+    config = getattr(args, "config_data", None) or {}
+    tui_config = config_section(config, "tui")
+    theme = getattr(args, "theme", None) or tui_config.get("theme") or "auto"
+    keymap = getattr(args, "keymap", None) or tui_config.get("keymap") or "vim"
+    limit = getattr(args, "limit", None) or tui_config.get("limit") or DEFAULT_TUI_LIMIT
+    agenda_window = (
+        getattr(args, "agenda_window", None)
+        or tui_config.get("agenda_window")
+        or DEFAULT_TUI_AGENDA_WINDOW
+    )
+    theme = str(theme).lower()
+    keymap = str(keymap).lower()
+    if theme not in TUI_THEMES:
+        theme = "auto"
+    if keymap not in TUI_KEYMAPS:
+        keymap = "vim"
+    try:
+        limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        limit = DEFAULT_TUI_LIMIT
+    return {
+        "theme": theme,
+        "keymap": keymap,
+        "limit": limit,
+        "agenda_window": str(agenda_window),
+        "id_key": id_key_from_config(config),
+    }
 
 
 def run_textual(args):
@@ -48,9 +86,21 @@ def run_textual(args):
     class LifeTxtApp(App):
         focus = "tasks"
         help_visible = False
+        selected_index = 0
+        detail_row = None
+        project_filter = None
 
         def compose(self):
-            self.dashboard = Static(render_dashboard_safe(args, focus=self.focus, help_visible=self.help_visible))
+            self.dashboard = Static(
+                render_dashboard_safe(
+                    args,
+                    focus=self.focus,
+                    help_visible=self.help_visible,
+                    selected_index=self.selected_index,
+                    detail_row=self.detail_row,
+                    project_filter=self.project_filter,
+                )
+            )
             yield self.dashboard
 
         def on_mount(self):
@@ -64,7 +114,17 @@ def run_textual(args):
                 self.refresh_dashboard()
 
         def refresh_dashboard(self):
-            self.dashboard.update(render_dashboard_safe(args, focus=self.focus, help_visible=self.help_visible))
+            self.selected_index = normalize_selected_index(args, self.selected_index, self.project_filter)
+            self.dashboard.update(
+                render_dashboard_safe(
+                    args,
+                    focus=self.focus,
+                    help_visible=self.help_visible,
+                    selected_index=self.selected_index,
+                    detail_row=self.detail_row,
+                    project_filter=self.project_filter,
+                )
+            )
 
         def on_key(self, event):
             if event.key == "q":
@@ -76,9 +136,40 @@ def run_textual(args):
                 self.refresh_dashboard()
             elif event.key in ("tab", "n", "l", "right"):
                 self.focus = next_section(self.focus)
+                self.selected_index = first_selectable_index_for_section(args, self.focus, self.project_filter)
+                self.detail_row = None
                 self.refresh_dashboard()
             elif event.key in ("p", "h", "left"):
                 self.focus = previous_section(self.focus)
+                self.selected_index = first_selectable_index_for_section(args, self.focus, self.project_filter)
+                self.detail_row = None
+                self.refresh_dashboard()
+            elif event.key in ("j", "down"):
+                self.selected_index = move_selection(args, self.selected_index, 1, self.project_filter)
+                self.detail_row = None
+                self.refresh_dashboard()
+            elif event.key in ("k", "up"):
+                self.selected_index = move_selection(args, self.selected_index, -1, self.project_filter)
+                self.detail_row = None
+                self.refresh_dashboard()
+            elif event.key in ("enter", "s"):
+                self.detail_row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                self.refresh_dashboard()
+            elif event.key == "f":
+                row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                project = row_project(row)
+                if project:
+                    self.project_filter = project if self.project_filter != project else None
+                    self.selected_index = 0
+                    self.detail_row = None
+                    self.refresh_dashboard()
+            elif event.key == "d":
+                row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                try:
+                    perform_row_action("done", row, args)
+                    self.detail_row = {"label": "Marked done: %s" % row.get("id", row.get("title", ""))}
+                except Exception as exc:
+                    self.detail_row = {"label": "ERROR: %s" % exc}
                 self.refresh_dashboard()
 
     try:
@@ -99,27 +190,67 @@ def run_curses_or_plain(args):
 
     def main(stdscr):
         stdscr.timeout(int(TUI_POLL_SECONDS * 1000))
-        color_attrs = _init_curses_colors(curses)
+        options = tui_options(args)
+        color_attrs = _init_curses_colors(curses, options["theme"])
         focus = "tasks"
         scroll = 0
+        selected_index = 0
         help_visible = False
+        detail_row = None
+        action_row = None
+        project_filter = None
+        message = ""
         dirty = True
         text = ""
         while True:
             if dirty or watcher.consume_changed():
+                selected_index = normalize_selected_index(args, selected_index, project_filter)
+                focus = section_for_selected_index(args, selected_index, focus, project_filter)
                 stdscr.erase()
-                text = render_dashboard_safe(args, focus=focus, help_visible=help_visible)
-                footer = "q quit  ? help  h/l section  j/k scroll  g/G top/bottom  r reload"
+                text = render_dashboard_safe(
+                    args,
+                    focus=focus,
+                    help_visible=help_visible,
+                    selected_index=selected_index,
+                    detail_row=detail_row,
+                    action_row=action_row,
+                    project_filter=project_filter,
+                    message=message,
+                )
+                scroll = _scroll_to_selected(text, selected_index, scroll, stdscr)
+                footer = _footer_text(options["keymap"], action_row is not None)
                 _draw_curses_text(stdscr, text, footer, scroll=scroll, color_attrs=color_attrs)
                 stdscr.refresh()
                 dirty = False
             key = stdscr.getch()
             if key == -1:
                 continue
+            if action_row is not None:
+                if key in (27, ord("q"), ord("Q")):
+                    action_row = None
+                    message = "Action canceled."
+                    dirty = True
+                    continue
+                action = _action_for_key(key)
+                if action:
+                    try:
+                        result = perform_row_action(action, action_row, args)
+                        if action == "filter-project":
+                            project_filter = result.get("project")
+                            selected_index = 0
+                        elif action == "show":
+                            detail_row = action_row
+                        message = result.get("message", "")
+                    except Exception as exc:
+                        message = "ERROR: %s" % exc
+                    action_row = None
+                    dirty = True
+                    continue
             if key in (ord("q"), ord("Q")):
                 break
             if key in (ord("r"), ord("R")):
                 scroll = 0
+                message = "Reloaded."
                 dirty = True
                 continue
             if key in (ord("?"), ord("H")):
@@ -129,36 +260,85 @@ def run_curses_or_plain(args):
                 continue
             if key in (9, ord("n"), ord("N"), ord("l"), ord("L"), curses.KEY_RIGHT):
                 focus = next_section(focus)
+                selected_index = first_selectable_index_for_section(args, focus, project_filter)
+                detail_row = None
                 scroll = 0
                 dirty = True
                 continue
             if key in (ord("p"), ord("P"), ord("h"), curses.KEY_LEFT):
                 focus = previous_section(focus)
+                selected_index = first_selectable_index_for_section(args, focus, project_filter)
+                detail_row = None
                 scroll = 0
                 dirty = True
                 continue
             if key in (ord("j"), ord("J"), curses.KEY_DOWN):
-                scroll += 1
+                selected_index = move_selection(args, selected_index, 1, project_filter)
+                detail_row = None
                 dirty = True
                 continue
             if key in (ord("k"), ord("K"), curses.KEY_UP):
-                scroll = max(0, scroll - 1)
+                selected_index = move_selection(args, selected_index, -1, project_filter)
+                detail_row = None
                 dirty = True
                 continue
             if key in (4, curses.KEY_NPAGE):
-                scroll += _page_scroll_amount(stdscr)
+                selected_index = move_selection(args, selected_index, _page_scroll_amount(stdscr), project_filter)
+                detail_row = None
                 dirty = True
                 continue
             if key in (21, curses.KEY_PPAGE):
-                scroll = max(0, scroll - _page_scroll_amount(stdscr))
+                selected_index = move_selection(args, selected_index, -_page_scroll_amount(stdscr), project_filter)
+                detail_row = None
                 dirty = True
                 continue
             if key in (ord("g"), curses.KEY_HOME):
+                selected_index = 0
                 scroll = 0
                 dirty = True
                 continue
             if key in (ord("G"), curses.KEY_END):
+                selected_index = max(0, len(selectable_dashboard_rows(args, project_filter)) - 1)
                 scroll = _max_scroll_for_screen(stdscr, text)
+                dirty = True
+                continue
+            if key in (10, 13, curses.KEY_ENTER, ord("o"), ord("O")):
+                action_row = selected_dashboard_row(args, selected_index, project_filter)
+                message = ""
+                dirty = True
+                continue
+            if key in (ord("s"), ord("S")):
+                detail_row = selected_dashboard_row(args, selected_index, project_filter)
+                message = ""
+                dirty = True
+                continue
+            if key in (ord("d"), ord("D")):
+                row = selected_dashboard_row(args, selected_index, project_filter)
+                try:
+                    message = perform_row_action("done", row, args).get("message", "")
+                    detail_row = None
+                except Exception as exc:
+                    message = "ERROR: %s" % exc
+                dirty = True
+                continue
+            if key in (ord("f"), ord("F")):
+                row = selected_dashboard_row(args, selected_index, project_filter)
+                try:
+                    result = perform_row_action("filter-project", row, args)
+                    project_filter = result.get("project")
+                    selected_index = 0
+                    detail_row = None
+                    message = result.get("message", "")
+                except Exception as exc:
+                    message = "ERROR: %s" % exc
+                dirty = True
+                continue
+            if key in (ord("e"), ord("E")):
+                row = selected_dashboard_row(args, selected_index, project_filter)
+                try:
+                    message = perform_row_action("edit", row, args).get("message", "")
+                except Exception as exc:
+                    message = "ERROR: %s" % exc
                 dirty = True
                 continue
             if key == curses.KEY_RESIZE:
@@ -220,16 +400,17 @@ def _safe_addstr(stdscr, row, column, text, attr=0):
         pass
 
 
-def _init_curses_colors(curses_module):
+def _init_curses_colors(curses_module, theme="auto"):
     attrs = {style: 0 for style in TUI_COLOR_STYLES}
     try:
         attrs["title"] = curses_module.A_BOLD
         attrs["focus"] = curses_module.A_BOLD
         attrs["footer"] = curses_module.A_REVERSE
+        attrs["selected"] = curses_module.A_REVERSE
         attrs["error"] = curses_module.A_BOLD
         attrs["help"] = curses_module.A_DIM
         attrs["muted"] = curses_module.A_DIM
-        if not curses_module.has_colors():
+        if theme == "mono" or not curses_module.has_colors():
             return attrs
         curses_module.start_color()
         background = -1
@@ -237,25 +418,45 @@ def _init_curses_colors(curses_module):
             curses_module.use_default_colors()
         except Exception:
             background = curses_module.COLOR_BLACK
-        pairs = (
-            ("title", curses_module.COLOR_CYAN),
-            ("focus", curses_module.COLOR_YELLOW),
-            ("section", curses_module.COLOR_BLUE),
-            ("open", curses_module.COLOR_WHITE),
-            ("active", curses_module.COLOR_CYAN),
-            ("done", curses_module.COLOR_GREEN),
-            ("agenda", curses_module.COLOR_MAGENTA),
-            ("status", curses_module.COLOR_CYAN),
-            ("muted", curses_module.COLOR_BLACK),
-            ("error", curses_module.COLOR_RED),
-            ("footer", curses_module.COLOR_BLACK),
-            ("help", curses_module.COLOR_BLUE),
-        )
+        if theme == "light":
+            pairs = (
+                ("title", curses_module.COLOR_BLUE),
+                ("focus", curses_module.COLOR_MAGENTA),
+                ("section", curses_module.COLOR_BLUE),
+                ("open", curses_module.COLOR_BLACK),
+                ("active", curses_module.COLOR_BLUE),
+                ("done", curses_module.COLOR_GREEN),
+                ("agenda", curses_module.COLOR_MAGENTA),
+                ("status", curses_module.COLOR_BLUE),
+                ("muted", curses_module.COLOR_BLACK),
+                ("error", curses_module.COLOR_RED),
+                ("footer", curses_module.COLOR_BLACK),
+                ("help", curses_module.COLOR_BLUE),
+                ("selected", curses_module.COLOR_WHITE),
+            )
+        else:
+            pairs = (
+                ("title", curses_module.COLOR_CYAN),
+                ("focus", curses_module.COLOR_YELLOW),
+                ("section", curses_module.COLOR_BLUE),
+                ("open", curses_module.COLOR_WHITE),
+                ("active", curses_module.COLOR_CYAN),
+                ("done", curses_module.COLOR_GREEN),
+                ("agenda", curses_module.COLOR_MAGENTA),
+                ("status", curses_module.COLOR_CYAN),
+                ("muted", curses_module.COLOR_BLACK),
+                ("error", curses_module.COLOR_RED),
+                ("footer", curses_module.COLOR_BLACK),
+                ("help", curses_module.COLOR_BLUE),
+                ("selected", curses_module.COLOR_YELLOW),
+            )
         for index, (style, foreground) in enumerate(pairs, 1):
             curses_module.init_pair(index, foreground, background)
             attrs[style] = curses_module.color_pair(index) | attrs.get(style, 0)
         footer_pair = [style for style, _foreground in pairs].index("footer") + 1
         attrs["footer"] = curses_module.color_pair(footer_pair) | curses_module.A_REVERSE
+        selected_pair = [style for style, _foreground in pairs].index("selected") + 1
+        attrs["selected"] = curses_module.color_pair(selected_pair) | curses_module.A_REVERSE
     except Exception:
         return {style: 0 for style in TUI_COLOR_STYLES}
     return attrs
@@ -273,6 +474,8 @@ def _style_for_line(line):
         return "rule"
     if line.startswith("> "):
         return "focus"
+    if line.startswith("* "):
+        return "selected"
     if stripped in ("TASKS (open)", "AGENDA (next 12h and active intervals)", "STATUS"):
         return "section"
     if stripped.startswith("[x]"):
@@ -303,10 +506,57 @@ def _page_scroll_amount(stdscr):
     return max(1, (height - 1) // 2)
 
 
+def _scroll_to_selected(text, selected_index, scroll, stdscr):
+    if selected_index is None:
+        return max(0, int(scroll or 0))
+    height, _width = stdscr.getmaxyx()
+    body_height = max(1, height - 1)
+    selected_line = _line_number_for_selected_row(text, selected_index)
+    if selected_line is None:
+        return max(0, int(scroll or 0))
+    scroll = max(0, int(scroll or 0))
+    if selected_line < scroll:
+        return selected_line
+    if selected_line >= scroll + body_height:
+        return max(0, selected_line - body_height + 1)
+    return scroll
+
+
+def _line_number_for_selected_row(text, selected_index):
+    for line_number, line in enumerate(text.splitlines()):
+        if line.startswith("* "):
+            return line_number
+    return None
+
+
 def _max_scroll_for_screen(stdscr, text):
     height, _width = stdscr.getmaxyx()
     body_height = max(0, height - 1)
     return max(0, len(text.splitlines()) - body_height)
+
+
+def _footer_text(keymap, in_action_menu=False):
+    if in_action_menu:
+        return "action: s show  d done  e edit  f filter  Esc/q cancel"
+    if keymap == "arrows":
+        return "q quit  ? help  arrows move/section  Enter actions  s detail  d done  r reload"
+    return "q quit  ? help  h/l section  j/k select  Enter actions  s detail  d done  r reload"
+
+
+def _action_for_key(key):
+    mapping = {
+        ord("s"): "show",
+        ord("S"): "show",
+        10: "show",
+        13: "show",
+        ord("d"): "done",
+        ord("D"): "done",
+        ord("e"): "edit",
+        ord("E"): "edit",
+        ord("f"): "filter-project",
+        ord("F"): "filter-project",
+    }
+    return mapping.get(key)
 
 
 def _clip_display_width(text, max_columns):
@@ -331,50 +581,81 @@ def _char_display_width(char):
     return 1
 
 
-def render_dashboard(args, focus="tasks", help_visible=False):
+def render_dashboard(
+    args,
+    focus="tasks",
+    help_visible=False,
+    selected_index=0,
+    detail_row=None,
+    action_row=None,
+    project_filter=None,
+    message="",
+):
+    options = tui_options(args)
     if help_visible:
-        return render_help()
-    items = load_items(args.paths)
-    tasks = filter_items(items, open_only=True, kinds=["T"])[:10]
-    start, end = parse_agenda_range(around_text="now", window_text="12h")
-    agenda = agenda_records(items, start, end)[:10]
-    statuses = latest_status_records(items, active_only=True)
+        return render_help(options)
+    model = dashboard_model(args, project_filter=project_filter)
+    selected_index = normalize_selected_index(args, selected_index, project_filter)
     lines = []
-    lines.append("lifetxt TUI                                  [q]uit  [r]eload")
+    title = "lifetxt TUI                                  [q]uit  [r]eload"
+    lines.append(title)
     lines.append("=" * 72)
-    lines.append(section_title("tasks", focus, "TASKS (open)"))
-    if tasks:
-        for item in tasks:
-            lines.append("  %s %s %s" % (item.status, item.kind, item.title))
-    else:
-        lines.append("  No open tasks.")
+    lines.append(
+        "Theme:%s  Keymap:%s  Limit:%s  Window:%s"
+        % (options["theme"], options["keymap"], options["limit"], options["agenda_window"])
+    )
+    if project_filter:
+        lines.append("Filter: project:%s  (press f on a project row to change/clear)" % project_filter)
+    if message:
+        lines.append(message)
     lines.append("")
-    lines.append(section_title("agenda", focus, "AGENDA (next 12h and active intervals)"))
-    if agenda:
-        for record in agenda:
-            lines.append("  %s  %s (%s)" % (record.get("when", ""), record.get("title", ""), record.get("type", "")))
-    else:
-        lines.append("  No agenda items.")
+
+    row_number = 0
+    for section in model["sections"]:
+        lines.append(section_title(section["key"], focus, section["title"]))
+        rows = section["rows"]
+        if rows:
+            for row in rows:
+                marker = "*" if row_number == selected_index else " "
+                lines.append("%s %s" % (marker, row["label"]))
+                row_number += 1
+        else:
+            lines.append("  %s" % section["empty"])
+        lines.append("")
+
+    if action_row:
+        lines.extend(render_action_menu(action_row).splitlines())
+    elif detail_row:
+        lines.extend(render_row_detail(detail_row).splitlines())
+
     lines.append("")
-    lines.append(section_title("status", focus, "STATUS"))
-    if statuses:
-        for record in statuses:
-            state = ""
-            details = record.get("details", {})
-            if details.get("state"):
-                state = " state:%s" % details["state"][0]
-            lines.append("  %s %s (%s)%s" % (record.get("status", ""), record.get("title", ""), record.get("person", ""), state))
-    else:
-        lines.append("  No active status.")
-    lines.append("")
-    lines.append("Use ? for help. Reload with r. Install textual for a richer TUI:")
+    lines.append("Use ? for help. Enter/o opens actions. s shows detail. d marks done. f filters by project.")
+    lines.append("Install textual for a richer TUI:")
     lines.append('  pip install "lifetxt[tui]"')
     return "\n".join(lines) + "\n"
 
 
-def render_dashboard_safe(args, focus="tasks", help_visible=False):
+def render_dashboard_safe(
+    args,
+    focus="tasks",
+    help_visible=False,
+    selected_index=0,
+    detail_row=None,
+    action_row=None,
+    project_filter=None,
+    message="",
+):
     try:
-        return render_dashboard(args, focus=focus, help_visible=help_visible)
+        return render_dashboard(
+            args,
+            focus=focus,
+            help_visible=help_visible,
+            selected_index=selected_index,
+            detail_row=detail_row,
+            action_row=action_row,
+            project_filter=project_filter,
+            message=message,
+        )
     except Exception as exc:
         lines = [
             "lifetxt TUI",
@@ -388,10 +669,14 @@ def render_dashboard_safe(args, focus="tasks", help_visible=False):
         return "\n".join(lines) + "\n"
 
 
-def render_help():
+def render_help(options=None):
+    options = options or {"keymap": "vim", "theme": "auto"}
     lines = [
         "lifetxt TUI help",
         "=" * 72,
+        "theme    %s" % options.get("theme", "auto"),
+        "keymap   %s" % options.get("keymap", "vim"),
+        "",
         "q        quit",
         "r        reload files",
         "? / H    toggle this help",
@@ -399,17 +684,262 @@ def render_help():
         "l / right focus next section",
         "tab / n  focus next section",
         "p        focus previous section",
-        "j / down scroll down",
-        "k / up   scroll up",
-        "Ctrl-D / PageDown scroll half page down",
-        "Ctrl-U / PageUp   scroll half page up",
-        "g / gg / home scroll to top",
-        "G / end       scroll to bottom",
+        "j / down move selection down",
+        "k / up   move selection up",
+        "Ctrl-D / PageDown move half page down",
+        "Ctrl-U / PageUp   move half page up",
+        "g / home select first row",
+        "G / end  select last row",
+        "Enter/o  open action menu for the selected row",
+        "s        show full detail for the selected row",
+        "d        mark selected task-like row done",
+        "e        open selected row source in $EDITOR",
+        "f        filter by selected row project",
         "",
         "Sections: tasks, agenda, status",
-        "The focused section is marked with > and highlighted when colors are available.",
+        "The focused section is marked with >. The selected row is marked with *.",
     ]
     return "\n".join(lines) + "\n"
+
+
+def dashboard_model(args, project_filter=None):
+    options = tui_options(args)
+    items = load_items(args.paths)
+    project_values = [project_filter] if project_filter else None
+    tasks = filter_items(items, open_only=True, kinds=["T"], projects=project_values)[:options["limit"]]
+    start, end = parse_agenda_range(around_text="now", window_text=options["agenda_window"])
+    agenda = agenda_records(items, start, end)
+    if project_filter:
+        agenda = [record for record in agenda if project_filter in record.get("details", {}).get("project", [])]
+    agenda = agenda[:options["limit"]]
+    statuses = latest_status_records(items, active_only=True)[:options["limit"]]
+    return {
+        "sections": [
+            {
+                "key": "tasks",
+                "title": "TASKS (open)",
+                "empty": "No open tasks.",
+                "rows": [_task_row(item, options["id_key"]) for item in tasks],
+            },
+            {
+                "key": "agenda",
+                "title": "AGENDA (next %s and active intervals)" % options["agenda_window"],
+                "empty": "No agenda items.",
+                "rows": [_agenda_row(record, options["id_key"]) for record in agenda],
+            },
+            {
+                "key": "status",
+                "title": "STATUS",
+                "empty": "No active status.",
+                "rows": [_status_row(record) for record in statuses],
+            },
+        ]
+    }
+
+
+def selectable_dashboard_rows(args, project_filter=None):
+    rows = []
+    for section in dashboard_model(args, project_filter=project_filter)["sections"]:
+        rows.extend(section["rows"])
+    return rows
+
+
+def selected_dashboard_row(args, selected_index=0, project_filter=None):
+    rows = selectable_dashboard_rows(args, project_filter=project_filter)
+    if not rows:
+        return None
+    selected_index = max(0, min(int(selected_index or 0), len(rows) - 1))
+    return rows[selected_index]
+
+
+def normalize_selected_index(args, selected_index=0, project_filter=None):
+    count = len(selectable_dashboard_rows(args, project_filter=project_filter))
+    if count <= 0:
+        return 0
+    return max(0, min(int(selected_index or 0), count - 1))
+
+
+def move_selection(args, selected_index, delta, project_filter=None):
+    count = len(selectable_dashboard_rows(args, project_filter=project_filter))
+    if count <= 0:
+        return 0
+    return max(0, min(int(selected_index or 0) + int(delta or 0), count - 1))
+
+
+def first_selectable_index_for_section(args, section_key, project_filter=None):
+    rows = selectable_dashboard_rows(args, project_filter=project_filter)
+    for index, row in enumerate(rows):
+        if row.get("section") == section_key:
+            return index
+    return 0
+
+
+def section_for_selected_index(args, selected_index, fallback="tasks", project_filter=None):
+    row = selected_dashboard_row(args, selected_index, project_filter=project_filter)
+    if row:
+        return row.get("section") or fallback
+    return fallback
+
+
+def render_row_detail(row):
+    if not row:
+        return "DETAIL\n------\nNo row selected."
+    lines = ["DETAIL", "------", row.get("label", "")]
+    if row.get("id"):
+        lines.append("id: %s" % row["id"])
+    if row.get("source"):
+        location = row["source"]
+        if row.get("line"):
+            location += ":%s" % row["line"]
+        lines.append("source: %s" % location)
+    if row.get("text"):
+        lines.append("")
+        lines.append("life.txt:")
+        for line in str(row["text"]).splitlines():
+            lines.append("  " + line)
+    details = row.get("details") or {}
+    body = details.get("body")
+    if body:
+        lines.append("")
+        lines.append("body:")
+        for value in body:
+            for line in str(value).splitlines():
+                lines.append("  " + line)
+    return "\n".join(lines)
+
+
+def render_action_menu(row):
+    if not row:
+        return "ACTIONS\n-------\nNo row selected."
+    actions = row_actions(row)
+    lines = ["ACTIONS", "-------", row.get("label", "")]
+    for key, description in actions:
+        lines.append("%s  %s" % (key, description))
+    lines.append("Esc/q  cancel")
+    return "\n".join(lines)
+
+
+def row_actions(row):
+    actions = [("s", "show full detail")]
+    if row and row.get("source") and row.get("id") and row.get("type") in ("T", "D", "R", "H"):
+        actions.append(("d", "mark done"))
+    if row and row.get("source"):
+        actions.append(("e", "open in $EDITOR"))
+    if row_project(row):
+        actions.append(("f", "filter by project:%s" % row_project(row)))
+    return actions
+
+
+def perform_row_action(action, row, args):
+    if not row:
+        raise ValueError("No row selected.")
+    if action == "show":
+        return {"message": "Showing detail for %s." % row.get("title", row.get("id", "row"))}
+    if action == "done":
+        if not row.get("source") or not row.get("id"):
+            raise ValueError("Selected row needs source and id to mark done.")
+        from .fzf_helper import update_item
+        update_item(row["source"], row["id"], tui_options(args)["id_key"], status="[x]")
+        return {"message": "Marked done: %s" % row["id"]}
+    if action == "edit":
+        from .fzf_helper import open_editor
+        open_editor(
+            {
+                "id": row.get("id", ""),
+                "source": row.get("source", ""),
+                "line": row.get("line"),
+                "label": row.get("label", ""),
+                "body": "",
+                "text": row.get("text", ""),
+            }
+        )
+        return {"message": "Opened editor for %s." % row.get("id", row.get("title", "row"))}
+    if action == "filter-project":
+        project = row_project(row)
+        if not project:
+            raise ValueError("Selected row has no project:.")
+        return {"project": project, "message": "Filtered by project:%s" % project}
+    raise ValueError("Unknown TUI action: %s" % action)
+
+
+def row_project(row):
+    if not row:
+        return None
+    details = row.get("details") or {}
+    values = details.get("project") or []
+    if values:
+        return values[0]
+    return None
+
+
+def _task_row(item, id_key):
+    item_id = item.details.get(id_key, [""])[0] if item.details.get(id_key) else ""
+    bits = [item.status, item.kind, item.title]
+    if item_id:
+        bits.append("id:%s" % item_id)
+    for key in ("project", "due", "do", "priority"):
+        if item.details.get(key):
+            bits.append("%s:%s" % (key, item.details[key][0]))
+    return {
+        "section": "tasks",
+        "type": item.kind,
+        "status": item.status,
+        "title": item.title,
+        "id": item_id,
+        "source": getattr(item, "source", ""),
+        "line": item.line,
+        "details": item.details,
+        "text": item_to_line(item),
+        "label": " ".join(bits),
+    }
+
+
+def _agenda_row(record, id_key):
+    details = record.get("details") or {}
+    item_id = details.get(id_key, [""])[0] if details.get(id_key) else record.get("source_id", "")
+    bits = [record.get("when", ""), record.get("status", ""), record.get("type", ""), record.get("title", "")]
+    if item_id:
+        bits.append("id:%s" % item_id)
+    if details.get("project"):
+        bits.append("project:%s" % details["project"][0])
+    if record.get("blocked"):
+        bits.append("blocked")
+    return {
+        "section": "agenda",
+        "type": record.get("type", ""),
+        "status": record.get("status", ""),
+        "title": record.get("title", ""),
+        "id": item_id,
+        "source": record.get("source", ""),
+        "line": record.get("line"),
+        "details": details,
+        "text": record.get("text", ""),
+        "label": " ".join(str(bit) for bit in bits if str(bit)),
+    }
+
+
+def _status_row(record):
+    details = record.get("details") or {}
+    bits = [
+        record.get("status", ""),
+        "S",
+        record.get("title", ""),
+        "person:%s" % record.get("person", ""),
+    ]
+    if details.get("state"):
+        bits.append("state:%s" % details["state"][0])
+    return {
+        "section": "status",
+        "type": "S",
+        "status": record.get("status", ""),
+        "title": record.get("title", ""),
+        "id": details.get("id", [""])[0] if details.get("id") else "",
+        "source": record.get("source", ""),
+        "line": record.get("line"),
+        "details": details,
+        "text": "",
+        "label": " ".join(str(bit) for bit in bits if str(bit)),
+    }
 
 
 def section_title(section, focus, title):
@@ -522,6 +1052,8 @@ def load_items(paths):
         errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
         if errors:
             raise ValueError(errors[0].format())
+        for item in path_items:
+            item.source = path
         items.extend(path_items)
     return items
 

@@ -69,6 +69,14 @@ def config_template():
             ("state_file", "~/.lifetxt_timer.json"),
         ]
     )
+    data["tui"] = OrderedDict(
+        [
+            ("theme", "auto"),
+            ("keymap", "vim"),
+            ("limit", 10),
+            ("agenda_window", "12h"),
+        ]
+    )
     data["notifications"] = OrderedDict(
         [
             ("enabled", True),

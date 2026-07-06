@@ -195,7 +195,20 @@ multiple files but writing to a single hand-maintained file.
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the
 enhanced TUI can use the optional `tui` extra, while a dependency-free fallback
-is available by default.
+is available by default. TUI supports configurable themes/keymaps, row
+selection, detail display, mark-done, editor opening, and project filtering:
+
+```sh
+python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15
+python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
+```
+
+Dependency chains can also be exported for graph tooling:
+
+```sh
+python -m lifetxt deps life.txt --root task_report --format mermaid --depth 2
+python -m lifetxt deps life.txt --blocked --format dot
+```
 
 The `status` command prints the latest `S` status / presence item for each
 `person:`. If `person:` is omitted, it is treated as `self` for this summary.

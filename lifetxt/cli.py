@@ -61,6 +61,8 @@ from .ids import (
 from .links import (
     dependency_blocker_records,
     dependency_chain_records,
+    dependency_chains_to_dot,
+    dependency_chains_to_mermaid,
     format_dependency_chain,
     format_link_table,
     link_records,
@@ -549,6 +551,25 @@ def build_parser():
         nargs="*",
         metavar="path",
         help="life.txt file(s) to read. Defaults to config paths or life.txt.",
+    )
+    tui.add_argument(
+        "--theme",
+        choices=("auto", "dark", "light", "mono"),
+        help="TUI color theme. Defaults to config tui.theme or auto.",
+    )
+    tui.add_argument(
+        "--keymap",
+        choices=("vim", "arrows"),
+        help="TUI keymap preset. Defaults to config tui.keymap or vim.",
+    )
+    tui.add_argument(
+        "--limit",
+        type=int,
+        help="Maximum rows per TUI section. Defaults to config tui.limit or 10.",
+    )
+    tui.add_argument(
+        "--agenda-window",
+        help="Agenda window around now, such as 6h, 12h, 1d. Defaults to config tui.agenda_window or 12h.",
     )
     tui.set_defaults(func=command_tui)
 
@@ -1623,9 +1644,14 @@ def build_parser():
     )
     deps_cmd.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "mermaid", "dot"),
         default="text",
         help="Output format (default: text).",
+    )
+    deps_cmd.add_argument(
+        "--depth",
+        type=int,
+        help="Maximum dependency depth to render. Depth 0 shows only root nodes.",
     )
     deps_cmd.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     deps_cmd.set_defaults(func=command_deps)
@@ -7081,12 +7107,21 @@ def command_deps(args):
         key=id_key,
         root_id=getattr(args, "root", None),
         blocked_only=getattr(args, "blocked", False),
+        max_depth=getattr(args, "depth", None),
     )
 
     if args.format == "json":
         write_text(None, json.dumps(roots, ensure_ascii=False,
                                     indent=2 if args.pretty else None,
                                     separators=None if args.pretty else (",", ":")) + "\n")
+        return 0
+
+    if args.format == "mermaid":
+        write_text(None, dependency_chains_to_mermaid(roots))
+        return 0
+
+    if args.format == "dot":
+        write_text(None, dependency_chains_to_dot(roots))
         return 0
 
     write_text(None, format_dependency_chain(roots))

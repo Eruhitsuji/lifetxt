@@ -91,6 +91,8 @@ OPTION_VALUES = {
     "--around": "now today",
     "--preset": "ics markdown todoist github",
     "--algorithm": "auto xsk aesgcm",
+    "--theme": "auto dark light mono",
+    "--keymap": "vim arrows",
 }
 
 
@@ -123,6 +125,10 @@ def bash_completion():
     around_values = OPTION_VALUES["--around"]
     preset_values = OPTION_VALUES["--preset"]
     algorithm_values = OPTION_VALUES["--algorithm"]
+    theme_values = OPTION_VALUES["--theme"]
+    keymap_values = OPTION_VALUES["--keymap"]
+    theme_values = OPTION_VALUES["--theme"]
+    keymap_values = OPTION_VALUES["--keymap"]
     return """# lifetxt bash completion
 _lifetxt_completion() {
   local cur prev
@@ -138,6 +144,8 @@ _lifetxt_completion() {
     --around) COMPREPLY=( $(compgen -W "%(around_values)s" -- "$cur") ); return 0 ;;
     --preset) COMPREPLY=( $(compgen -W "%(preset_values)s" -- "$cur") ); return 0 ;;
     --algorithm) COMPREPLY=( $(compgen -W "%(algorithm_values)s" -- "$cur") ); return 0 ;;
+    --theme) COMPREPLY=( $(compgen -W "%(theme_values)s" -- "$cur") ); return 0 ;;
+    --keymap) COMPREPLY=( $(compgen -W "%(keymap_values)s" -- "$cur") ); return 0 ;;
   esac
 
   if [[ "$cur" == -* ]]; then
@@ -163,6 +171,8 @@ complete -F _lifetxt_completion lifetxt
         "around_values": around_values,
         "preset_values": preset_values,
         "algorithm_values": algorithm_values,
+        "theme_values": theme_values,
+        "keymap_values": keymap_values,
     }
 
 
@@ -191,6 +201,8 @@ _lifetxt() {
     --around) _values 'around' %(around_values)s; return ;;
     --preset) _values 'preset' %(preset_values)s; return ;;
     --algorithm) _values 'algorithm' %(algorithm_values)s; return ;;
+    --theme) _values 'theme' %(theme_values)s; return ;;
+    --keymap) _values 'keymap' %(keymap_values)s; return ;;
   esac
   if [[ CURRENT -eq 2 ]]; then
     _values 'command' $commands
@@ -212,6 +224,8 @@ _lifetxt "$@"
         "around_values": around_values,
         "preset_values": preset_values,
         "algorithm_values": algorithm_values,
+        "theme_values": theme_values,
+        "keymap_values": keymap_values,
     }
 
 
@@ -230,6 +244,8 @@ def fish_completion():
     lines.append("complete -c lifetxt -l around -a '%s'" % OPTION_VALUES["--around"])
     lines.append("complete -c lifetxt -l preset -a '%s'" % OPTION_VALUES["--preset"])
     lines.append("complete -c lifetxt -l algorithm -a '%s'" % OPTION_VALUES["--algorithm"])
+    lines.append("complete -c lifetxt -l theme -a '%s'" % OPTION_VALUES["--theme"])
+    lines.append("complete -c lifetxt -l keymap -a '%s'" % OPTION_VALUES["--keymap"])
     return "\n".join(lines) + "\n"
 
 

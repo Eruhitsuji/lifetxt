@@ -1210,6 +1210,12 @@ Example config:
   "timer": {
     "state_file": "~/.lifetxt_timer.json"
   },
+  "tui": {
+    "theme": "auto",
+    "keymap": "vim",
+    "limit": 10,
+    "agenda_window": "12h"
+  },
   "notifications": {
     "enabled": true,
     "recipient": "",
@@ -1344,19 +1350,29 @@ active `S` status records.
 
 ```sh
 python -m lifetxt tui [path ...]
+python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15
+python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
 ```
 
 The command reads the same path forms as other life.txt commands. If the
 optional `textual` package is installed, a minimal Textual interface is used.
 Otherwise the command falls back to a dependency-free terminal view.
-Use `?` or `H` for help. The default keymap is Vim-like: `h` / `l` or
-Left/Right move section focus, `j` / `k` or Down/Up scroll, `Ctrl-D` /
-`Ctrl-U` and PageDown/PageUp move by half pages, `g` / `gg` jumps to the top,
-`G` jumps to the bottom, `r` reloads, and `q` quits. `Tab` / `n` and `p` remain
-available as non-Vim section navigation aliases.
-When curses colors are available, section focus, active tasks, completed items,
-status rows, errors, and the footer are color-highlighted. Plain text fallback
-output remains uncolored.
+Use `?` or `H` for help. `--theme auto|dark|light|mono` controls curses colors,
+and `--keymap vim|arrows` changes the help/footer preset. Defaults can also be
+set in config under `tui.theme`, `tui.keymap`, `tui.limit`, and
+`tui.agenda_window`.
+
+The dashboard has a selected row marked with `*`. With the default Vim-like
+keymap, `h` / `l` or Left/Right move section focus, `j` / `k` or Down/Up move
+the selected row, `Ctrl-D` / `Ctrl-U` and PageDown/PageUp move by half pages,
+`g` selects the first row, `G` selects the last row, `r` reloads, and `q`
+quits. `Enter` / `o` opens an action menu for the selected row. `s` shows full
+detail, `d` marks a task-like row done when it has `id:` and source metadata,
+`e` opens the source in `$EDITOR`, and `f` filters by the selected row's first
+`project:` value. `Tab` / `n` and `p` remain section navigation aliases.
+When curses colors are available, section focus, selected rows, active tasks,
+completed items, status rows, errors, and the footer are color-highlighted.
+Plain text fallback output remains uncolored.
 The dashboard auto-reloads when input files change. If `watchdog` is installed,
 file events are used; otherwise the fallback checks file mtimes periodically.
 
@@ -1553,6 +1569,8 @@ python -m lifetxt deps life.txt
 python -m lifetxt deps life.txt --blocked
 python -m lifetxt deps life.txt --root task_report
 python -m lifetxt deps life.txt --root task_report --format json --pretty
+python -m lifetxt deps life.txt --root task_report --format mermaid --depth 2
+python -m lifetxt deps life.txt --blocked --format dot
 ```
 
 Options:
@@ -1561,7 +1579,8 @@ Options:
 |---|---|
 | `--blocked` | Show only open items with open blockers |
 | `--root ID` | Trace the blocker chain for one item ID |
-| `--format text|json` | Output format |
+| `--format text|json|mermaid|dot` | Output format |
+| `--depth N` | Maximum dependency depth to render; `0` shows root nodes only |
 | `--pretty` | Pretty-print JSON |
 
 ## 14. Aliases

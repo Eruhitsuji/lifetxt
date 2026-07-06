@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-06 (updated x52)
+Last updated: 2026-07-06 (updated x53)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -278,11 +278,6 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   `{next_monday}`, `{next_week}` placeholders resolved at apply time) is
   implemented; see CLI guide section 18.
 
-- [ ] Add graph-oriented output for dependency chains: `deps --format mermaid`
-  and `deps --format dot`, plus an optional `--depth N` guard for very large
-  dependency trees. `links --chain ID`, `deps --root ID`, `deps --blocked`,
-  and `agenda --blocked only|hide|all` are implemented and tested.
-
 ---
 
 ## P2: Editor Support
@@ -319,19 +314,6 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   with attendees, status record (self), message with notification, journal
   entry with mood, linked subtask with `parent:` and `depends_on:`, and
   template record.
-
----
-
-## P2: TUI Usability
-
-- [ ] Add configurable TUI themes and keymaps via config after collecting
-  real-terminal feedback: support at minimum a light/dark theme toggle and
-  a non-Vim keymap preset for users who prefer arrow-key navigation.
-
-- [ ] Add row selection to TUI: pressing Enter on a task row should offer
-  actions (show full detail, open in `$EDITOR`, mark done via `done`, quick
-  filter by project). This makes `tui` usable as a lightweight interactive
-  manager without switching to `fzf`.
 
 ---
 

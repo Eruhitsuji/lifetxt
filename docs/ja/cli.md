@@ -1085,6 +1085,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
+| `tui.*` | TUI の既定値。`theme`、`keymap`、`limit`、`agenda_window` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
@@ -1137,15 +1138,23 @@ CLI フラグが優先されるため item は `writing` に分類されます�
 
 ```sh
 python -m lifetxt tui [path ...]
+python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15
+python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
 ```
 
 `textual` が利用可能な場合は最小限の Textual UI を使い、未導入の場合は依存なしの端末表示に fallback します。
-`?` または `H` で help を表示します。既定 keymap は Vim 風です。
+`?` または `H` で help を表示します。`--theme auto|dark|light|mono` で curses 色を指定し、
+`--keymap vim|arrows` で help/footer の keymap preset を指定できます。既定値は config の
+`tui.theme`、`tui.keymap`、`tui.limit`、`tui.agenda_window` でも設定できます。
+
+選択行は `*` で表示されます。既定 keymap は Vim 風です。
 `h` / `l` または Left/Right で section focus 移動、`j` / `k` または
-Down/Up で scroll、`Ctrl-D` / `Ctrl-U` と PageDown/PageUp で半ページ移動、
-`g` / `gg` で先頭、`G` で末尾、`r` で reload、`q` で終了します。
+Down/Up で選択行移動、`Ctrl-D` / `Ctrl-U` と PageDown/PageUp で半ページ移動、
+`g` で先頭、`G` で末尾、`r` で reload、`q` で終了します。
+`Enter` / `o` で選択行の action menu を開きます。`s` は詳細表示、`d` は `id:` と source を持つ
+task-like 行の完了、`e` は `$EDITOR` で source を開く、`f` は選択行の最初の `project:` で filter します。
 `Tab` / `n` と `p` も非 Vim 風の section 移動 alias として使えます。
-curses の色表示が利用できる場合は、focus section、active task、完了 item、
+curses の色表示が利用できる場合は、focus section、選択行、active task、完了 item、
 status 行、error、footer を色付きで表示します。plain text fallback は色なしのままです。
 入力 file が変更されると自動 reload します。`watchdog` が利用可能な場合は file event を使い、
 未導入の場合は mtime を定期確認する fallback で動作します。
@@ -1301,13 +1310,16 @@ python -m lifetxt deps life.txt
 python -m lifetxt deps life.txt --blocked
 python -m lifetxt deps life.txt --root task_report
 python -m lifetxt deps life.txt --root task_report --format json --pretty
+python -m lifetxt deps life.txt --root task_report --format mermaid --depth 2
+python -m lifetxt deps life.txt --blocked --format dot
 ```
 
 | Option | 意味 |
 |---|---|
 | `--blocked` | open blocker を持つ open item のみ表示 |
 | `--root ID` | 1つの item ID から blocker chain を辿る |
-| `--format text|json` | 出力形式 |
+| `--format text|json|mermaid|dot` | 出力形式 |
+| `--depth N` | 表示する dependency depth の上限。`0` は root のみ |
 | `--pretty` | JSON を整形して出力 |
 
 ## 14. alias

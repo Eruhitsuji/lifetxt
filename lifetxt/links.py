@@ -163,7 +163,7 @@ def dependency_blockers_by_item(items, key="id"):
     return blockers
 
 
-def dependency_chain_records(items, key="id", root_id=None, blocked_only=False):
+def dependency_chain_records(items, key="id", root_id=None, blocked_only=False, max_depth=None):
     """Return dependency chains rooted at blocked items.
 
     The chain treats ``depends_on:ID`` and inverse ``blocks:ID`` as the same
@@ -195,7 +195,13 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False):
         node["deps"] = []
         return node
 
-    def build_node(item, relation=None, path=None):
+    if max_depth is not None:
+        try:
+            max_depth = max(0, int(max_depth))
+        except (TypeError, ValueError):
+            max_depth = None
+
+    def build_node(item, relation=None, path=None, depth=0):
         if path is None:
             path = []
         current_id = item_id(item)
@@ -214,13 +220,24 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False):
             node["deps"] = []
             return node
 
+        has_more = bool(item.details.get("depends_on"))
+        for current_value in item_id_values(item, key):
+            if incoming_blocks.get(current_value):
+                has_more = True
+                break
+        if max_depth is not None and depth >= max_depth:
+            if has_more:
+                node["truncated"] = True
+            node["deps"] = []
+            return node
+
         deps = []
         next_path = path + [current_id]
         for target_id in item.details.get("depends_on", []):
             target_id = str(target_id)
             matches = index.get(target_id, [])
             if target_id in unique and unique[target_id] is not item:
-                deps.append(build_node(unique[target_id], relation="depends_on", path=next_path))
+                deps.append(build_node(unique[target_id], relation="depends_on", path=next_path, depth=depth + 1))
             elif len(matches) > 1:
                 deps.append(placeholder(target_id, "depends_on", "ambiguous"))
             else:
@@ -230,7 +247,7 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False):
             for blocker in incoming_blocks.get(current_value, []):
                 if blocker is item:
                     continue
-                deps.append(build_node(blocker, relation="blocks", path=next_path))
+                deps.append(build_node(blocker, relation="blocks", path=next_path, depth=depth + 1))
 
         node["deps"] = deps
         return node
@@ -285,6 +302,8 @@ def format_dependency_chain(records):
             suffix += " %s" % node["reference_status"]
         if node.get("cycle"):
             suffix += " cycle"
+        if node.get("truncated"):
+            suffix += " truncated"
         lines.append(
             "%s%s [%s] %s%s"
             % (
@@ -301,6 +320,102 @@ def format_dependency_chain(records):
     for record in records:
         add_node(record)
     return "\n".join(lines) + "\n"
+
+
+def dependency_chains_to_mermaid(records):
+    """Serialize dependency chains as a Mermaid graph LR diagram."""
+    nodes, edges = _dependency_graph_parts(records)
+    lines = ["graph LR"]
+    if not nodes:
+        lines.append("")
+        return "\n".join(lines)
+
+    for node_id, node in nodes.items():
+        safe = _mermaid_node_id(node_id)
+        label = _dependency_node_label(node_id, node).replace('"', "'")
+        done_cls = ":::done" if node.get("status") in _DONE_STATUSES else ""
+        lines.append('    %s["%s"]%s' % (safe, label, done_cls))
+
+    lines.append("")
+    for source, target, relation in edges:
+        lines.append(
+            "    %s -- %s --> %s"
+            % (_mermaid_node_id(source), relation or "depends", _mermaid_node_id(target))
+        )
+
+    if any(node.get("status") in _DONE_STATUSES for node in nodes.values()):
+        lines.append("")
+        lines.append("    classDef done stroke-dasharray:5 5")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def dependency_chains_to_dot(records):
+    """Serialize dependency chains as a Graphviz DOT digraph."""
+    nodes, edges = _dependency_graph_parts(records)
+    lines = ["digraph deps {"]
+    if not nodes:
+        lines.append("}")
+        lines.append("")
+        return "\n".join(lines)
+
+    for node_id, node in nodes.items():
+        attrs = "label=%s" % _dot_quote(_dependency_node_label(node_id, node))
+        if node.get("status") in _DONE_STATUSES:
+            attrs += " style=dashed"
+        lines.append("    %s [%s];" % (_dot_quote(node_id), attrs))
+
+    for source, target, relation in edges:
+        lines.append(
+            "    %s -> %s [label=%s];"
+            % (_dot_quote(source), _dot_quote(target), _dot_quote(relation or "depends"))
+        )
+
+    lines.append("}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _dependency_graph_parts(records):
+    nodes = OrderedDict()
+    edges = []
+
+    def add_node(node):
+        node_id = str(node.get("id", ""))
+        if not node_id:
+            return
+        if node_id not in nodes:
+            nodes[node_id] = node
+
+    def walk(node):
+        add_node(node)
+        source = str(node.get("id", ""))
+        for dep in node.get("deps", []):
+            add_node(dep)
+            target = str(dep.get("id", ""))
+            if source and target:
+                edges.append((source, target, dep.get("relation")))
+            walk(dep)
+
+    for record in records:
+        walk(record)
+    return nodes, edges
+
+
+def _dependency_node_label(node_id, node):
+    title = node.get("title", "")
+    suffixes = []
+    if node.get("reference_status"):
+        suffixes.append(str(node["reference_status"]))
+    if node.get("cycle"):
+        suffixes.append("cycle")
+    if node.get("truncated"):
+        suffixes.append("truncated")
+    label = "%s: %s" % (node_id, title)
+    if suffixes:
+        label += " (%s)" % ", ".join(suffixes)
+    return label
 
 
 def build_id_index(items, key="id"):

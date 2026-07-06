@@ -1737,6 +1737,71 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("task_waiting", normalized)
         self.assertNotIn("task_not_blocked", normalized)
 
+    def test_deps_cli_mermaid_dot_and_depth(self):
+        text = (
+            "[ ] T Root id:task_root depends_on:task_mid\n"
+            "[ ] T Mid id:task_mid depends_on:task_leaf\n"
+            "[ ] T Leaf id:task_leaf\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "deps",
+            "--root",
+            "task_root",
+            "--format",
+            "mermaid",
+            "--depth",
+            "1",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        out = normalize_newlines(stdout)
+        self.assertIn("graph LR", out)
+        self.assertIn("task_root", out)
+        self.assertIn("task_mid", out)
+        self.assertIn("truncated", out)
+        self.assertNotIn("task_leaf", out)
+
+        stdout, stderr, code = run_cli(
+            "deps",
+            "--root",
+            "task_root",
+            "--format",
+            "dot",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        out = normalize_newlines(stdout)
+        self.assertIn("digraph deps", out)
+        self.assertIn("task_root -> task_mid", out)
+        self.assertIn("task_mid -> task_leaf", out)
+
+    def test_deps_cli_depth_zero_outputs_root_only(self):
+        text = (
+            "[ ] T Root id:task_root depends_on:task_mid\n"
+            "[ ] T Mid id:task_mid\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "deps",
+            "--root",
+            "task_root",
+            "--depth",
+            "0",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        out = normalize_newlines(stdout)
+        self.assertIn("task_root", out)
+        self.assertIn("truncated", out)
+        self.assertNotIn("task_mid", out)
+
     def test_multiple_life_input_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = os.path.join(temp_dir, "first.life.txt")

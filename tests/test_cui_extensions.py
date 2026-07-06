@@ -32,6 +32,10 @@ class CompletionTests(unittest.TestCase):
         self.assertIn("--rrule", script)
         self.assertIn("--notify-at", script)
         self.assertIn("--occurrences", script)
+        self.assertIn("--theme", script)
+        self.assertIn("--keymap", script)
+        self.assertIn("auto dark light mono", script)
+        self.assertIn("vim arrows", script)
 
     def test_prints_fish_install_instructions(self):
         text = completion.install_instructions("fish")
@@ -483,6 +487,7 @@ class TuiTests(unittest.TestCase):
 
         self.assertIn("> TASKS (open)", output)
         self.assertIn("Write_Report", output)
+        self.assertIn("* [ ] T Write_Report", output)
 
     def test_render_dashboard_help(self):
         output = tui.render_dashboard(argparse.Namespace(paths=[]), help_visible=True)
@@ -490,7 +495,75 @@ class TuiTests(unittest.TestCase):
         self.assertIn("lifetxt TUI help", output)
         self.assertIn("tab / n", output)
         self.assertIn("h / left", output)
-        self.assertIn("G / end", output)
+        self.assertIn("Enter/o", output)
+
+    def test_render_dashboard_uses_tui_config_options(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "[ ] T First id:t1 project:work\n"
+                    "[ ] T Second id:t2 project:work\n"
+                )
+            output = tui.render_dashboard(
+                argparse.Namespace(
+                    paths=[path],
+                    config_data={"tui": {"theme": "light", "keymap": "arrows", "limit": 1, "agenda_window": "6h"}},
+                ),
+                focus="tasks",
+            )
+
+        self.assertIn("Theme:light  Keymap:arrows  Limit:1  Window:6h", output)
+        self.assertIn("First", output)
+        self.assertNotIn("Second", output)
+
+    def test_render_dashboard_detail_and_action_menu(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Write_Report id:t1 project:work\n| Body line\n")
+            args = argparse.Namespace(paths=[path], config_data={})
+            row = tui.selected_dashboard_row(args, 0)
+            detail = tui.render_dashboard(args, detail_row=row)
+            actions = tui.render_dashboard(args, action_row=row)
+
+        self.assertIn("DETAIL", detail)
+        self.assertIn("Body line", detail)
+        self.assertIn("ACTIONS", actions)
+        self.assertIn("d  mark done", actions)
+        self.assertIn("f  filter by project:work", actions)
+
+    def test_tui_row_action_mark_done_updates_source_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Write_Report id:t1 project:work\n")
+            args = argparse.Namespace(paths=[path], config_data={})
+            row = tui.selected_dashboard_row(args, 0)
+
+            result = tui.perform_row_action("done", row, args)
+
+            self.assertIn("Marked done: t1", result["message"])
+            with open(path, "r", encoding="utf-8") as handle:
+                self.assertIn("[x] T Write_Report", handle.read())
+
+    def test_tui_selection_helpers_and_project_filter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "[ ] T Work_Task id:t1 project:work\n"
+                    "[ ] T Home_Task id:t2 project:home\n"
+                    "[/] S Focus from:2026-06-10T09:00 state:focus person:self\n"
+                )
+            args = argparse.Namespace(paths=[path], config_data={})
+
+            self.assertEqual(1, tui.move_selection(args, 0, 1))
+            self.assertEqual("tasks", tui.section_for_selected_index(args, 0))
+            filtered = tui.render_dashboard(args, project_filter="home")
+
+        self.assertIn("Home_Task", filtered)
+        self.assertNotIn("Work_Task", filtered)
 
     def test_render_dashboard_safe_shows_errors(self):
         output = tui.render_dashboard_safe(argparse.Namespace(paths=["missing.life.txt"]))
@@ -547,6 +620,20 @@ class TuiTests(unittest.TestCase):
         self.assertIn(33, attrs)
         self.assertIn(44, attrs)
 
+    def test_curses_mono_theme_keeps_selected_reverse_attr(self):
+        class FakeCurses:
+            A_BOLD = 1
+            A_REVERSE = 2
+            A_DIM = 4
+
+            @staticmethod
+            def has_colors():
+                return True
+
+        attrs = tui._init_curses_colors(FakeCurses, theme="mono")
+
+        self.assertEqual(2, attrs["selected"])
+
     def test_clip_display_width_handles_wide_characters(self):
         self.assertEqual("あい", tui._clip_display_width("あいう", 4))
         self.assertEqual("ab", tui._clip_display_width("abc", 2))
@@ -564,6 +651,7 @@ class TuiTests(unittest.TestCase):
         self.assertEqual(2, tui._max_scroll_for_screen(FakeScreen(), "a\nb\nc\nd\ne\n"))
         self.assertEqual("title", tui._style_for_line("lifetxt TUI"))
         self.assertEqual("focus", tui._style_for_line("> TASKS (open)"))
+        self.assertEqual("selected", tui._style_for_line("* [ ] T Selected"))
         self.assertEqual("active", tui._style_for_line("  [/] T Active_Task"))
         self.assertEqual("error", tui._style_for_line("ERROR: broken"))
 

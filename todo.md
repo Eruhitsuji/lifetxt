@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-07 (updated x54)
+Last updated: 2026-07-07 (updated x55)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -283,6 +283,177 @@ work:
 ## P1: Validation
 
 Diagnostics added to `check` and `health` that catch common mistakes.
+
+---
+
+## Use-Case Backlog (added 2026-07-07)
+
+Concrete feature proposals derived from walking the whole system (format,
+CLI, Web UI/API, MCP, editors) as different kinds of users. Each item names
+the commands, flags, config keys, or endpoints it would introduce so it can
+be promoted into the P1/P2 sections above when picked up. The suggested
+priority is tagged per item; nothing here blocks the next release by itself.
+
+### Quick capture & mobile (any user away from a desktop)
+
+- [ ] (P1) Make the Web UI installable as a PWA: have `serve` expose a
+  `manifest.json` and a minimal service worker behind config
+  `web.pwa.enable` (default false) so phones can pin the UI to the home
+  screen. Cache only the app shell (the single HTML page); all `/api/*`
+  traffic stays online so the read/write model is unchanged.
+
+- [ ] (P2) Register the PWA as a Web Share Target so text shared from other
+  mobile apps opens the record editor modal prefilled as an inbox item
+  (`[ ] N <shared text>` with `tag:inbox`), writing through the existing
+  `POST /api/items/raw`. Depends on the PWA item above.
+
+- [ ] (P1) Add `lifetxt capture` for zero-friction terminal capture:
+  `echo "buy milk" | lifetxt capture --stdin` and `capture --clipboard`
+  append `[ ] T TITLE captured:NOW` (type overridable with `--type N`),
+  delegating to the same validation and atomic-write path as `quick` so
+  nothing new can corrupt the file.
+
+### Students (classes, assignments, semester rhythm)
+
+- [ ] (P2) Add `import-ics --preset university`: map recurring lecture
+  VEVENTs to `E` items with `repeat:weekly` + `until:SEMESTER_END` and a
+  `project:` derived from the course-code prefix of the summary, so a
+  timetable export becomes a one-command semester setup.
+
+- [ ] (P2) Show days-remaining countdowns: `agenda --countdown` adds a
+  `D-n` column computed from `due:`/`to:`, and the Web Dashboard "Today"
+  card shows a days-left badge for items due within
+  `web.dashboard.due_soon_days` (default 7).
+
+### Freelancers (billable time)
+
+- [ ] (P1) Add `lifetxt invoice`: aggregate `elapsed:` per project for a
+  billing period — `invoice --project clientA --month 2026-06 --rate 8000
+  --currency JPY --round 15m --format markdown|csv`. Reuse the
+  `review`/`stats` elapsed aggregation; `--round` rounds each item up to
+  the billing increment before summing; per-project default rates come from
+  config `billing.rates.{project}`.
+
+### Small teams (shared file over git)
+
+- [ ] (P1) Add `lifetxt standup`: print "done yesterday / planned today /
+  blocked" for `--user NAME` (default config `user.name`) derived from
+  `done:` dates, `due:` today, and open blockers; `--format
+  text|markdown|slack`, where `slack` reuses the `digest` webhook transport
+  and `--url-env` pattern.
+
+- [ ] (P2) Add a per-person workload summary: `who --workload` and
+  `/api/status?workload=true` append open / due-today / overdue / blocked
+  counts per assignee, so the Web Status view can render a small team board
+  without a new endpoint.
+
+- [ ] (P2) Ship a built-in "mine" preset: `?preset=mine` resolves to
+  `assignee:<config user.name>&open_only=true` without requiring a
+  `views.mine` config entry, and the Items toolbar shows a "My items" chip
+  when `user.name` is configured.
+
+### GTD practitioners (inbox → next actions)
+
+- [ ] (P1) Promote `context:` to a first-class filter: accept `--context
+  @home` on `filter`/`agenda` (and `next` below), add a `context=` URL/API
+  parameter, prompt for context in `inbox --process` alongside
+  project/due/assignee, and Tab-complete known context values from loaded
+  files.
+
+- [ ] (P1) Add `lifetxt next`: show the top N actionable tasks — open, not
+  blocked, not `[?]` — sorted by priority, then due, then age:
+  `next --context @errands --project home --limit 3`. Implement as a
+  curated wrapper over `filter` so all existing filters keep working.
+
+- [ ] (P2) Add `review --someday`: list `[?]` items untouched for longer
+  than `--older-than 30d` (by `updated:`/`created:`) so someday/maybe items
+  get re-decided during the weekly review; later surface the same list as
+  an optional card in the Web Review view.
+
+### Habit builders & journalers
+
+- [ ] (P1) Add `lifetxt habit today`: materialize today's habit checkboxes
+  from `H` items with `repeat:` into the writable file, idempotent per
+  habit+date through a generated `id:` (re-running never duplicates);
+  `--dry-run` previews. A git hook, cron job, or Task Scheduler entry can
+  run it each morning so daily habits become checkable items automatically.
+
+- [ ] (P2) Add journal prompts: `quick --journal` opens `$EDITOR` prefilled
+  from config `journal.prompt` (e.g. three reflection questions) and writes
+  a `J` item with `on:today` and a multiline body; the Web editor modal
+  gets a "Journal" shortcut that prefills the same prompt text.
+
+### Care & family coordination
+
+- [ ] (P2) Extend notifications to acknowledgeable recurring reminders:
+  notification records currently cover type `M` messages only. Let `R`
+  items with `repeat:` plus `notify_at:`/`require_ack:true` keep notifying
+  until an `ack:` is written (reusing the message Ack/Snooze plumbing), with
+  optional re-notification after `notifications.escalate_after` (e.g.
+  `30m`) — medication and pickup reminders on a shared screen.
+
+- [ ] (P2) Document a "family board" kiosk recipe in `docs/{en,ja}/web.md`:
+  a worked `views.family` preset combining `mode=kiosk`, `kiosk_filter`,
+  `kiosk_title`, `refresh`, and `theme`, plus a wall-tablet setup checklist
+  (autostart URL, notification permission, preventing sleep).
+
+### Accessibility & inclusive use
+
+- [ ] (P1) Web UI accessibility pass: `role=tablist`/`tab` semantics with
+  arrow-key movement on the view bar, `aria-live=polite` on the toast and
+  notification updates, a skip-to-content link before the header, and a
+  visible-focus audit of all interactive elements. Extends the existing
+  WCAG AA contrast item in the Design System section.
+
+- [ ] (P2) Honor `prefers-reduced-motion`: disable kiosk auto-scroll,
+  skeleton shimmer, and modal transitions when the media query matches,
+  with a `web.reduce_motion: true` config override for kiosk deployments.
+
+- [ ] (P2) Add a high-contrast theme: `?theme=high-contrast` plus a
+  `web.theme.high_contrast` token set layered on the planned theming hook,
+  so low-vision users get a supported mode instead of browser extensions.
+
+### Non-English users
+
+- [ ] (P2) Add a Web UI label dictionary: config `web.language: en|ja` and
+  a `?lang=` parameter switching the static chrome strings (view names,
+  buttons, empty states, help modal) from a small dictionary embedded in
+  `webapp.py`; item content is user data and is never translated. Start
+  with Japanese since `docs/ja` already exists.
+
+### First-run & evaluation
+
+- [ ] (P1) Add `lifetxt demo`: start `serve` against generated sample data
+  in a temp directory — `demo --persona student|team|freelancer` seeds
+  persona-flavored items (courses, a sprint with assignees, client
+  projects with elapsed time) and shows a "Demo data — nothing is saved to
+  your files" banner, so the Web UI can be evaluated with one command and
+  zero risk.
+
+- [ ] (P2) Add a guided empty state to the Web UI: when zero items load,
+  replace the empty table with three actions — "Add your first task"
+  (opens the editor prefilled with a commented example), "Import"
+  (ICS / Todoist / GitHub doc links), and "Open docs".
+
+### Long-horizon users (years of data)
+
+- [ ] (P2) Add `review --year 2026`: a year selector in
+  `review.resolve_review_range` plus per-month subtotal rows in the report
+  (tasks completed, habit rate, journal count, elapsed), with
+  `--format html` producing a shareable year-in-review page; expose the
+  same selector through `GET /api/review` and MCP `get_review`.
+
+- [ ] (P2) Add scheduled auto-archive: config
+  `archive.auto: {age: "180d", target: "archive/{year}.life.txt"}` applied
+  by `cleanup --auto` (documented for cron and Windows Task Scheduler),
+  reusing `archive`'s orphan-children handling and `--dry-run` semantics.
+
+### Developers
+
+- [ ] (P2) Add `lifetxt todo-scan`: import `TODO`/`FIXME` source comments
+  as tasks — `todo-scan src/ --project myrepo --tag code` generates stable
+  IDs from a path+text hash so re-runs update instead of duplicating, and
+  `--prune` closes tasks whose source comment has disappeared.
 
 ---
 

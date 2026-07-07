@@ -1146,6 +1146,7 @@ The MCP server exposes these tools:
 | `check_line` / `parse_item` | Validate or preview raw life.txt text |
 | `create_item` / `update_item` / `mark_done` / `delete_item` | Write item changes to the configured writable file |
 | `get_agenda` | Return agenda records for a range |
+| `get_review` | Return the weekly/monthly review report (same shape as `review --format json` and `GET /api/review`) |
 | `get_graph` / `get_blockers` / `list_links` | Inspect ID references and dependency blockers |
 | `list_status` | Return latest `S` presence records |
 | `list_notifications` | Return due message notifications |

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-06 (updated x53)
+Last updated: 2026-07-07 (updated x54)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -88,6 +88,13 @@ Improvements to existing commands that affect daily workflow.
   `filter` now has a `--width N` flag and a `--format table` output (bordered
   table, or a compact one-line form below 80 columns, matching `agenda` and
   `stats`); this part is done and documented in CLI guide section 6.
+
+- [ ] Add `--last-week` and `--last-month` convenience flags to `review` so
+  the CLI matches the Web Review view's range presets without manual
+  `--from`/`--to` date math. Implement the presets in
+  `review.resolve_review_range` so `GET /api/review` and the MCP `get_review`
+  tool can accept the same selector (e.g. `range=last-week`) instead of the
+  browser computing dates client-side as it does today.
 
 - [ ] Keep CLI help synchronized with docs: after every change to `tui`,
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
@@ -185,27 +192,41 @@ CLI-native charts without external dependencies.
   across browsers. Density toggle, theme, and graph layout currently persist
   locally; the active view is part of the URL by design.
 
-### Views: Dashboard & Focus (Web UI) — New
+### Views: Dashboard, Focus & Review (Web UI)
+
+The Review view is now implemented: a read-only tab backed by the new
+`GET /api/review` endpoint (shared `lifetxt/review.py` aggregation, also used
+by the CLI `review` command and the MCP `get_review` tool) with
+This week / Last week / This month / Last month presets, KPI tiles, a
+completed-task list, habit completion bars, journal entries with mood trend,
+and elapsed-by-project totals. The Focus view gained a quick-add input
+(appends `due:` today through `POST /api/items/raw`), a "Today's schedule"
+group for due-today `E` events, `at:`/`on:`-today Reminders, and an
+"Anytime reminders" group for undated `R` items. Remaining and follow-up
+work:
 
 - [ ] Make Dashboard cards configurable: a config key such as
   `web.dashboard.cards` choosing which cards render (today, needs-attention,
   completions chart, projects) and their order, plus per-card limits. The
   fixed four-card layout with KPI tiles is implemented.
 
-- [ ] Add a quick-add input to the Focus view so a task due today can be
-  captured without leaving the view (delegate to the same
-  `POST /api/items/raw` used by the items quick-add bar, appending
-  `due:today`).
+- [ ] Make Review view completed-task rows clickable: entries returned by
+  `GET /api/review` include the item `id`, so a click should resolve the
+  record via `/api/items/id/{id}` and open the detail modal; the view is
+  currently display-only.
 
-- [ ] Include due-today Events and untimed Reminders in the Focus view's
-  partitions: the current filter covers `T`/`D`/`R`/`H` items with `due:` and
-  in-progress `[/]` items, so timed events for today only appear on the
-  Dashboard's Today card.
+- [ ] Add a project filter and a custom from/to date picker to the Review
+  view: `GET /api/review` already accepts `project`, `from`, and `to`, but
+  the UI exposes only the four range presets.
 
-- [ ] Consider a "Review" view as the next mode: last week's completed items,
-  journal entries with mood trend, and habit streaks in one read-only page,
-  reusing `review`/`stats` data. Would pair with the CLI weekly-review
-  workflow (`review` → LLM → `template apply`).
+- [ ] Add an export/copy action to the Review view that produces the same
+  Markdown as `review --format markdown` for pasting into chat or a weekly
+  report; consider a shared server-side renderer so `digest` can reuse it.
+
+- [ ] Compute real habit streaks (longest and current consecutive-day runs)
+  in `lifetxt/review.py` from per-day `done:` dates, and show them in the
+  Review view's Habits card next to the completion-rate bars; the report
+  currently aggregates done/open counts per habit title only.
 
 - [ ] Deprecate the legacy `?workspace=` URL alias after one release: it now
   maps onto `view=` (and `workspace=new` opens the editor modal); emit a
@@ -401,9 +422,9 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   quick-postpone, est/elapsed progress bar, and the agenda blocked filter.
   The redesigned app shell also needs a short section: header workspace view buttons,
   density toggle, `?theme=` URL parameter, and the print stylesheet.
-  The REST table (including `/api/blockers` and `agenda?blocked=`), parse
-  endpoint, graph panel, kiosk parameters, and message thread basics are now
-  documented.
+  The REST table (including `/api/blockers`, `/api/review`, and
+  `agenda?blocked=`), parse endpoint, graph panel, kiosk parameters, message
+  thread basics, the Review view, and the Focus quick-add are now documented.
 
 - [ ] Document the dependency graph feature end-to-end: explain the
   `links --format mermaid` and `links --format dot` CLI outputs, the
@@ -489,7 +510,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   The 2026-07 single-content router redesign added more surfaces to cover:
   the ten-view tab bar (each view rendering exactly one page section),
   Dashboard KPI tiles and their click-through navigation, Focus one-click
-  done with undo, the record editor modal (open via ＋ New / `n` /
+  done with undo, the Focus quick-add input (Enter submits, quoted titles
+  with spaces, list reloads), the Focus "Today's schedule" and "Anytime
+  reminders" groups, the Review view (range preset switching, KPI tiles,
+  habit bars, mood pills, empty states per card), the record editor modal
+  (open via ＋ New / `n` /
   `?workspace=new`, close on save), legacy `?workspace=` alias mapping,
   density toggle persistence, skeleton-loading rows, contextual empty states,
   the back-to-top button, `?theme=dark|light` forcing, command-palette fuzzy
@@ -579,6 +604,14 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   with `labels` and `datasets` arrays; `from`/`to`/`project`/`group` query
   parameters filter results correctly; empty data range returns empty datasets
   without error.
+
+- [ ] Add `/api/review` and MCP `get_review` edge-case tests: `week=true`
+  taking precedence over `from`/`to`, an empty file returning zero counts
+  without error, `mood_trend` ordering with multiple journal entries on the
+  same day, and read-only server mode still serving the report. Report shape,
+  invalid-month `400`/`ValueError`, and `project=` filtering are already
+  covered in `tests/test_lifetxt.py` (`LifeTxtWebApiTests`, the MCP tests,
+  and `ReviewRangeResolutionTests`).
 
 - [ ] Add `links` tests for Mermaid/DOT: cross-file node references, titles
   with embedded quote characters.

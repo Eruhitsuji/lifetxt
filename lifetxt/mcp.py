@@ -229,6 +229,18 @@ def tool_schemas():
             },
         ),
         _tool(
+            "get_review",
+            "Return a weekly/monthly review report: completed tasks, habit "
+            "completion, journal entries, mood trend, and elapsed time.",
+            {
+                "week": _bool("Review the current week (Monday to Sunday)."),
+                "month": _string("Review a calendar month, formatted YYYY-MM."),
+                "from": _string("Range start date, YYYY-MM-DD. Defaults to the current week start."),
+                "to": _string("Range end date, YYYY-MM-DD. Defaults to today."),
+                "project": _string("Restrict the review to one project."),
+            },
+        ),
+        _tool(
             "get_graph",
             "Return ID reference graph nodes and edges.",
             {"root": _string("Optional root ID."), "depth": _integer("Optional traversal depth.")},
@@ -590,6 +602,27 @@ def _tool_get_agenda(args, context):
     }
 
 
+def _tool_get_review(args, context):
+    from .review import build_review, resolve_review_range
+
+    items, diagnostics = _read_items(context)
+    start, end = resolve_review_range(
+        week=_truthy(args.get("week")),
+        month=args.get("month"),
+        from_date=args.get("from"),
+        to_date=args.get("to"),
+    )
+    result = build_review(
+        items,
+        start,
+        end,
+        project=args.get("project"),
+        id_key=_id_key(context),
+    )
+    result["diagnostics"] = [diagnostic.to_dict() for diagnostic in diagnostics]
+    return result
+
+
 def _tool_get_graph(args, context):
     items, _diagnostics = _read_items(context)
     nodes, edges = _graph_nodes_edges(items, _id_key(context))
@@ -698,6 +731,7 @@ TOOL_HANDLERS = OrderedDict(
         ("mark_done", _tool_mark_done),
         ("delete_item", _tool_delete_item),
         ("get_agenda", _tool_get_agenda),
+        ("get_review", _tool_get_review),
         ("get_graph", _tool_get_graph),
         ("get_blockers", _tool_get_blockers),
         ("list_links", _tool_list_links),

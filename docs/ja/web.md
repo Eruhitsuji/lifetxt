@@ -80,6 +80,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
+| `GET` | `/api/review` | 日付範囲の review report(完了 task、habit 達成率、journal、mood 推移、elapsed 集計) |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
 | `GET` | `/api/notifications` | Message 通知候補を表示 |
 | `GET` | `/api/chart/tasks` | task chart data |
@@ -140,7 +141,17 @@ curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
+curl "http://127.0.0.1:8000/api/review?week=true"
+curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
+curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
 ```
+
+`GET /api/review` は CLI `review` コマンド・MCP `get_review` tool と同じ
+report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
+一覧(title、done 日付、project、id)、habit ごとの達成率、抜粋付き journal
+一覧、`mood_trend`、`elapsed_by_project` 集計。範囲指定は CLI と同じ優先順で
+`week=true`、`month=YYYY-MM`、`from`/`to`(default は今週の開始日と今日)を
+解釈し、不正な値には `400` を返します。
 
 ## GUI
 
@@ -149,13 +160,20 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、view 指定
-- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Focus、Messages、
-  Status、Notifications、Stats、Graph、Kiosk — 常に 1 つの view だけを全画面表示
+- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Focus、Review、
+  Messages、Status、Notifications、Stats、Graph、Kiosk — 常に 1 つの view
+  だけを全画面表示
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
   blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
   project 別進捗
-- Focus view: overdue・今日期限・進行中の作業 item だけを表示し、ワンクリック
-  done(undo 付き)で処理
+- Focus view: overdue・今日期限・進行中の作業 item をワンクリック done
+  (undo 付き)で処理。今日の timed event、`at:`/`on:` が今日の reminder、
+  日付なしの「anytime」reminder も表示し、quick-add 入力から `due:` 今日の
+  task を view を離れずに追加可能
+- Review view(read-only): `GET /api/review` を使い、今週 / 先週 / 今月 /
+  先月を切り替えて、完了 task 一覧、habit 達成率バー、mood 推移付き journal、
+  project 別 elapsed を 1 画面で振り返り — CLI の weekly-review workflow の
+  ブラウザ版
 - blocked filter 付きの agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
@@ -177,7 +195,7 @@ curl "http://127.0.0.1:8000/api/status?active=true"
 表示します。
 
 layout は「1画面1コンテンツ」を基本とします。header の view bar で選んだ
-1 つの page(Items、Dashboard、Agenda、Focus、Messages、Status、
+1 つの page(Items、Dashboard、Agenda、Focus、Review、Messages、Status、
 Notifications、Stats、Graph)だけが全幅で表示され、他のコンテンツと画面を
 奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
@@ -202,7 +220,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 
 | Parameter | 意味 |
 |---|---|
-| `view=dashboard\|agenda\|focus\|messages\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
+| `view=dashboard\|agenda\|focus\|review\|messages\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
 | `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
 | `preset=NAME` | config `views.NAME` のURL parameterを適用 |

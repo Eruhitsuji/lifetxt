@@ -648,6 +648,32 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "range": {"from": s.isoformat(), "to": e.isoformat()},
         }
 
+    @app.get("/api/review")
+    def get_review(
+        start=Query(None, alias="from"),
+        end=Query(None, alias="to"),
+        week=False,
+        month=None,
+        project=None,
+    ):
+        from .review import build_review, resolve_review_range
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        try:
+            range_start, range_end = resolve_review_range(
+                week=week, month=month, from_date=start, to_date=end
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return build_review(
+            items,
+            range_start,
+            range_end,
+            project=project,
+            id_key=id_key_from_config(app.state.config),
+        )
+
     @app.get("/api/agenda")
     def get_agenda(
         start=Query(None, alias="from"),
@@ -2775,6 +2801,45 @@ HTML_PAGE = r"""<!doctype html>
     .focus-row-title { font-size: 1.02rem; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
     .focus-row-meta { display: flex; align-items: center; gap: .4rem; margin-top: .15rem; font-size: .78rem; color: var(--muted); }
     .focus-readonly { opacity: .75; }
+    .focus-quick-add {
+      display: flex;
+      gap: .45rem;
+      align-items: center;
+      padding: .35rem 0 .2rem;
+    }
+    .focus-quick-add input { flex: 1; min-width: 0; }
+    .focus-event-time { font-variant-numeric: tabular-nums; }
+    /* ── Review view ─────────────────────────────────────────────── */
+    .review-body { display: grid; gap: 1rem; padding: 1rem; }
+    .review-range-bar { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .review-range-btn {
+      font-size: .78rem;
+      padding: .24rem .65rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+    }
+    .review-range-btn:hover { border-color: var(--line-strong); color: var(--ink); }
+    .review-range-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .review-habit-bar {
+      flex: 0 0 70px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--soft);
+      overflow: hidden;
+    }
+    .review-habit-bar > span { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+    .review-excerpt { font-size: .78rem; color: var(--muted); margin-top: .1rem; overflow-wrap: anywhere; }
+    .review-mood-row { flex-wrap: wrap; }
+    .review-num { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
     /* ── Record editor modal ─────────────────────────────────────── */
     .editor-modal { max-width: 560px; }
     .editor-modal-head {
@@ -3253,6 +3318,7 @@ HTML_PAGE = r"""<!doctype html>
       <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
       <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
       <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
+      <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
       <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
       <button type="button" class="workspace-tab" data-view="status" onclick="switchWorkspace('status')">👥 Status</button>
       <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
@@ -3383,7 +3449,45 @@ HTML_PAGE = r"""<!doctype html>
         <button class="secondary" onclick="loadFocus()" title="Refresh focus list">↺</button>
       </div>
       <div class="section-body focus-body">
+        <div class="focus-quick-add">
+          <input id="focus-quick-title" placeholder="Add a task due today… (Enter)" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();focusQuickAdd();}">
+          <button onclick="focusQuickAdd()">Add</button>
+        </div>
         <div id="focus-list" class="focus-list"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+    <section class="review-section page" data-page="review">
+      <div class="section-head">
+        <h2><span class="h2-icon" aria-hidden="true">📝</span>Review<span id="review-range-label" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+        <button class="secondary" onclick="loadReview()" title="Refresh review">↺</button>
+      </div>
+      <div class="section-body review-body">
+        <div class="review-range-bar" id="review-range-bar" role="group" aria-label="Review range">
+          <button type="button" class="review-range-btn active" data-range="week" onclick="setReviewRange('week')">This week</button>
+          <button type="button" class="review-range-btn" data-range="last-week" onclick="setReviewRange('last-week')">Last week</button>
+          <button type="button" class="review-range-btn" data-range="month" onclick="setReviewRange('month')">This month</button>
+          <button type="button" class="review-range-btn" data-range="last-month" onclick="setReviewRange('last-month')">Last month</button>
+        </div>
+        <div id="review-kpis" class="kpi-row"><div class="empty">Loading…</div></div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-title">✅ Completed</div>
+            <div id="review-completed" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">🔁 Habits</div>
+            <div id="review-habits" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">📓 Journal &amp; mood</div>
+            <div id="review-journal" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">⏱️ Elapsed by project</div>
+            <div id="review-elapsed" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+        </div>
       </div>
     </section>
     <section class="stats-section page" data-page="stats">
@@ -3729,11 +3833,11 @@ HTML_PAGE = r"""<!doctype html>
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "agenda", "focus", "messages", "status", "notifications", "stats", "graph"];
+    const PAGE_VIEWS = ["dashboard", "agenda", "focus", "review", "messages", "status", "notifications", "stats", "graph"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
       "dashboard": "dashboard", "agenda": "agenda", "focus": "focus",
-      "status": "status", "notifications": "notifications",
+      "review": "review", "status": "status", "notifications": "notifications",
       "stats": "stats", "graph": "graph",
     };
     function switchWorkspace(view, historyMode = "push") {
@@ -4740,6 +4844,7 @@ HTML_PAGE = r"""<!doctype html>
       if (v === "status") tasks.push(loadStatus());
       if (v === "dashboard") tasks.push(loadDashboard());
       if (v === "focus") tasks.push(loadFocus());
+      if (v === "review") tasks.push(loadReview());
       if (v === "graph") tasks.push(loadGraphPanel());
       if (v === "stats") {
         statsLoaded = true;
@@ -4882,6 +4987,7 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Go to Items", run: () => switchWorkspace("")},
       {label: "Go to Agenda", run: () => switchWorkspace("agenda")},
       {label: "Go to Focus", run: () => switchWorkspace("focus")},
+      {label: "Go to Review", run: () => switchWorkspace("review")},
       {label: "Go to Messages", run: () => switchWorkspace("messages")},
       {label: "Go to Status", run: () => switchWorkspace("status")},
       {label: "Go to Notifications", run: () => switchWorkspace("notifications")},
@@ -7116,26 +7222,46 @@ HTML_PAGE = r"""<!doctype html>
         return;
       }
       const today = new Date(); today.setHours(0, 0, 0, 0);
+      const detailDate = (item, keys) => {
+        for (const key of keys) {
+          const value = item?.details?.[key]?.[0];
+          if (!value) continue;
+          const d = new Date(value); if (isNaN(d)) continue;
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
+        return null;
+      };
+      // Reminders count at:/on: as their due date; tasks and deadlines use due: only.
+      const dueKeysByType = {T: ["due"], D: ["due"], R: ["due", "at", "on"], H: ["due"]};
       const dueDiff = (item) => {
-        const due = item?.details?.due?.[0];
-        if (!due) return null;
-        const d = new Date(due); if (isNaN(d)) return null;
-        d.setHours(0, 0, 0, 0);
-        return Math.round((d - today) / 86400000);
+        const d = detailDate(item, dueKeysByType[item.type] || ["due"]);
+        return d === null ? null : Math.round((d - today) / 86400000);
       };
       const workTypes = new Set(["T", "D", "R", "H"]);
-      const overdue = [], dueToday = [], inProgress = [];
+      const overdue = [], dueToday = [], todayEvents = [], inProgress = [], anytimeReminders = [];
       for (const item of items) {
+        if (item.type === "E") {
+          const d = detailDate(item, ["from", "on", "at", "due"]);
+          if (d && +d === +today) todayEvents.push(item);
+          continue;
+        }
         if (!workTypes.has(item.type)) continue;
         const diff = dueDiff(item);
         if (diff !== null && diff < 0) overdue.push(item);
         else if (diff === 0) dueToday.push(item);
         else if (item.status === "[/]") inProgress.push(item);
+        else if (item.type === "R" && diff === null) anytimeReminders.push(item);
       }
+      todayEvents.sort((a, b) =>
+        String(a?.details?.from?.[0] || a?.details?.at?.[0] || "").localeCompare(
+          String(b?.details?.from?.[0] || b?.details?.at?.[0] || "")));
       const groups = [
         {label: "⚠️ Overdue", items: overdue, cls: "focus-overdue"},
         {label: "📅 Due today", items: dueToday, cls: ""},
+        {label: "🕑 Today's schedule", items: todayEvents, cls: ""},
         {label: "◑ In progress", items: inProgress, cls: ""},
+        {label: "📌 Anytime reminders", items: anytimeReminders, cls: ""},
       ].filter(g => g.items.length);
       if (!groups.length) {
         listEl.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🎉</div>` +
@@ -7144,7 +7270,12 @@ HTML_PAGE = r"""<!doctype html>
           `<button type="button" class="secondary" onclick="switchWorkspace('')">Open Items</button></div>`;
         return;
       }
-      window._focusItems = [...overdue, ...dueToday, ...inProgress];
+      window._focusItems = groups.flatMap(g => g.items);
+      const eventTime = (item) => {
+        const value = String(item?.details?.from?.[0] || item?.details?.at?.[0] || "");
+        const match = value.match(/T(\d{2}:\d{2})/);
+        return match ? match[1] : "🕑";
+      };
       let idx = 0;
       let html = "";
       for (const group of groups) {
@@ -7152,8 +7283,10 @@ HTML_PAGE = r"""<!doctype html>
         for (const item of group.items) {
           const dueRel = buildDueRelLabel(item);
           const proj = item?.details?.project?.[0] ? `<span class="pill">${escapeHtml(item.details.project[0])}</span>` : "";
-          html += `<div class="focus-row${item.editable ? "" : " focus-readonly"}">` +
-            `<button type="button" class="focus-check" title="${item.editable ? "Mark done" : "Read-only"}" ${item.editable ? `onclick="focusMarkDone(${idx})"` : "disabled"}></button>` +
+          const lead = item.type === "E"
+            ? `<span class="focus-event-time pill">${escapeHtml(eventTime(item))}</span>`
+            : `<button type="button" class="focus-check" title="${item.editable ? "Mark done" : "Read-only"}" ${item.editable ? `onclick="focusMarkDone(${idx})"` : "disabled"}></button>`;
+          html += `<div class="focus-row${item.editable ? "" : " focus-readonly"}">` + lead +
             `<div class="focus-row-main" onclick="focusOpen(${idx})">` +
             `<div class="focus-row-title">${escapeHtml(item.title)}</div>` +
             `<div class="focus-row-meta">${proj}${dueRel}</div>` +
@@ -7162,6 +7295,27 @@ HTML_PAGE = r"""<!doctype html>
         }
       }
       listEl.innerHTML = html;
+    }
+    async function focusQuickAdd() {
+      const input = document.getElementById("focus-quick-title");
+      const title = (input?.value || "").trim();
+      if (!title) return;
+      const safe = /^[A-Za-z0-9_.\-]+$/.test(title)
+        ? title
+        : `"${title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+      const line = `[ ] T ${safe} due:${_fmtDate(new Date())}`;
+      try {
+        await api("/api/items/raw", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line}),
+        });
+        input.value = "";
+        showToast("Task added for today.", "success");
+        await loadFocus();
+      } catch(e) {
+        showToast("Quick add failed: " + (e.message || e), "error");
+      }
     }
     async function focusMarkDone(index) {
       const item = (window._focusItems || [])[index];
@@ -7189,6 +7343,103 @@ HTML_PAGE = r"""<!doctype html>
     function focusOpen(index) {
       const item = (window._focusItems || [])[index];
       if (item) openDrawer(item);
+    }
+
+    // ── Review view (weekly/monthly retrospective, read-only) ──────
+    let reviewRange = "week";
+    function setReviewRange(range) {
+      reviewRange = range;
+      document.querySelectorAll("#review-range-bar .review-range-btn").forEach(btn =>
+        btn.classList.toggle("active", btn.dataset.range === range));
+      loadReview();
+    }
+    function _reviewQuery() {
+      const today = new Date();
+      if (reviewRange === "week") return "week=true";
+      if (reviewRange === "last-week") {
+        const dow = (today.getDay() + 6) % 7; // Monday-based weekday
+        const monday = new Date(today); monday.setDate(today.getDate() - dow);
+        const start = new Date(monday); start.setDate(monday.getDate() - 7);
+        const end = new Date(monday); end.setDate(monday.getDate() - 1);
+        return `from=${_fmtDate(start)}&to=${_fmtDate(end)}`;
+      }
+      const y = today.getFullYear(), m = today.getMonth();
+      if (reviewRange === "month") return `month=${y}-${String(m + 1).padStart(2, "0")}`;
+      const prev = new Date(y, m - 1, 1);
+      return `month=${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+    }
+    async function loadReview() {
+      const kpiEl = document.getElementById("review-kpis");
+      if (!kpiEl) return;
+      let data;
+      try {
+        data = await api(`/api/review?${_reviewQuery()}`);
+      } catch(e) {
+        kpiEl.innerHTML = `<div class="diagnostic">Review error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const rangeEl = document.getElementById("review-range-label");
+      if (rangeEl) rangeEl.textContent = data.range || "";
+      const habitTitles = Object.keys(data.habits || {});
+      const kpis = [
+        {n: data.completed_tasks || 0, label: "Completed", icon: "✓", cls: "kpi-ok"},
+        {n: data.open_tasks || 0, label: "Still open", icon: "○"},
+        {n: data.journals || 0, label: "Journal entries", icon: "📓"},
+        {n: habitTitles.length, label: "Habits tracked", icon: "🔁"},
+      ];
+      kpiEl.innerHTML = kpis.map(k =>
+        `<div class="kpi-tile ${k.cls || ""}"><span class="kpi-icon" aria-hidden="true">${k.icon}</span>` +
+        `<span class="kpi-n">${k.n}</span><span class="kpi-label">${escapeHtml(k.label)}</span></div>`
+      ).join("");
+      const doneEl = document.getElementById("review-completed");
+      if (doneEl) {
+        const completed = data.completed || [];
+        doneEl.innerHTML = completed.length
+          ? completed.map(t =>
+              `<div class="dash-row">` +
+              (t.done ? `<span class="pill">${escapeHtml(String(t.done).slice(0, 10))}</span>` : "") +
+              `<span class="dash-row-title">${escapeHtml(t.title)}</span>` +
+              (t.project ? `<span class="pill">${escapeHtml(t.project)}</span>` : "") +
+              `</div>`).join("")
+          : `<div class="empty">No tasks completed in this range.</div>`;
+      }
+      const habitsEl = document.getElementById("review-habits");
+      if (habitsEl) {
+        habitsEl.innerHTML = habitTitles.length
+          ? habitTitles.map(title => {
+              const h = data.habits[title];
+              const total = h.done + h.open;
+              return `<div class="dash-row"><span class="dash-row-title">${escapeHtml(title)}</span>` +
+                `<span class="review-num">${h.done}/${total} (${h.completion_rate}%)</span>` +
+                `<span class="review-habit-bar"><span style="width:${h.completion_rate}%"></span></span></div>`;
+            }).join("")
+          : `<div class="empty">No habit records in this range.</div>`;
+      }
+      const journalEl = document.getElementById("review-journal");
+      if (journalEl) {
+        const entries = data.journal_entries || [];
+        const moods = data.mood_trend || [];
+        const moodLine = moods.length
+          ? `<div class="dash-row review-mood-row"><span class="review-num">Mood:</span>${moods.map(m =>
+              `<span class="pill" title="${escapeHtml(m.date)}">${escapeHtml(m.mood)}</span>`).join("")}</div>`
+          : "";
+        journalEl.innerHTML = (entries.length || moods.length)
+          ? moodLine + entries.map(e =>
+              `<div class="dash-row"><span class="pill">${escapeHtml(e.date)}</span>` +
+              `<div style="flex:1;min-width:0"><div class="dash-row-title">${escapeHtml(e.title)}</div>` +
+              (e.excerpt ? `<div class="review-excerpt">${escapeHtml(e.excerpt)}</div>` : "") +
+              `</div></div>`).join("")
+          : `<div class="empty">No journal entries in this range.</div>`;
+      }
+      const elapsedEl = document.getElementById("review-elapsed");
+      if (elapsedEl) {
+        const rows = Object.entries(data.elapsed_by_project || {});
+        elapsedEl.innerHTML = rows.length
+          ? rows.map(([proj, elapsed]) =>
+              `<div class="dash-row"><span class="dash-row-title">${escapeHtml(proj)}</span>` +
+              `<span class="pill">${escapeHtml(elapsed)}</span></div>`).join("")
+          : `<div class="empty">No elapsed time recorded.</div>`;
+      }
     }
 
     loadConfig().then(() => {

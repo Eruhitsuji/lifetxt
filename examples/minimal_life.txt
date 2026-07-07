@@ -1,9 +1,9 @@
 # Minimal life.txt
 
-[ ] T Write_Report due:2026-06-12 project:university assignee:alice
+[x] T Write_Report due:2026-06-12 project:university assignee:alice done:2026-06-30
 [ ] E Seminar from:2026-06-08T13:00 to:2026-06-08T14:30 loc:university attendee:alice
 [/] S Working from:2026-06-06T14:00 state:busy person:self
-[ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
+[x] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams done:2026-06-07
 [N] J "Research day" on:2026-06-23 mood:good tag:lab
 | Read papers in the morning.
 |
@@ -20,6 +20,6 @@
 id:my_project_root \
 on:2026-06-23 \
 due:2026-08-31
-    [ ] T "Write documentation" due:2026-06-30 project:my_project assignee:self id:my_project_doc parent:my_project_root
-    [ ] T "Prepare new content" due:2026-07-05 project:my_project assignee:self id:my_project_content parent:my_project_root
+    [x] T "Write documentation" due:2026-06-30 project:my_project assignee:self id:my_project_doc parent:my_project_root done:2026-07-01
+    [x] T "Prepare new content" due:2026-07-05 project:my_project assignee:self id:my_project_content parent:my_project_root done:2026-07-06
     [ ] T "Test new feature" due:2026-07-10 project:my_project assignee:self id:my_project_test parent:my_project_root

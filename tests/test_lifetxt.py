@@ -393,6 +393,16 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('class="focus-section page"', webapp.HTML_PAGE)
         self.assertIn("function loadDashboard(", webapp.HTML_PAGE)
         self.assertIn("function loadFocus(", webapp.HTML_PAGE)
+        self.assertIn('class="review-section page"', webapp.HTML_PAGE)
+        self.assertIn("function loadReview(", webapp.HTML_PAGE)
+        self.assertIn("function setReviewRange(", webapp.HTML_PAGE)
+        self.assertIn('id="review-range-bar"', webapp.HTML_PAGE)
+        self.assertIn('id="review-kpis"', webapp.HTML_PAGE)
+        self.assertIn("/api/review", webapp.HTML_PAGE)
+        self.assertIn('id="focus-quick-title"', webapp.HTML_PAGE)
+        self.assertIn("function focusQuickAdd(", webapp.HTML_PAGE)
+        self.assertIn("Go to Review", webapp.HTML_PAGE)
+        self.assertIn('data-view="review"', webapp.HTML_PAGE)
         self.assertIn('id="editor-modal"', webapp.HTML_PAGE)
         self.assertNotIn("saveCurrentViewPreset", webapp.HTML_PAGE)
         self.assertNotIn("loadCustomViewPresets", webapp.HTML_PAGE)
@@ -3520,6 +3530,51 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual([None, None, None], data["datasets"][0]["data"])
             self.assertEqual({}, data["counts"])
 
+    def test_review_api_returns_shared_report_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[x] T Done_task done:2026-01-15 id:T001 project:demo elapsed:1h30m\n"
+                "[ ] T Open_task id:T002\n"
+                "[x] H Exercise\n"
+                "[ ] H Exercise\n"
+                '[N] J "Good day" on:2026-01-15 mood:good\n',
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/review?month=2026-01")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual("2026-01-01", data["from"])
+            self.assertEqual("2026-01-31", data["to"])
+            self.assertEqual(1, data["completed_tasks"])
+            self.assertEqual(1, data["open_tasks"])
+            self.assertEqual("Done_task", data["completed"][0]["title"])
+            self.assertEqual("T001", data["completed"][0]["id"])
+            self.assertEqual(50, data["habits"]["Exercise"]["completion_rate"])
+            self.assertEqual([{"date": "2026-01-15", "mood": "good"}], data["mood_trend"])
+            self.assertEqual({"demo": "1h30m"}, data["elapsed_by_project"])
+
+    def test_review_api_rejects_invalid_month_and_filters_project(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[x] T In_project done:2026-01-15 project:alpha\n"
+                "[x] T Other_project done:2026-01-15 project:beta\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            bad = client.get("/api/review?month=not-a-month")
+            filtered = client.get("/api/review?month=2026-01&project=alpha")
+
+            self.assertEqual(400, bad.status_code)
+            self.assertEqual(200, filtered.status_code)
+            self.assertEqual(1, filtered.json()["completed_tasks"])
+            self.assertEqual("In_project", filtered.json()["completed"][0]["title"])
+
     def test_graph_and_message_thread_api_use_ids(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -3761,6 +3816,7 @@ class LifeTxtMcpTests(unittest.TestCase):
             tool_names = {tool["name"] for tool in tools["result"]["tools"]}
             self.assertIn("list_items", tool_names)
             self.assertIn("get_agenda", tool_names)
+            self.assertIn("get_review", tool_names)
             self.assertIn("get_graph", tool_names)
             self.assertEqual("lifetxt://source/0", resources["result"]["resources"][0]["uri"])
             self.assertIn("task_root", read["result"]["contents"][0]["text"])
@@ -3791,6 +3847,30 @@ class LifeTxtMcpTests(unittest.TestCase):
             self.assertEqual(["task_root"], [entry["blocker_id"] for entry in blockers["chain"]])
             self.assertEqual("self", status["records"][0]["person"])
             self.assertTrue(parsed["ok"])
+
+    def test_mcp_get_review_matches_api_report_shape(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[x] T Done_task done:2026-01-15 id:T001 project:demo elapsed:45m\n"
+                "[ ] T Open_task id:T002\n"
+                "[x] H Exercise done:2026-01-15\n",
+                encoding="utf-8",
+            )
+            context = McpContext(paths=[path], writable_path=path)
+
+            report = call_tool("get_review", {"month": "2026-01"}, context)
+
+            self.assertEqual("2026-01-01", report["from"])
+            self.assertEqual("2026-01-31", report["to"])
+            self.assertEqual(1, report["completed_tasks"])
+            self.assertEqual("T001", report["completed"][0]["id"])
+            self.assertEqual({"demo": "45m"}, report["elapsed_by_project"])
+            self.assertEqual([], report["diagnostics"])
+            with self.assertRaises(ValueError):
+                call_tool("get_review", {"month": "nope"}, context)
 
     def test_mcp_write_tools_create_update_done_and_delete(self):
         from lifetxt.mcp import McpContext, call_tool
@@ -5331,6 +5411,50 @@ class LifeTxtReviewCliTests(unittest.TestCase):
             data = json.loads(stdout)
             self.assertIn("projectA", data["elapsed_by_project"])
             self.assertIn("projectB", data["elapsed_by_project"])
+
+
+class ReviewRangeResolutionTests(unittest.TestCase):
+    """Unit coverage for the shared review window resolution used by the
+    CLI review command, GET /api/review, and the MCP get_review tool."""
+
+    def test_week_range_is_monday_to_sunday(self):
+        import datetime
+        from lifetxt.review import resolve_review_range
+
+        wednesday = datetime.date(2026, 7, 8)
+        start, end = resolve_review_range(week=True, today=wednesday)
+        self.assertEqual(datetime.date(2026, 7, 6), start)
+        self.assertEqual(datetime.date(2026, 7, 12), end)
+
+    def test_month_range_covers_whole_month(self):
+        import datetime
+        from lifetxt.review import resolve_review_range
+
+        start, end = resolve_review_range(month="2026-02")
+        self.assertEqual(datetime.date(2026, 2, 1), start)
+        self.assertEqual(datetime.date(2026, 2, 28), end)
+
+    def test_from_to_defaults_fill_week_start_and_today(self):
+        import datetime
+        from lifetxt.review import resolve_review_range
+
+        today = datetime.date(2026, 7, 7)
+        start, end = resolve_review_range(today=today)
+        self.assertEqual(datetime.date(2026, 7, 6), start)
+        self.assertEqual(today, end)
+        start, end = resolve_review_range(from_date="2026-06-01", today=today)
+        self.assertEqual(datetime.date(2026, 6, 1), start)
+        self.assertEqual(today, end)
+
+    def test_invalid_selectors_raise_value_error(self):
+        from lifetxt.review import resolve_review_range
+
+        with self.assertRaises(ValueError):
+            resolve_review_range(month="2026/02")
+        with self.assertRaises(ValueError):
+            resolve_review_range(from_date="junk")
+        with self.assertRaises(ValueError):
+            resolve_review_range(to_date="2026-13-99")
 
 
 class LifeTxtW225Tests(unittest.TestCase):

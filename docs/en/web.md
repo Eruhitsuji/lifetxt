@@ -81,6 +81,7 @@ tools.
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
+| `GET` | `/api/review` | Review report for a date window: completed tasks, habit completion, journal entries, mood trend, and elapsed time |
 | `GET` | `/api/status` | Show latest status / presence records |
 | `GET` | `/api/notifications` | Show due message notifications for a recipient |
 | `GET` | `/api/chart/tasks` | Task count chart data |
@@ -156,7 +157,18 @@ curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/notifications?recipient=self"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
+curl "http://127.0.0.1:8000/api/review?week=true"
+curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
+curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
 ```
+
+`GET /api/review` returns the same report as the CLI `review` command and the
+MCP `get_review` tool: `completed_tasks` / `open_tasks` counts, a `completed`
+list (title, done date, project, id), per-habit completion rates, journal
+entries with excerpts, a `mood_trend` list, and `elapsed_by_project` totals.
+Range selectors follow the CLI precedence: `week=true`, then `month=YYYY-MM`,
+then `from`/`to` (defaulting to the current week start and today). Invalid
+selectors return `400`.
 
 Example message payload:
 
@@ -177,14 +189,20 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and view selection
-- A single-content view bar: Dashboard, Items, Agenda, Focus, Messages,
-  Status, Notifications, Stats, Graph, and Kiosk — exactly one view fills the
-  screen at a time
+- A single-content view bar: Dashboard, Items, Agenda, Focus, Review,
+  Messages, Status, Notifications, Stats, Graph, and Kiosk — exactly one view
+  fills the screen at a time
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
   blocked, recent completions), today's agenda, a needs-attention list, a
   14-day completion chart, and per-project progress
-- A Focus view showing only overdue, due-today, and in-progress work items
-  with one-click done buttons and undo
+- A Focus view showing overdue, due-today, and in-progress work items with
+  one-click done buttons and undo, plus today's timed events, reminders whose
+  `at:`/`on:` falls today, undated "anytime" reminders, and a quick-add input
+  that captures a task with `due:` today without leaving the view
+- A read-only Review view backed by `GET /api/review` with This week / Last
+  week / This month / Last month range switching: completed tasks, habit
+  completion bars, journal entries with mood trend, and elapsed time by
+  project — the browser counterpart of the CLI weekly-review workflow
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
 - Showing due message notifications
@@ -210,8 +228,8 @@ Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
 The layout follows a one-screen-one-content rule: the header view bar picks a
-single full-width page (Items, Dashboard, Agenda, Focus, Messages, Status,
-Notifications, Stats, or Graph), and nothing else competes for space. The
+single full-width page (Items, Dashboard, Agenda, Focus, Review, Messages,
+Status, Notifications, Stats, or Graph), and nothing else competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
 
@@ -235,7 +253,7 @@ Supported parameters:
 
 | Parameter | Meaning |
 |---|---|
-| `view=dashboard\|agenda\|focus\|messages\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
+| `view=dashboard\|agenda\|focus\|review\|messages\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
 | `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
 | `preset=NAME` | Apply URL parameters from config `views.NAME` |

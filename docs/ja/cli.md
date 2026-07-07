@@ -1056,8 +1056,9 @@ python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
 
 主な tool は `list_items`、`get_item`、`check_line`、`parse_item`、
 `create_item`、`update_item`、`mark_done`、`delete_item`、`get_agenda`、
-`get_graph`、`get_blockers`、`list_links`、`list_status`、`list_notifications`、
-および type `M` message 操作です。複数 file を読み込んだ場合、read tool は全 file を走査し、
+`get_review`(`review --format json` / `GET /api/review` と同形の週次・月次
+review report)、`get_graph`、`get_blockers`、`list_links`、`list_status`、
+`list_notifications`、および type `M` message 操作です。複数 file を読み込んだ場合、read tool は全 file を走査し、
 write tool は `--write-file` のみを変更します。`--read-only` を付けると write tool を無効化します。
 
 ## 12. `config`

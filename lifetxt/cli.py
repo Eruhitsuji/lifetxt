@@ -4266,117 +4266,26 @@ def command_cleanup(args):
 
 
 def command_review(args):
-    import calendar as _calendar
-    from .timeutil import parse_elapsed as _parse_elapsed
+    from .review import build_review, resolve_review_range
 
     config = _config(args)
     paths = _normalize_paths(getattr(args, "paths", None) or [], config)
     items, _ = _parse_life_inputs(paths, config)
 
-    today = datetime.date.today()
-
-    if getattr(args, "week", False):
-        start = today - datetime.timedelta(days=today.weekday())
-        end = start + datetime.timedelta(days=6)
-    elif getattr(args, "month", None):
-        try:
-            year_s, month_s = args.month.split("-")
-            year_i, month_i = int(year_s), int(month_s)
-            start = datetime.date(year_i, month_i, 1)
-            last_day = _calendar.monthrange(year_i, month_i)[1]
-            end = datetime.date(year_i, month_i, last_day)
-        except (ValueError, AttributeError):
-            raise ValueError("Invalid --month format. Use YYYY-MM.")
-    else:
-        from_date = getattr(args, "from_date", None)
-        to_date = getattr(args, "to_date", None)
-        start = _parse_date_only(from_date) if from_date else today - datetime.timedelta(days=today.weekday())
-        end = _parse_date_only(to_date) if to_date else today
-
-    project_filter = getattr(args, "project", None)
-    if project_filter:
-        items = [i for i in items if project_filter in [str(v) for v in i.details.get("project", [])]]
-
-    completed_tasks = []
-    open_tasks = []
-    habits = {}
-    journal_entries = []
-    journal_count = 0
-    moods = []
-    elapsed_by_project = {}
-
-    for item in items:
-        if item.kind == "T":
-            if item.status == "[x]":
-                done_dates = [_parse_date_only(str(v)) for v in item.details.get("done", [])]
-                in_range = any(
-                    d and d >= start and d <= end for d in done_dates
-                ) if done_dates else False
-                if in_range:
-                    completed_tasks.append(item)
-            elif item.status in ("[ ]", "[/]", "[>]", "[?]"):
-                open_tasks.append(item)
-
-        elif item.kind == "H":
-            title = item.title
-            if title not in habits:
-                habits[title] = {"done": 0, "open": 0}
-            if item.status == "[x]":
-                habits[title]["done"] += 1
-            elif item.status in ("[ ]", "[/]"):
-                habits[title]["open"] += 1
-
-        elif item.kind == "J":
-            j_date = _latest_item_date(item) or today
-            if j_date >= start and j_date <= end:
-                journal_count += 1
-                body_vals = item.details.get("body", [])
-                excerpt = str(body_vals[0])[:200] if body_vals else ""
-                journal_entries.append((j_date, item.title, excerpt))
-                mood_vals = item.details.get("mood", [])
-                if mood_vals:
-                    moods.append((j_date, str(mood_vals[0])))
-
-        elapsed_vals = item.details.get("elapsed", [])
-        if elapsed_vals:
-            minutes = _parse_elapsed(str(elapsed_vals[0]))
-            if minutes:
-                proj = str(item.details.get("project", ["(no project)"])[0])
-                elapsed_by_project[proj] = elapsed_by_project.get(proj, 0) + minutes
-
-    def _fmt_elapsed(m):
-        if m >= 60:
-            return "%dh%dm" % (m // 60, m % 60)
-        return "%dm" % m
-
-    result = {
-        "range": "%s to %s" % (start.isoformat(), end.isoformat()),
-        "completed_tasks": len(completed_tasks),
-        "open_tasks": len(open_tasks),
-        "habits": {
-            title: {
-                "done": h["done"],
-                "open": h["open"],
-                "completion_rate": (
-                    round(h["done"] / (h["done"] + h["open"]) * 100)
-                    if (h["done"] + h["open"] > 0) else 0
-                ),
-            }
-            for title, h in habits.items()
-        },
-        "journals": journal_count,
-        "journal_entries": [
-            {"date": d.isoformat(), "title": t, "excerpt": e}
-            for d, t, e in sorted(journal_entries)
-        ],
-        "mood_trend": [
-            {"date": d.isoformat(), "mood": m} for d, m in sorted(moods)
-        ],
-        "elapsed_by_project": {
-            proj: _fmt_elapsed(m)
-            for proj, m in sorted(elapsed_by_project.items(), key=lambda x: -x[1])
-        },
-    }
+    start, end = resolve_review_range(
+        week=getattr(args, "week", False),
+        month=getattr(args, "month", None),
+        from_date=getattr(args, "from_date", None),
+        to_date=getattr(args, "to_date", None),
+    )
+    result = build_review(
+        items,
+        start,
+        end,
+        project=getattr(args, "project", None),
+        id_key=id_key_from_config(config),
+    )
+    completed_tasks = result["completed"]
 
     fmt = getattr(args, "format", "text") or "text"
     if fmt == "json":
@@ -4395,8 +4304,8 @@ def command_review(args):
             lines.append("")
             lines.append("### Completed")
             for t in completed_tasks:
-                done_val = str(t.details.get("done", [""])[0]) if t.details.get("done") else ""
-                lines.append("- [x] %s%s" % (t.title, (" (%s)" % done_val) if done_val else ""))
+                done_val = t["done"]
+                lines.append("- [x] %s%s" % (t["title"], (" (%s)" % done_val) if done_val else ""))
         if result["habits"]:
             lines.append("")
             lines.append("## Habits")
@@ -4453,9 +4362,9 @@ def command_review(args):
         if completed_tasks:
             lines.extend(["<h3>Completed</h3>", "<ul>"])
             for task in completed_tasks:
-                done_val = str(task.details.get("done", [""])[0]) if task.details.get("done") else ""
+                done_val = task["done"]
                 suffix = " (%s)" % esc(done_val) if done_val else ""
-                lines.append("<li>%s%s</li>" % (esc(task.title), suffix))
+                lines.append("<li>%s%s</li>" % (esc(task["title"]), suffix))
             lines.append("</ul>")
         if result["habits"]:
             lines.extend(["<h2>Habits</h2>", "<table><thead><tr><th>Habit</th><th>Done</th><th>Total</th><th>Rate</th></tr></thead><tbody>"])
@@ -4502,10 +4411,10 @@ def command_review(args):
 
     if result["journals"]:
         sys.stdout.write("\nJournal entries: %d\n" % result["journals"])
-        for j_date, title, excerpt in sorted(journal_entries):
-            sys.stdout.write("  %s %s\n" % (j_date.isoformat(), title))
-            if excerpt:
-                sys.stdout.write("    %s\n" % excerpt)
+        for entry in result["journal_entries"]:
+            sys.stdout.write("  %s %s\n" % (entry["date"], entry["title"]))
+            if entry["excerpt"]:
+                sys.stdout.write("    %s\n" % entry["excerpt"])
 
     if result["mood_trend"]:
         sys.stdout.write("\nMood trend:\n")

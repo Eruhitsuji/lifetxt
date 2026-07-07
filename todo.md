@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-07 (updated x57)
+Last updated: 2026-07-07 (updated x58)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -100,6 +100,13 @@ Improvements to existing commands that affect daily workflow.
   `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
   `docs/en/cli.md`, `docs/ja/cli.md`, and shell completion scripts in the
   same commit.
+
+- [ ] Verify `notify --email` against real SMTP providers in a safe test
+  account: confirm STARTTLS, authentication failure messages, multiple
+  comma-separated recipients, `--watch` seen-state behavior after successful
+  send, and provider-specific app-password requirements. Automated tests cover
+  dry-run formatting and watcher delivery callbacks, but no network SMTP smoke
+  test is committed.
 
 ---
 
@@ -264,6 +271,11 @@ records. Follow-up work:
   bar can be driven entirely from the browser.
 
 ### Agenda & Notifications (Web UI) — New
+
+- [ ] Add optional richer notification email rendering: HTML multipart email,
+  per-message deep links back to the Web UI (`?line=N` or id-based links),
+  and a config key for subject/body templates. Keep plain-text email as the
+  default for compatibility.
 
 ---
 

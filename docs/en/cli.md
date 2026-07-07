@@ -822,6 +822,8 @@ running with `--watch`.
 
 ```sh
 python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
+python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
 Selection rules:
@@ -845,6 +847,13 @@ Options:
 | `--watch` | Stay running and poll repeatedly |
 | `--interval SECONDS` | Poll interval for `--watch` |
 | `--desktop` | Also show a simple desktop notification when supported |
+| `--email` | Also send due notifications as one plain-text email batch |
+| `--email-to ADDRESS[,ADDRESS...]` | Email recipient list; defaults to `notifications.email.to` |
+| `--email-subject TEXT` | Base email subject; defaults to `notifications.email.subject` |
+| `--smtp-host-env ENVVAR` | Env var with SMTP host; default is `notifications.email.smtp_host_env` or `LIFETXT_SMTP_HOST` |
+| `--smtp-user-env ENVVAR` | Env var with SMTP username; default is `notifications.email.smtp_user_env` or `LIFETXT_SMTP_USER` |
+| `--smtp-pass-env ENVVAR` | Env var with SMTP password; default is `notifications.email.smtp_pass_env` or `LIFETXT_SMTP_PASS` |
+| `--dry-run` | With `--email`, print the email body without connecting to SMTP |
 | `--state-file PATH` | Persist seen notification IDs for `--watch` |
 | `--no-state` | Disable persistent seen-state for `--watch` |
 | `--format text|json|jsonl` | Output format in one-shot mode |
@@ -855,7 +864,12 @@ Examples:
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --recipient self --format json --pretty
 python -m lifetxt notify life.txt --watch --interval 30
+python -m lifetxt notify life.txt --email --email-to me@example.com --dry-run
 ```
+
+Email notification delivery uses SMTP credentials from environment variables,
+not from life.txt content. Configure the env var names under
+`notifications.email.*` when the defaults are not suitable.
 
 ## 9. `agenda`
 
@@ -1226,7 +1240,15 @@ Example config:
     "state_file": ".cache/lifetxt/notifications.json",
     "snooze_default": "10m",
     "desktop": false,
-    "web": true
+    "web": true,
+    "email": {
+      "enabled": false,
+      "to": "",
+      "subject": "lifetxt notifications",
+      "smtp_host_env": "LIFETXT_SMTP_HOST",
+      "smtp_user_env": "LIFETXT_SMTP_USER",
+      "smtp_pass_env": "LIFETXT_SMTP_PASS"
+    }
   },
   "api": {
     "id_key": "id",

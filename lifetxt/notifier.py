@@ -100,6 +100,46 @@ def format_notification_table(records):
     return "\n".join(lines) + "\n"
 
 
+def format_notification_email(records, recipient=None):
+    lines = ["lifetxt notifications", ""]
+    if recipient:
+        lines.append("Recipient: %s" % recipient)
+    lines.append("Count: %d" % len(records))
+    if not records:
+        lines.append("")
+        lines.append("No notifications found.")
+        return "\n".join(lines) + "\n"
+
+    lines.append("")
+    for index, record in enumerate(records, start=1):
+        lines.append("%d. %s" % (index, record.get("title", "")))
+        lines.append("   When: %s" % record.get("when", ""))
+        if record.get("until"):
+            lines.append("   Until: %s" % record.get("until", ""))
+        if record.get("sender"):
+            lines.append("   From: %s" % record.get("sender", ""))
+        recipients = record.get("recipients") or []
+        if recipients:
+            lines.append("   To: %s" % ", ".join(str(value) for value in recipients))
+        if record.get("id"):
+            lines.append("   ID: %s" % record.get("id"))
+        if record.get("source") or record.get("line"):
+            source = record.get("source") or ""
+            line = record.get("line") or ""
+            lines.append("   Source: %s%s" % (source, (":%s" % line) if line else ""))
+        body = str(record.get("body") or "").strip()
+        if body:
+            lines.append("   Body: %s" % body)
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def notification_email_subject(records, base="lifetxt notifications"):
+    count = len(records or [])
+    suffix = "1 due message" if count == 1 else "%d due messages" % count
+    return "%s: %s" % (base or "lifetxt notifications", suffix)
+
+
 def notify_desktop(record):
     title = "life.txt"
     message = "%s\n%s" % (record.get("title", ""), record.get("body", ""))
@@ -118,6 +158,7 @@ def watch_notifications(
     load_records,
     interval_seconds=30,
     desktop=False,
+    deliver=None,
     once=False,
     output=None,
     state_file=None,
@@ -139,6 +180,8 @@ def watch_notifications(
             output.flush()
             if desktop:
                 notify_desktop(record)
+        if emitted and deliver:
+            deliver(emitted)
         if emitted and state_file:
             mark_notifications_seen(state, emitted)
             save_notification_state(state_file, state)

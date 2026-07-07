@@ -76,7 +76,9 @@ from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
 from .timeutil import parse_date_or_datetime
 from .notifier import (
+    format_notification_email,
     format_notification_table,
+    notification_email_subject,
     notification_records,
     records_to_json as notifications_to_json,
     records_to_jsonl as notifications_to_jsonl,
@@ -784,6 +786,39 @@ def build_parser():
         "--desktop",
         action="store_true",
         help="Also show a simple desktop notification when supported.",
+    )
+    notify.add_argument(
+        "--email",
+        action="store_true",
+        help="Also send due notifications as a plain-text email batch.",
+    )
+    notify.add_argument(
+        "--email-to",
+        help="Recipient email address(es), comma-separated. Defaults to notifications.email.to.",
+    )
+    notify.add_argument(
+        "--email-subject",
+        help="Base subject for notification email. Defaults to notifications.email.subject.",
+    )
+    notify.add_argument(
+        "--smtp-host-env",
+        metavar="ENVVAR",
+        help="Environment variable with the SMTP host for --email.",
+    )
+    notify.add_argument(
+        "--smtp-user-env",
+        metavar="ENVVAR",
+        help="Environment variable with the SMTP username for --email.",
+    )
+    notify.add_argument(
+        "--smtp-pass-env",
+        metavar="ENVVAR",
+        help="Environment variable with the SMTP password for --email.",
+    )
+    notify.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="For --email, print the email that would be sent without using SMTP.",
     )
     notify.add_argument(
         "--state-file",
@@ -5655,6 +5690,8 @@ def command_notify(args):
     grace = args.grace or notification_config.get("grace") or "2m"
     interval = args.interval or int(notification_config.get("poll_seconds") or 30)
     desktop = args.desktop or bool(notification_config.get("desktop"))
+    email_config = _notification_email_config(notification_config)
+    email_enabled = bool(args.email or email_config.get("enabled"))
     state_file = None
     if not args.no_state:
         state_file = args.state_file or notification_config.get("state_file")
@@ -5670,15 +5707,33 @@ def command_notify(args):
         )
 
     if args.watch:
+        deliver = None
+        if email_enabled:
+            deliver = lambda records: _send_notification_email_batch(
+                records,
+                recipient=recipient,
+                args=args,
+                email_config=email_config,
+                output=sys.stdout,
+            )
         return watch_notifications(
             load_records,
             interval_seconds=interval,
             desktop=desktop,
+            deliver=deliver,
             once=False,
             state_file=state_file,
         )
 
     records = load_records()
+    if email_enabled:
+        _send_notification_email_batch(
+            records,
+            recipient=recipient,
+            args=args,
+            email_config=email_config,
+            output=sys.stdout,
+        )
     if args.format == "json":
         write_text(None, notifications_to_json(records, pretty=args.pretty) + "\n")
     elif args.format == "jsonl":
@@ -5689,6 +5744,92 @@ def command_notify(args):
     else:
         write_text(None, format_notification_table(records))
     return 0
+
+
+def _notification_email_config(notification_config):
+    raw = notification_config.get("email") if isinstance(notification_config, dict) else None
+    if isinstance(raw, dict):
+        return raw
+    return OrderedDict()
+
+
+def _split_email_addresses(value):
+    if isinstance(value, (list, tuple)):
+        values = []
+        for part in value:
+            values.extend(_split_email_addresses(part))
+        return values
+    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+
+
+def _send_notification_email_batch(records, recipient, args, email_config, output=None):
+    if output is None:
+        output = sys.stdout
+    if not records:
+        output.write("No notification email sent; no notifications found.\n")
+        output.flush()
+        return False
+
+    to_value = getattr(args, "email_to", None) or email_config.get("to")
+    to_addrs = _split_email_addresses(to_value)
+    if not to_addrs:
+        raise ValueError("--email-to or notifications.email.to is required with --email.")
+
+    host_env = (
+        getattr(args, "smtp_host_env", None)
+        or email_config.get("smtp_host_env")
+        or "LIFETXT_SMTP_HOST"
+    )
+    user_env = (
+        getattr(args, "smtp_user_env", None)
+        or email_config.get("smtp_user_env")
+        or "LIFETXT_SMTP_USER"
+    )
+    pass_env = (
+        getattr(args, "smtp_pass_env", None)
+        or email_config.get("smtp_pass_env")
+        or "LIFETXT_SMTP_PASS"
+    )
+    base_subject = (
+        getattr(args, "email_subject", None)
+        or email_config.get("subject")
+        or "lifetxt notifications"
+    )
+    subject = notification_email_subject(records, base=base_subject)
+    message = format_notification_email(records, recipient=recipient)
+
+    if getattr(args, "dry_run", False):
+        output.write(
+            "[dry-run] Would email %d notification(s) to %s via $%s:\n%s\n"
+            % (len(records), ", ".join(to_addrs), host_env, message)
+        )
+        output.flush()
+        return True
+
+    smtp_host = os.environ.get(host_env, "")
+    smtp_user = os.environ.get(user_env, "")
+    smtp_pass = os.environ.get(pass_env, "")
+    if not smtp_host:
+        raise ValueError("Environment variable %s (SMTP host) is not set." % host_env)
+    if not smtp_user or not smtp_pass:
+        raise ValueError(
+            "Environment variables %s and %s (SMTP credentials) must be set." % (user_env, pass_env)
+        )
+
+    import smtplib
+    from email.mime.text import MIMEText
+
+    mime = MIMEText(message, "plain", "utf-8")
+    mime["Subject"] = subject
+    mime["From"] = smtp_user
+    mime["To"] = ", ".join(to_addrs)
+    with smtplib.SMTP(smtp_host, timeout=10) as smtp:
+        smtp.starttls()
+        smtp.login(smtp_user, smtp_pass)
+        smtp.sendmail(smtp_user, to_addrs, mime.as_string())
+    output.write("Sent notification email to %s.\n" % ", ".join(to_addrs))
+    output.flush()
+    return True
 
 
 def command_agenda(args):

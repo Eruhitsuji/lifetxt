@@ -3322,6 +3322,35 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual(1, len(records))
         self.assertEqual("2026-06-06T09:00:30", records[0]["when"])
 
+    def test_notification_email_body_and_subject(self):
+        from lifetxt.notifier import (
+            format_notification_email,
+            notification_email_subject,
+            notification_records,
+        )
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 body:hello\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0),
+        )
+
+        body = format_notification_email(records, recipient="self")
+        self.assertIn("Recipient: self", body)
+        self.assertIn("1. Ping", body)
+        self.assertIn("From: bob", body)
+        self.assertIn("Body: hello", body)
+        self.assertEqual(
+            "lifetxt notifications: 1 due message",
+            notification_email_subject(records),
+        )
+
     def test_watch_notifications_persists_seen_state(self):
         from lifetxt.notifier import notification_records, watch_notifications
 
@@ -3361,6 +3390,31 @@ class LifeTxtNotifyTests(unittest.TestCase):
                 state = json.load(handle)
             self.assertIn(records[0]["notification_id"], state["seen"])
 
+    def test_watch_notifications_delivers_emitted_records(self):
+        from lifetxt.notifier import notification_records, watch_notifications
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        records = notification_records(
+            items,
+            recipient="self",
+            now=datetime(2026, 6, 6, 9, 0),
+        )
+        delivered = []
+
+        watch_notifications(
+            lambda: records,
+            once=True,
+            output=io.StringIO(),
+            deliver=lambda emitted: delivered.extend(emitted),
+        )
+
+        self.assertEqual(["msg_001"], [record["id"] for record in delivered])
+
     def test_notify_cli_json_output(self):
         text = (
             "[ ] M Ping id:msg_001 sender:bob recipient:self "
@@ -3382,6 +3436,50 @@ class LifeTxtNotifyTests(unittest.TestCase):
         data = json.loads(stdout)
         self.assertEqual("msg_001", data[0]["id"])
         self.assertEqual("long_message", data[0]["body"])
+
+    def test_notify_cli_email_dry_run(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00 "
+            "body:hello\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--email",
+            "--email-to",
+            "me@example.com",
+            "--dry-run",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("[dry-run] Would email 1 notification(s)", stdout)
+        self.assertIn("me@example.com", stdout)
+        self.assertIn("1. Ping", stdout)
+        self.assertIn("Body: hello", stdout)
+
+    def test_notify_cli_email_requires_recipient_address(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--email",
+            "--dry-run",
+            input_text=text,
+        )
+
+        self.assertEqual("", stdout)
+        self.assertEqual(1, code)
+        self.assertIn("--email-to", stderr)
 
 
 class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):

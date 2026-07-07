@@ -314,6 +314,10 @@ Notifications view に表示します。上部 toolbar の `Notifications` ま�
 通知許可が blocked の場合、JavaScript から再許可ダイアログを出すことはできません。
 その場合は panel に browser の site settings から通知を許可し直す案内を表示します。
 
+email 配信は browser ではなく CLI watcher が担当します:
+`python -m lifetxt notify life.txt --watch --email --email-to me@example.com`。
+SMTP host/user/password は `notifications.email.*` が指す環境変数から読みます。
+
 ## Graph と Message thread
 
 Graph workspace panel は `/api/graph` を読み、外部ライブラリなしの SVG graph として表示します。

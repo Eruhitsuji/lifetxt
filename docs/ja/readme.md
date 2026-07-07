@@ -253,6 +253,16 @@ VS Code 用の基本的な syntax highlight と snippet は [../../editors/vscod
 
 Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時刻まで通知を抑止できます。
 `notify --watch` は `notifications.state_file` に通知済みIDを保存し、再起動後の重複通知を抑えられます。
+同じ `notify` command で、通知対象を plain text email として送信できます。
+
+```sh
+python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
+```
+
+SMTP 認証情報は `LIFETXT_SMTP_HOST`、`LIFETXT_SMTP_USER`、
+`LIFETXT_SMTP_PASS` などの環境変数から読みます。SMTP password を life.txt 本文に
+保存しないでください。
 
 External JSON config は `--config FILE`、`LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` で利用できます。
 

@@ -370,6 +370,11 @@ If notification permission is blocked, the GUI cannot request it again through
 JavaScript. The notification panel shows a short guide telling the user to open
 the browser site settings for the current URL and allow notifications there.
 
+Email delivery is handled by the CLI watcher rather than the browser:
+`python -m lifetxt notify life.txt --watch --email --email-to me@example.com`.
+SMTP host/user/password values are read from environment variables named by
+`notifications.email.*`.
+
 ## Graph And Threads
 
 The Graph workspace panel reads `/api/graph` and renders a compact SVG reference

@@ -750,6 +750,8 @@ type `M` の通知対象を 1 回表示するか、`--watch` で常駐 polling �
 
 ```sh
 python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
+python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
 選択ルール:
@@ -771,6 +773,13 @@ python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
 | `--watch` | 終了せず繰り返し polling |
 | `--interval SECONDS` | `--watch` の polling 秒数 |
 | `--desktop` | 対応環境では簡易 desktop 通知も表示 |
+| `--email` | 通知対象を plain text email としてまとめて送信 |
+| `--email-to ADDRESS[,ADDRESS...]` | email 宛先。省略時は `notifications.email.to` |
+| `--email-subject TEXT` | email subject のベース。省略時は `notifications.email.subject` |
+| `--smtp-host-env ENVVAR` | SMTP host を格納する環境変数。省略時は `notifications.email.smtp_host_env` または `LIFETXT_SMTP_HOST` |
+| `--smtp-user-env ENVVAR` | SMTP username を格納する環境変数。省略時は `notifications.email.smtp_user_env` または `LIFETXT_SMTP_USER` |
+| `--smtp-pass-env ENVVAR` | SMTP password を格納する環境変数。省略時は `notifications.email.smtp_pass_env` または `LIFETXT_SMTP_PASS` |
+| `--dry-run` | `--email` 時に SMTP 接続せず、送信予定本文を表示 |
 | `--state-file PATH` | `--watch` の通知済み ID を保存する JSON file |
 | `--no-state` | `--watch` で通知済み状態を保存しない |
 | `--format text|json|jsonl` | one-shot mode の出力形式 |
@@ -782,7 +791,12 @@ python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --recipient self --format json --pretty
 python -m lifetxt notify life.txt --watch --interval 30
+python -m lifetxt notify life.txt --email --email-to me@example.com --dry-run
 ```
+
+email 通知は SMTP 認証情報を環境変数から読みます。life.txt 本文や config には
+秘密情報を保存せず、必要に応じて `notifications.email.*` で環境変数名だけを
+変更してください。
 
 ## 9. `agenda`
 

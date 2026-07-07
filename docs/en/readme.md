@@ -224,7 +224,17 @@ watcher. The browser GUI also has an `Enable Notifications` button that polls
 `/api/notifications` and uses browser notifications after permission is granted.
 Message notifications can be acknowledged with `ack:` or snoozed with
 `snooze_until:`. The watcher can persist seen notification IDs with
-`notifications.state_file`.
+`notifications.state_file`. The same `notify` command can send due
+notifications as a plain-text email batch:
+
+```sh
+python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
+```
+
+SMTP credentials are read from environment variables such as
+`LIFETXT_SMTP_HOST`, `LIFETXT_SMTP_USER`, and `LIFETXT_SMTP_PASS`; do not store
+SMTP passwords in life.txt content.
 
 Journal / diary records use type `J`; aliases include `journal`, `diary`,
 `log`, and `entry`. `[N]` is the recommended status. Use `body:` for long text;

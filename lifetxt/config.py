@@ -88,6 +88,19 @@ def config_template():
             ("snooze_default", "10m"),
             ("desktop", False),
             ("web", True),
+            (
+                "email",
+                OrderedDict(
+                    [
+                        ("enabled", False),
+                        ("to", ""),
+                        ("subject", "lifetxt notifications"),
+                        ("smtp_host_env", "LIFETXT_SMTP_HOST"),
+                        ("smtp_user_env", "LIFETXT_SMTP_USER"),
+                        ("smtp_pass_env", "LIFETXT_SMTP_PASS"),
+                    ]
+                ),
+            ),
         ]
     )
     data["api"] = OrderedDict(

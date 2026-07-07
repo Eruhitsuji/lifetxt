@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-07 (updated x55)
+Last updated: 2026-07-07 (updated x56)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -232,6 +232,42 @@ work:
   maps onto `view=` (and `workspace=new` opens the editor modal); emit a
   console warning first, then drop the mapping and the doc row.
 
+### Views: Team, Timeline & Presence (Web UI)
+
+Implemented 2026-07-07: colored presence indicators (state → dot/badge color
+mapping, with the state text always shown so color is never the only
+signal), a redesigned Status view using person cards plus an
+Active-only / All-latest toggle, a Team presence board view combining latest
+status records, per-person open messages, and assignee workload counts, a
+Timeline view (chronological agenda board with a red now line, per-type rail
+nodes, day headers, dimmed past rows, and Today / Next 24h / Week presets),
+and a fullscreen toggle (header ⛶ button, `f` key, command palette).
+`GET /api/status?active=false` was also fixed to actually include ended
+records. Follow-up work:
+
+- [ ] Audit untyped boolean query parameters across all FastAPI routes:
+  with untyped defaults FastAPI 0.83 passes raw query strings through, so
+  `?open_only=false`, `?blocked=false`, and similar are truthy strings and
+  behave as `true`. `/api/status?active=false` is fixed and
+  regression-tested; apply the same string-aware parsing (or typed `bool`
+  parameters) to `/api/items`, `/api/messages`, `/api/agenda`, and the
+  chart routes, with a test per route. (P1 — correctness.)
+
+- [ ] Make presence state colors configurable: a config key
+  `web.presence.states` mapping custom state names onto the built-in color
+  classes (green/red/violet/amber/gray), merged over the default regex
+  rules, so teams with their own vocabulary ("onsite", "wfh") get correct
+  dots without code changes. (P2)
+
+- [ ] Persist the Timeline range in the URL (`range=today|24h|week`) like
+  other view state so wall displays can bookmark
+  `?view=timeline&range=week&refresh=120`, and re-render the now line every
+  minute on auto-refreshing screens instead of only on reload. (P2)
+
+- [ ] Order and pin Team board cards: sort by the config `users` order or a
+  `web.team.pin` list (pinned people first, others alphabetical), and add a
+  per-person click-through from the card to `?view=&assignee=NAME`. (P2)
+
 ### Context Menu & Dark Mode (Web UI) — New
 
 ### Stats & Charts (Web UI) — New
@@ -342,10 +378,11 @@ priority is tagged per item; nothing here blocks the next release by itself.
   text|markdown|slack`, where `slack` reuses the `digest` webhook transport
   and `--url-env` pattern.
 
-- [ ] (P2) Add a per-person workload summary: `who --workload` and
-  `/api/status?workload=true` append open / due-today / overdue / blocked
-  counts per assignee, so the Web Status view can render a small team board
-  without a new endpoint.
+- [ ] (P2) Add a per-person workload summary to the CLI and API: `who
+  --workload` and `/api/status?workload=true` appending open / due-today /
+  overdue / blocked counts per assignee. The Web Team view now computes
+  open/overdue per assignee client-side; a server-side summary would let
+  the CLI, MCP clients, and kiosks reuse the same numbers.
 
 - [ ] (P2) Ship a built-in "mine" preset: `?preset=mine` resolves to
   `assignee:<config user.name>&open_only=true` without requiring a
@@ -595,7 +632,8 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   density toggle, `?theme=` URL parameter, and the print stylesheet.
   The REST table (including `/api/blockers`, `/api/review`, and
   `agenda?blocked=`), parse endpoint, graph panel, kiosk parameters, message
-  thread basics, the Review view, and the Focus quick-add are now documented.
+  thread basics, the Review view, the Focus quick-add, the Team and Timeline
+  views, presence indicators, and the fullscreen toggle are now documented.
 
 - [ ] Document the dependency graph feature end-to-end: explain the
   `links --format mermaid` and `links --format dot` CLI outputs, the
@@ -684,7 +722,11 @@ long-term file management, and sharing. Implement after P1 commands are stable.
   done with undo, the Focus quick-add input (Enter submits, quoted titles
   with spaces, list reloads), the Focus "Today's schedule" and "Anytime
   reminders" groups, the Review view (range preset switching, KPI tiles,
-  habit bars, mood pills, empty states per card), the record editor modal
+  habit bars, mood pills, empty states per card), the Team presence board
+  (dot/badge state colors, message click-through, workload pills), the
+  Timeline view (now-line placement, range presets, all-day rows, day
+  headers), the Status view active-toggle, the fullscreen toggle
+  (fullscreenchange icon swap), the record editor modal
   (open via ＋ New / `n` /
   `?workspace=new`, close on save), legacy `?workspace=` alias mapping,
   density toggle persistence, skeleton-loading rows, contextual empty states,

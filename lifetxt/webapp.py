@@ -784,7 +784,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_status(person=None, active=False):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
-        records = latest_status_records(items, person=person, active_only=active)
+        # Untyped query params arrive as raw strings, so "?active=false" must
+        # not be treated as truthy.
+        active_only = str(active).lower() in ("1", "true", "yes", "on")
+        records = latest_status_records(items, person=person, active_only=active_only)
         return {"count": len(records), "records": records}
 
     @app.get("/api/notifications")
@@ -2840,6 +2843,156 @@ HTML_PAGE = r"""<!doctype html>
     .review-excerpt { font-size: .78rem; color: var(--muted); margin-top: .1rem; overflow-wrap: anywhere; }
     .review-mood-row { flex-wrap: wrap; }
     .review-num { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+    /* ── Presence (Status & Team views) ──────────────────────────── */
+    .presence-dot {
+      width: .72rem;
+      height: .72rem;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+      background: var(--info);
+      box-shadow: 0 0 0 2px var(--panel);
+    }
+    .presence-dot.p-available { background: var(--ok); }
+    .presence-dot.p-busy { background: var(--danger); }
+    .presence-dot.p-away { background: var(--warn); }
+    .presence-dot.p-focus { background: var(--violet); }
+    .presence-dot.p-off { background: transparent; border: 2px solid var(--muted); box-shadow: none; }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+      gap: .8rem;
+    }
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+      gap: .8rem;
+      padding: 1rem;
+    }
+    .person-card {
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--panel);
+      padding: .8rem .95rem;
+      display: grid;
+      gap: .45rem;
+      align-content: start;
+      min-width: 0;
+    }
+    .person-card.presence-ended { opacity: .72; }
+    .person-head { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+    .person-name {
+      font-weight: 750;
+      font-size: 1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .presence-state-badge {
+      margin-left: auto;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: .12rem .5rem;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .presence-state-badge.p-available { background: var(--ok-soft); color: var(--ok); }
+    .presence-state-badge.p-busy { background: var(--danger-soft); color: var(--danger); }
+    .presence-state-badge.p-away { background: var(--warn-soft); color: var(--warn); }
+    .presence-state-badge.p-focus { background: var(--violet-soft); color: var(--violet); }
+    .presence-state-badge.p-unknown { background: var(--info-soft); color: var(--info); }
+    .person-status-title { font-size: .9rem; overflow-wrap: anywhere; }
+    .person-meta { font-size: .76rem; color: var(--muted); display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .person-workload { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .person-msgs { display: grid; gap: .25rem; border-top: 1px dashed var(--line); padding-top: .45rem; }
+    .person-msg {
+      font-size: .8rem;
+      display: flex;
+      gap: .4rem;
+      align-items: baseline;
+      cursor: pointer;
+      border-radius: var(--r-sm);
+      padding: .15rem .3rem;
+      min-width: 0;
+    }
+    .person-msg:hover { background: var(--panel-2); }
+    .person-msg-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* ── Timeline view ───────────────────────────────────────────── */
+    .timeline-body { max-width: 52rem; margin: 0 auto; width: 100%; padding: 0 1rem 1.2rem; }
+    .tl-controls { display: flex; gap: .35rem; padding: .8rem 0 .4rem; flex-wrap: wrap; align-items: center; }
+    .tl-day-head {
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 1rem 0 .35rem;
+      padding-left: 4.4rem;
+    }
+    .tl-row { display: flex; gap: .7rem; align-items: stretch; min-width: 0; }
+    .tl-time {
+      flex: 0 0 3.2rem;
+      text-align: right;
+      font-size: .78rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      padding-top: .55rem;
+      white-space: nowrap;
+    }
+    .tl-rail { flex: 0 0 .9rem; position: relative; display: flex; justify-content: center; }
+    .tl-rail::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); }
+    .tl-node {
+      position: relative;
+      z-index: 1;
+      width: .8rem;
+      height: .8rem;
+      margin-top: .62rem;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--panel-2);
+    }
+    .tl-node.t-T { background: #4092d2; }
+    .tl-node.t-E { background: #be5cd6; }
+    .tl-node.t-D { background: #e05a5a; }
+    .tl-node.t-R { background: #e0a03c; }
+    .tl-node.t-H { background: #46c882; }
+    .tl-node.t-N { background: #96a09b; }
+    .tl-node.t-S { background: #6482e6; }
+    .tl-node.t-M { background: #dc8246; }
+    .tl-node.t-J { background: #c8c850; }
+    .tl-card {
+      flex: 1;
+      min-width: 0;
+      margin: .18rem 0;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--panel);
+      padding: .5rem .7rem;
+      cursor: pointer;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .tl-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+    .tl-card.tl-static { cursor: default; }
+    .tl-card-title { font-weight: 650; overflow-wrap: anywhere; }
+    .tl-card-meta { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-top: .15rem; font-size: .76rem; color: var(--muted); }
+    .tl-past .tl-card { opacity: .78; }
+    .tl-now { display: flex; align-items: center; gap: .5rem; margin: .3rem 0; }
+    .tl-now-label { flex: 0 0 3.2rem; text-align: right; font-size: .72rem; font-weight: 800; color: var(--danger); }
+    .tl-now-line { flex: 1; height: 2px; background: var(--danger); border-radius: 1px; position: relative; }
+    .tl-now-line::before {
+      content: "";
+      position: absolute;
+      left: -.1rem;
+      top: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
     /* ── Record editor modal ─────────────────────────────────────── */
     .editor-modal { max-width: 560px; }
     .editor-modal-head {
@@ -3305,6 +3458,7 @@ HTML_PAGE = r"""<!doctype html>
       <button id="new-item-btn" data-workspace="new" onclick="newItem()" title="Create a new record (n)">＋ New</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
       <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
+      <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)">⛶</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Open notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
       <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)">⌘</button>
@@ -3317,9 +3471,11 @@ HTML_PAGE = r"""<!doctype html>
       <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
       <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
       <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
+      <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
       <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
       <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
       <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
+      <button type="button" class="workspace-tab" data-view="team" onclick="switchWorkspace('team')">🟢 Team</button>
       <button type="button" class="workspace-tab" data-view="status" onclick="switchWorkspace('status')">👥 Status</button>
       <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
       <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
@@ -3558,9 +3714,34 @@ HTML_PAGE = r"""<!doctype html>
       <section class="status-section page" data-page="status">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">👥</span>Status</h2>
+          <button id="status-active-btn" class="secondary" style="font-size:.72rem;padding:.18rem .5rem" onclick="toggleStatusActive()" title="Toggle between active-only and latest record for everyone">● Active only</button>
+          <button class="secondary" onclick="loadStatus()" title="Refresh status">↺</button>
         </div>
         <div class="section-body">
           <div id="status" class="stack"></div>
+        </div>
+      </section>
+      <section class="team-section page" data-page="team">
+        <div class="section-head">
+          <h2><span class="h2-icon" aria-hidden="true">🟢</span>Team</h2>
+          <button class="secondary" onclick="loadTeam()" title="Refresh team board">↺</button>
+        </div>
+        <div class="section-body">
+          <div id="team-board" class="team-grid"><div class="empty">Loading…</div></div>
+        </div>
+      </section>
+      <section class="timeline-section page" data-page="timeline">
+        <div class="section-head">
+          <h2><span class="h2-icon" aria-hidden="true">🕒</span>Timeline<span id="tl-range-label" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+          <button class="secondary" onclick="loadTimeline()" title="Refresh timeline">↺</button>
+        </div>
+        <div class="section-body timeline-body">
+          <div class="tl-controls" role="group" aria-label="Timeline range">
+            <button type="button" class="review-range-btn active" data-range="today" onclick="setTimelineRange('today')">Today</button>
+            <button type="button" class="review-range-btn" data-range="24h" onclick="setTimelineRange('24h')">Next 24h</button>
+            <button type="button" class="review-range-btn" data-range="week" onclick="setTimelineRange('week')">Week</button>
+          </div>
+          <div id="timeline"><div class="empty">Loading…</div></div>
         </div>
       </section>
       <section class="notifications-section page" data-page="notifications">
@@ -3682,6 +3863,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>r</td><td>Refresh current view</td></tr>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
+        <tr><td>f</td><td>Toggle fullscreen</td></tr>
         <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
         <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
         <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
@@ -3833,11 +4015,12 @@ HTML_PAGE = r"""<!doctype html>
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "agenda", "focus", "review", "messages", "status", "notifications", "stats", "graph"];
+    const PAGE_VIEWS = ["dashboard", "agenda", "timeline", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
-      "dashboard": "dashboard", "agenda": "agenda", "focus": "focus",
-      "review": "review", "status": "status", "notifications": "notifications",
+      "dashboard": "dashboard", "agenda": "agenda", "timeline": "timeline",
+      "focus": "focus", "review": "review", "team": "team",
+      "status": "status", "notifications": "notifications",
       "stats": "stats", "graph": "graph",
     };
     function switchWorkspace(view, historyMode = "push") {
@@ -4649,21 +4832,246 @@ HTML_PAGE = r"""<!doctype html>
       }
       updateAgendaOverdueBadge(data.records);
     }
+    // ── Presence rendering (Status & Team views) ───────────────────
+    const PRESENCE_RULES = [
+      [/^(available|free|online|in|open|active|here|present)$/, "p-available"],
+      [/^(busy|meeting|call|working|occupied|class|lecture)$/, "p-busy"],
+      [/^(focus|dnd|do[-_ ]?not[-_ ]?disturb|deep[-_ ]?work)$/, "p-focus"],
+      [/^(away|afk|lunch|break|brb|idle|errand)$/, "p-away"],
+      [/^(out|off|offline|gone|vacation|holiday|sick|absent|left)$/, "p-off"],
+    ];
+    function presenceClass(state, active) {
+      if (active === false) return "p-off";
+      const s = String(state || "").toLowerCase().trim();
+      for (const [re, cls] of PRESENCE_RULES) if (re.test(s)) return cls;
+      return "p-unknown";
+    }
+    function presenceDot(record) {
+      const cls = presenceClass(record.state, record.active);
+      const label = record.active === false ? "ended" : (record.state || "unknown");
+      return `<span class="presence-dot ${cls}" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></span>`;
+    }
+    function presenceCard(record, extraHtml = "") {
+      const cls = presenceClass(record.state, record.active);
+      const started = record.from ? relativeTime(record.from) : "";
+      const stateLabel = record.active === false
+        ? (record.state ? `${record.state} · ended` : "ended")
+        : (record.state || "—");
+      return `<div class="person-card${record.active === false ? " presence-ended" : ""}">` +
+        `<div class="person-head">${presenceDot(record)}` +
+        `<span class="person-name">${escapeHtml(record.person)}</span>` +
+        `<span class="presence-state-badge ${cls}">${escapeHtml(stateLabel)}</span></div>` +
+        (record.title ? `<div class="person-status-title">${escapeHtml(record.title)}</div>` : "") +
+        `<div class="person-meta">` +
+        (record.from ? `<span title="${escapeHtml(record.from)}">started ${escapeHtml(started || record.from)}</span>` : "") +
+        (record.to ? `<span title="${escapeHtml(record.to)}">until ${escapeHtml(record.to.replace("T", " "))}</span>` : "") +
+        (record.service ? `<span class="pill">${escapeHtml(record.service)}</span>` : "") +
+        `</div>` + extraHtml + `</div>`;
+    }
+    function toggleStatusActive() {
+      const params = query();
+      const activeOnly = firstParam(params, ["active"], "true") !== "false";
+      params.set("active", activeOnly ? "false" : "true");
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadStatus();
+    }
     async function loadStatus() {
       const params = query();
       const statusParams = new URLSearchParams();
-      statusParams.set("active", firstParam(params, ["active"], "true"));
+      const activeOnly = firstParam(params, ["active"], "true") !== "false";
+      statusParams.set("active", activeOnly ? "true" : "false");
       if (params.has("person")) statusParams.set("person", params.get("person"));
+      const btn = document.getElementById("status-active-btn");
+      if (btn) btn.textContent = activeOnly ? "● Active only" : "◌ All latest";
       const data = await api(`/api/status?${statusParams}`);
       const node = document.getElementById("status");
-      node.innerHTML = data.records.length ? "" : `<div class="empty">No active status.</div>`;
-      for (const record of data.records) {
-        node.insertAdjacentHTML(
-          "beforeend",
-          `<div><span class="pill">${escapeHtml(record.person)}</span> ${escapeHtml(record.state)}<div class="meta">${escapeHtml(record.title)}</div></div>`
-        );
+      if (!data.records.length) {
+        node.innerHTML = `<div class="empty">No ${activeOnly ? "active " : ""}status records.` +
+          (activeOnly ? ` <a href="#" class="drawer-link" onclick="event.preventDefault();toggleStatusActive()">Show latest for everyone</a>` : "") +
+          `</div>`;
+        return;
       }
+      node.innerHTML = `<div class="status-grid">` + data.records.map(r => presenceCard(r)).join("") + `</div>`;
     }
+
+    // ── Team board (presence + messages + workload) ────────────────
+    async function loadTeam() {
+      const board = document.getElementById("team-board");
+      if (!board) return;
+      let statusData = {records: []}, msgs = [], openItems = [];
+      try {
+        [statusData, msgs, openItems] = await Promise.all([
+          api("/api/status?active=false"),
+          api("/api/messages?open_only=true&sort=time&order=desc").then(d => d.items || []).catch(() => []),
+          api("/api/items?open_only=true").then(d => d.items || []).catch(() => []),
+        ]);
+      } catch(e) {
+        board.innerHTML = `<div class="diagnostic">Team board error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const records = statusData.records || [];
+      if (!records.length) {
+        board.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🟢</div>` +
+          `<div class="empty-title">No presence records yet</div>` +
+          `<div class="empty-hint">Add a status record like<br><code>[/] S Working from:2026-07-07T09:00 state:busy person:alice</code><br>to put people on the board.</div></div>`;
+        return;
+      }
+      const msgsFor = (person) => msgs.filter(m =>
+        (m?.details?.recipient || []).map(String).includes(person)).slice(0, 3);
+      const workloadFor = (person) => {
+        const mine = openItems.filter(i => (i?.details?.assignee || []).map(String).includes(person));
+        return {open: mine.length, overdue: mine.filter(i => itemDueSoonClass(i) === "overdue").length};
+      };
+      board.innerHTML = records.map(record => {
+        const w = workloadFor(record.person);
+        const personMsgs = msgsFor(record.person);
+        let extra = "";
+        if (w.open || w.overdue) {
+          extra += `<div class="person-workload"><span class="pill">○ ${w.open} open</span>` +
+            (w.overdue ? `<span class="pill" style="color:var(--danger)">⚠ ${w.overdue} overdue</span>` : "") +
+            `</div>`;
+        }
+        if (personMsgs.length) {
+          extra += `<div class="person-msgs">` + personMsgs.map(m =>
+            `<div class="person-msg" onclick="openItemByLine(${Number(m.line)})" title="${escapeHtml(m.title)}">` +
+            `<span aria-hidden="true">💬</span>` +
+            `<span class="person-msg-title">${escapeHtml(m.title)}</span>` +
+            `<span class="review-num" style="margin-left:auto">${escapeHtml(String(m?.details?.sender?.[0] || ""))}</span>` +
+            `</div>`).join("") + `</div>`;
+        }
+        return presenceCard(record, extra);
+      }).join("");
+    }
+
+    // ── Timeline view (chronological board with a now line) ────────
+    let timelineRange = "today";
+    function setTimelineRange(range) {
+      timelineRange = range;
+      document.querySelectorAll(".timeline-section .tl-controls .review-range-btn").forEach(btn =>
+        btn.classList.toggle("active", btn.dataset.range === range));
+      loadTimeline();
+    }
+    function _tlIso(d) {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+    function _tlNowLine() {
+      const now = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      return `<div class="tl-now" aria-label="Current time"><span class="tl-now-label">${p(now.getHours())}:${p(now.getMinutes())}</span><span class="tl-now-line"></span></div>`;
+    }
+    function _tlRow(record, nowIso) {
+      const when = String(record.when || "");
+      const timed = when.length > 10;
+      const time = timed ? when.slice(11, 16) : "all-day";
+      const past = timed ? when < nowIso : when.slice(0, 10) < nowIso.slice(0, 10);
+      const type = record.type || "N";
+      const blockedBadge = record.blocked
+        ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
+        : "";
+      const occ = record.occurrence_start || record.repeat_rule
+        ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
+        : "";
+      const proj = record.details?.project?.[0]
+        ? `<span class="pill">${escapeHtml(String(record.details.project[0]))}</span>` : "";
+      const clickable = Number.isInteger(record.line);
+      return `<div class="tl-row${past ? " tl-past" : ""}">` +
+        `<div class="tl-time">${escapeHtml(time)}</div>` +
+        `<div class="tl-rail"><span class="tl-node t-${escapeHtml(type)}"></span></div>` +
+        `<div class="tl-card${clickable ? "" : " tl-static"}"${clickable ? ` onclick="openItemByLine(${record.line})"` : ""}>` +
+        `<div class="tl-card-title">${escapeHtml(record.title)}</div>` +
+        `<div class="tl-card-meta">` +
+        `<span class="type-badge type-${escapeHtml(type)}" style="font-size:.66rem;padding:.05rem .35rem;min-height:auto">${escapeHtml(type)}</span>` +
+        (record.status ? `<span>${escapeHtml(record.status)}</span>` : "") +
+        `${proj}${blockedBadge}${occ}</div></div></div>`;
+    }
+    async function loadTimeline() {
+      const node = document.getElementById("timeline");
+      if (!node) return;
+      const now = new Date();
+      const nowIso = _tlIso(now);
+      const today = _fmtDate(now);
+      let from, to, label;
+      if (timelineRange === "24h") {
+        from = nowIso;
+        to = _tlIso(new Date(now.getTime() + 24 * 3600 * 1000));
+        label = "next 24 hours";
+      } else if (timelineRange === "week") {
+        const end = new Date(now); end.setDate(end.getDate() + 6);
+        from = today;
+        to = _fmtDate(end);
+        label = `${today} to ${_fmtDate(end)}`;
+      } else {
+        from = today;
+        to = today;
+        label = now.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      }
+      const rangeEl = document.getElementById("tl-range-label");
+      if (rangeEl) rangeEl.textContent = label;
+      let data;
+      try {
+        data = await api(`/api/agenda?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      } catch(e) {
+        node.innerHTML = `<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const records = (data.records || []).slice().sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
+      if (!records.length) {
+        node.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🕒</div>` +
+          `<div class="empty-title">Nothing on the timeline</div>` +
+          `<div class="empty-hint">No dated records in this range. Items appear here when they carry due:, from:/to:, at:, or on: values.</div></div>`;
+        return;
+      }
+      const multiDay = timelineRange !== "today";
+      const dayLabel = (d) => {
+        const parsed = new Date(d + "T00:00");
+        return isNaN(parsed) ? d : parsed.toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"});
+      };
+      let html = "";
+      let lastDay = "";
+      let nowInserted = false;
+      for (const record of records) {
+        const when = String(record.when || "");
+        const day = when.slice(0, 10);
+        const timed = when.length > 10;
+        if (multiDay && day !== lastDay) {
+          if (!nowInserted && lastDay === today) { html += _tlNowLine(); nowInserted = true; }
+          html += `<div class="tl-day-head">${escapeHtml(dayLabel(day))}${day === today ? " · Today" : ""}</div>`;
+          lastDay = day;
+        }
+        if (!nowInserted && day === today && timed && when > nowIso) {
+          html += _tlNowLine();
+          nowInserted = true;
+        }
+        html += _tlRow(record, nowIso);
+        if (!multiDay) lastDay = day;
+      }
+      if (!nowInserted && lastDay === today) html += _tlNowLine();
+      node.innerHTML = html;
+    }
+
+    // ── Fullscreen ─────────────────────────────────────────────────
+    function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.();
+        return;
+      }
+      const target = document.documentElement;
+      if (!target.requestFullscreen) {
+        showToast("Fullscreen is not available in this browser.", "error");
+        return;
+      }
+      target.requestFullscreen().catch(() => showToast("Fullscreen was blocked by the browser.", "error"));
+    }
+    document.addEventListener("fullscreenchange", () => {
+      const active = !!document.fullscreenElement;
+      document.body.classList.toggle("is-fullscreen", active);
+      const btn = document.getElementById("fullscreen-btn");
+      if (btn) {
+        btn.textContent = active ? "⤢" : "⛶";
+        btn.title = active ? "Exit fullscreen (f)" : "Toggle fullscreen (f)";
+      }
+    });
     async function loadConfig() {
       appConfig = await api("/api/config");
     }
@@ -4841,7 +5249,9 @@ HTML_PAGE = r"""<!doctype html>
       const tasks = [loadNotifications()];
       if (VIEW_PAGE[v] === "items" || v === "") tasks.push(loadItems());
       if (v === "agenda") tasks.push(loadAgenda());
+      if (v === "timeline") tasks.push(loadTimeline());
       if (v === "status") tasks.push(loadStatus());
+      if (v === "team") tasks.push(loadTeam());
       if (v === "dashboard") tasks.push(loadDashboard());
       if (v === "focus") tasks.push(loadFocus());
       if (v === "review") tasks.push(loadReview());
@@ -4935,6 +5345,7 @@ HTML_PAGE = r"""<!doctype html>
       if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
       if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
+      if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); return; }
       if (e.key === "g" || e.key === "G") { e.preventDefault(); jumpToLine(); return; }
       if (e.key === "K") { e.preventDefault(); toggleKioskMode(); return; }
     });
@@ -4986,10 +5397,13 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Go to Dashboard", run: () => switchWorkspace("dashboard")},
       {label: "Go to Items", run: () => switchWorkspace("")},
       {label: "Go to Agenda", run: () => switchWorkspace("agenda")},
+      {label: "Go to Timeline", run: () => switchWorkspace("timeline")},
       {label: "Go to Focus", run: () => switchWorkspace("focus")},
       {label: "Go to Review", run: () => switchWorkspace("review")},
       {label: "Go to Messages", run: () => switchWorkspace("messages")},
+      {label: "Go to Team", run: () => switchWorkspace("team")},
       {label: "Go to Status", run: () => switchWorkspace("status")},
+      {label: "Toggle fullscreen", run: () => toggleFullscreen()},
       {label: "Go to Notifications", run: () => switchWorkspace("notifications")},
       {label: "Go to Stats", run: () => switchWorkspace("stats")},
       {label: "Go to Graph", run: () => switchWorkspace("graph")},

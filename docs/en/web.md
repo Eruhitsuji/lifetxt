@@ -189,9 +189,9 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and view selection
-- A single-content view bar: Dashboard, Items, Agenda, Focus, Review,
-  Messages, Status, Notifications, Stats, Graph, and Kiosk — exactly one view
-  fills the screen at a time
+- A single-content view bar: Dashboard, Items, Agenda, Timeline, Focus,
+  Review, Messages, Team, Status, Notifications, Stats, Graph, and Kiosk —
+  exactly one view fills the screen at a time
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
   blocked, recent completions), today's agenda, a needs-attention list, a
   14-day completion chart, and per-project progress
@@ -203,6 +203,22 @@ The browser GUI supports:
   week / This month / Last month range switching: completed tasks, habit
   completion bars, journal entries with mood trend, and elapsed time by
   project — the browser counterpart of the CLI weekly-review workflow
+- A Timeline view: a chronological board of agenda records with a red "now"
+  line, per-type colored rail nodes, hour labels, all-day rows, day headers,
+  dimmed past records, and Today / Next 24h / Week range presets; cards open
+  the record detail modal
+- A Team view: a presence board combining latest status records (colored
+  presence dot and state badge per person), open messages addressed to each
+  person, and an open/overdue workload summary per assignee — designed for
+  wall displays with `?view=team&refresh=60` and the fullscreen toggle
+- Colored presence indicators on the Status and Team views: state values map
+  to a dot and badge color (available/free/online → green, busy/meeting →
+  red, focus/dnd → violet, away/lunch → amber, out/offline or ended → gray
+  outline; anything else → blue), with the state text always shown so color
+  is never the only signal
+- A fullscreen toggle (header ⛶ button, `f` key, or command palette) using
+  the browser Fullscreen API — pairs with kiosk/display mode for wall
+  screens
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
 - Showing due message notifications
@@ -228,8 +244,9 @@ Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
 The layout follows a one-screen-one-content rule: the header view bar picks a
-single full-width page (Items, Dashboard, Agenda, Focus, Review, Messages,
-Status, Notifications, Stats, or Graph), and nothing else competes for space. The
+single full-width page (Items, Dashboard, Agenda, Timeline, Focus, Review,
+Messages, Team, Status, Notifications, Stats, or Graph), and nothing else
+competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
 
@@ -253,7 +270,7 @@ Supported parameters:
 
 | Parameter | Meaning |
 |---|---|
-| `view=dashboard\|agenda\|focus\|review\|messages\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
+| `view=dashboard\|agenda\|timeline\|focus\|review\|messages\|team\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
 | `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
 | `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
 | `preset=NAME` | Apply URL parameters from config `views.NAME` |

@@ -403,6 +403,24 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn("function focusQuickAdd(", webapp.HTML_PAGE)
         self.assertIn("Go to Review", webapp.HTML_PAGE)
         self.assertIn('data-view="review"', webapp.HTML_PAGE)
+        self.assertIn('class="team-section page"', webapp.HTML_PAGE)
+        self.assertIn('class="timeline-section page"', webapp.HTML_PAGE)
+        self.assertIn('data-view="team"', webapp.HTML_PAGE)
+        self.assertIn('data-view="timeline"', webapp.HTML_PAGE)
+        self.assertIn("function loadTeam(", webapp.HTML_PAGE)
+        self.assertIn("function loadTimeline(", webapp.HTML_PAGE)
+        self.assertIn("function setTimelineRange(", webapp.HTML_PAGE)
+        self.assertIn("function presenceCard(", webapp.HTML_PAGE)
+        self.assertIn("function presenceClass(", webapp.HTML_PAGE)
+        self.assertIn("presence-dot", webapp.HTML_PAGE)
+        self.assertIn("function toggleStatusActive(", webapp.HTML_PAGE)
+        self.assertIn('id="status-active-btn"', webapp.HTML_PAGE)
+        self.assertIn('id="fullscreen-btn"', webapp.HTML_PAGE)
+        self.assertIn("function toggleFullscreen(", webapp.HTML_PAGE)
+        self.assertIn("fullscreenchange", webapp.HTML_PAGE)
+        self.assertIn("Go to Team", webapp.HTML_PAGE)
+        self.assertIn("Go to Timeline", webapp.HTML_PAGE)
+        self.assertIn("tl-now-line", webapp.HTML_PAGE)
         self.assertIn('id="editor-modal"', webapp.HTML_PAGE)
         self.assertNotIn("saveCurrentViewPreset", webapp.HTML_PAGE)
         self.assertNotIn("loadCustomViewPresets", webapp.HTML_PAGE)
@@ -3529,6 +3547,31 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(["2026-07-01", "2026-07-02", "2026-07-03"], data["labels"])
             self.assertEqual([None, None, None], data["datasets"][0]["data"])
             self.assertEqual({}, data["counts"])
+
+    def test_status_api_active_false_includes_ended_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[/] S Working from:2026-07-07T09:00 state:busy person:alice\n"
+                "[/] S Lecture from:2026-07-07T10:00 to:2026-07-07T12:00 state:away person:bob\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            all_latest = client.get("/api/status?active=false")
+            active_only = client.get("/api/status?active=true")
+            default = client.get("/api/status")
+
+            self.assertEqual(200, all_latest.status_code)
+            self.assertEqual(
+                [("alice", True), ("bob", False)],
+                [(r["person"], r["active"]) for r in all_latest.json()["records"]],
+            )
+            self.assertEqual(
+                ["alice"],
+                [r["person"] for r in active_only.json()["records"]],
+            )
+            self.assertEqual(2, default.json()["count"])
 
     def test_review_api_returns_shared_report_shape(self):
         with tempfile.TemporaryDirectory() as temp_dir:

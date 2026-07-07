@@ -160,9 +160,9 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、view 指定
-- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Focus、Review、
-  Messages、Status、Notifications、Stats、Graph、Kiosk — 常に 1 つの view
-  だけを全画面表示
+- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Timeline、Focus、
+  Review、Messages、Team、Status、Notifications、Stats、Graph、Kiosk —
+  常に 1 つの view だけを全画面表示
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
   blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
   project 別進捗
@@ -174,6 +174,21 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   先月を切り替えて、完了 task 一覧、habit 達成率バー、mood 推移付き journal、
   project 別 elapsed を 1 画面で振り返り — CLI の weekly-review workflow の
   ブラウザ版
+- Timeline view: agenda record を時系列に並べたボード。赤い「now」ライン、
+  type 別の色付きレールノード、時刻ラベル、all-day 行、日付ヘッダー、過去
+  record の減光、Today / Next 24h / Week の範囲プリセットに対応し、card
+  クリックで record detail modal を開く
+- Team view: 在席ボード。人ごとの最新 status record(色付き presence dot と
+  state badge)、その人宛ての open message、assignee としての open/overdue
+  件数を 1 枚の card に集約 — `?view=team&refresh=60` と fullscreen の
+  組み合わせで壁掛けディスプレイに向く
+- Status / Team view の色付き在席インジケーター: state 値を dot と badge の
+  色に対応付け(available/free/online → 緑、busy/meeting → 赤、focus/dnd →
+  紫、away/lunch → 黄、out/offline や終了済み → グレー枠、その他 → 青)。
+  state のテキストも常に表示するため、色だけに依存しない
+- fullscreen 切り替え(header の ⛶ ボタン、`f` キー、command palette):
+  ブラウザの Fullscreen API を使用し、kiosk / display mode と組み合わせて
+  常時表示画面に使える
 - blocked filter 付きの agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
@@ -195,9 +210,9 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 表示します。
 
 layout は「1画面1コンテンツ」を基本とします。header の view bar で選んだ
-1 つの page(Items、Dashboard、Agenda、Focus、Review、Messages、Status、
-Notifications、Stats、Graph)だけが全幅で表示され、他のコンテンツと画面を
-奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
+1 つの page(Items、Dashboard、Agenda、Timeline、Focus、Review、Messages、
+Team、Status、Notifications、Stats、Graph)だけが全幅で表示され、他の
+コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
 
 ## URL parameter
@@ -220,7 +235,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 
 | Parameter | 意味 |
 |---|---|
-| `view=dashboard\|agenda\|focus\|review\|messages\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
+| `view=dashboard\|agenda\|timeline\|focus\|review\|messages\|team\|status\|notifications\|stats\|graph` | 全画面 view を開く。`view=messages` は type `M` を default filter にする |
 | `mode=display` または `view=display` | 常時表示mode。編集UIを隠し、自動更新を有効化 |
 | `mode=kiosk` または `view=kiosk` | 常時表示向け kiosk board。auto-scroll と card grid を使う |
 | `preset=NAME` | config `views.NAME` のURL parameterを適用 |
@@ -390,5 +405,5 @@ query parameter:
 | Parameter | 意味 |
 |---|---|
 | `id` | 指定 ID に接続する link だけを表示 |
-| `direction=incoming|outgoing|both` | `id` 指定時の方向 |
+| `direction=incoming\|outgoing\|both` | `id` 指定時の方向 |
 | `limit` | 最大件数 |

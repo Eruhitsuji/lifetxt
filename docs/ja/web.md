@@ -165,15 +165,15 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   常に 1 つの view だけを全画面表示
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
   blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
-  project 別進捗
+  project 別進捗。`web.dashboard.cards` と `web.dashboard.limits` で
+  card の表示/非表示、順序、件数上限を設定可能
 - Focus view: overdue・今日期限・進行中の作業 item をワンクリック done
   (undo 付き)で処理。今日の timed event、`at:`/`on:` が今日の reminder、
   日付なしの「anytime」reminder も表示し、quick-add 入力から `due:` 今日の
   task を view を離れずに追加可能
-- Review view(read-only): `GET /api/review` を使い、今週 / 先週 / 今月 /
-  先月を切り替えて、完了 task 一覧、habit 達成率バー、mood 推移付き journal、
-  project 別 elapsed を 1 画面で振り返り — CLI の weekly-review workflow の
-  ブラウザ版
+- Review view: `GET /api/review` を使い、今週 / 先週 / 今月 / 先月 preset、
+  project filter、custom from/to date、`id:` がある完了 task のクリック詳細表示、
+  Markdown copy に対応。CLI の weekly-review workflow をブラウザで扱える
 - Timeline view: agenda record を時系列に並べたボード。赤い「now」ライン、
   type 別の色付きレールノード、時刻ラベル、all-day 行、日付ヘッダー、過去
   record の減光、Today / Next 24h / Week の範囲プリセットに対応し、card
@@ -195,7 +195,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - repeat から生成された agenda occurrence の badge 表示
 - record detail modal 内の Message thread 表示
 - record detail modal からの Message thread 返信
-- Help / Git / record detail / record editor の keyboard-trapped modal
+- Help / Git / Undo history / record detail / record editor の keyboard-trapped modal
 - fuzzy command palette(action、view 切替、最近開いた record)
 - `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
@@ -204,6 +204,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - raw life.txt 行を server parser で解析して preview してから editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除
+- browser session 内の直近5件の undo history。command palette の
+  `Show undo history` から表示
 
 編集可能なのは書き込み先ファイル由来の item です。
 `.generated/google_calendar.life.txt` など生成ファイル由来の item は read-only として
@@ -214,6 +216,36 @@ layout は「1画面1コンテンツ」を基本とします。header の view b
 Team、Status、Notifications、Stats、Graph)だけが全幅で表示され、他の
 コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
+
+## Web UI configuration
+
+`/api/config` は browser に公開してよい `web.*` 設定だけを返します。GUI は
+起動時に以下のような値を読み取り、見た目と Dashboard を調整します。
+
+```json
+{
+  "web": {
+    "theme": {
+      "accent": "#0e7a65",
+      "accent_hover": "#0a6252",
+      "accent_soft": "#e0f0ea",
+      "accent_ink": "#ffffff"
+    },
+    "dashboard": {
+      "cards": ["today", "needs_attention", "completions", "projects"],
+      "limits": {"today": 7, "needs_attention": 7, "projects": 7}
+    }
+  }
+}
+```
+
+theme token 名は CSS 変数名から先頭の `--` を除いたものです。例:
+`bg`、`panel`、`panel_2`、`soft`、`ink`、`muted`、`line`、
+`line_strong`、`accent`、`accent_hover`、`accent_soft`、`accent_ink`、
+`danger`、`warn`、`ok`、`info`、`violet`、`shadow_1`、`shadow_2`、
+`shadow_3`、`r_sm`、`r_md`、`r_lg` と各 semantic `*_soft` token。
+flat な config generator 向けに `"theme.accent"` や `"dashboard.cards"` の
+ような dotted key も利用できます。
 
 ## URL parameter
 

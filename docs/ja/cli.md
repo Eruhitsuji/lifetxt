@@ -1035,11 +1035,11 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
 詳細は [web.md](./web.md) を参照してください。
 
-Browser GUI には item view と tool panel をまとめた header Workspace、
-中央の record detail modal、`Save View` による browser-local custom view、
-config 由来の read-only view preset、`Ctrl+K` fuzzy Command Palette、
-recently opened records、browser notifications、Graph、display mode、kiosk mode
-があります。複数 file を読み込む場合は `path ...` と `--write-file FILE` を併用すると、
+Browser GUI には header Workspace、中央の record modal、URL/config 由来の
+view preset、Review filter と Markdown copy、設定可能な Dashboard card と
+theme token、`Ctrl+K` fuzzy Command Palette、recently opened records、
+undo history、browser notifications、Graph、display mode、kiosk mode があります。
+複数 file を読み込む場合は `path ...` と `--write-file FILE` を併用すると、
 generated/read-only file を表示しつつ、編集は hand-maintained file だけに限定できます。
 
 ### 11.1 `mcp`
@@ -1090,7 +1090,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
-| `web.*` | `serve` と Web UI の既定値 |
+| `web.*` | `serve` と Web UI の既定値。`web.theme.*` と `web.dashboard.*` で見た目と Dashboard を調整 |
 | `sync_ics.*` | `sync-ics` の default source / output / cache |
 
 top-level `generated_paths` または `sync_ics.generated_paths` に含まれる file は、

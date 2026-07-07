@@ -181,16 +181,16 @@ agenda, graph, blockers, links, latest status, notifications, and message
 operations. With multiple input files, read tools scan all files and write
 tools modify only `--write-file`.
 
-The Web UI includes a header Workspace for Items, Messages, Status, Kiosk,
-New Record, Agenda, Notifications, Statistics, and Graph panels. Records open
-in a centered detail modal with thread replies, dependency links, due quick
-actions, and Markdown previews. The toolbar can save the current
-filter/sort/group/workspace state as a browser-local custom view via
-`Save View`; config-defined `views` appear in the same selector as read-only
-presets. Press `Ctrl+K` for the fuzzy command palette, recently opened records,
-saved views, exports, theme toggles, and common actions. Use `--read-only` for
-public or wall-display deployments and `--write-file FILE` when reading
-multiple files but writing to a single hand-maintained file.
+The Web UI uses a header Workspace for Dashboard, Items, Agenda, Timeline,
+Focus, Review, Messages, Team, Status, Notifications, Stats, Graph, and Kiosk.
+Records open in centered modals with thread replies, dependency links, due
+quick actions, and Markdown previews. Review supports project/custom date
+filters and Markdown copy; Dashboard cards and theme tokens are configurable
+through `web.dashboard.*` and `web.theme.*`. Press `Ctrl+K` for the fuzzy
+command palette, recently opened records, undo history, exports, theme toggles,
+and common actions. Use `--read-only` for public or wall-display deployments
+and `--write-file FILE` when reading multiple files but writing to a single
+hand-maintained file.
 
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the

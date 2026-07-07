@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-07 (updated x56)
+Last updated: 2026-07-07 (updated x57)
 
 This roadmap tracks remaining work after the current prototype updates.
 Completed prototype-only items are removed; items below are implementation,
@@ -178,11 +178,6 @@ CLI-native charts without external dependencies.
 
 ### Design System & App Shell (Web UI) — New
 
-- [ ] Extract the Web UI design tokens (`--accent`, semantic soft colors,
-  radii, shadows, spacing) into a documented theming hook: allow a config key
-  such as `web.theme.accent` to override the accent color without editing
-  `webapp.py`, and document the token list for custom deployments.
-
 - [ ] Audit the redesigned UI for WCAG AA contrast in both themes (badge
   soft-background/foreground pairs, muted text on `--panel-2`, kiosk header)
   and adjust token values where they fall below 4.5:1 for body-size text.
@@ -194,34 +189,21 @@ CLI-native charts without external dependencies.
 
 ### Views: Dashboard, Focus & Review (Web UI)
 
-The Review view is now implemented: a read-only tab backed by the new
+The Review view is now implemented: a browser tab backed by
 `GET /api/review` endpoint (shared `lifetxt/review.py` aggregation, also used
-by the CLI `review` command and the MCP `get_review` tool) with
-This week / Last week / This month / Last month presets, KPI tiles, a
-completed-task list, habit completion bars, journal entries with mood trend,
-and elapsed-by-project totals. The Focus view gained a quick-add input
-(appends `due:` today through `POST /api/items/raw`), a "Today's schedule"
-group for due-today `E` events, `at:`/`on:`-today Reminders, and an
-"Anytime reminders" group for undated `R` items. Remaining and follow-up
-work:
+by the CLI `review` command and the MCP `get_review` tool) with This week /
+Last week / This month / Last month presets, project and custom date filters,
+KPI tiles, clickable completed-task rows when `id:` is present, Markdown copy,
+habit completion bars, journal entries with mood trend, and
+elapsed-by-project totals. The Focus view gained a quick-add input (appends
+`due:` today through `POST /api/items/raw`), a "Today's schedule" group for
+due-today `E` events, `at:`/`on:`-today Reminders, and an "Anytime reminders"
+group for undated `R` items. Remaining and follow-up work:
 
-- [ ] Make Dashboard cards configurable: a config key such as
-  `web.dashboard.cards` choosing which cards render (today, needs-attention,
-  completions chart, projects) and their order, plus per-card limits. The
-  fixed four-card layout with KPI tiles is implemented.
-
-- [ ] Make Review view completed-task rows clickable: entries returned by
-  `GET /api/review` include the item `id`, so a click should resolve the
-  record via `/api/items/id/{id}` and open the detail modal; the view is
-  currently display-only.
-
-- [ ] Add a project filter and a custom from/to date picker to the Review
-  view: `GET /api/review` already accepts `project`, `from`, and `to`, but
-  the UI exposes only the four range presets.
-
-- [ ] Add an export/copy action to the Review view that produces the same
-  Markdown as `review --format markdown` for pasting into chat or a weekly
-  report; consider a shared server-side renderer so `digest` can reuse it.
+- [ ] Deduplicate Review Markdown rendering between the CLI/Web UI/digest:
+  the browser now has a client-side `copyReviewMarkdown()` renderer, while
+  `review --format markdown` is still rendered separately. Add a shared
+  server-side Markdown renderer so all review exports stay byte-consistent.
 
 - [ ] Compute real habit streaks (longest and current consecutive-day runs)
   in `lifetxt/review.py` from per-day `done:` dates, and show them in the
@@ -273,10 +255,6 @@ records. Follow-up work:
 ### Stats & Charts (Web UI) — New
 
 ### Item Selection (Web UI) — New
-
-- [ ] Add a multi-level undo history to the Web UI: the undo toast currently
-  keeps only the most recent action; a small history (last 5 actions with
-  labels) surfaced from the command palette would make bulk edits safer.
 
 ### Detail Modal Improvements (Web UI) — New
 

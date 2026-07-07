@@ -130,16 +130,17 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-Web UI には Items、Messages、Status、Kiosk、New Record、Agenda、
-Notifications、Statistics、Graph をまとめた header Workspace があります。
-record は中央の detail modal で開き、thread reply、dependency link、due quick
-action、Markdown preview を確認できます。Toolbar の `Save View` で現在の
-filter / sort / group-by / workspace を browser-local custom view として保存でき、
-config の `views` は read-only preset として同じ selector に表示されます。
-`Ctrl+K` で fuzzy Command Palette を開き、recently opened records、saved views、
-export、theme toggle、kiosk mode などを実行できます。公開用や常時表示用途では
-`--read-only`、複数 file を読みつつ書き込み先を固定する場合は `--write-file FILE`
-を使ってください。詳細は [web.md](./web.md) を参照してください。
+Web UI は Dashboard、Items、Agenda、Timeline、Focus、Review、Messages、
+Team、Status、Notifications、Stats、Graph、Kiosk を header Workspace にまとめます。
+record は中央 modal で開き、thread reply、dependency link、due quick action、
+Markdown preview を確認できます。Review は project/custom date filter と
+Markdown copy に対応し、Dashboard card と theme token は `web.dashboard.*` と
+`web.theme.*` で設定できます。`Ctrl+K` で fuzzy Command Palette を開き、
+recently opened records、undo history、export、theme toggle、kiosk mode などを
+実行できます。共有したい view は URL parameter または config `views` preset で
+扱います。公開用や常時表示用途では `--read-only`、複数 file を読みつつ書き込み先を
+固定する場合は `--write-file FILE` を使ってください。詳細は [web.md](./web.md) を
+参照してください。
 
 端末向け補助機能として `tui`、`fzf`、`timer`、`stats`、`git-hook`、
 `completion` があります。`fzf` は `fzf` または `peco` が PATH に必要です。

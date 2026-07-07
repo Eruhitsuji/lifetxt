@@ -1281,16 +1281,109 @@ def public_id_config(config):
     }
 
 
+WEB_THEME_KEYS = (
+    "bg",
+    "panel",
+    "panel_2",
+    "soft",
+    "ink",
+    "muted",
+    "line",
+    "line_strong",
+    "accent",
+    "accent_hover",
+    "accent_soft",
+    "accent_ink",
+    "danger",
+    "danger_soft",
+    "warn",
+    "warn_soft",
+    "ok",
+    "ok_soft",
+    "info",
+    "info_soft",
+    "violet",
+    "violet_soft",
+    "shadow_1",
+    "shadow_2",
+    "shadow_3",
+    "r_sm",
+    "r_md",
+    "r_lg",
+)
+
+DEFAULT_DASHBOARD_CARDS = ("today", "needs_attention", "completions", "projects")
+KNOWN_DASHBOARD_CARDS = set(DEFAULT_DASHBOARD_CARDS)
+
+
+def _int_or_default(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _string_list(value):
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    if isinstance(value, (list, tuple)):
+        return [str(part).strip() for part in value if str(part).strip()]
+    return []
+
+
+def _nested_or_dotted(section, key):
+    nested = section.get(key)
+    data = OrderedDict()
+    if isinstance(nested, dict):
+        data.update(nested)
+    prefix = key + "."
+    for raw_key, value in section.items():
+        if isinstance(raw_key, str) and raw_key.startswith(prefix):
+            data[raw_key[len(prefix) :]] = value
+    return data
+
+
+def public_web_theme_config(web):
+    theme = _nested_or_dotted(web, "theme")
+    result = OrderedDict()
+    for key in WEB_THEME_KEYS:
+        if key in theme and str(theme[key]).strip():
+            result[key] = str(theme[key]).strip()
+    return result
+
+
+def public_web_dashboard_config(web):
+    dashboard = _nested_or_dotted(web, "dashboard")
+    cards = _string_list(dashboard.get("cards"))
+    cards = [card for card in cards if card in KNOWN_DASHBOARD_CARDS]
+    if not cards:
+        cards = list(DEFAULT_DASHBOARD_CARDS)
+    limits = dashboard.get("limits")
+    if not isinstance(limits, dict):
+        limits = {}
+    result_limits = OrderedDict()
+    for card in DEFAULT_DASHBOARD_CARDS:
+        raw = limits.get(card)
+        if raw is None:
+            raw = dashboard.get("limit." + card)
+        value = _int_or_default(raw, 0)
+        if value > 0:
+            result_limits[card] = value
+    return {"cards": cards, "limits": result_limits}
+
+
 def public_web_config(config):
     web = config_section(config, "web")
     return {
-        "display_refresh": int(web.get("display_refresh") or 60),
-        "notification_poll_seconds": int(web.get("notification_poll_seconds") or 30),
+        "display_refresh": _int_or_default(web.get("display_refresh"), 60),
+        "notification_poll_seconds": _int_or_default(web.get("notification_poll_seconds"), 30),
         "notification_lookahead": web.get("notification_lookahead", "0m"),
         "default_limit": web.get("default_limit", ""),
         "default_sort": web.get("default_sort", "line"),
         "default_order": web.get("default_order", "asc"),
-        "due_soon_days": int(web.get("due_soon_days") or 3),
+        "due_soon_days": _int_or_default(web.get("due_soon_days"), 3),
+        "theme": public_web_theme_config(web),
+        "dashboard": public_web_dashboard_config(web),
     }
 
 
@@ -2743,6 +2836,7 @@ HTML_PAGE = r"""<!doctype html>
       padding: .85rem 1rem;
       min-width: 0;
     }
+    .dash-card.card-hidden { display: none; }
     .dash-card-title {
       font-size: .78rem;
       font-weight: 800;
@@ -2764,6 +2858,16 @@ HTML_PAGE = r"""<!doctype html>
     .dash-row:hover { background: var(--panel-2); }
     .dash-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     a.dash-row-title { cursor: pointer; }
+    .dash-row-title.review-click {
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      padding: 0;
+      text-align: left;
+      font-weight: 650;
+      text-decoration: underline;
+      cursor: pointer;
+    }
     /* ── Focus view ──────────────────────────────────────────────── */
     .focus-body { max-width: 46rem; margin: 0 auto; width: 100%; }
     .focus-list { display: grid; gap: .45rem; padding: .35rem 0 1rem; }
@@ -2814,7 +2918,7 @@ HTML_PAGE = r"""<!doctype html>
     .focus-event-time { font-variant-numeric: tabular-nums; }
     /* ── Review view ─────────────────────────────────────────────── */
     .review-body { display: grid; gap: 1rem; padding: 1rem; }
-    .review-range-bar { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .review-range-bar { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
     .review-range-btn {
       font-size: .78rem;
       padding: .24rem .65rem;
@@ -2831,6 +2935,12 @@ HTML_PAGE = r"""<!doctype html>
       border-color: var(--accent);
       color: var(--accent);
       font-weight: 700;
+    }
+    .review-filter-input {
+      min-width: 8.5rem;
+      font-size: .78rem;
+      padding: .3rem .55rem;
+      border-radius: 999px;
     }
     .review-habit-bar {
       flex: 0 0 70px;
@@ -3280,6 +3390,23 @@ HTML_PAGE = r"""<!doctype html>
       color: #fff;
       border-radius: .35rem;
     }
+    .modal-hint { margin: -.35rem 0 .85rem; color: var(--muted); font-size: .86rem; }
+    .undo-history-list { display: grid; gap: .45rem; }
+    .undo-history-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .55rem .65rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--panel-2);
+    }
+    .undo-history-row .undo-history-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .undo-history-row .undo-history-time {
+      color: var(--muted);
+      font-size: .76rem;
+      white-space: nowrap;
+    }
     /* ── Blocked badges (items + agenda) ── */
     .blocked-badge {
       display: inline-flex;
@@ -3432,6 +3559,7 @@ HTML_PAGE = r"""<!doctype html>
       .workspace-tabs { margin-inline: -.15rem; }
       .workspace-tab { padding: .32rem .6rem; font-size: .78rem; }
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .review-range-bar > * { flex: 1 1 100%; }
       .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
       .item-check { display: none; }
       .source { grid-column: 1 / -1; }
@@ -3579,20 +3707,20 @@ HTML_PAGE = r"""<!doctype html>
       </div>
       <div class="section-body dashboard-body">
         <div id="dash-kpis" class="kpi-row"><div class="empty">Loading…</div></div>
-        <div class="dash-grid">
-          <div class="dash-card">
+        <div class="dash-grid" id="dash-grid">
+          <div class="dash-card" data-dashboard-card="today">
             <div class="dash-card-title">📅 Today</div>
             <div id="dash-today" class="dash-list"><div class="empty">Loading…</div></div>
           </div>
-          <div class="dash-card">
+          <div class="dash-card" data-dashboard-card="needs_attention">
             <div class="dash-card-title">⚠️ Needs attention</div>
             <div id="dash-overdue" class="dash-list"><div class="empty">Loading…</div></div>
           </div>
-          <div class="dash-card">
+          <div class="dash-card" data-dashboard-card="completions">
             <div class="dash-card-title">📈 Completions (last 14 days)</div>
             <div class="chart-panel" style="height:180px"><canvas id="dash-chart"></canvas></div>
           </div>
-          <div class="dash-card">
+          <div class="dash-card" data-dashboard-card="projects">
             <div class="dash-card-title">📁 Projects</div>
             <div id="dash-projects" class="dash-list"><div class="empty">Loading…</div></div>
           </div>
@@ -3624,6 +3752,11 @@ HTML_PAGE = r"""<!doctype html>
           <button type="button" class="review-range-btn" data-range="last-week" onclick="setReviewRange('last-week')">Last week</button>
           <button type="button" class="review-range-btn" data-range="month" onclick="setReviewRange('month')">This month</button>
           <button type="button" class="review-range-btn" data-range="last-month" onclick="setReviewRange('last-month')">Last month</button>
+          <input id="review-project" class="review-filter-input" placeholder="Project" autocomplete="off">
+          <input id="review-from" class="review-filter-input" type="date" title="Review start date">
+          <input id="review-to" class="review-filter-input" type="date" title="Review end date">
+          <button type="button" class="secondary" onclick="setReviewCustom()">Apply</button>
+          <button type="button" class="secondary" onclick="copyReviewMarkdown()">Copy Markdown</button>
         </div>
         <div id="review-kpis" class="kpi-row"><div class="empty">Loading…</div></div>
         <div class="dash-grid">
@@ -3875,6 +4008,18 @@ HTML_PAGE = r"""<!doctype html>
     </div>
   </div>
 
+  <!-- Undo history modal -->
+  <div class="modal-backdrop" id="undo-modal" onclick="if(event.target===this)closeUndoHistoryModal()">
+    <div class="modal">
+      <h3>Undo history</h3>
+      <p class="modal-hint">The browser keeps the last five undoable actions from this session.</p>
+      <div id="undo-history-list" class="undo-history-list"></div>
+      <div class="actions" style="margin-top:1rem">
+        <button class="secondary" onclick="closeUndoHistoryModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Git commit/push modal -->
   <div class="modal-backdrop" id="git-modal" onclick="if(event.target===this)closeGitModal()">
     <div class="modal">
@@ -3909,11 +4054,56 @@ HTML_PAGE = r"""<!doctype html>
     let _kioskLastFingerprints = null;
     let _lastFocusedBeforeModal = null;
     const RECENT_ITEMS_STORAGE_KEY = "lifetxt_recent_items";
+    const DASHBOARD_CARDS = ["today", "needs_attention", "completions", "projects"];
+    const THEME_TOKEN_KEYS = new Set([
+      "bg", "panel", "panel_2", "soft", "ink", "muted", "line", "line_strong",
+      "accent", "accent_hover", "accent_soft", "accent_ink",
+      "danger", "danger_soft", "warn", "warn_soft",
+      "ok", "ok_soft", "info", "info_soft", "violet", "violet_soft",
+      "shadow_1", "shadow_2", "shadow_3", "r_sm", "r_md", "r_lg",
+    ]);
 
     async function api(path, options) {
       const response = await fetch(path, options);
       if (!response.ok) throw new Error(await response.text());
       return response.json();
+    }
+    function cssVarName(configKey) {
+      return "--" + String(configKey || "").replace(/_/g, "-");
+    }
+    function applyConfiguredTheme() {
+      const theme = appConfig?.web?.theme || {};
+      for (const [key, value] of Object.entries(theme)) {
+        if (!THEME_TOKEN_KEYS.has(key) || !String(value || "").trim()) continue;
+        document.documentElement.style.setProperty(cssVarName(key), String(value).trim());
+      }
+    }
+    function configuredDashboardCards() {
+      const raw = appConfig?.web?.dashboard?.cards;
+      const list = Array.isArray(raw)
+        ? raw.map(String)
+        : String(raw || "").split(",").map(part => part.trim());
+      const cards = list.filter(card => DASHBOARD_CARDS.includes(card));
+      return cards.length ? cards : DASHBOARD_CARDS.slice();
+    }
+    function applyConfiguredDashboard() {
+      const grid = document.getElementById("dash-grid");
+      if (!grid) return;
+      const configured = configuredDashboardCards();
+      const enabled = new Set(configured);
+      const byName = {};
+      grid.querySelectorAll("[data-dashboard-card]").forEach(card => {
+        byName[card.dataset.dashboardCard] = card;
+        card.classList.toggle("card-hidden", !enabled.has(card.dataset.dashboardCard));
+      });
+      for (const name of configured) {
+        if (byName[name]) grid.appendChild(byName[name]);
+      }
+    }
+    function dashboardLimit(cardName, fallback) {
+      const raw = appConfig?.web?.dashboard?.limits?.[cardName];
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
     }
     function detailText(details) {
       return Object.entries(details || {}).flatMap(([key, values]) =>
@@ -4573,9 +4763,17 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     // ── Undo for destructive actions ───────────────────────────────
-    let _undoAction = null;
+    let _undoStack = [];
+    let _undoSeq = 0;
     function registerUndo(message, undoFn) {
-      _undoAction = undoFn;
+      const entry = {
+        id: ++_undoSeq,
+        message: String(message || "Undo action"),
+        run: undoFn,
+        createdAt: Date.now(),
+      };
+      _undoStack = [entry, ..._undoStack].slice(0, 5);
+      renderUndoHistory();
       const container = document.getElementById("toast-container");
       const el = document.createElement("div");
       el.className = "toast success";
@@ -4584,22 +4782,47 @@ HTML_PAGE = r"""<!doctype html>
       const btn = document.createElement("button");
       btn.className = "undo-btn";
       btn.textContent = "Undo";
-      btn.addEventListener("click", async () => { el.remove(); await performUndo(); });
+      btn.addEventListener("click", async () => { el.remove(); await performUndo(entry.id); });
       el.append(span, btn);
       container.appendChild(el);
       setTimeout(() => el.remove(), 8000);
     }
-    async function performUndo() {
-      const fn = _undoAction;
-      _undoAction = null;
-      if (!fn) return;
+    async function performUndo(entryId) {
+      const idx = entryId == null ? 0 : _undoStack.findIndex(entry => entry.id === entryId);
+      if (idx < 0 || !_undoStack[idx]) return;
+      const [entry] = _undoStack.splice(idx, 1);
+      renderUndoHistory();
       try {
-        await fn();
+        await entry.run();
         showToast("Undone.", "success");
         await refreshAll();
       } catch(e) {
         showToast("Undo failed: " + (e.message || e), "error");
       }
+    }
+    function openUndoHistoryModal() {
+      renderUndoHistory();
+      openManagedModal(document.getElementById("undo-modal"), "button");
+    }
+    function closeUndoHistoryModal() {
+      closeManagedModal(document.getElementById("undo-modal"));
+    }
+    function renderUndoHistory() {
+      const list = document.getElementById("undo-history-list");
+      if (!list) return;
+      if (!_undoStack.length) {
+        list.innerHTML = `<div class="empty">No undoable actions in this session.</div>`;
+        return;
+      }
+      list.innerHTML = _undoStack.map(entry => {
+        const age = Math.max(0, Math.round((Date.now() - entry.createdAt) / 1000));
+        const ageText = age < 60 ? `${age}s ago` : `${Math.floor(age / 60)}m ago`;
+        return `<div class="undo-history-row">` +
+          `<span class="undo-history-label">${escapeHtml(entry.message)}</span>` +
+          `<span class="undo-history-time">${escapeHtml(ageText)}</span>` +
+          `<button type="button" class="secondary" onclick="performUndo(${entry.id})">Undo</button>` +
+          `</div>`;
+      }).join("");
     }
     function _updateBulkToolbar() {
       const bar = document.getElementById("bulk-toolbar");
@@ -5074,6 +5297,8 @@ HTML_PAGE = r"""<!doctype html>
     });
     async function loadConfig() {
       appConfig = await api("/api/config");
+      applyConfiguredTheme();
+      applyConfiguredDashboard();
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
@@ -5311,6 +5536,7 @@ HTML_PAGE = r"""<!doctype html>
         if (document.getElementById("cmdk-backdrop").classList.contains("open")) { closeCmdk(); return; }
         if (isKioskMode()) { toggleKioskMode(); return; }
         if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
+        if (document.getElementById("undo-modal").classList.contains("open")) { closeUndoHistoryModal(); return; }
         if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
         if (document.getElementById("editor-modal").classList.contains("open")) { closeEditorModal(); return; }
         if (document.getElementById("detail-drawer").classList.contains("open")) { closeDrawer(); return; }
@@ -5412,6 +5638,7 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Toggle dark mode", run: toggleDarkMode},
       {label: "Toggle kiosk mode", run: toggleKioskMode},
       {label: "Toggle agenda blocked filter", run: toggleAgendaBlocked},
+      {label: "Show undo history", run: openUndoHistoryModal},
       {label: "Export items as CSV", run: () => exportItems("csv")},
       {label: "Export items as JSON", run: () => exportItems("json")},
       {label: "Export items as Markdown", run: () => exportItems("markdown")},
@@ -7557,12 +7784,13 @@ HTML_PAGE = r"""<!doctype html>
       // Today agenda
       const todayEl = document.getElementById("dash-today");
       if (todayEl) {
+        const limit = dashboardLimit("today", 7);
         todayEl.innerHTML = agendaRecords.length
-          ? agendaRecords.slice(0, 7).map(r =>
+          ? agendaRecords.slice(0, limit).map(r =>
               `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
               (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
               `<span class="dash-row-title">${escapeHtml(r.title)}</span></div>`
-            ).join("") + (agendaRecords.length > 7 ? `<a class="drawer-link" onclick="switchWorkspace('agenda')">View all ${agendaRecords.length} →</a>` : "")
+            ).join("") + (agendaRecords.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('agenda')">View all ${agendaRecords.length} →</a>` : "")
           : `<div class="empty">Nothing scheduled around now.</div>`;
       }
       // Needs attention: overdue + blocked
@@ -7570,15 +7798,16 @@ HTML_PAGE = r"""<!doctype html>
       if (overdueEl) {
         const attention = [...overdue.map(i => ({...i, _why: "overdue"})),
                            ...blockedItems.filter(b => !overdue.some(o => o.line === b.line && o.source === b.source)).map(i => ({...i, _why: "blocked"}))];
+        const limit = dashboardLimit("needs_attention", 7);
         overdueEl.innerHTML = attention.length
-          ? attention.slice(0, 7).map(_dashItemRow).join("") +
-            (attention.length > 7 ? `<a class="drawer-link" onclick="switchWorkspace('focus')">View all ${attention.length} →</a>` : "")
+          ? attention.slice(0, limit).map(_dashItemRow).join("") +
+            (attention.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('focus')">View all ${attention.length} →</a>` : "")
           : `<div class="empty">🎉 Nothing overdue or blocked.</div>`;
       }
       // Projects
       const projEl = document.getElementById("dash-projects");
       if (projEl) {
-        const projects = (summary?.by_project || []).filter(p => p.total > 0).slice(0, 7);
+        const projects = (summary?.by_project || []).filter(p => p.total > 0).slice(0, dashboardLimit("projects", 7));
         const maxTotal = Math.max(...projects.map(p => p.total), 1);
         projEl.innerHTML = projects.length
           ? projects.map(p =>
@@ -7589,7 +7818,8 @@ HTML_PAGE = r"""<!doctype html>
           : `<div class="empty">No project data.</div>`;
       }
       // Chart
-      if (chartData) {
+      const chartCard = document.querySelector('[data-dashboard-card="completions"]');
+      if (chartData && !(chartCard && chartCard.classList.contains("card-hidden"))) {
         try {
           await ensureChartJs();
           const canvas = document.getElementById("dash-chart");
@@ -7759,7 +7989,7 @@ HTML_PAGE = r"""<!doctype html>
       if (item) openDrawer(item);
     }
 
-    // ── Review view (weekly/monthly retrospective, read-only) ──────
+    // ── Review view (weekly/monthly retrospective) ────────────────
     let reviewRange = "week";
     function setReviewRange(range) {
       reviewRange = range;
@@ -7767,20 +7997,40 @@ HTML_PAGE = r"""<!doctype html>
         btn.classList.toggle("active", btn.dataset.range === range));
       loadReview();
     }
+    function setReviewCustom() {
+      reviewRange = "custom";
+      document.querySelectorAll("#review-range-bar .review-range-btn").forEach(btn =>
+        btn.classList.remove("active"));
+      loadReview();
+    }
+    function _reviewProjectParam() {
+      const value = (document.getElementById("review-project")?.value || "").trim();
+      return value ? `&project=${encodeURIComponent(value)}` : "";
+    }
     function _reviewQuery() {
       const today = new Date();
-      if (reviewRange === "week") return "week=true";
+      if (reviewRange === "week") return "week=true" + _reviewProjectParam();
       if (reviewRange === "last-week") {
         const dow = (today.getDay() + 6) % 7; // Monday-based weekday
         const monday = new Date(today); monday.setDate(today.getDate() - dow);
         const start = new Date(monday); start.setDate(monday.getDate() - 7);
         const end = new Date(monday); end.setDate(monday.getDate() - 1);
-        return `from=${_fmtDate(start)}&to=${_fmtDate(end)}`;
+        return `from=${_fmtDate(start)}&to=${_fmtDate(end)}` + _reviewProjectParam();
       }
       const y = today.getFullYear(), m = today.getMonth();
-      if (reviewRange === "month") return `month=${y}-${String(m + 1).padStart(2, "0")}`;
+      if (reviewRange === "month") return `month=${y}-${String(m + 1).padStart(2, "0")}` + _reviewProjectParam();
+      if (reviewRange === "custom") {
+        const start = (document.getElementById("review-from")?.value || "").trim();
+        const end = (document.getElementById("review-to")?.value || "").trim();
+        const parts = [];
+        if (start) parts.push(`from=${encodeURIComponent(start)}`);
+        if (end) parts.push(`to=${encodeURIComponent(end)}`);
+        const project = _reviewProjectParam().replace(/^&/, "");
+        if (project) parts.push(project);
+        return parts.join("&") || "week=true";
+      }
       const prev = new Date(y, m - 1, 1);
-      return `month=${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+      return `month=${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}` + _reviewProjectParam();
     }
     async function loadReview() {
       const kpiEl = document.getElementById("review-kpis");
@@ -7792,6 +8042,7 @@ HTML_PAGE = r"""<!doctype html>
         kpiEl.innerHTML = `<div class="diagnostic">Review error: ${escapeHtml(e.message)}</div>`;
         return;
       }
+      window._lastReviewData = data;
       const rangeEl = document.getElementById("review-range-label");
       if (rangeEl) rangeEl.textContent = data.range || "";
       const habitTitles = Object.keys(data.habits || {});
@@ -7812,7 +8063,9 @@ HTML_PAGE = r"""<!doctype html>
           ? completed.map(t =>
               `<div class="dash-row">` +
               (t.done ? `<span class="pill">${escapeHtml(String(t.done).slice(0, 10))}</span>` : "") +
-              `<span class="dash-row-title">${escapeHtml(t.title)}</span>` +
+              (t.id
+                ? `<button type="button" class="dash-row-title review-click" onclick="drawerNavigate(${escapeHtml(jsLiteral(t.id))})">${escapeHtml(t.title)}</button>`
+                : `<span class="dash-row-title">${escapeHtml(t.title)}</span>`) +
               (t.project ? `<span class="pill">${escapeHtml(t.project)}</span>` : "") +
               `</div>`).join("")
           : `<div class="empty">No tasks completed in this range.</div>`;
@@ -7854,6 +8107,58 @@ HTML_PAGE = r"""<!doctype html>
               `<span class="pill">${escapeHtml(elapsed)}</span></div>`).join("")
           : `<div class="empty">No elapsed time recorded.</div>`;
       }
+    }
+    function reviewMarkdown(data) {
+      const lines = [
+        "# life.txt Review",
+        "",
+        `Range: ${data?.range || ""}`,
+        "",
+        "## Summary",
+        `- Completed tasks: ${data?.completed_tasks || 0}`,
+        `- Open tasks: ${data?.open_tasks || 0}`,
+        `- Journal entries: ${data?.journals || 0}`,
+      ];
+      const completed = data?.completed || [];
+      if (completed.length) {
+        lines.push("", "## Completed");
+        for (const item of completed) {
+          const bits = [];
+          if (item.done) bits.push(`done:${item.done}`);
+          if (item.project) bits.push(`project:${item.project}`);
+          if (item.id) bits.push(`id:${item.id}`);
+          lines.push(`- [x] ${item.title}${bits.length ? " (" + bits.join(", ") + ")" : ""}`);
+        }
+      }
+      const habits = Object.entries(data?.habits || {});
+      if (habits.length) {
+        lines.push("", "## Habits");
+        for (const [title, h] of habits) {
+          const total = (Number(h.done) || 0) + (Number(h.open) || 0);
+          lines.push(`- ${title}: ${h.done}/${total} (${h.completion_rate}%)`);
+        }
+      }
+      const journals = data?.journal_entries || [];
+      if (journals.length) {
+        lines.push("", "## Journal");
+        for (const entry of journals) {
+          lines.push(`- ${entry.date} ${entry.title}${entry.excerpt ? " — " + entry.excerpt : ""}`);
+        }
+      }
+      const elapsed = Object.entries(data?.elapsed_by_project || {});
+      if (elapsed.length) {
+        lines.push("", "## Elapsed");
+        for (const [project, value] of elapsed) lines.push(`- ${project}: ${value}`);
+      }
+      return lines.join("\n");
+    }
+    function copyReviewMarkdown() {
+      const data = window._lastReviewData;
+      if (!data) { showToast("Load a review first.", "warning"); return; }
+      navigator.clipboard.writeText(reviewMarkdown(data)).then(
+        () => showToast("Review copied as Markdown.", "success"),
+        () => showToast("Copy failed.", "error")
+      );
     }
 
     loadConfig().then(() => {

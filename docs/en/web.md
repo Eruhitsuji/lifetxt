@@ -194,15 +194,17 @@ The browser GUI supports:
   exactly one view fills the screen at a time
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
   blocked, recent completions), today's agenda, a needs-attention list, a
-  14-day completion chart, and per-project progress
+  14-day completion chart, and per-project progress. Dashboard cards can be
+  hidden, reordered, and capped through `web.dashboard.cards` and
+  `web.dashboard.limits`
 - A Focus view showing overdue, due-today, and in-progress work items with
   one-click done buttons and undo, plus today's timed events, reminders whose
   `at:`/`on:` falls today, undated "anytime" reminders, and a quick-add input
   that captures a task with `due:` today without leaving the view
-- A read-only Review view backed by `GET /api/review` with This week / Last
-  week / This month / Last month range switching: completed tasks, habit
-  completion bars, journal entries with mood trend, and elapsed time by
-  project — the browser counterpart of the CLI weekly-review workflow
+- A Review view backed by `GET /api/review` with This week / Last week / This
+  month / Last month presets, project filtering, custom from/to dates,
+  clickable completed-task rows when records have an `id:`, and a Markdown
+  copy action for weekly-report or chat handoff workflows
 - A Timeline view: a chronological board of agenda records with a red "now"
   line, per-type colored rail nodes, hour labels, all-day rows, day headers,
   dimmed past records, and Today / Next 24h / Week range presets; cards open
@@ -226,8 +228,8 @@ The browser GUI supports:
 - Browser notifications after the user grants permission
 - Showing message threads in the record detail modal using `parent:`
 - Replying to message threads from the record detail modal
-- Keyboard-trapped modals for Help, Git, record details, and the record
-  editor
+- Keyboard-trapped modals for Help, Git, Undo history, record details, and the
+  record editor
 - A fuzzy command palette with actions, view switching, and recently opened
   items
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
@@ -239,6 +241,8 @@ The browser GUI supports:
   parser, with a live parse preview before writing
 - Selecting editable items and saving changes
 - Deleting editable item lines
+- Session undo history for the last five undoable browser actions, available
+  from the command palette as `Show undo history`
 
 Editable items are items from the writable file. Items loaded from generated
 files, such as `.generated/google_calendar.life.txt`, are shown read-only.
@@ -249,6 +253,36 @@ Messages, Team, Status, Notifications, Stats, or Graph), and nothing else
 competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
+
+## Web UI Configuration
+
+`/api/config` exposes a safe subset of `web.*` settings to the browser. The
+GUI applies these values at startup:
+
+```json
+{
+  "web": {
+    "theme": {
+      "accent": "#0e7a65",
+      "accent_hover": "#0a6252",
+      "accent_soft": "#e0f0ea",
+      "accent_ink": "#ffffff"
+    },
+    "dashboard": {
+      "cards": ["today", "needs_attention", "completions", "projects"],
+      "limits": {"today": 7, "needs_attention": 7, "projects": 7}
+    }
+  }
+}
+```
+
+Supported theme token names mirror the CSS variables without the leading
+`--`: `bg`, `panel`, `panel_2`, `soft`, `ink`, `muted`, `line`,
+`line_strong`, `accent`, `accent_hover`, `accent_soft`, `accent_ink`,
+`danger`, `warn`, `ok`, `info`, `violet`, `shadow_1`, `shadow_2`,
+`shadow_3`, `r_sm`, `r_md`, and `r_lg` plus the matching `*_soft` semantic
+tokens. Dotted keys such as `"theme.accent"` and `"dashboard.cards"` are also
+accepted for flat config generators.
 
 ## URL Parameters
 

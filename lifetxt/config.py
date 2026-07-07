@@ -128,6 +128,39 @@ def config_template():
             ("default_limit", ""),
             ("default_sort", "line"),
             ("default_order", "asc"),
+            ("due_soon_days", 3),
+            (
+                "theme",
+                OrderedDict(
+                    [
+                        ("accent", "#0e7a65"),
+                        ("accent_hover", "#0a6252"),
+                        ("accent_soft", "#e0f0ea"),
+                        ("accent_ink", "#ffffff"),
+                    ]
+                ),
+            ),
+            (
+                "dashboard",
+                OrderedDict(
+                    [
+                        (
+                            "cards",
+                            ["today", "needs_attention", "completions", "projects"],
+                        ),
+                        (
+                            "limits",
+                            OrderedDict(
+                                [
+                                    ("today", 7),
+                                    ("needs_attention", 7),
+                                    ("projects", 7),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
         ]
     )
     data["views"] = OrderedDict(

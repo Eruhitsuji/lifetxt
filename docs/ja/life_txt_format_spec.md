@@ -698,8 +698,8 @@ Web UI は複数の life.txt file を同時に読み込めます。`.generated/*
 のような generated file は慣例的に read-only として扱い、
 `serve --write-file FILE` で create、update、message thread 操作用の書き込み先を
 指定します。`serve --read-only` は line validation 以外の write endpoint を
-無効化します。browser-local saved view と config-defined view preset は UI state
-であり、file syntax ではありません。
+無効化します。URL parameter と config-defined view preset は UI state であり、
+file syntax ではありません。
 
 ## 16. 形式文法
 

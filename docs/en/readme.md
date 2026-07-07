@@ -140,16 +140,16 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-The Web UI includes a header Workspace for Items, Messages, Status, Kiosk,
-New Record, Agenda, Notifications, Statistics, and Graph panels. Records open
-in a centered detail modal with thread replies, dependency links, due quick
-actions, and Markdown previews. The toolbar can save the current
-filter/sort/group/workspace state as a browser-local custom view via
-`Save View`; config-defined `views` appear in the same selector as read-only
-presets. Press `Ctrl+K` for the fuzzy command palette, recently opened records,
-saved views, exports, theme toggles, and common actions. Use `--read-only` for
-public or wall-display deployments and `--write-file FILE` when reading
-multiple files but writing to a single hand-maintained file. See
+The Web UI uses a header Workspace for Dashboard, Items, Agenda, Timeline,
+Focus, Review, Messages, Team, Status, Notifications, Stats, Graph, and Kiosk.
+Records open in centered modals with thread replies, dependency links, due
+quick actions, and Markdown previews. Review supports project/custom date
+filters and Markdown copy; Dashboard cards and theme tokens are configurable
+through `web.dashboard.*` and `web.theme.*`. Press `Ctrl+K` for the fuzzy
+command palette, recently opened records, undo history, exports, theme toggles,
+and common actions. Use `--read-only` for public or wall-display deployments
+and `--write-file FILE` when reading multiple files but writing to a single
+hand-maintained file. See
 [web.md](./web.md) for URL parameters, API routes, browser notifications, and
 kiosk/display modes.
 

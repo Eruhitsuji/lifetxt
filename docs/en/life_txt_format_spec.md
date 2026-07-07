@@ -857,8 +857,8 @@ The Web UI can load several life.txt files at once. Generated files such as
 `.generated/*.life.txt` are treated as read-only by convention, and
 `serve --write-file FILE` selects the writable file for create, update, and
 message-thread operations. `serve --read-only` disables write endpoints except
-line validation. Browser-local saved views and config-defined view presets are
-UI state, not file syntax.
+line validation. URL parameters and config-defined view presets are UI state,
+not file syntax.
 
 ## 16. Formal Grammar
 

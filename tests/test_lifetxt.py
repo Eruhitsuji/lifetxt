@@ -418,6 +418,15 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('id="fullscreen-btn"', webapp.HTML_PAGE)
         self.assertIn("function toggleFullscreen(", webapp.HTML_PAGE)
         self.assertIn("fullscreenchange", webapp.HTML_PAGE)
+        self.assertIn('data-dashboard-card="today"', webapp.HTML_PAGE)
+        self.assertIn('id="review-project"', webapp.HTML_PAGE)
+        self.assertIn('id="review-from"', webapp.HTML_PAGE)
+        self.assertIn('id="review-to"', webapp.HTML_PAGE)
+        self.assertIn("function setReviewCustom(", webapp.HTML_PAGE)
+        self.assertIn("function copyReviewMarkdown(", webapp.HTML_PAGE)
+        self.assertIn('id="undo-modal"', webapp.HTML_PAGE)
+        self.assertIn("function openUndoHistoryModal(", webapp.HTML_PAGE)
+        self.assertIn("Show undo history", webapp.HTML_PAGE)
         self.assertIn("Go to Team", webapp.HTML_PAGE)
         self.assertIn("Go to Timeline", webapp.HTML_PAGE)
         self.assertIn("tl-now-line", webapp.HTML_PAGE)
@@ -3375,7 +3384,7 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual("long_message", data[0]["body"])
 
 
-class LifeTxtCheckLineTests(unittest.TestCase):
+class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
     def test_check_line_valid_item_returns_ok(self):
         from lifetxt.parser import parse_text as pt
         text = "[ ] T Valid_task due:2026-06-30\n"
@@ -3411,6 +3420,38 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         from lifetxt.webapp import public_web_config
         result = public_web_config({})
         self.assertEqual(3, result["due_soon_days"])
+
+    def test_public_web_config_theme_and_dashboard_nested(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config(
+            {
+                "web": {
+                    "theme": {"accent": "#123456", "not_a_token": "ignored"},
+                    "dashboard": {
+                        "cards": ["projects", "today", "missing"],
+                        "limits": {"today": "4", "projects": 2},
+                    },
+                }
+            }
+        )
+        self.assertEqual({"accent": "#123456"}, dict(result["theme"]))
+        self.assertEqual(["projects", "today"], result["dashboard"]["cards"])
+        self.assertEqual({"today": 4, "projects": 2}, dict(result["dashboard"]["limits"]))
+
+    def test_public_web_config_theme_and_dashboard_dotted_keys(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config(
+            {
+                "web": {
+                    "theme.accent": "#0f766e",
+                    "dashboard.cards": "needs_attention,completions",
+                    "dashboard.limit.needs_attention": "3",
+                }
+            }
+        )
+        self.assertEqual("#0f766e", result["theme"]["accent"])
+        self.assertEqual(["needs_attention", "completions"], result["dashboard"]["cards"])
+        self.assertEqual({"needs_attention": 3}, dict(result["dashboard"]["limits"]))
 
 
 class LifeTxtItemsRawTests(unittest.TestCase):

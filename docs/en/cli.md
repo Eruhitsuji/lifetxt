@@ -1117,13 +1117,13 @@ Options:
 The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.
 
-The browser GUI includes a header Workspace for item views and tool panels,
-a centered record detail modal, browser-local custom views via `Save View`,
-config-defined read-only view presets, `Ctrl+K` fuzzy command palette,
-recently opened records, browser notifications, graph review, display mode,
-and kiosk mode. When reading multiple files, combine `path ...` with
-`--write-file FILE` so generated or read-only files can be shown while edits
-go only to the hand-maintained file.
+The browser GUI includes a header Workspace, centered record modals,
+URL/config-driven view presets, Review filters with Markdown copy, configurable
+Dashboard cards and theme tokens, `Ctrl+K` fuzzy command palette, recently
+opened records, undo history, browser notifications, graph review, display
+mode, and kiosk mode. When reading multiple files, combine `path ...` with
+`--write-file FILE` so generated or read-only files can be shown while edits go
+only to the hand-maintained file.
 
 ### 11.1 `mcp`
 
@@ -1255,7 +1255,22 @@ Example config:
     "notification_lookahead": "0m",
     "default_limit": "",
     "default_sort": "line",
-    "default_order": "asc"
+    "default_order": "asc",
+    "due_soon_days": 3,
+    "theme": {
+      "accent": "#0e7a65",
+      "accent_hover": "#0a6252",
+      "accent_soft": "#e0f0ea",
+      "accent_ink": "#ffffff"
+    },
+    "dashboard": {
+      "cards": ["today", "needs_attention", "completions", "projects"],
+      "limits": {
+        "today": 7,
+        "needs_attention": 7,
+        "projects": 7
+      }
+    }
   },
   "views": {
     "today": {

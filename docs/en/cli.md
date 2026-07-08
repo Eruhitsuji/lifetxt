@@ -48,6 +48,7 @@ python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
 python -m lifetxt done [path ...]
+python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
 python -m lifetxt batch [path ...]
 python -m lifetxt archive [path ...]
@@ -107,8 +108,9 @@ python -m lifetxt template list
 | `config` | Create or inspect an external JSON config file |
 | `init` | Interactive first-time setup: create life.txt and .lifetxt.json |
 | `doctor` | Check Python version, files, dependencies, and data issues |
-| `quick` (`q`) | Quickly capture a new item and append it to a file |
-| `done` | Mark an item as complete and append `done:TODAY` |
+| `quick` (`q`) | Quickly capture a new item and append it to a file; `-` reads the title from stdin |
+| `done` | Mark a task done and append `done:TODAY`; on habit (`H`) items, append `done:DATE` to the completion log instead |
+| `complete` | Complete a repeat-enabled task instance and materialize the next occurrence; behaves like `done` otherwise |
 | `assign` | Change the `assignee:` on an existing item |
 | `batch` | Apply a simple item command across multiple life.txt files |
 | `archive` | Move or copy completed/canceled items to a separate archive file |
@@ -1159,6 +1161,7 @@ The MCP server exposes these tools:
 | `get_item` | Read one item by ID |
 | `check_line` / `parse_item` | Validate or preview raw life.txt text |
 | `create_item` / `update_item` / `mark_done` / `delete_item` | Write item changes to the configured writable file |
+| `complete_item` | Complete a repeat-enabled task instance and materialize the next occurrence; behaves like `mark_done` otherwise |
 | `get_agenda` | Return agenda records for a range |
 | `get_review` | Return the weekly/monthly review report (same shape as `review --format json` and `GET /api/review`) |
 | `get_graph` / `get_blockers` / `list_links` | Inspect ID references and dependency blockers |
@@ -1620,6 +1623,65 @@ Options:
 | `--format text|json|mermaid|dot` | Output format |
 | `--depth N` | Maximum dependency depth to render; `0` shows root nodes only |
 | `--pretty` | Pretty-print JSON |
+
+### 13.9 `complete` and habit `done` logging
+
+Task-like items marked `[x]` with `done` lose their `repeat:` cadence: nothing
+records the next due instance, and the file itself is the only completion
+history. `complete` and the habit-aware branch of `done` resolve this without
+inventing a new syntax; both build on the existing `repeat:`, `due:`/`do:`,
+`until:`, and `done:` detail keys.
+
+**`complete`** targets repeat-enabled tasks (any type, typically `T`). It
+marks the current instance `[x]` with `done:DATE` and appends a fresh `[ ]`
+instance immediately after it with the next due date, Taskwarrior-style:
+
+```sh
+python -m lifetxt complete life.txt task_water_plants
+python -m lifetxt complete life.txt --text "Water plants" --date 2026-07-08
+python -m lifetxt complete life.txt task_water_plants --dry-run
+```
+
+The next due date advances by exactly one `repeat:` interval from an anchor
+date, controlled by `repeat_base:due|done` (a detail key on the item, or
+`defaults.repeat_base` in config; `due` is the default):
+
+- `repeat_base:due` advances from the item's current `due:`/`do:` value. The
+  item must already carry a `due:` or `do:`; missing dates fail loudly instead
+  of guessing a start date.
+- `repeat_base:done` advances from the completion date instead (today, or
+  `--date`), useful for tasks where "clean the gutters every 3 months after I
+  actually did it" matters more than a fixed schedule.
+
+If the series has a `until:` bound and the next occurrence would fall after
+it, `complete` marks the current instance done and prints that the series has
+ended without materializing a new instance. `BYDAY` RRULE values (e.g.
+`RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR`) are not yet supported for materialization
+and fail loudly; edit the due date by hand for those. Items without a
+`repeat:` value behave exactly like `done`. The new instance always gets a
+freshly generated ID — the completed instance keeps its original ID — so
+`ids` never reports a collision. File growth from repeated completions is
+expected; run `archive` periodically to move closed instances out of the
+working file.
+
+**Habit `done` logging** (`H` type items) takes a different approach, because
+a habit definition is meant to stay a single always-open line while its
+history accumulates. `lifetxt done PATH ID [--date DATE] [--force]` on an `H`
+item does not touch `status:`; it appends `done:DATE` to the item's existing
+`done:` values (a duplicate-key list, same as any other repeated detail key)
+and prints the resulting streak:
+
+```sh
+python -m lifetxt done life.txt habit_exercise
+python -m lifetxt done life.txt habit_exercise --date 2026-06-01
+```
+
+Logging the same date twice fails loudly (`--force` overrides it
+deliberately) so a stray second run cannot silently inflate a streak. Streaks
+are computed from the accumulated `done:` dates with `stats.streak_days`, the
+same function the Web UI heatmap and `stats --habits` already use, so all
+surfaces agree. Non-habit `done` is unchanged: `done PATH ID [--date DATE]`
+still marks the item `[x]` and sets `done:DATE` (defaulting to today).
 
 ## 14. Aliases
 

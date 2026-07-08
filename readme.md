@@ -120,6 +120,9 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 python -m lifetxt mcp life.txt
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
+echo "Buy milk" | python -m lifetxt quick - --append life.txt
+python -m lifetxt done life.txt habit_exercise
+python -m lifetxt complete life.txt task_water_plants
 ```
 
 Install locally as a command:

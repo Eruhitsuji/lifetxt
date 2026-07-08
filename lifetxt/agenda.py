@@ -549,6 +549,56 @@ def _add_on_matches(matches, item, range_start, range_end):
             _add_match(matches, "on", span[0], span[1], range_start, range_end)
 
 
+def next_repeat_occurrence(item, repeat_base, completion_date):
+    """Compute the next occurrence for a repeat-enabled item's instance completion.
+
+    Shared by the CLI `complete` command and the MCP `complete_item` tool so
+    both surfaces materialize the next occurrence identically.
+
+    Returns (anchor_key, next_datetime_or_None, rule). anchor_key is 'due' or
+    'do', whichever the item carries. next_datetime is None when the repeat
+    series has reached its `until` bound (no new occurrence should be added).
+    Raises ValueError (fail-loud) when the repeat rule cannot be resolved,
+    when repeat_base is invalid, or when repeat_base:due lacks a due/do value.
+    """
+    repeat_value = _first_detail_value(item, "repeat")
+    rule = _repeat_rule(item, repeat_value)
+    if rule is None:
+        raise ValueError(
+            "Unrecognized repeat:%s value; cannot materialize the next occurrence." % repeat_value
+        )
+    if rule.get("byday"):
+        raise ValueError(
+            "complete does not support BYDAY repeat rules for instance materialization yet; "
+            "edit the due date manually."
+        )
+
+    repeat_base = str(repeat_base or "due").strip().lower()
+    if repeat_base not in ("due", "done"):
+        raise ValueError("repeat_base must be 'due' or 'done', got %r." % repeat_base)
+
+    anchor_key = "due" if item.details.get("due") else ("do" if item.details.get("do") else "due")
+
+    if repeat_base == "due":
+        due_values = item.details.get(anchor_key)
+        if not due_values:
+            raise ValueError(
+                "repeat_base:due requires a due: (or do:) value on the item. "
+                "Set repeat_base:done or add a due date."
+            )
+        anchor = parse_date_or_datetime(due_values[0], is_end=False)
+        if anchor is None:
+            raise ValueError("Could not parse %s:%s for repeat calculation." % (anchor_key, due_values[0]))
+    else:
+        anchor = datetime.combine(completion_date, time())
+
+    next_dt = _next_repeat_datetime(anchor, rule["repeat"], rule["interval"])
+    until = rule.get("until")
+    if until is not None and next_dt > until:
+        return anchor_key, None, rule
+    return anchor_key, next_dt, rule
+
+
 def _add_repeat_matches(matches, item, range_start, range_end):
     repeat_value = _first_detail_value(item, "repeat")
     rule = _repeat_rule(item, repeat_value)

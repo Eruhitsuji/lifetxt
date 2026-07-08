@@ -50,6 +50,7 @@ DETAIL_FLAGS = (
     "on",
     "at",
     "repeat",
+    "repeat_base",
     "interval",
     "until",
     "count",

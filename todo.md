@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-08 (updated x59)
+Last updated: 2026-07-08 (updated x60)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -44,9 +44,8 @@ Design decisions that affect the file format, parser, serialization, and every d
 - [ ] Wire `#! timezone:` into datetime display and filtering for agenda, summary, stats, review, Web API, and MCP. Add tests that cover timezone-suffixed values, naive values, file directives, config defaults, and CLI overrides.
 - [ ] Decide which item types should recommend `elapsed:`. Determine whether events, status records, journal entries, reminders, and future timer session records should record elapsed time, and add type-specific guidance to the format spec.
 - [ ] Finalize occurrence materialization rules for life.txt output files. Specify how generated recurrence occurrences may be written to `.life.txt` or `.generated/*.life.txt` without confusing them with stored source items.
-- [ ] Design repeat completion semantics separately for tasks and habits. Repeating tasks should be able to materialize the next due instance; habits should be able to keep compact completion logs and compute streaks without creating daily noise.
-- [ ] Add `repeat_base: due|done` semantics. Decide whether the next occurrence advances from the scheduled date or the completion date, and require explicit behavior for overdue recurring tasks.
-- [ ] Define same-day habit completion behavior. Default to fail-loud duplicate detection, provide a deliberate override, and document how local date boundaries are selected.
+- [ ] Support `BYDAY` RRULE values in `complete` / `complete_item` next-occurrence materialization. Currently `next_repeat_occurrence()` fails loudly and asks for a manual due-date edit; decide the intended next-match rule (e.g. next matching weekday) before implementing.
+- [ ] Decide how `count:` interacts with `complete` materialization. `next_repeat_occurrence()` currently ignores `count:` (it only stops at `until:`) because nothing tracks how many instances have already been completed; either derive a count from archived/completed sibling instances or document that `count:` only bounds agenda's virtual expansion, not real completions.
 - [ ] Specify multi-file semantics. Define ID uniqueness scope, cross-file link resolution, glob ordering, archive interactions, source-file metadata, and write-file selection when multiple files are loaded.
 - [ ] Specify Unicode, encoding, and newline rules. Normalize comparison-sensitive fields to NFC, require UTF-8 without BOM and LF line endings for canonical output, and add `check` diagnostics for non-canonical encodings and newline forms.
 - [ ] Specify case-sensitivity rules for detail keys, tags, IDs, contexts, users, and projects. Make parser, filters, docs, completion, and editor support agree.
@@ -94,7 +93,7 @@ Improvements to existing commands that affect daily workflow.
 
 - [ ] Add `--last-week` and `--last-month` convenience flags to `review`. Implement shared range selectors in `review.resolve_review_range` so CLI, Web API, and MCP accept the same range names.
 - [ ] Extend `inbox --fzf` from selection-only output to optional follow-up actions after selector verification is complete. Support `show`, `assign`, `done`, and `edit` without bypassing validation or atomic writes.
-- [ ] Add `lifetxt capture` for zero-friction terminal capture. Support stdin, clipboard when available, explicit type selection, and append to the configured inbox target through the same safe write path as `quick`.
+- [ ] Add clipboard capture and an `--edit` ($EDITOR) flow to `quick`, or a dedicated `lifetxt capture` wrapper. `quick -` already reads a single title line from stdin through the existing safe write path; clipboard support and multi-line `$EDITOR` composition are still missing.
 - [ ] Keep date-token parsing intentionally small and explicit. Support a documented closed set such as `today`, `tomorrow`, weekdays, and relative offsets; reject unrecognized natural-language dates instead of guessing.
 - [ ] Promote `context:` to a first-class filter. Accept `--context` in `filter`, `agenda`, `next`, Web API, MCP, and shell completion. Prompt for context during inbox processing.
 - [ ] Add `lifetxt next`. Show actionable open tasks that are not blocked and not someday/maybe, sorted by priority, due date, and age. Reuse existing filter logic where possible.
@@ -118,6 +117,7 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Keep Web API default binding safe. Bind to localhost by default, document the security model, and require explicit configuration for non-localhost access.
 - [ ] Publish and test OpenAPI output. Ensure it reflects read-only mode, write-file behavior, timer endpoints, review endpoints, and MCP-adjacent schemas.
 - [ ] Add write-conflict detection before update and delete operations when multiple writers share a file. Return a clear conflict response instead of overwriting silently.
+- [ ] Add a Web API `POST /api/items/{id}/complete` route mirroring the CLI `complete` command and MCP `complete_item` tool (see `lifetxt/cli.py` `command_complete`, `lifetxt/agenda.py` `next_repeat_occurrence`, `lifetxt/mcp.py` `_tool_complete_item`), then add a Complete action to the Web UI detail modal for repeat-enabled items so all three surfaces stay in sync.
 
 ### Record Display and Undo
 

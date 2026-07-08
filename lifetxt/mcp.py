@@ -1,12 +1,13 @@
 import json
 import sys
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, time
 
 from .agenda import (
     agenda_records,
     filter_agenda_records,
     filter_items,
+    next_repeat_occurrence,
     parse_agenda_range,
     parse_optional_time_range,
 )
@@ -20,12 +21,19 @@ from .config import (
     config_user_aliases,
     config_write_file,
 )
-from .ids import id_key_from_config
+from .ids import (
+    collect_item_ids,
+    ensure_item_id,
+    id_key_from_config,
+    id_prefix_for_item,
+)
 from .links import dependency_blocker_records, link_records
+from .model import Item
 from .notifier import notification_records
 from .parser import parse_text
 from .serializer import item_to_line
 from .status_summary import latest_status_records
+from .timeutil import format_datetime, parse_date_or_datetime
 from .webapp import (
     ack_message_in_file,
     api_item,
@@ -207,6 +215,17 @@ def tool_schemas():
             "mark_done",
             "Mark an item done by ID and add done: when missing.",
             {"id": _string("Item ID."), "done": _string("done: value. Defaults to now.")},
+            required=["id"],
+        ),
+        _tool(
+            "complete_item",
+            "Complete a repeat-enabled task instance by ID and materialize the next "
+            "occurrence (Taskwarrior-style), using repeat_base:due|done. Non-repeating "
+            "items are marked done with no new occurrence, matching mark_done.",
+            {
+                "id": _string("Item ID."),
+                "date": _string("Completion date, YYYY-MM-DD. Defaults to today."),
+            },
             required=["id"],
         ),
         _tool("delete_item", "Delete an item by ID.", {"id": _string("Item ID.")}, required=["id"]),
@@ -557,6 +576,78 @@ def _tool_mark_done(args, context):
     return {"id": item_id, "item": api_item(updated, context.writable_path, _id_key(context))}
 
 
+def _resolve_repeat_base(item, config):
+    values = item.details.get("repeat_base")
+    repeat_base = values[0] if values else None
+    if not repeat_base:
+        defaults = config_section(config, "defaults")
+        repeat_base = defaults.get("repeat_base") or "due"
+    return str(repeat_base).strip().lower()
+
+
+def _tool_complete_item(args, context):
+    _require_writable(context)
+    item_id = str(args.get("id"))
+    id_key = _id_key(context)
+    items, _diagnostics = _read_items(context)
+    item = find_item_by_id(items, item_id, key=id_key)
+    if item is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+    if item.status == "[x]":
+        return {"id": item_id, "item": api_item(item, context.writable_path, id_key), "next": None}
+
+    date_value = args.get("date")
+    if date_value:
+        completion_dt = parse_date_or_datetime(date_value, is_end=False)
+        if completion_dt is None:
+            raise ValueError("Invalid date %r. Use YYYY-MM-DD." % date_value)
+        completion_date = completion_dt.date()
+    else:
+        completion_date = datetime.now().date()
+    date_iso = completion_date.isoformat()
+
+    repeat_value = item.details.get("repeat")
+    next_item = None
+    if repeat_value:
+        repeat_base = _resolve_repeat_base(item, context.config)
+        anchor_key, next_dt, _rule = next_repeat_occurrence(item, repeat_base, completion_date)
+        if next_dt is not None:
+            new_details = OrderedDict()
+            for key, values in item.details.items():
+                if key in (id_key, "done"):
+                    continue
+                new_details[key] = list(values)
+            if next_dt.time() == time():
+                next_value = next_dt.date().isoformat()
+            else:
+                next_value = format_datetime(next_dt)
+            new_details[anchor_key] = [next_value]
+            next_item = Item("[ ]", item.kind, item.title, new_details)
+            existing_ids = collect_item_ids(items, key=id_key)
+            ensure_item_id(
+                next_item,
+                existing_ids=existing_ids,
+                key=id_key,
+                prefix=id_prefix_for_item(next_item, context.config),
+            )
+
+    details = _copy_details(item.details)
+    if not details.get("done"):
+        details["done"] = [date_iso]
+    updated = update_item_by_id_in_file(
+        context.writable_path,
+        item_id,
+        {"status": "[x]", "type": item.kind, "title": item.title, "details": details},
+        key=id_key,
+    )
+
+    result = {"id": item_id, "item": api_item(updated, context.writable_path, id_key), "next": None}
+    if next_item is not None:
+        append_item_to_file(context.writable_path, next_item)
+        result["next"] = api_item(next_item, context.writable_path, id_key)
+    return result
+
+
 def _tool_delete_item(args, context):
     _require_writable(context)
     item_id = str(args.get("id"))
@@ -729,6 +820,7 @@ TOOL_HANDLERS = OrderedDict(
         ("create_item", _tool_create_item),
         ("update_item", _tool_update_item),
         ("mark_done", _tool_mark_done),
+        ("complete_item", _tool_complete_item),
         ("delete_item", _tool_delete_item),
         ("get_agenda", _tool_get_agenda),
         ("get_review", _tool_get_review),

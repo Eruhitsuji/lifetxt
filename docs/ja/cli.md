@@ -49,6 +49,7 @@ python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
 python -m lifetxt done [path ...]
+python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
 python -m lifetxt batch [path ...]
 python -m lifetxt archive [path ...]
@@ -108,8 +109,9 @@ python -m lifetxt template list
 | `config` | 外部 JSON config を作成または表示 |
 | `init` | 対話形式の初回セットアップ。life.txt と .lifetxt.json を作成 |
 | `doctor` | Python version、file、dependency、data の問題を検査 |
-| `quick` (`q`) | 新規 item をすばやく作成して file に追記 |
-| `done` | item を完了にし `done:TODAY` を追記 |
+| `quick` (`q`) | 新規 item をすばやく作成して file に追記。title に `-` を渡すと stdin から読み込む |
+| `done` | task を完了にし `done:TODAY` を追記。habit (`H`) item では status を変えず、完了ログに `done:DATE` を追記する |
+| `complete` | repeat 付き task のインスタンスを完了し、次回インスタンスを生成。repeat が無ければ `done` と同じ動作 |
 | `assign` | 既存 item の `assignee:` を変更 |
 | `batch` | 複数の life.txt file に対して単純な操作を一括適用 |
 | `archive` | 完了/中止済み item を別 file へ移動またはコピー |
@@ -1069,10 +1071,12 @@ python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
 ```
 
 主な tool は `list_items`、`get_item`、`check_line`、`parse_item`、
-`create_item`、`update_item`、`mark_done`、`delete_item`、`get_agenda`、
+`create_item`、`update_item`、`mark_done`、`complete_item`、`delete_item`、`get_agenda`、
 `get_review`(`review --format json` / `GET /api/review` と同形の週次・月次
 review report)、`get_graph`、`get_blockers`、`list_links`、`list_status`、
-`list_notifications`、および type `M` message 操作です。複数 file を読み込んだ場合、read tool は全 file を走査し、
+`list_notifications`、および type `M` message 操作です。`complete_item` は
+repeat 付き task のインスタンスを完了し次回インスタンスを生成します（repeat
+が無ければ `mark_done` と同じ動作）。複数 file を読み込んだ場合、read tool は全 file を走査し、
 write tool は `--write-file` のみを変更します。`--read-only` を付けると write tool を無効化します。
 
 ## 12. `config`
@@ -1336,6 +1340,63 @@ python -m lifetxt deps life.txt --blocked --format dot
 | `--format text|json|mermaid|dot` | 出力形式 |
 | `--depth N` | 表示する dependency depth の上限。`0` は root のみ |
 | `--pretty` | JSON を整形して出力 |
+
+### 13.9 `complete` と habit `done` ログ
+
+`[x]` と `done:` だけで task を完了にすると、`repeat:` の周期情報が失われます。
+次回の due instance は誰も記録せず、file 自体が唯一の完了履歴になってしまいます。
+`complete` と、habit item 向けに拡張された `done` はこの問題を、新しい記法を
+発明せずに既存の `repeat:`、`due:`/`do:`、`until:`、`done:` の上に構築して解決します。
+
+**`complete`** は repeat 付き task（type は任意、多くは `T`）を対象にします。
+現在の instance を `done:DATE` 付きで `[x]` にし、その直後に次回 due を持つ新しい
+`[ ]` instance を追記します（Taskwarrior 方式）。
+
+```sh
+python -m lifetxt complete life.txt task_water_plants
+python -m lifetxt complete life.txt --text "Water plants" --date 2026-07-08
+python -m lifetxt complete life.txt task_water_plants --dry-run
+```
+
+次回 due は `repeat:` の周期をちょうど1つ分、anchor 日付から進めます。anchor は
+item の detail key `repeat_base:due|done`（または config の
+`defaults.repeat_base`、デフォルトは `due`）で選べます。
+
+- `repeat_base:due` は item の現在の `due:`/`do:` から進めます。`due:` /
+  `do:` が無い場合は開始日を推測せず fail-loud でエラーになります。
+- `repeat_base:done` は完了日（today、または `--date`）から進めます。「実際に
+  やった日から3か月後」のように、固定スケジュールより実施日基準が重要な task
+  に向いています。
+
+`until:` の上限を超える場合は、現在の instance を完了にした上で新しい
+instance を作らず、series が終了したことを表示します。`BYDAY` の RRULE
+（例: `RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR`）はまだ instance 生成に対応しておらず
+fail-loud エラーになります。該当する場合は due を手動で編集してください。
+`repeat:` を持たない item は `done` と全く同じ動作になります。新しい instance
+には必ず新規生成した ID が割り当てられ（完了済み instance は元の ID を保持）、
+`ids` が重複を報告することはありません。繰り返し完了によるファイル増加は
+想定内の挙動なので、定期的に `archive` を実行して完了済み instance を作業
+file から退避してください。
+
+**habit `done` ログ**（`H` type item）は異なるアプローチを取ります。habit の
+定義は常に開いた状態の1行のまま保ち、履歴だけが積み上がっていくべきだから
+です。`H` item に対する `lifetxt done PATH ID [--date DATE] [--force]` は
+`status:` を変更せず、既存の `done:` 値のリストに `done:DATE` を追記し
+（他の繰り返し可能な detail key と同様の複数値リスト）、結果の streak を
+表示します。
+
+```sh
+python -m lifetxt done life.txt habit_exercise
+python -m lifetxt done life.txt habit_exercise --date 2026-06-01
+```
+
+同じ日付を2回記録しようとすると fail-loud エラーになります（`--force` で
+意図的に上書き可能）。誤って2回実行しても streak が静かに水増しされることは
+ありません。streak は蓄積された `done:` の日付から `stats.streak_days` で
+計算されます。これは Web UI の heatmap や `stats --habits` と同じ関数なので、
+すべての画面で一致します。habit 以外の `done` の動作は変わりません:
+`done PATH ID [--date DATE]` は引き続き item を `[x]` にし `done:DATE`
+（省略時は今日）を設定します。
 
 ## 14. alias
 

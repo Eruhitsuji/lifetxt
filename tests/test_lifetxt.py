@@ -2393,6 +2393,22 @@ class LifeTxtQuickCliTests(unittest.TestCase):
             self.assertIn("Existing", content)
             self.assertIn("New_task", content)
 
+    def test_quick_reads_title_from_stdin(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "quick", "-", "--append", path, input_text="Captured_from_stdin\n"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Captured_from_stdin", content)
+
+    def test_quick_stdin_empty_title_fails_loud(self):
+        stdout, stderr, code = run_cli("quick", "-", "--append", "unused.life.txt", input_text="\n")
+        self.assertEqual(1, code)
+        self.assertIn("requires a non-empty title", stderr)
+
 
 class LifeTxtDoneCliTests(unittest.TestCase):
     SOURCE_TEXT = "[ ] T Buy_milk id:t001\n[ ] T Clean_house id:t002\n[ ] T Walk_dog\n"
@@ -2476,6 +2492,199 @@ class LifeTxtDoneCliTests(unittest.TestCase):
                 f.write(self.SOURCE_TEXT)
             stdout, stderr, code = run_cli("done", path, "nonexistent")
             self.assertEqual(1, code)
+
+    def test_done_accepts_explicit_date(self):
+        source = "[ ] T Buy_milk id:t001\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("done", path, "t001", "--date", "2026-05-01")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("done:2026-05-01", content)
+
+
+class LifeTxtDoneHabitCliTests(unittest.TestCase):
+    def test_done_habit_appends_log_and_keeps_status_open(self):
+        source = "[ ] H Exercise repeat:daily project:health id:h1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("done", path, "h1", "--date", "2026-06-01")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Logged:", stdout)
+            self.assertIn("streak: 1 day(s)", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[ ] H Exercise", content)
+            self.assertIn("done:2026-06-01", content)
+
+    def test_done_habit_accumulates_multiple_dates_and_streak(self):
+        source = "[ ] H Exercise repeat:daily project:health id:h1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            run_cli("done", path, "h1", "--date", "2026-06-01")
+            run_cli("done", path, "h1", "--date", "2026-06-02")
+            stdout, stderr, code = run_cli("done", path, "h1", "--date", "2026-06-03")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("streak: 3 day(s)", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("done:2026-06-01", content)
+            self.assertIn("done:2026-06-02", content)
+            self.assertIn("done:2026-06-03", content)
+
+    def test_done_habit_same_day_duplicate_fails_loud(self):
+        source = "[ ] H Exercise repeat:daily id:h1 done:2026-06-01\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("done", path, "h1", "--date", "2026-06-01")
+            self.assertEqual(1, code)
+            self.assertIn("already has done:2026-06-01", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(source, content)
+
+    def test_done_habit_same_day_duplicate_with_force_succeeds(self):
+        source = "[ ] H Exercise repeat:daily id:h1 done:2026-06-01\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("done", path, "h1", "--date", "2026-06-01", "--force")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(2, content.count("done:2026-06-01"))
+
+
+class LifeTxtCompleteCliTests(unittest.TestCase):
+    def test_complete_repeat_task_marks_done_and_materializes_next(self):
+        source = "[ ] T Water_plants repeat:daily due:2026-07-01 project:home id:t1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "t1", "--date", "2026-07-08")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Completed:", stdout)
+            self.assertIn("Next:", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            lines = [line for line in content.splitlines() if line.strip()]
+            self.assertEqual(2, len(lines))
+            self.assertIn("[x] T Water_plants", lines[0])
+            self.assertIn("done:2026-07-08", lines[0])
+            self.assertIn("[ ] T Water_plants", lines[1])
+            self.assertIn("due:2026-07-02", lines[1])
+            self.assertNotIn("done:", lines[1])
+
+    def test_complete_next_occurrence_gets_a_fresh_unique_id(self):
+        source = "[ ] T Water_plants repeat:daily due:2026-07-01 id:t1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            run_cli("complete", path, "t1", "--date", "2026-07-08")
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("id:t1"))
+
+    def test_complete_no_repeat_behaves_like_done(self):
+        source = "[ ] T Standalone due:2026-07-05 id:p1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "p1", "--date", "2026-07-08")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            lines = [line for line in content.splitlines() if line.strip()]
+            self.assertEqual(1, len(lines))
+            self.assertIn("[x] T Standalone", lines[0])
+
+    def test_complete_series_ended_no_new_occurrence(self):
+        source = "[ ] T Series repeat:daily until:2026-07-08 due:2026-07-08 id:s1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "s1", "--date", "2026-07-08")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("series ended", stdout.lower())
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            lines = [line for line in content.splitlines() if line.strip()]
+            self.assertEqual(1, len(lines))
+            self.assertIn("[x] T Series", lines[0])
+
+    def test_complete_missing_due_with_repeat_base_due_fails_loud(self):
+        source = "[ ] T NoDue repeat:daily id:s2\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "s2")
+            self.assertEqual(1, code)
+            self.assertIn("repeat_base:due requires", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(source, content)
+
+    def test_complete_byday_rule_unsupported_fails_loud(self):
+        source = '[ ] T ByDay repeat:"RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR" due:2026-07-06 id:s3\n'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "s3")
+            self.assertEqual(1, code)
+            self.assertIn("BYDAY", stderr)
+
+    def test_complete_repeat_base_done_anchors_on_completion_date(self):
+        source = "[ ] T DoneBased repeat:weekly repeat_base:done id:d1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "d1", "--date", "2026-07-08")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-07-15", content)
+
+    def test_complete_already_done_no_rewrite(self):
+        source = "[x] T Done_task repeat:daily due:2026-07-01 id:t1 done:2026-07-01\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "t1")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Already done", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(source, content)
+
+    def test_complete_dry_run_does_not_write(self):
+        source = "[ ] T Water_plants repeat:daily due:2026-07-01 id:t1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "t1", "--date", "2026-07-08", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(source, content)
 
 
 class LifeTxtSummaryCliTests(unittest.TestCase):
@@ -4091,6 +4300,43 @@ class LifeTxtMcpTests(unittest.TestCase):
             self.assertEqual(["2026-06-12"], done["item"]["details"]["done"])
             self.assertIn("Draft updated", deleted["deleted"])
             self.assertEqual("", Path(path).read_text(encoding="utf-8"))
+
+    def test_mcp_complete_item_materializes_next_repeat_occurrence(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Water_plants repeat:daily due:2026-07-01 id:t1\n",
+                encoding="utf-8",
+            )
+            context = McpContext(paths=[path], writable_path=path, config={"ids": {"auto": True}})
+
+            result = call_tool("complete_item", {"id": "t1", "date": "2026-07-08"}, context)
+
+            self.assertEqual("[x]", result["item"]["status"])
+            self.assertEqual(["2026-07-08"], result["item"]["details"]["done"])
+            self.assertIsNotNone(result["next"])
+            self.assertEqual("[ ]", result["next"]["status"])
+            self.assertEqual(["2026-07-02"], result["next"]["details"]["due"])
+            self.assertNotEqual("t1", result["next"]["id"])
+
+            content = Path(path).read_text(encoding="utf-8")
+            lines = [line for line in content.splitlines() if line.strip()]
+            self.assertEqual(2, len(lines))
+
+    def test_mcp_complete_item_no_repeat_behaves_like_mark_done(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T Plain id:p1\n", encoding="utf-8")
+            context = McpContext(paths=[path], writable_path=path)
+
+            result = call_tool("complete_item", {"id": "p1"}, context)
+
+            self.assertEqual("[x]", result["item"]["status"])
+            self.assertIsNone(result["next"])
 
     def test_mcp_message_tools_create_reply_ack_and_snooze(self):
         from lifetxt.mcp import McpContext, call_tool

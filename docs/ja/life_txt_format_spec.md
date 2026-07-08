@@ -284,6 +284,7 @@ iCalendar sync は `source:ics uid:event-1@example.com` を書き、通常は同
 | Key | 意味 | 例 |
 |---|---|---|
 | `repeat` | 繰り返し規則 | `repeat:daily` |
+| `repeat_base` | `complete` が次回 occurrence を計算する起点: `due` または `done` | `repeat_base:done` |
 | `interval` | N 単位ごとに繰り返す | `interval:2` |
 | `until` | 最後の繰り返し日または日時 | `until:2026-12-31` |
 | `count` | 最大 occurrence 数 | `count:10` |
@@ -292,6 +293,14 @@ simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays
 を推奨します。`RRULE:...` は外部互換のため保存でき、組み込み agenda と
 time filter は dependency-free な subset として `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`、
 `INTERVAL`、`COUNT`、`UNTIL`、daily/weekly の `BYDAY` を展開します。
+
+`repeat_base` は CLI の `complete` command と MCP の `complete_item` tool
+（repeat 付き task instance の次回 occurrence を生成する機能。CLI docs の
+13.9 節を参照）にのみ影響し、agenda の仮想展開には影響しません。
+`repeat_base:due`（デフォルト。config の `defaults.repeat_base` でも設定可）
+は item の現在の `due:`/`do:` から進み、値が無ければエラーになります。
+`repeat_base:done` は完了日から進みます。`BYDAY` の RRULE は `complete` の
+occurrence 生成にはまだ対応していません。
 
 ### 7.7 Message keys
 

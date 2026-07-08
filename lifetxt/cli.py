@@ -38,6 +38,8 @@ from .agenda import (
     parse_optional_time_range,
     _format_table_row as _agenda_format_table_row,
     _table_cell as _agenda_table_cell,
+    _first_detail_value,
+    next_repeat_occurrence,
 )
 from .assist import (
     DETAIL_FLAGS,
@@ -74,7 +76,7 @@ from .links import (
 )
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
-from .timeutil import parse_date_or_datetime
+from .timeutil import format_datetime, parse_date_or_datetime
 from .notifier import (
     format_notification_email,
     format_notification_table,
@@ -1086,7 +1088,7 @@ def build_parser():
         aliases=["q"],
         help="Quickly capture a new item and append it to a file.",
     )
-    quick.add_argument("title", help="Item title.")
+    quick.add_argument("title", help="Item title. Use - to read a single line from stdin.")
     quick.add_argument(
         "--type",
         dest="kind",
@@ -1117,7 +1119,10 @@ def build_parser():
 
     done_cmd = subparsers.add_parser(
         "done",
-        help="Mark an item as complete and append done:TODAY.",
+        help=(
+            "Mark a task as complete and append done:TODAY. For habit (H) items, "
+            "append done:DATE to the completion log instead of changing status."
+        ),
     )
     done_cmd.add_argument("path", help="life.txt file containing the item.")
     done_cmd.add_argument(
@@ -1129,11 +1134,49 @@ def build_parser():
     done_cmd.add_argument("--line", type=int, default=None, help="Line number of the item.")
     done_cmd.add_argument("--text", default=None, help="Title substring to search for.")
     done_cmd.add_argument(
+        "--date",
+        default=None,
+        help="Completion date (YYYY-MM-DD). Defaults to today.",
+    )
+    done_cmd.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow logging a duplicate same-day habit completion.",
+    )
+    done_cmd.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would change without writing to the file.",
     )
     done_cmd.set_defaults(func=command_done)
+
+    complete_cmd = subparsers.add_parser(
+        "complete",
+        help=(
+            "Complete a repeat-enabled task instance and materialize the next occurrence "
+            "(Taskwarrior-style). Non-repeating items behave like `done`."
+        ),
+    )
+    complete_cmd.add_argument("path", help="life.txt file containing the item.")
+    complete_cmd.add_argument(
+        "id",
+        nargs="?",
+        default=None,
+        help="ID of the item to complete.",
+    )
+    complete_cmd.add_argument("--line", type=int, default=None, help="Line number of the item.")
+    complete_cmd.add_argument("--text", default=None, help="Title substring to search for.")
+    complete_cmd.add_argument(
+        "--date",
+        default=None,
+        help="Completion date (YYYY-MM-DD), used as the repeat_base:done anchor. Defaults to today.",
+    )
+    complete_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    complete_cmd.set_defaults(func=command_complete)
 
     batch_cmd = subparsers.add_parser(
         "batch",
@@ -3288,6 +3331,12 @@ def command_quick(args):
     config = _config(args)
     today = datetime.date.today()
 
+    if args.title == "-":
+        stdin_title = sys.stdin.readline().rstrip("\r\n")
+        if not stdin_title:
+            raise ValueError("quick - requires a non-empty title on stdin.")
+        args.title = stdin_title
+
     if args.due:
         args.due = [_resolve_relative_date(v, today) for v in args.due]
     if args.do:
@@ -3326,6 +3375,57 @@ def command_quick(args):
     return 0
 
 
+def _resolve_target_item(items, id_key, args, prompt_verb="Select"):
+    """Locate one item by --line, id, or --text. Returns (item, aborted).
+
+    aborted is True when a --text query matched multiple items and the
+    user declined to pick one; callers should print nothing further and
+    return 0 in that case.
+    """
+    if getattr(args, "line", None) is not None:
+        matches = [item for item in items if item.line == args.line]
+        if not matches:
+            raise ValueError("No item at line %d." % args.line)
+        return matches[0], False
+
+    item_id = getattr(args, "id", None)
+    if item_id:
+        matches = [
+            item for item in items
+            if item_id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError("No item with %s:%s." % (id_key, item_id))
+        if len(matches) > 1:
+            raise ValueError("Multiple items with %s:%s." % (id_key, item_id))
+        return matches[0], False
+
+    text_query = getattr(args, "text", None)
+    if text_query:
+        query = text_query.lower()
+        matches = [item for item in items if query in item.title.lower()]
+        if not matches:
+            raise ValueError("No item matching %r." % text_query)
+        if len(matches) > 1:
+            sys.stdout.write("Multiple items match:\n")
+            for i, m in enumerate(matches):
+                sys.stdout.write("  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title))
+            sys.stdout.write("%s which item? (1-%d) " % (prompt_verb, len(matches)))
+            sys.stdout.flush()
+            answer = sys.stdin.readline().strip()
+            try:
+                idx = int(answer) - 1
+                if idx < 0 or idx >= len(matches):
+                    raise ValueError()
+                return matches[idx], False
+            except (ValueError, IndexError):
+                sys.stdout.write("Aborted.\n")
+                return None, True
+        return matches[0], False
+
+    raise ValueError("Specify an ID, --line N, or --text QUERY.")
+
+
 def command_done(args):
     config = _config(args)
     path = args.path
@@ -3335,67 +3435,28 @@ def command_done(args):
     id_key = id_key_from_config(config)
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
 
-    if args.line is not None:
-        matches = [item for item in items if item.line == args.line]
-        if not matches:
-            raise ValueError("No item at line %d." % args.line)
-        target = matches[0]
-    elif args.id:
-        matches = [
-            item for item in items
-            if args.id in [str(v) for v in item.details.get(id_key, [])]
-        ]
-        if not matches:
-            raise ValueError("No item with %s:%s." % (id_key, args.id))
-        if len(matches) > 1:
-            raise ValueError("Multiple items with %s:%s." % (id_key, args.id))
-        target = matches[0]
-    elif args.text:
-        query = args.text.lower()
-        matches = [item for item in items if query in item.title.lower()]
-        if not matches:
-            raise ValueError("No item matching %r." % args.text)
-        if len(matches) > 1:
-            sys.stdout.write("Multiple items match:\n")
-            for i, m in enumerate(matches):
-                sys.stdout.write("  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title))
-            sys.stdout.write("Mark which item done? (1-%d) " % len(matches))
-            sys.stdout.flush()
-            answer = sys.stdin.readline().strip()
-            try:
-                idx = int(answer) - 1
-                if idx < 0 or idx >= len(matches):
-                    raise ValueError()
-                target = matches[idx]
-            except (ValueError, IndexError):
-                sys.stdout.write("Aborted.\n")
-                return 0
-        else:
-            target = matches[0]
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Mark done:")
+    if aborted:
+        return 0
+
+    date_arg = getattr(args, "date", None)
+    if date_arg:
+        completion_date = parse_date_or_datetime(date_arg, is_end=False)
+        if completion_date is None:
+            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
+        completion_date = completion_date.date()
     else:
-        raise ValueError("Specify an ID, --line N, or --text QUERY.")
+        completion_date = datetime.date.today()
+    date_iso = completion_date.isoformat()
+
+    if target.kind == "H":
+        return _command_done_habit(path, text, target, date_iso, config, args)
 
     if target.status == "[x]":
         sys.stdout.write("Already done: %s\n" % target.title)
         return 0
 
-    today = datetime.date.today().isoformat()
-    update_args = types.SimpleNamespace(
-        line=target.line,
-        match_id=None,
-        status="[x]",
-        kind=None,
-        title=None,
-        done=[today],
-        detail=None,
-        add_detail=None,
-        remove_detail=None,
-    )
-    for flag in DETAIL_FLAGS:
-        dest = "from_" if flag == "from" else flag
-        if not hasattr(update_args, dest):
-            setattr(update_args, dest, None)
-
+    update_args = _build_mark_done_args(target, date_iso)
     updated_text, updated_line, diagnostics = update_text(text, update_args)
     if _has_error(diagnostics):
         _print_diagnostics(diagnostics)
@@ -3411,6 +3472,227 @@ def command_done(args):
     atomic_write_text(path, updated_text)
     sys.stdout.write("Done: %s\n" % updated_line)
     return 0
+
+
+def _build_mark_done_args(target, date_iso):
+    """Build update_text() args that mark an item [x] with done:DATE."""
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status="[x]",
+        kind=None,
+        title=None,
+        done=[date_iso],
+        detail=None,
+        add_detail=None,
+        remove_detail=None,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+    return update_args
+
+
+def _command_done_habit(path, text, target, date_iso, config, args):
+    """Append a completion date to a habit item's done: log without changing status.
+
+    Habit definitions stay on one line and open (status unchanged); streaks are
+    computed from the accumulated done: values, matching item_completion_dates().
+    """
+    existing_dates = target.details.get("done", [])
+    force = getattr(args, "force", False)
+    if date_iso in existing_dates and not force:
+        raise ValueError(
+            "Habit already has done:%s. Use --force to log a duplicate same-day completion."
+            % date_iso
+        )
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=["done:%s" % date_iso],
+        detail=None,
+        remove_detail=None,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    from .stats import streak_days
+    completion_date = _parse_date_only(date_iso)
+    dates = {_parse_date_only(v) for v in existing_dates}
+    dates.discard(None)
+    dates.add(completion_date)
+    streak = streak_days(dates, completion_date)
+
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        sys.stdout.write(
+            "[dry-run] Would log habit completion: %s (streak: %d day(s))\n" % (updated_line, streak)
+        )
+        return 0
+
+    _ensure_writable_path(path, config, "done")
+    _pre_write_backup(path, config, "done")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Logged: %s (streak: %d day(s))\n" % (updated_line, streak))
+    return 0
+
+
+def command_complete(args):
+    """Complete a repeat-enabled task instance, materializing the next occurrence.
+
+    Non-repeating items fall back to the same behavior as `done`. Repeat-enabled
+    items mark the current instance [x] and append a fresh [ ] instance with the
+    next due date, Taskwarrior-style, so file growth is handled by `archive`.
+    """
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("complete command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Complete:")
+    if aborted:
+        return 0
+
+    if target.status == "[x]":
+        sys.stdout.write("Already done: %s\n" % target.title)
+        return 0
+
+    date_arg = getattr(args, "date", None)
+    if date_arg:
+        completion_dt = parse_date_or_datetime(date_arg, is_end=False)
+        if completion_dt is None:
+            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
+        completion_date = completion_dt.date()
+    else:
+        completion_date = datetime.date.today()
+    date_iso = completion_date.isoformat()
+
+    repeat_value = _first_detail_value(target, "repeat")
+    dry_run = getattr(args, "dry_run", False)
+
+    if not repeat_value:
+        # No repeat rule: complete behaves exactly like done for tasks.
+        update_args = _build_mark_done_args(target, date_iso)
+        updated_text, updated_line, diagnostics = update_text(text, update_args)
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        if dry_run:
+            sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+            return 0
+        _ensure_writable_path(path, config, "complete")
+        _pre_write_backup(path, config, "complete")
+        atomic_write_text(path, updated_text)
+        sys.stdout.write("Done: %s\n" % updated_line)
+        return 0
+
+    next_anchor_key, next_dt, rule = _compute_next_occurrence(target, config, completion_date)
+
+    update_args = _build_mark_done_args(target, date_iso)
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    if next_dt is None:
+        # Series ended (until reached): mark done, do not materialize a new instance.
+        if dry_run:
+            sys.stdout.write(
+                "[dry-run] Would mark done (series complete, no new occurrence): %s\n" % updated_line
+            )
+            return 0
+        _ensure_writable_path(path, config, "complete")
+        _pre_write_backup(path, config, "complete")
+        atomic_write_text(path, updated_text)
+        sys.stdout.write("Completed (series ended): %s\n" % updated_line)
+        return 0
+
+    new_details = OrderedDict()
+    for key, values in target.details.items():
+        if key in (id_key, "done"):
+            continue
+        new_details[key] = list(values)
+
+    if next_dt.time() == datetime.time():
+        next_value = next_dt.date().isoformat()
+    else:
+        next_value = format_datetime(next_dt)
+    new_details[next_anchor_key] = [next_value]
+
+    new_item = Item("[ ]", target.kind, target.title, new_details)
+    existing_ids = collect_item_ids(items, key=id_key)
+    ensure_item_id(
+        new_item,
+        existing_ids=existing_ids,
+        key=id_key,
+        prefix=id_prefix_for_item(new_item, config),
+    )
+    new_line = item_to_assisted_line(new_item)
+
+    parsed_new, new_diagnostics = parse_text(new_line + "\n")
+    if not parsed_new or _has_error(new_diagnostics):
+        _print_diagnostics(new_diagnostics)
+        raise ValueError("Generated next occurrence did not produce a valid item: %s" % new_line)
+
+    if dry_run:
+        sys.stdout.write("[dry-run] Would complete: %s\n" % updated_line)
+        sys.stdout.write("[dry-run] Would add next occurrence: %s\n" % new_line)
+        return 0
+
+    end_line = getattr(target, "end_line", target.line) or target.line
+    text_lines = updated_text.splitlines(True)
+    ending = "\n"
+    if text_lines and not text_lines[-1].endswith(("\n", "\r")):
+        text_lines[-1] += ending
+    insert_at = min(end_line, len(text_lines))
+    text_lines.insert(insert_at, new_line + ending)
+    final_text = "".join(text_lines)
+
+    _ensure_writable_path(path, config, "complete")
+    _pre_write_backup(path, config, "complete")
+    atomic_write_text(path, final_text)
+    sys.stdout.write("Completed: %s\n" % updated_line)
+    sys.stdout.write("Next: %s\n" % new_line)
+    return 0
+
+
+def resolve_repeat_base(item, config):
+    """Resolve the effective repeat_base ('due' or 'done') for an item.
+
+    Item-level repeat_base: overrides the config defaults.repeat_base setting,
+    which defaults to 'due' when unset.
+    """
+    repeat_base = _first_detail_value(item, "repeat_base")
+    if not repeat_base:
+        defaults = config_section(config, "defaults")
+        repeat_base = defaults.get("repeat_base") or "due"
+    return str(repeat_base).strip().lower()
+
+
+def _compute_next_occurrence(item, config, completion_date):
+    """Return (anchor_key, next_datetime_or_None, rule) for repeat materialization.
+
+    Thin wrapper around agenda.next_repeat_occurrence() that resolves
+    repeat_base from the item or config first, so CLI, Web API, and MCP
+    share one calculation.
+    """
+    repeat_base = resolve_repeat_base(item, config)
+    return next_repeat_occurrence(item, repeat_base, completion_date)
 
 
 def command_batch(args):

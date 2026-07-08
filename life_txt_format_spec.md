@@ -271,6 +271,7 @@ ownership, filtering, or routing.
 | Key | Meaning | Example |
 |---|---|---|
 | `repeat` | Recurrence rule | `repeat:daily` |
+| `repeat_base` | Anchor for the next occurrence on `complete`: `due` or `done` | `repeat_base:done` |
 | `interval` | Repeat every N units | `interval:2` |
 | `until` | Last recurrence date or datetime | `until:2026-12-31` |
 | `count` | Maximum number of occurrences | `count:10` |
@@ -280,6 +281,15 @@ and `weekdays`. `RRULE:...` values may be stored for interoperability. Built-in
 agenda and time-filter expansion supports a dependency-free RRULE subset:
 `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and
 daily/weekly `BYDAY`.
+
+`repeat_base` only affects the `complete` CLI command and the `complete_item`
+MCP tool, which materialize the next occurrence of a repeat-enabled task
+instance (see CLI docs section 13.9). It has no effect on agenda's virtual
+expansion. `repeat_base:due` (the default, also settable via
+`defaults.repeat_base` in config) advances from the item's current `due:`/
+`do:` value and requires one to be present. `repeat_base:done` advances from
+the completion date instead. `BYDAY` RRULE values are not yet supported by
+`complete`'s materialization.
 
 ### 7.7 Message Keys
 

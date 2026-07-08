@@ -101,6 +101,7 @@ KNOWN_KEYS = (
     "on",
     "at",
     "repeat",
+    "repeat_base",
     "interval",
     "until",
     "count",
@@ -135,7 +136,7 @@ PEOPLE_RECOMMENDED_KEYS = (
 )
 TEAM_RECOMMENDED_KEYS = ("team", "group")
 TIME_RECOMMENDED_KEYS = ("from", "to", "on", "at", "due", "do", "done")
-RECURRENCE_RECOMMENDED_KEYS = ("repeat", "interval", "until", "count")
+RECURRENCE_RECOMMENDED_KEYS = ("repeat", "repeat_base", "interval", "until", "count")
 MESSAGE_RECOMMENDED_KEYS = (
     "sender",
     "recipient",

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-08 (updated x62)
+Last updated: 2026-07-08 (updated x63)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -138,13 +138,11 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Deprecate the legacy `?workspace=` URL alias after one release. Emit a console warning first, then remove the mapping and docs row.
 - [ ] Make presence state colors configurable through `web.presence.states`, merged over default regex rules.
 - [ ] Order and pin Team board cards by configured user order or `web.team.pin`, then sort remaining users alphabetically.
-- [ ] Add a per-person click-through from Team board cards to a filtered Items view.
-- [ ] Add a guided empty state when zero items load. Offer first task creation, import documentation, demo mode, and docs links.
+- [ ] Expand guided empty states beyond the current Items actions. Add import documentation links, demo mode entry, docs links, and similar guidance for Agenda, Team, Status, Notifications, Stats, and Graph.
 - [ ] Add days-remaining countdowns to agenda output and Web Dashboard cards for upcoming due items.
 
 ### Accessibility and Internationalization
 
-- [ ] Perform a Web UI accessibility pass. Add tablist semantics, arrow-key view navigation, `aria-live` regions for toasts and notifications, a skip-to-content link, and visible focus coverage.
 - [ ] Audit redesigned UI color contrast for WCAG AA in both themes. Include badges, muted text, kiosk header, presence dots, and timer state indicators.
 - [ ] Honor `prefers-reduced-motion`. Disable kiosk auto-scroll, skeleton shimmer, timer animations, and modal transitions when appropriate; add a config override.
 - [ ] Add a high-contrast theme using the existing theme-token approach.
@@ -273,7 +271,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add real-export fixture tests for Todoist CSV, GitHub issues, Markdown checkboxes, todo.txt, and future calendar export/import flows.
 - [ ] Add large-file performance tests. Parsing, filtering, duplicate-ID detection, and core review aggregation on a 50,000-line file should meet documented thresholds.
 - [ ] Add optional web dependency CI and FastAPI TestClient coverage for all `/api/*` routes, including timer endpoints and read-only behavior.
-- [ ] Add Playwright or equivalent browser tests for core Web UI flows.
+- [ ] Add Playwright or equivalent browser tests for core Web UI flows, including the View Guide actions, workspace tab keyboard navigation, guided empty states, and Team `View items` click-through.
 - [ ] Add MCP integration tests that start the stdio server and exercise read, write-proposal, write-commit, read-only, timer, and conflict paths.
 - [ ] Add release process documentation and automation: `CHANGELOG.md`, semantic versioning policy, build, tag, PyPI publishing, and post-release smoke checks.
 - [ ] Verify packaging in a clean environment. Cover editable install, optional extras, console script entry points, Windows PowerShell usage, and zipapp or other single-file distribution if supported.

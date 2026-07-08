@@ -143,11 +143,17 @@ python -m lifetxt serve life.txt
 The Web UI uses a header Workspace for Dashboard, Items, Agenda, Timeline,
 Focus, Review, Messages, Team, Status, Notifications, Stats, Graph, Display,
 and Kiosk.
+The header includes a contextual View Guide for the active workspace, exposes
+the workspace switcher as a keyboard-friendly tablist, and provides a
+skip-to-content link for dense dashboards.
 Records open in centered modals with thread replies, dependency links, due
 quick actions, and Markdown previews. Review supports project/custom date
 filters and Markdown copy; Timeline preserves `range=today|24h|week` in the
 URL, shows guided empty states for ranges with no dated records, and marks
 records that overlap the selected range from earlier starts as `ongoing`.
+The Items view now has action-oriented empty states, and Team cards include a
+`View items` action that opens `user=PERSON&open_only=true` in the shared
+Items filter.
 Dashboard cards and theme tokens are configurable through `web.dashboard.*`
 and `web.theme.*`. Display mode has separate light/dark palettes. The `+ New`
 editor exposes viewport-aware hover/focus help for status, type, title, and

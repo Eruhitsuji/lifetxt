@@ -2355,6 +2355,13 @@ HTML_PAGE = r"""<!doctype html>
     .empty-state .empty-icon { font-size: 2rem; opacity: .75; }
     .empty-state .empty-title { font-weight: 700; color: var(--ink); }
     .empty-state .empty-hint { font-size: .84rem; max-width: 26rem; }
+    .empty-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: .45rem;
+      margin-top: .2rem;
+    }
     /* ── Back to top ── */
     #back-to-top {
       position: fixed;
@@ -2855,6 +2862,58 @@ HTML_PAGE = r"""<!doctype html>
     }
     .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+    .skip-link {
+      position: fixed;
+      top: .75rem;
+      left: .75rem;
+      z-index: 1000;
+      transform: translateY(-160%);
+      padding: .45rem .7rem;
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--accent);
+      box-shadow: var(--shadow-2);
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .skip-link:focus { transform: translateY(0); outline: 2px solid var(--accent); outline-offset: 2px; }
+    .view-guide {
+      max-width: 1360px;
+      margin: .85rem auto 0;
+      padding: 0 1rem;
+    }
+    .view-guide-card {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      flex-wrap: wrap;
+      padding: .8rem .95rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      background: color-mix(in srgb, var(--panel) 92%, var(--soft));
+      box-shadow: var(--shadow-1);
+    }
+    .view-guide-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.6rem;
+      padding: .12rem .55rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: .74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .view-guide-copy { min-width: min(100%, 26rem); flex: 1 1 20rem; }
+    .view-guide-title { font-weight: 800; color: var(--ink); line-height: 1.2; }
+    .view-guide-desc { color: var(--muted); font-size: .86rem; margin-top: .12rem; }
+    .view-guide-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+    .view-guide-actions button { padding: .34rem .6rem; font-size: .78rem; }
+    .display-mode .view-guide,
+    .kiosk-mode .view-guide { display: none; }
     /* ── Dashboard view ──────────────────────────────────────────── */
     .dashboard-body { display: grid; gap: 1rem; padding: 1rem; }
     .kpi-row {
@@ -3076,6 +3135,17 @@ HTML_PAGE = r"""<!doctype html>
     .person-status-title { font-size: .9rem; overflow-wrap: anywhere; }
     .person-meta { font-size: .76rem; color: var(--muted); display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
     .person-workload { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .person-card-actions {
+      display: flex;
+      gap: .35rem;
+      flex-wrap: wrap;
+      margin-top: .1rem;
+    }
+    .person-card-action {
+      justify-self: start;
+      padding: .26rem .55rem;
+      font-size: .76rem;
+    }
     .person-msgs { display: grid; gap: .25rem; border-top: 1px dashed var(--line); padding-top: .45rem; }
     .person-msg {
       font-size: .8rem;
@@ -3674,6 +3744,10 @@ HTML_PAGE = r"""<!doctype html>
       .items-controls > * { flex: 1 1 40%; }
       .workspace-tabs { margin-inline: -.15rem; }
       .workspace-tab { padding: .32rem .6rem; font-size: .78rem; }
+      .view-guide { padding: 0 .75rem; }
+      .view-guide-card { align-items: stretch; }
+      .view-guide-actions { justify-content: stretch; }
+      .view-guide-actions button { flex: 1 1 8rem; }
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
       .review-range-bar > * { flex: 1 1 100%; }
       .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
@@ -3687,6 +3761,7 @@ HTML_PAGE = r"""<!doctype html>
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#workspace">Skip to content</a>
   <div id="read-only-banner" style="display:none;background:#d97706;color:#fff;text-align:center;font-size:.78rem;padding:.25rem .75rem;letter-spacing:.02em;">
     ⚠️ Read-only demo — write operations are disabled.
   </div>
@@ -3712,7 +3787,7 @@ HTML_PAGE = r"""<!doctype html>
       <span id="kiosk-clock" style="display:none"></span>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
-    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views">
+    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views" role="tablist">
       <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
       <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
       <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
@@ -3729,7 +3804,8 @@ HTML_PAGE = r"""<!doctype html>
       <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
     </nav>
   </header>
-  <main id="workspace">
+  <div id="view-guide" class="view-guide" aria-live="polite"></div>
+  <main id="workspace" tabindex="-1">
     <section class="item-section page" data-page="items">
       <div class="section-head">
         <h2><span class="h2-icon" aria-hidden="true">📋</span><span id="items-heading-label">Items</span></h2>
@@ -4085,7 +4161,7 @@ HTML_PAGE = r"""<!doctype html>
   </div>
 
   <!-- Toast container -->
-  <div id="toast-container"></div>
+  <div id="toast-container" aria-live="polite" aria-atomic="true" role="status"></div>
   <div id="hm-tooltip" class="hm-tooltip"></div>
   <div id="ui-help-tooltip" class="ui-help-tooltip" role="tooltip" aria-hidden="true"></div>
   <button id="back-to-top" class="secondary" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
@@ -4338,6 +4414,191 @@ HTML_PAGE = r"""<!doctype html>
       "status": "status", "notifications": "notifications",
       "stats": "stats", "graph": "graph",
     };
+    const VIEW_META = {
+      "": {
+        label: "Items",
+        description: "Search, filter, edit, and bulk-manage life.txt records.",
+        actions: [["New record", "newItem"], ["Quick add", "quickAdd"], ["Clear filters", "clearFilters"]],
+      },
+      dashboard: {
+        label: "Dashboard",
+        description: "A compact overview of open work, agenda pressure, messages, and presence.",
+        actions: [["Open agenda", "agenda"], ["Open focus", "focus"], ["Refresh", "refresh"]],
+      },
+      agenda: {
+        label: "Agenda",
+        description: "Review dated work in the selected range, including blocked and upcoming records.",
+        actions: [["Today", "agendaToday"], ["7 days", "agendaWeek"], ["Refresh", "refresh"]],
+      },
+      timeline: {
+        label: "Timeline",
+        description: "See dated records on a chronological board with empty-range guidance.",
+        actions: [["Today", "timelineToday"], ["Next 24h", "timeline24h"], ["Week", "timelineWeek"]],
+      },
+      focus: {
+        label: "Focus",
+        description: "Prioritize open, actionable work and reduce noisy context while planning.",
+        actions: [["Open tasks", "openTasks"], ["New record", "newItem"], ["Refresh", "refresh"]],
+      },
+      review: {
+        label: "Review",
+        description: "Summarize completed, carried, blocked, and planned work for a chosen period.",
+        actions: [["This week", "reviewWeek"], ["Copy Markdown", "copyReview"], ["Refresh", "refresh"]],
+      },
+      messages: {
+        label: "Messages",
+        description: "Filter message records and manage notification-oriented conversations.",
+        actions: [["New message", "newMessage"], ["Notifications", "notifications"], ["Clear filters", "clearFilters"]],
+      },
+      team: {
+        label: "Team",
+        description: "Combine presence, open workload, and recent messages per person.",
+        actions: [["Status view", "status"], ["Messages", "messages"], ["Refresh", "refresh"]],
+      },
+      status: {
+        label: "Status",
+        description: "Show the latest presence state for each person or active status records only.",
+        actions: [["Active only", "toggleStatusActive"], ["Team board", "team"], ["Refresh", "refresh"]],
+      },
+      notifications: {
+        label: "Notifications",
+        description: "Review pending notification records, acknowledge them, or request browser alerts.",
+        actions: [["Enable alerts", "enableNotifications"], ["Messages", "messages"], ["Refresh", "refresh"]],
+      },
+      stats: {
+        label: "Statistics",
+        description: "Inspect charted trends for tasks, projects, messages, and journal fields.",
+        actions: [["Refresh charts", "refreshCharts"], ["Dashboard", "dashboard"]],
+      },
+      graph: {
+        label: "Graph",
+        description: "Explore dependencies, references, parent-child links, and related records.",
+        actions: [["Refresh graph", "refreshGraph"], ["Items", "items"]],
+      },
+      display: {
+        label: "Display",
+        description: "Read-focused wall display mode with editing controls hidden.",
+        actions: [["Exit display", "items"]],
+      },
+      kiosk: {
+        label: "Kiosk",
+        description: "Always-on display mode with automatic refresh and compact controls.",
+        actions: [["Exit kiosk", "items"]],
+      },
+    };
+    const VIEW_ACTIONS = {
+      newItem: () => newItem(),
+      quickAdd: () => toggleQuickAdd(true),
+      clearFilters: () => clearAllFilters(),
+      refresh: () => triggerRefresh(),
+      items: () => switchWorkspace(""),
+      dashboard: () => switchWorkspace("dashboard"),
+      agenda: () => switchWorkspace("agenda"),
+      focus: () => switchWorkspace("focus"),
+      review: () => switchWorkspace("review"),
+      messages: () => switchWorkspace("messages"),
+      team: () => switchWorkspace("team"),
+      status: () => switchWorkspace("status"),
+      notifications: () => switchWorkspace("notifications"),
+      agendaToday: () => setAgendaQuickRange("today"),
+      agendaWeek: () => setAgendaQuickRange("7d"),
+      timelineToday: () => setTimelineRange("today"),
+      timeline24h: () => setTimelineRange("24h"),
+      timelineWeek: () => setTimelineRange("week"),
+      openTasks: () => openTaskItems(),
+      reviewWeek: () => setReviewRange("week"),
+      copyReview: () => copyReviewMarkdown(),
+      newMessage: () => {
+        newItem();
+        setTimeout(() => {
+          const type = document.getElementById("edit-type");
+          if (type) type.value = "M";
+          updateTypeHints("M");
+        }, 0);
+      },
+      toggleStatusActive: () => toggleStatusActive(),
+      enableNotifications: () => enableBrowserNotifications(),
+      refreshCharts: () => refreshStatsView(),
+      refreshGraph: () => loadGraphPanel(),
+    };
+    function runViewGuideAction(action) {
+      const fn = VIEW_ACTIONS[action];
+      if (fn) fn();
+    }
+    function syncViewGuide() {
+      const node = document.getElementById("view-guide");
+      if (!node) return;
+      const v = currentView();
+      const meta = VIEW_META[v] || VIEW_META[""];
+      const actions = (meta.actions || []).map(([label, action]) =>
+        `<button type="button" class="secondary" onclick="runViewGuideAction(${escapeHtml(jsLiteral(action))})">${escapeHtml(label)}</button>`
+      ).join("");
+      node.innerHTML = `
+        <div class="view-guide-card">
+          <span class="view-guide-chip">${escapeHtml(v || "items")}</span>
+          <div class="view-guide-copy">
+            <div class="view-guide-title">${escapeHtml(meta.label)}</div>
+            <div class="view-guide-desc">${escapeHtml(meta.description)}</div>
+          </div>
+          <div class="view-guide-actions">${actions}</div>
+        </div>`;
+    }
+    function setupWorkspaceTabs() {
+      const nav = document.getElementById("workspace-tabs");
+      if (!nav) return;
+      nav.setAttribute("role", "tablist");
+      nav.addEventListener("keydown", (event) => {
+        if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+        const tabs = Array.from(nav.querySelectorAll(".workspace-tab[data-view]"));
+        const current = tabs.indexOf(document.activeElement);
+        if (current < 0 || !tabs.length) return;
+        event.preventDefault();
+        let next = current;
+        if (event.key === "Home") next = 0;
+        else if (event.key === "End") next = tabs.length - 1;
+        else next = (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+        tabs[next].focus();
+      });
+    }
+    function openTaskItems() {
+      const params = query();
+      params.delete("mode");
+      params.delete("view");
+      params.delete("workspace");
+      params.delete("panel");
+      params.set("kind", "T");
+      params.set("open_only", "true");
+      history.pushState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+    }
+    function setAgendaQuickRange(range) {
+      const params = query();
+      params.delete("mode");
+      params.set("view", "agenda");
+      params.delete("from");
+      params.delete("to");
+      params.delete("around");
+      params.delete("window");
+      const today = new Date();
+      if (range === "today") {
+        params.set("from", _fmtDate(today));
+        params.set("to", _fmtDate(today));
+      } else {
+        const end = new Date(today);
+        end.setDate(end.getDate() + (range === "7d" ? 7 : 1));
+        params.set("from", _fmtDate(today));
+        params.set("to", _fmtDate(end));
+      }
+      history.pushState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadAgenda();
+    }
+    function refreshStatsView() {
+      statsLoaded = true;
+      loadChart(currentChartType);
+      loadStatsBreakdown();
+    }
     function switchWorkspace(view, historyMode = "push") {
       const params = query();
       params.delete("mode");
@@ -4359,7 +4620,11 @@ HTML_PAGE = r"""<!doctype html>
     function syncViewTabs() {
       const v = currentView();
       document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
-        btn.classList.toggle("active", (btn.dataset.view || "") === v);
+        const active = (btn.dataset.view || "") === v;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("role", "tab");
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+        btn.tabIndex = active ? 0 : -1;
       });
       const notifBtn = document.getElementById("notif-btn");
       if (notifBtn) notifBtn.classList.toggle("btn-active", v === "notifications");
@@ -4420,6 +4685,7 @@ HTML_PAGE = r"""<!doctype html>
       document.body.classList.toggle("kiosk-mode", isKioskMode());
       syncViewTabs();
       syncPages();
+      syncViewGuide();
       _kioskApply();
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       const fallbackKind = currentView() === "messages" ? "M" : "";
@@ -4667,6 +4933,25 @@ HTML_PAGE = r"""<!doctype html>
       else return "";
       return `<span class="due-rel ${cls}">${escapeHtml(text)}</span>`;
     }
+    function enhanceItemsEmptyState(hasFilters) {
+      if (isKioskMode() || isDisplayMode()) return;
+      const state = document.querySelector("#items .empty-state");
+      if (!state) return;
+      state.querySelectorAll(":scope > button, :scope > .empty-actions").forEach(el => el.remove());
+      const actions = document.createElement("div");
+      actions.className = "empty-actions";
+      if (hasFilters) {
+        actions.innerHTML =
+          `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>` +
+          `<button type="button" onclick="newItem()">New record</button>`;
+      } else {
+        actions.innerHTML =
+          `<button type="button" onclick="newItem()">New record</button>` +
+          `<button type="button" class="secondary" onclick="toggleQuickAdd(true)">Quick add</button>` +
+          `<button type="button" class="secondary" onclick="openCmdk()">Command palette</button>`;
+      }
+      state.appendChild(actions);
+    }
     function renderItems(items) {
       const root = document.getElementById("items");
       const hasFilters = !!(document.getElementById("search").value.trim() ||
@@ -4683,6 +4968,7 @@ HTML_PAGE = r"""<!doctype html>
             ? `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>`
             : `<button type="button" onclick="toggleQuickAdd(true)">＋ Quick add</button>`)}
         </div>`;
+      if (!items.length) enhanceItemsEmptyState(hasFilters);
       renderSummary(items);
       renderFilterChips();
       updateSearchCount(items.length);
@@ -5225,6 +5511,24 @@ HTML_PAGE = r"""<!doctype html>
         (record.service ? `<span class="pill">${escapeHtml(record.service)}</span>` : "") +
         `</div>` + extraHtml + `</div>`;
     }
+    function openPersonItems(person) {
+      const params = query();
+      params.delete("mode");
+      params.delete("view");
+      params.delete("workspace");
+      params.delete("panel");
+      params.delete("person");
+      params.delete("assignee");
+      params.delete("sender");
+      params.delete("recipient");
+      params.set("user", String(person || ""));
+      params.set("open_only", "true");
+      if (!params.has("sort")) params.set("sort", "time");
+      if (!params.has("order")) params.set("order", "asc");
+      history.pushState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+    }
     function toggleStatusActive() {
       const params = query();
       const activeOnly = firstParam(params, ["active"], "true") !== "false";
@@ -5296,6 +5600,7 @@ HTML_PAGE = r"""<!doctype html>
             `<span class="review-num" style="margin-left:auto">${escapeHtml(String(m?.details?.sender?.[0] || ""))}</span>` +
             `</div>`).join("") + `</div>`;
         }
+        extra += `<div class="person-card-actions"><button type="button" class="secondary person-card-action" onclick="openPersonItems(${escapeHtml(jsLiteral(record.person))})">View items</button></div>`;
         return presenceCard(record, extra);
       }).join("");
     }
@@ -8409,6 +8714,7 @@ HTML_PAGE = r"""<!doctype html>
       updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
       setupContextualHelp();
+      setupWorkspaceTabs();
       syncStatusFilterBarsFromUrl();
       _syncGraphLayoutBtns();
       startGitPolling();

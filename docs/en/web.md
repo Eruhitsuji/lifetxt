@@ -189,6 +189,13 @@ The browser GUI supports:
 - Listing and filtering items
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and view selection
+- A contextual View Guide below the header. It explains the active workspace
+  and exposes the most common actions for that view, such as New record,
+  Quick add, Timeline range changes, Review Markdown copy, or Team/Status
+  navigation.
+- Keyboard-friendly workspace navigation: the header view bar is exposed as a
+  tablist, `Left`/`Right` move between views, `Home`/`End` jump to the ends,
+  and a skip-to-content link lets keyboard users bypass the header.
 - A single-content view bar: Dashboard, Items, Agenda, Timeline, Focus,
   Review, Messages, Team, Status, Notifications, Stats, Graph, Display, and Kiosk —
   exactly one view fills the screen at a time
@@ -229,6 +236,9 @@ The browser GUI supports:
   and follows browser Back/Forward URL state.
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
+- Team cards include a `View items` action that opens the shared Items view
+  filtered with `user=PERSON&open_only=true`, so presence, assignments,
+  sent messages, and received messages can be inspected from one place.
 - Showing due message notifications
 - Showing repeated agenda occurrences with occurrence badges
 - Browser notifications after the user grants permission
@@ -238,6 +248,9 @@ The browser GUI supports:
   record editor
 - A fuzzy command palette with actions, view switching, and recently opened
   items
+- Guided empty states in the Items view. When no records exist, the UI offers
+  New record, Quick add, and the command palette; when filters hide all
+  records, it offers Clear filters and New record.
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews

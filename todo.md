@@ -1,909 +1,332 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-07 (updated x58)
+Last updated: 2026-07-08 (updated x59)
 
-This roadmap tracks remaining work after the current prototype updates.
-Completed prototype-only items are removed; items below are implementation,
-validation, documentation, or design work that still matters.
+This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
 Priority guide:
 
 - `P0`: Stabilize features that are already implemented and likely to break in real use.
-- `P1`: Implement or refine core features that affect the format, CLI, API, or daily workflow.
-- `P2`: Improve usability, documentation, packaging, and long-term maintainability.
+- `P1`: Implement or refine core features that affect the format, CLI, API, MCP, or daily workflow.
+- `P2`: Improve usability, documentation, packaging, long-term maintainability, and ecosystem fit.
 - `Deferred`: Useful ideas that should not block the next practical release.
 
----
+Design principles:
 
-## P0: Stabilization
-
-Items in this section are already implemented but have not been verified in
-real environments. Each item must be tested manually before the next release.
-
-- [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native
-  macOS/Linux: confirm Vim-like keymap, curses colors, and auto-reload with a
-  human at a real TTY. Automated regression tests now cover the fallback
-  logic itself (`textual` missing -> curses/plain, `curses` missing -> plain
-  text, `cmd_tui` never raises) in `tests/test_cui_extensions.py`
-  (`TuiFallbackTests`), so what remains is interactive verification, not the
-  fallback code path.
-
-- [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco`
-  binaries on both Windows PowerShell and Unix-like shells: confirm `done`,
-  `delete`, and `edit` (with `$EDITOR`) actions end-to-end. The preview
-  command quoting bug for native Windows `cmd.exe` (vs. git-bash/WSL/POSIX
-  shells, which set `$SHELL`) has been fixed in `fzf_helper._preview_command`
-  and is regression-tested (`FzfPreviewQuotingTests`), and the
-  no-selector-installed error path is also regression-tested
-  (`FzfNotInstalledTests`). What remains is verifying the actual selector UI
-  and its preview rendering with real `fzf`/`peco` installed.
+- Work backward from observed problems; do not add complex mechanisms only because they are imaginable.
+- Fail loudly when behavior is ambiguous or data may be lost.
+- Prefer existing infrastructure: git, detail fields, JSON Schema, shared mutation paths, and standard file formats.
+- Keep CLI, Web API, Web UI, MCP, editor support, and documentation synchronized.
 
 ---
 
-## P1: Format Semantics
+## P0: Stabilization and Data Safety
 
-Design decisions that affect the file format, parser, and all downstream tools.
-Resolve these before implementing features that depend on them.
+Items in this section are already implemented or foundational enough that they should be verified or hardened before the next release.
 
-- [ ] Finalize timezone-aware datetime round-trip rules: specify how naive
-  datetimes (no timezone suffix) are stored and interpreted, how
-  `#! timezone:` and config `defaults.timezone` affect display and filtering,
-  and how `to-json`, `to-csv`, and `from-json` preserve or normalize timezone
-  information without silent data loss.
-
-- [ ] Decide which item types should recommend `elapsed:`: currently only
-  task-like records use it; determine whether `E` events, `S` status records,
-  and `J` journal entries should also record elapsed time, and add
-  type-specific guidance to the spec.
-
-- [ ] Finalize occurrence materialization rules for life.txt output files:
-  CLI JSON/JSONL/CSV occurrence exports and Web agenda occurrence metadata are
-  implemented, but the format still needs explicit guidance for writing
-  generated occurrences back to `.life.txt` or `.generated/*.life.txt` files
-  without confusing them with stored source items.
+- [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native macOS/Linux. Confirm Vim-like keymaps, curses colors, narrow-terminal behavior, and auto-reload with a human at a real TTY.
+- [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco` binaries on Windows PowerShell and Unix-like shells. Confirm preview rendering plus `show`, `done`, `delete`, and `edit` actions end-to-end.
+- [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
+- [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
+- [ ] Add browser-level smoke tests for the Web UI. Cover raw import live parse preview, detail modal message replies, occurrence badges, kiosk change highlighting, search highlighting, command palette actions, undo toast restore, keyboard navigation, inline status cycling, export buttons, graph layout switching, modal focus trapping, and the current single-content router views.
+- [ ] Audit untyped boolean query parameters across all FastAPI routes. Apply string-aware parsing or typed `bool` parameters to `/api/items`, `/api/messages`, `/api/agenda`, chart routes, and any remaining endpoints; add one regression test per route.
+- [ ] Unify all mutating operations behind one atomic write path. Use write-temp plus rename, a lock file for concurrent writers, and a shared mutation layer for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
+- [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
+- [ ] Add a release smoke-test runner that executes key CLI and Web API flows without running the full unit suite. Include timer state-file behavior, cross-platform paths, Web API write mode, read-only mode, and MCP startup.
 
 ---
 
-## P1: Configuration
+## P1: Format and Data Semantics
 
-Settings that affect how values are resolved across CLI, config file, and
-file-level metadata. These must be consistent across all commands.
+Design decisions that affect the file format, parser, serialization, and every downstream tool. Resolve these before adding features that depend on them.
 
-- [ ] Extend `#!` directive wiring to `timezone`: apply `timezone` directive
-  to datetime display (agenda, summary, stats) and filtering. Currently `self`
-  and `project` are wired for `quick` and `assist`; `timezone` remains unread.
-  This needs care: `timeutil.parse_datetime` currently converts any
-  timezone-suffixed value to naive system-local time on parse, so wiring a
-  per-file `timezone` directive means deciding how it interacts with that
-  existing conversion without silently changing already-correct displayed
-  times (see the related P1 Format Semantics item below).
+- [ ] Finalize timezone-aware datetime round-trip rules. Specify how naive datetimes are stored and interpreted, how `#! timezone:` and config `defaults.timezone` affect display and filtering, and how JSON/JSONL/CSV import and export preserve timezone information without silent data loss.
+- [ ] Wire `#! timezone:` into datetime display and filtering for agenda, summary, stats, review, Web API, and MCP. Add tests that cover timezone-suffixed values, naive values, file directives, config defaults, and CLI overrides.
+- [ ] Decide which item types should recommend `elapsed:`. Determine whether events, status records, journal entries, reminders, and future timer session records should record elapsed time, and add type-specific guidance to the format spec.
+- [ ] Finalize occurrence materialization rules for life.txt output files. Specify how generated recurrence occurrences may be written to `.life.txt` or `.generated/*.life.txt` without confusing them with stored source items.
+- [ ] Design repeat completion semantics separately for tasks and habits. Repeating tasks should be able to materialize the next due instance; habits should be able to keep compact completion logs and compute streaks without creating daily noise.
+- [ ] Add `repeat_base: due|done` semantics. Decide whether the next occurrence advances from the scheduled date or the completion date, and require explicit behavior for overdue recurring tasks.
+- [ ] Define same-day habit completion behavior. Default to fail-loud duplicate detection, provide a deliberate override, and document how local date boundaries are selected.
+- [ ] Specify multi-file semantics. Define ID uniqueness scope, cross-file link resolution, glob ordering, archive interactions, source-file metadata, and write-file selection when multiple files are loaded.
+- [ ] Specify Unicode, encoding, and newline rules. Normalize comparison-sensitive fields to NFC, require UTF-8 without BOM and LF line endings for canonical output, and add `check` diagnostics for non-canonical encodings and newline forms.
+- [ ] Specify case-sensitivity rules for detail keys, tags, IDs, contexts, users, and projects. Make parser, filters, docs, completion, and editor support agree.
+- [ ] Document `#!` metadata directive placement rules. Directives must appear contiguously before the first item, and the spec should include the resolution order across CLI flags, config, file directives, and built-in defaults.
+- [ ] Add JSON Schema definitions for JSON, JSONL, Web API payloads, and MCP tool outputs. Publish schemas under a stable `dist/` path, give them HTTPS `$id` values, and validate golden corpus exports in CI.
 
 ---
 
-## P1: CLI — Core Improvements
+## P1: Timer System Expansion
+
+Existing timer support should grow from basic start/stop tracking into a coherent local productivity subsystem shared by CLI, Web UI, Web API, and MCP.
+
+- [ ] Design a timer state model that supports stopwatch sessions, alarms, Pomodoro-style intervals, pause/resume, cancellation, completion, and optional association with a life.txt item ID.
+- [ ] Add CLI commands for the expanded timer model: `timer status`, `timer pause`, `timer resume`, `timer cancel`, `timer alarm`, `timer pomodoro`, and `timer log`. Preserve the current `timer start` / `timer stop` behavior as the simplest path.
+- [ ] Support arbitrary Pomodoro profiles. Allow configurable focus length, short break length, long break length, cycle count, auto-start policy, notification behavior, and optional project/item defaults.
+- [ ] Add alarm support. Allow one-shot alarms by absolute time or relative duration, store enough state to survive process restarts, and fail loudly when the requested time is ambiguous.
+- [ ] Add stopwatch mode for ad-hoc measurement without requiring a task ID. Let users optionally attach the resulting elapsed time to an item later.
+- [ ] Decide whether named or multiple parallel timers belong in P1 or should remain deferred. If implemented, define conflict rules for writing `elapsed:` to the same item from multiple active timers.
+- [ ] Define how timer sessions are persisted. Decide between a state file, life.txt session records, or both. Include crash recovery, stale timer detection, and portability across machines.
+- [ ] Add notification hooks for timer events. Support terminal output first, then optional desktop notification, Web UI toast, email, and future webhook channels through the shared notification backend.
+- [ ] Add timer summary and statistics. Show active timer, current interval, total elapsed today, elapsed by project, and completed Pomodoro cycles through CLI, Web UI, Web API, and MCP.
+- [ ] Add timer tests. Cover duration normalization, pause/resume math, crossing midnight, timezone display, crash recovery, concurrent writes, state-file corruption, and cross-platform file locking.
+- [ ] Add timer documentation. Include start/pause/stop, stopwatch, alarm, Pomodoro profiles, item-linked elapsed updates, crash recovery, and examples for both CLI and Web UI.
+
+---
+
+## P1: Timer Web UI / Web API / MCP
+
+The timer feature should be controllable from every user-facing surface while sharing one backend state model.
+
+- [ ] Add Web API endpoints for timer operations: status, start, stop, pause, resume, cancel, create alarm, create Pomodoro session, list recent sessions, and attach elapsed time to an item.
+- [ ] Add an inline timer control to the Web UI detail modal for task-like items. Provide start, pause, resume, stop, and cancel actions that update `elapsed:` through the existing item update path.
+- [ ] Add a global timer panel to the Web UI. Show active stopwatch, active Pomodoro phase, next alarm, elapsed today, and quick controls without opening a record.
+- [ ] Add Web UI alarm and Pomodoro setup flows. Use explicit fields instead of natural-language guessing, and preview the resulting schedule before starting.
+- [ ] Add MCP timer tools. Include `timer_status`, `timer_start`, `timer_stop`, `timer_pause`, `timer_resume`, `timer_cancel`, `timer_alarm`, `timer_pomodoro`, and `timer_log`, all backed by the same mutation path as CLI and Web API.
+- [ ] Make MCP timer writes safe by default. For actions that modify life.txt content, support proposal mode that returns a diff unless the client explicitly asks for a committed write.
+- [ ] Add read-only mode behavior for timer surfaces. Decide whether read-only Web/MCP servers may show timer state, and ensure they cannot mutate life.txt or timer state unless explicitly configured.
+- [ ] Document the timer API and MCP tools with request/response examples, error cases, and client configuration snippets.
+
+---
+
+## P1: CLI Core Improvements
 
 Improvements to existing commands that affect daily workflow.
 
-- [ ] Verify `tui` behavior in narrow terminals with a real curses TTY.
-  `filter` now has a `--width N` flag and a `--format table` output (bordered
-  table, or a compact one-line form below 80 columns, matching `agenda` and
-  `stats`); this part is done and documented in CLI guide section 6.
-
-- [ ] Add `--last-week` and `--last-month` convenience flags to `review` so
-  the CLI matches the Web Review view's range presets without manual
-  `--from`/`--to` date math. Implement the presets in
-  `review.resolve_review_range` so `GET /api/review` and the MCP `get_review`
-  tool can accept the same selector (e.g. `range=last-week`) instead of the
-  browser computing dates client-side as it does today.
-
-- [ ] Keep CLI help synchronized with docs: after every change to `tui`,
-  `fzf`, `timer`, `stats`, `git-hook`, and `completion`, update
-  `docs/en/cli.md`, `docs/ja/cli.md`, and shell completion scripts in the
-  same commit.
-
-- [ ] Verify `notify --email` against real SMTP providers in a safe test
-  account: confirm STARTTLS, authentication failure messages, multiple
-  comma-separated recipients, `--watch` seen-state behavior after successful
-  send, and provider-specific app-password requirements. Automated tests cover
-  dry-run formatting and watcher delivery callbacks, but no network SMTP smoke
-  test is committed.
-
----
-
-## P1: CLI — New Commands (Onboarding & Safety)
-
-New commands that reduce the initial setup cost and protect against data loss.
-Implement before other new commands because they lower the barrier for all
-subsequent use.
-
----
-
-## P1: CLI — New Commands (Daily Operations)
-
-New commands for the most frequent daily actions. Each delegates to an
-existing command internally to reuse validation and atomic write behavior.
-
----
-
-## P1: CLI — New Commands (Review & Health)
-
-New commands that close the feedback loop: surfacing what is happening,
-what is overdue, and what the week looked like.
-
-- [ ] Extend `inbox --fzf` from selection-only output to optional follow-up
-  actions (`show`, `assign`, `done`, `edit`) after real `fzf`/`peco`
-  verification confirms quoting and selector behavior.
-
----
-
-## P1: CLI — Archive
-
-Commands and behaviors for moving old items out of active files.
-
----
-
-## P1: CLI — Visualization
-
-CLI-native charts without external dependencies.
+- [ ] Add `--last-week` and `--last-month` convenience flags to `review`. Implement shared range selectors in `review.resolve_review_range` so CLI, Web API, and MCP accept the same range names.
+- [ ] Extend `inbox --fzf` from selection-only output to optional follow-up actions after selector verification is complete. Support `show`, `assign`, `done`, and `edit` without bypassing validation or atomic writes.
+- [ ] Add `lifetxt capture` for zero-friction terminal capture. Support stdin, clipboard when available, explicit type selection, and append to the configured inbox target through the same safe write path as `quick`.
+- [ ] Keep date-token parsing intentionally small and explicit. Support a documented closed set such as `today`, `tomorrow`, weekdays, and relative offsets; reject unrecognized natural-language dates instead of guessing.
+- [ ] Promote `context:` to a first-class filter. Accept `--context` in `filter`, `agenda`, `next`, Web API, MCP, and shell completion. Prompt for context during inbox processing.
+- [ ] Add `lifetxt next`. Show actionable open tasks that are not blocked and not someday/maybe, sorted by priority, due date, and age. Reuse existing filter logic where possible.
+- [ ] Add `lifetxt habit today`. Materialize today's habit checkboxes from repeat-enabled habit definitions, idempotent per habit and date, with `--dry-run` support.
+- [ ] Add `lifetxt invoice`. Aggregate `elapsed:` per project for a billing period, support rates and rounding, and output Markdown and CSV.
+- [ ] Add `lifetxt standup`. Summarize done yesterday, planned today, and blocked work for a user, with text, Markdown, and Slack-ready output.
+- [ ] Add `lifetxt demo`. Start the Web UI against generated temporary sample data for selected personas and clearly mark that no real user files are being changed.
+- [ ] Add `lifetxt fmt`. Normalize indentation, spacing, newline style, ordering where safe, and canonical detail formatting. Provide `--check` and `--diff` modes for CI and pre-commit use.
+- [ ] Add `check --fix` for mechanical fixes that cannot change meaning. Start with key spelling normalization, whitespace, line endings, and canonical date forms.
+- [ ] Add `depends_on` cycle detection to `check`, `health`, Web API, and MCP. Report the shortest cycle path and avoid undefined agenda ordering.
+- [ ] Add `config show`. Display the effective merged config from defaults, global config, repo-local config, environment variables, file directives, and CLI overrides.
+- [ ] Specify common CLI output behavior: `--json`, `--quiet`, `--verbose`, `--color=auto|always|never`, `NO_COLOR`, pager behavior, stdin `-`, and documented exit codes.
 
 ---
 
 ## P1: Web API / Browser UI
 
-### API Stability & Security
+### API Stability and Security
 
-- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with full request and
-  response examples for the remaining less-common routes, especially Git
-  integration endpoints. Elapsed chart range examples are now documented.
+- [ ] Expand Web API documentation with full request and response examples for less-common routes, especially Git integration, timer endpoints, review, graph, blockers, parse, generated/read-only mode, and mutation error cases.
+- [ ] Keep Web API default binding safe. Bind to localhost by default, document the security model, and require explicit configuration for non-localhost access.
+- [ ] Publish and test OpenAPI output. Ensure it reflects read-only mode, write-file behavior, timer endpoints, review endpoints, and MCP-adjacent schemas.
+- [ ] Add write-conflict detection before update and delete operations when multiple writers share a file. Return a clear conflict response instead of overwriting silently.
 
-### Statistics & Charts (Web UI)
+### Record Display and Undo
 
-- [ ] Verify weekly/monthly chart rendering in the browser: the `/api/chart/habits`
-  now returns raw counts per bucket; confirm Chart.js renders bars correctly
-  and the Y-axis label is meaningful (e.g., "completions / week").
+- [ ] Preserve original line position when Web UI Undo restores a deleted item. Avoid re-appending restored raw lines at the end of the writable file when the original context is available.
+- [ ] Add source-file and line-position metadata to detail views when multiple files are loaded. Make write targets explicit when editing cross-file results.
+- [ ] Improve long-body and Markdown previews in the detail modal. Keep CLI HTML rendering and Web UI rendering consistent through shared code.
 
-### Record Display (Web UI)
+### Graph and Dependencies
 
-- [ ] Preserve original line position when the Web UI Undo restores a deleted
-  item: undo currently re-appends the raw line at the end of the writable file
-  via `POST /api/items/raw`, so ordering and surrounding comments are not
-  restored. Consider a dedicated restore endpoint that remembers the original
-  line number.
+- [ ] Add a force-directed layout preset to the browser graph panel. Keep existing ring and layered layouts, and persist the selected layout per user or URL when appropriate.
+- [ ] Add Mermaid and DOT tests for cross-file node references, special characters in IDs and titles, and scoped `--id` plus `--direction` rendering.
+- [ ] Document the dependency graph end-to-end across `links`, `/api/graph`, MCP tools, and the browser panel.
 
-### Dependency & Reference Graph (Web UI & CLI)
+### Dashboard, Focus, Review, Team, Timeline, and Status
 
-- [ ] Add a `force` (physics-based) layout preset to the browser graph panel:
-  `ring`, `lr` (layered left-to-right), and `tb` (layered top-to-bottom) are
-  implemented with per-user persistence and SVG/PNG export; a force layout
-  would help non-hierarchical graphs but needs an iterative simulation.
+- [ ] Deduplicate Review Markdown rendering between CLI, Web UI, digest, and MCP. Use one server-side renderer so exports stay byte-consistent.
+- [ ] Compute real habit streaks in `lifetxt/review.py` from per-day completion data. Show current and longest streaks in CLI, Web UI, API, and MCP review output.
+- [ ] Deprecate the legacy `?workspace=` URL alias after one release. Emit a console warning first, then remove the mapping and docs row.
+- [ ] Make presence state colors configurable through `web.presence.states`, merged over default regex rules.
+- [ ] Persist Timeline range in the URL. Support bookmarks such as `?view=timeline&range=week&refresh=120` and update the now line during auto-refresh.
+- [ ] Order and pin Team board cards by configured user order or `web.team.pin`, then sort remaining users alphabetically.
+- [ ] Add a per-person click-through from Team board cards to a filtered Items view.
+- [ ] Add a guided empty state when zero items load. Offer first task creation, import documentation, demo mode, and docs links.
+- [ ] Add days-remaining countdowns to agenda output and Web Dashboard cards for upcoming due items.
 
-- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, special
-  characters in IDs/titles (quotes, spaces), and `--id` + `--direction` scoping
-  with mermaid/dot output (verify only reachable subgraph is rendered).
+### Accessibility and Internationalization
 
-### Git Integration (Web API)
-
-### Design System & App Shell (Web UI) — New
-
-- [ ] Audit the redesigned UI for WCAG AA contrast in both themes (badge
-  soft-background/foreground pairs, muted text on `--panel-2`, kiosk header)
-  and adjust token values where they fall below 4.5:1 for body-size text.
-
-- [ ] Consider persisting UI preferences (density, graph layout, dark mode)
-  server-side per user instead of `localStorage`, so settings follow the user
-  across browsers. Density toggle, theme, and graph layout currently persist
-  locally; the active view is part of the URL by design.
-
-### Views: Dashboard, Focus & Review (Web UI)
-
-The Review view is now implemented: a browser tab backed by
-`GET /api/review` endpoint (shared `lifetxt/review.py` aggregation, also used
-by the CLI `review` command and the MCP `get_review` tool) with This week /
-Last week / This month / Last month presets, project and custom date filters,
-KPI tiles, clickable completed-task rows when `id:` is present, Markdown copy,
-habit completion bars, journal entries with mood trend, and
-elapsed-by-project totals. The Focus view gained a quick-add input (appends
-`due:` today through `POST /api/items/raw`), a "Today's schedule" group for
-due-today `E` events, `at:`/`on:`-today Reminders, and an "Anytime reminders"
-group for undated `R` items. Remaining and follow-up work:
-
-- [ ] Deduplicate Review Markdown rendering between the CLI/Web UI/digest:
-  the browser now has a client-side `copyReviewMarkdown()` renderer, while
-  `review --format markdown` is still rendered separately. Add a shared
-  server-side Markdown renderer so all review exports stay byte-consistent.
-
-- [ ] Compute real habit streaks (longest and current consecutive-day runs)
-  in `lifetxt/review.py` from per-day `done:` dates, and show them in the
-  Review view's Habits card next to the completion-rate bars; the report
-  currently aggregates done/open counts per habit title only.
-
-- [ ] Deprecate the legacy `?workspace=` URL alias after one release: it now
-  maps onto `view=` (and `workspace=new` opens the editor modal); emit a
-  console warning first, then drop the mapping and the doc row.
-
-### Views: Team, Timeline & Presence (Web UI)
-
-Implemented 2026-07-07: colored presence indicators (state → dot/badge color
-mapping, with the state text always shown so color is never the only
-signal), a redesigned Status view using person cards plus an
-Active-only / All-latest toggle, a Team presence board view combining latest
-status records, per-person open messages, and assignee workload counts, a
-Timeline view (chronological agenda board with a red now line, per-type rail
-nodes, day headers, dimmed past rows, and Today / Next 24h / Week presets),
-and a fullscreen toggle (header ⛶ button, `f` key, command palette).
-`GET /api/status?active=false` was also fixed to actually include ended
-records. Follow-up work:
-
-- [ ] Audit untyped boolean query parameters across all FastAPI routes:
-  with untyped defaults FastAPI 0.83 passes raw query strings through, so
-  `?open_only=false`, `?blocked=false`, and similar are truthy strings and
-  behave as `true`. `/api/status?active=false` is fixed and
-  regression-tested; apply the same string-aware parsing (or typed `bool`
-  parameters) to `/api/items`, `/api/messages`, `/api/agenda`, and the
-  chart routes, with a test per route. (P1 — correctness.)
-
-- [ ] Make presence state colors configurable: a config key
-  `web.presence.states` mapping custom state names onto the built-in color
-  classes (green/red/violet/amber/gray), merged over the default regex
-  rules, so teams with their own vocabulary ("onsite", "wfh") get correct
-  dots without code changes. (P2)
-
-- [ ] Persist the Timeline range in the URL (`range=today|24h|week`) like
-  other view state so wall displays can bookmark
-  `?view=timeline&range=week&refresh=120`, and re-render the now line every
-  minute on auto-refreshing screens instead of only on reload. (P2)
-
-- [ ] Order and pin Team board cards: sort by the config `users` order or a
-  `web.team.pin` list (pinned people first, others alphabetical), and add a
-  per-person click-through from the card to `?view=&assignee=NAME`. (P2)
-
-### Context Menu & Dark Mode (Web UI) — New
-
-### Stats & Charts (Web UI) — New
-
-### Item Selection (Web UI) — New
-
-### Detail Modal Improvements (Web UI) — New
-
-- [ ] Add an inline timer control to the detail modal for task-like items: start /
-  stop buttons that update `elapsed:` through the existing item update
-  endpoint, reusing the CLI `timer` duration math, so the est/elapsed progress
-  bar can be driven entirely from the browser.
-
-### Agenda & Notifications (Web UI) — New
-
-- [ ] Add optional richer notification email rendering: HTML multipart email,
-  per-message deep links back to the Web UI (`?line=N` or id-based links),
-  and a config key for subject/body templates. Keep plain-text email as the
-  default for compatibility.
+- [ ] Perform a Web UI accessibility pass. Add tablist semantics, arrow-key view navigation, `aria-live` regions for toasts and notifications, a skip-to-content link, and visible focus coverage.
+- [ ] Audit redesigned UI color contrast for WCAG AA in both themes. Include badges, muted text, kiosk header, presence dots, and timer state indicators.
+- [ ] Honor `prefers-reduced-motion`. Disable kiosk auto-scroll, skeleton shimmer, timer animations, and modal transitions when appropriate; add a config override.
+- [ ] Add a high-contrast theme using the existing theme-token approach.
+- [ ] Add a Web UI label dictionary with `web.language` and `?lang=` for static chrome strings. Keep user item content untranslated.
 
 ---
 
-## P1: Multiple Files / Sync / External Tools
+## P1: MCP Expansion and AI Integration
 
-- [ ] Document the recommended directory layout for a typical user:
-  `life.txt` (hand-written), `.generated/` (ICS sync output), `archive/`
-  (archived items), `.cache/lifetxt/` (undo stack, backup, notification
-  state). Explain which directories belong in `.gitignore`.
+The existing stdio MCP server should become a safer, more complete interface for AI clients without losing the local-first file model.
 
-- [ ] Define integration boundaries for calendar sources beyond ICS and for
-  presence/message tools (Teams, Discord, Slack): specify which fields are
-  imported, which are exported, and which are read-only in life.txt because
-  they are managed by the external tool.
-
-- [ ] Define conflict policy for `sync-ics --merge-existing`: decide whether
-  local edits inside generated records should be overwritten, preserved by
-  selected keys, or reported as conflicts before replacement. Current behavior
-  replaces matching UID-backed records and preserves comments/unmatched lines.
-
-- [ ] Add usage example for `.pre-commit-hooks.yaml` to docs: show the
-  `.pre-commit-config.yaml` snippet that references the `lifetxt-check` hook,
-  and document which file patterns are matched by default.
-
-- [ ] Document that secret URLs and tokens (iCalendar feed URLs, API tokens)
-  must not be stored in life.txt content. Reference the `--url-env` and
-  `--key-env` patterns as the correct approach.
+- [ ] Align MCP tool input and output with JSON Schema definitions. Validate tool responses against the same schemas used for JSON export and Web API payloads.
+- [ ] Add or refine MCP tools for search, review, next actions, standup summary, workload summary, habit streaks, dependency graph, blockers, and timer control.
+- [ ] Make proposal mode the default for destructive or ambiguous MCP writes. Return a structured diff that can be applied by a human-approved `lifetxt apply` or equivalent command.
+- [ ] Require MCP-created records to include source metadata such as `source:mcp`, unless the user explicitly disables it.
+- [ ] Generate IDs on the lifetxt side, not in the AI client. Avoid trusting AI-generated IDs for write operations.
+- [ ] Re-check file mtime and content hash before every MCP write. Return a conflict error if the file changed after the MCP client read it.
+- [ ] Ensure MCP, CLI, and Web API use one internal mutation path. Do not duplicate validation, ID generation, link checks, timer updates, or atomic-write behavior across surfaces.
+- [ ] Add MCP read-only mode tests. Confirm read tools still work and write tools return clear errors.
+- [ ] Add MCP edge-case tests for `get_review`, timer tools, search, cross-file items, empty files, invalid ranges, read-only mode, and conflict handling.
+- [ ] Publish ready-to-copy MCP client configuration snippets for Claude Desktop, Cursor, VS Code, and local-only multi-file use. Include read-only and write-enabled examples.
+- [ ] Add `docs/en/ai-integration.md` and `docs/ja/ai-integration.md`. Cover MCP setup, local LLM privacy patterns, CLI pipe patterns, JSON review prompts, and GitHub Actions summaries.
 
 ---
 
-## P1: Validation
+## P1: Multiple Files, Sync, and External Tools
 
-Diagnostics added to `check` and `health` that catch common mistakes.
-
----
-
-## Use-Case Backlog (added 2026-07-07)
-
-Concrete feature proposals derived from walking the whole system (format,
-CLI, Web UI/API, MCP, editors) as different kinds of users. Each item names
-the commands, flags, config keys, or endpoints it would introduce so it can
-be promoted into the P1/P2 sections above when picked up. The suggested
-priority is tagged per item; nothing here blocks the next release by itself.
-
-### Quick capture & mobile (any user away from a desktop)
-
-- [ ] (P1) Make the Web UI installable as a PWA: have `serve` expose a
-  `manifest.json` and a minimal service worker behind config
-  `web.pwa.enable` (default false) so phones can pin the UI to the home
-  screen. Cache only the app shell (the single HTML page); all `/api/*`
-  traffic stays online so the read/write model is unchanged.
-
-- [ ] (P2) Register the PWA as a Web Share Target so text shared from other
-  mobile apps opens the record editor modal prefilled as an inbox item
-  (`[ ] N <shared text>` with `tag:inbox`), writing through the existing
-  `POST /api/items/raw`. Depends on the PWA item above.
-
-- [ ] (P1) Add `lifetxt capture` for zero-friction terminal capture:
-  `echo "buy milk" | lifetxt capture --stdin` and `capture --clipboard`
-  append `[ ] T TITLE captured:NOW` (type overridable with `--type N`),
-  delegating to the same validation and atomic-write path as `quick` so
-  nothing new can corrupt the file.
-
-### Students (classes, assignments, semester rhythm)
-
-- [ ] (P2) Add `import-ics --preset university`: map recurring lecture
-  VEVENTs to `E` items with `repeat:weekly` + `until:SEMESTER_END` and a
-  `project:` derived from the course-code prefix of the summary, so a
-  timetable export becomes a one-command semester setup.
-
-- [ ] (P2) Show days-remaining countdowns: `agenda --countdown` adds a
-  `D-n` column computed from `due:`/`to:`, and the Web Dashboard "Today"
-  card shows a days-left badge for items due within
-  `web.dashboard.due_soon_days` (default 7).
-
-### Freelancers (billable time)
-
-- [ ] (P1) Add `lifetxt invoice`: aggregate `elapsed:` per project for a
-  billing period — `invoice --project clientA --month 2026-06 --rate 8000
-  --currency JPY --round 15m --format markdown|csv`. Reuse the
-  `review`/`stats` elapsed aggregation; `--round` rounds each item up to
-  the billing increment before summing; per-project default rates come from
-  config `billing.rates.{project}`.
-
-### Small teams (shared file over git)
-
-- [ ] (P1) Add `lifetxt standup`: print "done yesterday / planned today /
-  blocked" for `--user NAME` (default config `user.name`) derived from
-  `done:` dates, `due:` today, and open blockers; `--format
-  text|markdown|slack`, where `slack` reuses the `digest` webhook transport
-  and `--url-env` pattern.
-
-- [ ] (P2) Add a per-person workload summary to the CLI and API: `who
-  --workload` and `/api/status?workload=true` appending open / due-today /
-  overdue / blocked counts per assignee. The Web Team view now computes
-  open/overdue per assignee client-side; a server-side summary would let
-  the CLI, MCP clients, and kiosks reuse the same numbers.
-
-- [ ] (P2) Ship a built-in "mine" preset: `?preset=mine` resolves to
-  `assignee:<config user.name>&open_only=true` without requiring a
-  `views.mine` config entry, and the Items toolbar shows a "My items" chip
-  when `user.name` is configured.
-
-### GTD practitioners (inbox → next actions)
-
-- [ ] (P1) Promote `context:` to a first-class filter: accept `--context
-  @home` on `filter`/`agenda` (and `next` below), add a `context=` URL/API
-  parameter, prompt for context in `inbox --process` alongside
-  project/due/assignee, and Tab-complete known context values from loaded
-  files.
-
-- [ ] (P1) Add `lifetxt next`: show the top N actionable tasks — open, not
-  blocked, not `[?]` — sorted by priority, then due, then age:
-  `next --context @errands --project home --limit 3`. Implement as a
-  curated wrapper over `filter` so all existing filters keep working.
-
-- [ ] (P2) Add `review --someday`: list `[?]` items untouched for longer
-  than `--older-than 30d` (by `updated:`/`created:`) so someday/maybe items
-  get re-decided during the weekly review; later surface the same list as
-  an optional card in the Web Review view.
-
-### Habit builders & journalers
-
-- [ ] (P1) Add `lifetxt habit today`: materialize today's habit checkboxes
-  from `H` items with `repeat:` into the writable file, idempotent per
-  habit+date through a generated `id:` (re-running never duplicates);
-  `--dry-run` previews. A git hook, cron job, or Task Scheduler entry can
-  run it each morning so daily habits become checkable items automatically.
-
-- [ ] (P2) Add journal prompts: `quick --journal` opens `$EDITOR` prefilled
-  from config `journal.prompt` (e.g. three reflection questions) and writes
-  a `J` item with `on:today` and a multiline body; the Web editor modal
-  gets a "Journal" shortcut that prefills the same prompt text.
-
-### Care & family coordination
-
-- [ ] (P2) Extend notifications to acknowledgeable recurring reminders:
-  notification records currently cover type `M` messages only. Let `R`
-  items with `repeat:` plus `notify_at:`/`require_ack:true` keep notifying
-  until an `ack:` is written (reusing the message Ack/Snooze plumbing), with
-  optional re-notification after `notifications.escalate_after` (e.g.
-  `30m`) — medication and pickup reminders on a shared screen.
-
-- [ ] (P2) Document a "family board" kiosk recipe in `docs/{en,ja}/web.md`:
-  a worked `views.family` preset combining `mode=kiosk`, `kiosk_filter`,
-  `kiosk_title`, `refresh`, and `theme`, plus a wall-tablet setup checklist
-  (autostart URL, notification permission, preventing sleep).
-
-### Accessibility & inclusive use
-
-- [ ] (P1) Web UI accessibility pass: `role=tablist`/`tab` semantics with
-  arrow-key movement on the view bar, `aria-live=polite` on the toast and
-  notification updates, a skip-to-content link before the header, and a
-  visible-focus audit of all interactive elements. Extends the existing
-  WCAG AA contrast item in the Design System section.
-
-- [ ] (P2) Honor `prefers-reduced-motion`: disable kiosk auto-scroll,
-  skeleton shimmer, and modal transitions when the media query matches,
-  with a `web.reduce_motion: true` config override for kiosk deployments.
-
-- [ ] (P2) Add a high-contrast theme: `?theme=high-contrast` plus a
-  `web.theme.high_contrast` token set layered on the planned theming hook,
-  so low-vision users get a supported mode instead of browser extensions.
-
-### Non-English users
-
-- [ ] (P2) Add a Web UI label dictionary: config `web.language: en|ja` and
-  a `?lang=` parameter switching the static chrome strings (view names,
-  buttons, empty states, help modal) from a small dictionary embedded in
-  `webapp.py`; item content is user data and is never translated. Start
-  with Japanese since `docs/ja` already exists.
-
-### First-run & evaluation
-
-- [ ] (P1) Add `lifetxt demo`: start `serve` against generated sample data
-  in a temp directory — `demo --persona student|team|freelancer` seeds
-  persona-flavored items (courses, a sprint with assignees, client
-  projects with elapsed time) and shows a "Demo data — nothing is saved to
-  your files" banner, so the Web UI can be evaluated with one command and
-  zero risk.
-
-- [ ] (P2) Add a guided empty state to the Web UI: when zero items load,
-  replace the empty table with three actions — "Add your first task"
-  (opens the editor prefilled with a commented example), "Import"
-  (ICS / Todoist / GitHub doc links), and "Open docs".
-
-### Long-horizon users (years of data)
-
-- [ ] (P2) Add `review --year 2026`: a year selector in
-  `review.resolve_review_range` plus per-month subtotal rows in the report
-  (tasks completed, habit rate, journal count, elapsed), with
-  `--format html` producing a shareable year-in-review page; expose the
-  same selector through `GET /api/review` and MCP `get_review`.
-
-- [ ] (P2) Add scheduled auto-archive: config
-  `archive.auto: {age: "180d", target: "archive/{year}.life.txt"}` applied
-  by `cleanup --auto` (documented for cron and Windows Task Scheduler),
-  reusing `archive`'s orphan-children handling and `--dry-run` semantics.
-
-### Developers
-
-- [ ] (P2) Add `lifetxt todo-scan`: import `TODO`/`FIXME` source comments
-  as tasks — `todo-scan src/ --project myrepo --tag code` generates stable
-  IDs from a path+text hash so re-runs update instead of duplicating, and
-  `--prune` closes tasks whose source comment has disappeared.
+- [ ] Document the recommended directory layout: `life.txt` for hand-written data, `.generated/` for sync output, `archive/` for archived items, and `.cache/lifetxt/` for undo, backup, timer, and notification state.
+- [ ] Define integration boundaries for calendar sources beyond ICS and for presence/message tools such as Teams, Discord, and Slack. Specify which fields are imported, exported, or read-only.
+- [ ] Define conflict policy for `sync-ics --merge-existing`. Decide whether local edits inside generated records are overwritten, preserved by selected keys, or reported as conflicts before replacement.
+- [ ] Add `to-ics` export. Preserve event times, all-day events, attendees where safe, recurrence where supported, and source UID metadata.
+- [ ] Add import presets for todo.txt and Markdown checkboxes. Generate stable IDs where possible and avoid duplicates on re-run.
+- [ ] Add usage examples for `.pre-commit-hooks.yaml` and `.pre-commit-config.yaml`. Document matched file patterns and recommended hooks.
+- [ ] Document that secret URLs and tokens must not be stored in life.txt content. Use environment-variable patterns such as `--url-env` and `--key-env` instead.
+- [ ] Add named filters or saved views in config. Let CLI, Web UI, Web API, and MCP resolve the same named filter definitions.
+- [ ] Decide whether `--config paths` should auto-load default file sets when no file arguments are given.
 
 ---
 
-## P2: CLI — Power User Commands
+## P1: Validation and Health Diagnostics
 
-Additional commands for users who want deeper inspection, style enforcement,
-long-term file management, and sharing. Implement after P1 commands are stable.
+Diagnostics added to `check`, `health`, `doctor`, Web API, and MCP should catch common mistakes before data is lost.
 
-- [ ] Extend `template` beyond config-defined templates: consider also
-  supporting a `templates.life.txt` file using a reserved `TEMPLATE` type
-  marker as an alternative to config JSON, for teams that prefer templates to
-  live alongside their life.txt files under version control. The config-based
-  `template list` / `template apply NAME --append FILE` (with `{today}`,
-  `{next_monday}`, `{next_week}` placeholders resolved at apply time) is
-  implemented; see CLI guide section 18.
+- [ ] Add diagnostics for Unicode normalization, BOM usage, CRLF when canonical LF is required, mixed tabs/spaces in indentation, and invalid directive placement.
+- [ ] Add diagnostics for duplicate IDs across configured files and archives. Provide an `ids --include-archive` or equivalent workflow.
+- [ ] Add diagnostics for dangling links, cross-file references to archived records, dependency cycles, missing parents, and invalid hierarchy indentation.
+- [ ] Add diagnostics for invalid timer state, stale active timers, corrupted timer state files, and elapsed values that cannot be normalized.
+- [ ] Add diagnostics for config schema errors. Broken config should fail loudly with a clear path and key name.
+- [ ] Add a diagnostic code catalog generated from parser and validator definitions. Include code, name, description, triggering example, and resolution hint.
+- [ ] Document stable exit codes for validation errors, usage errors, write conflicts, environment failures, and internal errors.
+
+---
+
+## P1: LSP and Parser Foundation
+
+Editor support should move beyond syntax highlighting while keeping the parser and spec authoritative.
+
+- [ ] Add a lossless parser or CST mode that preserves source spans, comments, continuation lines, directive lines, and exact ranges. Treat this as the foundation for LSP, precise diagnostics, code actions, and formatting.
+- [ ] Add `lifetxt lsp` as a Python-packaged language server. The VS Code extension should spawn it rather than reimplementing logic.
+- [ ] Start LSP support with diagnostics using `check` logic and debounce. Keep errors consistent with CLI diagnostics.
+- [ ] Add document symbols for sections, item trees, and major directives.
+- [ ] Add completion for detail keys, statuses, type aliases, IDs, cross-file references, contexts, users, projects, and date snippets.
+- [ ] Add hover information for due dates, repeat next occurrence, elapsed/estimated progress, linked items, dependency blockers, and timer state.
+- [ ] Add code actions for status toggling, mechanical `check --fix` repairs, adding missing IDs, and safe detail-key normalization.
+- [ ] Add go-to-definition and references for IDs and dependency links. Leave rename as a later feature because it requires workspace-wide edits.
+- [ ] Keep full-file reparsing until performance problems are observed on realistic files.
+
+---
+
+## P2: CLI Power User Commands
+
+- [ ] Extend `template` beyond config-defined templates. Consider supporting a `templates.life.txt` file with a reserved template marker for teams that prefer version-controlled templates.
+- [ ] Add `lifetxt show <id>` to display one item with resolved links, source file, hierarchy context, and dependent records.
+- [ ] Add `lifetxt edit <id>` to open the target item in `$EDITOR` at the correct line.
+- [ ] Add `lifetxt path` to display resolved default file paths and config paths for debugging.
+- [ ] Add count and aggregation commands such as `count --by status|tag|person|project|context`.
+- [ ] Add sort-key options for `filter` and `agenda`, such as `--sort due,priority`.
+- [ ] Consider git auto-commit for mutations through config. Use git as a durable recovery mechanism while keeping built-in undo and backups documented.
+- [ ] Consider a custom git merge driver that resolves item-level changes by ID for shared repositories.
 
 ---
 
 ## P2: Editor Support
 
-- [ ] Package VS Code grammar and snippets as a proper extension installable
-  from the Marketplace or via `code --install-extension`, not by copying files
-  manually.
-
-- [ ] Keep editor file-association documentation current for `life.txt`,
-  `*.life.txt`, and `*_life.txt` in `docs/en/editor.md` and
-  `docs/ja/editor.md`.
-
-- [ ] Generate VS Code editor snippet key lists directly from
-  `lifetxt/model.py` (`RECOMMENDED_KEYS_BY_TYPE`, `KNOWN_KEYS`, status/type
-  aliases) to prevent drift between the editor extension and the spec.
-  `lifetxt/completion.py` (shell Tab-completion for bash/zsh/fish) already
-  derives its `--type`/`--status` value lists and detail-key flag list from
-  `lifetxt/model.py` and its `COMMANDS` tuple has been brought up to date
-  with every current subcommand; only the VS Code snippet side remains.
-
-- [ ] Add highlight snapshot tests for every grammar token: title, status,
-  type, detail key, quoted value, body continuation (`|`), line continuation
-  (`\`), `#!` directive, and `enc:` encrypted value prefix. Run these in CI
-  to catch grammar regressions.
-
-- [ ] Add editor support for `#!` metadata directive lines: highlight
-  distinctly from ordinary `#` comment lines. Add snippets for common
-  directive combinations (`self` + `timezone` + `project`).
-
-- [ ] Add editor support for encrypted field values (`enc:` prefix): display
-  with a distinct color and a tooltip indicating the value is encrypted.
-
-- [ ] Add snippets for: task with timer fields (`est:`, `elapsed:`), event
-  with attendees, status record (self), message with notification, journal
-  entry with mood, linked subtask with `parent:` and `depends_on:`, and
-  template record.
+- [ ] Package VS Code grammar and snippets as a proper extension installable from the Marketplace or with `code --install-extension`.
+- [ ] Keep editor file-association documentation current for `life.txt`, `*.life.txt`, and `*_life.txt`.
+- [ ] Generate VS Code snippet key lists from `lifetxt/model.py` to prevent drift between the editor extension, CLI completion, and the spec.
+- [ ] Add highlight snapshot tests for title, status, type, detail key, quoted value, body continuation, line continuation, directive lines, and encrypted values.
+- [ ] Add editor support for metadata directive lines. Highlight them distinctly from ordinary comments and add snippets for common directive combinations.
+- [ ] Add editor support for encrypted field values. Display `enc:` values distinctly and show a tooltip that the value is encrypted.
+- [ ] Add snippets for task timer fields, events with attendees, status records, messages with notification, journal entries with mood, linked subtasks, and template records.
+- [ ] Add folding ranges for sections and subtrees.
+- [ ] Register file icons and language IDs for `.life.txt` patterns.
 
 ---
 
-## P2: Documentation / Examples
+## P2: Documentation and Examples
 
-- [ ] Resolve documentation synchronization policy: decide which of `readme.md`,
-  `docs/en/readme.md`, `docs/ja/readme.md`, and `life_txt_format_spec.md` is
-  the authoritative source for each topic, and document the policy so
-  contributors know where to make changes.
-
-- [ ] Add worked examples for: `timer` (start, pause, stop, summary),
-  `stats` (weekly grouping), `tui` (keymap cheatsheet), `fzf` (preview and
-  actions), `git-hook` (install and commit-msg), `completion` (bash/zsh/fish
-  install).
-
-- [ ] Add recommended workflow docs with step-by-step instructions for:
-  daily use (`quick` → `inbox` → `done` → `summary`), team status sharing,
-  message notifications, calendar sync (`sync-ics` + `agenda`), weekly review
-  (`review` → LLM → `template apply`), and periodic archiving.
-
-- [ ] Add migration notes for every breaking format change: `S`, `M`, `J`
-  type additions, multiline body (`|`), hierarchy and `parent:`, CSV column
-  schema, `elapsed:` normalization, Markdown subset, and RRULE storage.
-  Include the `migrate` command invocation for each change once implemented.
-
-- [ ] Add screenshots or terminal captures for: Web UI agenda view, `tui`
-  dashboard, `stats` weekly output, `plot` terminal chart, and `doctor`
-  diagnostic output. Include in both English and Japanese docs.
-
-- [ ] Generate a diagnostic code catalog from parser and validator definitions:
-  each code (E0xx, W2xx, W3xx, W4xx) must have a name, description, example
-  triggering input, and resolution hint. Use this catalog as the source for
-  CLI `--help`, shell completion, and the docs diagnostic reference.
-
-- [ ] Document recommended file-splitting strategies (not enforced
-  constraints): one file per editor/author, auto-generated files in
-  `.generated/`, archives in `archive/`, and periodic archiving schedule.
-  Clarify that the tool enforces nothing; these are operational recommendations.
-
-- [ ] Document `#!` metadata directive placement rules in the format spec:
-  the parser (`parser.py`'s `parse_directives`) stops scanning for
-  directives at the first non-directive, non-blank line, so directives must
-  appear contiguously before the first item — this constraint is not
-  documented anywhere yet. The four-level resolution order with a worked
-  side-by-side example (CLI flag vs. config JSON vs. `#!` directive vs.
-  built-in default) is now documented in CLI guide section 12.1.
-
-- [ ] Document `archive` command and workflow: all `--orphan-children` modes
-  with before/after examples, `--block-on-external-refs` for cross-file
-  safety, structure-preserving comment behavior, and when to use `--dry-run`.
-
-- [ ] Document W219 resolution: explain the three resolution paths (close
-  children manually, `archive --orphan-children adopt`, `archive
-  --orphan-children promote`) and when `--ignore W219` is appropriate.
-
-- [ ] Document `plot`: chart types, filter options, terminal rendering
-  behavior, enabling SVG/PNG output, and piping text output to a pager.
-
-- [ ] Document `undo` and `backup.auto`: differences between the two safety
-  mechanisms, recommended config for users without Git, and step-by-step
-  recovery from an accidental write.
-
-- [ ] Add `docs/en/ai-integration.md` and `docs/ja/ai-integration.md`:
-  expand beyond the basic MCP setup already documented in README/CLI/Web docs
-  with client-specific configuration examples, CLI pipe patterns (`to-json |
-  llm "..."`), example prompts for `review --format json` → LLM weekly review,
-  local LLM (Ollama) setup for privacy-sensitive files, and a GitHub Actions
-  workflow for automated AI summaries on push. Include annotated examples
-  showing what life.txt data looks like from the AI's perspective.
-
-- [ ] Add full command docs and workflow examples to `docs/en/cli.md` and
-  `docs/ja/cli.md` for: `quick`, `done`, `undo`, `assign`, `summary`,
-  `review`, `health`, `inbox`, `cleanup`, `archive`, `plot`, `search`, `lint`,
-  `diff`, `snapshot`, `migrate`, `who`. All of these (plus every other
-  subcommand) now have a one-line entry in the section 1 command-overview
-  table, but only `init`, `doctor`, `encrypt`, `decrypt`, `share`, `digest`,
-  and `template` have a dedicated worked-example section (sections 16-18).
-
-- [ ] Expand `docs/en/web.md` and `docs/ja/web.md` with worked examples for:
-  statistics dashboard usage, chart panel workflows, item creation/editing,
-  Git integration endpoints and security model, and the `quick-add` shortcut.
-  Also document the newer UI affordances: command palette (Ctrl+K), undo
-  toast, group-by, keyboard list navigation (j/k/x/Enter), inline status
-  cycling, item export, graph layout presets and SVG/PNG export, detail modal due
-  quick-postpone, est/elapsed progress bar, and the agenda blocked filter.
-  The redesigned app shell also needs a short section: header workspace view buttons,
-  density toggle, `?theme=` URL parameter, and the print stylesheet.
-  The REST table (including `/api/blockers`, `/api/review`, and
-  `agenda?blocked=`), parse endpoint, graph panel, kiosk parameters, message
-  thread basics, the Review view, the Focus quick-add, the Team and Timeline
-  views, presence indicators, and the fullscreen toggle are now documented.
-
-- [ ] Document the dependency graph feature end-to-end: explain the
-  `links --format mermaid` and `links --format dot` CLI outputs, the
-  `/api/graph` endpoint, the browser GUI graph panel, and when to use each.
-  Include a worked example showing how to trace a blocked task back to its
-  root blocker using both the CLI and the GUI.
-
-- [ ] Consider generating CLI reference pages from `argparse` definitions to
-  eliminate drift between `--help` output and the Markdown docs.
+- [ ] Resolve documentation synchronization policy. Decide which of `readme.md`, `docs/en/readme.md`, `docs/ja/readme.md`, and the format spec is authoritative for each topic.
+- [ ] Add worked examples for timer, expanded timer modes, stats, TUI, fzf, git hooks, completion, archive, MCP, Web API, and Web UI workflows.
+- [ ] Add recommended workflow docs for daily capture, inbox processing, team status sharing, notifications, calendar sync, weekly review, periodic archiving, and timer-based focus sessions.
+- [ ] Add migration notes for every breaking or user-visible format change. Include command examples once migration support exists.
+- [ ] Add screenshots or terminal captures for Web agenda, timer panel, TUI dashboard, stats weekly output, plot output, doctor output, Review view, Team view, Timeline view, and graph view.
+- [ ] Document file-splitting strategies. Explain one-file-per-author, generated files, archive files, cache files, and what the tool enforces versus what is only a recommendation.
+- [ ] Document archive command and workflow, including orphan-children handling, external reference safety, structure-preserving behavior, and dry-run usage.
+- [ ] Document undo and backup behavior. Explain differences, recommended config for users without Git, and recovery steps after accidental writes.
+- [ ] Expand CLI docs for all implemented commands that currently only have overview entries.
+- [ ] Expand Web docs with statistics dashboard workflows, chart usage, item creation/editing, Git integration security, quick-add, command palette, undo toast, keyboard navigation, export, graph layout, detail modal actions, and timer UI.
+- [ ] Add an English/Japanese documentation parity CI check. Compare headings, code blocks, command names, and key examples.
+- [ ] Add a bilingual glossary for stable terms used in the spec, diagnostics, CLI output, and docs.
 
 ---
 
-## P2: Tests / CI / Release
+## P2: Tests, CI, and Release
 
-- [ ] Add CI pipeline: unit tests, compile checks, and example file
-  validation on every push. Run on Python 3.10, 3.11, and 3.12 on Ubuntu,
-  Windows, and macOS.
+- [ ] Add a CI pipeline for unit tests, compile checks, and example file validation on every push. Run on Python 3.10, 3.11, and 3.12 across Ubuntu, Windows, and macOS.
+- [ ] Add snapshot tests for important human-readable CLI output.
+- [ ] Add sync tests comparing model constants with English and Japanese format specs, CLI completion, editor snippets, and docs examples.
+- [ ] Add cross-platform tests for paths with spaces, glob expansion, Windows line endings, CJK terminal width, shell completion, and Windows console behavior.
+- [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, directories, and `projects/**/*.life.txt` across all file-reading commands.
+- [ ] Add parser edge-case tests for nested quotes, invalid continuations, mixed indentation, duplicate IDs, Unicode normalization, CRLF, emoji, multi-value fields, and empty files.
+- [ ] Add parse-serialize-parse round-trip tests. Treat this as a prerequisite for `fmt`, LSP, code actions, and stable docs examples.
+- [ ] Add parser fuzz tests and a backward-compatibility golden corpus.
+- [ ] Add recurrence tests for simple repeat values, interval, until, count, long-range performance, occurrence export shapes, and repeat completion semantics.
+- [ ] Add real-export fixture tests for Todoist CSV, GitHub issues, Markdown checkboxes, todo.txt, and future calendar export/import flows.
+- [ ] Add large-file performance tests. Parsing, filtering, duplicate-ID detection, and core review aggregation on a 50,000-line file should meet documented thresholds.
+- [ ] Add optional web dependency CI and FastAPI TestClient coverage for all `/api/*` routes, including timer endpoints and read-only behavior.
+- [ ] Add Playwright or equivalent browser tests for core Web UI flows.
+- [ ] Add MCP integration tests that start the stdio server and exercise read, write-proposal, write-commit, read-only, timer, and conflict paths.
+- [ ] Add release process documentation and automation: `CHANGELOG.md`, semantic versioning policy, build, tag, PyPI publishing, and post-release smoke checks.
+- [ ] Verify packaging in a clean environment. Cover editable install, optional extras, console script entry points, Windows PowerShell usage, and zipapp or other single-file distribution if supported.
+- [ ] Add CONTRIBUTING, issue templates, and pre-commit configuration.
 
-- [ ] Add a lightweight smoke-test runner for release checks: execute key CLI
-  smoke tests (including timer state-file and cross-platform path tests)
-  without running the full unittest suite.
+---
 
-- [ ] Add snapshot tests for all important human-readable CLI output so
-  unintended formatting changes are caught automatically.
+## P2: Distribution, Environment, and Localization
 
-- [ ] Add sync tests comparing `RECOMMENDED_KEYS_BY_TYPE` in
-  `lifetxt/model.py` with the type-specific recommended key lists in the
-  English and Japanese format specs.
-
-- [ ] Add cross-platform tests: paths with spaces, glob expansion, Windows
-  line endings (`\r\n`), and shell completion output on bash, zsh, and fish.
-
-- [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, and
-  `projects/**/*.life.txt` across all file-reading commands.
-
-- [ ] Add parser edge-case tests: nested quotes, invalid `|` continuation
-  variants, indentation with mixed spaces and tabs, and same-file
-  duplicate-ID edge cases. (Unicode, emoji, CRLF, multi-value already covered.)
-
-- [ ] Add canonical hierarchy edge-case tests: `from-jsonl --canonical`,
-  `from-csv --canonical`, custom `ids.key`, a parent without an ID, and items
-  that already have explicit `parent:` details.
-
-- [ ] Add recurrence tests: occurrence expansion for all five simple repeat
-  values, `interval:` / `until:` / `count:` edge cases, remaining occurrence
-  export shapes, and long-range expansion performance (10 years of daily
-  recurrence must complete under 500 ms).
-
-- [ ] Add real-export fixture tests for `import-ics --preset todoist` and
-  `--preset github`: cover multiple Todoist CSV dialects, GitHub search API
-  result objects, missing optional fields, labels with commas, and closed
-  issues without `closed_at`.
-
-- [ ] Add duration normalization tests (W222): `1h00m` simplification, elapsed
-  accumulation across multiple items in the same project.
-
-- [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
-  is affected once timezone wiring is implemented.
-
-- [ ] Add `quick` tests: `write_file` config fallback (no `--append`).
-
-- [ ] Add Markdown rendering regression tests: CLI HTML output snapshot and
-  Web UI Markdown preview snapshot, run in CI to prevent the table-rendering
-  bug from reappearing.
-
-- [ ] Add large-file performance tests: parsing, filtering, and duplicate-ID
-  detection on a 50,000-line file must each complete under 5 seconds.
-
-- [ ] Add CI job with optional web dependencies installed and run FastAPI
-  test-client coverage for all `/api/*` routes. Local tests now include
-  TestClient cases for parse, generated/read-only, mood chart, graph, and
-  message threads, but they skip when `fastapi` is not installed.
-
-- [ ] Add browser-level Web UI smoke tests with Playwright or an equivalent
-  driver: raw import live parse preview, detail modal message replies, occurrence
-  badges, kiosk change highlighting, explicit ref-link scroll fallback, and
-  search highlighting in detail/body previews. Newly added interactive
-  features also need DOM-level coverage: command palette (Ctrl+K) matching and
-  execution, undo toast (status/delete restore), j/k/x/Enter keyboard
-  navigation, inline status-badge cycling, group-by section headers, item
-  CSV/JSON/Markdown export, graph layout switching plus SVG/PNG download, the
-  detail modal due quick-postpone buttons, and the agenda blocked-filter cycle.
-  The 2026-07 single-content router redesign added more surfaces to cover:
-  the ten-view tab bar (each view rendering exactly one page section),
-  Dashboard KPI tiles and their click-through navigation, Focus one-click
-  done with undo, the Focus quick-add input (Enter submits, quoted titles
-  with spaces, list reloads), the Focus "Today's schedule" and "Anytime
-  reminders" groups, the Review view (range preset switching, KPI tiles,
-  habit bars, mood pills, empty states per card), the Team presence board
-  (dot/badge state colors, message click-through, workload pills), the
-  Timeline view (now-line placement, range presets, all-day rows, day
-  headers), the Status view active-toggle, the fullscreen toggle
-  (fullscreenchange icon swap), the record editor modal
-  (open via ＋ New / `n` /
-  `?workspace=new`, close on save), legacy `?workspace=` alias mapping,
-  density toggle persistence, skeleton-loading rows, contextual empty states,
-  the back-to-top button, `?theme=dark|light` forcing, command-palette fuzzy
-  matching and "Go to view" entries, and modal focus trapping/background
-  inert behavior. Current tests cover static HTML hooks and API behavior, not
-  real DOM interaction.
-
-- [ ] Add release process: changelog (`CHANGELOG.md`), semantic versioning
-  policy (`MAJOR.MINOR.PATCH`), and a `make release` or CI workflow that
-  tags, builds, and publishes to PyPI.
-
-- [ ] Verify packaging on a clean environment: `pip install -e .`, optional
-  extras (`[web]`, `[crypto]`, `[plot]`), console script entry points, and
-  Windows PowerShell usage.
-
-- [ ] Add `archive` tests: structure-preserving mode (comments in both files,
-  empty sections retained), all three `--orphan-children` modes, `--dry-run`
-  for each mode, `--block-on-external-refs`, and cross-file reference warning.
-
-- [ ] Add `#!` directive wiring tests for `timezone`: verify datetime display
-  is affected once timezone wiring is implemented.
-
-- [ ] Expand `encrypt`/`decrypt` tests beyond the key-file and AES-GCM round
-  trips: cover `--dry-run`, `--type`, `--key-env`, empty key files, wrong
-  passphrase failures, and `check` diagnostics for encrypted values.
-
-- [ ] Expand `plot` output tests beyond SVG smoke coverage: text chart rendering
-  for task, habit, mood, elapsed, deadlines, each `--group` value, sparkline
-  terminal output, and optional PNG behavior when `matplotlib` is installed.
-
-- [ ] Add `init` tests: generated files contain valid directives and a starter
-  item; `.lifetxt.json` matches prompted values; prompts before overwriting.
-
-- [ ] Add `doctor` tests: pass on a clean environment, correct
-  pass/warn/fail per check, optional dependencies reported as warn, exit
-  non-zero on any failure.
-
-- [ ] Add `check --ignore` tests: `--code` filter interaction (include-only
-  overrides ignore for same code when both flags specified).
-
-- [ ] Add `undo` edge-case tests: concurrent write isolation (two simultaneous
-  quick-adds to the same file).
-
-- [ ] Add `done` tests: ambiguous title match (interactive confirmation prompt).
-
-- [ ] Add `summary` edge-case tests: missing-ID count is accurate, multiple-file
-  aggregation totals, and zero-item file returns empty counts without error.
-
-- [ ] Add `review` edge-case tests: mood trend most-common-first summary aggregation.
-
-- [ ] Add dependency edge-case tests: cross-file blockers, and source metadata
-  in blocked agenda records.
-
-- [ ] Add remaining CLI batch mutation tests: `batch done` writes across
-  multiple files, `batch assign` updates matching records, `batch migrate`
-  applies chained migrations, and partial failures produce a clear per-file
-  summary without corrupting unaffected files. `batch tag-rename` is covered.
-
-- [ ] Add `inbox --process` tests: prompts for project/due/assignee in sequence,
-  each field correctly applied via `assist --update`.
-
-- [ ] Add `assign` edge-case tests: ambiguous `--text` match (interactive
-  confirm prompt), validation error when resulting line is invalid.
-
-- [ ] Add `diff` cross-file and glob tests: pass glob sets to diff,
-  verify cycle-safe behavior, and test `--status` filter (once added).
-
-- [ ] Add `search` cross-file glob tests: pass a glob pattern covering multiple
-  files and verify results aggregate correctly.
-
-- [ ] Add `migrate` chained-migration tests: two migrations applied in sequence,
-  idempotency (running twice produces same result), and `add-id` collision
-  avoidance when file already has some IDs.
-
-- [ ] Add a `digest --format slack-webhook` payload-shape test: mock the
-  HTTP transport (e.g. monkeypatch `urllib.request.urlopen` or point
-  `--url-env` at a local `http.server` fixture) and assert the JSON body is
-  `{"text": ...}` with the expected summary content. `--format file` append
-  and the missing-env-var-exits-before-network-request path are already
-  covered in `tests/test_lifetxt.py` (`LifeTxtShareDigestTemplateTests`).
-
-- [ ] Add `undo` / `backup.auto` tests: backup created before each write,
-  `backup.keep` eviction, directory auto-created.
-
-- [ ] Add chart API tests: `/api/chart/tasks`, `/api/chart/habits`,
-  `/api/chart/mood`, `/api/chart/elapsed` each return a stable JSON structure
-  with `labels` and `datasets` arrays; `from`/`to`/`project`/`group` query
-  parameters filter results correctly; empty data range returns empty datasets
-  without error.
-
-- [ ] Add `/api/review` and MCP `get_review` edge-case tests: `week=true`
-  taking precedence over `from`/`to`, an empty file returning zero counts
-  without error, `mood_trend` ordering with multiple journal entries on the
-  same day, and read-only server mode still serving the report. Report shape,
-  invalid-month `400`/`ValueError`, and `project=` filtering are already
-  covered in `tests/test_lifetxt.py` (`LifeTxtWebApiTests`, the MCP tests,
-  and `ReviewRangeResolutionTests`).
-
-- [ ] Add `links` tests for Mermaid/DOT: cross-file node references, titles
-  with embedded quote characters.
-
-- [ ] Add git API endpoint tests (with a real git repo fixture): `POST
-  /api/git/pull` returns exit code and stderr; `POST /api/git/commit` with a
-  message creates a commit; endpoints return 403 when `git.enable_api` is
-  false; endpoints return 403 when accessed from a non-loopback address.
-
-- [ ] Add `who` tests: same person has records in multiple files (latest wins).
+- [ ] Follow XDG Base Directory conventions for global config where appropriate while preserving project-local configuration.
+- [ ] Define precedence for project-local config and global config.
+- [ ] Add config schema validation.
+- [ ] Add week-start configuration for agenda, review, and Web calendar-style views.
+- [ ] Add CLI message localization for English and Japanese. Keep stored data in ISO-oriented canonical forms; localize display only.
+- [ ] Add locale-aware date display options without changing the saved datetime format.
+- [ ] Verify Windows behavior for paths, PowerShell quoting, console encoding, notifications, file locks, and browser launch behavior.
+- [ ] Generate man pages from CLI help.
+- [ ] Bundle shell completion for bash, zsh, and fish, with an optional install helper.
+- [ ] Consider zipapp or another single-file distribution path for users without a prepared Python environment.
+- [ ] Consider a Homebrew formula after demand is observed.
 
 ---
 
 ## Deferred Ideas
 
-Ideas that are useful but should not block any near-term release. Revisit
-after the corresponding P1 or P2 feature is stable.
+Useful ideas that should not block near-term releases. Revisit after the corresponding P1 or P2 foundation is stable.
 
-### Format & Parser
-- [ ] Consider `#! import: PATH [as ALIAS]` directive (phase 2 of file-level
-  metadata): auto-load declared files for cross-file ID resolution without
-  listing them on the CLI. Unresolved design questions: relative-path base,
-  maximum import depth, circular-import detection, read-only semantics for
-  imported IDs. Evaluate whether `--config paths` already covers all practical
-  cases before implementing.
-- [ ] Consider namespace-qualified ID syntax (`alias:id`) only if flat
-  cross-file resolution proves insufficient after `#! import` or `--config
-  paths` is in place. The `:` separator conflicts with `key:value` parsing
-  and requires a parser change; defer until a concrete unsolvable case arises.
-- [ ] Consider JSON Schema definitions for JSON/JSONL output and API payloads
-  to enable external tool validation without parsing life.txt directly.
+### Format and Parser
 
-### CLI Extensions
-- [ ] Consider named or multiple parallel timers if the single global timer
-  becomes too restrictive for users who switch between tasks frequently.
-- [ ] Consider a small local daemon that unifies notification watch, timer
-  status, and file-reload events into a single background process.
-- [ ] Consider `quick` type inference from title keywords ("meeting at 14:00"
-  → `E`, "remind me to …" → `R`) as an opt-in mode after the basic command
-  is stable.
-- [ ] Consider `template` variables beyond date placeholders (`{user}`,
-  `{project}`) and a simple prompt mode that asks for variable values before
-  expanding.
-- [ ] Consider `digest` additional channels (Teams webhook, Discord webhook,
-  desktop notification) now that `digest` (Slack webhook / email / file) is
-  implemented and stable.
-- [ ] Consider `archive` rotation policy (e.g., yearly auto-archive via config
-  `archive.auto`) after the basic `archive` command is stable.
-- [ ] Consider `--config paths` auto-load mode: when no file arguments are
-  given, fall back to the paths configured in `.lifetxt.json`, reducing
-  repetition in daily use.
-- [ ] Consider `lint` community ruleset repository so teams can share and
-  contribute standard style conventions.
+- [ ] Consider `#! import: PATH [as ALIAS]` for declared cross-file loading only if configured paths do not solve practical use cases.
+- [ ] Consider namespace-qualified ID syntax only if flat cross-file ID resolution proves insufficient.
+- [ ] Consider richer schema packages for external tools after JSON Schema output is stable.
 
-### Web & API
-- [ ] Consider interactive `plot` mode in `tui` as a live-updating chart
-  panel, after the basic `plot` command is stable.
-- [ ] Consider `who` integration into the `tui` sidebar panel showing team
-  presence alongside tasks and agenda.
-- [ ] Consider attaching `share --format html` output as an email attachment
-  from `digest --format email` (currently `digest` sends only the plain-text
-  summary body; `share` and `digest` are both implemented but not wired
-  together).
-- [ ] Consider write-conflict detection using source-ownership metadata before
-  `update` and `delete` operations when multiple writers share a file.
-- [ ] Consider a full Git server (e.g., Soft-serve or a Gitea-compatible
-  endpoint) embedded in `serve` for teams who cannot use GitHub/GitLab. Only
-  worth implementing if the lightweight `/api/git/*` subprocess endpoints
-  prove insufficient for multi-user workflows; defer until there is concrete
-  demand.
-- [ ] Consider server-side rendering of the exported graph (SVG generated by
-  the API rather than serialized from the DOM) so `share`/`digest` can attach
-  the same image without a browser. Browser-side SVG/PNG export and `ring`/
-  `lr`/`tb` layout switching are implemented.
-- [ ] Consider an MCP HTTP/SSE transport with token auth for clients that
-  cannot launch stdio commands directly. The current MCP server is dependency-
-  free stdio and is intentionally separate from FastAPI.
-- [ ] Consider publishing ready-to-copy MCP client configuration snippets for
-  Claude Desktop, Cursor, and VS Code, including read-only and multi-file
-  examples.
+### CLI and Background Services
 
-### Security
-- [ ] Consider asymmetric encryption (public/private key) for `encrypt` to
-  support multi-user scenarios where different people encrypt but only the
-  key holder can decrypt.
+- [ ] Consider named or multiple parallel timers if the single active timer remains too restrictive after the expanded timer model ships.
+- [ ] Consider a small local daemon that unifies notification watch, timer status, alarm delivery, and file-reload events.
+- [ ] Consider opt-in quick type inference from title text after explicit capture commands are stable.
+- [ ] Consider template variables beyond date placeholders and a prompt mode for template expansion.
+- [ ] Consider additional digest channels such as Teams webhook, Discord webhook, and desktop notification.
+- [ ] Consider a community lint ruleset repository.
 
-### Ecosystem
-- [ ] Consider import/export adapters beyond current ICS, Markdown, Todoist
-  CSV, and GitHub Issues presets: org-mode, mailbox/message logs, and richer
-  bidirectional calendar/status integrations.
-- [ ] Consider a static HTML export mode (`serve --export DIR`) that writes
-  a read-only snapshot of the GUI without requiring the server to keep running.
+### Web, API, and MCP
+
+- [ ] Consider MCP HTTP/SSE transport with token authentication for clients that cannot launch stdio commands directly.
+- [ ] Consider server-side graph rendering so share and digest outputs can attach the same graph image without a browser.
+- [ ] Consider a full embedded Git server only if lightweight Git subprocess endpoints prove insufficient.
+- [ ] Consider static HTML export mode for the Web UI as a read-only snapshot.
+- [ ] Consider interactive plot mode in TUI after plot output is stable.
+- [ ] Consider integrating team presence into the TUI sidebar.
+
+### Ecosystem and Security
+
+- [ ] Consider asymmetric encryption for multi-user scenarios where different users encrypt but only selected key holders can decrypt.
+- [ ] Consider richer import/export adapters after ICS, Markdown, Todoist, GitHub issues, and todo.txt coverage is stable: org-mode, mailbox logs, CalDAV, and richer bidirectional calendar/status integrations.
+- [ ] Consider a plugin mechanism only after repeated integration requests cannot be handled through CLI, Web API, MCP, or import/export adapters.

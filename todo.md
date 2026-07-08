@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-08 (updated x63)
+Last updated: 2026-07-08 (updated x65)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -33,6 +33,7 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Unify all mutating operations behind one atomic write path. Use write-temp plus rename, a lock file for concurrent writers, and a shared mutation layer for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
 - [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
 - [ ] Add a release smoke-test runner that executes key CLI and Web API flows without running the full unit suite. Include timer state-file behavior, cross-platform paths, Web API write mode, read-only mode, and MCP startup.
+- [ ] Verify the new repeat-completion flow end-to-end on real files: `complete` materialization across `repeat_base: due|done`, `done habit` logging, MCP `complete_item`, undo after completion, and interaction with archive. These shipped recently and are the most likely new-feature breakage.
 
 ---
 
@@ -45,6 +46,9 @@ Design decisions that affect the file format, parser, serialization, and every d
 - [ ] Decide which item types should recommend `elapsed:`. Determine whether events, status records, journal entries, reminders, and future timer session records should record elapsed time, and add type-specific guidance to the format spec.
 - [ ] Finalize occurrence materialization rules for life.txt output files. Specify how generated recurrence occurrences may be written to `.life.txt` or `.generated/*.life.txt` without confusing them with stored source items.
 - [ ] Support `BYDAY` RRULE values in `complete` / `complete_item` next-occurrence materialization. Currently `next_repeat_occurrence()` fails loudly and asks for a manual due-date edit; decide the intended next-match rule (e.g. next matching weekday) before implementing.
+- [ ] Fail loudly on same-day double completion. `complete` and `done habit` should reject a second completion for the same instance or date with a clear error, and allow an explicit `--force` overwrite; a silent no-op hides typos in the target ID or date.
+- [ ] Specify the completion date boundary rule. A completion recorded after midnight defaults to the local calendar date, and an explicit date argument always wins; never guess timezones to reassign the day.
+- [ ] Add a `format_version` file directive and a versioning policy for the format spec. `migrate` already exists but has no version anchor to migrate from or to; define how unversioned files are treated and when `check` warns about stale versions.
 - [ ] Decide how `count:` interacts with `complete` materialization. `next_repeat_occurrence()` currently ignores `count:` (it only stops at `until:`) because nothing tracks how many instances have already been completed; either derive a count from archived/completed sibling instances or document that `count:` only bounds agenda's virtual expansion, not real completions.
 - [ ] Specify multi-file semantics. Define ID uniqueness scope, cross-file link resolution, glob ordering, archive interactions, source-file metadata, and write-file selection when multiple files are loaded.
 - [ ] Specify Unicode, encoding, and newline rules. Normalize comparison-sensitive fields to NFC, require UTF-8 without BOM and LF line endings for canonical output, and add `check` diagnostics for non-canonical encodings and newline forms.
@@ -59,7 +63,7 @@ Design decisions that affect the file format, parser, serialization, and every d
 Existing timer support should grow from basic start/stop tracking into a coherent local productivity subsystem shared by CLI, Web UI, Web API, and MCP.
 
 - [ ] Design a timer state model that supports stopwatch sessions, alarms, Pomodoro-style intervals, pause/resume, cancellation, completion, and optional association with a life.txt item ID.
-- [ ] Add CLI commands for the expanded timer model: `timer status`, `timer pause`, `timer resume`, `timer cancel`, `timer alarm`, `timer pomodoro`, and `timer log`. Preserve the current `timer start` / `timer stop` behavior as the simplest path.
+- [ ] Add the remaining timer CLI commands: `timer alarm`, `timer pomodoro`, and `timer log`. `timer status`, `timer pause`, `timer resume`, `timer cancel`, and `timer summary` are implemented; keep `timer start` / `timer stop` as the simplest path.
 - [ ] Support arbitrary Pomodoro profiles. Allow configurable focus length, short break length, long break length, cycle count, auto-start policy, notification behavior, and optional project/item defaults.
 - [ ] Add alarm support. Allow one-shot alarms by absolute time or relative duration, store enough state to survive process restarts, and fail loudly when the requested time is ambiguous.
 - [ ] Add stopwatch mode for ad-hoc measurement without requiring a task ID. Let users optionally attach the resulting elapsed time to an item later.
@@ -91,7 +95,7 @@ The timer feature should be controllable from every user-facing surface while sh
 
 Improvements to existing commands that affect daily workflow.
 
-- [ ] Add `--last-week` and `--last-month` convenience flags to `review`. Implement shared range selectors in `review.resolve_review_range` so CLI, Web API, and MCP accept the same range names.
+- [ ] Add `--last-week`, `--last-month`, and `--year` convenience selectors to `review`. Implement shared range selectors in `review.resolve_review_range` so CLI, Web API, and MCP accept the same range names.
 - [ ] Extend `inbox --fzf` from selection-only output to optional follow-up actions after selector verification is complete. Support `show`, `assign`, `done`, and `edit` without bypassing validation or atomic writes.
 - [ ] Add clipboard capture and an `--edit` ($EDITOR) flow to `quick`, or a dedicated `lifetxt capture` wrapper. `quick -` already reads a single title line from stdin through the existing safe write path; clipboard support and multi-line `$EDITOR` composition are still missing.
 - [ ] Keep date-token parsing intentionally small and explicit. Support a documented closed set such as `today`, `tomorrow`, weekdays, and relative offsets; reject unrecognized natural-language dates instead of guessing.
@@ -104,7 +108,7 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add `lifetxt fmt`. Normalize indentation, spacing, newline style, ordering where safe, and canonical detail formatting. Provide `--check` and `--diff` modes for CI and pre-commit use.
 - [ ] Add `check --fix` for mechanical fixes that cannot change meaning. Start with key spelling normalization, whitespace, line endings, and canonical date forms.
 - [ ] Add `depends_on` cycle detection to `check`, `health`, Web API, and MCP. Report the shortest cycle path and avoid undefined agenda ordering.
-- [ ] Add `config show`. Display the effective merged config from defaults, global config, repo-local config, environment variables, file directives, and CLI overrides.
+- [ ] Use East Asian Width-aware column widths in CLI table output. `_format_table` in `lifetxt/cli.py` measures cell width with `len()`, so tables with Japanese titles misalign; reuse the `unicodedata.east_asian_width` logic already used by the TUI.
 - [ ] Specify common CLI output behavior: `--json`, `--quiet`, `--verbose`, `--color=auto|always|never`, `NO_COLOR`, pager behavior, stdin `-`, and documented exit codes.
 
 ---
@@ -122,6 +126,7 @@ Improvements to existing commands that affect daily workflow.
 ### Record Display and Undo
 
 - [ ] Preserve original line position when Web UI Undo restores a deleted item. Avoid re-appending restored raw lines at the end of the writable file when the original context is available.
+- [ ] Add a multi-level undo history to the Web UI. The undo toast currently covers only the most recent write; keep a small session-scoped stack so several consecutive mistakes can be reverted in order.
 - [ ] Add source-file and line-position metadata to detail views when multiple files are loaded. Make write targets explicit when editing cross-file results.
 - [ ] Improve long-body and Markdown previews in the detail modal. Keep CLI HTML rendering and Web UI rendering consistent through shared code.
 
@@ -140,6 +145,10 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Order and pin Team board cards by configured user order or `web.team.pin`, then sort remaining users alphabetically.
 - [ ] Expand guided empty states beyond the current Items actions. Add import documentation links, demo mode entry, docs links, and similar guidance for Agenda, Team, Status, Notifications, Stats, and Graph.
 - [ ] Add days-remaining countdowns to agenda output and Web Dashboard cards for upcoming due items.
+- [ ] Add a month/week calendar view to the Web UI. Place due, do, and event records on a calendar grid, reuse the agenda occurrence expansion for repeats, and link each cell entry to the detail modal.
+- [ ] Add a keyboard-shortcut help overlay to the Web UI, opened with `?`. Generate the list from the same definitions the keyboard-navigation code uses so it cannot drift.
+- [ ] Persist the Timeline range in the URL. Support bookmarks such as `?view=timeline&range=today|24h|week&refresh=120` and keep the now line updated during auto-refresh.
+- [ ] Make Dashboard cards configurable. Let a config key select and order the cards shown on the Dashboard view so kiosk and personal setups can differ without code changes.
 
 ### Accessibility and Internationalization
 
@@ -148,6 +157,19 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add a high-contrast theme using the existing theme-token approach.
 - [ ] Add a Web UI label dictionary with `web.language` and `?lang=` for static chrome strings. Keep user item content untranslated.
 - [ ] Expand contextual hover/focus help across advanced Web UI controls. Prioritize filters, export, agenda blocked mode, graph layout, notification permission, raw import, and destructive actions; keep the help short enough for pointer and keyboard users.
+
+---
+
+## P1: Notifications and Background Watch
+
+Hygiene for `notify`, `notify --watch`, and future timer/alarm delivery. Independent of other features but easy to trip over in daily use.
+
+- [ ] Add quiet-hours configuration. Suppress non-urgent notification delivery inside a configured local-time window and deliver a catch-up summary when the window ends.
+- [ ] Add configurable snooze duration presets shared by CLI, Web UI, Web API, and MCP snooze actions.
+- [ ] Persist acknowledgement and seen state across watcher restarts. A restarted `notify --watch` must not re-deliver already-acknowledged messages.
+- [ ] Abstract the notification delivery backend. Support terminal output, `notify-send`, macOS `osascript`, and Windows toast behind one interface, with email and Web UI toast as existing channels; fail loudly when the selected backend is unavailable.
+- [ ] Add acknowledgeable recurring reminders. A repeat-enabled reminder record should re-notify on schedule until acknowledged, with the acknowledgement recorded through the same persisted seen-state as messages.
+- [ ] Add optional HTML multipart rendering to email notifications and digests. Keep plain text as the default and canonical form.
 
 ---
 
@@ -175,7 +197,8 @@ The existing stdio MCP server should become a safer, more complete interface for
 - [ ] Define integration boundaries for calendar sources beyond ICS and for presence/message tools such as Teams, Discord, and Slack. Specify which fields are imported, exported, or read-only.
 - [ ] Define conflict policy for `sync-ics --merge-existing`. Decide whether local edits inside generated records are overwritten, preserved by selected keys, or reported as conflicts before replacement.
 - [ ] Add `to-ics` export. Preserve event times, all-day events, attendees where safe, recurrence where supported, and source UID metadata.
-- [ ] Add import presets for todo.txt and Markdown checkboxes. Generate stable IDs where possible and avoid duplicates on re-run.
+- [ ] Add a todo.txt import preset. Markdown checkbox import already exists as `from-markdown`; map todo.txt priority, contexts, projects, and completion dates, generate stable IDs where possible, and avoid duplicates on re-run.
+- [ ] Add `from-markdown --preset github`. Map GitHub-flavored issue and task-list conventions (checkbox state, `#123` references, assignee mentions) onto the standard import path.
 - [ ] Add usage examples for `.pre-commit-hooks.yaml` and `.pre-commit-config.yaml`. Document matched file patterns and recommended hooks.
 - [ ] Document that secret URLs and tokens must not be stored in life.txt content. Use environment-variable patterns such as `--url-env` and `--key-env` instead.
 - [ ] Add named filters or saved views in config. Let CLI, Web UI, Web API, and MCP resolve the same named filter definitions.
@@ -220,6 +243,10 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add `lifetxt edit <id>` to open the target item in `$EDITOR` at the correct line.
 - [ ] Add `lifetxt path` to display resolved default file paths and config paths for debugging.
 - [ ] Add count and aggregation commands such as `count --by status|tag|person|project|context`.
+- [ ] Extend `batch` beyond `done` and `assign`. Add safe bulk operations such as tag rename, status set, and due-date shift, all through the shared mutation path with `--dry-run` support.
+- [ ] Add `who --workload` for a per-person workload summary. Show open, due-soon, and overdue counts per assignee in CLI and Web API output.
+- [ ] Add `review --someday` to list `[?]` someday/maybe items untouched for longer than a threshold, so periodic reviews surface stale ideas.
+- [ ] Add `quick --journal` journal prompts. Open `$EDITOR` prefilled with a dated journal skeleton and append the result as a `J` record through the safe write path.
 - [ ] Add sort-key options for `filter` and `agenda`, such as `--sort due,priority`.
 - [ ] Consider git auto-commit for mutations through config. Use git as a durable recovery mechanism while keeping built-in undo and backups documented.
 - [ ] Consider a custom git merge driver that resolves item-level changes by ID for shared repositories.
@@ -249,6 +276,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add screenshots or terminal captures for Web agenda, timer panel, TUI dashboard, stats weekly output, plot output, doctor output, Review view, Team view, Timeline view, and graph view.
 - [ ] Document file-splitting strategies. Explain one-file-per-author, generated files, archive files, cache files, and what the tool enforces versus what is only a recommendation.
 - [ ] Document archive command and workflow, including orphan-children handling, external reference safety, structure-preserving behavior, and dry-run usage.
+- [ ] Document a "family board" kiosk recipe in `docs/en/web.md` and `docs/ja/web.md`. Cover a shared display setup: kiosk URL parameters, auto-refresh, presence, and a small config example.
 - [ ] Document undo and backup behavior. Explain differences, recommended config for users without Git, and recovery steps after accidental writes.
 - [ ] Expand CLI docs for all implemented commands that currently only have overview entries.
 - [ ] Expand Web docs with statistics dashboard workflows, chart usage, item creation/editing, Git integration security, quick-add, command palette, undo toast, keyboard navigation, export, graph layout, detail modal actions, and timer UI.
@@ -289,7 +317,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add locale-aware date display options without changing the saved datetime format.
 - [ ] Verify Windows behavior for paths, PowerShell quoting, console encoding, notifications, file locks, and browser launch behavior.
 - [ ] Generate man pages from CLI help.
-- [ ] Bundle shell completion for bash, zsh, and fish, with an optional install helper.
+- [ ] Add PowerShell to the bundled shell completions. bash, zsh, and fish completion plus the `completion install` helper already exist; Windows users currently get nothing.
 - [ ] Consider zipapp or another single-file distribution path for users without a prepared Python environment.
 - [ ] Consider a Homebrew formula after demand is observed.
 
@@ -310,6 +338,8 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 - [ ] Consider named or multiple parallel timers if the single active timer remains too restrictive after the expanded timer model ships.
 - [ ] Consider a small local daemon that unifies notification watch, timer status, alarm delivery, and file-reload events.
 - [ ] Consider opt-in quick type inference from title text after explicit capture commands are stable.
+- [ ] Consider `lifetxt todo-scan` to import `TODO`/`FIXME` source-code comments as tasks with file/line references.
+- [ ] Consider a scheduled auto-archive rotation policy in config (for example, yearly) after manual `archive` usage patterns are observed.
 - [ ] Consider template variables beyond date placeholders and a prompt mode for template expansion.
 - [ ] Consider additional digest channels such as Teams webhook, Discord webhook, and desktop notification.
 - [ ] Consider a community lint ruleset repository.
@@ -320,6 +350,7 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 - [ ] Consider server-side graph rendering so share and digest outputs can attach the same graph image without a browser.
 - [ ] Consider a full embedded Git server only if lightweight Git subprocess endpoints prove insufficient.
 - [ ] Consider static HTML export mode for the Web UI as a read-only snapshot.
+- [ ] Consider PWA support for the Web UI: offline caching, home-screen install, and a mobile quick-capture screen, plus Web Share Target registration so text shared from other apps lands in the inbox. This is the most direct answer to mobile input friction, but it needs the Web calendar/quick-add surfaces and write-conflict detection to stabilize first.
 - [ ] Consider interactive plot mode in TUI after plot output is stable.
 - [ ] Consider integrating team presence into the TUI sidebar.
 

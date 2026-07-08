@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-08 (updated x60)
+Last updated: 2026-07-08 (updated x61)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -28,7 +28,7 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco` binaries on Windows PowerShell and Unix-like shells. Confirm preview rendering plus `show`, `done`, `delete`, and `edit` actions end-to-end.
 - [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
 - [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
-- [ ] Add browser-level smoke tests for the Web UI. Cover raw import live parse preview, detail modal message replies, occurrence badges, kiosk change highlighting, search highlighting, command palette actions, undo toast restore, keyboard navigation, inline status cycling, export buttons, graph layout switching, modal focus trapping, and the current single-content router views.
+- [ ] Add browser-level smoke tests for the Web UI. Cover raw import live parse preview, detail modal message replies, occurrence badges, kiosk change highlighting, display-mode entry/exit, browser Back/Forward cleanup for kiosk/display CSS state, Timeline empty states for today/24h/week, search highlighting, command palette actions, undo toast restore, keyboard navigation, inline status cycling, export buttons, graph layout switching, modal focus trapping, and the current single-content router views.
 - [ ] Audit untyped boolean query parameters across all FastAPI routes. Apply string-aware parsing or typed `bool` parameters to `/api/items`, `/api/messages`, `/api/agenda`, chart routes, and any remaining endpoints; add one regression test per route.
 - [ ] Unify all mutating operations behind one atomic write path. Use write-temp plus rename, a lock file for concurrent writers, and a shared mutation layer for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
 - [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
@@ -137,7 +137,6 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Compute real habit streaks in `lifetxt/review.py` from per-day completion data. Show current and longest streaks in CLI, Web UI, API, and MCP review output.
 - [ ] Deprecate the legacy `?workspace=` URL alias after one release. Emit a console warning first, then remove the mapping and docs row.
 - [ ] Make presence state colors configurable through `web.presence.states`, merged over default regex rules.
-- [ ] Persist Timeline range in the URL. Support bookmarks such as `?view=timeline&range=week&refresh=120` and update the now line during auto-refresh.
 - [ ] Order and pin Team board cards by configured user order or `web.team.pin`, then sort remaining users alphabetically.
 - [ ] Add a per-person click-through from Team board cards to a filtered Items view.
 - [ ] Add a guided empty state when zero items load. Offer first task creation, import documentation, demo mode, and docs links.
@@ -150,6 +149,7 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Honor `prefers-reduced-motion`. Disable kiosk auto-scroll, skeleton shimmer, timer animations, and modal transitions when appropriate; add a config override.
 - [ ] Add a high-contrast theme using the existing theme-token approach.
 - [ ] Add a Web UI label dictionary with `web.language` and `?lang=` for static chrome strings. Keep user item content untranslated.
+- [ ] Expand contextual hover/focus help across advanced Web UI controls. Prioritize filters, export, agenda blocked mode, graph layout, notification permission, raw import, and destructive actions; keep the help short enough for pointer and keyboard users.
 
 ---
 

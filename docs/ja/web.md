@@ -161,7 +161,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、view 指定
 - 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Timeline、Focus、
-  Review、Messages、Team、Status、Notifications、Stats、Graph、Kiosk —
+  Review、Messages、Team、Status、Notifications、Stats、Graph、Display、Kiosk —
   常に 1 つの view だけを全画面表示
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
   blocked / 直近完了数)、今日の agenda、要対応一覧、14日間の完了 chart、
@@ -176,7 +176,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   Markdown copy に対応。CLI の weekly-review workflow をブラウザで扱える
 - Timeline view: agenda record を時系列に並べたボード。赤い「now」ライン、
   type 別の色付きレールノード、時刻ラベル、all-day 行、日付ヘッダー、過去
-  record の減光、Today / Next 24h / Week の範囲プリセットに対応し、card
+  record の減光、URL に保存される Today / Next 24h / Week の範囲プリセット、
+  選択範囲に dated record がない場合の guided empty state に対応し、card
   クリックで record detail modal を開く
 - Team view: 在席ボード。人ごとの最新 status record(色付き presence dot と
   state badge)、その人宛ての open message、assignee としての open/overdue
@@ -189,6 +190,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - fullscreen 切り替え(header の ⛶ ボタン、`f` キー、command palette):
   ブラウザの Fullscreen API を使用し、kiosk / display mode と組み合わせて
   常時表示画面に使える
+- Display workspace tab と command palette action。常時表示向けに編集UIを隠し、
+  Exit Display ボタンだけを残し、ブラウザの戻る/進むによる URL 状態にも追従する
 - blocked filter 付きの agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
@@ -200,7 +203,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
 - title、detail、body/note preview の検索語 highlight
-- 中央の record editor modal での item 作成(`＋ New` または `n`)
+- 中央の record editor modal での item 作成(`＋ New` または `n`)。New ボタンと
+  editor の Status / Type / Title / Details には hover/focus help を表示
 - raw life.txt 行を server parser で解析して preview してから editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除
@@ -213,7 +217,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 
 layout は「1画面1コンテンツ」を基本とします。header の view bar で選んだ
 1 つの page(Items、Dashboard、Agenda、Timeline、Focus、Review、Messages、
-Team、Status、Notifications、Stats、Graph)だけが全幅で表示され、他の
+Team、Status、Notifications、Stats、Graph、Display、Kiosk)だけが全幅で表示され、他の
 コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
 
@@ -258,6 +262,7 @@ GUI は読み込み時に query parameter を読みます。bookmark、常時表
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
 http://127.0.0.1:8000/?view=dashboard&refresh=60
 http://127.0.0.1:8000/?view=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=timeline&range=week&refresh=120
 http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
@@ -286,6 +291,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `limit=N` | item と agenda の表示件数上限 |
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
+| `range=today\|24h\|week` | `view=timeline` 時の Timeline 範囲。UI の範囲ボタンを押すとこの値も更新 |
 | `after=VALUE`、`before=VALUE` | item の時刻filter |
 | `notify_refresh=SECONDS` | 通知 polling 間隔 |
 | `notify_lookahead=DURATION` | 通知の future lookahead |

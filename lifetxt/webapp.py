@@ -2206,6 +2206,72 @@ HTML_PAGE = r"""<!doctype html>
     button.danger { background: var(--panel); border-color: var(--danger); color: var(--danger); }
     button.danger:hover { background: var(--danger-soft); }
     button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+    .help-target,
+    .field-help {
+      position: relative;
+    }
+    .help-target::after,
+    .field-help::after {
+      content: attr(data-help);
+      position: absolute;
+      left: 50%;
+      top: calc(100% + .45rem);
+      transform: translateX(-50%) translateY(-.15rem);
+      z-index: 400;
+      width: min(18rem, 72vw);
+      padding: .55rem .65rem;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r-md);
+      background: var(--ink);
+      color: var(--panel);
+      box-shadow: var(--shadow-2);
+      font-size: .78rem;
+      font-weight: 500;
+      line-height: 1.35;
+      text-align: left;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--t-fast), transform var(--t-fast);
+    }
+    .help-target:hover::after,
+    .help-target:focus-visible::after,
+    .field-help:hover::after,
+    .field-help:focus-visible::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .field-label {
+      display: grid;
+      gap: .25rem;
+    }
+    .field-label-head {
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+    }
+    .field-help {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.15rem;
+      height: 1.15rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--accent);
+      background: var(--panel);
+      font-size: .72rem;
+      font-weight: 800;
+      cursor: help;
+    }
+    .editor-help-strip {
+      padding: .55rem .7rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--info-soft);
+      color: var(--info);
+      font-size: .84rem;
+    }
     .content, .stack { display: grid; gap: .6rem; padding: 1rem; }
     /* ── Items secondary control strip ── */
     .items-controls {
@@ -3034,6 +3100,19 @@ HTML_PAGE = r"""<!doctype html>
     /* ── Timeline view ───────────────────────────────────────────── */
     .timeline-body { max-width: 52rem; margin: 0 auto; width: 100%; padding: 0 1rem 1.2rem; }
     .tl-controls { display: flex; gap: .35rem; padding: .8rem 0 .4rem; flex-wrap: wrap; align-items: center; }
+    .tl-empty-actions {
+      display: flex;
+      gap: .45rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: .75rem;
+    }
+    .tl-empty-range {
+      margin-top: .4rem;
+      color: var(--muted);
+      font-size: .78rem;
+      font-family: var(--font-mono);
+    }
     .tl-day-head {
       font-size: .8rem;
       font-weight: 800;
@@ -3231,8 +3310,15 @@ HTML_PAGE = r"""<!doctype html>
       border-color: #31413b;
     }
     .display-mode .section-head { border-color: #31413b; }
-    .display-mode .toolbar,
-    .display-mode header button { display: none; }
+    .display-mode main .toolbar,
+    .display-mode section .toolbar { display: none; }
+    .display-mode header .toolbar > *:not(#display-exit-btn) { display: none; }
+    .display-mode #display-exit-btn {
+      display: inline-flex !important;
+      background: #23322d;
+      border-color: #31413b;
+      color: #edf4ef;
+    }
     .display-mode .pill {
       background: #23322d;
       color: #edf4ef;
@@ -3583,7 +3669,7 @@ HTML_PAGE = r"""<!doctype html>
       </div>
     </div>
     <div class="toolbar">
-      <button id="new-item-btn" data-workspace="new" onclick="newItem()" title="Create a new record (n)">＋ New</button>
+      <button id="new-item-btn" class="help-target" data-workspace="new" data-help="Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard." onclick="newItem()" title="Create a new record (n)">＋ New</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
       <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
       <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)">⛶</button>
@@ -3592,6 +3678,7 @@ HTML_PAGE = r"""<!doctype html>
       <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)">⌘</button>
       <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts (?)">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
+      <button id="display-exit-btn" class="secondary" style="display:none" onclick="switchWorkspace('')" title="Exit display mode">Exit Display</button>
       <span id="kiosk-clock" style="display:none"></span>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
@@ -3608,6 +3695,7 @@ HTML_PAGE = r"""<!doctype html>
       <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
       <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
       <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+      <button type="button" class="workspace-tab" data-view="display" onclick="switchWorkspace('display')" title="Open a read-focused wall display mode">🪧 Display</button>
       <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
     </nav>
   </header>
@@ -3896,22 +3984,27 @@ HTML_PAGE = r"""<!doctype html>
         <button type="button" class="drawer-close-btn" onclick="closeEditorModal()" title="Close (Esc)">✕</button>
       </div>
       <form class="stack" onsubmit="saveItem(event)">
-        <label>Status
+        <div class="editor-help-strip wide">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
+        <label class="field-label">
+          <span class="field-label-head"><span>Status</span><span class="field-help" tabindex="0" data-help="Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.">?</span></span>
           <select id="edit-status">
             <option>[ ]</option><option>[/]</option><option>[x]</option>
             <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
           </select>
         </label>
-        <label>Type
-          <select id="edit-type">
+        <label class="field-label">
+          <span class="field-label-head"><span>Type</span><span class="field-help" tabindex="0" data-help="Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.">?</span></span>
+          <select id="edit-type" aria-describedby="type-hints">
             <option>T</option><option>E</option><option>D</option><option>R</option>
             <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
           </select>
         </label>
-        <label class="wide">Title
+        <label class="wide field-label">
+          <span class="field-label-head"><span>Title</span><span class="field-help" tabindex="0" data-help="Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.">?</span></span>
           <input id="edit-title" required>
         </label>
-        <label class="wide">Details
+        <label class="wide field-label">
+          <span class="field-label-head"><span>Details</span><span class="field-help" tabindex="0" data-help="One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.">?</span></span>
           <div id="type-hints" class="type-hints" style="display:none"></div>
           <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
         </label>
@@ -3997,6 +4090,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
         <tr><td>f</td><td>Toggle fullscreen</td></tr>
+        <tr><td>Ctrl+K display</td><td>Open or toggle Display mode</td></tr>
         <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
         <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
         <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
@@ -4228,6 +4322,9 @@ HTML_PAGE = r"""<!doctype html>
     }
     function switchView(view) { switchWorkspace(view); }
     function switchViewWorkspace(view, workspace) { switchWorkspace(view || workspace || ""); }
+    function toggleDisplayMode() {
+      switchWorkspace(isDisplayMode() ? "" : "display");
+    }
     function syncViewTabs() {
       const v = currentView();
       document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
@@ -4262,6 +4359,11 @@ HTML_PAGE = r"""<!doctype html>
       if (PAGE_VIEWS.includes(ws)) return ws;
       return "";
     }
+    window.addEventListener("popstate", () => {
+      applyPresetToUrl();
+      applyUrlToControls();
+      refreshAll();
+    });
     function applyPresetToUrl() {
       const params = query();
       // Support ?view=NAME as alias for ?preset=NAME (config-defined presets)
@@ -4298,6 +4400,7 @@ HTML_PAGE = r"""<!doctype html>
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
       const groupSel = document.getElementById("group-by");
       if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
+      syncTimelineRange(firstParam(params, ["range", "timeline_range"], timelineRange));
       syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
       configureNotificationPolling();
@@ -5168,10 +5271,19 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Timeline view (chronological board with a now line) ────────
     let timelineRange = "today";
-    function setTimelineRange(range) {
-      timelineRange = range;
+    const TIMELINE_RANGES = new Set(["today", "24h", "week"]);
+    function syncTimelineRange(range) {
+      timelineRange = TIMELINE_RANGES.has(range) ? range : "today";
       document.querySelectorAll(".timeline-section .tl-controls .review-range-btn").forEach(btn =>
-        btn.classList.toggle("active", btn.dataset.range === range));
+        btn.classList.toggle("active", btn.dataset.range === timelineRange));
+    }
+    function setTimelineRange(range) {
+      syncTimelineRange(range);
+      const params = query();
+      params.set("view", "timeline");
+      params.delete("mode");
+      params.set("range", timelineRange);
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       loadTimeline();
     }
     function _tlIso(d) {
@@ -5182,6 +5294,24 @@ HTML_PAGE = r"""<!doctype html>
       const now = new Date();
       const p = (n) => String(n).padStart(2, "0");
       return `<div class="tl-now" aria-label="Current time"><span class="tl-now-label">${p(now.getHours())}:${p(now.getMinutes())}</span><span class="tl-now-line"></span></div>`;
+    }
+    function _timelineEmptyState(range, label, from, to) {
+      const title = range === "today"
+        ? "No dated records today"
+        : range === "24h"
+          ? "No dated records in the next 24 hours"
+          : "No dated records this week";
+      const hint = "Timeline only shows records with due:, do:, from:/to:, at:, on:, or notify_at: values inside the selected range.";
+      const actions = range === "today"
+        ? `<button type="button" onclick="setTimelineRange('24h')">Next 24h</button><button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>`
+        : range === "24h"
+          ? `<button type="button" onclick="setTimelineRange('week')">This week</button><button type="button" class="secondary" onclick="setTimelineRange('today')">Today</button>`
+          : `<button type="button" onclick="setTimelineRange('today')">Today</button><button type="button" class="secondary" onclick="switchWorkspace('')">Go to Items</button>`;
+      return `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🕒</div>` +
+        `<div class="empty-title">${escapeHtml(title)}</div>` +
+        `<div class="empty-hint">${escapeHtml(hint)}</div>` +
+        `<div class="tl-empty-range">${escapeHtml(label)} / ${escapeHtml(from)} - ${escapeHtml(to)}</div>` +
+        `<div class="tl-empty-actions">${actions}</div></div>`;
     }
     function _tlRow(record, nowIso) {
       const when = String(record.when || "");
@@ -5211,6 +5341,7 @@ HTML_PAGE = r"""<!doctype html>
     async function loadTimeline() {
       const node = document.getElementById("timeline");
       if (!node) return;
+      syncTimelineRange(firstParam(query(), ["range", "timeline_range"], timelineRange));
       const now = new Date();
       const nowIso = _tlIso(now);
       const today = _fmtDate(now);
@@ -5240,9 +5371,7 @@ HTML_PAGE = r"""<!doctype html>
       }
       const records = (data.records || []).slice().sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
       if (!records.length) {
-        node.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🕒</div>` +
-          `<div class="empty-title">Nothing on the timeline</div>` +
-          `<div class="empty-hint">No dated records in this range. Items appear here when they carry due:, from:/to:, at:, or on: values.</div></div>`;
+        node.innerHTML = _timelineEmptyState(timelineRange, label, from, to);
         return;
       }
       const multiDay = timelineRange !== "today";
@@ -5633,9 +5762,11 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Go to Notifications", run: () => switchWorkspace("notifications")},
       {label: "Go to Stats", run: () => switchWorkspace("stats")},
       {label: "Go to Graph", run: () => switchWorkspace("graph")},
+      {label: "Go to Display mode", run: () => switchWorkspace("display")},
       {label: "Toggle quick-add bar", run: () => toggleQuickAdd(true)},
       {label: "Refresh all", run: refreshAll},
       {label: "Toggle dark mode", run: toggleDarkMode},
+      {label: "Toggle display mode", run: toggleDisplayMode},
       {label: "Toggle kiosk mode", run: toggleKioskMode},
       {label: "Toggle agenda blocked filter", run: toggleAgendaBlocked},
       {label: "Show undo history", run: openUndoHistoryModal},

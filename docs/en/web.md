@@ -190,7 +190,7 @@ The browser GUI supports:
 - Sorting items by line, time, title, type, status, or source
 - URL-driven filters, ordering, limits, and view selection
 - A single-content view bar: Dashboard, Items, Agenda, Timeline, Focus,
-  Review, Messages, Team, Status, Notifications, Stats, Graph, and Kiosk —
+  Review, Messages, Team, Status, Notifications, Stats, Graph, Display, and Kiosk —
   exactly one view fills the screen at a time
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
   blocked, recent completions), today's agenda, a needs-attention list, a
@@ -207,8 +207,9 @@ The browser GUI supports:
   copy action for weekly-report or chat handoff workflows
 - A Timeline view: a chronological board of agenda records with a red "now"
   line, per-type colored rail nodes, hour labels, all-day rows, day headers,
-  dimmed past records, and Today / Next 24h / Week range presets; cards open
-  the record detail modal
+  dimmed past records, URL-persisted Today / Next 24h / Week range presets,
+  and guided empty states when the selected range has no dated records; cards
+  open the record detail modal
 - A Team view: a presence board combining latest status records (colored
   presence dot and state badge per person), open messages addressed to each
   person, and an open/overdue workload summary per assignee — designed for
@@ -221,6 +222,9 @@ The browser GUI supports:
 - A fullscreen toggle (header ⛶ button, `f` key, or command palette) using
   the browser Fullscreen API — pairs with kiosk/display mode for wall
   screens
+- A Display workspace tab and command-palette action for read-focused wall
+  displays. Display mode hides editing controls, keeps a visible Exit Display
+  button, and follows browser Back/Forward URL state.
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
 - Showing due message notifications
@@ -236,7 +240,9 @@ The browser GUI supports:
   `blocks:`, and `related:`
 - Rendering sanitized Markdown title/body/note previews
 - Highlighting search matches in titles, details, and body/note previews
-- Creating new items in a centered record editor modal (`＋ New` or `n`)
+- Creating new items in a centered record editor modal (`＋ New` or `n`) with
+  hover/focus help on the New button and the editor Status, Type, Title, and
+  Details fields
 - Importing a raw life.txt line/body block into the editor through the server
   parser, with a live parse preview before writing
 - Selecting editable items and saving changes
@@ -249,7 +255,7 @@ files, such as `.generated/google_calendar.life.txt`, are shown read-only.
 
 The layout follows a one-screen-one-content rule: the header view bar picks a
 single full-width page (Items, Dashboard, Agenda, Timeline, Focus, Review,
-Messages, Team, Status, Notifications, Stats, or Graph), and nothing else
+Messages, Team, Status, Notifications, Stats, Graph, Display, or Kiosk), and nothing else
 competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
@@ -295,6 +301,7 @@ Examples:
 http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
 http://127.0.0.1:8000/?view=dashboard&refresh=60
 http://127.0.0.1:8000/?view=agenda&around=now&window=1d
+http://127.0.0.1:8000/?view=timeline&range=week&refresh=120
 http://127.0.0.1:8000/?view=focus&theme=dark
 http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
 http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
@@ -323,6 +330,7 @@ Supported parameters:
 | `limit=N` | Limit item and agenda results |
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
+| `range=today\|24h\|week` | Timeline range when `view=timeline`; the UI updates this value when range buttons are clicked |
 | `after=VALUE`, `before=VALUE` | Item time filters |
 | `notify_refresh=SECONDS` | Notification polling interval |
 | `notify_lookahead=DURATION` | Future notification lookahead for browser notifications |
@@ -405,7 +413,10 @@ curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&proj
 
 Display mode is intended for always-on screens. It keeps the page read-only,
 uses larger typography, hides the editor and filter controls, and refreshes
-automatically.
+automatically. Open it from the Display workspace tab, `Ctrl+K` command
+palette, `?mode=display`, or `?view=display`. The header keeps an Exit Display
+button, and browser Back/Forward navigation reapplies the URL state so kiosk
+or display styling does not remain after leaving the mode.
 
 Recommended examples:
 

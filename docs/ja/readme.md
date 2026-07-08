@@ -146,6 +146,8 @@ recently opened records、undo history、export、theme toggle、kiosk mode な�
 `completion` があります。`fzf` は `fzf` または `peco` が PATH に必要です。
 TUI は任意の `tui` extra を使えますが、依存なしの fallback 表示もあります。
 
+補足: 最新の Web UI では Display workspace が追加され、常時表示向けに編集UIを隠しつつ Exit Display ボタンから通常表示へ戻れます。Timeline は `range=today|24h|week` を URL に保存し、選択範囲に dated record がない場合は Next 24h / Week / Items への guided empty state を表示します。`+ New` editor では Status / Type / Title / Details に hover/focus help を表示します。
+
 ## assist
 
 入力補助は非対話型と対話型の両方に対応します。

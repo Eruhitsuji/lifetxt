@@ -177,7 +177,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - Timeline view: agenda record を時系列に並べたボード。赤い「now」ライン、
   type 別の色付きレールノード、時刻ラベル、all-day 行、日付ヘッダー、過去
   record の減光、URL に保存される Today / Next 24h / Week の範囲プリセット、
-  選択範囲に dated record がない場合の guided empty state に対応し、card
+  選択範囲に dated record がない場合の guided empty state、選択範囲より前に
+  開始して現在も重なっている record の `ongoing` badge に対応し、card
   クリックで record detail modal を開く
 - Team view: 在席ボード。人ごとの最新 status record(色付き presence dot と
   state badge)、その人宛ての open message、assignee としての open/overdue
@@ -191,7 +192,8 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   ブラウザの Fullscreen API を使用し、kiosk / display mode と組み合わせて
   常時表示画面に使える
 - Display workspace tab と command palette action。常時表示向けに編集UIを隠し、
-  Exit Display ボタンだけを残し、ブラウザの戻る/進むによる URL 状態にも追従する
+  Exit Display ボタンだけを残す。light theme では明るい常時表示palette、dark theme
+  では暗色paletteを使い、ブラウザの戻る/進むによる URL 状態にも追従する
 - blocked filter 付きの agenda 表示
 - active な status / presence 表示
 - Message 通知候補と browser notification
@@ -204,7 +206,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - sanitized Markdown title / body / note preview の描画
 - title、detail、body/note preview の検索語 highlight
 - 中央の record editor modal での item 作成(`＋ New` または `n`)。New ボタンと
-  editor の Status / Type / Title / Details には hover/focus help を表示
+  editor の Status / Type / Title / Details には viewport 内に収まる hover/focus help を表示
 - raw life.txt 行を server parser で解析して preview してから editor へ取り込み
 - 編集可能な item の選択と保存
 - 編集可能な item 行の削除

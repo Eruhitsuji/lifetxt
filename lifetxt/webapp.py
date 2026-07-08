@@ -2210,15 +2210,10 @@ HTML_PAGE = r"""<!doctype html>
     .field-help {
       position: relative;
     }
-    .help-target::after,
-    .field-help::after {
-      content: attr(data-help);
-      position: absolute;
-      left: 50%;
-      top: calc(100% + .45rem);
-      transform: translateX(-50%) translateY(-.15rem);
-      z-index: 400;
-      width: min(18rem, 72vw);
+    .ui-help-tooltip {
+      position: fixed;
+      z-index: 900;
+      max-width: min(20rem, calc(100vw - 1rem));
       padding: .55rem .65rem;
       border: 1px solid var(--line-strong);
       border-radius: var(--r-md);
@@ -2229,17 +2224,14 @@ HTML_PAGE = r"""<!doctype html>
       font-weight: 500;
       line-height: 1.35;
       text-align: left;
-      white-space: normal;
       opacity: 0;
       pointer-events: none;
+      transform: translateY(-.12rem);
       transition: opacity var(--t-fast), transform var(--t-fast);
     }
-    .help-target:hover::after,
-    .help-target:focus-visible::after,
-    .field-help:hover::after,
-    .field-help:focus-visible::after {
+    .ui-help-tooltip.visible {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
+      transform: translateY(0);
     }
     .field-label {
       display: grid;
@@ -3281,24 +3273,26 @@ HTML_PAGE = r"""<!doctype html>
       background: var(--panel-2);
     }
     .display-mode {
-      background: #0f1412;
-      color: #edf4ef;
+      background:
+        radial-gradient(circle at top left, rgba(14, 122, 101, .12), transparent 28rem),
+        linear-gradient(180deg, #f8f3e8 0%, #eef4ee 100%);
+      color: #17201b;
       font-size: clamp(18px, 1.4vw, 28px);
     }
     .display-mode header {
       max-width: none;
       padding: 1.2rem 2rem;
       position: static;
-      background: transparent;
+      background: color-mix(in srgb, #fffaf0 84%, transparent);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
-      border-bottom: none;
+      border-bottom: 1px solid #decfb7;
     }
     .display-mode .header-workspace-tabs, .kiosk-mode .header-workspace-tabs { display: none; }
     .display-mode #back-to-top, .kiosk-mode #back-to-top { display: none !important; }
-    .display-mode .brand-mark { background: #23322d; }
-    .display-mode h1 { font-size: clamp(2.6rem, 6vw, 5rem); }
-    .display-mode .subtitle { color: #aebbb4; }
+    .display-mode .brand-mark { background: linear-gradient(135deg, #0e7a65, #86b85b); }
+    .display-mode h1 { font-size: clamp(2.6rem, 6vw, 5rem); color: #15231d; }
+    .display-mode .subtitle { color: #6b6254; }
     .display-mode main {
       max-width: none;
       grid-template-columns: minmax(0, 1fr);
@@ -3306,27 +3300,63 @@ HTML_PAGE = r"""<!doctype html>
     }
     .display-mode section,
     .display-mode .item {
-      background: #151c19;
-      border-color: #31413b;
+      background: #fffdf6;
+      border-color: #decfb7;
     }
-    .display-mode .section-head { border-color: #31413b; }
+    .display-mode .section-head {
+      background: #fbf4e7;
+      border-color: #decfb7;
+    }
     .display-mode main .toolbar,
     .display-mode section .toolbar { display: none; }
     .display-mode header .toolbar > *:not(#display-exit-btn) { display: none; }
     .display-mode #display-exit-btn {
       display: inline-flex !important;
-      background: #23322d;
-      border-color: #31413b;
-      color: #edf4ef;
+      background: #fffdf6;
+      border-color: #b9a98d;
+      color: #0e7a65;
     }
     .display-mode .pill {
-      background: #23322d;
-      color: #edf4ef;
+      background: #e4f1e9;
+      color: #0b604f;
     }
     .display-mode .meta,
     .display-mode .source,
     .display-mode .empty,
-    .display-mode .note { color: #aebbb4; }
+    .display-mode .note { color: #6b6254; }
+    [data-theme="dark"] body.display-mode {
+      background: #0f1412;
+      color: #edf4ef;
+    }
+    [data-theme="dark"] body.display-mode header {
+      background: transparent;
+      border-bottom: none;
+    }
+    [data-theme="dark"] body.display-mode .brand-mark { background: #23322d; }
+    [data-theme="dark"] body.display-mode h1 { color: #edf4ef; }
+    [data-theme="dark"] body.display-mode .subtitle { color: #aebbb4; }
+    [data-theme="dark"] body.display-mode section,
+    [data-theme="dark"] body.display-mode .item {
+      background: #151c19;
+      border-color: #31413b;
+    }
+    [data-theme="dark"] body.display-mode .section-head {
+      background: #151c19;
+      border-color: #31413b;
+    }
+    [data-theme="dark"] body.display-mode #display-exit-btn {
+      background: #23322d;
+      border-color: #31413b;
+      color: #edf4ef;
+    }
+    [data-theme="dark"] body.display-mode .pill {
+      background: #23322d;
+      color: #edf4ef;
+    }
+    [data-theme="dark"] body.display-mode .meta,
+    [data-theme="dark"] body.display-mode .source,
+    [data-theme="dark"] body.display-mode .empty,
+    [data-theme="dark"] body.display-mode .note { color: #aebbb4; }
     /* ── Kiosk mode (bulletin board / 掲示板) — high-contrast light theme ── */
     .kiosk-mode {
       background: #f5f7f6;
@@ -4057,6 +4087,7 @@ HTML_PAGE = r"""<!doctype html>
   <!-- Toast container -->
   <div id="toast-container"></div>
   <div id="hm-tooltip" class="hm-tooltip"></div>
+  <div id="ui-help-tooltip" class="ui-help-tooltip" role="tooltip" aria-hidden="true"></div>
   <button id="back-to-top" class="secondary" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
   <!-- Context menu -->
   <div id="ctx-menu" role="menu" aria-label="Item context menu">
@@ -5290,6 +5321,29 @@ HTML_PAGE = r"""<!doctype html>
       const p = (n) => String(n).padStart(2, "0");
       return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
     }
+    function _tlComparable(value, endOfDay = false) {
+      const text = String(value || "");
+      if (!text) return "";
+      if (text.length > 10) return text;
+      return text + (endOfDay ? "T23:59" : "T00:00");
+    }
+    function _tlDisplayInfo(record, rangeStart, rangeEnd) {
+      const primary = (record.matches || [])[0] || {};
+      const originalStart = primary.start || record.when || "";
+      const originalEnd = primary.end || "";
+      const rangeStartIso = _tlComparable(rangeStart, false);
+      const rangeEndIso = _tlComparable(rangeEnd, true);
+      let when = originalStart || record.when || "";
+      let clipped = false;
+      if (originalStart && rangeStartIso && _tlComparable(originalStart, false) < rangeStartIso) {
+        when = rangeStartIso;
+        clipped = true;
+      }
+      if (when && rangeEndIso && _tlComparable(when, false) > rangeEndIso) {
+        when = rangeEndIso;
+      }
+      return {when, originalStart, originalEnd, clipped};
+    }
     function _tlNowLine() {
       const now = new Date();
       const p = (n) => String(n).padStart(2, "0");
@@ -5313,8 +5367,8 @@ HTML_PAGE = r"""<!doctype html>
         `<div class="tl-empty-range">${escapeHtml(label)} / ${escapeHtml(from)} - ${escapeHtml(to)}</div>` +
         `<div class="tl-empty-actions">${actions}</div></div>`;
     }
-    function _tlRow(record, nowIso) {
-      const when = String(record.when || "");
+    function _tlRow(record, nowIso, displayInfo) {
+      const when = String(displayInfo?.when || record.when || "");
       const timed = when.length > 10;
       const time = timed ? when.slice(11, 16) : "all-day";
       const past = timed ? when < nowIso : when.slice(0, 10) < nowIso.slice(0, 10);
@@ -5324,6 +5378,9 @@ HTML_PAGE = r"""<!doctype html>
         : "";
       const occ = record.occurrence_start || record.repeat_rule
         ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
+        : "";
+      const ongoing = displayInfo?.clipped
+        ? `<span class="occurrence-badge" title="Started ${escapeHtml(displayInfo.originalStart || record.when || "")}${displayInfo.originalEnd ? ` / until ${escapeHtml(displayInfo.originalEnd)}` : ""}">ongoing</span>`
         : "";
       const proj = record.details?.project?.[0]
         ? `<span class="pill">${escapeHtml(String(record.details.project[0]))}</span>` : "";
@@ -5336,7 +5393,7 @@ HTML_PAGE = r"""<!doctype html>
         `<div class="tl-card-meta">` +
         `<span class="type-badge type-${escapeHtml(type)}" style="font-size:.66rem;padding:.05rem .35rem;min-height:auto">${escapeHtml(type)}</span>` +
         (record.status ? `<span>${escapeHtml(record.status)}</span>` : "") +
-        `${proj}${blockedBadge}${occ}</div></div></div>`;
+        `${proj}${blockedBadge}${occ}${ongoing}</div></div></div>`;
     }
     async function loadTimeline() {
       const node = document.getElementById("timeline");
@@ -5369,7 +5426,12 @@ HTML_PAGE = r"""<!doctype html>
         node.innerHTML = `<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
         return;
       }
-      const records = (data.records || []).slice().sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
+      const records = (data.records || []).map(record => ({
+        record,
+        display: _tlDisplayInfo(record, from, to),
+      })).sort((a, b) =>
+        String(a.display.when || a.record.when || "").localeCompare(String(b.display.when || b.record.when || ""))
+      );
       if (!records.length) {
         node.innerHTML = _timelineEmptyState(timelineRange, label, from, to);
         return;
@@ -5382,8 +5444,9 @@ HTML_PAGE = r"""<!doctype html>
       let html = "";
       let lastDay = "";
       let nowInserted = false;
-      for (const record of records) {
-        const when = String(record.when || "");
+      for (const entry of records) {
+        const record = entry.record;
+        const when = String(entry.display.when || record.when || "");
         const day = when.slice(0, 10);
         const timed = when.length > 10;
         if (multiDay && day !== lastDay) {
@@ -5395,7 +5458,7 @@ HTML_PAGE = r"""<!doctype html>
           html += _tlNowLine();
           nowInserted = true;
         }
-        html += _tlRow(record, nowIso);
+        html += _tlRow(record, nowIso, entry.display);
         if (!multiDay) lastDay = day;
       }
       if (!nowInserted && lastDay === today) html += _tlNowLine();
@@ -5864,6 +5927,53 @@ HTML_PAGE = r"""<!doctype html>
     // ── Help modal ─────────────────────────────────────────────────
     function openHelpModal() { openManagedModal(document.getElementById("help-modal"), "button"); }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
+
+    // ── Contextual hover/focus help ────────────────────────────────
+    function clampNumber(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+    function positionUiHelpTooltip(anchor, tooltip) {
+      if (!anchor || !tooltip) return;
+      const margin = 8;
+      const rect = anchor.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      const left = clampNumber(
+        rect.left + rect.width / 2 - tipRect.width / 2,
+        margin,
+        Math.max(margin, window.innerWidth - tipRect.width - margin)
+      );
+      let top = rect.bottom + margin;
+      if (top + tipRect.height > window.innerHeight - margin) {
+        top = rect.top - tipRect.height - margin;
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${Math.max(margin, top)}px`;
+    }
+    function showUiHelp(anchor) {
+      const tooltip = document.getElementById("ui-help-tooltip");
+      const text = anchor?.dataset?.help || "";
+      if (!tooltip || !text) return;
+      tooltip.textContent = text;
+      tooltip.setAttribute("aria-hidden", "false");
+      tooltip.classList.add("visible");
+      window.requestAnimationFrame(() => positionUiHelpTooltip(anchor, tooltip));
+    }
+    function hideUiHelp() {
+      const tooltip = document.getElementById("ui-help-tooltip");
+      if (!tooltip) return;
+      tooltip.classList.remove("visible");
+      tooltip.setAttribute("aria-hidden", "true");
+    }
+    function setupContextualHelp() {
+      document.querySelectorAll(".help-target[data-help], .field-help[data-help]").forEach(el => {
+        el.addEventListener("mouseenter", () => showUiHelp(el));
+        el.addEventListener("focus", () => showUiHelp(el));
+        el.addEventListener("mouseleave", hideUiHelp);
+        el.addEventListener("blur", hideUiHelp);
+      });
+      window.addEventListener("resize", hideUiHelp);
+      window.addEventListener("scroll", hideUiHelp, {passive: true});
+    }
 
     // ── Toast system ────────────────────────────────────────────────
     function showToast(message, type = "info", duration = 3500) {
@@ -8298,6 +8408,7 @@ HTML_PAGE = r"""<!doctype html>
       updateNotifPermissionDisplay();
       updateNotifBtnLabel();
       updateTypeHints(document.getElementById("edit-type").value);
+      setupContextualHelp();
       syncStatusFilterBarsFromUrl();
       _syncGraphLayoutBtns();
       startGitPolling();

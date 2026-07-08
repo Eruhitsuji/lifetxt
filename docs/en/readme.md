@@ -146,10 +146,12 @@ and Kiosk.
 Records open in centered modals with thread replies, dependency links, due
 quick actions, and Markdown previews. Review supports project/custom date
 filters and Markdown copy; Timeline preserves `range=today|24h|week` in the
-URL and shows guided empty states for ranges with no dated records. Dashboard
-cards and theme tokens are configurable through `web.dashboard.*` and
-`web.theme.*`. The `+ New` editor exposes hover/focus help for status, type,
-title, and detail fields. Press `Ctrl+K` for the fuzzy
+URL, shows guided empty states for ranges with no dated records, and marks
+records that overlap the selected range from earlier starts as `ongoing`.
+Dashboard cards and theme tokens are configurable through `web.dashboard.*`
+and `web.theme.*`. Display mode has separate light/dark palettes. The `+ New`
+editor exposes viewport-aware hover/focus help for status, type, title, and
+detail fields. Press `Ctrl+K` for the fuzzy
 command palette, recently opened records, undo history, exports, theme toggles,
 and common actions. Use `--read-only` for public or wall-display deployments
 and `--write-file FILE` when reading multiple files but writing to a single

@@ -208,8 +208,9 @@ The browser GUI supports:
 - A Timeline view: a chronological board of agenda records with a red "now"
   line, per-type colored rail nodes, hour labels, all-day rows, day headers,
   dimmed past records, URL-persisted Today / Next 24h / Week range presets,
-  and guided empty states when the selected range has no dated records; cards
-  open the record detail modal
+  guided empty states when the selected range has no dated records, and
+  `ongoing` badges for records that started before the selected range but
+  still overlap it; cards open the record detail modal
 - A Team view: a presence board combining latest status records (colored
   presence dot and state badge per person), open messages addressed to each
   person, and an open/overdue workload summary per assignee — designed for
@@ -224,7 +225,8 @@ The browser GUI supports:
   screens
 - A Display workspace tab and command-palette action for read-focused wall
   displays. Display mode hides editing controls, keeps a visible Exit Display
-  button, and follows browser Back/Forward URL state.
+  button, uses a light wall-display palette unless the page is in dark theme,
+  and follows browser Back/Forward URL state.
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
 - Showing due message notifications
@@ -241,8 +243,8 @@ The browser GUI supports:
 - Rendering sanitized Markdown title/body/note previews
 - Highlighting search matches in titles, details, and body/note previews
 - Creating new items in a centered record editor modal (`＋ New` or `n`) with
-  hover/focus help on the New button and the editor Status, Type, Title, and
-  Details fields
+  viewport-aware hover/focus help on the New button and the editor Status,
+  Type, Title, and Details fields
 - Importing a raw life.txt line/body block into the editor through the server
   parser, with a live parse preview before writing
 - Selecting editable items and saving changes
@@ -413,10 +415,12 @@ curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&proj
 
 Display mode is intended for always-on screens. It keeps the page read-only,
 uses larger typography, hides the editor and filter controls, and refreshes
-automatically. Open it from the Display workspace tab, `Ctrl+K` command
-palette, `?mode=display`, or `?view=display`. The header keeps an Exit Display
-button, and browser Back/Forward navigation reapplies the URL state so kiosk
-or display styling does not remain after leaving the mode.
+automatically. In light theme it uses a warm, high-contrast wall-display
+palette; in dark theme it switches to the dark display palette. Open it from
+the Display workspace tab, `Ctrl+K` command palette, `?mode=display`, or
+`?view=display`. The header keeps an Exit Display button, and browser
+Back/Forward navigation reapplies the URL state so kiosk or display styling
+does not remain after leaving the mode.
 
 Recommended examples:
 

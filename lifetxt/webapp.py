@@ -1,11 +1,12 @@
 import os
 import tempfile
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, time
 
 from .agenda import (
     agenda_records,
     filter_items,
+    next_repeat_occurrence,
     parse_duration,
     parse_agenda_range,
     parse_optional_time_range,
@@ -1119,6 +1120,83 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             ),
         }
 
+    @app.post("/api/items/id/{item_id}/complete")
+    def complete_item_by_id(item_id, payload=Body(None)):
+        # Mirror the CLI `complete` command and MCP `complete_item` tool: mark a
+        # repeat-enabled task done and materialize the next occurrence so CLI,
+        # Web API, and MCP stay in sync (see cli.command_complete /
+        # mcp._tool_complete_item).
+        key = id_key_from_config(app.state.config)
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        try:
+            item = find_item_by_id(items, item_id, key=key)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if item is None:
+            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+        if item.status == "[x]":
+            return {
+                "id": item_id,
+                "item": api_item(item, app.state.writable_path, key),
+                "next": None,
+            }
+        date_value = (payload or {}).get("date") if isinstance(payload, dict) else None
+        if date_value:
+            completion_dt = parse_date_or_datetime(str(date_value), is_end=False)
+            if completion_dt is None:
+                raise HTTPException(status_code=400, detail="Invalid date %r. Use YYYY-MM-DD." % date_value)
+            completion_date = completion_dt.date()
+        else:
+            completion_date = datetime.now().date()
+        date_iso = completion_date.isoformat()
+
+        next_item = None
+        if item.details.get("repeat"):
+            repeat_base = resolve_web_repeat_base(item, app.state.config)
+            try:
+                anchor_key, next_dt, _rule = next_repeat_occurrence(item, repeat_base, completion_date)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=error_detail(exc))
+            if next_dt is not None:
+                new_details = OrderedDict()
+                for detail_key, values in item.details.items():
+                    if detail_key in (key, "done"):
+                        continue
+                    new_details[detail_key] = list(values)
+                if next_dt.time() == time():
+                    next_value = next_dt.date().isoformat()
+                else:
+                    next_value = format_life_datetime(next_dt)
+                new_details[anchor_key] = [next_value]
+                next_item = Item("[ ]", item.kind, item.title, new_details)
+                existing_ids = collect_item_ids(items, key=key)
+                ensure_item_id(
+                    next_item,
+                    existing_ids=existing_ids,
+                    key=key,
+                    prefix=id_prefix_for_item(next_item, app.state.config),
+                )
+
+        details = OrderedDict((k, list(v)) for k, v in item.details.items())
+        if not details.get("done"):
+            details["done"] = [date_iso]
+        try:
+            updated = update_item_by_id_in_file(
+                app.state.writable_path,
+                item_id,
+                {"status": "[x]", "type": item.kind, "title": item.title, "details": details},
+                key=key,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
+        result = {"id": item_id, "item": api_item(updated, app.state.writable_path, key), "next": None}
+        if next_item is not None:
+            append_item_to_file(app.state.writable_path, next_item)
+            result["next"] = api_item(next_item, app.state.writable_path, key)
+        return result
+
     @app.delete("/api/items/id/{item_id}")
     def delete_item_by_id(item_id):
         try:
@@ -1372,6 +1450,45 @@ def public_web_dashboard_config(web):
     return {"cards": cards, "limits": result_limits}
 
 
+PRESENCE_STATE_CLASSES = (
+    "p-available", "p-busy", "p-focus", "p-away", "p-off", "p-unknown",
+)
+
+
+def public_web_presence_config(web):
+    """Return user-defined presence state -> class overrides.
+
+    Config accepts `web.presence.states` as a mapping of a presence word
+    (matched case-insensitively) to one of the known presence classes, letting
+    teams recolor states without code changes. Values that are not known
+    classes are dropped so the client cannot inject arbitrary CSS class names.
+    """
+    presence = _nested_or_dotted(web, "presence")
+    states = presence.get("states")
+    if not isinstance(states, dict):
+        states = {}
+        prefix = "states."
+        for key, value in presence.items():
+            if isinstance(key, str) and key.startswith(prefix):
+                states[key[len(prefix):]] = value
+    result = OrderedDict()
+    for word, cls in states.items():
+        cls_name = str(cls).strip()
+        if not cls_name.startswith("p-"):
+            cls_name = "p-" + cls_name
+        if cls_name in PRESENCE_STATE_CLASSES:
+            result[str(word).strip().lower()] = cls_name
+    return result
+
+
+def public_web_team_config(web):
+    team = _nested_or_dotted(web, "team")
+    return {
+        "pin": _string_list(team.get("pin")),
+        "order": _string_list(team.get("order")),
+    }
+
+
 def public_web_config(config):
     web = config_section(config, "web")
     return {
@@ -1382,9 +1499,34 @@ def public_web_config(config):
         "default_sort": web.get("default_sort", "line"),
         "default_order": web.get("default_order", "asc"),
         "due_soon_days": _int_or_default(web.get("due_soon_days"), 3),
+        "week_start": _normalize_week_start(web.get("week_start")),
+        "high_contrast": _truthy_config(web.get("high_contrast")),
+        "reduced_motion": _truthy_config(web.get("reduced_motion")),
+        "language": str(web.get("language", "") or "").strip().lower(),
         "theme": public_web_theme_config(web),
         "dashboard": public_web_dashboard_config(web),
+        "presence": public_web_presence_config(web),
+        "team": public_web_team_config(web),
     }
+
+
+def _truthy_config(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _normalize_week_start(value):
+    """Normalize a configured week-start value to 'sunday' or 'monday'.
+
+    The Web calendar and any future week-based views honor this so kiosks and
+    personal setups can pick their preferred first column. Defaults to Monday,
+    matching agenda/review week bucketing elsewhere in the codebase.
+    """
+    text = str(value or "").strip().lower()
+    if text in ("sun", "sunday", "0", "7"):
+        return "sunday"
+    return "monday"
 
 
 def public_git_config(config):
@@ -1669,6 +1811,20 @@ def _append_payload_values(details, key, raw_value):
     for value in values:
         if value is not None and value != "":
             details.setdefault(key, []).append(value)
+
+
+def resolve_web_repeat_base(item, config):
+    """Resolve effective repeat_base ('due'|'done') for the Web API complete route.
+
+    Item-level repeat_base: overrides config defaults.repeat_base, mirroring
+    cli.resolve_repeat_base and mcp._resolve_repeat_base so all surfaces agree.
+    """
+    values = item.details.get("repeat_base")
+    repeat_base = values[0] if values else None
+    if not repeat_base:
+        defaults = config_section(config, "defaults")
+        repeat_base = defaults.get("repeat_base") or "due"
+    return str(repeat_base).strip().lower()
 
 
 def find_item_by_id(items, item_id, kind=None, key="id"):
@@ -2390,6 +2546,34 @@ HTML_PAGE = r"""<!doctype html>
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
     }
+    /* Config/user override: force reduced motion regardless of OS setting. */
+    body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+      animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important; scroll-behavior: auto !important;
+    }
+    /* ── High-contrast theme (accessibility) ── */
+    [data-contrast="high"] {
+      --bg: #ffffff; --panel: #ffffff; --panel-2: #ffffff; --soft: #eeeeee;
+      --ink: #000000; --muted: #333333;
+      --line: #000000; --line-strong: #000000;
+      --accent: #0a4f42; --accent-hover: #063b31; --accent-soft: #d3ece6; --accent-ink: #ffffff;
+      --danger: #8a1000; --danger-soft: #f6d9d5;
+      --warn: #6b3d00; --warn-soft: #f7e4c4;
+      --ok: #0c5a2f; --ok-soft: #d3f0dd;
+      --info: #0a3d6b; --info-soft: #d5e4f4;
+      --violet: #4a2f9c; --violet-soft: #e0d8f6;
+      --shadow-1: none; --shadow-2: 0 0 0 1px #000; --shadow-3: 0 0 0 2px #000;
+    }
+    [data-contrast="high"][data-theme="dark"] {
+      --bg: #000000; --panel: #0a0a0a; --panel-2: #111111; --soft: #1a1a1a;
+      --ink: #ffffff; --muted: #dddddd;
+      --line: #ffffff; --line-strong: #ffffff;
+      --accent: #58e0c2; --accent-hover: #7fead2; --accent-soft: #123a32; --accent-ink: #000000;
+      --danger: #ff7a68; --warn: #ffc061; --ok: #74e39a; --info: #7fbdf5; --violet: #b9a4f5;
+    }
+    [data-contrast="high"] .pill, [data-contrast="high"] .badge,
+    [data-contrast="high"] .status, [data-contrast="high"] button,
+    [data-contrast="high"] .item, [data-contrast="high"] section { border: 1px solid var(--line) !important; }
     .markdown {
       overflow-wrap: anywhere;
     }
@@ -3067,6 +3251,7 @@ HTML_PAGE = r"""<!doctype html>
       overflow: hidden;
     }
     .review-habit-bar > span { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+    .review-streak { font-size: .72rem; font-weight: 700; color: var(--warn); white-space: nowrap; margin-left: .25rem; }
     .review-excerpt { font-size: .78rem; color: var(--muted); margin-top: .1rem; overflow-wrap: anywhere; }
     .review-mood-row { flex-wrap: wrap; }
     .review-num { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
@@ -3162,6 +3347,41 @@ HTML_PAGE = r"""<!doctype html>
     /* ── Timeline view ───────────────────────────────────────────── */
     .timeline-body { max-width: 52rem; margin: 0 auto; width: 100%; padding: 0 1rem 1.2rem; }
     .tl-controls { display: flex; gap: .35rem; padding: .8rem 0 .4rem; flex-wrap: wrap; align-items: center; }
+    /* ── Calendar view ── */
+    .calendar-body { width: 100%; padding: 0 1rem 1.2rem; }
+    .cal-controls { display: flex; gap: .35rem; padding: .8rem 0 .5rem; flex-wrap: wrap; align-items: center; }
+    .cal-summary { font-size: .74rem; color: var(--muted); padding: 0 .1rem .5rem; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .cal-weekday { background: var(--panel-2); color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; text-align: center; padding: .35rem .2rem; }
+    .cal-cell { background: var(--panel); min-height: 5.6rem; padding: .25rem .3rem .3rem; display: flex; flex-direction: column; gap: .2rem; }
+    .cal-mode-week .cal-cell { min-height: 9rem; }
+    .cal-cell.cal-out { background: var(--panel-2); }
+    .cal-cell.cal-out .cal-daynum { opacity: .45; }
+    .cal-cell.cal-today { box-shadow: inset 0 0 0 2px var(--accent); }
+    .cal-daynum { display: flex; align-items: center; justify-content: space-between; font-size: .78rem; font-weight: 600; }
+    .cal-daylink { cursor: pointer; color: var(--text); text-decoration: none; padding: 0 .15rem; border-radius: 4px; }
+    .cal-daylink:hover { background: var(--accent-soft); color: var(--accent); }
+    .cal-today .cal-daylink { color: var(--accent); }
+    .cal-count { font-size: .6rem; font-weight: 700; color: var(--muted); background: var(--panel-2); border-radius: 8px; padding: 0 .3rem; }
+    .cal-entries { display: flex; flex-direction: column; gap: .12rem; min-width: 0; }
+    .cal-entry { display: flex; align-items: center; gap: .25rem; font-size: .68rem; line-height: 1.15; padding: .1rem .25rem; border-radius: 4px; background: var(--panel-2); cursor: pointer; min-width: 0; }
+    .cal-entry:hover { background: var(--accent-soft); }
+    .cal-entry.cal-static { cursor: default; }
+    .cal-entry.cal-overdue { background: var(--danger-soft); }
+    .cal-entry.cal-due-soon { background: var(--warn-soft); }
+    .cal-entry-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .cal-entry-dot { flex: 0 0 auto; width: .5rem; height: .5rem; border-radius: 50%; }
+    .cal-entry-dot.t-T { background: #4092d2; } .cal-entry-dot.t-E { background: #be5cd6; }
+    .cal-entry-dot.t-D { background: #e05a5a; } .cal-entry-dot.t-R { background: #e0a03c; }
+    .cal-entry-dot.t-H { background: #46c882; } .cal-entry-dot.t-N { background: #96a09b; }
+    .cal-entry-dot.t-S { background: #6482e6; } .cal-entry-dot.t-M { background: #dc8246; }
+    .cal-entry-dot.t-J { background: #c8c850; }
+    .cal-more { font-size: .62rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: .05rem .1rem; text-align: left; }
+    .cal-more:hover { text-decoration: underline; }
+    @media (max-width: 640px) {
+      .cal-cell { min-height: 4rem; }
+      .cal-entry-title { font-size: .62rem; }
+    }
     .tl-empty-actions {
       display: flex;
       gap: .45rem;
@@ -3770,12 +3990,14 @@ HTML_PAGE = r"""<!doctype html>
       <span class="brand-mark" aria-hidden="true">✓</span>
       <div>
         <h1>life.txt</h1>
-        <p class="subtitle">Plain text tasks, schedule, presence, and notes.</p>
+        <p class="subtitle" id="app-subtitle">Plain text tasks, schedule, presence, and notes.</p>
       </div>
     </div>
     <div class="toolbar">
       <button id="new-item-btn" class="help-target" data-workspace="new" data-help="Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard." onclick="newItem()" title="Create a new record (n)">＋ New</button>
       <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
+      <button id="contrast-btn" class="secondary" onclick="toggleHighContrast()" title="Toggle high-contrast theme" aria-pressed="false">◑</button>
+      <button id="motion-btn" class="secondary" onclick="toggleReducedMotion()" title="Toggle reduced motion" aria-pressed="false">⏸</button>
       <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
       <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)">⛶</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Open notifications / enable browser alerts">Notifications</button>
@@ -3792,6 +4014,7 @@ HTML_PAGE = r"""<!doctype html>
       <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
       <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
       <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
+      <button type="button" class="workspace-tab" data-view="calendar" onclick="switchWorkspace('calendar')" title="Month/week calendar grid of dated records">📆 Calendar</button>
       <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
       <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
       <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
@@ -4018,6 +4241,7 @@ HTML_PAGE = r"""<!doctype html>
             <button class="graph-layout-btn" data-layout="ring" onclick="setGraphLayout('ring')" title="Ring layout (focus in center)">Ring</button>
             <button class="graph-layout-btn" data-layout="lr" onclick="setGraphLayout('lr')" title="Layered left-to-right">LR</button>
             <button class="graph-layout-btn" data-layout="tb" onclick="setGraphLayout('tb')" title="Layered top-to-bottom">TB</button>
+            <button class="graph-layout-btn" data-layout="force" onclick="setGraphLayout('force')" title="Force-directed layout (physics simulation)">Force</button>
             <span style="flex:1"></span>
             <button class="graph-export-btn" onclick="exportGraphSvg()" title="Download graph as SVG">⇩ SVG</button>
             <button class="graph-export-btn" onclick="exportGraphPng()" title="Download graph as PNG">⇩ PNG</button>
@@ -4069,6 +4293,23 @@ HTML_PAGE = r"""<!doctype html>
             <button type="button" class="review-range-btn" data-range="week" onclick="setTimelineRange('week')">Week</button>
           </div>
           <div id="timeline"><div class="empty">Loading…</div></div>
+        </div>
+      </section>
+      <section class="calendar-section page" data-page="calendar">
+        <div class="section-head">
+          <h2><span class="h2-icon" aria-hidden="true">📆</span>Calendar<span id="cal-title" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+          <button class="secondary" onclick="loadCalendar()" title="Refresh calendar">↺</button>
+        </div>
+        <div class="section-body calendar-body">
+          <div class="cal-controls" role="group" aria-label="Calendar navigation">
+            <button type="button" class="review-range-btn" onclick="calShift(-1)" title="Previous period (,)">‹ Prev</button>
+            <button type="button" class="review-range-btn" onclick="calToday()" title="Jump to current period (t)">Today</button>
+            <button type="button" class="review-range-btn" onclick="calShift(1)" title="Next period (.)">Next ›</button>
+            <span style="flex:1"></span>
+            <button type="button" class="review-range-btn" data-calmode="month" onclick="setCalMode('month')" title="Month grid">Month</button>
+            <button type="button" class="review-range-btn" data-calmode="week" onclick="setCalMode('week')" title="Single-week grid">Week</button>
+          </div>
+          <div id="calendar"><div class="empty">Loading…</div></div>
         </div>
       </section>
       <section class="notifications-section page" data-page="notifications">
@@ -4203,6 +4444,8 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
         <tr><td>[ / ]</td><td>Prev / next item in detail modal</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
+        <tr><td>, / . <em>(Calendar)</em></td><td>Previous / next calendar period</td></tr>
+        <tr><td>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
@@ -4277,6 +4520,41 @@ HTML_PAGE = r"""<!doctype html>
       for (const [key, value] of Object.entries(theme)) {
         if (!THEME_TOKEN_KEYS.has(key) || !String(value || "").trim()) continue;
         document.documentElement.style.setProperty(cssVarName(key), String(value).trim());
+      }
+    }
+    // ── Minimal i18n for static chrome (web.language / ?lang=) ─────
+    // Only UI chrome is translated; user record content stays untouched.
+    const UI_LABELS = {
+      ja: {
+        tabs: {
+          dashboard: "🏠 ダッシュボード", "": "📋 アイテム", agenda: "📅 予定",
+          timeline: "🕒 タイムライン", focus: "🎯 フォーカス", review: "📝 レビュー",
+          messages: "💬 メッセージ", team: "🟢 チーム", status: "👥 ステータス",
+          notifications: "🔔 通知", stats: "📊 統計", graph: "🕸️ グラフ",
+          display: "🪧 表示", kiosk: "🖥️ キオスク",
+        },
+        subtitle: "プレーンテキストのタスク・予定・在席・メモ。",
+        buttons: {"notif-btn": "通知", "refresh-btn": "更新"},
+      },
+    };
+    function currentLanguage() {
+      const urlLang = (new URLSearchParams(location.search).get("lang") || "").toLowerCase();
+      return urlLang || String(appConfig?.web?.language || "").toLowerCase();
+    }
+    function applyLanguage() {
+      const lang = currentLanguage();
+      const dict = UI_LABELS[lang];
+      document.documentElement.setAttribute("lang", lang || "en");
+      if (!dict) return;
+      document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
+        const label = dict.tabs[btn.dataset.view || ""];
+        if (label) btn.textContent = label;
+      });
+      const subtitle = document.getElementById("app-subtitle");
+      if (subtitle && dict.subtitle) subtitle.textContent = dict.subtitle;
+      for (const [id, text] of Object.entries(dict.buttons || {})) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
       }
     }
     function configuredDashboardCards() {
@@ -4406,11 +4684,11 @@ HTML_PAGE = r"""<!doctype html>
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "agenda", "timeline", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
+    const PAGE_VIEWS = ["dashboard", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
       "dashboard": "dashboard", "agenda": "agenda", "timeline": "timeline",
-      "focus": "focus", "review": "review", "team": "team",
+      "calendar": "calendar", "focus": "focus", "review": "review", "team": "team",
       "status": "status", "notifications": "notifications",
       "stats": "stats", "graph": "graph",
     };
@@ -4434,6 +4712,11 @@ HTML_PAGE = r"""<!doctype html>
         label: "Timeline",
         description: "See dated records on a chronological board with empty-range guidance.",
         actions: [["Today", "timelineToday"], ["Next 24h", "timeline24h"], ["Week", "timelineWeek"]],
+      },
+      calendar: {
+        label: "Calendar",
+        description: "Place due, do, and event records on a month or week grid; click any entry to open it.",
+        actions: [["Today", "calToday"], ["Month", "calMonth"], ["Week", "calWeek"]],
       },
       focus: {
         label: "Focus",
@@ -4505,6 +4788,10 @@ HTML_PAGE = r"""<!doctype html>
       timelineToday: () => setTimelineRange("today"),
       timeline24h: () => setTimelineRange("24h"),
       timelineWeek: () => setTimelineRange("week"),
+      calendar: () => switchWorkspace("calendar"),
+      calToday: () => calToday(),
+      calMonth: () => setCalMode("month"),
+      calWeek: () => setCalMode("week"),
       openTasks: () => openTaskItems(),
       reviewWeek: () => setReviewRange("week"),
       copyReview: () => copyReviewMarkdown(),
@@ -4520,6 +4807,9 @@ HTML_PAGE = r"""<!doctype html>
       enableNotifications: () => enableBrowserNotifications(),
       refreshCharts: () => refreshStatsView(),
       refreshGraph: () => loadGraphPanel(),
+      help: () => openHelpModal(),
+      stats: () => switchWorkspace("stats"),
+      graph: () => switchWorkspace("graph"),
     };
     function runViewGuideAction(action) {
       const fn = VIEW_ACTIONS[action];
@@ -4652,8 +4942,23 @@ HTML_PAGE = r"""<!doctype html>
       if (PAGE_VIEWS.includes(value)) return value;
       // Back-compat: old ?workspace= / ?panel= parameters map onto page views.
       const ws = firstParam(params, ["workspace", "panel"], "").toLowerCase();
-      if (PAGE_VIEWS.includes(ws)) return ws;
+      if (PAGE_VIEWS.includes(ws)) {
+        warnDeprecatedWorkspaceParam();
+        return ws;
+      }
       return "";
+    }
+    let _workspaceDeprecationWarned = false;
+    function warnDeprecatedWorkspaceParam() {
+      // The legacy ?workspace= / ?panel= aliases are deprecated in favor of
+      // ?view=. Warn once per session before the mapping is removed in a
+      // future release.
+      if (_workspaceDeprecationWarned) return;
+      _workspaceDeprecationWarned = true;
+      console.warn(
+        "[life.txt] The ?workspace= / ?panel= URL parameters are deprecated and " +
+        "will be removed in a future release. Use ?view=NAME instead."
+      );
     }
     window.addEventListener("popstate", () => {
       applyPresetToUrl();
@@ -4698,6 +5003,7 @@ HTML_PAGE = r"""<!doctype html>
       const groupSel = document.getElementById("group-by");
       if (groupSel) groupSel.value = firstParam(params, ["group_by"], "");
       syncTimelineRange(firstParam(params, ["range", "timeline_range"], timelineRange));
+      syncCalStateFromUrl();
       syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
       configureNotificationPolling();
@@ -4932,6 +5238,36 @@ HTML_PAGE = r"""<!doctype html>
       else if (diff <= 60) { text = `in ${diff}d`; }
       else return "";
       return `<span class="due-rel ${cls}">${escapeHtml(text)}</span>`;
+    }
+    function agendaCountdownLabel(record) {
+      // Days-remaining countdown for an agenda record, derived from its
+      // occurrence date (works for due, do, and event records alike).
+      if (["[x]", "[-]"].includes(record?.status)) return "";
+      const raw = record?.occurrence_start || record?.when || "";
+      const d = new Date(String(raw).replace(" ", "T"));
+      if (isNaN(d)) return "";
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dm = new Date(d); dm.setHours(0, 0, 0, 0);
+      const diff = Math.round((dm - today) / 86400000);
+      let text, cls = "";
+      if (diff < 0) { text = `${-diff}d ago`; cls = "overdue"; }
+      else if (diff === 0) { text = "today"; cls = "due-soon"; }
+      else if (diff <= dueSoonDays()) { text = `in ${diff}d`; cls = "due-soon"; }
+      else if (diff <= 365) { text = `in ${diff}d`; }
+      else return "";
+      return `<span class="due-rel ${cls}">${escapeHtml(text)}</span>`;
+    }
+    function guidedEmptyState(icon, title, hint, actions = []) {
+      // Shared guided empty state (icon + title + hint + optional action
+      // buttons) so Agenda, Team, Status, Notifications, Stats, and Graph give
+      // the same actionable guidance as the Items view.
+      const btns = actions.map(([label, action]) =>
+        `<button type="button" class="secondary" onclick="runViewGuideAction(${escapeHtml(jsLiteral(action))})">${escapeHtml(label)}</button>`
+      ).join("");
+      return `<div class="empty-state"><div class="empty-icon" aria-hidden="true">${icon}</div>` +
+        `<div class="empty-title">${escapeHtml(title)}</div>` +
+        (hint ? `<div class="empty-hint">${hint}</div>` : "") +
+        (btns ? `<div class="empty-actions">${btns}</div>` : "") + `</div>`;
     }
     function enhanceItemsEmptyState(hasFilters) {
       if (isKioskMode() || isDisplayMode()) return;
@@ -5445,7 +5781,9 @@ HTML_PAGE = r"""<!doctype html>
       _syncAgendaBlockedBtn(blockedMode);
       const data = await api(`/api/agenda?${agendaParams}`);
       const node = document.getElementById("agenda");
-      node.innerHTML = data.records.length ? "" : `<div class="empty">No agenda items.</div>`;
+      node.innerHTML = data.records.length ? "" : guidedEmptyState("📅", "Nothing scheduled in this range",
+        "Agenda shows records with <code>due</code>, <code>do</code>, <code>from</code>/<code>to</code>, or <code>on</code> dates. Add a dated record or widen the range.",
+        [["Today", "agendaToday"], ["7 days", "agendaWeek"], ["New record", "newItem"], ["Help", "help"]]);
       const agendaLimitRaw = firstParam(query(), ["agenda_limit"], "8");
       const maxAgenda = Number(agendaLimitRaw);
       const unlimitedAgenda = agendaLimitRaw === "0" || maxAgenda === 0;
@@ -5461,9 +5799,10 @@ HTML_PAGE = r"""<!doctype html>
           ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
           : "";
         const source = record.source_id ? `<div class="meta">source: ${escapeHtml(record.source_id)}</div>` : "";
+        const countdown = agendaCountdownLabel(record);
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}${blockedBadge}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
         );
       }
       if (!unlimitedAgenda && data.records.length > limit) {
@@ -5486,6 +5825,10 @@ HTML_PAGE = r"""<!doctype html>
     function presenceClass(state, active) {
       if (active === false) return "p-off";
       const s = String(state || "").toLowerCase().trim();
+      // Config-defined overrides (web.presence.states) win over built-in rules
+      // so teams can recolor states without code changes.
+      const overrides = appConfig?.web?.presence || {};
+      if (overrides[s]) return overrides[s];
       for (const [re, cls] of PRESENCE_RULES) if (re.test(s)) return cls;
       return "p-unknown";
     }
@@ -5547,15 +5890,37 @@ HTML_PAGE = r"""<!doctype html>
       const data = await api(`/api/status?${statusParams}`);
       const node = document.getElementById("status");
       if (!data.records.length) {
-        node.innerHTML = `<div class="empty">No ${activeOnly ? "active " : ""}status records.` +
-          (activeOnly ? ` <a href="#" class="drawer-link" onclick="event.preventDefault();toggleStatusActive()">Show latest for everyone</a>` : "") +
-          `</div>`;
+        node.innerHTML = guidedEmptyState("👥", `No ${activeOnly ? "active " : ""}status records`,
+          "Presence comes from <code>S</code> records like<br><code>[/] S Working from:2026-07-07T09:00 state:busy person:alice</code>",
+          (activeOnly
+            ? [["Show all latest", "toggleStatusActive"], ["Team board", "team"], ["New record", "newItem"]]
+            : [["Team board", "team"], ["New record", "newItem"], ["Help", "help"]]));
         return;
       }
       node.innerHTML = `<div class="status-grid">` + data.records.map(r => presenceCard(r)).join("") + `</div>`;
     }
 
     // ── Team board (presence + messages + workload) ────────────────
+    function orderTeamRecords(records) {
+      // Pinned people first (web.team.pin order), then a configured order
+      // (web.team.order), then the rest alphabetically by person name.
+      const pin = (appConfig?.web?.team?.pin || []).map(s => String(s).toLowerCase());
+      const order = (appConfig?.web?.team?.order || []).map(s => String(s).toLowerCase());
+      const rank = (person) => {
+        const p = String(person || "").toLowerCase();
+        const pinIdx = pin.indexOf(p);
+        if (pinIdx >= 0) return [0, pinIdx, ""];
+        const orderIdx = order.indexOf(p);
+        if (orderIdx >= 0) return [1, orderIdx, ""];
+        return [2, 0, p];
+      };
+      return records.slice().sort((a, b) => {
+        const ra = rank(a.person), rb = rank(b.person);
+        if (ra[0] !== rb[0]) return ra[0] - rb[0];
+        if (ra[1] !== rb[1]) return ra[1] - rb[1];
+        return ra[2].localeCompare(rb[2]);
+      });
+    }
     async function loadTeam() {
       const board = document.getElementById("team-board");
       if (!board) return;
@@ -5570,11 +5935,11 @@ HTML_PAGE = r"""<!doctype html>
         board.innerHTML = `<div class="diagnostic">Team board error: ${escapeHtml(e.message)}</div>`;
         return;
       }
-      const records = statusData.records || [];
+      const records = orderTeamRecords(statusData.records || []);
       if (!records.length) {
-        board.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🟢</div>` +
-          `<div class="empty-title">No presence records yet</div>` +
-          `<div class="empty-hint">Add a status record like<br><code>[/] S Working from:2026-07-07T09:00 state:busy person:alice</code><br>to put people on the board.</div></div>`;
+        board.innerHTML = guidedEmptyState("🟢", "No presence records yet",
+          "Add a status record like<br><code>[/] S Working from:2026-07-07T09:00 state:busy person:alice</code><br>to put people on the board.",
+          [["Status view", "status"], ["New record", "newItem"], ["Help", "help"]]);
         return;
       }
       const msgsFor = (person) => msgs.filter(m =>
@@ -5770,6 +6135,221 @@ HTML_PAGE = r"""<!doctype html>
       node.innerHTML = html;
     }
 
+    // ── Calendar view (month / week grid) ──────────────────────────
+    // Places dated agenda records — including expanded repeat occurrences —
+    // on a calendar grid. Reuses /api/agenda so recurrence, blockers, and
+    // occurrence badges stay consistent with the Agenda and Timeline views.
+    const CAL_MODES = new Set(["month", "week"]);
+    const CAL_CELL_LIMIT = 4;
+    let calMode = "month";
+    let calAnchor = _calStartOfDay(new Date());
+    const _calExpandedDays = new Set();
+
+    function _calStartOfDay(d) {
+      const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      c.setHours(0, 0, 0, 0);
+      return c;
+    }
+    function _calParseAnchor(text) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(text || "").trim());
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return isNaN(d) ? null : _calStartOfDay(d);
+    }
+    function _calWeekStartIndex() {
+      // 0 = Sunday, 1 = Monday (default). Honors web.week_start config.
+      return (appConfig?.web?.week_start === "sunday") ? 0 : 1;
+    }
+    function _calGridStart(anchor) {
+      // First visible day: for month mode back up to the configured week start
+      // from the 1st of the month; for week mode from the anchor's own week.
+      const base = calMode === "week"
+        ? new Date(anchor)
+        : new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+      const ws = _calWeekStartIndex();
+      const diff = (base.getDay() - ws + 7) % 7;
+      const start = new Date(base);
+      start.setDate(base.getDate() - diff);
+      return _calStartOfDay(start);
+    }
+    function _calGridDays(anchor) {
+      const start = _calGridStart(anchor);
+      let count;
+      if (calMode === "week") {
+        count = 7;
+      } else {
+        // Enough full weeks to cover the whole month (5 or 6 rows).
+        const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+        const spanDays = Math.round((monthEnd - start) / 86400000) + 1;
+        count = Math.ceil(spanDays / 7) * 7;
+      }
+      const days = [];
+      for (let i = 0; i < count; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        days.push(_calStartOfDay(d));
+      }
+      return days;
+    }
+    function syncCalStateFromUrl() {
+      const params = query();
+      const mode = firstParam(params, ["calmode"], calMode).toLowerCase();
+      calMode = CAL_MODES.has(mode) ? mode : "month";
+      const anchor = _calParseAnchor(firstParam(params, ["cal"], ""));
+      if (anchor) calAnchor = anchor;
+      document.querySelectorAll("#calendar-anchor, .cal-controls [data-calmode]").forEach(btn => {
+        if (btn.dataset && btn.dataset.calmode) {
+          btn.classList.toggle("active", btn.dataset.calmode === calMode);
+        }
+      });
+    }
+    function _calWriteUrl(replace = true) {
+      const params = query();
+      params.set("view", "calendar");
+      params.delete("mode");
+      params.set("calmode", calMode);
+      params.set("cal", _fmtDate(calAnchor));
+      const url = `${location.pathname}?${params.toString()}`;
+      if (replace) history.replaceState(null, "", url);
+      else history.pushState(null, "", url);
+    }
+    function setCalMode(mode) {
+      calMode = CAL_MODES.has(mode) ? mode : "month";
+      _calExpandedDays.clear();
+      _calWriteUrl(true);
+      syncCalStateFromUrl();
+      loadCalendar();
+    }
+    function calShift(delta) {
+      _calExpandedDays.clear();
+      if (calMode === "week") {
+        calAnchor.setDate(calAnchor.getDate() + delta * 7);
+      } else {
+        calAnchor.setMonth(calAnchor.getMonth() + delta);
+      }
+      calAnchor = _calStartOfDay(calAnchor);
+      _calWriteUrl(true);
+      loadCalendar();
+    }
+    function calToday() {
+      _calExpandedDays.clear();
+      calAnchor = _calStartOfDay(new Date());
+      _calWriteUrl(true);
+      loadCalendar();
+    }
+    function calOpenDay(dateStr) {
+      // Jump to the Agenda view scoped to a single day for a focused list.
+      const params = query();
+      params.set("view", "agenda");
+      params.delete("mode"); params.delete("around"); params.delete("window");
+      params.delete("calmode"); params.delete("cal");
+      params.set("from", dateStr);
+      params.set("to", dateStr);
+      history.pushState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadAgenda();
+    }
+    function _calRecordDay(record) {
+      const primary = (record.matches || [])[0] || {};
+      const raw = record.occurrence_start || primary.start || record.when || "";
+      return String(raw).slice(0, 10);
+    }
+    function _calEntryHtml(record) {
+      const type = record.type || "N";
+      const when = String(record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
+      const timed = when.length > 10;
+      const time = timed ? when.slice(11, 16) + " " : "";
+      const dueCls = agendaDueSoonClass(record);
+      const clickable = Number.isInteger(record.line);
+      const occ = (record.occurrence_start || record.repeat_rule) ? " ↻" : "";
+      const blocked = record.blocked ? " ⚡" : "";
+      const title = `${time}${record.title}${occ}${blocked}`;
+      return `<div class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
+        (clickable ? ` onclick="event.stopPropagation();openItemByLine(${record.line})"` : "") +
+        ` title="${escapeHtml((record.status ? record.status + " " : "") + when + " · " + record.title)}">` +
+        `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
+        `<span class="cal-entry-title">${escapeHtml(title)}</span></div>`;
+    }
+    async function loadCalendar() {
+      const node = document.getElementById("calendar");
+      if (!node) return;
+      syncCalStateFromUrl();
+      const days = _calGridDays(calAnchor);
+      const from = _fmtDate(days[0]);
+      const to = _fmtDate(days[days.length - 1]);
+      const titleEl = document.getElementById("cal-title");
+      if (titleEl) {
+        titleEl.textContent = calMode === "week"
+          ? `Week of ${days[0].toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}`
+          : calAnchor.toLocaleDateString(undefined, {month: "long", year: "numeric"});
+      }
+      let data;
+      try {
+        data = await api(`/api/agenda?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      } catch (e) {
+        node.innerHTML = `<div class="diagnostic">Calendar error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const records = data.records || [];
+      const byDay = new Map();
+      for (const record of records) {
+        const day = _calRecordDay(record);
+        if (!day) continue;
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day).push(record);
+      }
+      for (const list of byDay.values()) {
+        list.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
+      }
+      const total = records.length;
+      const ws = _calWeekStartIndex();
+      const weekdayNames = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(2024, 0, 7 + ((ws + i) % 7)); // 2024-01-07 is a Sunday
+        weekdayNames.push(d.toLocaleDateString(undefined, {weekday: "short"}));
+      }
+      if (!total) {
+        node.innerHTML = guidedEmptyState("📆", "Nothing scheduled in this period",
+          "The calendar plots records with <code>due</code>, <code>do</code>, <code>on</code>, or <code>from</code>/<code>to</code> dates, including repeat occurrences. Move to another period or add a dated record.",
+          [["Today", "calToday"], ["New record", "newItem"], ["Agenda", "agenda"], ["Help", "help"]]);
+        return;
+      }
+      const todayStr = _fmtDate(new Date());
+      let html = `<div class="cal-summary">${total} record${total === 1 ? "" : "s"} · ${escapeHtml(from)} → ${escapeHtml(to)}</div>`;
+      html += `<div class="cal-grid cal-mode-${calMode}">`;
+      for (const name of weekdayNames) {
+        html += `<div class="cal-weekday">${escapeHtml(name)}</div>`;
+      }
+      for (const day of days) {
+        const dayStr = _fmtDate(day);
+        const inMonth = calMode === "week" || day.getMonth() === calAnchor.getMonth();
+        const isToday = dayStr === todayStr;
+        const entries = byDay.get(dayStr) || [];
+        const expanded = _calExpandedDays.has(dayStr);
+        const shown = expanded ? entries : entries.slice(0, CAL_CELL_LIMIT);
+        const overflow = entries.length - shown.length;
+        let cell = `<div class="cal-cell${inMonth ? "" : " cal-out"}${isToday ? " cal-today" : ""}${entries.length ? " cal-has" : ""}">`;
+        cell += `<div class="cal-daynum"><a class="cal-daylink" onclick="calOpenDay('${dayStr}')" title="Open ${escapeHtml(dayStr)} in Agenda">${day.getDate()}</a>`;
+        cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
+        cell += `</div><div class="cal-entries">`;
+        cell += shown.map(_calEntryHtml).join("");
+        if (overflow > 0) {
+          cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">+${overflow} more</button>`;
+        } else if (expanded && entries.length > CAL_CELL_LIMIT) {
+          cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">show less</button>`;
+        }
+        cell += `</div></div>`;
+        html += cell;
+      }
+      html += `</div>`;
+      node.innerHTML = html;
+    }
+    function calExpandDay(dateStr) {
+      if (_calExpandedDays.has(dateStr)) _calExpandedDays.delete(dateStr);
+      else _calExpandedDays.add(dateStr);
+      loadCalendar();
+    }
+
     // ── Fullscreen ─────────────────────────────────────────────────
     function toggleFullscreen() {
       if (document.fullscreenElement) {
@@ -5796,6 +6376,8 @@ HTML_PAGE = r"""<!doctype html>
       appConfig = await api("/api/config");
       applyConfiguredTheme();
       applyConfiguredDashboard();
+      initAccessibilityPrefs();
+      applyLanguage();
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
@@ -5815,7 +6397,9 @@ HTML_PAGE = r"""<!doctype html>
       const data = await api(`/api/notifications?${notificationParams}`);
       window._lastNotifRecords = data.records || [];
       const node = document.getElementById("notifications");
-      node.innerHTML = data.records.length ? "" : `<div class="empty">No notifications.</div>`;
+      node.innerHTML = data.records.length ? "" : guidedEmptyState("🔔", "No notifications right now",
+        "Notifications surface reminders and messages with a <code>notify</code> detail. Enable browser alerts to be notified while this tab is open.",
+        [["Enable alerts", "enableNotifications"], ["Messages", "messages"], ["Help", "help"]]);
       const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
       let notifIdx = 0;
       for (const record of data.records) {
@@ -5972,6 +6556,7 @@ HTML_PAGE = r"""<!doctype html>
       if (VIEW_PAGE[v] === "items" || v === "") tasks.push(loadItems());
       if (v === "agenda") tasks.push(loadAgenda());
       if (v === "timeline") tasks.push(loadTimeline());
+      if (v === "calendar") tasks.push(loadCalendar());
       if (v === "status") tasks.push(loadStatus());
       if (v === "team") tasks.push(loadTeam());
       if (v === "dashboard") tasks.push(loadDashboard());
@@ -6043,6 +6628,12 @@ HTML_PAGE = r"""<!doctype html>
       }
       if (inInput) return;
       if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
+      if (currentView() === "calendar" && !document.getElementById("detail-drawer").classList.contains("open")) {
+        if (e.key === "," || e.key === "<") { e.preventDefault(); calShift(-1); return; }
+        if (e.key === "." || e.key === ">") { e.preventDefault(); calShift(1); return; }
+        if (e.key === "t" || e.key === "T") { e.preventDefault(); calToday(); return; }
+        if (e.key === "m" || e.key === "M") { e.preventDefault(); setCalMode(calMode === "month" ? "week" : "month"); return; }
+      }
       if (e.key === "[" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerPrev(); return; }
       if (e.key === "]" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerNext(); return; }
       if (e.key === "<" || e.key === ",") { e.preventDefault(); cycleStatusFilter(-1); return; }
@@ -6298,8 +6889,12 @@ HTML_PAGE = r"""<!doctype html>
       const isDone = ["[x]", "[-]"].includes(item.status);
       const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
       const hasId = !!(item?.details?.[idKey]?.[0] || item?.id);
+      const isRepeat = !!(item?.details?.repeat?.length && hasId);
       document.getElementById("drawer-head-btns").innerHTML =
         `<button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn"${!item.editable || isDone ? " disabled" : ""}>Done</button>` +
+        (isRepeat
+          ? `<button class="secondary" onclick="drawerComplete()" id="drawer-complete-btn" title="Complete this instance and materialize the next occurrence"${!item.editable || isDone ? " disabled" : ""}>✓ Complete + repeat</button>`
+          : "") +
         `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
@@ -6484,6 +7079,69 @@ HTML_PAGE = r"""<!doctype html>
       return positions;
     }
 
+    function computeForcePositions(nodes, edges, w, h, focusId) {
+      // Lightweight deterministic force-directed layout (Fruchterman-Reingold
+      // style): repulsion between all nodes, attraction along edges, cooling.
+      const ids = nodes.map(n => String(n.id));
+      const n = ids.length;
+      const pad = 40;
+      const pos = {};
+      // Seed positions on a circle for a stable, reproducible start.
+      ids.forEach((id, i) => {
+        const a = (Math.PI * 2 * i) / Math.max(1, n);
+        pos[id] = {
+          x: w / 2 + Math.cos(a) * (Math.min(w, h) / 3),
+          y: h / 2 + Math.sin(a) * (Math.min(w, h) / 3),
+        };
+      });
+      if (n <= 1) { if (n === 1) pos[ids[0]] = {x: w / 2, y: h / 2}; return pos; }
+      const area = (w - 2 * pad) * (h - 2 * pad);
+      const k = Math.sqrt(area / n) * 0.85;
+      const adj = edges.map(e => [String(e.source), String(e.target)])
+        .filter(([s, t]) => pos[s] && pos[t] && s !== t);
+      let temp = Math.min(w, h) / 6;
+      const iterations = 220;
+      for (let step = 0; step < iterations; step++) {
+        const disp = {};
+        for (const id of ids) disp[id] = {x: 0, y: 0};
+        // Repulsive forces between every pair.
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            const a = pos[ids[i]], b = pos[ids[j]];
+            let dx = a.x - b.x, dy = a.y - b.y;
+            let dist = Math.hypot(dx, dy) || 0.01;
+            const rep = (k * k) / dist;
+            const ux = dx / dist, uy = dy / dist;
+            disp[ids[i]].x += ux * rep; disp[ids[i]].y += uy * rep;
+            disp[ids[j]].x -= ux * rep; disp[ids[j]].y -= uy * rep;
+          }
+        }
+        // Attractive forces along edges.
+        for (const [s, t] of adj) {
+          const a = pos[s], b = pos[t];
+          let dx = a.x - b.x, dy = a.y - b.y;
+          let dist = Math.hypot(dx, dy) || 0.01;
+          const att = (dist * dist) / k;
+          const ux = dx / dist, uy = dy / dist;
+          disp[s].x -= ux * att; disp[s].y -= uy * att;
+          disp[t].x += ux * att; disp[t].y += uy * att;
+        }
+        // Apply displacement capped by temperature, keep in bounds.
+        for (const id of ids) {
+          if (String(id) === String(focusId)) continue; // pin focus loosely
+          const d = disp[id];
+          const len = Math.hypot(d.x, d.y) || 0.01;
+          pos[id].x += (d.x / len) * Math.min(len, temp);
+          pos[id].y += (d.y / len) * Math.min(len, temp);
+          pos[id].x = Math.max(pad, Math.min(w - pad, pos[id].x));
+          pos[id].y = Math.max(pad, Math.min(h - pad, pos[id].y));
+        }
+        temp *= 0.97;
+      }
+      if (focusId && pos[String(focusId)]) pos[String(focusId)] = {x: w / 2, y: h / 2};
+      return pos;
+    }
+
     function renderGraphSvg(nodes, edges, options = {}) {
       const compact = !!options.compact;
       const focusId = options.focusId || "";
@@ -6495,7 +7153,9 @@ HTML_PAGE = r"""<!doctype html>
       const w = compact ? 360 : 640;
       const h = compact ? 180 : 300;
       let positions = {};
-      if (layout === "lr" || layout === "tb") {
+      if (layout === "force") {
+        positions = computeForcePositions(shownNodes, shownEdges, w, h, focusId);
+      } else if (layout === "lr" || layout === "tb") {
         positions = computeLayeredPositions(shownNodes, shownEdges, layout, w, h);
       } else {
         const cx = w / 2;
@@ -6662,7 +7322,9 @@ HTML_PAGE = r"""<!doctype html>
         const nodes = data.nodes || [];
         const edges = data.edges || [];
         if (!nodes.length) {
-          panel.innerHTML = `<div class="empty">No ID links. Add id: plus parent:, ref:, depends_on:, blocks:, or related: details.</div>`;
+          panel.innerHTML = guidedEmptyState("🕸️", "No ID links to graph yet",
+            "Give records an <code>id</code> and connect them with <code>parent</code>, <code>ref</code>, <code>depends_on</code>, <code>blocks</code>, or <code>related</code> details.",
+            [["New record", "newItem"], ["Items", "items"], ["Help", "help"]]);
           return;
         }
         const missingCount = nodes.filter(n => n.missing).length;
@@ -6875,6 +7537,29 @@ HTML_PAGE = r"""<!doctype html>
           body: JSON.stringify(prevPayload),
         });
       });
+      closeDrawer();
+      await refreshAll();
+    }
+
+    async function drawerComplete() {
+      // Complete a repeat-enabled instance and materialize the next occurrence
+      // via the shared /complete route (mirrors CLI `complete` + MCP tool).
+      if (!drawerItem || !drawerItem.editable) return;
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = drawerItem?.id || drawerItem?.details?.[idKey]?.[0];
+      if (!itemId) { showToast("This record needs an id: to complete.", "warning"); return; }
+      try {
+        const result = await api(`/api/items/id/${encodeURIComponent(itemId)}/complete`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({}),
+        });
+        const nextId = result?.next?.id || result?.next?.details?.[idKey]?.[0];
+        showToast(nextId ? `Completed. Next occurrence created (${nextId}).` : "Completed.", "success");
+      } catch(e) {
+        showToast("Complete failed: " + e.message, "error");
+        return;
+      }
       closeDrawer();
       await refreshAll();
     }
@@ -7969,6 +8654,57 @@ HTML_PAGE = r"""<!doctype html>
       if (btn) btn.textContent = !isDark ? "☀️" : "🌙";
     }
 
+    // ── High contrast + reduced motion (accessibility) ────────────
+    function _syncA11yButtons() {
+      const hc = document.documentElement.getAttribute("data-contrast") === "high";
+      const rm = document.body.classList.contains("reduce-motion");
+      const hcBtn = document.getElementById("contrast-btn");
+      if (hcBtn) { hcBtn.classList.toggle("btn-active", hc); hcBtn.setAttribute("aria-pressed", hc ? "true" : "false"); }
+      const rmBtn = document.getElementById("motion-btn");
+      if (rmBtn) { rmBtn.classList.toggle("btn-active", rm); rmBtn.setAttribute("aria-pressed", rm ? "true" : "false"); }
+    }
+    function applyHighContrast(on) {
+      if (on) document.documentElement.setAttribute("data-contrast", "high");
+      else document.documentElement.removeAttribute("data-contrast");
+      _syncA11yButtons();
+    }
+    function applyReducedMotion(on) {
+      document.body.classList.toggle("reduce-motion", !!on);
+      _syncA11yButtons();
+    }
+    function initAccessibilityPrefs() {
+      const params = new URLSearchParams(location.search);
+      // Precedence: explicit URL param > stored user choice > config default.
+      const urlContrast = (params.get("contrast") || "").toLowerCase();
+      let hc;
+      if (urlContrast) hc = urlContrast === "high" || urlContrast === "1";
+      else {
+        const stored = localStorage.getItem("lifetxt_contrast");
+        hc = stored !== null ? stored === "1" : !!(appConfig?.web?.high_contrast);
+      }
+      applyHighContrast(hc);
+      const urlMotion = (params.get("motion") || "").toLowerCase();
+      let rm;
+      if (urlMotion) rm = urlMotion === "reduce" || urlMotion === "1";
+      else {
+        const stored = localStorage.getItem("lifetxt_motion");
+        rm = stored !== null ? stored === "1" : !!(appConfig?.web?.reduced_motion);
+      }
+      applyReducedMotion(rm);
+    }
+    function toggleHighContrast() {
+      const on = document.documentElement.getAttribute("data-contrast") !== "high";
+      try { localStorage.setItem("lifetxt_contrast", on ? "1" : "0"); } catch(_) {}
+      applyHighContrast(on);
+      showToast(on ? "High contrast on." : "High contrast off.", "info", 1600);
+    }
+    function toggleReducedMotion() {
+      const on = !document.body.classList.contains("reduce-motion");
+      try { localStorage.setItem("lifetxt_motion", on ? "1" : "0"); } catch(_) {}
+      applyReducedMotion(on);
+      showToast(on ? "Reduced motion on." : "Reduced motion off.", "info", 1600);
+    }
+
     // ── Density toggle (comfortable / compact) ────────────────────
     function _applyDensity(compact) {
       document.body.classList.toggle("density-compact", compact);
@@ -8622,7 +9358,14 @@ HTML_PAGE = r"""<!doctype html>
           ? habitTitles.map(title => {
               const h = data.habits[title];
               const total = h.done + h.open;
+              const cur = Number(h.current_streak || 0);
+              const longest = Number(h.longest_streak || 0);
+              const streak = (cur || longest)
+                ? `<span class="review-streak" title="Current / longest consecutive-day streak">` +
+                  `🔥 ${cur}d${longest > cur ? ` · best ${longest}d` : ""}</span>`
+                : "";
               return `<div class="dash-row"><span class="dash-row-title">${escapeHtml(title)}</span>` +
+                streak +
                 `<span class="review-num">${h.done}/${total} (${h.completion_rate}%)</span>` +
                 `<span class="review-habit-bar"><span style="width:${h.completion_rate}%"></span></span></div>`;
             }).join("")

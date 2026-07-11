@@ -10,6 +10,7 @@ all produce the same result shape from these two functions.
 import calendar
 import datetime
 
+from .stats import longest_streak_days, streak_days
 from .timeutil import parse_elapsed
 
 OPEN_TASK_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
@@ -99,11 +100,21 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
                 open_tasks += 1
 
         elif item.kind == "H":
-            bucket = habits.setdefault(item.title, {"done": 0, "open": 0})
+            bucket = habits.setdefault(item.title, {"done": 0, "open": 0, "dates": set()})
             if item.status == "[x]":
                 bucket["done"] += 1
             elif item.status in ("[ ]", "[/]"):
                 bucket["open"] += 1
+            # Collect per-day completion dates so real streaks can be derived
+            # instead of the earlier placeholder that reported no streaks.
+            done_dates = [parse_date_only(str(v)) for v in item.details.get("done", [])]
+            for d in done_dates:
+                if d is not None:
+                    bucket["dates"].add(d)
+            if item.status == "[x]" and not done_dates:
+                item_date = latest_item_date(item)
+                if item_date is not None:
+                    bucket["dates"].add(item_date)
 
         elif item.kind == "J":
             j_date = latest_item_date(item) or today
@@ -149,6 +160,8 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
                     round(h["done"] / (h["done"] + h["open"]) * 100)
                     if (h["done"] + h["open"] > 0) else 0
                 ),
+                "current_streak": streak_days(h["dates"], today),
+                "longest_streak": longest_streak_days(h["dates"]),
             }
             for title, h in habits.items()
         },

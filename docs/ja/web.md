@@ -160,7 +160,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - item 一覧と filter
 - line、time、title、type、status、source による item 並び替え
 - URL parameter による filter、順序、件数、view 指定
-- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Timeline、Focus、
+- 1画面1コンテンツの view bar: Dashboard、Items、Agenda、Timeline、Calendar、Focus、
   Review、Messages、Team、Status、Notifications、Stats、Graph、Display、Kiosk —
   常に 1 つの view だけを全画面表示
 - Dashboard view: クリック可能な KPI tile(open / due today / overdue /
@@ -180,6 +180,14 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   選択範囲に dated record がない場合の guided empty state、選択範囲より前に
   開始して現在も重なっている record の `ongoing` badge に対応し、card
   クリックで record detail modal を開く
+- Calendar view: 月または単一週のグリッドに agenda record(繰り返し
+  occurrence の展開を含む)を該当日へ配置。各セルは先頭数件を表示し
+  `+N more` で残りを展開、type と overdue/due-soon で色分け、today を強調、
+  日別件数を表示。entry クリックで record detail modal、日付番号クリックで
+  その日を Agenda で開く。Prev/Next/Today と Month/Week 切り替えはキー操作
+  (`,` `.` で前後の期間、`t` で today、`m` でモード切替)に対応し、
+  `?view=calendar&calmode=month|week&cal=YYYY-MM-DD` として URL に保存される。
+  週の先頭曜日は `web.week_start`(既定 `monday`、`sunday` も可)に従う
 - Team view: 在席ボード。人ごとの最新 status record(色付き presence dot と
   state badge)、その人宛ての open message、assignee としての open/overdue
   件数を 1 枚の card に集約 — `?view=team&refresh=60` と fullscreen の
@@ -294,6 +302,8 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
 | `range=today\|24h\|week` | `view=timeline` 時の Timeline 範囲。UI の範囲ボタンを押すとこの値も更新 |
+| `calmode=month\|week` | `view=calendar` 時の Calendar グリッドモード。Month/Week ボタンで更新 |
+| `cal=YYYY-MM-DD` | 表示中の Calendar 期間の基準日。Prev/Next/Today 操作で更新 |
 | `after=VALUE`、`before=VALUE` | item の時刻filter |
 | `notify_refresh=SECONDS` | 通知 polling 間隔 |
 | `notify_lookahead=DURATION` | 通知の future lookahead |

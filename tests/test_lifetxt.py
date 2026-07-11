@@ -3759,6 +3759,31 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         result = public_web_config({})
         self.assertEqual(3, result["due_soon_days"])
 
+    def test_public_web_config_week_start_default_monday(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config({})
+        self.assertEqual("monday", result["week_start"])
+
+    def test_public_web_config_week_start_sunday(self):
+        from lifetxt.webapp import public_web_config
+        for value in ("sunday", "Sun", "0", "7", "SUNDAY"):
+            result = public_web_config({"web": {"week_start": value}})
+            self.assertEqual("sunday", result["week_start"], value)
+
+    def test_public_web_config_week_start_invalid_falls_back_to_monday(self):
+        from lifetxt.webapp import public_web_config
+        result = public_web_config({"web": {"week_start": "friday"}})
+        self.assertEqual("monday", result["week_start"])
+
+    def test_index_page_includes_calendar_view(self):
+        from fastapi.testclient import TestClient
+        from lifetxt.webapp import create_app
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        self.assertIn('data-page="calendar"', html)
+        self.assertIn("function loadCalendar", html)
+        self.assertIn("data-view=\"calendar\"", html)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
         result = public_web_config(

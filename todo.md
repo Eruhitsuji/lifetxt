@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-08 (updated x65)
+Last updated: 2026-07-11 (updated x66)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -121,7 +121,6 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Keep Web API default binding safe. Bind to localhost by default, document the security model, and require explicit configuration for non-localhost access.
 - [ ] Publish and test OpenAPI output. Ensure it reflects read-only mode, write-file behavior, timer endpoints, review endpoints, and MCP-adjacent schemas.
 - [ ] Add write-conflict detection before update and delete operations when multiple writers share a file. Return a clear conflict response instead of overwriting silently.
-- [ ] Add a Web API `POST /api/items/{id}/complete` route mirroring the CLI `complete` command and MCP `complete_item` tool (see `lifetxt/cli.py` `command_complete`, `lifetxt/agenda.py` `next_repeat_occurrence`, `lifetxt/mcp.py` `_tool_complete_item`), then add a Complete action to the Web UI detail modal for repeat-enabled items so all three surfaces stay in sync.
 
 ### Record Display and Undo
 
@@ -132,31 +131,23 @@ Improvements to existing commands that affect daily workflow.
 
 ### Graph and Dependencies
 
-- [ ] Add a force-directed layout preset to the browser graph panel. Keep existing ring and layered layouts, and persist the selected layout per user or URL when appropriate.
 - [ ] Add Mermaid and DOT tests for cross-file node references, special characters in IDs and titles, and scoped `--id` plus `--direction` rendering.
 - [ ] Document the dependency graph end-to-end across `links`, `/api/graph`, MCP tools, and the browser panel.
 
 ### Dashboard, Focus, Review, Team, Timeline, and Status
 
 - [ ] Deduplicate Review Markdown rendering between CLI, Web UI, digest, and MCP. Use one server-side renderer so exports stay byte-consistent.
-- [ ] Compute real habit streaks in `lifetxt/review.py` from per-day completion data. Show current and longest streaks in CLI, Web UI, API, and MCP review output.
-- [ ] Deprecate the legacy `?workspace=` URL alias after one release. Emit a console warning first, then remove the mapping and docs row.
-- [ ] Make presence state colors configurable through `web.presence.states`, merged over default regex rules.
-- [ ] Order and pin Team board cards by configured user order or `web.team.pin`, then sort remaining users alphabetically.
-- [ ] Expand guided empty states beyond the current Items actions. Add import documentation links, demo mode entry, docs links, and similar guidance for Agenda, Team, Status, Notifications, Stats, and Graph.
-- [ ] Add days-remaining countdowns to agenda output and Web Dashboard cards for upcoming due items.
-- [ ] Add a month/week calendar view to the Web UI. Place due, do, and event records on a calendar grid, reuse the agenda occurrence expansion for repeats, and link each cell entry to the detail modal.
-- [ ] Add a keyboard-shortcut help overlay to the Web UI, opened with `?`. Generate the list from the same definitions the keyboard-navigation code uses so it cannot drift.
-- [ ] Persist the Timeline range in the URL. Support bookmarks such as `?view=timeline&range=today|24h|week&refresh=120` and keep the now line updated during auto-refresh.
-- [ ] Make Dashboard cards configurable. Let a config key select and order the cards shown on the Dashboard view so kiosk and personal setups can differ without code changes.
+- [ ] Complete the `?workspace=` / `?panel=` deprecation. The Web UI now emits a one-time console warning; after one release, remove the alias mapping in `currentView()` and the docs row.
+- [ ] Fully expand `repeat`-enabled occurrences across the visible Calendar month. `/api/agenda` currently returns a capped set for daily/weekly repeats, so long-running habits show only a few cells; decide the expansion cap and share it with Timeline.
+- [ ] Add a day-detail popover to the Calendar view. Clicking a day (or its `+N more`) should optionally open an in-place list with quick-add for that date instead of jumping to Agenda.
+- [ ] Add a keyboard-shortcut help overlay row generator. The `?` overlay is now populated by hand; generate its rows from the same key definitions the keydown handler uses so Calendar/Timeline shortcuts cannot drift.
+- [ ] Keep the Timeline now line updated during auto-refresh. Range persistence in the URL is done; verify the red now line advances on each refresh tick without a full reload.
 
 ### Accessibility and Internationalization
 
-- [ ] Audit redesigned UI color contrast for WCAG AA in both themes. Include badges, muted text, kiosk header, presence dots, and timer state indicators.
-- [ ] Honor `prefers-reduced-motion`. Disable kiosk auto-scroll, skeleton shimmer, timer animations, and modal transitions when appropriate; add a config override.
-- [ ] Add a high-contrast theme using the existing theme-token approach.
-- [ ] Add a Web UI label dictionary with `web.language` and `?lang=` for static chrome strings. Keep user item content untranslated.
-- [ ] Expand contextual hover/focus help across advanced Web UI controls. Prioritize filters, export, agenda blocked mode, graph layout, notification permission, raw import, and destructive actions; keep the help short enough for pointer and keyboard users.
+- [ ] Audit redesigned UI color contrast for WCAG AA in both themes. Include badges, muted text, kiosk header, presence dots, Calendar entry chips, and timer state indicators.
+- [ ] Extend the Web UI label dictionary. `web.language` / `?lang=` cover core chrome strings; add the remaining Calendar, accessibility-toggle, and empty-state labels, and document the supported languages.
+- [ ] Expand contextual hover/focus help across advanced Web UI controls. Prioritize filters, export, agenda blocked mode, notification permission, raw import, Calendar navigation, and destructive actions; keep the help short enough for pointer and keyboard users.
 
 ---
 

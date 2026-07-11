@@ -196,7 +196,7 @@ The browser GUI supports:
 - Keyboard-friendly workspace navigation: the header view bar is exposed as a
   tablist, `Left`/`Right` move between views, `Home`/`End` jump to the ends,
   and a skip-to-content link lets keyboard users bypass the header.
-- A single-content view bar: Dashboard, Items, Agenda, Timeline, Focus,
+- A single-content view bar: Dashboard, Items, Agenda, Timeline, Calendar, Focus,
   Review, Messages, Team, Status, Notifications, Stats, Graph, Display, and Kiosk —
   exactly one view fills the screen at a time
 - A Dashboard view with clickable KPI tiles (open, due today, overdue,
@@ -218,6 +218,16 @@ The browser GUI supports:
   guided empty states when the selected range has no dated records, and
   `ongoing` badges for records that started before the selected range but
   still overlap it; cards open the record detail modal
+- A Calendar view: a month or single-week grid that plots agenda records —
+  including expanded repeat occurrences — on the day they fall. Cells show the
+  first few entries with a `+N more` expander, color-coded per record type and
+  overdue/due-soon state, a today highlight, and per-day counts. Clicking an
+  entry opens the record detail modal; clicking a day number opens that day in
+  Agenda. Prev/Next/Today navigation and Month/Week mode are keyboard-driven
+  (`,` `.` previous/next period, `t` today, `m` toggle mode) and persisted in
+  the URL via `?view=calendar&calmode=month|week&cal=YYYY-MM-DD`. The first
+  weekday column follows the `web.week_start` config (`monday` default or
+  `sunday`)
 - A Team view: a presence board combining latest status records (colored
   presence dot and state badge per person), open messages addressed to each
   person, and an open/overdue workload summary per assignee — designed for
@@ -346,6 +356,8 @@ Supported parameters:
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
 | `range=today\|24h\|week` | Timeline range when `view=timeline`; the UI updates this value when range buttons are clicked |
+| `calmode=month\|week` | Calendar grid mode when `view=calendar`; the UI updates this value when the Month/Week buttons are used |
+| `cal=YYYY-MM-DD` | Anchor date of the visible calendar period; the UI updates this value on Prev/Next/Today navigation |
 | `after=VALUE`, `before=VALUE` | Item time filters |
 | `notify_refresh=SECONDS` | Notification polling interval |
 | `notify_lookahead=DURATION` | Future notification lookahead for browser notifications |

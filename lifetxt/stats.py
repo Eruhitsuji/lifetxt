@@ -341,6 +341,25 @@ def streak_days(dates, end):
     return count
 
 
+def longest_streak_days(dates):
+    """Return the longest run of consecutive calendar days present in ``dates``."""
+    if not dates:
+        return 0
+    ordered = sorted(dates)
+    best = 1
+    run = 1
+    for prev, cur in zip(ordered, ordered[1:]):
+        if cur - prev == timedelta(days=1):
+            run += 1
+        elif cur == prev:
+            continue
+        else:
+            run = 1
+        if run > best:
+            best = run
+    return best
+
+
 def item_in_date_range(item, start, end):
     item_date = item_date_value(item)
     if item_date is None:

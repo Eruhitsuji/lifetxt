@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-11 (updated x66)
+Last updated: 2026-07-11 (updated x67)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -30,8 +30,17 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
 - [ ] Add browser-level smoke tests for the Web UI. Cover raw import live parse preview, detail modal message replies, occurrence badges, kiosk change highlighting, display-mode entry/exit, display light/dark palette snapshots, `+ New` tooltip viewport collision, browser Back/Forward cleanup for kiosk/display CSS state, Timeline empty states for today/24h/week, Timeline `ongoing` clipped records, search highlighting, command palette actions, undo toast restore, keyboard navigation, inline status cycling, export buttons, graph layout switching, modal focus trapping, and the current single-content router views.
 - [ ] Audit untyped boolean query parameters across all FastAPI routes. Apply string-aware parsing or typed `bool` parameters to `/api/items`, `/api/messages`, `/api/agenda`, chart routes, and any remaining endpoints; add one regression test per route.
+- [ ] Fix timezone-offset data loss as a P0 data-safety issue. `timeutil.parse_datetime` must not convert an offset-aware value to the execution machine's local timezone and then drop `tzinfo`; preserve enough offset/aware information for `to-json` -> `from-json` round-trip and normalize only for comparisons.
+- [ ] Fail loudly on invalid elapsed values. `parse_elapsed("1d")`, `parse_elapsed("90x")`, and similar unrecognized values must produce a diagnostic or explicit error instead of silently becoming zero minutes; update `normalize_duration`, stats, invoice planning, and validation docs accordingly.
+- [ ] Add a round-trip golden corpus before expanding `fmt`, LSP, or `check --fix`. Start with the known `body:"inline" body:"second"` plus `|` continuation case that currently serializes into one fused value on reparse; decide whether repeated `body:` is invalid or has a lossless canonical representation.
+- [ ] Define date-range filtering as half-open intervals. Date-only end boundaries should behave as `[start, next-day 00:00)` rather than ending at `23:59:59`, so fractional seconds such as `23:59:59.5` cannot fall through the boundary.
 - [ ] Unify all mutating operations behind one atomic write path. Use write-temp plus rename, a lock file for concurrent writers, and a shared mutation layer for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
+- [ ] Add content-hash compare-and-swap protection to all writes before or alongside lock files. Capture the file hash at read time and abort loudly if the content changed before write; apply the same principle to CLI, Web API, MCP, notification seen-state, timer state, and undo/archive operations.
+- [ ] Make local state writes atomic. `timer.py`, `notifier.py` seen-state, completion state, git-hook state, and cache files should use the same write-temp-plus-rename helper as life.txt mutations, not bare `open(..., "w")`.
 - [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
+- [ ] Harden public Web deployments. Non-loopback binds or deployment templates must require a bearer token or an explicit `--insecure-public` opt-in, and Git/admin subprocess routes must not rely on `request.client.host` loopback checks behind reverse proxies.
+- [ ] Add a minimal CI workflow as a release blocker. Run unit tests, compile checks, and example validation on supported Python versions for every push and pull request before adding more large feature surfaces.
+- [ ] Define the next release gate explicitly: timezone round-trip safety, shared mutation path with CAS, round-trip golden corpus, CI, packaging metadata cleanup, and published JSON Schema are blockers; timer expansion and decorative Web UI work are not.
 - [ ] Add a release smoke-test runner that executes key CLI and Web API flows without running the full unit suite. Include timer state-file behavior, cross-platform paths, Web API write mode, read-only mode, and MCP startup.
 - [ ] Verify the new repeat-completion flow end-to-end on real files: `complete` materialization across `repeat_base: due|done`, `done habit` logging, MCP `complete_item`, undo after completion, and interaction with archive. These shipped recently and are the most likely new-feature breakage.
 
@@ -52,6 +61,7 @@ Design decisions that affect the file format, parser, serialization, and every d
 - [ ] Decide how `count:` interacts with `complete` materialization. `next_repeat_occurrence()` currently ignores `count:` (it only stops at `until:`) because nothing tracks how many instances have already been completed; either derive a count from archived/completed sibling instances or document that `count:` only bounds agenda's virtual expansion, not real completions.
 - [ ] Specify multi-file semantics. Define ID uniqueness scope, cross-file link resolution, glob ordering, archive interactions, source-file metadata, and write-file selection when multiple files are loaded.
 - [ ] Specify Unicode, encoding, and newline rules. Normalize comparison-sensitive fields to NFC, require UTF-8 without BOM and LF line endings for canonical output, and add `check` diagnostics for non-canonical encodings and newline forms.
+- [ ] Define `LIFETXT_CANON_V1` as a named canonical form. Specify detail key ordering, whitespace, quoting rules, repeated-key ordering, continuation-line representation, LF endings, UTF-8, and NFC so `fmt --canonical`, golden corpus comparisons, JSON/CSV export, and future merge tooling have a stable byte-level target.
 - [ ] Specify case-sensitivity rules for detail keys, tags, IDs, contexts, users, and projects. Make parser, filters, docs, completion, and editor support agree.
 - [ ] Document `#!` metadata directive placement rules. Directives must appear contiguously before the first item, and the spec should include the resolution order across CLI flags, config, file directives, and built-in defaults.
 - [ ] Add JSON Schema definitions for JSON, JSONL, Web API payloads, and MCP tool outputs. Publish schemas under a stable `dist/` path, give them HTTPS `$id` values, and validate golden corpus exports in CI.
@@ -62,6 +72,7 @@ Design decisions that affect the file format, parser, serialization, and every d
 
 Existing timer support should grow from basic start/stop tracking into a coherent local productivity subsystem shared by CLI, Web UI, Web API, and MCP.
 
+- [ ] Decide the timer scope boundary before adding more stateful features. Treat `start` / `stop` / `pause` / `resume` / `elapsed:` updates as the core plain-text workflow, and explicitly justify or defer alarm, Pomodoro, parallel timers, and crash-recovery complexity.
 - [ ] Design a timer state model that supports stopwatch sessions, alarms, Pomodoro-style intervals, pause/resume, cancellation, completion, and optional association with a life.txt item ID.
 - [ ] Add the remaining timer CLI commands: `timer alarm`, `timer pomodoro`, and `timer log`. `timer status`, `timer pause`, `timer resume`, `timer cancel`, and `timer summary` are implemented; keep `timer start` / `timer stop` as the simplest path.
 - [ ] Support arbitrary Pomodoro profiles. Allow configurable focus length, short break length, long break length, cycle count, auto-start policy, notification behavior, and optional project/item defaults.
@@ -80,6 +91,7 @@ Existing timer support should grow from basic start/stop tracking into a coheren
 
 The timer feature should be controllable from every user-facing surface while sharing one backend state model.
 
+- [ ] Re-scope Timer Web/API/MCP expansion before implementing new surfaces. Keep existing start/stop/elapsed workflows stable first, and move alarm/Pomodoro/global panel work to Deferred unless there is a concrete daily-use requirement that justifies persistent-process complexity.
 - [ ] Add Web API endpoints for timer operations: status, start, stop, pause, resume, cancel, create alarm, create Pomodoro session, list recent sessions, and attach elapsed time to an item.
 - [ ] Add an inline timer control to the Web UI detail modal for task-like items. Provide start, pause, resume, stop, and cancel actions that update `elapsed:` through the existing item update path.
 - [ ] Add a global timer panel to the Web UI. Show active stopwatch, active Pomodoro phase, next alarm, elapsed today, and quick controls without opening a record.
@@ -108,6 +120,7 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add `lifetxt fmt`. Normalize indentation, spacing, newline style, ordering where safe, and canonical detail formatting. Provide `--check` and `--diff` modes for CI and pre-commit use.
 - [ ] Add `check --fix` for mechanical fixes that cannot change meaning. Start with key spelling normalization, whitespace, line endings, and canonical date forms.
 - [ ] Add `depends_on` cycle detection to `check`, `health`, Web API, and MCP. Report the shortest cycle path and avoid undefined agenda ordering.
+- [ ] Add a small shared query language before adding more per-surface filter flags. Support a closed grammar such as `tag:urgent AND NOT tag:archived AND due<2026-07-01`, fail loudly on unknown syntax, and reuse it for CLI `--query`, Web API, MCP, and named saved views.
 - [ ] Use East Asian Width-aware column widths in CLI table output. `_format_table` in `lifetxt/cli.py` measures cell width with `len()`, so tables with Japanese titles misalign; reuse the `unicodedata.east_asian_width` logic already used by the TUI.
 - [ ] Specify common CLI output behavior: `--json`, `--quiet`, `--verbose`, `--color=auto|always|never`, `NO_COLOR`, pager behavior, stdin `-`, and documented exit codes.
 
@@ -119,13 +132,16 @@ Improvements to existing commands that affect daily workflow.
 
 - [ ] Expand Web API documentation with full request and response examples for less-common routes, especially Git integration, timer endpoints, review, graph, blockers, parse, generated/read-only mode, and mutation error cases.
 - [ ] Keep Web API default binding safe. Bind to localhost by default, document the security model, and require explicit configuration for non-localhost access.
+- [ ] Add `--token-env` and config/env-based bearer-token loading. Public deployment recipes should never require putting tokens directly in command lines, config examples, or life.txt content.
 - [ ] Publish and test OpenAPI output. Ensure it reflects read-only mode, write-file behavior, timer endpoints, review endpoints, and MCP-adjacent schemas.
 - [ ] Add write-conflict detection before update and delete operations when multiple writers share a file. Return a clear conflict response instead of overwriting silently.
+- [ ] Implement ETag / `If-Match` optimistic locking for item updates and deletes. Use a hash of the source text or source snapshot as the ETag, return `412 Precondition Failed` on mismatch, and reuse the same hash model for MCP write proposals and CLI CAS checks.
 
 ### Record Display and Undo
 
 - [ ] Preserve original line position when Web UI Undo restores a deleted item. Avoid re-appending restored raw lines at the end of the writable file when the original context is available.
 - [ ] Add a multi-level undo history to the Web UI. The undo toast currently covers only the most recent write; keep a small session-scoped stack so several consecutive mistakes can be reverted in order.
+- [ ] Design an append-only mutation journal at `.cache/lifetxt/journal.jsonl`. Record `{op, before, after, surface, ts, file_hash}` for CLI, Web API, MCP, and background writes so multi-level undo, audit trails, sync debugging, and MCP source metadata share one durable primitive.
 - [ ] Add source-file and line-position metadata to detail views when multiple files are loaded. Make write targets explicit when editing cross-file results.
 - [ ] Improve long-body and Markdown previews in the detail modal. Keep CLI HTML rendering and Web UI rendering consistent through shared code.
 
@@ -171,6 +187,7 @@ The existing stdio MCP server should become a safer, more complete interface for
 - [ ] Align MCP tool input and output with JSON Schema definitions. Validate tool responses against the same schemas used for JSON export and Web API payloads.
 - [ ] Add or refine MCP tools for search, review, next actions, standup summary, workload summary, habit streaks, dependency graph, blockers, and timer control.
 - [ ] Make proposal mode the default for destructive or ambiguous MCP writes. Return a structured diff that can be applied by a human-approved `lifetxt apply` or equivalent command.
+- [ ] Align MCP proposal diffs with a reusable JSON Patch-style structure. Keep it compatible with future `lifetxt diff`, JSON Schema `$id` publication, and cross-project AI context tooling instead of inventing a chat-only diff shape.
 - [ ] Require MCP-created records to include source metadata such as `source:mcp`, unless the user explicitly disables it.
 - [ ] Generate IDs on the lifetxt side, not in the AI client. Avoid trusting AI-generated IDs for write operations.
 - [ ] Re-check file mtime and content hash before every MCP write. Return a conflict error if the file changed after the MCP client read it.
@@ -206,7 +223,10 @@ Diagnostics added to `check`, `health`, `doctor`, Web API, and MCP should catch 
 - [ ] Add diagnostics for dangling links, cross-file references to archived records, dependency cycles, missing parents, and invalid hierarchy indentation.
 - [ ] Add diagnostics for invalid timer state, stale active timers, corrupted timer state files, and elapsed values that cannot be normalized.
 - [ ] Add diagnostics for config schema errors. Broken config should fail loudly with a clear path and key name.
+- [ ] Add typo suggestions for unknown detail keys. For values such as `assginee:`, warn with the nearest known key candidates instead of silently accepting likely mistakes; keep auto-fix separate and conservative.
+- [ ] Add `check --format json` as the stable diagnostics API before implementing LSP diagnostics. Include file, line, column/span where available, code, severity, message, and fix hints so editor integrations can be a thin wrapper over `check`.
 - [ ] Add a diagnostic code catalog generated from parser and validator definitions. Include code, name, description, triggering example, and resolution hint.
+- [ ] Add opt-in secret linting. Warn on likely tokens, access keys, `token=` query strings, long base64-like values, and private calendar URLs; document environment-variable patterns as the preferred fix.
 - [ ] Document stable exit codes for validation errors, usage errors, write conflicts, environment failures, and internal errors.
 
 ---
@@ -240,6 +260,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add `quick --journal` journal prompts. Open `$EDITOR` prefilled with a dated journal skeleton and append the result as a `J` record through the safe write path.
 - [ ] Add sort-key options for `filter` and `agenda`, such as `--sort due,priority`.
 - [ ] Consider git auto-commit for mutations through config. Use git as a durable recovery mechanism while keeping built-in undo and backups documented.
+- [ ] Add `lifetxt diff` for ID-level semantic diffs before building a custom git merge driver. Compare records by ID, show changed details and body values, and handle moved records separately from content changes.
 - [ ] Consider a custom git merge driver that resolves item-level changes by ID for shared repositories.
 
 ---
@@ -278,13 +299,14 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 
 ## P2: Tests, CI, and Release
 
-- [ ] Add a CI pipeline for unit tests, compile checks, and example file validation on every push. Run on Python 3.10, 3.11, and 3.12 across Ubuntu, Windows, and macOS.
+- [ ] Expand CI after the minimal P0 workflow lands. Add the full Python 3.10/3.11/3.12 and Ubuntu/Windows/macOS matrix, coverage reporting, and optional dependency jobs without blocking the first safety-focused CI pass.
 - [ ] Add snapshot tests for important human-readable CLI output.
 - [ ] Add sync tests comparing model constants with English and Japanese format specs, CLI completion, editor snippets, and docs examples.
 - [ ] Add cross-platform tests for paths with spaces, glob expansion, Windows line endings, CJK terminal width, shell completion, and Windows console behavior.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, directories, and `projects/**/*.life.txt` across all file-reading commands.
 - [ ] Add parser edge-case tests for nested quotes, invalid continuations, mixed indentation, duplicate IDs, Unicode normalization, CRLF, emoji, multi-value fields, and empty files.
 - [ ] Add parse-serialize-parse round-trip tests. Treat this as a prerequisite for `fmt`, LSP, code actions, and stable docs examples.
+- [ ] Add Hypothesis/property-based round-trip tests. Generate random valid items, serialize them, parse them again, and assert semantic equivalence so repeated-key, quote, continuation, timezone, and body edge cases are discovered mechanically.
 - [ ] Add parser fuzz tests and a backward-compatibility golden corpus.
 - [ ] Add recurrence tests for simple repeat values, interval, until, count, long-range performance, occurrence export shapes, and repeat completion semantics.
 - [ ] Add real-export fixture tests for Todoist CSV, GitHub issues, Markdown checkboxes, todo.txt, and future calendar export/import flows.
@@ -298,8 +320,18 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 
 ---
 
+## P2: Maintainability and Architecture
+
+- [ ] Split browser static assets out of `lifetxt/webapp.py` before adding more complex Web UI features. Keep a build-free path if possible by serving package-data HTML/CSS/JS through StaticFiles or equivalent, but make JavaScript lintable and editor-friendly.
+- [ ] Split `lifetxt/cli.py` into command-focused modules with a thin dispatcher. Keep the public CLI stable, move shared formatting/filter/mutation helpers into internal modules, and reduce the risk of unrelated command regressions.
+- [ ] Add lightweight lint or syntax checks for extracted browser JavaScript once assets are split. This should run in CI without requiring a full frontend build chain.
+
+---
+
 ## P2: Distribution, Environment, and Localization
 
+- [ ] Raise the supported Python baseline to match reality. Move package metadata and docs toward Python `>=3.10`, verify dependencies such as FastAPI against that floor, and remove Python 2-era style where it obscures modern typing or warnings.
+- [ ] Fix Python 3.12 import-time warnings. Audit parser and docs strings for invalid escape sequences and other warnings that pollute stderr during normal CLI or test runs.
 - [ ] Follow XDG Base Directory conventions for global config where appropriate while preserving project-local configuration.
 - [ ] Define precedence for project-local config and global config.
 - [ ] Add config schema validation.
@@ -327,6 +359,7 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 ### CLI and Background Services
 
 - [ ] Consider named or multiple parallel timers if the single active timer remains too restrictive after the expanded timer model ships.
+- [ ] Consider full alarm and Pomodoro management only after the plain-text timer workflow proves insufficient. Prefer OS notification tools or dedicated timer apps unless lifetxt-specific item linkage clearly adds value.
 - [ ] Consider a small local daemon that unifies notification watch, timer status, alarm delivery, and file-reload events.
 - [ ] Consider opt-in quick type inference from title text after explicit capture commands are stable.
 - [ ] Consider `lifetxt todo-scan` to import `TODO`/`FIXME` source-code comments as tasks with file/line references.
@@ -338,6 +371,7 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 ### Web, API, and MCP
 
 - [ ] Consider MCP HTTP/SSE transport with token authentication for clients that cannot launch stdio commands directly.
+- [ ] Consider making experimental or low-use Web UI surfaces read-only until their write paths have shared mutation, undo, conflict detection, accessibility, and browser tests.
 - [ ] Consider server-side graph rendering so share and digest outputs can attach the same graph image without a browser.
 - [ ] Consider a full embedded Git server only if lightweight Git subprocess endpoints prove insufficient.
 - [ ] Consider static HTML export mode for the Web UI as a read-only snapshot.

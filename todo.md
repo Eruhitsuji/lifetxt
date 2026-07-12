@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-12 (updated x70)
+Last updated: 2026-07-12 (updated x71)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -149,14 +149,12 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Complete the `?workspace=` / `?panel=` deprecation. The Web UI now emits a one-time console warning; after one release, remove the alias mapping in `currentView()` and the docs row.
 - [ ] Fully expand `repeat`-enabled occurrences across the visible Calendar month. `/api/agenda` currently returns a capped set for daily/weekly repeats, so long-running habits show only a few cells; decide the expansion cap and share it with Timeline.
 - [ ] Add a day-detail popover to the Calendar view. Clicking a day (or its `+N more`) should optionally open an in-place list with quick-add for that date instead of jumping to Agenda.
-- [ ] Add a keyboard-shortcut help overlay row generator. The `?` overlay is now populated by hand; generate its rows from the same key definitions the keydown handler uses so Calendar/Timeline shortcuts cannot drift.
-- [ ] Keep the Timeline now line updated during auto-refresh. Range persistence in the URL is done; verify the red now line advances on each refresh tick without a full reload.
 
 ### Accessibility and Internationalization
 
 - [ ] Audit redesigned UI color contrast for WCAG AA in both themes. Include badges, muted text, kiosk header, presence dots, Calendar entry chips, and timer state indicators.
 - [ ] Extend the Web UI label dictionary. `web.language` / `?lang=` cover core chrome strings; add the remaining Calendar, accessibility-toggle, and empty-state labels, and document the supported languages.
-- [ ] Expand contextual hover/focus help across advanced Web UI controls. Prioritize filters, export, agenda blocked mode, notification permission, raw import, Calendar navigation, and destructive actions; keep the help short enough for pointer and keyboard users.
+- [ ] Add browser-level tooltip placement tests for the Web UI. Cover topbar buttons, workspace tabs, Timeline and Calendar controls, editor field help, small viewports, keyboard focus, and clipped-window edge cases.
 
 ---
 

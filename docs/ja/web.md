@@ -359,6 +359,13 @@ curl "http://127.0.0.1:8000/api/chart/elapsed?from=2026-06-01&to=2026-06-30&proj
 
 ## Display mode
 
+補足:
+
+- Display mode / Kiosk mode は URL 状態に追従します。ブラウザの戻る/進む操作で mode が外れた場合、専用 CSS、時計、auto-scroll、Exit ボタンも解除されます。
+- `display_title=TEXT` を付けると、Display mode 中だけ subtitle を差し替えられます。
+- Timeline view は表示中に now line を定期的に更新します。対象期間に dated record がない場合は、`due:` / `from:` / `notify_at:` などの追加例を含む empty state を表示します。
+- Header button、workspace tab、Timeline / Calendar control、sort/group/export、record editor には viewport-aware な hover/focus help が表示されます。
+
 Display mode は常時表示ディスプレイ向けです。read-only 表示にし、文字を大きくし、
 editor と filter controls を隠し、自動更新します。
 

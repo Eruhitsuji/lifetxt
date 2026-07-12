@@ -193,6 +193,10 @@ The browser GUI supports:
   and exposes the most common actions for that view, such as New record,
   Quick add, Timeline range changes, Review Markdown copy, or Team/Status
   navigation.
+- Contextual hover/focus help on primary controls, workspace tabs, Timeline
+  range buttons, Calendar navigation, export/group/sort controls, and the
+  record editor. Tooltips are viewport-aware so they avoid clipping at the
+  edges of small browser windows.
 - Keyboard-friendly workspace navigation: the header view bar is exposed as a
   tablist, `Left`/`Right` move between views, `Home`/`End` jump to the ends,
   and a skip-to-content link lets keyboard users bypass the header.
@@ -215,9 +219,11 @@ The browser GUI supports:
 - A Timeline view: a chronological board of agenda records with a red "now"
   line, per-type colored rail nodes, hour labels, all-day rows, day headers,
   dimmed past records, URL-persisted Today / Next 24h / Week range presets,
-  guided empty states when the selected range has no dated records, and
-  `ongoing` badges for records that started before the selected range but
-  still overlap it; cards open the record detail modal
+  a refreshed "now" line while the view stays open, guided empty states with
+  dated-key examples when the selected range has no dated records, a "no
+  upcoming records left today" banner when all today records are already in
+  the past, and `ongoing` badges for records that started before the selected
+  range but still overlap it; cards open the record detail modal
 - A Calendar view: a month or single-week grid that plots agenda records —
   including expanded repeat occurrences — on the day they fall. Cells show the
   first few entries with a `+N more` expander, color-coded per record type and
@@ -256,8 +262,8 @@ The browser GUI supports:
 - Replying to message threads from the record detail modal
 - Keyboard-trapped modals for Help, Git, Undo history, record details, and the
   record editor
-- A fuzzy command palette with actions, view switching, and recently opened
-  items
+- A fuzzy command palette with actions, view switching, Calendar/Kiosk/Display
+  shortcuts, and recently opened items
 - Guided empty states in the Items view. When no records exist, the UI offers
   New record, Quick add, and the command palette; when filters hide all
   records, it offers Clear filters and New record.
@@ -445,7 +451,8 @@ palette; in dark theme it switches to the dark display palette. Open it from
 the Display workspace tab, `Ctrl+K` command palette, `?mode=display`, or
 `?view=display`. The header keeps an Exit Display button, and browser
 Back/Forward navigation reapplies the URL state so kiosk or display styling
-does not remain after leaving the mode.
+does not remain after leaving the mode. `display_title=TEXT` can override the
+subtitle while Display mode is active.
 
 Recommended examples:
 

@@ -470,6 +470,18 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('role="status"', webapp.HTML_PAGE)
         self.assertIn("function enhanceItemsEmptyState(", webapp.HTML_PAGE)
         self.assertIn("empty-actions", webapp.HTML_PAGE)
+        self.assertIn("const SHORTCUT_HELP_ROWS", webapp.HTML_PAGE)
+        self.assertIn("function renderHelpModalShortcuts(", webapp.HTML_PAGE)
+        self.assertIn("function installContextualHelpTargets(", webapp.HTML_PAGE)
+        self.assertIn("const CONTROL_HELP", webapp.HTML_PAGE)
+        self.assertIn("const VIEW_HELP", webapp.HTML_PAGE)
+        self.assertIn("function _displayApply(", webapp.HTML_PAGE)
+        self.assertIn("function syncTimelineNowTimer(", webapp.HTML_PAGE)
+        self.assertIn("function _timelineQuietBanner(", webapp.HTML_PAGE)
+        self.assertIn("tl-empty-suggestions", webapp.HTML_PAGE)
+        self.assertIn("No upcoming records left today", webapp.HTML_PAGE)
+        self.assertIn("Go to Calendar", webapp.HTML_PAGE)
+        self.assertIn("Go to Kiosk mode", webapp.HTML_PAGE)
 
     def test_datetime_seconds_and_timezone_are_valid(self):
         text = (

@@ -2368,6 +2368,8 @@ HTML_PAGE = r"""<!doctype html>
       position: fixed;
       z-index: 900;
       max-width: min(20rem, calc(100vw - 1rem));
+      max-height: min(18rem, calc(100vh - 1rem));
+      overflow: auto;
       padding: .55rem .65rem;
       border: 1px solid var(--line-strong);
       border-radius: var(--r-md);
@@ -2382,6 +2384,7 @@ HTML_PAGE = r"""<!doctype html>
       pointer-events: none;
       transform: translateY(-.12rem);
       transition: opacity var(--t-fast), transform var(--t-fast);
+      overflow-wrap: anywhere;
     }
     .ui-help-tooltip.visible {
       opacity: 1;
@@ -3461,6 +3464,20 @@ HTML_PAGE = r"""<!doctype html>
       height: 8px;
       border-radius: 50%;
       background: var(--danger);
+    }
+    .tl-now-stale { opacity: .72; }
+    .tl-empty-suggestions {
+      margin-top: .45rem;
+      display: grid;
+      gap: .25rem;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    .tl-empty-suggestions code {
+      padding: .05rem .25rem;
+      border-radius: .25rem;
+      background: var(--soft);
+      color: var(--ink);
     }
     /* ── Record editor modal ─────────────────────────────────────── */
     .editor-modal { max-width: 560px; }
@@ -4809,6 +4826,62 @@ HTML_PAGE = r"""<!doctype html>
       stats: () => switchWorkspace("stats"),
       graph: () => switchWorkspace("graph"),
     };
+    const VIEW_HELP = {
+      dashboard: "Dashboard: overview KPI tiles, attention list, completions, and project progress.",
+      "": "Items: searchable record list with filters, grouping, edit modal, bulk actions, and exports.",
+      agenda: "Agenda: date-range list for due, do, at, from/to, on, and notify_at records.",
+      timeline: "Timeline: chronological board for today, next 24 hours, or week with an updated now line.",
+      calendar: "Calendar: month/week grid of dated records; click a day for Agenda or an entry for details.",
+      focus: "Focus: reduced-noise list of overdue, due-today, and in-progress work.",
+      review: "Review: weekly/monthly/custom period summary with Markdown copy.",
+      messages: "Messages: type M records, sender/recipient filters, and notification-oriented conversations.",
+      team: "Team: presence, workload, and recent messages grouped by person.",
+      status: "Status: latest or active presence records for each person.",
+      notifications: "Notifications: due messages/reminders, acknowledge, snooze, and browser alert controls.",
+      stats: "Stats: charts, heatmaps, and type/status breakdowns.",
+      graph: "Graph: id, parent, ref, depends_on, blocks, and related links.",
+      display: "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.",
+      kiosk: "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.",
+    };
+    const CONTROL_HELP = {
+      "dark-btn": "Toggle light and dark theme. Add ?theme=light or ?theme=dark to force a wall-display theme.",
+      "contrast-btn": "High-contrast mode increases borders and text contrast for low-visibility displays.",
+      "motion-btn": "Reduced motion disables most transitions and animation-heavy feedback.",
+      "density-btn": "Compact density hides long body previews and fits more records on small screens.",
+      "fullscreen-btn": "Use browser fullscreen for kiosk or display boards. Press f to toggle.",
+      "notif-btn": "Open notification records and optionally request browser notification permission.",
+      "refresh-btn": "Reload the active view from disk/API without changing filters. Press r as a shortcut.",
+      "status-active-btn": "Switch Status between active records only and latest status per person.",
+      "agenda-blocked-btn": "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.",
+      "export-select": "Download the current Items result as CSV, JSON, or Markdown.",
+      "group-by": "Group the Items list without changing the source file.",
+      "sort": "Sort visible Items by line, time, title, type, status, or source.",
+      "order": "Choose ascending or descending sort order.",
+      "limit": "Limit the number of visible Items. Leave empty for all matching records.",
+      "search": "Search title, raw line, and detail values. Shortcut: /.",
+    };
+    const SHORTCUT_HELP_ROWS = [
+      ["/", "Focus search"],
+      ["Ctrl+K", "Command palette (actions + jump to item)"],
+      ["j / k", "Move keyboard focus down / up in item list"],
+      ["Enter", "Open focused item in detail modal"],
+      ["x", "Toggle bulk selection on focused item"],
+      ["n", "New item (opens the record editor)"],
+      ["q", "Toggle quick-add bar"],
+      ["r", "Refresh current view"],
+      ["s", "Go to Stats view"],
+      ["d", "Toggle dark mode"],
+      ["f", "Toggle fullscreen"],
+      ["Ctrl+K display", "Open or toggle Display mode"],
+      ["g", "Jump to line number (opens detail modal)"],
+      ["Shift+K", "Toggle kiosk mode"],
+      ["Esc", "Close modal / palette / blur input / exit kiosk"],
+      ["[ / ]", "Prev / next item in detail modal"],
+      ["< / >", "Prev / next status filter"],
+      [", / . (Calendar)", "Previous / next calendar period"],
+      ["t / m (Calendar)", "Jump to today / toggle month/week"],
+      ["?", "Show / hide this help"],
+    ];
     function runViewGuideAction(action) {
       const fn = VIEW_ACTIONS[action];
       if (fn) fn();
@@ -4905,6 +4978,20 @@ HTML_PAGE = r"""<!doctype html>
     function toggleDisplayMode() {
       switchWorkspace(isDisplayMode() ? "" : "display");
     }
+    let _displayDefaultSubtitle = null;
+    function _displayApply() {
+      const active = isDisplayMode();
+      const exitBtn = document.getElementById("display-exit-btn");
+      const subtitle = document.getElementById("app-subtitle");
+      if (exitBtn) exitBtn.style.display = active ? "inline-flex" : "none";
+      if (subtitle && _displayDefaultSubtitle === null) _displayDefaultSubtitle = subtitle.textContent;
+      if (subtitle && active) {
+        subtitle.textContent = firstParam(query(), ["display_title"], "Read-focused wall display.");
+      } else if (subtitle && _displayDefaultSubtitle !== null && !isKioskMode()) {
+        subtitle.textContent = _displayDefaultSubtitle;
+      }
+      document.body.dataset.activeView = currentView() || "items";
+    }
     function syncViewTabs() {
       const v = currentView();
       document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
@@ -4989,6 +5076,7 @@ HTML_PAGE = r"""<!doctype html>
       syncViewTabs();
       syncPages();
       syncViewGuide();
+      _displayApply();
       _kioskApply();
       document.getElementById("search").value = firstParam(params, ["text", "q"], "");
       const fallbackKind = currentView() === "messages" ? "M" : "";
@@ -5005,6 +5093,7 @@ HTML_PAGE = r"""<!doctype html>
       syncStatusFilterBarsFromUrl();
       configureAutoRefresh();
       configureNotificationPolling();
+      syncTimelineNowTimer();
     }
     function configureAutoRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
@@ -5970,6 +6059,7 @@ HTML_PAGE = r"""<!doctype html>
 
     // ── Timeline view (chronological board with a now line) ────────
     let timelineRange = "today";
+    let _timelineNowTimer = null;
     const TIMELINE_RANGES = new Set(["today", "24h", "week"]);
     function syncTimelineRange(range) {
       timelineRange = TIMELINE_RANGES.has(range) ? range : "today";
@@ -6017,6 +6107,18 @@ HTML_PAGE = r"""<!doctype html>
       const p = (n) => String(n).padStart(2, "0");
       return `<div class="tl-now" aria-label="Current time"><span class="tl-now-label">${p(now.getHours())}:${p(now.getMinutes())}</span><span class="tl-now-line"></span></div>`;
     }
+    function syncTimelineNowTimer() {
+      if (_timelineNowTimer) {
+        clearInterval(_timelineNowTimer);
+        _timelineNowTimer = null;
+      }
+      if (currentView() !== "timeline") return;
+      _timelineNowTimer = setInterval(() => {
+        const node = document.getElementById("timeline");
+        if (!node || !document.body.contains(node)) return;
+        loadTimeline();
+      }, 60000);
+    }
     function _timelineEmptyState(range, label, from, to) {
       const title = range === "today"
         ? "No dated records today"
@@ -6024,6 +6126,10 @@ HTML_PAGE = r"""<!doctype html>
           ? "No dated records in the next 24 hours"
           : "No dated records this week";
       const hint = "Timeline only shows records with due:, do:, from:/to:, at:, on:, or notify_at: values inside the selected range.";
+      const suggestions = `<div class="tl-empty-suggestions">` +
+        `<div>Try adding <code>due:${escapeHtml(from)}</code>, <code>from:${escapeHtml(from)}T09:00</code>, or <code>notify_at:${escapeHtml(from)}T09:00</code>.</div>` +
+        `<div>If you expected records here, widen the range or check whether the record has a dated detail key.</div>` +
+        `</div>`;
       const actions = range === "today"
         ? `<button type="button" onclick="setTimelineRange('24h')">Next 24h</button><button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>`
         : range === "24h"
@@ -6032,8 +6138,18 @@ HTML_PAGE = r"""<!doctype html>
       return `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🕒</div>` +
         `<div class="empty-title">${escapeHtml(title)}</div>` +
         `<div class="empty-hint">${escapeHtml(hint)}</div>` +
+        suggestions +
         `<div class="tl-empty-range">${escapeHtml(label)} / ${escapeHtml(from)} - ${escapeHtml(to)}</div>` +
         `<div class="tl-empty-actions">${actions}</div></div>`;
+    }
+    function _timelineQuietBanner(range) {
+      if (range !== "today") return "";
+      return `<div class="empty-state tl-now-stale" style="margin-bottom:.7rem">` +
+        `<div class="empty-title">No upcoming records left today</div>` +
+        `<div class="empty-hint">The rows below are earlier records from today. Switch to Next 24h or Week to see what is coming next.</div>` +
+        `<div class="tl-empty-actions"><button type="button" onclick="setTimelineRange('24h')">Next 24h</button>` +
+        `<button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>` +
+        `<button type="button" class="secondary" onclick="newItem()">New record</button></div></div>`;
     }
     function _tlRow(record, nowIso, displayInfo) {
       const when = String(displayInfo?.when || record.when || "");
@@ -6109,7 +6225,13 @@ HTML_PAGE = r"""<!doctype html>
         const parsed = new Date(d + "T00:00");
         return isNaN(parsed) ? d : parsed.toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"});
       };
-      let html = "";
+      const hasCurrentOrFuture = records.some(entry => {
+        const when = String(entry.display.when || entry.record.when || "");
+        if (entry.display.clipped) return true;
+        if (!when) return false;
+        return when.length > 10 ? when >= nowIso : when.slice(0, 10) >= today;
+      });
+      let html = hasCurrentOrFuture ? "" : _timelineQuietBanner(timelineRange);
       let lastDay = "";
       let nowInserted = false;
       for (const entry of records) {
@@ -6710,6 +6832,7 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Go to Items", run: () => switchWorkspace("")},
       {label: "Go to Agenda", run: () => switchWorkspace("agenda")},
       {label: "Go to Timeline", run: () => switchWorkspace("timeline")},
+      {label: "Go to Calendar", run: () => switchWorkspace("calendar")},
       {label: "Go to Focus", run: () => switchWorkspace("focus")},
       {label: "Go to Review", run: () => switchWorkspace("review")},
       {label: "Go to Messages", run: () => switchWorkspace("messages")},
@@ -6720,6 +6843,7 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Go to Stats", run: () => switchWorkspace("stats")},
       {label: "Go to Graph", run: () => switchWorkspace("graph")},
       {label: "Go to Display mode", run: () => switchWorkspace("display")},
+      {label: "Go to Kiosk mode", run: () => switchWorkspace("kiosk")},
       {label: "Toggle quick-add bar", run: () => toggleQuickAdd(true)},
       {label: "Refresh all", run: refreshAll},
       {label: "Toggle dark mode", run: toggleDarkMode},
@@ -6819,7 +6943,17 @@ HTML_PAGE = r"""<!doctype html>
     });
 
     // ── Help modal ─────────────────────────────────────────────────
-    function openHelpModal() { openManagedModal(document.getElementById("help-modal"), "button"); }
+    function renderHelpModalShortcuts() {
+      const table = document.querySelector("#help-modal table");
+      if (!table) return;
+      table.innerHTML = SHORTCUT_HELP_ROWS.map(([key, text]) =>
+        `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text)}</td></tr>`
+      ).join("");
+    }
+    function openHelpModal() {
+      renderHelpModalShortcuts();
+      openManagedModal(document.getElementById("help-modal"), "button");
+    }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
 
     // ── Contextual hover/focus help ────────────────────────────────
@@ -6841,7 +6975,7 @@ HTML_PAGE = r"""<!doctype html>
         top = rect.top - tipRect.height - margin;
       }
       tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${Math.max(margin, top)}px`;
+      tooltip.style.top = `${clampNumber(top, margin, Math.max(margin, window.innerHeight - tipRect.height - margin))}px`;
     }
     function showUiHelp(anchor) {
       const tooltip = document.getElementById("ui-help-tooltip");
@@ -6859,14 +6993,42 @@ HTML_PAGE = r"""<!doctype html>
       tooltip.setAttribute("aria-hidden", "true");
     }
     function setupContextualHelp() {
+      installContextualHelpTargets();
       document.querySelectorAll(".help-target[data-help], .field-help[data-help]").forEach(el => {
+        if (el.dataset.helpBound === "true") return;
+        el.dataset.helpBound = "true";
+        el.setAttribute("aria-describedby", "ui-help-tooltip");
         el.addEventListener("mouseenter", () => showUiHelp(el));
         el.addEventListener("focus", () => showUiHelp(el));
         el.addEventListener("mouseleave", hideUiHelp);
         el.addEventListener("blur", hideUiHelp);
       });
-      window.addEventListener("resize", hideUiHelp);
-      window.addEventListener("scroll", hideUiHelp, {passive: true});
+      if (document.body.dataset.helpViewportBound !== "true") {
+        document.body.dataset.helpViewportBound = "true";
+        window.addEventListener("resize", hideUiHelp);
+        window.addEventListener("scroll", hideUiHelp, {passive: true});
+      }
+    }
+    function installContextualHelpTargets() {
+      for (const [id, text] of Object.entries(CONTROL_HELP)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.classList.add("help-target");
+        if (!el.dataset.help) el.dataset.help = text;
+      }
+      document.querySelectorAll(".workspace-tab[data-view]").forEach(el => {
+        el.classList.add("help-target");
+        const view = el.dataset.view || "";
+        if (!el.dataset.help && VIEW_HELP[view]) el.dataset.help = VIEW_HELP[view];
+      });
+      document.querySelectorAll(".tl-controls button[data-range]").forEach(el => {
+        el.classList.add("help-target");
+        if (!el.dataset.help) el.dataset.help = "Change the Timeline range and keep the choice in the URL.";
+      });
+      document.querySelectorAll(".cal-controls button").forEach(el => {
+        el.classList.add("help-target");
+        if (!el.dataset.help) el.dataset.help = "Navigate the Calendar month/week view; URL parameters keep the visible period stable.";
+      });
     }
 
     // ── Toast system ────────────────────────────────────────────────

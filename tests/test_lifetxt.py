@@ -8955,5 +8955,93 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
             os.unlink(life_path)
 
 
+class LifeTxtDemoCommandTests(unittest.TestCase):
+    def test_demo_generates_requested_count_from_date(self):
+        out, err, rc = run_cli("demo", "--count", "9", "--date", "2026-07-12T09:30")
+
+        items, diagnostics = parse_text(out)
+        self.assertEqual("", err)
+        self.assertEqual(0, rc)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        self.assertEqual(9, len(items))
+        self.assertEqual(["T", "E", "D", "R", "H", "N", "S", "M", "J"], [item.kind for item in items])
+        self.assertEqual(["2026-07-12"], items[0].details["do"])
+        self.assertEqual(["2026-07-14"], items[0].details["due"])
+
+    def test_demo_filters_types_and_start_index(self):
+        out, err, rc = run_cli(
+            "demo",
+            "--count",
+            "2",
+            "--date",
+            "2026-07-12",
+            "--types",
+            "S,M",
+            "--start-index",
+            "10",
+            "--person",
+            "self",
+            "--person",
+            "alice",
+        )
+
+        items, diagnostics = parse_text(out)
+        self.assertEqual("", err)
+        self.assertEqual(0, rc)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        self.assertEqual(["S", "M"], [item.kind for item in items])
+        self.assertEqual(["demo_status_010"], items[0].details["id"])
+        self.assertEqual(["demo_message_011"], items[1].details["id"])
+        self.assertIn(items[0].details["person"][0], ("self", "alice"))
+
+    def test_demo_preserves_timezone_in_timed_values(self):
+        out, err, rc = run_cli("demo", "--count", "1", "--date", "2026-07-12T09:30:15+09:00", "--types", "E")
+
+        items, diagnostics = parse_text(out)
+        self.assertEqual("", err)
+        self.assertEqual(0, rc)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        self.assertEqual(1, len(items))
+        self.assertIn("+09:00", items[0].details["from"][0])
+        self.assertIn("+09:00", items[0].details["to"][0])
+
+    def test_demo_output_and_append_continue_demo_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "demo.life.txt")
+
+            out, err, rc = run_cli("demo", "--count", "2", "--date", "2026-07-12", "-o", path)
+            self.assertEqual("", err)
+            self.assertEqual(0, rc)
+            self.assertIn("Generated 2 demo item(s)", out)
+
+            out, err, rc = run_cli("demo", "--count", "2", "--date", "2026-07-13", "-o", path, "--append")
+            self.assertEqual("", err)
+            self.assertEqual(0, rc)
+            self.assertIn("Appended 2 demo item(s)", out)
+
+            text = Path(path).read_text(encoding="utf-8")
+            items, diagnostics = parse_text(text)
+            self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+            self.assertEqual(4, len(items))
+            ids = [item.details["id"][0] for item in items]
+            self.assertEqual(len(ids), len(set(ids)))
+            self.assertIn("demo_task_003", ids)
+            self.assertIn("demo_event_004", ids)
+
+    def test_demo_invalid_date_errors(self):
+        out, err, rc = run_cli("demo", "--date", "not-a-date")
+
+        self.assertEqual("", out)
+        self.assertEqual(1, rc)
+        self.assertIn("--date must be", err)
+
+    def test_demo_append_requires_output(self):
+        out, err, rc = run_cli("demo", "--append")
+
+        self.assertEqual("", out)
+        self.assertEqual(1, rc)
+        self.assertIn("--append requires --output", err)
+
+
 if __name__ == "__main__":
     unittest.main()

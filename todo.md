@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-12 (updated x69)
+Last updated: 2026-07-12 (updated x70)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -110,7 +110,6 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add `lifetxt habit today`. Materialize today's habit checkboxes from repeat-enabled habit definitions, idempotent per habit and date, with `--dry-run` support.
 - [ ] Add `lifetxt invoice`. Aggregate `elapsed:` per project for a billing period, support rates and rounding, and output Markdown and CSV.
 - [ ] Add `lifetxt standup`. Summarize done yesterday, planned today, and blocked work for a user, with text, Markdown, and Slack-ready output.
-- [ ] Add `lifetxt demo`. Start the Web UI against generated temporary sample data for selected personas and clearly mark that no real user files are being changed.
 - [ ] Add `lifetxt fmt`. Normalize indentation, spacing, newline style, ordering where safe, and canonical detail formatting. Provide `--check` and `--diff` modes for CI and pre-commit use.
 - [ ] Add `check --fix` for mechanical fixes that cannot change meaning. Start with key spelling normalization, whitespace, line endings, and canonical date forms.
 - [ ] Add `depends_on` cycle detection to `check`, `health`, Web API, and MCP. Report the shortest cycle path and avoid undefined agenda ordering.
@@ -247,6 +246,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add `lifetxt show <id>` to display one item with resolved links, source file, hierarchy context, and dependent records.
 - [ ] Add `lifetxt edit <id>` to open the target item in `$EDITOR` at the correct line.
 - [ ] Add `lifetxt path` to display resolved default file paths and config paths for debugging.
+- [ ] Extend `lifetxt demo` with named profiles such as `minimal`, `team`, `calendar`, `status`, `messages`, `journal`, and `stress`. Add an optional `--serve` mode that launches the Web UI against a temporary generated file and clearly marks that no real user data is being changed.
 - [ ] Add count and aggregation commands such as `count --by status|tag|person|project|context`.
 - [ ] Extend `batch` beyond `done` and `assign`. Add safe bulk operations such as tag rename, status set, and due-date shift, all through the shared mutation path with `--dry-run` support.
 - [ ] Add `who --workload` for a per-person workload summary. Show open, due-soon, and overdue counts per assignee in CLI and Web API output.

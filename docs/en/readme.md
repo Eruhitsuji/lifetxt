@@ -50,6 +50,7 @@ See [web.md](./web.md) for the optional FastAPI REST API and browser GUI.
 
 ```sh
 python -m lifetxt check life.txt
+python -m lifetxt demo --count 50 --date 2026-07-12 -o demo.life.txt
 python -m lifetxt to-json life.txt --pretty
 python -m lifetxt to-jsonl life.txt --open --type task -o open_tasks.jsonl
 python -m lifetxt to-csv life.txt --type journal -o journal.csv

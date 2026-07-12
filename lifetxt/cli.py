@@ -51,6 +51,8 @@ from .assist import (
     update_text,
 )
 from .csvio import items_from_csv_text, items_to_csv
+from .demo import DEFAULT_COUNT as DEMO_DEFAULT_COUNT
+from .demo import demo_text, parse_demo_base_datetime, parse_demo_types
 from .ics import items_from_ics_text
 from .ids import (
     auto_ids_enabled,
@@ -355,6 +357,53 @@ def build_parser():
     _add_item_filter_arguments(to_csv)
     _add_occurrence_export_arguments(to_csv)
     to_csv.set_defaults(func=command_to_csv)
+
+    demo = subparsers.add_parser(
+        "demo",
+        help="Generate a valid demo life.txt file.",
+        description="Generate a valid demo life.txt file for testing CLI, Web UI, and API features.",
+    )
+    demo.add_argument(
+        "-n",
+        "--count",
+        type=int,
+        default=DEMO_DEFAULT_COUNT,
+        help="Number of item records to generate. Defaults to %(default)s.",
+    )
+    demo.add_argument(
+        "--date",
+        help="Base date or datetime for generated records. Defaults to the current datetime.",
+    )
+    demo.add_argument(
+        "--types",
+        action="append",
+        help="Comma-separated item types to generate, e.g. T,E,S,M,J. Defaults to all supported types.",
+    )
+    demo.add_argument(
+        "--seed",
+        type=int,
+        default=1,
+        help="Deterministic seed for demo variation. Defaults to %(default)s.",
+    )
+    demo.add_argument(
+        "--project",
+        default="demo",
+        help="Project detail value for generated project-aware records. Defaults to %(default)s.",
+    )
+    demo.add_argument(
+        "--person",
+        action="append",
+        help="Person name for generated assignee/attendee/sender/recipient/status records. Can be repeated.",
+    )
+    demo.add_argument(
+        "--start-index",
+        type=int,
+        help="First numeric suffix for demo IDs. Defaults to 1, or the next demo ID when --append is used.",
+    )
+    demo.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    demo.add_argument("--append", action="store_true", help="Append to --output instead of overwriting it.")
+    demo.add_argument("--no-check", action="store_true", help="Skip validation of generated demo text before output.")
+    demo.set_defaults(func=command_demo)
 
     markdown_command = subparsers.add_parser(
         "markdown",
@@ -2290,6 +2339,69 @@ def command_to_csv(args):
     write_text(args.output, output)
     _print_warnings(diagnostics)
     return 0
+
+
+def command_demo(args):
+    if args.count < 0:
+        raise ValueError("--count must be zero or greater.")
+    if args.append and not args.output:
+        raise ValueError("--append requires --output.")
+    base_datetime = parse_demo_base_datetime(args.date)
+    kinds = parse_demo_types(args.types)
+    start_index = args.start_index
+    if start_index is None:
+        start_index = _next_demo_start_index(args.output) if args.append else 1
+    if start_index < 1:
+        raise ValueError("--start-index must be 1 or greater.")
+    output = demo_text(
+        count=args.count,
+        base_datetime=base_datetime,
+        types=kinds,
+        seed=args.seed,
+        project=args.project,
+        people=args.person,
+        start_index=start_index,
+    )
+
+    if not args.no_check:
+        items, diagnostics = parse_text(output)
+        if len(items) != args.count:
+            diagnostics.append(
+                Diagnostic(
+                    "error",
+                    "E301",
+                    "Generated %d item(s), expected %d." % (len(items), args.count),
+                )
+            )
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        _print_warnings(diagnostics)
+
+    if args.output:
+        _ensure_writable_path(args.output, _config(args), "demo")
+        if args.append:
+            append_text(args.output, output)
+            action = "Appended"
+        else:
+            write_text(args.output, output)
+            action = "Generated"
+        sys.stdout.write("%s %d demo item(s) to %s\n" % (action, args.count, args.output))
+    else:
+        write_text(None, output)
+    return 0
+
+
+def _next_demo_start_index(path):
+    if not path:
+        return 1
+    try:
+        text = read_text(path)
+    except FileNotFoundError:
+        return 1
+    import re as _re
+    numbers = [int(match.group(1)) for match in _re.finditer(r"\bdemo_[a-z]+_(\d+)\b", text)]
+    return (max(numbers) + 1) if numbers else 1
 
 
 def command_markdown(args):

@@ -14,6 +14,7 @@ COMMANDS = (
     "to-json",
     "to-jsonl",
     "to-csv",
+    "demo",
     "markdown",
     "import-ics",
     "sync-ics",

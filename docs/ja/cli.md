@@ -20,6 +20,7 @@ python -m lifetxt sources [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
+python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
@@ -87,6 +88,7 @@ python -m lifetxt template list
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
 | `to-csv` | life.txt を CSV へ変換 |
+| `demo` | demo、test、screenshot 用の有効な life.txt record を生成 |
 | `markdown` | safe Markdown field を HTML / text / JSON / JSONL として描画 |
 | `import-ics` | iCalendar `.ics` の予定を life.txt event item に変換 |
 | `sync-ics` | iCalendar URL を取得して life.txt event item を再生成 |
@@ -241,6 +243,7 @@ command 対応表:
 | `links` | yes | no | yes | relation filter |
 | `to-json`, `to-jsonl`, `to-csv`, `markdown` | yes | no | yes | yes |
 | `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rule | no |
+| `demo` | no | optional | generated item validation | type selection only |
 | `filter` | yes | yes | yes | yes |
 | `status` | yes | no | yes | `--person`, `--active` |
 | `notify` | yes | no | yes | notification 固有 |
@@ -490,7 +493,33 @@ python -m lifetxt from-csv [path ...] [-o life.txt]
 
 `from-csv` も `--canonical` を受け付けます。
 
-### 4.7 `markdown`
+### 4.7 `demo`
+
+有効な demo life.txt を生成します。Web UI demo、screenshot、CLI example、smoke test、空のローカル環境の初期データ作成に使えます。`--count` は item record 数です。`J` record の body continuation がある場合、物理行数は指定件数より多くなることがあります。
+
+```sh
+python -m lifetxt demo
+python -m lifetxt demo --count 50 --date 2026-07-12 -o demo.life.txt
+python -m lifetxt demo --count 20 --date 2026-07-12T09:30 --types T,E,S,M,J
+python -m lifetxt demo --count 10 --date 2026-07-13 -o demo.life.txt --append
+```
+
+| Option | 意味 |
+|---|---|
+| `-n`, `--count N` | 生成する item record 数。既定値は 30 |
+| `--date VALUE` | 基準 date/datetime。省略時は現在日時 |
+| `--types VALUES` | 生成 type を制限。comma-separated または複数回指定 |
+| `--seed N` | 決定的な variation seed。既定値は 1 |
+| `--project NAME` | 既定の `project:`。既定値は `demo` |
+| `--person NAME` | status、message、assignee、attendee、owner で使う person 名。複数回指定可能 |
+| `--start-index N` | demo ID の開始番号。省略時は 1、append 時は既存 demo ID の次番号 |
+| `-o`, `--output FILE` | stdout ではなく FILE に出力 |
+| `--append` | `--output` に追記。`--output` が必須 |
+| `--no-check` | 生成 record の validation を省略 |
+
+既定では、出力前に生成 record を validation します。既存 demo file へ追記する場合は `demo_*_NNN` ID を走査し、`--start-index` が未指定なら次の番号から生成します。
+
+### 4.8 `markdown`
 
 選択した field の safe Markdown subset を描画します。この command はファイルを変更しません。raw の title / body / note を読み取り、HTML、plain text、JSON、JSONL として出力します。
 
@@ -513,7 +542,7 @@ JSON / JSONL record には `source`、`line`、`type`、`status`、`title`、
 `field`、`index`、`raw`、`html`、`text` が含まれます。Markdown source 内の
 raw HTML は escape され、`javascript:` のような unsafe link は link として描画しません。
 
-### 4.8 export filter option
+### 4.9 export filter option
 
 `to-json`、`to-jsonl`、`to-csv`、`markdown` は出力前に item を絞り込めます。
 

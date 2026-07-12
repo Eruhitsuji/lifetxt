@@ -20,6 +20,7 @@ python -m lifetxt sources [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
+python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
@@ -86,6 +87,7 @@ python -m lifetxt template list
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `to-csv` | Convert life.txt to CSV |
+| `demo` | Generate valid demo life.txt records for demos, tests, and screenshots |
 | `markdown` | Render safe Markdown fields as HTML, text, JSON, or JSONL |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
 | `sync-ics` | Fetch iCalendar URLs and regenerate life.txt event items |
@@ -262,6 +264,7 @@ CLI command coverage:
 | `links` | yes | no | yes | relation filters only |
 | `to-json`, `to-jsonl`, `to-csv`, `markdown` | yes | no | yes | yes |
 | `from-json`, `from-jsonl`, `from-csv` | no | yes | serializer rules |
+| `demo` | no | optional | generated item validation | type selection only |
 | `filter` | yes | yes | yes | yes |
 | `status` | yes | no | yes | `--person`, `--active` |
 | `notify` | yes | no | yes | notification-specific |
@@ -532,7 +535,40 @@ python -m lifetxt from-csv [path ...] [-o life.txt]
 
 `from-csv` also accepts `--canonical` for consistency with `from-json`.
 
-### 4.7 `markdown`
+### 4.7 `demo`
+
+Generate a valid demo life.txt file. This is intended for Web UI demos,
+screenshots, CLI examples, smoke tests, and empty local setups. `--count`
+counts item records, not physical lines, so journal records with continuation
+body lines may produce more output lines than the requested item count.
+
+```sh
+python -m lifetxt demo
+python -m lifetxt demo --count 50 --date 2026-07-12 -o demo.life.txt
+python -m lifetxt demo --count 20 --date 2026-07-12T09:30 --types T,E,S,M,J
+python -m lifetxt demo --count 10 --date 2026-07-13 -o demo.life.txt --append
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `-n`, `--count N` | Number of item records to generate. Defaults to 30 |
+| `--date VALUE` | Base date or datetime. Defaults to the current datetime |
+| `--types VALUES` | Limit generated item types. Accepts comma-separated values and may be repeated |
+| `--seed N` | Deterministic variation seed. Defaults to 1 |
+| `--project NAME` | Default `project:` value. Defaults to `demo` |
+| `--person NAME` | Person names used by status, message, assignee, attendee, and owner fields. Repeatable |
+| `--start-index N` | First demo ID number. Defaults to 1, or the next existing demo ID when appending |
+| `-o`, `--output FILE` | Write generated life.txt to a file instead of stdout |
+| `--append` | Append to `--output`; requires `--output` |
+| `--no-check` | Skip validation of generated records |
+
+By default, generated items are checked before they are printed or written. When
+appending to an existing demo file, the command scans existing `demo_*_NNN` IDs
+and continues from the next number unless `--start-index` is given.
+
+### 4.8 `markdown`
 
 Render the safe life.txt Markdown subset from selected fields. This command
 does not modify the file; it reads raw title/body/note text and emits rendered
@@ -559,7 +595,7 @@ JSON and JSONL records include `source`, `line`, `type`, `status`, `title`,
 `field`, `index`, `raw`, `html`, and `text`. Raw HTML in Markdown source is
 escaped. Unsafe links such as `javascript:` are not rendered as links.
 
-### 4.8 Export Filter Options
+### 4.9 Export Filter Options
 
 `to-json`, `to-jsonl`, `to-csv`, and `markdown` can filter items before writing
 output.

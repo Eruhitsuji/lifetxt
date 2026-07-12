@@ -1162,6 +1162,8 @@ python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
 ```
 
 `textual` が利用可能な場合は最小限の Textual UI を使い、未導入の場合は依存なしの端末表示に fallback します。
+現在の dashboard は top card summary、section focus、選択行 highlight、常時表示の `INSPECTOR`
+panel を持つ端末向け layout です。
 `?` または `H` で help を表示します。`--theme auto|dark|light|mono` で curses 色を指定し、
 `--keymap vim|arrows` で help/footer の keymap preset を指定できます。既定値は config の
 `tui.theme`、`tui.keymap`、`tui.limit`、`tui.agenda_window` でも設定できます。
@@ -1170,6 +1172,8 @@ python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
 `h` / `l` または Left/Right で section focus 移動、`j` / `k` または
 Down/Up で選択行移動、`Ctrl-D` / `Ctrl-U` と PageDown/PageUp で半ページ移動、
 `g` で先頭、`G` で末尾、`r` で reload、`q` で終了します。
+`/` で dashboard search に入り、入力した文字列で tasks / agenda / status の visible row を横断 filter します。
+`Enter` で search を適用し、`Esc` で解除します。
 `Enter` / `o` で選択行の action menu を開きます。`s` は詳細表示、`d` は `id:` と source を持つ
 task-like 行の完了、`e` は `$EDITOR` で source を開く、`f` は選択行の最初の `project:` で filter します。
 `Tab` / `n` と `p` も非 Vim 風の section 移動 alias として使えます。

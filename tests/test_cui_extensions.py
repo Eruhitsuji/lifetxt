@@ -485,9 +485,12 @@ class TuiTests(unittest.TestCase):
                 handle.write("[ ] T Write_Report id:t1\n")
             output = tui.render_dashboard(argparse.Namespace(paths=[path]), focus="tasks")
 
+        self.assertIn("modern terminal workspace", output)
+        self.assertIn("Cards: open:1", output)
         self.assertIn("> TASKS (open)", output)
         self.assertIn("Write_Report", output)
         self.assertIn("* [ ] T Write_Report", output)
+        self.assertIn("INSPECTOR", output)
 
     def test_render_dashboard_help(self):
         output = tui.render_dashboard(argparse.Namespace(paths=[]), help_visible=True)
@@ -496,6 +499,7 @@ class TuiTests(unittest.TestCase):
         self.assertIn("tab / n", output)
         self.assertIn("h / left", output)
         self.assertIn("Enter/o", output)
+        self.assertIn("/        search visible dashboard rows", output)
 
     def test_render_dashboard_uses_tui_config_options(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -516,6 +520,30 @@ class TuiTests(unittest.TestCase):
         self.assertIn("Theme:light  Keymap:arrows  Limit:1  Window:6h", output)
         self.assertIn("First", output)
         self.assertNotIn("Second", output)
+
+    def test_render_dashboard_search_filters_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "[ ] T Work_Task id:t1 project:work\n"
+                    "[ ] T Home_Task id:t2 project:home\n"
+                    "[/] S Focus from:2026-06-10T09:00 state:focus person:self\n"
+                )
+            args = argparse.Namespace(paths=[path], config_data={})
+            output = tui.render_dashboard(args, search_query="home")
+
+        self.assertIn("Search:home", output)
+        self.assertIn("Home_Task", output)
+        self.assertNotIn("Work_Task", output)
+        self.assertNotIn("Focus", output)
+
+    def test_tui_footer_supports_search_mode(self):
+        footer = tui._footer_text("vim", search_query="work", search_editing=True)
+
+        self.assertIn("search: work", footer)
+        self.assertIn("Enter apply", footer)
+        self.assertIn("Esc clear", footer)
 
     def test_render_dashboard_detail_and_action_menu(self):
         with tempfile.TemporaryDirectory() as tmp:

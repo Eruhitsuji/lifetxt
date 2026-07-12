@@ -211,7 +211,8 @@ Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the
 enhanced TUI can use the optional `tui` extra, while a dependency-free fallback
 is available by default. TUI supports configurable themes/keymaps, row
-selection, detail display, mark-done, editor opening, and project filtering:
+selection, top-card summaries, an always-visible inspector panel, `/` search,
+detail display, mark-done, editor opening, and project filtering:
 
 ```sh
 python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15

@@ -168,7 +168,9 @@ kiosk/display modes.
 Terminal-oriented helpers are available through `tui`, `fzf`, `timer`, `stats`,
 `git-hook`, and `completion`. `fzf` requires `fzf` or `peco` in `PATH`; the
 enhanced TUI can use the optional `tui` extra, while a dependency-free fallback
-is available by default.
+is available by default. TUI now includes top-card summaries, an always-visible
+inspector panel, `/` search, configurable themes/keymaps, mark-done, editor
+opening, and project filtering.
 
 ## Assist
 

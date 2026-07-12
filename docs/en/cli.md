@@ -1397,7 +1397,10 @@ python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
 
 The command reads the same path forms as other life.txt commands. If the
 optional `textual` package is installed, a minimal Textual interface is used.
-Otherwise the command falls back to a dependency-free terminal view.
+Otherwise the command falls back to a dependency-free terminal view. The
+current dashboard uses a modern terminal layout with a top card summary, section
+focus, selected-row highlighting, and an always-visible `INSPECTOR` panel for
+the selected row.
 Use `?` or `H` for help. `--theme auto|dark|light|mono` controls curses colors,
 and `--keymap vim|arrows` changes the help/footer preset. Defaults can also be
 set in config under `tui.theme`, `tui.keymap`, `tui.limit`, and
@@ -1407,7 +1410,9 @@ The dashboard has a selected row marked with `*`. With the default Vim-like
 keymap, `h` / `l` or Left/Right move section focus, `j` / `k` or Down/Up move
 the selected row, `Ctrl-D` / `Ctrl-U` and PageDown/PageUp move by half pages,
 `g` selects the first row, `G` selects the last row, `r` reloads, and `q`
-quits. `Enter` / `o` opens an action menu for the selected row. `s` shows full
+quits. `/` enters dashboard search, typing filters visible rows across tasks,
+agenda, and status, `Enter` applies the search, and `Esc` clears it. `Enter` /
+`o` opens an action menu for the selected row. `s` shows full
 detail, `d` marks a task-like row done when it has `id:` and source metadata,
 `e` opens the source in `$EDITOR`, and `f` filters by the selected row's first
 `project:` value. `Tab` / `n` and `p` remain section navigation aliases.

@@ -28,6 +28,8 @@ TUI_COLOR_STYLES = (
     "error",
     "footer",
     "help",
+    "search",
+    "inspector",
     "selected",
 )
 TUI_THEMES = ("auto", "dark", "light", "mono")
@@ -89,6 +91,7 @@ def run_textual(args):
         selected_index = 0
         detail_row = None
         project_filter = None
+        search_query = ""
 
         def compose(self):
             self.dashboard = Static(
@@ -99,6 +102,7 @@ def run_textual(args):
                     selected_index=self.selected_index,
                     detail_row=self.detail_row,
                     project_filter=self.project_filter,
+                    search_query=self.search_query,
                 )
             )
             yield self.dashboard
@@ -114,7 +118,12 @@ def run_textual(args):
                 self.refresh_dashboard()
 
         def refresh_dashboard(self):
-            self.selected_index = normalize_selected_index(args, self.selected_index, self.project_filter)
+            self.selected_index = normalize_selected_index(
+                args,
+                self.selected_index,
+                self.project_filter,
+                self.search_query,
+            )
             self.dashboard.update(
                 render_dashboard_safe(
                     args,
@@ -123,6 +132,7 @@ def run_textual(args):
                     selected_index=self.selected_index,
                     detail_row=self.detail_row,
                     project_filter=self.project_filter,
+                    search_query=self.search_query,
                 )
             )
 
@@ -134,37 +144,53 @@ def run_textual(args):
             elif event.key in ("question_mark", "H"):
                 self.help_visible = not self.help_visible
                 self.refresh_dashboard()
+            elif event.key == "escape" and self.search_query:
+                self.search_query = ""
+                self.selected_index = 0
+                self.detail_row = None
+                self.refresh_dashboard()
             elif event.key in ("tab", "n", "l", "right"):
                 self.focus = next_section(self.focus)
-                self.selected_index = first_selectable_index_for_section(args, self.focus, self.project_filter)
+                self.selected_index = first_selectable_index_for_section(
+                    args,
+                    self.focus,
+                    self.project_filter,
+                    self.search_query,
+                )
                 self.detail_row = None
                 self.refresh_dashboard()
             elif event.key in ("p", "h", "left"):
                 self.focus = previous_section(self.focus)
-                self.selected_index = first_selectable_index_for_section(args, self.focus, self.project_filter)
+                self.selected_index = first_selectable_index_for_section(
+                    args,
+                    self.focus,
+                    self.project_filter,
+                    self.search_query,
+                )
                 self.detail_row = None
                 self.refresh_dashboard()
             elif event.key in ("j", "down"):
-                self.selected_index = move_selection(args, self.selected_index, 1, self.project_filter)
+                self.selected_index = move_selection(args, self.selected_index, 1, self.project_filter, self.search_query)
                 self.detail_row = None
                 self.refresh_dashboard()
             elif event.key in ("k", "up"):
-                self.selected_index = move_selection(args, self.selected_index, -1, self.project_filter)
+                self.selected_index = move_selection(args, self.selected_index, -1, self.project_filter, self.search_query)
                 self.detail_row = None
                 self.refresh_dashboard()
             elif event.key in ("enter", "s"):
-                self.detail_row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                self.detail_row = selected_dashboard_row(args, self.selected_index, self.project_filter, self.search_query)
                 self.refresh_dashboard()
             elif event.key == "f":
-                row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                row = selected_dashboard_row(args, self.selected_index, self.project_filter, self.search_query)
                 project = row_project(row)
                 if project:
                     self.project_filter = project if self.project_filter != project else None
                     self.selected_index = 0
                     self.detail_row = None
+                    self.search_query = ""
                     self.refresh_dashboard()
             elif event.key == "d":
-                row = selected_dashboard_row(args, self.selected_index, self.project_filter)
+                row = selected_dashboard_row(args, self.selected_index, self.project_filter, self.search_query)
                 try:
                     perform_row_action("done", row, args)
                     self.detail_row = {"label": "Marked done: %s" % row.get("id", row.get("title", ""))}
@@ -199,13 +225,15 @@ def run_curses_or_plain(args):
         detail_row = None
         action_row = None
         project_filter = None
+        search_query = ""
+        search_editing = False
         message = ""
         dirty = True
         text = ""
         while True:
             if dirty or watcher.consume_changed():
-                selected_index = normalize_selected_index(args, selected_index, project_filter)
-                focus = section_for_selected_index(args, selected_index, focus, project_filter)
+                selected_index = normalize_selected_index(args, selected_index, project_filter, search_query)
+                focus = section_for_selected_index(args, selected_index, focus, project_filter, search_query)
                 stdscr.erase()
                 text = render_dashboard_safe(
                     args,
@@ -215,15 +243,55 @@ def run_curses_or_plain(args):
                     detail_row=detail_row,
                     action_row=action_row,
                     project_filter=project_filter,
+                    search_query=search_query,
                     message=message,
                 )
                 scroll = _scroll_to_selected(text, selected_index, scroll, stdscr)
-                footer = _footer_text(options["keymap"], action_row is not None)
+                footer = _footer_text(
+                    options["keymap"],
+                    action_row is not None,
+                    search_query=search_query,
+                    search_editing=search_editing,
+                )
                 _draw_curses_text(stdscr, text, footer, scroll=scroll, color_attrs=color_attrs)
                 stdscr.refresh()
                 dirty = False
             key = stdscr.getch()
             if key == -1:
+                continue
+            if search_editing:
+                if key in (27,):
+                    search_editing = False
+                    if search_query:
+                        search_query = ""
+                        selected_index = 0
+                        message = "Search cleared."
+                    else:
+                        message = "Search canceled."
+                    dirty = True
+                    continue
+                if key in (10, 13, curses.KEY_ENTER):
+                    search_editing = False
+                    selected_index = normalize_selected_index(args, selected_index, project_filter, search_query)
+                    focus = section_for_selected_index(args, selected_index, focus, project_filter, search_query)
+                    message = "Search: %s" % (search_query or "(empty)")
+                    dirty = True
+                    continue
+                if key in (8, 127, curses.KEY_BACKSPACE):
+                    search_query = search_query[:-1]
+                    selected_index = normalize_selected_index(args, selected_index, project_filter, search_query)
+                    dirty = True
+                    continue
+                if key == 21:
+                    search_query = ""
+                    selected_index = 0
+                    dirty = True
+                    continue
+                if 32 <= key <= 126:
+                    search_query += chr(key)
+                    selected_index = normalize_selected_index(args, selected_index, project_filter, search_query)
+                    dirty = True
+                    continue
                 continue
             if action_row is not None:
                 if key in (27, ord("q"), ord("Q")):
@@ -253,6 +321,18 @@ def run_curses_or_plain(args):
                 message = "Reloaded."
                 dirty = True
                 continue
+            if key == ord("/"):
+                search_editing = True
+                message = "Search mode. Type to filter, Enter to apply, Esc to clear."
+                dirty = True
+                continue
+            if key == 27 and search_query:
+                search_query = ""
+                selected_index = 0
+                detail_row = None
+                message = "Search cleared."
+                dirty = True
+                continue
             if key in (ord("?"), ord("H")):
                 help_visible = not help_visible
                 scroll = 0
@@ -260,35 +340,35 @@ def run_curses_or_plain(args):
                 continue
             if key in (9, ord("n"), ord("N"), ord("l"), ord("L"), curses.KEY_RIGHT):
                 focus = next_section(focus)
-                selected_index = first_selectable_index_for_section(args, focus, project_filter)
+                selected_index = first_selectable_index_for_section(args, focus, project_filter, search_query)
                 detail_row = None
                 scroll = 0
                 dirty = True
                 continue
             if key in (ord("p"), ord("P"), ord("h"), curses.KEY_LEFT):
                 focus = previous_section(focus)
-                selected_index = first_selectable_index_for_section(args, focus, project_filter)
+                selected_index = first_selectable_index_for_section(args, focus, project_filter, search_query)
                 detail_row = None
                 scroll = 0
                 dirty = True
                 continue
             if key in (ord("j"), ord("J"), curses.KEY_DOWN):
-                selected_index = move_selection(args, selected_index, 1, project_filter)
+                selected_index = move_selection(args, selected_index, 1, project_filter, search_query)
                 detail_row = None
                 dirty = True
                 continue
             if key in (ord("k"), ord("K"), curses.KEY_UP):
-                selected_index = move_selection(args, selected_index, -1, project_filter)
+                selected_index = move_selection(args, selected_index, -1, project_filter, search_query)
                 detail_row = None
                 dirty = True
                 continue
             if key in (4, curses.KEY_NPAGE):
-                selected_index = move_selection(args, selected_index, _page_scroll_amount(stdscr), project_filter)
+                selected_index = move_selection(args, selected_index, _page_scroll_amount(stdscr), project_filter, search_query)
                 detail_row = None
                 dirty = True
                 continue
             if key in (21, curses.KEY_PPAGE):
-                selected_index = move_selection(args, selected_index, -_page_scroll_amount(stdscr), project_filter)
+                selected_index = move_selection(args, selected_index, -_page_scroll_amount(stdscr), project_filter, search_query)
                 detail_row = None
                 dirty = True
                 continue
@@ -298,22 +378,22 @@ def run_curses_or_plain(args):
                 dirty = True
                 continue
             if key in (ord("G"), curses.KEY_END):
-                selected_index = max(0, len(selectable_dashboard_rows(args, project_filter)) - 1)
+                selected_index = max(0, len(selectable_dashboard_rows(args, project_filter, search_query)) - 1)
                 scroll = _max_scroll_for_screen(stdscr, text)
                 dirty = True
                 continue
             if key in (10, 13, curses.KEY_ENTER, ord("o"), ord("O")):
-                action_row = selected_dashboard_row(args, selected_index, project_filter)
+                action_row = selected_dashboard_row(args, selected_index, project_filter, search_query)
                 message = ""
                 dirty = True
                 continue
             if key in (ord("s"), ord("S")):
-                detail_row = selected_dashboard_row(args, selected_index, project_filter)
+                detail_row = selected_dashboard_row(args, selected_index, project_filter, search_query)
                 message = ""
                 dirty = True
                 continue
             if key in (ord("d"), ord("D")):
-                row = selected_dashboard_row(args, selected_index, project_filter)
+                row = selected_dashboard_row(args, selected_index, project_filter, search_query)
                 try:
                     message = perform_row_action("done", row, args).get("message", "")
                     detail_row = None
@@ -322,19 +402,20 @@ def run_curses_or_plain(args):
                 dirty = True
                 continue
             if key in (ord("f"), ord("F")):
-                row = selected_dashboard_row(args, selected_index, project_filter)
+                row = selected_dashboard_row(args, selected_index, project_filter, search_query)
                 try:
                     result = perform_row_action("filter-project", row, args)
                     project_filter = result.get("project")
                     selected_index = 0
                     detail_row = None
+                    search_query = ""
                     message = result.get("message", "")
                 except Exception as exc:
                     message = "ERROR: %s" % exc
                 dirty = True
                 continue
             if key in (ord("e"), ord("E")):
-                row = selected_dashboard_row(args, selected_index, project_filter)
+                row = selected_dashboard_row(args, selected_index, project_filter, search_query)
                 try:
                     message = perform_row_action("edit", row, args).get("message", "")
                 except Exception as exc:
@@ -432,6 +513,8 @@ def _init_curses_colors(curses_module, theme="auto"):
                 ("error", curses_module.COLOR_RED),
                 ("footer", curses_module.COLOR_BLACK),
                 ("help", curses_module.COLOR_BLUE),
+                ("search", curses_module.COLOR_MAGENTA),
+                ("inspector", curses_module.COLOR_BLUE),
                 ("selected", curses_module.COLOR_WHITE),
             )
         else:
@@ -448,6 +531,8 @@ def _init_curses_colors(curses_module, theme="auto"):
                 ("error", curses_module.COLOR_RED),
                 ("footer", curses_module.COLOR_BLACK),
                 ("help", curses_module.COLOR_BLUE),
+                ("search", curses_module.COLOR_YELLOW),
+                ("inspector", curses_module.COLOR_CYAN),
                 ("selected", curses_module.COLOR_YELLOW),
             )
         for index, (style, foreground) in enumerate(pairs, 1):
@@ -470,12 +555,16 @@ def _style_for_line(line):
         return "error"
     if line.startswith("lifetxt TUI"):
         return "title"
-    if stripped and set(stripped) == {"="}:
+    if stripped and set(stripped) in ({"="}, {"-"}):
         return "rule"
     if line.startswith("> "):
         return "focus"
     if line.startswith("* "):
         return "selected"
+    if stripped.startswith("Views:") or stripped.startswith("Cards:") or stripped.startswith("Search:"):
+        return "search"
+    if stripped.startswith(("INSPECTOR", "ACTIONS", "DETAIL")):
+        return "inspector"
     if stripped in ("TASKS (open)", "AGENDA (next 12h and active intervals)", "STATUS"):
         return "section"
     if stripped.startswith("[x]"):
@@ -535,12 +624,14 @@ def _max_scroll_for_screen(stdscr, text):
     return max(0, len(text.splitlines()) - body_height)
 
 
-def _footer_text(keymap, in_action_menu=False):
+def _footer_text(keymap, in_action_menu=False, search_query="", search_editing=False):
+    if search_editing:
+        return "search: %s  Enter apply  Esc clear  Ctrl-U clear line" % search_query
     if in_action_menu:
         return "action: s show  d done  e edit  f filter  Esc/q cancel"
     if keymap == "arrows":
-        return "q quit  ? help  arrows move/section  Enter actions  s detail  d done  r reload"
-    return "q quit  ? help  h/l section  j/k select  Enter actions  s detail  d done  r reload"
+        return "q quit  / search  ? help  arrows move/section  Enter actions  s detail  d done  r reload"
+    return "q quit  / search  ? help  h/l section  j/k select  Enter actions  s detail  d done  r reload"
 
 
 def _action_for_key(key):
@@ -589,23 +680,22 @@ def render_dashboard(
     detail_row=None,
     action_row=None,
     project_filter=None,
+    search_query="",
     message="",
 ):
     options = tui_options(args)
     if help_visible:
         return render_help(options)
-    model = dashboard_model(args, project_filter=project_filter)
-    selected_index = normalize_selected_index(args, selected_index, project_filter)
+    model = dashboard_model(args, project_filter=project_filter, search_query=search_query)
+    model["focus"] = focus
+    selected_index = normalize_selected_index(args, selected_index, project_filter, search_query)
+    selected_row = selected_dashboard_row(args, selected_index, project_filter, search_query)
     lines = []
-    title = "lifetxt TUI                                  [q]uit  [r]eload"
-    lines.append(title)
-    lines.append("=" * 72)
+    lines.extend(render_modern_header(model, options, args, project_filter, search_query).splitlines())
     lines.append(
         "Theme:%s  Keymap:%s  Limit:%s  Window:%s"
         % (options["theme"], options["keymap"], options["limit"], options["agenda_window"])
     )
-    if project_filter:
-        lines.append("Filter: project:%s  (press f on a project row to change/clear)" % project_filter)
     if message:
         lines.append(message)
     lines.append("")
@@ -627,9 +717,11 @@ def render_dashboard(
         lines.extend(render_action_menu(action_row).splitlines())
     elif detail_row:
         lines.extend(render_row_detail(detail_row).splitlines())
+    else:
+        lines.extend(render_inspector(selected_row, project_filter=project_filter, search_query=search_query).splitlines())
 
     lines.append("")
-    lines.append("Use ? for help. Enter/o opens actions. s shows detail. d marks done. f filters by project.")
+    lines.append("Use / to search. ? for help. Enter/o opens actions. s detail. d done. f project filter.")
     lines.append("Install textual for a richer TUI:")
     lines.append('  pip install "lifetxt[tui]"')
     return "\n".join(lines) + "\n"
@@ -643,6 +735,7 @@ def render_dashboard_safe(
     detail_row=None,
     action_row=None,
     project_filter=None,
+    search_query="",
     message="",
 ):
     try:
@@ -654,6 +747,7 @@ def render_dashboard_safe(
             detail_row=detail_row,
             action_row=action_row,
             project_filter=project_filter,
+            search_query=search_query,
             message=message,
         )
     except Exception as exc:
@@ -679,6 +773,8 @@ def render_help(options=None):
         "",
         "q        quit",
         "r        reload files",
+        "/        search visible dashboard rows",
+        "Esc      clear active search",
         "? / H    toggle this help",
         "h / left focus previous section",
         "l / right focus next section",
@@ -698,84 +794,183 @@ def render_help(options=None):
         "",
         "Sections: tasks, agenda, status",
         "The focused section is marked with >. The selected row is marked with *.",
+        "The INSPECTOR panel shows the selected row without opening an action menu.",
     ]
     return "\n".join(lines) + "\n"
 
 
-def dashboard_model(args, project_filter=None):
+def render_modern_header(model, options, args, project_filter=None, search_query=""):
+    summary = model.get("summary", {})
+    path_count = len([path for path in getattr(args, "paths", []) or [] if path and path != "-"])
+    cards = [
+        "open:%s" % summary.get("tasks", 0),
+        "agenda:%s" % summary.get("agenda", 0),
+        "status:%s" % summary.get("status", 0),
+        "files:%s" % path_count,
+    ]
+    active_filter = project_filter or "-"
+    active_search = search_query or "-"
+    lines = [
+        "lifetxt TUI  |  modern terminal workspace  |  [q]uit  [/]search  [r]eload",
+        "=" * 72,
+        "Cards: " + "  ".join(cards),
+        "Views: " + "  ".join(
+            "%s%s" % (">" if section["key"] == model.get("focus") else " ", section["key"])
+            for section in model.get("sections", [])
+        ),
+        "Search:%s  Project:%s  Rows:%s" % (active_search, active_filter, summary.get("rows", 0)),
+    ]
+    return "\n".join(lines)
+
+
+def render_inspector(row, project_filter=None, search_query=""):
+    lines = ["INSPECTOR", "---------"]
+    if project_filter:
+        lines.append("project filter: %s" % project_filter)
+    if search_query:
+        lines.append("search: %s" % search_query)
+    if not row:
+        lines.append("No row selected.")
+        return "\n".join(lines)
+    lines.append(row.get("label", ""))
+    meta = []
+    if row.get("section"):
+        meta.append("section:%s" % row["section"])
+    if row.get("id"):
+        meta.append("id:%s" % row["id"])
+    if row_project(row):
+        meta.append("project:%s" % row_project(row))
+    if row.get("source") and row.get("line"):
+        meta.append("%s:%s" % (os.path.basename(row["source"]), row["line"]))
+    elif row.get("source"):
+        meta.append(os.path.basename(row["source"]))
+    if meta:
+        lines.append("  " + "  ".join(meta))
+    hint_parts = ["Enter actions", "s full detail"]
+    if row.get("type") in ("T", "D", "R", "H") and row.get("id"):
+        hint_parts.append("d done")
+    if row_project(row):
+        hint_parts.append("f filter")
+    lines.append("  " + " / ".join(hint_parts))
+    return "\n".join(lines)
+
+
+def dashboard_model(args, project_filter=None, search_query=""):
     options = tui_options(args)
     items = load_items(args.paths)
     project_values = [project_filter] if project_filter else None
-    tasks = filter_items(items, open_only=True, kinds=["T"], projects=project_values)[:options["limit"]]
+    task_items = filter_items(items, open_only=True, kinds=["T"], projects=project_values)
     start, end = parse_agenda_range(around_text="now", window_text=options["agenda_window"])
     agenda = agenda_records(items, start, end)
     if project_filter:
         agenda = [record for record in agenda if project_filter in record.get("details", {}).get("project", [])]
-    agenda = agenda[:options["limit"]]
-    statuses = latest_status_records(items, active_only=True)[:options["limit"]]
+    statuses = latest_status_records(items, active_only=True)
+    task_rows = _filter_rows([_task_row(item, options["id_key"]) for item in task_items], search_query)
+    agenda_rows = _filter_rows([_agenda_row(record, options["id_key"]) for record in agenda], search_query)
+    status_rows = _filter_rows([_status_row(record) for record in statuses], search_query)
+    sections = [
+        {
+            "key": "tasks",
+            "title": "TASKS (open)",
+            "empty": "No open tasks.",
+            "rows": task_rows[:options["limit"]],
+        },
+        {
+            "key": "agenda",
+            "title": "AGENDA (next %s and active intervals)" % options["agenda_window"],
+            "empty": "No agenda items.",
+            "rows": agenda_rows[:options["limit"]],
+        },
+        {
+            "key": "status",
+            "title": "STATUS",
+            "empty": "No active status.",
+            "rows": status_rows[:options["limit"]],
+        },
+    ]
+    summary = {
+        "tasks": len(task_rows),
+        "agenda": len(agenda_rows),
+        "status": len(status_rows),
+        "rows": sum(len(section["rows"]) for section in sections),
+    }
     return {
-        "sections": [
-            {
-                "key": "tasks",
-                "title": "TASKS (open)",
-                "empty": "No open tasks.",
-                "rows": [_task_row(item, options["id_key"]) for item in tasks],
-            },
-            {
-                "key": "agenda",
-                "title": "AGENDA (next %s and active intervals)" % options["agenda_window"],
-                "empty": "No agenda items.",
-                "rows": [_agenda_row(record, options["id_key"]) for record in agenda],
-            },
-            {
-                "key": "status",
-                "title": "STATUS",
-                "empty": "No active status.",
-                "rows": [_status_row(record) for record in statuses],
-            },
-        ]
+        "focus": "tasks",
+        "sections": sections,
+        "summary": summary,
     }
 
 
-def selectable_dashboard_rows(args, project_filter=None):
+def _filter_rows(rows, search_query=""):
+    query = str(search_query or "").strip().lower()
+    if not query:
+        return rows
+    result = []
+    for row in rows:
+        haystack = " ".join(
+            str(part or "")
+            for part in (
+                row.get("label"),
+                row.get("title"),
+                row.get("id"),
+                row.get("section"),
+                row.get("source"),
+                item_to_line_like(row),
+            )
+        ).lower()
+        if query in haystack:
+            result.append(row)
+    return result
+
+
+def item_to_line_like(row):
+    details = row.get("details") or {}
+    parts = []
+    for key, values in sorted(details.items()):
+        for value in values:
+            parts.append("%s:%s" % (key, value))
+    return " ".join(parts)
+
+
+def selectable_dashboard_rows(args, project_filter=None, search_query=""):
     rows = []
-    for section in dashboard_model(args, project_filter=project_filter)["sections"]:
+    for section in dashboard_model(args, project_filter=project_filter, search_query=search_query)["sections"]:
         rows.extend(section["rows"])
     return rows
 
 
-def selected_dashboard_row(args, selected_index=0, project_filter=None):
-    rows = selectable_dashboard_rows(args, project_filter=project_filter)
+def selected_dashboard_row(args, selected_index=0, project_filter=None, search_query=""):
+    rows = selectable_dashboard_rows(args, project_filter=project_filter, search_query=search_query)
     if not rows:
         return None
     selected_index = max(0, min(int(selected_index or 0), len(rows) - 1))
     return rows[selected_index]
 
 
-def normalize_selected_index(args, selected_index=0, project_filter=None):
-    count = len(selectable_dashboard_rows(args, project_filter=project_filter))
+def normalize_selected_index(args, selected_index=0, project_filter=None, search_query=""):
+    count = len(selectable_dashboard_rows(args, project_filter=project_filter, search_query=search_query))
     if count <= 0:
         return 0
     return max(0, min(int(selected_index or 0), count - 1))
 
 
-def move_selection(args, selected_index, delta, project_filter=None):
-    count = len(selectable_dashboard_rows(args, project_filter=project_filter))
+def move_selection(args, selected_index, delta, project_filter=None, search_query=""):
+    count = len(selectable_dashboard_rows(args, project_filter=project_filter, search_query=search_query))
     if count <= 0:
         return 0
     return max(0, min(int(selected_index or 0) + int(delta or 0), count - 1))
 
 
-def first_selectable_index_for_section(args, section_key, project_filter=None):
-    rows = selectable_dashboard_rows(args, project_filter=project_filter)
+def first_selectable_index_for_section(args, section_key, project_filter=None, search_query=""):
+    rows = selectable_dashboard_rows(args, project_filter=project_filter, search_query=search_query)
     for index, row in enumerate(rows):
         if row.get("section") == section_key:
             return index
     return 0
 
 
-def section_for_selected_index(args, selected_index, fallback="tasks", project_filter=None):
-    row = selected_dashboard_row(args, selected_index, project_filter=project_filter)
+def section_for_selected_index(args, selected_index, fallback="tasks", project_filter=None, search_query=""):
+    row = selected_dashboard_row(args, selected_index, project_filter=project_filter, search_query=search_query)
     if row:
         return row.get("section") or fallback
     return fallback

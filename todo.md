@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-11 (updated x67)
+Last updated: 2026-07-12 (updated x68)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -24,7 +24,7 @@ Design principles:
 
 Items in this section are already implemented or foundational enough that they should be verified or hardened before the next release.
 
-- [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native macOS/Linux. Confirm Vim-like keymaps, curses colors, narrow-terminal behavior, and auto-reload with a human at a real TTY.
+- [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native macOS/Linux. Confirm Vim-like keymaps, `/` search, inspector panel readability, curses colors, narrow-terminal behavior, and auto-reload with a human at a real TTY.
 - [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco` binaries on Windows PowerShell and Unix-like shells. Confirm preview rendering plus `show`, `done`, `delete`, and `edit` actions end-to-end.
 - [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
 - [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
@@ -325,6 +325,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Split browser static assets out of `lifetxt/webapp.py` before adding more complex Web UI features. Keep a build-free path if possible by serving package-data HTML/CSS/JS through StaticFiles or equivalent, but make JavaScript lintable and editor-friendly.
 - [ ] Split `lifetxt/cli.py` into command-focused modules with a thin dispatcher. Keep the public CLI stable, move shared formatting/filter/mutation helpers into internal modules, and reduce the risk of unrelated command regressions.
 - [ ] Add lightweight lint or syntax checks for extracted browser JavaScript once assets are split. This should run in CI without requiring a full frontend build chain.
+- [ ] Bring the optional Textual TUI path up to parity with the modern dependency-free dashboard. Reuse the same model for cards, search, inspector, action menu, and project filtering instead of keeping a minimal Static-only wrapper.
 
 ---
 

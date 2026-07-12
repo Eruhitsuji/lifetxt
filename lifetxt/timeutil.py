@@ -122,6 +122,8 @@ def parse_elapsed(value):
     text = str(value or "").strip().lower()
     if not text:
         return 0
+    if not _DURATION_VALUE_RE.match(text):
+        raise ValueError("Invalid elapsed duration %r. Use forms like 25m, 1h30m, or 90." % value)
     total = 0
     number = ""
     saw_unit = False
@@ -139,7 +141,7 @@ def parse_elapsed(value):
             number = ""
             saw_unit = True
             continue
-        return 0
+        raise ValueError("Invalid elapsed duration %r. Use forms like 25m, 1h30m, or 90." % value)
     if number and not saw_unit:
         total += int(number)
     return total

@@ -60,7 +60,7 @@ def parse_agenda_range(
     window_text="1h",
     now=None,
 ):
-    """Parse CLI range options into inclusive start/end datetimes."""
+    """Parse CLI range options into half-open start/end datetimes."""
     if now is None:
         now = datetime.now().replace(second=0, microsecond=0)
 
@@ -1018,8 +1018,10 @@ def _add_match(matches, key, start, end, range_start, range_end, repeat=None, oc
 
 def _overlaps(start, end, range_start, range_end):
     if end is None:
-        return start <= range_end
-    return start <= range_end and end >= range_start
+        return start < range_end
+    if end == start:
+        return range_start <= start < range_end
+    return start < range_end and end > range_start
 
 
 def _is_unbounded_range(range_start, range_end):
@@ -1032,7 +1034,7 @@ def _parse_range_boundary(value, is_end, now):
     parsed_date = parse_date(value)
     if parsed_date is not None:
         if is_end:
-            return datetime.combine(parsed_date, time(23, 59, 59))
+            return datetime.combine(parsed_date, time(0, 0, 0)) + timedelta(days=1)
         return datetime.combine(parsed_date, time(0, 0, 0))
     parsed = _parse_datetime_value(value)
     if parsed is None:

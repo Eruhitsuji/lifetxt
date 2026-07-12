@@ -33,6 +33,7 @@ _SUPPORTED_RRULE_KEYS = set(("FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY"))
 _SUPPORTED_RRULE_FREQS = set(("DAILY", "WEEKLY", "MONTHLY", "YEARLY"))
 _SUPPORTED_RRULE_BYDAY_FREQS = set(("DAILY", "WEEKLY"))
 _RRULE_WEEKDAYS = set(("MO", "TU", "WE", "TH", "FR", "SA", "SU"))
+_DURATION_VALUE_RE = re.compile(r"^\d+(?:h(?:\d+m)?|m)$|^\d+$")
 
 
 def validate_item(item):
@@ -216,6 +217,16 @@ def _validate_value(item, key, value):
             )
     elif key in DURATION_KEYS:
         normalized = normalize_duration(value)
+        if str(normalized) == str(value) and not _duration_like(value):
+            diagnostics.append(
+                Diagnostic(
+                    "warning",
+                    "W226",
+                    "%s: duration %r is not recognized; use forms like 25m, 1h30m, or 90." % (key, value),
+                    item.line,
+                )
+            )
+            return diagnostics
         if str(normalized) != str(value):
             diagnostics.append(
                 Diagnostic(
@@ -446,6 +457,10 @@ def _is_positive_integer(value):
         return int(str(value)) > 0
     except (TypeError, ValueError):
         return False
+
+
+def _duration_like(value):
+    return bool(_DURATION_VALUE_RE.match(str(value or "").strip().lower()))
 
 
 def _validate_message_item(item):

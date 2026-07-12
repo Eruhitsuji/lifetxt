@@ -392,6 +392,9 @@ Options:
 `check` reports missing references (`W215`), self references (`W216`),
 `parent:` cycles (`W217`), ambiguous references (`W218`), and completed items
 whose `depends_on:` prerequisite is still open (`W224`).
+For duration fields such as `est:` and `elapsed:`, `check` reports
+non-canonical but parseable values as `W222` and unrecognized values such as
+`elapsed:1d` as `W226`.
 
 Dependency behavior:
 
@@ -825,6 +828,7 @@ running with `--watch`.
 ```sh
 python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
 python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
@@ -847,6 +851,7 @@ Options:
 | `--lookahead VALUE` | Future notification window, such as `0m`, `5m`, or `1h` |
 | `--grace VALUE` | Past grace window for missed notifications |
 | `--watch` | Stay running and poll repeatedly |
+| `--once` | With `--watch`, poll once, update seen-state, and exit; useful for smoke tests or schedulers |
 | `--interval SECONDS` | Poll interval for `--watch` |
 | `--desktop` | Also show a simple desktop notification when supported |
 | `--email` | Also send due notifications as one plain-text email batch |
@@ -866,6 +871,7 @@ Examples:
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --recipient self --format json --pretty
 python -m lifetxt notify life.txt --watch --interval 30
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --email --email-to me@example.com --dry-run
 ```
 
@@ -1115,6 +1121,7 @@ Start the server:
 
 ```sh
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --token-env LIFETXT_API_TOKEN
 ```
 
 Open `http://127.0.0.1:8000/` in a browser.
@@ -1128,7 +1135,14 @@ Options:
 | `--host HOST` | Bind host; defaults to `127.0.0.1` |
 | `--port PORT` | Bind port; defaults to `8000` |
 | `--read-only` | Disable write endpoints except `/api/check-line`; useful for public or wall-display deployments |
+| `--token-env ENVVAR` | Read the API bearer token from an environment variable and require `Authorization: Bearer TOKEN` on API routes |
+| `--insecure-public` | Explicitly allow a non-loopback writable server without a bearer token; intended only for trusted local networks |
 | `--mcp` | Run the stdio MCP server instead of the FastAPI HTTP server |
+
+When `--host` binds a non-loopback address such as `0.0.0.0`, writable mode
+now requires either `--token-env ENVVAR`, `--read-only`, or the explicit
+`--insecure-public` opt-in. Keep secrets in environment variables rather than
+committing them to `.lifetxt.json`.
 
 The REST API includes `/api/items`, `/api/messages`, `/api/agenda`, `/api/status`, and
 `/api/health`. See [web.md](./web.md) for the full API and GUI guide.

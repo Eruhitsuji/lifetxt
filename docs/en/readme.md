@@ -87,6 +87,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --token-env LIFETXT_API_TOKEN
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
@@ -243,12 +244,19 @@ notifications as a plain-text email batch:
 
 ```sh
 python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
 SMTP credentials are read from environment variables such as
 `LIFETXT_SMTP_HOST`, `LIFETXT_SMTP_USER`, and `LIFETXT_SMTP_PASS`; do not store
 SMTP passwords in life.txt content.
+
+For release checks, run the fast smoke runner:
+
+```sh
+python scripts/smoke_test.py
+```
 
 Journal / diary records use type `J`; aliases include `journal`, `diary`,
 `log`, and `entry`. `[N]` is the recommended status. Use `body:` for long text;

@@ -264,7 +264,10 @@ ownership, filtering, or routing.
 | `elapsed` | Accumulated actual elapsed time | `elapsed:1h30m` |
 
 `elapsed:` is used by the `timer` CLI command. Compact values such as `25m`,
-`1h`, and `1h30m` are recommended.
+`1h`, `1h30m`, and bare minutes such as `90` are supported. `check` reports
+parseable but non-canonical duration values as `W222`; unrecognized values such
+as `elapsed:1d` or `elapsed:90x` are reported as `W226` instead of being treated
+as zero minutes.
 
 ### 7.6 Recurrence Keys
 
@@ -382,6 +385,12 @@ subset from the first available anchor, in this order:
 the number of generated occurrences from the anchor. `until:` is an inclusive
 end date/datetime. One-sided filters intentionally ignore floating `at:` values
 without `on:` because they have no stable date anchor.
+
+Requested date/time ranges are half-open: `[start, end)`. When a CLI or API
+range uses a date-only end such as `--to 2026-06-12`, tools interpret the end as
+`2026-06-13T00:00` and exclude records exactly at that next-day boundary. This
+keeps fractional-second values on the selected day, such as
+`2026-06-12T23:59:59.5`, inside the requested range.
 
 For `repeat:RRULE:...`, the built-in subset reads `FREQ`, `INTERVAL`, `COUNT`,
 and `UNTIL`; `BYDAY` is supported for `FREQ=DAILY` and `FREQ=WEEKLY`. `UNTIL`

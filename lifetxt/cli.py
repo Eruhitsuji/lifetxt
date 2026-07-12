@@ -5,12 +5,13 @@ import hashlib
 import json
 import os
 import sys
-import tempfile
 import types
 from collections import OrderedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .atomic import atomic_write_bytes as _shared_atomic_write_bytes
+from .atomic import atomic_write_text as _shared_atomic_write_text
 from .config import (
     config_notification_recipient,
     config_paths,
@@ -491,6 +492,16 @@ def build_parser():
         help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
     )
     serve.add_argument(
+        "--token-env",
+        metavar="ENVVAR",
+        help="Read the API bearer token from ENVVAR instead of storing it in config.",
+    )
+    serve.add_argument(
+        "--insecure-public",
+        action="store_true",
+        help="Allow a non-loopback writable Web server without a bearer token. Not recommended.",
+    )
+    serve.add_argument(
         "--mcp",
         action="store_true",
         help="Run the stdio MCP server instead of the FastAPI HTTP server.",
@@ -778,6 +789,11 @@ def build_parser():
         "--watch",
         action="store_true",
         help="Stay running and poll for notifications.",
+    )
+    notify.add_argument(
+        "--once",
+        action="store_true",
+        help="With --watch, poll once, emit new notifications, update seen-state, and exit.",
     )
     notify.add_argument(
         "--interval",
@@ -2936,10 +2952,52 @@ def command_serve(args):
     writable_path = args.write_file or config_write_file(_config(args)) or paths[0]
     host = args.host or web_config.get("host") or "127.0.0.1"
     port = args.port or int(web_config.get("port") or 8000)
-    read_only = getattr(args, "read_only", False) or bool(web_config.get("read_only"))
-    app = create_app(paths=paths, writable_path=writable_path, config=_config(args), read_only=read_only)
+    read_only = getattr(args, "read_only", False) or _truthy_config(web_config.get("read_only"))
+    config = _config(args)
+    token_env = getattr(args, "token_env", None) or web_config.get("token_env")
+    if token_env:
+        token = os.environ.get(str(token_env), "")
+        if not token:
+            raise ValueError("Environment variable %s (API bearer token) is not set." % token_env)
+        config = _config_with_api_token(config, token)
+    if _is_public_bind_host(host) and not read_only and not _config_api_token(config):
+        if not getattr(args, "insecure_public", False) and not _truthy_config(web_config.get("insecure_public")):
+            raise ValueError(
+                "Refusing to start a writable public Web server without an API token. "
+                "Use --token-env ENVVAR, --read-only, or --insecure-public."
+            )
+    app = create_app(paths=paths, writable_path=writable_path, config=config, read_only=read_only)
     uvicorn.run(app, host=host, port=port)
     return 0
+
+
+def _truthy_config(value):
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    return text in ("1", "true", "yes", "on")
+
+
+def _is_public_bind_host(host):
+    text = str(host or "").strip().lower()
+    return text not in ("", "127.0.0.1", "localhost", "::1")
+
+
+def _config_api_token(config):
+    api = config_section(config or {}, "api")
+    return str(api.get("token") or "").strip()
+
+
+def _config_with_api_token(config, token):
+    from copy import deepcopy as _deepcopy
+
+    copied = _deepcopy(config or {})
+    api = copied.setdefault("api", {})
+    if not isinstance(api, dict):
+        api = {}
+        copied["api"] = api
+    api["token"] = token
+    return copied
 
 
 def command_mcp(args):
@@ -6003,7 +6061,7 @@ def command_notify(args):
             interval_seconds=interval,
             desktop=desktop,
             deliver=deliver,
-            once=False,
+            once=bool(getattr(args, "once", False)),
             state_file=state_file,
         )
 
@@ -7093,37 +7151,12 @@ def write_text(path, text):
 
 def atomic_write_text(path, text):
     ensure_parent_dir(path)
-    directory = os.path.dirname(os.path.abspath(path)) or "."
-    handle = None
-    temp_path = None
-    try:
-        handle = tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            newline="\n",
-            delete=False,
-            dir=directory,
-            prefix=".lifetxt-",
-            suffix=".tmp",
-        )
-        temp_path = handle.name
-        handle.write(text)
-        handle.close()
-        os.replace(temp_path, path)
-    finally:
-        if handle is not None and not handle.closed:
-            handle.close()
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.unlink(temp_path)
-            except OSError:
-                pass
+    _shared_atomic_write_text(path, text)
 
 
 def write_bytes(path, data):
     ensure_parent_dir(path)
-    with open(path, "wb") as handle:
-        handle.write(data)
+    _shared_atomic_write_bytes(path, data)
 
 
 def ensure_parent_dir(path):
@@ -7383,7 +7416,7 @@ def diagnostic_category(diagnostic):
         return "reference"
     if code in ("W101", "W102", "W103", "W104", "W224"):
         return "workflow"
-    if code == "W222":
+    if code in ("W222", "W226"):
         return "duration"
     return "semantic"
 

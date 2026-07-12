@@ -1,5 +1,8 @@
 .*
 !.gitignore
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
 !.vscode/
 !.vscode/settings.json
 __pycache__/

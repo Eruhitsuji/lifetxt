@@ -4,6 +4,7 @@ import sys
 from collections import OrderedDict
 from datetime import datetime
 
+from .atomic import atomic_write_json, atomic_write_text
 from .config import config_section
 from .ids import id_key_from_config
 from .parser import parse_text
@@ -348,12 +349,7 @@ def _read_state(path):
 
 
 def _write_json(path, data):
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(data, handle, ensure_ascii=False, indent=2)
-        handle.write("\n")
+    atomic_write_json(path, data)
 
 
 def _read_text(path):
@@ -362,8 +358,7 @@ def _read_text(path):
 
 
 def _write_text(path, text):
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
+    atomic_write_text(path, text)
 
 
 def _line_ending(line):

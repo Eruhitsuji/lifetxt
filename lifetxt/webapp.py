@@ -1,8 +1,8 @@
 import os
-import tempfile
 from collections import OrderedDict
 from datetime import datetime, time
 
+from .atomic import atomic_write_text
 from .agenda import (
     agenda_records,
     filter_items,
@@ -197,9 +197,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     ):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         range_start, range_end = parse_optional_time_range(after, before)
+        open_only_flag = _bool_query(open_only)
+        blocked_flag = _bool_query(blocked)
         filtered = filter_items(
             items,
-            open_only=open_only or bool(blocked and blocked != "false"),
+            open_only=open_only_flag or blocked_flag,
             statuses=_csv_values(status),
             kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
@@ -222,7 +224,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             team_aliases=config_team_aliases(app.state.config),
             tag_aliases=config_tag_aliases(app.state.config),
         )
-        if blocked and blocked != "false":
+        if blocked_flag:
             key = id_key_from_config(app.state.config)
             blocker_records = dependency_blocker_records(items, key=key)
             blocked_item_ids = set(
@@ -720,7 +722,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             record_items.append((record, item))
         filtered_items = filter_items(
             [entry[1] for entry in record_items],
-            open_only=open_only,
+            open_only=_bool_query(open_only),
             statuses=_csv_values(status),
             kinds=_csv_values(kind or type_value),
             projects=_csv_values(project),
@@ -773,7 +775,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 )
             record["blocked"] = bool(blockers)
             record["blocked_by"] = blockers or []
-        blocked_mode = str(blocked or "").strip().lower()
+        blocked_mode = _blocked_query_mode(blocked)
         if blocked_mode in ("only", "true", "1"):
             filtered_records = [r for r in filtered_records if r["blocked"]]
         elif blocked_mode in ("hide", "none"):
@@ -785,9 +787,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_status(person=None, active=False):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
-        # Untyped query params arrive as raw strings, so "?active=false" must
-        # not be treated as truthy.
-        active_only = str(active).lower() in ("1", "true", "yes", "on")
+        active_only = _bool_query(active)
         records = latest_status_records(items, person=person, active_only=active_only)
         return {"count": len(records), "records": records}
 
@@ -829,7 +829,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         range_start, range_end = parse_optional_time_range(after, before)
         filtered = filter_items(
             items,
-            open_only=open_only,
+            open_only=_bool_query(open_only),
             statuses=_csv_values(status),
             kinds=("M",),
             projects=_csv_values(project),
@@ -2019,31 +2019,7 @@ def read_text(path):
 
 def write_text(path, text):
     ensure_parent_dir(path)
-    directory = os.path.dirname(os.path.abspath(path)) or "."
-    handle = None
-    temp_path = None
-    try:
-        handle = tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            newline="\n",
-            delete=False,
-            dir=directory,
-            prefix=".lifetxt-",
-            suffix=".tmp",
-        )
-        temp_path = handle.name
-        handle.write(text)
-        handle.close()
-        os.replace(temp_path, path)
-    finally:
-        if handle is not None and not handle.closed:
-            handle.close()
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.unlink(temp_path)
-            except OSError:
-                pass
+    atomic_write_text(path, text)
 
 
 def ensure_parent_dir(path):
@@ -2133,6 +2109,28 @@ def _csv_values(value):
             if part:
                 values.append(part)
     return values or None
+
+
+def _bool_query(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "on", "open", "only"):
+        return True
+    if text in ("0", "false", "no", "off", "none", "hide", ""):
+        return False
+    return default
+
+
+def _blocked_query_mode(value):
+    text = str(value or "").strip().lower()
+    if text in ("hide", "none"):
+        return "hide"
+    if _bool_query(value):
+        return "only"
+    return ""
 
 
 def _has_error(diagnostics):

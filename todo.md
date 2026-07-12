@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-12 (updated x68)
+Last updated: 2026-07-12 (updated x69)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -29,19 +29,13 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
 - [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
 - [ ] Add browser-level smoke tests for the Web UI. Cover raw import live parse preview, detail modal message replies, occurrence badges, kiosk change highlighting, display-mode entry/exit, display light/dark palette snapshots, `+ New` tooltip viewport collision, browser Back/Forward cleanup for kiosk/display CSS state, Timeline empty states for today/24h/week, Timeline `ongoing` clipped records, search highlighting, command palette actions, undo toast restore, keyboard navigation, inline status cycling, export buttons, graph layout switching, modal focus trapping, and the current single-content router views.
-- [ ] Audit untyped boolean query parameters across all FastAPI routes. Apply string-aware parsing or typed `bool` parameters to `/api/items`, `/api/messages`, `/api/agenda`, chart routes, and any remaining endpoints; add one regression test per route.
 - [ ] Fix timezone-offset data loss as a P0 data-safety issue. `timeutil.parse_datetime` must not convert an offset-aware value to the execution machine's local timezone and then drop `tzinfo`; preserve enough offset/aware information for `to-json` -> `from-json` round-trip and normalize only for comparisons.
-- [ ] Fail loudly on invalid elapsed values. `parse_elapsed("1d")`, `parse_elapsed("90x")`, and similar unrecognized values must produce a diagnostic or explicit error instead of silently becoming zero minutes; update `normalize_duration`, stats, invoice planning, and validation docs accordingly.
 - [ ] Add a round-trip golden corpus before expanding `fmt`, LSP, or `check --fix`. Start with the known `body:"inline" body:"second"` plus `|` continuation case that currently serializes into one fused value on reparse; decide whether repeated `body:` is invalid or has a lossless canonical representation.
-- [ ] Define date-range filtering as half-open intervals. Date-only end boundaries should behave as `[start, next-day 00:00)` rather than ending at `23:59:59`, so fractional seconds such as `23:59:59.5` cannot fall through the boundary.
-- [ ] Unify all mutating operations behind one atomic write path. Use write-temp plus rename, a lock file for concurrent writers, and a shared mutation layer for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
+- [ ] Add lock files and a shared mutation layer on top of the shared atomic write helper. Use one mutation path for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
 - [ ] Add content-hash compare-and-swap protection to all writes before or alongside lock files. Capture the file hash at read time and abort loudly if the content changed before write; apply the same principle to CLI, Web API, MCP, notification seen-state, timer state, and undo/archive operations.
-- [ ] Make local state writes atomic. `timer.py`, `notifier.py` seen-state, completion state, git-hook state, and cache files should use the same write-temp-plus-rename helper as life.txt mutations, not bare `open(..., "w")`.
 - [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
-- [ ] Harden public Web deployments. Non-loopback binds or deployment templates must require a bearer token or an explicit `--insecure-public` opt-in, and Git/admin subprocess routes must not rely on `request.client.host` loopback checks behind reverse proxies.
-- [ ] Add a minimal CI workflow as a release blocker. Run unit tests, compile checks, and example validation on supported Python versions for every push and pull request before adding more large feature surfaces.
+- [ ] Harden public Web deployments beyond startup checks. Git/admin subprocess routes must not rely on `request.client.host` loopback checks behind reverse proxies; add trusted-proxy and disabled-by-default controls.
 - [ ] Define the next release gate explicitly: timezone round-trip safety, shared mutation path with CAS, round-trip golden corpus, CI, packaging metadata cleanup, and published JSON Schema are blockers; timer expansion and decorative Web UI work are not.
-- [ ] Add a release smoke-test runner that executes key CLI and Web API flows without running the full unit suite. Include timer state-file behavior, cross-platform paths, Web API write mode, read-only mode, and MCP startup.
 - [ ] Verify the new repeat-completion flow end-to-end on real files: `complete` materialization across `repeat_base: due|done`, `done habit` logging, MCP `complete_item`, undo after completion, and interaction with archive. These shipped recently and are the most likely new-feature breakage.
 
 ---
@@ -300,6 +294,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 ## P2: Tests, CI, and Release
 
 - [ ] Expand CI after the minimal P0 workflow lands. Add the full Python 3.10/3.11/3.12 and Ubuntu/Windows/macOS matrix, coverage reporting, and optional dependency jobs without blocking the first safety-focused CI pass.
+- [ ] Expand `scripts/smoke_test.py` into named smoke profiles. Add `--profile cli`, `--profile web`, `--profile mcp`, and `--profile release` so CI, local debugging, and release checks can run the right subset quickly.
 - [ ] Add snapshot tests for important human-readable CLI output.
 - [ ] Add sync tests comparing model constants with English and Japanese format specs, CLI completion, editor snippets, and docs examples.
 - [ ] Add cross-platform tests for paths with spaces, glob expansion, Windows line endings, CJK terminal width, shell completion, and Windows console behavior.

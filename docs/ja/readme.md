@@ -84,6 +84,7 @@ python -m lifetxt from-json life.json -o life.txt
 python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --token-env LIFETXT_API_TOKEN
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 ```
@@ -261,12 +262,19 @@ Message 通知は `ack:` で確認済みにでき、`snooze_until:` で指定時
 
 ```sh
 python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
 SMTP 認証情報は `LIFETXT_SMTP_HOST`、`LIFETXT_SMTP_USER`、
 `LIFETXT_SMTP_PASS` などの環境変数から読みます。SMTP password を life.txt 本文に
 保存しないでください。
+
+Release smoke test:
+
+```sh
+python scripts/smoke_test.py
+```
 
 External JSON config は `--config FILE`、`LIFETXT_CONFIG`、`.lifetxt.json`、`lifetxt.config.json` で利用できます。
 

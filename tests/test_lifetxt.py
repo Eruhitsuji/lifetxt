@@ -562,6 +562,15 @@ class LifeTxtParserTests(unittest.TestCase):
         _items, diagnostics = parse_text("[ ] T Review est:1.5h\n")
 
         self.assertFalse(any(d.code == "W222" for d in diagnostics))
+        self.assertTrue(any(d.code == "W226" for d in diagnostics))
+
+    def test_parse_elapsed_rejects_unknown_units(self):
+        from lifetxt.timeutil import parse_elapsed
+
+        with self.assertRaises(ValueError):
+            parse_elapsed("1d")
+        with self.assertRaises(ValueError):
+            parse_elapsed("90x")
 
     def test_reference_diagnostics_and_link_records(self):
         text = (
@@ -841,6 +850,29 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         normalized = normalize_newlines(stdout)
         self.assertIn("Seminar", normalized)
         self.assertNotIn("Future", normalized)
+
+    def test_agenda_date_only_end_is_half_open(self):
+        text = (
+            "[ ] R Late notify_at:2026-06-06T23:59:59.5\n"
+            "[ ] R Boundary notify_at:2026-06-07T00:00:00\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "agenda",
+            "--from",
+            "2026-06-06",
+            "--to",
+            "2026-06-06",
+            "--format",
+            "life",
+            input_text=text,
+        )
+
+        normalized = normalize_newlines(stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("Late", normalized)
+        self.assertNotIn("Boundary", normalized)
 
     def test_agenda_cli_around_window(self):
         text = (
@@ -3914,6 +3946,78 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(200, parse_response.status_code)
             self.assertEqual(403, write_response.status_code)
 
+    def test_items_api_boolean_false_query_values_do_not_filter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Open id:task_open\n"
+                "[x] T Done id:task_done\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            false_response = client.get("/api/items?open_only=false&blocked=false")
+            true_response = client.get("/api/items?open_only=true")
+
+            self.assertEqual(200, false_response.status_code)
+            self.assertEqual(2, false_response.json()["count"])
+            self.assertEqual(200, true_response.status_code)
+            self.assertEqual(1, true_response.json()["count"])
+
+    def test_messages_api_boolean_false_query_value_does_not_filter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] M Open_Message id:msg_open sender:alice recipient:self notify_at:2026-06-06T12:00\n"
+                "[x] M Done_Message id:msg_done sender:alice recipient:self notify_at:2026-06-06T13:00\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            false_response = client.get("/api/messages?open_only=false")
+            true_response = client.get("/api/messages?open_only=true")
+
+            self.assertEqual(200, false_response.status_code)
+            self.assertEqual(2, false_response.json()["count"])
+            self.assertEqual(200, true_response.status_code)
+            self.assertEqual(1, true_response.json()["count"])
+
+    def test_agenda_api_boolean_false_query_value_does_not_filter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] E Open_Event id:event_open from:2026-06-06T12:00\n"
+                "[x] E Done_Event id:event_done from:2026-06-06T13:00\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            false_response = client.get("/api/agenda?from=2026-06-06&to=2026-06-06&open_only=false")
+            true_response = client.get("/api/agenda?from=2026-06-06&to=2026-06-06&open_only=true")
+
+            self.assertEqual(200, false_response.status_code)
+            self.assertEqual(2, false_response.json()["count"])
+            self.assertEqual(200, true_response.status_code)
+            self.assertEqual(1, true_response.json()["count"])
+
+    def test_status_api_boolean_false_query_value_does_not_filter_active(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[/] S Working id:status_working from:2026-06-06T09:00 state:working person:self\n"
+                "[x] S Meeting id:status_meeting from:2026-06-06T10:00 to:2026-06-06T11:00 state:meeting person:self\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            false_response = client.get("/api/status?active=false")
+            true_response = client.get("/api/status?active=true")
+
+            self.assertEqual(200, false_response.status_code)
+            self.assertEqual("meeting", false_response.json()["records"][0]["state"])
+            self.assertEqual(200, true_response.status_code)
+            self.assertEqual("working", true_response.json()["records"][0]["state"])
+
     def test_items_api_marks_mixed_writable_and_generated_sources(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             writable = os.path.join(temp_dir, "life.txt")
@@ -4979,6 +5083,51 @@ class LifeTxtWebAppTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertIn("Run the optional FastAPI REST API", stdout)
+        self.assertIn("--read-only", stdout)
+        self.assertIn("--token-env", stdout)
+        self.assertIn("--insecure-public", stdout)
+
+    def test_serve_public_safety_helpers(self):
+        from lifetxt.cli import _config_with_api_token, _is_public_bind_host, _truthy_config
+
+        self.assertTrue(_is_public_bind_host("0.0.0.0"))
+        self.assertFalse(_is_public_bind_host("127.0.0.1"))
+        self.assertTrue(_truthy_config("true"))
+        self.assertFalse(_truthy_config("false"))
+        config = _config_with_api_token({}, "secret-token")
+        self.assertEqual("secret-token", config["api"]["token"])
+
+    def test_notify_watch_once_persists_seen_state_and_exits(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            state_path = os.path.join(temp_dir, "notifications.json")
+            notify_at = datetime.now().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
+            Path(path).write_text(
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:%s\n" % notify_at,
+                encoding="utf-8",
+            )
+
+            stdout, stderr, code = run_cli(
+                "notify",
+                path,
+                "--recipient",
+                "self",
+                "--lookahead",
+                "1h",
+                "--grace",
+                "1h",
+                "--watch",
+                "--once",
+                "--state-file",
+                state_path,
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Ping", stdout)
+            data = json.loads(Path(state_path).read_text(encoding="utf-8"))
+            self.assertIn("seen", data)
+            self.assertTrue(data["seen"])
 
 
 class LifeTxtAssistCliTests(unittest.TestCase):

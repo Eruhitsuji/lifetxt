@@ -1,4 +1,6 @@
 import os
+
+from .atomic import atomic_write_text
 import sys
 
 from .model import KNOWN_KEYS, STATUS_ALIASES, TYPE_ALIASES, VALID_STATUSES, VALID_TYPES
@@ -418,5 +420,4 @@ def _write_text(path, text):
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
+    atomic_write_text(path, text)

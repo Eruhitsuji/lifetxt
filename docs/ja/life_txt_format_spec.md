@@ -277,7 +277,8 @@ iCalendar sync は `source:ics uid:event-1@example.com` を書き、通常は同
 | `est` | 見積もり作業量または見積もり時間 | `est:2h` |
 | `elapsed` | 実際の累積経過時間 | `elapsed:1h30m` |
 
-`elapsed:` は `timer` CLI command が使用します。`25m`、`1h`、`1h30m` のような短い形式を推奨します。
+`elapsed:` は `timer` CLI command が使用します。`25m`、`1h`、`1h30m`、bare minutes の `90` のような短い形式を推奨します。
+parse 可能だが canonical でない duration は `W222`、`elapsed:1d` や `elapsed:90x` のような認識できない duration は `W226` として報告され、0 分として黙って扱われません。
 
 ### 7.6 Recurrence keys
 
@@ -381,6 +382,9 @@ time filter では一致対象にしません。`repeat:RRULE:...` では `FREQ`
 `INTERVAL`、`COUNT`、`UNTIL` を読み、`FREQ=DAILY` / `FREQ=WEEKLY` では
 `BYDAY` も利用できます。`UNTIL` は life.txt の datetime 構文または
 `20260630`、`20260630T090000` のような iCalendar basic 形式を使えます。
+requested date/time range は half-open interval `[start, end)` として扱います。
+date-only の end boundary、例えば `--to 2026-06-12` は `2026-06-13T00:00`
+として解釈し、同日 `23:59:59.5` は含め、翌日 `00:00` ちょうどは除外します。
 より複雑な RRULE は text として保持しますが、dependency-free core では展開しません。
 `check` は対応外の RRULE feature を検出した場合、recurrence warning `W223`
 を出します。

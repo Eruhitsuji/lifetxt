@@ -1,12 +1,12 @@
 import hashlib
 import json
-import os
 import sys
 import time
 from collections import OrderedDict
 from datetime import datetime
 
 from .agenda import parse_duration
+from .atomic import atomic_write_json
 from .serializer import item_to_line
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime, parse_datetime
 
@@ -212,12 +212,7 @@ def load_notification_state(path):
 def save_notification_state(path, state):
     if not path:
         return
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(state, handle, ensure_ascii=False, indent=2)
-        handle.write("\n")
+    atomic_write_json(path, state)
 
 
 def mark_notifications_seen(state, records, now=None):

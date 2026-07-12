@@ -753,6 +753,7 @@ type `M` の通知対象を 1 回表示するか、`--watch` で常駐 polling �
 ```sh
 python -m lifetxt notify [path ...] [--recipient PERSON] [--watch]
 python -m lifetxt notify life.txt --recipient self --email --email-to me@example.com --dry-run
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --watch --email --email-to me@example.com --interval 60
 ```
 
@@ -773,6 +774,7 @@ python -m lifetxt notify life.txt --watch --email --email-to me@example.com --in
 | `--lookahead VALUE` | 未来方向の通知検出幅。例: `0m`、`5m`、`1h` |
 | `--grace VALUE` | 過去方向の取りこぼし許容幅 |
 | `--watch` | 終了せず繰り返し polling |
+| `--once` | `--watch` と併用し、1 回だけ poll して seen-state を更新して終了 |
 | `--interval SECONDS` | `--watch` の polling 秒数 |
 | `--desktop` | 対応環境では簡易 desktop 通知も表示 |
 | `--email` | 通知対象を plain text email としてまとめて送信 |
@@ -793,6 +795,7 @@ python -m lifetxt notify life.txt --watch --email --email-to me@example.com --in
 python -m lifetxt notify life.txt --recipient self
 python -m lifetxt notify life.txt --recipient self --format json --pretty
 python -m lifetxt notify life.txt --watch --interval 30
+python -m lifetxt notify life.txt --watch --once --state-file .generated/notifications.json
 python -m lifetxt notify life.txt --email --email-to me@example.com --dry-run
 ```
 
@@ -1035,6 +1038,7 @@ server を起動します。
 
 ```sh
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
+LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --token-env LIFETXT_API_TOKEN
 ```
 
 ブラウザで `http://127.0.0.1:8000/` を開きます。
@@ -1046,7 +1050,13 @@ python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 | `--host HOST` | bind host。既定値は `127.0.0.1` |
 | `--port PORT` | bind port。既定値は `8000` |
 | `--read-only` | `/api/check-line` 以外の write endpoint を無効化。公開用・常時表示用に便利 |
+| `--token-env ENVVAR` | API bearer token を環境変数から読み込む |
+| `--insecure-public` | token なしの非 loopback writable server を明示的に許可する |
 | `--mcp` | FastAPI HTTP server の代わりに stdio MCP server を起動 |
+
+`--host 0.0.0.0` など非 loopback に bind する writable server は、
+`--token-env ENVVAR`、`--read-only`、または明示的な `--insecure-public`
+のいずれかが必要です。
 
 REST API は `/api/items`、`/api/agenda`、`/api/status`、`/api/health` を提供します。
 詳細は [web.md](./web.md) を参照してください。

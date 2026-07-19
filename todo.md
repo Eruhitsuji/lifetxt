@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x82)
+Last updated: 2026-07-20 (updated x83)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -68,6 +68,7 @@ Design decisions that affect the file format, parser, serialization, and every d
 - [ ] Specify case-sensitivity rules for detail keys, tags, IDs, contexts, users, and projects. Make parser, filters, docs, completion, and editor support agree.
 - [ ] Document `#!` metadata directive placement rules. Directives must appear contiguously before the first item, and the spec should include the resolution order across CLI flags, config, file directives, and built-in defaults.
 - [ ] Add JSON Schema definitions for JSON, JSONL, Web API payloads, and MCP tool outputs. Publish schemas under a stable `dist/` path, give them HTTPS `$id` values, and validate golden corpus exports in CI.
+- [ ] Define a concrete life.txt Format 1.0 release milestone. Treat timezone-safe round trips, `format_version`, `LIFETXT_CANON_V1`, multi-file semantics, Unicode rules, stable schemas, a migration path, and the golden corpus as one compatibility boundary rather than shipping them as unrelated changes.
 
 ---
 
@@ -161,6 +162,8 @@ floating action button that reaches the keyboard-only entry points.
 - [ ] Give the horizontally scrolling toolbars a visible affordance. Nothing signals that the toolbar and view tabs scroll sideways; a fade or shadow at the edge would.
 - [ ] Decide whether the Items view should use a denser row layout on phones. Rows are comfortable to tap but show few records per screen.
 - [ ] Revisit PWA support now that the UI is usable on a phone. Offline caching, home-screen install, and a Web Share Target for capture are the natural next step, and the deferred entry lists this as blocked on mobile surfaces stabilising.
+- [ ] Design an offline quick-capture queue before enabling PWA writes. Queue item-level proposals with the source file hash, replay them through the shared mutation layer after reconnect, and present conflicts instead of silently overwriting newer edits.
+- [ ] Add mobile-first capture inputs after the offline queue is safe. Support Web Share Target text, shared URLs, files or images as attachments, and browser speech-to-text where available, while keeping the canonical saved record explicit and reviewable.
 
 ---
 
@@ -286,6 +289,8 @@ The existing stdio MCP server should become a safer, more complete interface for
 - [ ] Make the MCP content-hash check mandatory rather than opt-in. `get_file_state` returns `file_hash` and every write accepts `expected_file_hash`, but omitting it skips the check, so a careless client can still overwrite a concurrent edit. Decide whether to require it once the shared mutation layer exists.
 - [ ] Ensure MCP, CLI, and Web API use one internal mutation path. Presence transitions and capture shorthand are now shared modules, but each surface still calls its own write helper, and MCP proposal mode has to apply-then-roll-back because the write helpers are file-based rather than pure.
 - [ ] Add MCP edge-case tests for cross-file items, empty files, and invalid ranges. Read-only mode, conflict handling, timer tools, search, and proposal mode are covered in `tests/test_mcp_expansion.py`.
+- [ ] Add structured interpretation metadata to AI-created proposals. Return the resolved item type, dates and timezone, selected target file, inferred IDs or links, assumptions, and warnings beside the diff so users can review how natural language became canonical life.txt data.
+- [ ] Add an explicit proposal approval flow shared by MCP and CLI. Bind approval to the proposal hash and expected file hash, expire stale proposals, apply the accepted batch atomically, and record the AI client and proposal metadata in the mutation journal.
 
 ---
 
@@ -302,6 +307,9 @@ The existing stdio MCP server should become a safer, more complete interface for
 - [ ] Document that secret URLs and tokens must not be stored in life.txt content. Use environment-variable patterns such as `--url-env` and `--key-env` instead.
 - [ ] Add named filters or saved views in config. Let CLI, Web UI, Web API, and MCP resolve the same named filter definitions.
 - [ ] Decide whether `--config paths` should auto-load default file sets when no file arguments are given.
+- [ ] Define an ID-based three-way merge model before adding general-purpose sync. Merge records by stable ID, auto-merge changes to different records or different detail keys, preserve moves separately from content edits, and surface same-key, body, delete-versus-update, and duplicate-ID conflicts for explicit resolution.
+- [ ] Add sync support in stages after Format 1.0 and the shared mutation layer are stable. Start with Git-backed pull/merge/push, then conflict-file detection for WebDAV, Dropbox, and Syncthing-style folders, followed by CalDAV or service adapters only where bidirectional field mappings are well-defined.
+- [ ] Add `lifetxt sync --dry-run` and a machine-readable sync plan. Show incoming, outgoing, auto-merged, and conflicting item-level operations before touching files, then commit accepted changes as one mutation-journal transaction.
 
 ---
 
@@ -334,7 +342,19 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add hover information for due dates, repeat next occurrence, elapsed/estimated progress, linked items, dependency blockers, and timer state.
 - [ ] Add code actions for status toggling, mechanical `check --fix` repairs, adding missing IDs, and safe detail-key normalization.
 - [ ] Add go-to-definition and references for IDs and dependency links. Leave rename as a later feature because it requires workspace-wide edits.
+- [ ] Add workspace-wide rename for stable IDs after lossless parsing and cross-file edits are safe. Update `id:`, `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` references as one CAS-protected transaction and preview every affected file before applying.
 - [ ] Keep full-file reparsing until performance problems are observed on realistic files.
+
+---
+
+## P1: Cross-Surface Semantic Contracts
+
+CLI, TUI, Web API, Web UI, and MCP should be different interaction layers over the same semantics rather than parallel implementations that merely look similar.
+
+- [ ] Define a surface-neutral operation contract for query, add, update, delete, done, complete, recurrence materialization, agenda, next-action selection, timer actions, links, attachments, and timezone conversion. Specify canonical inputs, outputs, errors, and mutation effects before adding more surface-specific commands.
+- [ ] Build a contract-test harness that runs the same fixtures through the shared Python operation layer and every applicable public surface. Assert semantic equivalence of records, ordering, diagnostics, conflict responses, and emitted schemas while allowing presentation-only differences.
+- [ ] Generate command and capability matrices from registries where possible. Fail CI when a documented CLI, TUI, Web, or MCP operation has no equivalent implementation or intentionally documented exception on another required surface.
+- [ ] Add compatibility fixtures for old format versions and previous public API shapes so the surface contract can distinguish intentional migrations from accidental drift.
 
 ---
 
@@ -386,6 +406,8 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Expand Web docs with statistics dashboard workflows, chart usage, item creation/editing, Git integration security, quick-add, command palette, undo toast, keyboard navigation, export, graph layout, detail modal actions, and timer UI.
 - [ ] Add an English/Japanese documentation parity CI check. Compare headings, code blocks, command names, and key examples.
 - [ ] Add a bilingual glossary for stable terms used in the spec, diagnostics, CLI output, and docs.
+- [ ] Add a positioning and comparison guide for todo.txt, Taskwarrior, Org mode, Logseq, and GUI task managers. State lifetxt's intended role as a Git-friendly, AI-native, editor-independent plain-text operations format, and document non-goals so feature requests can be evaluated consistently.
+- [ ] Add version-controlled starter kits for common workflows: GTD, student or researcher, software development, journal and habits, freelance time and invoicing, team status or standup, and AI-agent inbox. Each kit should include sample life.txt data, `.lifetxt.json`, named queries, Web dashboard settings, commands, and MCP prompt examples.
 
 ---
 
@@ -411,6 +433,8 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add release process documentation and automation: `CHANGELOG.md`, semantic versioning policy, build, tag, PyPI publishing, and post-release smoke checks.
 - [ ] Verify packaging in a clean environment. Cover editable install, optional extras, console script entry points, Windows PowerShell usage, and zipapp or other single-file distribution if supported.
 - [ ] Add CONTRIBUTING, issue templates, and pre-commit configuration.
+- [ ] Add `SECURITY.md`, a supported-version policy, and a private vulnerability-reporting path before recommending public Web or MCP deployments.
+- [ ] Add repository discovery metadata for releases: a concise GitHub description, relevant topics, CI and package badges, screenshots, and links to the comparison guide and Format 1.0 compatibility policy.
 
 ---
 
@@ -421,6 +445,17 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Add lightweight lint or syntax checks for extracted browser JavaScript once assets are split. This should run in CI without requiring a full frontend build chain.
 - [ ] Decide the future of the optional Textual TUI path. The dependency-free workspace in `lifetxt/tui_app.py` is now the primary interface and is strictly richer than the Static-only Textual wrapper, which is only reached when curses is missing; either delete the Textual path or rebuild it on the shared `WorkspaceState` and frame model.
 - [ ] Split `lifetxt/tui_app.py` into a `tui/` package. It now holds the state model, ~29 command handlers, key handling, frame building, session persistence, and the color palette in one module; commands and layout should become separate units so each is testable and reviewable in isolation.
+
+---
+
+## P2: Extension and Adapter Boundaries
+
+Keep the core focused on the format, parser, query, mutation, validation, and standard interchange paths. Add an extension mechanism only where stable contracts prevent plugins from bypassing data-safety rules.
+
+- [ ] Inventory extension points that already exist implicitly: importers, exporters, validators, notification backends, query predicates, renderers, commands, MCP tools, and external sync adapters. Define which are supported public interfaces and which remain internal.
+- [ ] Design a versioned adapter SDK after the shared mutation and schema layers are stable. Require plugins to return structured proposals or records rather than writing files directly, and route every accepted mutation through validation, CAS, locking, undo, and the mutation journal.
+- [ ] Define plugin discovery, configuration, capability declaration, compatibility ranges, failure isolation, and security guidance. Keep third-party code disabled by default for public Web/MCP servers and expose installed capabilities through `doctor`.
+- [ ] Build one small official adapter outside the core package as a reference implementation before advertising a general plugin ecosystem. Use it to validate packaging, schemas, diagnostics, and backward-compatibility rules.
 
 ---
 
@@ -471,7 +506,7 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 - [ ] Consider server-side graph rendering so share and digest outputs can attach the same graph image without a browser.
 - [ ] Consider a full embedded Git server only if lightweight Git subprocess endpoints prove insufficient.
 - [ ] Consider static HTML export mode for the Web UI as a read-only snapshot.
-- [ ] Consider PWA support for the Web UI: offline caching, home-screen install, and a mobile quick-capture screen, plus Web Share Target registration so text shared from other apps lands in the inbox. The touch layout now exists, so the remaining blocker is write-conflict detection.
+- [ ] Consider PWA support for the Web UI after write-conflict detection and the offline mutation queue are stable: offline caching, home-screen install, quick capture, Web Share Target registration, attachment intake, notification actions, and explicit conflict review on reconnect.
 - [ ] Consider interactive plot mode in TUI after plot output is stable.
 - [ ] Consider integrating team presence into the TUI sidebar.
 
@@ -479,4 +514,5 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 
 - [ ] Consider asymmetric encryption for multi-user scenarios where different users encrypt but only selected key holders can decrypt.
 - [ ] Consider richer import/export adapters after ICS, Markdown, Todoist, GitHub issues, and todo.txt coverage is stable: org-mode, mailbox logs, CalDAV, and richer bidirectional calendar/status integrations.
-- [ ] Consider a plugin mechanism only after repeated integration requests cannot be handled through CLI, Web API, MCP, or import/export adapters.
+- [ ] Consider a general plugin mechanism only after the versioned adapter SDK has been validated by an out-of-tree reference adapter and repeated integration requests cannot be handled through CLI, Web API, MCP, or import/export adapters.
+- [ ] Consider a rebuildable SQLite or equivalent search index only after large-file benchmarks show that full-file parsing is a practical bottleneck. Keep life.txt authoritative, key the cache by source hashes, support incremental refresh, and use it for full-text search, backlinks, and aggregate queries without making the index required for correctness.

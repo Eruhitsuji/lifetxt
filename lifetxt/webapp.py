@@ -1,4 +1,6 @@
+import contextlib
 import os
+import sys
 from collections import OrderedDict
 from datetime import datetime, time
 
@@ -55,6 +57,49 @@ from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
+
+
+#: Commands the browser implements. Everything else in the shared catalog is
+#: terminal-only and the palette says so instead of failing silently.
+WEB_COMMANDS = frozenset(
+    [
+        "help", "view", "next", "search", "project", "context", "tag", "sort",
+        "clear", "goto", "mark", "done", "status", "set", "due", "assign",
+        "add", "delete", "state", "now", "timer", "export", "stats", "detail",
+        "reload", "theme",
+    ]
+)
+
+#: Why a command is unavailable, or how the browser differs from the terminal.
+WEB_COMMAND_NOTES = {
+    "edit": "Opens $EDITOR, which only exists at a terminal. Use the record editor instead.",
+    "quit": "Close the browser tab.",
+    "limit": "The browser paginates instead; use the filter bar.",
+    "window": "Use the Agenda range controls.",
+    "undo": "Use the undo toast or the undo history panel.",
+    "mark": "Selects rows; the browser uses checkboxes and the x key.",
+    "detail": "Opens the detail drawer for the selected record.",
+}
+
+
+def _timer_args(path, item_id, config):
+    import argparse
+
+    return argparse.Namespace(path=path, item_id=item_id, note=None, config_data=config)
+
+
+@contextlib.contextmanager
+def _quiet_stdout():
+    """The timer helpers report to stdout for CLI use; a server must not."""
+    import io as _io
+
+    buffer = _io.StringIO()
+    original = sys.stdout
+    sys.stdout = buffer
+    try:
+        yield buffer
+    finally:
+        sys.stdout = original
 
 
 def create_app(paths=None, writable_path=None, config=None, read_only=False):
@@ -1030,6 +1075,101 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             ),
         }
 
+    @app.get("/api/commands")
+    def get_commands():
+        """The slash-command catalog, shared with the TUI.
+
+        Names, aliases, usage, and summaries come from `lifetxt.tui_app` so a
+        command means the same thing in the terminal and the browser. The
+        `web` flag says whether the browser implements it; commands that only
+        make sense at a terminal are listed but marked unsupported so the
+        palette can explain rather than silently omit them.
+        """
+        from .tui_app import COMMANDS
+
+        rows = []
+        for command in COMMANDS:
+            rows.append(
+                {
+                    "name": command.name,
+                    "alias": command.alias or "",
+                    "usage": command.usage,
+                    "summary": command.summary,
+                    "web": command.name in WEB_COMMANDS,
+                    "note": WEB_COMMAND_NOTES.get(command.name, ""),
+                }
+            )
+        return {"count": len(rows), "commands": rows}
+
+    @app.get("/api/timer")
+    def get_timer():
+        from . import timer as timer_module
+
+        state_file = timer_module.timer_state_file(app.state.config)
+        if not os.path.exists(state_file):
+            return {"running": False}
+        state = timer_module._read_state(state_file)
+        minutes = timer_module.state_elapsed_minutes(state, timer_module._now())
+        return {
+            "running": True,
+            "id": state.get("id"),
+            "file": state.get("file"),
+            "started_at": state.get("started_at"),
+            "paused": bool(state.get("paused_at")),
+            "elapsed_minutes": minutes,
+            "elapsed": timer_module.format_elapsed(minutes),
+        }
+
+    @app.post("/api/timer")
+    def post_timer(payload=Body(...)):
+        """Drive the single shared timer: start, stop, or cancel."""
+        from . import timer as timer_module
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        action = str(payload.get("action") or "").strip().lower()
+        if action not in ("start", "stop", "cancel"):
+            raise HTTPException(status_code=400, detail="action must be start, stop, or cancel.")
+
+        state_file = timer_module.timer_state_file(app.state.config)
+        id_key = id_key_from_config(app.state.config)
+
+        if action == "start":
+            item_id = str(payload.get("id") or "").strip()
+            if not item_id:
+                raise HTTPException(status_code=400, detail="id is required to start a timer.")
+            if os.path.exists(state_file):
+                running = timer_module._read_state(state_file)
+                raise HTTPException(
+                    status_code=409,
+                    detail="A timer is already running for %s." % running.get("id"),
+                )
+            try:
+                with _quiet_stdout():
+                    timer_module.start_timer(
+                        _timer_args(app.state.writable_path, item_id, app.state.config)
+                    )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=error_detail(exc))
+            return {"running": True, "id": item_id}
+
+        if not os.path.exists(state_file):
+            raise HTTPException(status_code=409, detail="No running timer.")
+        state = timer_module._read_state(state_file)
+
+        if action == "cancel":
+            os.remove(state_file)
+            return {"running": False, "id": state.get("id"), "elapsed_written": False}
+
+        try:
+            with _quiet_stdout():
+                timer_module.stop_timer(
+                    _timer_args(state.get("file"), state.get("id"), app.state.config)
+                )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {"running": False, "id": state.get("id"), "elapsed_written": True}
+
     @app.post("/api/status", status_code=201)
     def set_status(payload=Body(...)):
         """Record a presence status, closing the previously open one.
@@ -1094,7 +1234,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         The browser uses this for the live preview under the quick-add box, so
         the sigil rules never drift between the server and a JS reimplementation.
         """
-        from .shorthand import ShorthandError, describe_sigils, parse_capture
+        from .shorthand import (
+            ShorthandError,
+            describe_date_tokens,
+            describe_sigils,
+            parse_capture,
+            resolve_date_token,
+        )
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
@@ -1103,11 +1249,23 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             title, details = parse_capture(text, strict_dates=True)
         except ShorthandError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {
+        result = {
             "title": title,
             "details": details,
             "sigils": [{"token": token, "expands_to": target} for token, target in describe_sigils()],
+            "date_tokens": [
+                {"token": token, "meaning": meaning} for token, meaning in describe_date_tokens()
+            ],
         }
+        # Resolving a single token is what the /due command needs; the browser
+        # must not reimplement the date grammar.
+        date_value = payload.get("date")
+        if date_value:
+            try:
+                result["date"] = resolve_date_token(str(date_value), strict=True)
+            except ShorthandError as exc:
+                raise HTTPException(status_code=400, detail=error_detail(exc))
+        return result
 
     @app.post("/api/items/capture", status_code=201)
     def capture_item(payload=Body(...)):
@@ -4530,7 +4688,7 @@ HTML_PAGE = r"""<!doctype html>
   <!-- Command palette -->
   <div class="cmdk-backdrop" id="cmdk-backdrop" onclick="if(event.target===this)closeCmdk()">
     <div class="cmdk" role="dialog" aria-label="Command palette">
-      <input id="cmdk-input" placeholder="Type a command or search items…" autocomplete="off">
+      <input id="cmdk-input" placeholder="Type / for commands, or search items…" autocomplete="off">
       <div id="cmdk-list" class="cmdk-list"></div>
     </div>
   </div>
@@ -4568,7 +4726,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (opens the record editor)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
-        <tr><td>p</td><td>Toggle presence status bar</td></tr>
+        <tr><td>p</td><td>Toggle presence status bar</td></tr>\n        <tr><td>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
         <tr><td>r</td><td>Refresh current view</td></tr>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
@@ -7080,6 +7238,329 @@ HTML_PAGE = r"""<!doctype html>
       {label: "Jump to line number", run: jumpToLine},
       {label: "Keyboard shortcuts help", run: openHelpModal},
     ];
+    // ── Slash commands (shared vocabulary with the TUI) ────────────
+    // The catalog comes from /api/commands, which derives it from the TUI
+    // command registry, so a command means the same thing in both places.
+    // Execution happens here because selection and filters are browser state.
+    let COMMAND_CATALOG = [];
+
+    async function loadCommandCatalog() {
+      try {
+        const data = await api("/api/commands");
+        COMMAND_CATALOG = data.commands || [];
+      } catch (err) {
+        COMMAND_CATALOG = [];
+      }
+    }
+
+    function commandByName(name) {
+      const key = String(name || "").toLowerCase();
+      return COMMAND_CATALOG.find(c => c.name === key || (c.alias && c.alias === key)) || null;
+    }
+
+    function matchingCommands(typed) {
+      const raw = String(typed || "").replace(/^\//, "");
+      const name = raw.split(/\s+/)[0].toLowerCase();
+      if (!name) return COMMAND_CATALOG.slice();
+      const exact = COMMAND_CATALOG.find(c => c.alias && c.alias === name);
+      const rest = COMMAND_CATALOG.filter(c => c !== exact && fuzzyMatch(c.name, name));
+      return exact ? [exact, ...rest] : rest;
+    }
+
+    function _selectedTargets() {
+      const targets = _bulkTargets();
+      if (targets.length) return targets;
+      if (selectedItem && selectedItem.editable) return [selectedItem];
+      return [];
+    }
+
+    async function _applyToTargets(label, mutate) {
+      const targets = _selectedTargets();
+      if (!targets.length) {
+        showToast("Select one or more records first (click a row, or press x).", "error");
+        return;
+      }
+      let done = 0;
+      for (const item of targets) {
+        try {
+          await mutate(item);
+          done += 1;
+        } catch (err) {
+          showToast(`${label} failed: ${err.message || "error"}`, "error");
+          break;
+        }
+      }
+      if (done) {
+        bulkSelectedLines.clear();
+        showToast(`${label}: ${done} record(s).`, "success");
+        await refreshAll();
+      }
+    }
+
+    async function _setDetailOnTargets(key, value, label) {
+      await _applyToTargets(label, async (item) => {
+        const details = JSON.parse(JSON.stringify(item.details || {}));
+        if (value === "") delete details[key];
+        else details[key] = [value];
+        await api(`/api/items/${item.line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({status: item.status, type: item.type, title: item.title, details}),
+        });
+      });
+    }
+
+    async function _resolveDateToken(value) {
+      const data = await api("/api/shorthand/parse", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({date: value}),
+      });
+      return data.date;
+    }
+
+    function _setSearchBox(value) {
+      const box = document.getElementById("search");
+      if (box) { box.value = value; }
+    }
+
+    const WEB_COMMAND_HANDLERS = {
+      help: async (arg) => {
+        if (arg) { renderCmdk("/" + arg); openCmdk(); return; }
+        openHelpModal();
+      },
+      view: async (arg) => {
+        const name = (arg || "").trim().toLowerCase();
+        const known = ["", "dashboard", "agenda", "timeline", "calendar", "focus", "review", "team", "stats", "graph"];
+        const target = name === "all" || name === "items" ? "" : name;
+        if (!known.includes(target)) throw new Error(`Unknown view: ${name}`);
+        switchWorkspace(target);
+      },
+      next: async () => {
+        _setSearchBox("");
+        setStatusFilter("[ ]");
+        showToast("Showing open work. Sort by priority for next actions.", "info");
+        await loadItems();
+      },
+      search: async (arg) => { _setSearchBox(arg || ""); await loadItems(); },
+      project: async (arg) => { _setSearchBox(arg ? `project:${arg}` : ""); await loadItems(); },
+      context: async (arg) => { _setSearchBox(arg ? `context:${arg}` : ""); await loadItems(); },
+      tag: async (arg) => { _setSearchBox(arg ? `tag:${String(arg).replace(/^#/, "")}` : ""); await loadItems(); },
+      sort: async (arg) => {
+        const select = document.getElementById("sort");
+        const wanted = (arg || "").trim().toLowerCase();
+        if (!select) throw new Error("Sorting is not available in this view.");
+        const option = Array.from(select.options).find(o => o.value.toLowerCase() === wanted);
+        if (!option) throw new Error(`Unknown sort: ${wanted}. Options: ${Array.from(select.options).map(o => o.value).join(", ")}`);
+        select.value = option.value;
+        await loadItems();
+      },
+      clear: async () => { clearAllFilters(); },
+      goto: async (arg) => {
+        const wanted = String(arg || "").trim();
+        if (!wanted) throw new Error("Usage: /goto ID");
+        const idKey = appConfig?.ids?.key || "id";
+        const match = (currentItems || []).find(i => (i?.details?.[idKey] || []).includes(wanted));
+        if (!match) throw new Error(`No visible record with id ${wanted}. Clear filters first.`);
+        selectItem(match);
+        openDrawer(match);
+      },
+      mark: async (arg) => {
+        const mode = (arg || "toggle").trim().toLowerCase();
+        if (mode === "none") { bulkClearSelection(); return; }
+        if (mode === "all") {
+          (currentItems || []).filter(i => i.editable)
+            .forEach(i => bulkSelectedLines.add(String(i.line) + "|" + (i.source || "")));
+          renderItems(currentItems);
+          return;
+        }
+        throw new Error("Usage: /mark all|none");
+      },
+      done: async () => { await bulkOrSelectedStatus("[x]", "Marked done"); },
+      status: async (arg) => {
+        const aliases = {open: "[ ]", todo: "[ ]", active: "[/]", progress: "[/]", doing: "[/]",
+                         done: "[x]", complete: "[x]", dropped: "[-]", cancelled: "[-]", canceled: "[-]",
+                         deferred: "[>]", moved: "[>]", pending: "[?]"};
+        const raw = (arg || "").trim().toLowerCase();
+        const status = aliases[raw] || (raw.startsWith("[") ? raw : "");
+        if (!status) throw new Error(`Unknown status: ${arg}. Try open, active, done, dropped, deferred.`);
+        await bulkOrSelectedStatus(status, `Set ${status}`);
+      },
+      set: async (arg) => {
+        const parts = String(arg || "").trim().split(/\s+/);
+        const key = parts.shift();
+        if (!key) throw new Error("Usage: /set KEY VALUE");
+        await _setDetailOnTargets(key, parts.join(" "), `Set ${key}`);
+      },
+      due: async (arg) => {
+        const raw = String(arg || "").trim();
+        if (!raw) { await _setDetailOnTargets("due", "", "Cleared due"); return; }
+        const resolved = await _resolveDateToken(raw);
+        await _setDetailOnTargets("due", resolved, `Set due ${resolved}`);
+      },
+      assign: async (arg) => {
+        await _setDetailOnTargets("assignee", String(arg || "").trim(), "Assigned");
+      },
+      add: async (arg) => {
+        const text = String(arg || "").trim();
+        if (!text) { toggleQuickAdd(true); return; }
+        await api("/api/items/capture", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text}),
+        });
+        showToast("Item added.", "success");
+        await refreshAll();
+      },
+      delete: async (arg) => {
+        if (String(arg || "").trim().toLowerCase() !== "yes") {
+          throw new Error(`Deleting ${_selectedTargets().length} record(s). Re-run as /delete yes to confirm.`);
+        }
+        await _applyToTargets("Deleted", async (item) => {
+          await api(`/api/items/${item.line}`, {method: "DELETE"});
+        });
+      },
+      state: async (arg) => {
+        const raw = String(arg || "").trim();
+        if (!raw || raw.toLowerCase() === "end") { await endPresence(); return; }
+        const parts = raw.split(/\s+/);
+        const body = {state: parts[0]};
+        if (parts.length > 1) body.title = parts.slice(1).join(" ");
+        const data = await api("/api/status", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body),
+        });
+        if (data.unchanged) showToast(`Already ${data.unchanged}.`, "info");
+        else showToast(`Status: ${body.state}`, "success");
+        await loadPresence();
+        await refreshAll();
+      },
+      now: async () => {
+        const data = await api("/api/status?active=true");
+        const open = (data.records || []).filter(r => r.active);
+        if (!open.length) { showToast("No open status.", "info"); return; }
+        showToast(open.map(r => `${r.person}: ${r.state} since ${r.from}`).join("  |  "), "info");
+      },
+      timer: async (arg) => {
+        const action = (arg || "status").trim().toLowerCase();
+        if (action === "status") {
+          const data = await api("/api/timer");
+          showToast(data.running ? `Timer ${data.id}: ${data.elapsed}` : "No running timer.", "info");
+          return;
+        }
+        if (!["start", "stop", "cancel"].includes(action)) throw new Error("Usage: /timer start|stop|status|cancel");
+        const body = {action};
+        if (action === "start") {
+          const target = _selectedTargets()[0];
+          const idKey = appConfig?.ids?.key || "id";
+          const id = target?.details?.[idKey]?.[0];
+          if (!id) throw new Error("Select a record with an id: to start a timer.");
+          body.id = id;
+        }
+        const data = await api("/api/timer", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body),
+        });
+        showToast(action === "start" ? `Timer started for ${data.id}.` : `Timer ${action}ed.`, "success");
+        await refreshAll();
+      },
+      export: async (arg) => {
+        const format = (arg || "markdown").trim().toLowerCase();
+        const allowed = ["csv", "json", "markdown", "life"];
+        if (!allowed.includes(format)) throw new Error(`Unknown format: ${format}. Options: ${allowed.join(", ")}`);
+        exportItems(format);
+      },
+      stats: async () => { switchWorkspace("stats"); },
+      detail: async () => {
+        const target = _selectedTargets()[0];
+        if (!target) throw new Error("Select a record first.");
+        selectItem(target);
+        openDrawer(target);
+      },
+      reload: async () => { await refreshAll(); showToast("Reloaded.", "success"); },
+      theme: async (arg) => {
+        const wanted = (arg || "").trim().toLowerCase();
+        const dark = document.body.classList.contains("dark");
+        if ((wanted === "dark" && !dark) || (wanted === "light" && dark) || !wanted) toggleDarkMode();
+      },
+    };
+
+    async function bulkOrSelectedStatus(statusValue, label) {
+      await _applyToTargets(label, async (item) => {
+        await api(`/api/items/${item.line}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({status: statusValue, type: item.type, title: item.title, details: item.details}),
+        });
+      });
+    }
+
+    async function runWebCommand(text) {
+      const raw = String(text || "").trim().replace(/^\//, "");
+      if (!raw) return;
+      const [name, ...rest] = raw.split(/\s+/);
+      const arg = rest.join(" ");
+      const command = commandByName(name);
+      if (!command) {
+        const near = matchingCommands(name)[0];
+        showToast(`Unknown command /${name}.` + (near ? ` Did you mean /${near.name}?` : ""), "error");
+        return;
+      }
+      if (!command.web) {
+        showToast(`/${command.name} is terminal-only. ${command.note || ""}`.trim(), "error");
+        return;
+      }
+      const handler = WEB_COMMAND_HANDLERS[command.name];
+      if (!handler) {
+        showToast(`/${command.name} is not wired up in the browser yet.`, "error");
+        return;
+      }
+      try {
+        await handler(arg);
+      } catch (err) {
+        showToast(err.message || `/${command.name} failed.`, "error");
+      }
+    }
+
+    function renderCmdkCommands(typed, list) {
+      const matches = matchingCommands(typed);
+      _cmdkEntries = matches.map(command => ({
+        kind: command.web ? "cmd" : "cli",
+        label: "/" + command.name + (command.usage ? " " + command.usage : ""),
+        hint: command.alias ? "/" + command.alias : "",
+        section: command.web ? "Commands" : "Terminal only",
+        run: () => runWebCommand(typed.split(/\s+/)[0] === "/" + command.name || typed.slice(1).split(/\s+/)[0] === command.alias
+          ? typed
+          : "/" + command.name + " " + typed.split(/\s+/).slice(1).join(" ")),
+        summary: command.summary,
+      }));
+      _cmdkIndex = 0;
+      if (!_cmdkEntries.length) {
+        list.innerHTML = `<div class="cmdk-empty">No command matches. Type / to list them all.</div>`;
+        return;
+      }
+      list.innerHTML = "";
+      let lastSection = "";
+      _cmdkEntries.forEach((entry, i) => {
+        if (entry.section !== lastSection) {
+          const section = document.createElement("div");
+          section.className = "cmdk-section";
+          section.textContent = entry.section;
+          list.appendChild(section);
+          lastSection = entry.section;
+        }
+        const row = document.createElement("div");
+        row.className = "cmdk-row" + (i === _cmdkIndex ? " focus" : "");
+        row.innerHTML = `<span class="cmdk-kind">${escapeHtml(entry.kind)}</span>` +
+          `<span>${escapeHtml(entry.label)}</span>` +
+          `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary || entry.hint)}</span>`;
+        row.addEventListener("click", () => { closeCmdk(); entry.run(); });
+        list.appendChild(row);
+      });
+    }
+
     function openCmdk() {
       const backdrop = document.getElementById("cmdk-backdrop");
       const input = document.getElementById("cmdk-input");
@@ -7095,7 +7576,9 @@ HTML_PAGE = r"""<!doctype html>
     }
     function renderCmdk(qText) {
       const list = document.getElementById("cmdk-list");
-      const q = String(qText || "").trim().toLowerCase();
+      const raw = String(qText || "").trim();
+      if (raw.startsWith("/")) { renderCmdkCommands(raw, list); return; }
+      const q = raw.toLowerCase();
       const idKey = appConfig?.ids?.key || "id";
       const actions = CMDK_ACTIONS.filter(a => fuzzyMatch(a.label, q));
       const items = q
@@ -7148,6 +7631,7 @@ HTML_PAGE = r"""<!doctype html>
       if (rows[_cmdkIndex]) rows[_cmdkIndex].scrollIntoView({block: "nearest"});
     }
     document.addEventListener("DOMContentLoaded", () => {
+      loadCommandCatalog();
       const input = document.getElementById("cmdk-input");
       if (!input) return;
       input.addEventListener("input", () => renderCmdk(input.value));
@@ -7156,6 +7640,18 @@ HTML_PAGE = r"""<!doctype html>
         else if (e.key === "ArrowUp") { e.preventDefault(); _cmdkMoveFocus(-1); }
         else if (e.key === "Enter") {
           e.preventDefault();
+          const typed = input.value.trim();
+          if (typed.startsWith("/")) {
+            // Run exactly what was typed so arguments survive; the highlighted
+            // row only matters when the name itself is incomplete.
+            const name = typed.slice(1).split(/\s+/)[0].toLowerCase();
+            const resolved = commandByName(name)
+              ? typed
+              : "/" + ((matchingCommands(typed)[0] || {}).name || name) + " " + typed.split(/\s+/).slice(1).join(" ");
+            closeCmdk();
+            runWebCommand(resolved);
+            return;
+          }
           const entry = _cmdkEntries[_cmdkIndex];
           if (entry) { closeCmdk(); entry.run(); }
         } else if (e.key === "Escape") {

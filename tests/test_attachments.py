@@ -795,6 +795,47 @@ class ServeBindDiagnosticTests(unittest.TestCase):
         self.assertIn("Another process", message)
         self.assertNotIn("reserving that port", message)
 
+    def test_suggestion_is_never_the_port_that_failed(self):
+        from lifetxt.cli import _bind_error_message
+
+        for port in (8000, 8080, 8090):
+            error = OSError(98, "in use")
+            error.winerror = 10048
+
+            message = _bind_error_message("127.0.0.1", port, error)
+
+            hint = [line for line in message.splitlines() if "--port" in line][0]
+            self.assertNotIn(str(port), hint, "suggested the port that just failed")
+
+    def test_probe_does_not_reuse_addresses_on_windows(self):
+        """Windows SO_REUSEADDR lets a probe bind a port a server already holds.
+
+        Setting it there would make the whole preflight check silently useless
+        for the most common failure, a second server on the same port.
+        """
+        import socket
+
+        from lifetxt.cli import _preflight_bind
+
+        recorded = []
+
+        class RecordingSocket(socket.socket):
+            def setsockopt(self, level, option, value):
+                recorded.append((level, option, value))
+                return super(RecordingSocket, self).setsockopt(level, option, value)
+
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        free_port = probe.getsockname()[1]
+        probe.close()
+
+        with unittest.mock.patch.object(socket, "socket", RecordingSocket):
+            with unittest.mock.patch.object(os, "name", "nt"):
+                _preflight_bind("127.0.0.1", free_port)
+
+        reuse = [entry for entry in recorded if entry[1] == socket.SO_REUSEADDR]
+        self.assertEqual([], reuse, "SO_REUSEADDR must not be set on Windows")
+
     def test_privileged_port_message_on_posix(self):
         from lifetxt.cli import _bind_error_message
 

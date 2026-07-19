@@ -81,6 +81,9 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/review` | 日付範囲の review report(完了 task、habit 達成率、journal、mood 推移、elapsed 集計) |
+| `GET` | `/api/commands` | TUI と共有する slash command の catalog |
+| `GET` | `/api/timer` | 実行中の timer |
+| `POST` | `/api/timer` | timer 操作。body: `{"action": "start", "id": "t1"}`、`stop`、`cancel` |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
 | `POST` | `/api/status` | 直前の open な status を閉じて presence を記録。body: `{"state": "busy"}`、`{"end": true}`、同じ状態を繰り返す場合は `"force": true` |
 | `POST` | `/api/items/capture` | plain text から task を追記。`@project #tag !priority ^due` を展開 |
@@ -323,6 +326,38 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 `Ctrl+K` で Command Palette を開けます。fuzzy matching、recently opened records、
 view 切り替え(`Go to Dashboard` など)、quick-add、export、theme toggle、
 kiosk mode、agenda blocked filter の切り替えに対応しています。
+
+### slash command
+
+`Ctrl+K` を押して `/` を入力すると、TUI と同じ command を実行できます。
+catalog は `/api/commands` から取得され、TUI の command registry を元に生成されるため、
+command 名・別名・意味は両者で完全に一致します。
+
+```
+/done                 選択した record を完了
+/status active        選択に status を設定
+/set owner dana       選択に任意の detail を設定
+/due +3d              共有の日付トークンで due: を設定
+/assign carol         assignee: を設定
+/add Buy milk @home   記号記法付きでキャプチャ
+/state focus          直前の status を閉じて presence を記録
+/timer start          選択 record で共有 timer を開始
+/project work         project で filter
+/export csv           現在の表示を書き出し
+```
+
+command は**チェックボックスの選択**に対して実行され、
+何も選択していない場合は現在選択中の record が対象になります。
+`/mark all` と `/mark none` で選択を操作でき、`x` で 1 行ずつ切り替えられます。
+
+端末でしか意味を持たない command (`/edit`、`/quit`、`/limit`、`/window`、`/undo`) も
+「Terminal only」として一覧に残り、ブラウザでの代替手段を短く説明します。
+隠してしまうより分かりやすいためです。
+
+Enter を押したときは引数が保持されるため、
+palette が別の行を強調していても `/due tomorrow` は引数付きで実行されます。
+日付トークンはサーバ側で解決されるため、`tomorrow`、`monday`、`+3d` は
+ブラウザ・TUI・CLI で同じ意味になります。
 
 ### クイック追加の省略記法と presence
 

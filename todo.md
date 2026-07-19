@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x79)
+Last updated: 2026-07-19 (updated x80)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -95,7 +95,7 @@ Existing timer support should grow from basic start/stop tracking into a coheren
 The timer feature should be controllable from every user-facing surface while sharing one backend state model.
 
 - [ ] Re-scope Timer Web/API/MCP expansion before implementing new surfaces. Keep existing start/stop/elapsed workflows stable first, and move alarm/Pomodoro/global panel work to Deferred unless there is a concrete daily-use requirement that justifies persistent-process complexity.
-- [ ] Add Web API endpoints for timer operations: status, start, stop, pause, resume, cancel, create alarm, create Pomodoro session, list recent sessions, and attach elapsed time to an item.
+- [ ] Extend the Web API timer endpoints. `GET`/`POST /api/timer` cover status, start, stop, and cancel; pause, resume, alarms, Pomodoro sessions, and session history are still missing.
 - [ ] Add an inline timer control to the Web UI detail modal for task-like items. Provide start, pause, resume, stop, and cancel actions that update `elapsed:` through the existing item update path.
 - [ ] Add a global timer panel to the Web UI. Show active stopwatch, active Pomodoro phase, next alarm, elapsed today, and quick controls without opening a record.
 - [ ] Add Web UI alarm and Pomodoro setup flows. Use explicit fields instead of natural-language guessing, and preview the resulting schedule before starting.
@@ -143,6 +143,22 @@ TUI inspector.
 - [ ] Decide how `archive` and `undo` interact with attachments. Archiving an item keeps its `file:` value pointing at a path that may later move; there is no rewrite or validation step.
 - [ ] Handle symlinked targets explicitly. They currently resolve transparently, so a symlink that escapes the life.txt directory is neither reported nor blocked.
 - [ ] Verify attachment behaviour on a case-sensitive filesystem. The `W405` case-mismatch check only has an observable effect on case-insensitive filesystems (Windows, macOS), and has not been exercised on Linux where the mismatch becomes a real failure.
+
+---
+
+## P1: Web UI Commands
+
+`Ctrl+K` then `/` runs the TUI command vocabulary in the browser. The catalog
+comes from `/api/commands` (derived from the TUI registry); execution happens in
+the browser because selection and filters are browser state.
+
+- [ ] Add a persistent command input to the Web UI instead of requiring `Ctrl+K` first. The TUI's always-visible prompt is what makes commands feel primary; the browser still hides them behind a modal.
+- [ ] Show command results inline rather than only as a toast. `/now` and `/timer status` return information that disappears after a few seconds.
+- [ ] Add argument completion in the palette. Typing `/status ` should offer the valid statuses, `/view ` the views, and `/sort ` the sort keys, the way the TUI usage strings imply.
+- [ ] Reconcile `/next` between surfaces. The TUI filters with the shared `nextaction` predicate; the browser only filters to open items, so the same command gives different results.
+- [ ] Add browser tests that actually execute the command handlers. Current tests verify the catalog, that every advertised command has a handler, and that handlers only reference functions that exist, but nothing runs them in a DOM.
+- [ ] Support `/undo` in the browser. The undo stack exists in the UI but is not wired to the command.
+- [ ] Decide whether the Web UI should gain a keyboard shortcut that opens the palette straight into command mode, rather than `Ctrl+K` then `/`.
 
 ---
 

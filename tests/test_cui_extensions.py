@@ -1569,6 +1569,66 @@ class WorkspaceCommandTests(unittest.TestCase):
         self.assertEqual("tasks", restored.view)
         self.assertEqual("title", restored.sort)
 
+    def test_session_is_scoped_to_the_file_set(self):
+        """A view saved for one file must not be restored over another.
+
+        Without scoping, quitting while filtered to `status` made an unrelated
+        life.txt open with no visible rows and no explanation.
+        """
+        state, path, tmp = self._state()
+        session_file = os.path.join(tmp, "session.json")
+        state.args.config_data["tui"] = {"session_file": session_file}
+        state.view = "status"
+        state.sort = "title"
+        tui_app.save_session(state)
+
+        other_path = os.path.join(tmp, "other.life.txt")
+        with open(other_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Elsewhere id:x1\n")
+        other_args = argparse.Namespace(
+            paths=[other_path], config_data={"tui": {"session_file": session_file}}
+        )
+        other = tui_app.WorkspaceState(other_args, glyphs=tui_app.ASCII_GLYPHS)
+
+        self.assertFalse(tui_app.load_session(other))
+        self.assertEqual("all", other.view)
+        self.assertEqual("natural", other.sort)
+
+        # The original file still gets its own session back.
+        again = tui_app.WorkspaceState(state.args, glyphs=tui_app.ASCII_GLYPHS)
+        self.assertTrue(tui_app.load_session(again))
+        self.assertEqual("status", again.view)
+
+    def test_sessions_for_several_files_coexist(self):
+        state, _path, tmp = self._state()
+        session_file = os.path.join(tmp, "session.json")
+        state.args.config_data["tui"] = {"session_file": session_file}
+        state.view = "tasks"
+        tui_app.save_session(state)
+
+        other_path = os.path.join(tmp, "other.life.txt")
+        with open(other_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Elsewhere id:x1\n")
+        other_args = argparse.Namespace(
+            paths=[other_path], config_data={"tui": {"session_file": session_file}}
+        )
+        other = tui_app.WorkspaceState(other_args, glyphs=tui_app.ASCII_GLYPHS)
+        other.view = "agenda"
+        tui_app.save_session(other)
+
+        with open(session_file, "r", encoding="utf-8") as handle:
+            stored = json.load(handle)
+
+        self.assertEqual(2, len(stored["sessions"]))
+        first = tui_app.WorkspaceState(state.args, glyphs=tui_app.ASCII_GLYPHS)
+        tui_app.load_session(first)
+        self.assertEqual("tasks", first.view)
+
+    def test_session_key_uses_absolute_paths(self):
+        state, path, _tmp = self._state()
+
+        self.assertIn(os.path.abspath(path), tui_app.session_key(state))
+
     def test_session_can_be_disabled_in_config(self):
         state, _path, _tmp = self._state()
 
@@ -1884,7 +1944,9 @@ class WorkspaceRunnerTests(unittest.TestCase):
 
             keys = [ord(char) for char in "milk"] + [10] + [ord(char) for char in "/done"] + [10] + [3]
             screen = self._Screen(keys)
-            args = argparse.Namespace(paths=[path], config_data={})
+            # Sessions off: a saved view from a previous run would otherwise be
+            # restored here and silently change which rows are listed.
+            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
             with patch.dict(sys.modules, {"curses": self._fake_curses(screen)}):
                 result = tui_app.run_workspace(args)
 
@@ -1905,7 +1967,7 @@ class WorkspaceRunnerTests(unittest.TestCase):
                 handle.write(original)
 
             screen = self._Screen([3])
-            args = argparse.Namespace(paths=[path], config_data={})
+            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
             with patch.dict(sys.modules, {"curses": self._fake_curses(screen)}):
                 result = tui_app.run_workspace(args)
 

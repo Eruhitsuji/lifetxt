@@ -3294,12 +3294,27 @@ def _preflight_bind(host, port):
 
     probe = socket.socket(socket.AF_INET6 if ":" in str(host) else socket.AF_INET, socket.SOCK_STREAM)
     try:
-        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if os.name != "nt":
+            # POSIX needs SO_REUSEADDR so a socket left in TIME_WAIT does not
+            # look like a conflict. On Windows the same option lets a probe
+            # bind a port another server is already listening on, which would
+            # make this check silently useless.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         probe.bind((host, int(port)))
     except OSError as exc:
         raise ValueError(_bind_error_message(host, port, exc))
     finally:
         probe.close()
+
+
+def _suggest_port(port):
+    """A different port to try, never the one that just failed."""
+    try:
+        number = int(port)
+    except (TypeError, ValueError):
+        return 8080
+    candidate = 8080 if number != 8080 else 8090
+    return candidate if candidate != number else number + 1
 
 
 def _bind_error_message(host, port, exc):
@@ -3310,9 +3325,11 @@ def _bind_error_message(host, port, exc):
     in_use = errno in (48, 98) or winerror == 10048
     forbidden = errno == 13 or winerror == 10013
 
+    suggestion = _suggest_port(port)
+
     if in_use:
         lines.append("Another process is already using that port.")
-        lines.append("Stop it, or start on a different port: lifetxt serve --port 8080")
+        lines.append("Stop it, or start on a different port: lifetxt serve --port %d" % suggestion)
     elif forbidden and os.name == "nt":
         # Hyper-V, WSL, and Docker reserve blocks of ports on Windows. Nothing
         # is listening, so "port in use" advice sends people down a dead end.
@@ -3323,10 +3340,10 @@ def _bind_error_message(host, port, exc):
         lines.append("Check the reserved ranges with:")
         lines.append("  netsh interface ipv4 show excludedportrange protocol=tcp")
         lines.append("Then start outside those ranges, for example:")
-        lines.append("  lifetxt serve --port 8080")
+        lines.append("  lifetxt serve --port %d" % suggestion)
     elif forbidden:
         lines.append("Ports below 1024 need elevated privileges on this system.")
-        lines.append("Use a port above 1024, for example: lifetxt serve --port 8080")
+        lines.append("Use a port above 1024, for example: lifetxt serve --port %d" % suggestion)
     else:
         lines.append("Try a different --port, or --host 127.0.0.1.")
     return "\n".join(lines)

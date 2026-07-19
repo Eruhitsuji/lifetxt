@@ -82,6 +82,9 @@ tools.
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/review` | Review report for a date window: completed tasks, habit completion, journal entries, mood trend, and elapsed time |
+| `GET` | `/api/commands` | The slash-command catalog, shared with the TUI |
+| `GET` | `/api/timer` | The running timer, if any |
+| `POST` | `/api/timer` | Drive the timer. Body: `{"action": "start", "id": "t1"}`, or `stop` / `cancel` |
 | `GET` | `/api/status` | Show latest status / presence records |
 | `POST` | `/api/status` | Record a presence status, closing the previously open one. Body: `{"state": "busy"}`, `{"end": true}`, or add `"force": true` to repeat a state |
 | `POST` | `/api/items/capture` | Append a task from plain text, expanding `@project #tag !priority ^due` |
@@ -386,6 +389,38 @@ recently opened records when the query is empty, switches between views
 (`Go to Dashboard`, `Go to Focus`, ...), and includes common actions such as
 quick-add, export, theme toggle, kiosk mode, and agenda blocked-filter
 toggling.
+
+### Slash Commands
+
+Press `Ctrl+K` and type `/` to run the same commands the TUI uses. The catalog
+is served from `/api/commands`, which derives it from the TUI command registry,
+so a command name, alias, and meaning are identical in both places.
+
+```
+/done                 mark the selected records done
+/status active        set a status on the selection
+/set owner dana       set any detail on the selection
+/due +3d              set due:, using the shared date tokens
+/assign carol         set assignee:
+/add Buy milk @home   capture with shorthand sigils
+/state focus          record presence, closing the previous status
+/timer start          start the shared timer on the selected record
+/project work         filter by project
+/export csv           download the current view
+```
+
+Commands act on the **checkbox selection**, falling back to the currently
+selected record when nothing is checked. `/mark all` and `/mark none` manage the
+selection; `x` toggles one row.
+
+A command that only makes sense at a terminal (`/edit`, `/quit`, `/limit`,
+`/window`, `/undo`) is still listed, under "Terminal only", with a short note
+explaining the browser equivalent, rather than being hidden.
+
+Arguments are preserved when you press Enter, so `/due tomorrow` runs with its
+argument even while the palette is highlighting a different row. Date tokens are
+resolved on the server, so `tomorrow`, `monday`, and `+3d` mean the same thing
+in the browser, the TUI, and the CLI.
 
 ### Quick add shorthand and presence
 

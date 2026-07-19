@@ -595,14 +595,48 @@ def session_payload(state):
     return payload
 
 
+def session_key(state):
+    """Identity of the file set a session belongs to.
+
+    Sessions are keyed per file set. Without this, quitting while filtered to
+    one file's `status` view would restore that view over an unrelated
+    life.txt, and the workspace would look empty for no visible reason.
+    """
+    paths = [path for path in getattr(state.args, "paths", []) or [] if path and path != "-"]
+    if not paths:
+        return "(none)"
+    return "|".join(sorted(os.path.abspath(path) for path in paths))
+
+
+def _read_sessions(state):
+    import json
+
+    try:
+        with open(session_path(getattr(state.args, "config_data", None)), "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data.get("sessions") if isinstance(data.get("sessions"), dict) else {}
+
+
 def save_session(state):
     """Persist view/sort/filter choices so the next run starts where you left."""
     if not _session_enabled(state):
         return False
     from .atomic import atomic_write_json
 
+    sessions = _read_sessions(state)
+    sessions[session_key(state)] = session_payload(state)
+    # Keep the file from growing without bound as files come and go.
+    if len(sessions) > 20:
+        sessions = dict(list(sessions.items())[-20:])
     try:
-        atomic_write_json(session_path(getattr(state.args, "config_data", None)), session_payload(state))
+        atomic_write_json(
+            session_path(getattr(state.args, "config_data", None)),
+            OrderedDict([("version", 2), ("sessions", sessions)]),
+        )
         return True
     except OSError:
         # A read-only or missing cache directory must never break quitting.
@@ -612,13 +646,7 @@ def save_session(state):
 def load_session(state):
     if not _session_enabled(state):
         return False
-    import json
-
-    try:
-        with open(session_path(getattr(state.args, "config_data", None)), "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except (OSError, ValueError):
-        return False
+    payload = _read_sessions(state).get(session_key(state))
     if not isinstance(payload, dict):
         return False
     apply_session(state, payload)

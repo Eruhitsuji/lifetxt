@@ -4474,28 +4474,39 @@ class LifeTxtMcpTests(unittest.TestCase):
             Path(path).write_text("", encoding="utf-8")
             context = McpContext(paths=[path], writable_path=path)
 
+            # The server generates the id; a client-supplied one is refused so
+            # a model cannot reuse an id and silently merge two records.
+            with self.assertRaises(ValueError):
+                call_tool(
+                    "create_item",
+                    {"type": "T", "title": "Draft", "details": {"id": "task_draft"}},
+                    context,
+                )
+
             created = call_tool(
                 "create_item",
                 {
                     "status": "[ ]",
                     "type": "T",
                     "title": "Draft",
-                    "details": {"id": "task_draft", "project": "api"},
+                    "details": {"project": "api"},
                 },
                 context,
             )
+            item_id = created["item"]["details"]["id"][0]
             updated = call_tool(
                 "update_item",
                 {
-                    "id": "task_draft",
+                    "id": item_id,
                     "title": "Draft updated",
                     "set_details": {"tag": ["mcp", "api"]},
                 },
                 context,
             )
-            done = call_tool("mark_done", {"id": "task_draft", "done": "2026-06-12"}, context)
-            deleted = call_tool("delete_item", {"id": "task_draft"}, context)
+            done = call_tool("mark_done", {"id": item_id, "done": "2026-06-12"}, context)
+            deleted = call_tool("delete_item", {"id": item_id}, context)
 
+            self.assertTrue(item_id)
             self.assertEqual(1, created["line"])
             self.assertEqual("Draft updated", updated["item"]["title"])
             self.assertEqual(["mcp", "api"], updated["item"]["details"]["tag"])

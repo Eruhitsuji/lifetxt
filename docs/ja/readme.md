@@ -44,6 +44,8 @@ command 互換性、filter、出力形式、変換規則は [cli.md](./cli.md) �
 このリポジトリには、外部依存のない Python CLI が含まれます。
 詳細なコマンドの使い方とオプション一覧は [cli.md](./cli.md) を参照してください。
 任意機能の FastAPI REST API とブラウザGUIについては [web.md](./web.md) を参照してください。
+MCP server、AI client の設定、書き込みの安全性については
+[ai-integration.md](./ai-integration.md) を参照してください。
 
 ```sh
 python -m lifetxt check life.txt

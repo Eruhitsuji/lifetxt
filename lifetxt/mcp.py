@@ -1,7 +1,9 @@
+import hashlib
 import json
+import os
 import sys
 from collections import OrderedDict
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from .agenda import (
     agenda_records,
@@ -54,6 +56,7 @@ from .webapp import (
     snooze_message_in_file,
     sort_items,
     update_item_by_id_in_file,
+    write_text,
     _subgraph,
 )
 
@@ -112,7 +115,15 @@ def handle_request(request, context):
     request_id = request.get("id")
     method = request.get("method")
     params = request.get("params") or {}
-    if request_id is None and method not in ("initialize", "tools/list", "tools/call", "resources/list", "resources/read"):
+    if request_id is None and method not in (
+        "initialize",
+        "tools/list",
+        "tools/call",
+        "resources/list",
+        "resources/read",
+        "prompts/list",
+        "prompts/get",
+    ):
         return None
 
     try:
@@ -122,8 +133,9 @@ def handle_request(request, context):
                 {
                     "protocolVersion": params.get("protocolVersion", "2024-11-05"),
                     "capabilities": {
-                        "tools": {},
+                        "tools": {"listChanged": False},
                         "resources": {"subscribe": False, "listChanged": False},
+                        "prompts": {"listChanged": False},
                     },
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
                 },
@@ -137,6 +149,13 @@ def handle_request(request, context):
             arguments = params.get("arguments") or {}
             result = call_tool(name, arguments, context)
             return _jsonrpc_result(request_id, _tool_result(result))
+        if method == "prompts/list":
+            return _jsonrpc_result(request_id, {"prompts": prompt_list()})
+        if method == "prompts/get":
+            return _jsonrpc_result(
+                request_id,
+                prompt_get(params.get("name"), params.get("arguments") or {}),
+            )
         if method == "resources/list":
             return _jsonrpc_result(request_id, {"resources": resource_list(context)})
         if method == "resources/read":
@@ -153,7 +172,45 @@ def call_tool(name, arguments, context):
     return TOOL_HANDLERS[name](arguments or {}, context)
 
 
+#: Tools that never write. Clients use readOnlyHint to skip confirmation.
+READ_ONLY_TOOLS = frozenset(
+    [
+        "list_items", "get_item", "check_line", "parse_item", "get_agenda",
+        "get_review", "get_graph", "get_blockers", "list_links", "list_status",
+        "list_notifications", "list_messages", "get_file_state", "search_items",
+        "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
+        "get_status", "parse_shorthand", "timer_status",
+    ]
+)
+
+#: Tools that can remove or overwrite existing content.
+DESTRUCTIVE_TOOLS = frozenset(
+    ["delete_item", "set_status", "timer_cancel", "update_item", "stop_work"]
+)
+
+
+def _annotate(schema):
+    """Apply MCP annotations from the central classification.
+
+    Keeping the classification in one place means a new tool cannot quietly
+    ship with the wrong hint just because its _tool() call omitted a flag.
+    """
+    name = schema.get("name", "")
+    read_only = name in READ_ONLY_TOOLS
+    annotations = schema.setdefault("annotations", {})
+    annotations["title"] = name.replace("_", " ")
+    annotations["readOnlyHint"] = read_only
+    annotations["destructiveHint"] = name in DESTRUCTIVE_TOOLS
+    annotations["idempotentHint"] = read_only
+    annotations["openWorldHint"] = False
+    return schema
+
+
 def tool_schemas():
+    return [_annotate(schema) for schema in _tool_schemas()]
+
+
+def _tool_schemas():
     return [
         _tool(
             "list_items",
@@ -341,7 +398,284 @@ def tool_schemas():
             {"id": _string("Message ID."), "duration": _string("Duration such as 10m."), "until": _string("Explicit snooze_until value.")},
             required=["id"],
         ),
+        _tool(
+            "get_file_state",
+            "Paths, write target, read-only flag, and content hashes. Call this "
+            "before a write to obtain expected_file_hash for conflict detection.",
+            {},
+        ),
+        _tool(
+            "search_items",
+            "Fuzzy search across titles, ids, and detail values. Title matches "
+            "rank above id matches, which rank above detail matches.",
+            {
+                "query": _string("Search text."),
+                "limit": _integer("Maximum results. Defaults to 20."),
+            },
+            required=["query"],
+        ),
+        _tool(
+            "get_next_actions",
+            "Actionable work: open or in progress, not blocked by a dependency, "
+            "and not parked behind a someday or waiting tag. Ordered by "
+            "priority, then due date, then age.",
+            {
+                "limit": _integer("Maximum results."),
+                "project": _string("Only this project:."),
+                "assignee": _string("Only this assignee:."),
+            },
+        ),
+        _tool(
+            "get_stats",
+            "Task, habit, mood, and project statistics for a date range.",
+            {
+                "from": _string("Start date (YYYY-MM-DD)."),
+                "to": _string("End date (YYYY-MM-DD)."),
+                "group": _string("Bucket size: day, week, or month."),
+            },
+        ),
+        _tool(
+            "get_habit_streaks",
+            "Per-habit completion counts and current streaks.",
+            {
+                "from": _string("Start date (YYYY-MM-DD)."),
+                "to": _string("End date (YYYY-MM-DD)."),
+            },
+        ),
+        _tool(
+            "get_workload",
+            "Open, actionable, due-soon, and overdue counts per assignee.",
+            {},
+        ),
+        _tool(
+            "get_status",
+            "Presence records, including which status is currently open.",
+            {
+                "person": _string("Only this person:."),
+                "active": _bool("Only records without to:."),
+            },
+        ),
+        _tool(
+            "set_status",
+            "Record a presence status, closing the previously open one in the "
+            "same write. Pass end=true to close without opening a new one. "
+            "Switching to a state that is already open writes nothing unless "
+            "force=true, so a repeated call cannot fragment one long block.",
+            {
+                "state": _string("New presence state, such as busy or focus."),
+                "title": _string("Status title. Defaults to the state name."),
+                "person": _string("Person the status belongs to. Defaults to self."),
+                "note": _string("Free-text note stored as note:."),
+                "project": _string("Associated project stored as project:."),
+                "service": _string("Service stored as service:."),
+                "visibility": _string("Visibility stored as visibility:."),
+                "end": _bool("Close the current status without opening a new one."),
+                "force": _bool("Record a new block even when the state is unchanged."),
+                "dry_run": _bool("Return a unified diff instead of writing."),
+                "expected_file_hash": _string(
+                    "Hash from get_file_state. The write is rejected if the file changed."
+                ),
+            },
+        ),
+        _tool(
+            "capture_item",
+            "Create a task from plain text, expanding capture shorthand: "
+            "@project sets project:, #tag adds tag:, !value sets priority:, and "
+            "^date sets due:. Relative dates such as tomorrow or +3d resolve. "
+            "lifetxt generates the id; do not invent one.",
+            {
+                "text": _string("Title with optional @ # ! ^ tokens."),
+                "type": _string("Item type. Defaults to T."),
+                "status": _string("Initial status. Defaults to [ ]."),
+                "dry_run": _bool("Return a unified diff instead of writing."),
+                "expected_file_hash": _string(
+                    "Hash from get_file_state. The write is rejected if the file changed."
+                ),
+            },
+            required=["text"],
+        ),
+        _tool(
+            "parse_shorthand",
+            "Preview capture-sigil and date-token expansion without writing. "
+            "Call with no arguments to list every supported token.",
+            {
+                "text": _string("Text to expand."),
+                "date": _string("A single date token to resolve."),
+            },
+        ),
+        _tool(
+            "timer_status",
+            "The running timer, if any, with elapsed minutes.",
+            {},
+        ),
+        _tool(
+            "timer_start",
+            "Start the single shared timer on an item and set it in progress.",
+            {
+                "id": _string("Item id to track."),
+                "note": _string("Optional note stored with the timer state."),
+                "dry_run": _bool("Describe the change instead of applying it."),
+            },
+            required=["id"],
+        ),
+        _tool(
+            "timer_stop",
+            "Stop the running timer and add the elapsed minutes to elapsed:.",
+            {"dry_run": _bool("Describe the change instead of applying it.")},
+        ),
+        _tool(
+            "timer_cancel",
+            "Discard the running timer without writing elapsed:.",
+            {"dry_run": _bool("Describe the change instead of applying it.")},
+        ),
+        _tool(
+            "start_work",
+            "Begin a work session: set the task in progress, start its timer, "
+            "and record presence, in one call.",
+            {
+                "id": _string("Item id to work on."),
+                "state": _string("Presence state. Defaults to busy."),
+                "no_timer": _bool("Skip starting the timer."),
+                "no_presence": _bool("Skip recording presence."),
+                "dry_run": _bool("Describe the change instead of applying it."),
+            },
+            required=["id"],
+        ),
+        _tool(
+            "stop_work",
+            "End a work session: stop the timer and write elapsed:, close the "
+            "open presence status, and optionally mark the task done.",
+            {
+                "done": _bool("Also mark the task complete."),
+                "no_presence": _bool("Leave the presence status open."),
+                "dry_run": _bool("Describe the change instead of applying it."),
+            },
+        ),
     ]
+
+
+# ---------------------------------------------------------------------------
+# prompts
+# ---------------------------------------------------------------------------
+
+#: Reusable workflows exposed through the MCP prompts capability. Clients show
+#: these as slash commands, so the useful sequences do not have to be
+#: rediscovered by every model on every conversation.
+PROMPT_DEFINITIONS = OrderedDict(
+    [
+        (
+            "daily_review",
+            {
+                "description": "Review today: what is due, what is actionable, what slipped.",
+                "arguments": [],
+                "template": (
+                    "Review my life.txt for today.\n\n"
+                    "1. Call get_agenda for today to see what is scheduled.\n"
+                    "2. Call get_next_actions to see what is actionable now.\n"
+                    "3. Call list_items with open_only and a before date of today to find "
+                    "anything overdue.\n\n"
+                    "Then summarise: what is due today, what I should do next in priority "
+                    "order, and anything overdue that needs rescheduling. Do not write "
+                    "anything; propose changes and wait for me to confirm."
+                ),
+            },
+        ),
+        (
+            "weekly_review",
+            {
+                "description": "Weekly review: completions, stalled work, and habits.",
+                "arguments": [],
+                "template": (
+                    "Run my weekly review.\n\n"
+                    "1. Call get_review with week=true for completions and elapsed time.\n"
+                    "2. Call get_stats with group=day for the same range.\n"
+                    "3. Call get_habit_streaks for habit consistency.\n"
+                    "4. Call get_blockers to find work waiting on something.\n\n"
+                    "Summarise what I finished, where time went, which habits slipped, and "
+                    "which items have been open longest. Suggest what to drop. Propose "
+                    "changes with dry_run=true first."
+                ),
+            },
+        ),
+        (
+            "standup",
+            {
+                "description": "Standup summary: done yesterday, today, blocked.",
+                "arguments": [
+                    {"name": "person", "description": "Person to report for.", "required": False}
+                ],
+                "template": (
+                    "Write my standup update.\n\n"
+                    "1. Call get_review for the last two days to find completions.\n"
+                    "2. Call get_next_actions for what is planned.\n"
+                    "3. Call get_blockers for anything blocked.\n\n"
+                    "Format as three short bullet lists: Done, Today, Blocked. Keep it under "
+                    "120 words and do not write to the file."
+                ),
+            },
+        ),
+        (
+            "inbox_triage",
+            {
+                "description": "Process untriaged captures into projects and dates.",
+                "arguments": [],
+                "template": (
+                    "Help me triage my inbox.\n\n"
+                    "1. Call list_items with open_only=true to list open work.\n"
+                    "2. Identify items with no project: and no due:.\n\n"
+                    "For each, propose a project, a due date, and a priority, using "
+                    "capture shorthand where helpful. Call update_item with dry_run=true so "
+                    "I can review the diffs before anything is written."
+                ),
+            },
+        ),
+        (
+            "start_focus",
+            {
+                "description": "Pick the next action and start a focused work session.",
+                "arguments": [
+                    {"name": "project", "description": "Limit to one project.", "required": False}
+                ],
+                "template": (
+                    "Start a focus session.\n\n"
+                    "1. Call get_next_actions (optionally filtered by project) and pick the "
+                    "single best next action, explaining why in one sentence.\n"
+                    "2. Confirm the choice with me.\n"
+                    "3. On confirmation call start_work with that id, which sets it in "
+                    "progress, starts the timer, and sets my presence to busy.\n\n"
+                    "When I say I am done, call stop_work with done=true."
+                ),
+            },
+        ),
+    ]
+)
+
+
+def prompt_list():
+    return [
+        {
+            "name": name,
+            "description": spec["description"],
+            "arguments": spec["arguments"],
+        }
+        for name, spec in PROMPT_DEFINITIONS.items()
+    ]
+
+
+def prompt_get(name, arguments=None):
+    spec = PROMPT_DEFINITIONS.get(name)
+    if spec is None:
+        raise ValueError("Unknown prompt: %s" % name)
+    text = spec["template"]
+    for key, value in (arguments or {}).items():
+        if value:
+            text += "\n\nContext: %s = %s" % (key, value)
+    return {
+        "description": spec["description"],
+        "messages": [
+            {"role": "user", "content": {"type": "text", "text": text}}
+        ],
+    }
 
 
 def resource_list(context):
@@ -380,7 +714,13 @@ def resource_read(context, uri):
     }
 
 
-def _tool(name, description, properties, required=None):
+def _tool(name, description, properties, required=None, read_only=False, destructive=False):
+    """Build a tool schema, including MCP annotations.
+
+    Annotations are hints a client uses to decide what needs confirmation:
+    readOnlyHint means the tool never writes, destructiveHint means it can
+    remove or overwrite existing data.
+    """
     schema = {
         "type": "object",
         "properties": properties,
@@ -392,6 +732,13 @@ def _tool(name, description, properties, required=None):
         "name": name,
         "description": description,
         "inputSchema": schema,
+        "annotations": {
+            "title": name.replace("_", " "),
+            "readOnlyHint": bool(read_only),
+            "destructiveHint": bool(destructive),
+            "idempotentHint": bool(read_only),
+            "openWorldHint": False,
+        },
     }
 
 
@@ -413,6 +760,171 @@ def _object(description):
 
 def _array(description):
     return {"type": "array", "description": description, "items": {"type": "string"}}
+
+
+# ---------------------------------------------------------------------------
+# write safety
+# ---------------------------------------------------------------------------
+
+#: Detail written on records the AI creates, so a human can always tell which
+#: rows came from a model. Disable with config mcp.source_metadata = false.
+SOURCE_DETAIL_KEY = "source"
+SOURCE_DETAIL_VALUE = "mcp"
+
+
+def file_hash(path):
+    """Content hash of a life.txt file, or "" when it does not exist yet.
+
+    Used as an optimistic-concurrency token: a client reads a hash, then passes
+    it back on write so a change made in between is rejected instead of being
+    silently overwritten.
+    """
+    try:
+        with open(path, "rb") as handle:
+            data = handle.read()
+    except OSError:
+        return ""
+    return hashlib.sha256(data).hexdigest()
+
+
+def _read_text_safe(path):
+    try:
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            return handle.read()
+    except OSError:
+        return ""
+
+
+def _check_expected_hash(context, args):
+    """Reject a write when the file changed after the client read it."""
+    expected = args.get("expected_file_hash") or args.get("file_hash")
+    if not expected:
+        return
+    current = file_hash(context.writable_path)
+    if str(expected) != current:
+        raise ValueError(
+            "Write conflict: %s changed since it was read (expected %s, found %s). "
+            "Re-read the file and retry." % (context.writable_path, expected, current)
+        )
+
+
+def _source_metadata_enabled(context):
+    section = config_section(context.config, "mcp")
+    value = section.get("source_metadata")
+    if value is None:
+        return True
+    return str(value).strip().lower() not in ("0", "false", "no", "off")
+
+
+def _stamp_source(item, context):
+    if not _source_metadata_enabled(context):
+        return item
+    if not item.details.get(SOURCE_DETAIL_KEY):
+        item.details[SOURCE_DETAIL_KEY] = [SOURCE_DETAIL_VALUE]
+    return item
+
+
+def _diff_lines(before, after, path):
+    """Unified diff of a proposed write, for proposal mode."""
+    import difflib
+
+    return list(
+        difflib.unified_diff(
+            before.splitlines(),
+            after.splitlines(),
+            fromfile="%s (current)" % path,
+            tofile="%s (proposed)" % path,
+            lineterm="",
+            n=2,
+        )
+    )
+
+
+def _proposal(context, before, after, summary):
+    """Structured description of a write that was not performed."""
+    return {
+        "applied": False,
+        "proposal": True,
+        "summary": summary,
+        "path": context.writable_path,
+        "file_hash": file_hash(context.writable_path),
+        "diff": _diff_lines(before, after, context.writable_path),
+    }
+
+
+def _dry_run(args):
+    return _truthy(args.get("dry_run")) or _truthy(args.get("propose"))
+
+
+def _applied(context, result, summary=""):
+    """Annotate a completed write with the new hash so the client can chain."""
+    result = dict(result or {})
+    result.setdefault("applied", True)
+    result.setdefault("proposal", False)
+    if summary:
+        result.setdefault("summary", summary)
+    result["path"] = context.writable_path
+    result["file_hash"] = file_hash(context.writable_path)
+    return result
+
+
+def _reject_client_id(args, context):
+    """IDs are generated by lifetxt, never trusted from the model.
+
+    A model that invents an id will happily reuse one, which silently merges
+    two different records on the next update.
+    """
+    details = args.get("details") or {}
+    key = _id_key(context)
+    supplied = details.get(key) if isinstance(details, dict) else None
+    if supplied:
+        raise ValueError(
+            "Do not supply %s: on create; lifetxt generates it. Remove it and read "
+            "the id from the response." % key
+        )
+
+
+def _ensure_server_id(item, context):
+    """Guarantee a server-generated id on records the model creates.
+
+    Client-supplied ids are refused, so the server must always provide one:
+    without it the model has no handle to update or complete what it just
+    wrote. This applies regardless of config ids.auto, which governs
+    hand-written capture rather than API writes.
+    """
+    key = _id_key(context)
+    assign_auto_id_from_paths(item, context.config, auto_id_paths(context.paths, context.writable_path))
+    if item.details.get(key):
+        return item
+    from .ids import generate_item_id
+
+    existing = set()
+    items, _diagnostics = _read_items(context)
+    for other in items:
+        for value in other.details.get(key, []):
+            existing.add(value)
+    item.details[key] = [generate_item_id(item, existing_ids=existing)]
+    return item
+
+
+def _preview_write(context, apply_fn, summary):
+    """Run a write, capture the diff, then restore the file.
+
+    The existing write helpers only operate on files, so proposal mode applies
+    the change and rolls it back rather than reimplementing every mutation as a
+    pure function. The rollback is unconditional, so a failure mid-way still
+    leaves the original bytes in place.
+    """
+    path = context.writable_path
+    before = _read_text_safe(path)
+    try:
+        apply_fn()
+        after = _read_text_safe(path)
+    finally:
+        write_text(path, before)
+    proposal = _proposal(context, before, after, summary)
+    proposal["file_hash"] = file_hash(path)
+    return proposal
 
 
 def _read_items(context):
@@ -511,6 +1023,8 @@ def _tool_parse_item(args, context):
 
 def _tool_create_item(args, context):
     _require_writable(context)
+    _reject_client_id(args, context)
+    _check_expected_hash(context, args)
     payload = {
         "status": args.get("status", "[ ]"),
         "type": args.get("type") or args.get("kind"),
@@ -518,7 +1032,8 @@ def _tool_create_item(args, context):
         "details": _normalize_details(args.get("details") or {}),
     }
     item = item_from_payload(payload)
-    assign_auto_id_from_paths(item, context.config, auto_id_paths(context.paths, context.writable_path))
+    _stamp_source(item, context)
+    _ensure_server_id(item, context)
     line_no = append_item_to_file(context.writable_path, item)
     return {
         "line": line_no,
@@ -529,6 +1044,7 @@ def _tool_create_item(args, context):
 
 def _tool_update_item(args, context):
     _require_writable(context)
+    _check_expected_hash(context, args)
     item_id = str(args.get("id"))
     items, _diagnostics = _read_items(context)
     original = find_item_by_id(items, item_id, key=_id_key(context))
@@ -553,12 +1069,25 @@ def _tool_update_item(args, context):
         payload["details"] = details
     if not payload:
         raise ValueError("update_item requires at least one field to update.")
+    if _dry_run(args):
+        return _preview_write(
+            context,
+            lambda: update_item_by_id_in_file(
+                context.writable_path, item_id, payload, key=_id_key(context)
+            ),
+            "Update %s" % item_id,
+        )
     item = update_item_by_id_in_file(context.writable_path, item_id, payload, key=_id_key(context))
-    return {"id": item_id, "item": api_item(item, context.writable_path, _id_key(context))}
+    return _applied(
+        context,
+        {"id": item_id, "item": api_item(item, context.writable_path, _id_key(context))},
+        "Update %s" % item_id,
+    )
 
 
 def _tool_mark_done(args, context):
     _require_writable(context)
+    _check_expected_hash(context, args)
     item_id = str(args.get("id"))
     items, _diagnostics = _read_items(context)
     item = find_item_by_id(items, item_id, key=_id_key(context))
@@ -566,14 +1095,24 @@ def _tool_mark_done(args, context):
         raise ValueError("Item id:%s was not found." % item_id)
     details = _copy_details(item.details)
     if not details.get("done"):
-        details["done"] = [str(args.get("done") or _now_text())]
+        details["done"] = [_completion_value(context, args)]
+    payload = {"status": "[x]", "type": item.kind, "title": item.title, "details": details}
+    if _dry_run(args):
+        return _preview_write(
+            context,
+            lambda: update_item_by_id_in_file(
+                context.writable_path, item_id, payload, key=_id_key(context)
+            ),
+            "Mark %s done" % item_id,
+        )
     updated = update_item_by_id_in_file(
-        context.writable_path,
-        item_id,
-        {"status": "[x]", "type": item.kind, "title": item.title, "details": details},
-        key=_id_key(context),
+        context.writable_path, item_id, payload, key=_id_key(context)
     )
-    return {"id": item_id, "item": api_item(updated, context.writable_path, _id_key(context))}
+    return _applied(
+        context,
+        {"id": item_id, "item": api_item(updated, context.writable_path, _id_key(context))},
+        "Mark %s done" % item_id,
+    )
 
 
 def _resolve_repeat_base(item, config):
@@ -650,6 +1189,7 @@ def _tool_complete_item(args, context):
 
 def _tool_delete_item(args, context):
     _require_writable(context)
+    _check_expected_hash(context, args)
     item_id = str(args.get("id"))
     deleted = delete_item_by_id_from_file(context.writable_path, item_id, key=_id_key(context))
     return {"id": item_id, "deleted": deleted}
@@ -811,6 +1351,483 @@ def _tool_snooze_message(args, context):
     return {"id": message_id, "item": api_item(item, context.writable_path, _id_key(context))}
 
 
+# ---------------------------------------------------------------------------
+# shorthand parity: presence, capture, completion precision
+# ---------------------------------------------------------------------------
+
+
+def _tool_set_status(args, context):
+    """Record a presence status, closing the previously open one."""
+    from .presence import status_transition
+
+    _require_writable(context)
+    _check_expected_hash(context, args)
+
+    close_only = _truthy(args.get("end"))
+    state_value = args.get("state")
+    if not close_only and not state_value:
+        raise ValueError("set_status requires state, or end=true to close the current status.")
+
+    details = OrderedDict()
+    for key in ("note", "project", "service", "visibility"):
+        value = args.get(key)
+        if value:
+            details[key] = [str(value)]
+
+    before = _read_text_safe(context.writable_path)
+    result = status_transition(
+        before,
+        state=state_value,
+        title=args.get("title"),
+        person=args.get("person") or "self",
+        details=details,
+        id_key=_id_key(context),
+        close_only=close_only,
+        force=_truthy(args.get("force")),
+    )
+
+    if result.unchanged:
+        return {
+            "applied": False,
+            "proposal": False,
+            "unchanged": result.unchanged,
+            "summary": "Already %s; nothing written. Pass force=true to start a new record."
+            % result.unchanged,
+            "path": context.writable_path,
+            "file_hash": file_hash(context.writable_path),
+        }
+
+    summary = "Close status" if close_only else "Switch status to %s" % state_value
+    if _dry_run(args):
+        proposal = _proposal(context, before, result.text, summary)
+        proposal["closed"] = result.closed
+        proposal["opened"] = result.opened
+        return proposal
+
+    write_text(context.writable_path, result.text)
+    return _applied(
+        context,
+        {"closed": result.closed, "opened": result.opened, "unchanged": ""},
+        summary,
+    )
+
+
+def _tool_get_status(args, context):
+    """Presence records, including which one is currently open."""
+    from .presence import active_status_items
+
+    items, _diagnostics = _read_items(context)
+    person = args.get("person")
+    records = latest_status_records(items, person=person, active_only=_truthy(args.get("active")))
+    open_items = active_status_items(items, person=person)
+    return {
+        "count": len(records),
+        "records": records,
+        "open": [
+            {
+                "person": (item.details.get("person") or ["self"])[0],
+                "state": (item.details.get("state") or [""])[0],
+                "since": (item.details.get("from") or [""])[0],
+                "title": item.title,
+            }
+            for item in open_items
+        ],
+    }
+
+
+def _tool_capture_item(args, context):
+    """Create a task from plain text, expanding capture sigils."""
+    from .shorthand import ShorthandError, parse_capture
+
+    _require_writable(context)
+    _check_expected_hash(context, args)
+    text = str(args.get("text") or "").strip()
+    if not text:
+        raise ValueError("capture_item requires text.")
+    try:
+        title, details = parse_capture(text, strict_dates=True)
+    except ShorthandError as exc:
+        raise ValueError(str(exc))
+    if not title:
+        raise ValueError("Capture shorthand consumed the whole title. Include a title.")
+
+    payload = {
+        "status": args.get("status", "[ ]"),
+        "type": args.get("type") or "T",
+        "title": title,
+        "details": _normalize_details(details),
+    }
+    item = item_from_payload(payload)
+    _stamp_source(item, context)
+    _ensure_server_id(item, context)
+
+    before = _read_text_safe(context.writable_path)
+    line = item_to_line(item)
+    if _dry_run(args):
+        after = before + ("" if before.endswith(("\n", "")) else "\n") + line + "\n"
+        proposal = _proposal(context, before, after, "Capture %s" % title)
+        proposal["text"] = line
+        return proposal
+
+    line_no = append_item_to_file(context.writable_path, item)
+    return _applied(
+        context,
+        {
+            "line": line_no,
+            "item": api_item(item, context.writable_path, _id_key(context)),
+            "text": line,
+        },
+        "Capture %s" % title,
+    )
+
+
+def _tool_parse_shorthand(args, _context):
+    """Preview capture-sigil expansion without writing anything."""
+    from .shorthand import (
+        ShorthandError,
+        describe_date_tokens,
+        describe_sigils,
+        parse_capture,
+        resolve_date_token,
+    )
+
+    text = str(args.get("text") or "")
+    result = {
+        "sigils": [{"token": token, "expands_to": target} for token, target in describe_sigils()],
+        "date_tokens": [{"token": token, "meaning": meaning} for token, meaning in describe_date_tokens()],
+    }
+    if text:
+        try:
+            title, details = parse_capture(text, strict_dates=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        result["title"] = title
+        result["details"] = details
+    date_value = args.get("date")
+    if date_value:
+        try:
+            result["date"] = resolve_date_token(date_value, strict=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+    return result
+
+
+def _completion_value(context, args):
+    """done: value honouring the same config the CLI and TUI use."""
+    explicit = args.get("done") or args.get("date")
+    if explicit:
+        return str(explicit)
+    precision = str(config_section(context.config, "done").get("precision") or "date").lower()
+    if _truthy(args.get("now")):
+        precision = "datetime"
+    if precision not in ("date", "datetime"):
+        raise ValueError("config done.precision must be date or datetime.")
+    moment = datetime.now()
+    if precision == "datetime":
+        return moment.strftime("%Y-%m-%dT%H:%M")
+    return moment.date().isoformat()
+
+
+# ---------------------------------------------------------------------------
+# timer and work sessions
+# ---------------------------------------------------------------------------
+
+
+def _timer_state_file(context):
+    from . import timer as timer_module
+
+    return timer_module.timer_state_file(context.config)
+
+
+def _tool_timer_status(_args, context):
+    from . import timer as timer_module
+
+    path = _timer_state_file(context)
+    if not os.path.exists(path):
+        return {"running": False}
+    state = timer_module._read_state(path)
+    minutes = timer_module.state_elapsed_minutes(state, timer_module._now())
+    return {
+        "running": True,
+        "id": state.get("id"),
+        "file": state.get("file"),
+        "started_at": state.get("started_at"),
+        "paused": bool(state.get("paused_at")),
+        "elapsed_minutes": minutes,
+        "elapsed": timer_module.format_elapsed(minutes),
+    }
+
+
+def _tool_timer_start(args, context):
+    from . import timer as timer_module
+
+    _require_writable(context)
+    item_id = str(args.get("id") or "").strip()
+    if not item_id:
+        raise ValueError("timer_start requires id.")
+    path = _timer_state_file(context)
+    if os.path.exists(path):
+        running = timer_module._read_state(path)
+        raise ValueError("A timer is already running for %s. Stop it first." % running.get("id"))
+
+    items, _diagnostics = _read_items(context)
+    item = find_item_by_id(items, item_id, key=_id_key(context))
+    if item is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+
+    if _dry_run(args):
+        return {
+            "applied": False,
+            "proposal": True,
+            "summary": "Start a timer for %s and set it in progress" % item_id,
+            "id": item_id,
+        }
+
+    source = getattr(item, "source", None) or context.writable_path
+    timer_module.start_timer(
+        _namespace(path=source, item_id=item_id, note=args.get("note"), config_data=context.config)
+    )
+    return _applied(context, {"id": item_id, "running": True}, "Timer started for %s" % item_id)
+
+
+def _tool_timer_stop(args, context):
+    from . import timer as timer_module
+
+    _require_writable(context)
+    path = _timer_state_file(context)
+    if not os.path.exists(path):
+        raise ValueError("No running timer.")
+    state = timer_module._read_state(path)
+    if _dry_run(args):
+        return {
+            "applied": False,
+            "proposal": True,
+            "summary": "Stop the timer for %s and write elapsed:" % state.get("id"),
+            "id": state.get("id"),
+        }
+    timer_module.stop_timer(
+        _namespace(path=state.get("file"), item_id=state.get("id"), config_data=context.config)
+    )
+    return _applied(context, {"id": state.get("id"), "running": False}, "Timer stopped")
+
+
+def _tool_timer_cancel(args, context):
+    from . import timer as timer_module
+
+    _require_writable(context)
+    path = _timer_state_file(context)
+    if not os.path.exists(path):
+        raise ValueError("No running timer to cancel.")
+    state = timer_module._read_state(path)
+    if _dry_run(args):
+        return {
+            "applied": False,
+            "proposal": True,
+            "summary": "Discard the timer for %s without writing elapsed:" % state.get("id"),
+        }
+    os.remove(path)
+    return {"applied": True, "proposal": False, "id": state.get("id"), "running": False}
+
+
+def _tool_start_work(args, context):
+    """Task in progress, timer running, presence recorded, in one call."""
+    _require_writable(context)
+    item_id = str(args.get("id") or "").strip()
+    if not item_id:
+        raise ValueError("start_work requires id.")
+    items, _diagnostics = _read_items(context)
+    item = find_item_by_id(items, item_id, key=_id_key(context))
+    if item is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+
+    state_value = args.get("state") or "busy"
+    if _dry_run(args):
+        return {
+            "applied": False,
+            "proposal": True,
+            "summary": "Set %s in progress, start its timer, and set presence to %s"
+            % (item_id, state_value),
+        }
+
+    steps = []
+    if not _truthy(args.get("no_timer")):
+        steps.append(_tool_timer_start({"id": item_id}, context))
+    if not _truthy(args.get("no_presence")):
+        steps.append(
+            _tool_set_status(
+                {"state": state_value, "title": item.title, "force": False}, context
+            )
+        )
+    return _applied(context, {"id": item_id, "steps": steps}, "Started work on %s" % item_id)
+
+
+def _tool_stop_work(args, context):
+    """Stop the timer, close presence, and optionally finish the task."""
+    _require_writable(context)
+    status = _tool_timer_status({}, context)
+    if not status.get("running"):
+        raise ValueError("No running timer.")
+    item_id = status.get("id")
+
+    if _dry_run(args):
+        return {
+            "applied": False,
+            "proposal": True,
+            "summary": "Stop the timer for %s, close presence%s"
+            % (item_id, ", and mark it done" if _truthy(args.get("done")) else ""),
+        }
+
+    steps = [_tool_timer_stop({}, context)]
+    if _truthy(args.get("done")):
+        steps.append(_tool_mark_done({"id": item_id}, context))
+    if not _truthy(args.get("no_presence")):
+        steps.append(_tool_set_status({"end": True}, context))
+    return _applied(context, {"id": item_id, "steps": steps}, "Stopped work on %s" % item_id)
+
+
+def _namespace(**kwargs):
+    import argparse as _argparse
+
+    return _argparse.Namespace(**kwargs)
+
+
+# ---------------------------------------------------------------------------
+# analysis
+# ---------------------------------------------------------------------------
+
+
+def _tool_get_next_actions(args, context):
+    """Open, unblocked, non-parked work ordered by priority then due date."""
+    from .nextaction import next_action_items
+
+    items, diagnostics = _read_items(context)
+    selected = next_action_items(
+        items,
+        key=_id_key(context),
+        limit=args.get("limit"),
+        project=args.get("project"),
+        assignee=args.get("assignee"),
+    )
+    return items_response(selected, diagnostics, context.writable_path, _id_key(context))
+
+
+def _tool_search_items(args, context):
+    """Fuzzy search across titles, ids, and detail values."""
+    from .shorthand import parse_capture  # noqa: F401  (keeps import cost in one place)
+    from .tui_app import fuzzy_match
+
+    query = str(args.get("query") or args.get("q") or "").strip()
+    if not query:
+        raise ValueError("search_items requires query.")
+    items, diagnostics = _read_items(context)
+    limit = args.get("limit") or 20
+
+    scored = []
+    for index, item in enumerate(items):
+        haystacks = [
+            (item.title or "", 3.0),
+            (" ".join(str(v) for v in item.details.get(_id_key(context)) or []), 2.0),
+        ]
+        detail_text = " ".join(
+            "%s:%s" % (key, value)
+            for key, values in item.details.items()
+            for value in values
+        )
+        haystacks.append((detail_text, 1.0))
+        best = None
+        for text, weight in haystacks:
+            if not text:
+                continue
+            match = fuzzy_match(query, text)
+            if match is None:
+                continue
+            score = match[0] * weight
+            if best is None or score > best:
+                best = score
+        if best is not None:
+            scored.append((-best, index, item))
+    scored.sort()
+    if scored:
+        best = -scored[0][0]
+        cutoff = best * 0.25
+        scored = [entry for entry in scored if -entry[0] >= cutoff]
+    selected = [entry[2] for entry in scored[: max(1, int(limit))]]
+    return items_response(selected, diagnostics, context.writable_path, _id_key(context))
+
+
+def _tool_get_stats(args, context):
+    """Task, habit, mood, and project statistics for a date range."""
+    from .stats import build_stats, stats_range
+
+    items, _diagnostics = _read_items(context)
+    start, end = stats_range(args.get("from"), args.get("to"))
+    group = args.get("group") or "day"
+    if group not in ("day", "week", "month"):
+        raise ValueError("group must be day, week, or month.")
+    return build_stats(items, start, end, group)
+
+
+def _tool_get_habit_streaks(args, context):
+    """Per-habit completion counts and current streaks."""
+    from .stats import habit_stats, stats_range
+
+    items, _diagnostics = _read_items(context)
+    start, end = stats_range(args.get("from"), args.get("to"))
+    # habit_stats does not filter by kind; build_stats passes only H records
+    # and so must this, or every task with a done: date looks like a habit.
+    habits = [item for item in items if item.kind == "H"]
+    return {"habits": habit_stats(habits, start, end)}
+
+
+def _tool_get_workload(args, context):
+    """Open, due-soon, and overdue counts per assignee."""
+    from .nextaction import is_actionable
+
+    items, _diagnostics = _read_items(context)
+    today = datetime.now().date().isoformat()
+    soon = (datetime.now().date() + timedelta(days=7)).isoformat()
+
+    people = OrderedDict()
+    for item in items:
+        if item.kind not in ("T", "D", "R", "H"):
+            continue
+        if item.status not in ("[ ]", "[/]"):
+            continue
+        owners = [str(v) for v in item.details.get("assignee") or []] or ["(unassigned)"]
+        due = (item.details.get("due") or [""])[0]
+        for owner in owners:
+            row = people.setdefault(
+                owner, {"person": owner, "open": 0, "due_soon": 0, "overdue": 0, "actionable": 0}
+            )
+            row["open"] += 1
+            if is_actionable(item.status, item.details, kind=item.kind):
+                row["actionable"] += 1
+            if due:
+                if due < today:
+                    row["overdue"] += 1
+                elif due <= soon:
+                    row["due_soon"] += 1
+    return {"count": len(people), "people": list(people.values())}
+
+
+def _tool_get_file_state(_args, context):
+    """Paths, write target, read-only flag, and content hashes.
+
+    A client calls this before a write to obtain expected_file_hash.
+    """
+    return {
+        "paths": list(context.paths),
+        "writable_path": context.writable_path,
+        "read_only": context.read_only,
+        "file_hash": file_hash(context.writable_path),
+        "hashes": OrderedDict((path, file_hash(path)) for path in context.paths),
+        "source_metadata": _source_metadata_enabled(context),
+        "done_precision": str(
+            config_section(context.config, "done").get("precision") or "date"
+        ).lower(),
+    }
+
+
 TOOL_HANDLERS = OrderedDict(
     [
         ("list_items", _tool_list_items),
@@ -834,6 +1851,22 @@ TOOL_HANDLERS = OrderedDict(
         ("reply_message", _tool_reply_message),
         ("ack_message", _tool_ack_message),
         ("snooze_message", _tool_snooze_message),
+        ("get_file_state", _tool_get_file_state),
+        ("search_items", _tool_search_items),
+        ("get_next_actions", _tool_get_next_actions),
+        ("get_stats", _tool_get_stats),
+        ("get_habit_streaks", _tool_get_habit_streaks),
+        ("get_workload", _tool_get_workload),
+        ("get_status", _tool_get_status),
+        ("set_status", _tool_set_status),
+        ("capture_item", _tool_capture_item),
+        ("parse_shorthand", _tool_parse_shorthand),
+        ("timer_status", _tool_timer_status),
+        ("timer_start", _tool_timer_start),
+        ("timer_stop", _tool_timer_stop),
+        ("timer_cancel", _tool_timer_cancel),
+        ("start_work", _tool_start_work),
+        ("stop_work", _tool_stop_work),
     ]
 )
 

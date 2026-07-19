@@ -13,6 +13,8 @@ current grammar of `life.txt`.
 - [Japanese CLI guide](./docs/ja/cli.md)
 - [English Web API / GUI guide](./docs/en/web.md)
 - [Japanese Web API / GUI guide](./docs/ja/web.md)
+- [English AI / MCP integration guide](./docs/en/ai-integration.md)
+- [Japanese AI / MCP integration guide](./docs/ja/ai-integration.md)
 - [English editor support guide](./docs/en/editor.md)
 - [Japanese editor support guide](./docs/ja/editor.md)
 - [English format specification](./docs/en/life_txt_format_spec.md)

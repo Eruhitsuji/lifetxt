@@ -47,6 +47,8 @@ Sample files are available in [../../examples/](../../examples/):
 This repository includes a dependency-free Python CLI:
 See [cli.md](./cli.md) for detailed command usage and option reference.
 See [web.md](./web.md) for the optional FastAPI REST API and browser GUI.
+See [ai-integration.md](./ai-integration.md) for the MCP server, AI client
+configuration, and the write-safety model.
 
 ```sh
 python -m lifetxt check life.txt

@@ -320,7 +320,6 @@ def row_haystack(row):
 # a detail value, which a single flattened haystack cannot express.
 ROW_FIELD_WEIGHTS = (("title", 3.0), ("id", 2.0), ("project", 1.5), ("details", 1.0))
 
-SOMEDAY_STATUSES = ("[?]",)
 
 
 def score_row(query, row):
@@ -350,20 +349,18 @@ def score_row(query, row):
 
 
 def is_next_action(row):
-    """An actionable next step: open, not blocked, not someday/maybe."""
-    if row.get("status") not in ("[ ]", "[/]"):
-        return False
-    if row.get("status") in SOMEDAY_STATUSES:
-        return False
-    if row.get("blocked"):
-        return False
-    details = row.get("details") or {}
-    if details.get("depends_on"):
-        return False
-    tags = [str(value).lstrip("#").lower() for value in details.get("tag") or []]
-    if "someday" in tags or "maybe" in tags:
-        return False
-    return True
+    """An actionable next step, using the shared predicate.
+
+    Delegating keeps `/next`, `lifetxt next`, and the MCP next-actions tool
+    from drifting apart.
+    """
+    from .nextaction import is_actionable
+
+    return is_actionable(
+        row.get("status"),
+        row.get("details") or {},
+        blocked=bool(row.get("blocked")),
+    )
 
 
 def sort_rows(rows, sort_key):

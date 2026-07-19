@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x76)
+Last updated: 2026-07-19 (updated x77)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -27,7 +27,6 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Test on the Python versions CI actually runs. The CI failure that went unnoticed from 2026-07-12 to 2026-07-19 was Linux-only: `curses` imports successfully there even with no terminal attached, so `run_curses_or_plain` called `curses.wrapper()` and `cbreak()` failed, while on Windows the import failed first and silently took the plain path. Local development runs Python 3.6 on Windows; CI runs 3.10/3.11/3.12 on Ubuntu. Add a documented way to run the suite against a CI-like environment before pushing (Docker, WSL, or `py -3.12`).
 - [ ] Make CI failures visible. Three consecutive weeks of red CI went unnoticed; consider a status badge in `readme.md` and/or failure notifications.
 - [ ] Add a CI job that runs the suite without the optional web dependencies. Every web test guards with `skipTest`, but one had lost its guard and only failed for contributors without the extras installed; a no-extras job would catch the next one.
-- [ ] Bring MCP up to parity with the new shorthand surfaces. `state`/presence transitions, capture sigils, and `done` precision now exist in the CLI, TUI, and Web API, but `lifetxt/mcp.py` exposes none of them, so an AI client still has to hand-write `S` records and close them itself. This is the widest remaining CLI/Web/MCP gap.
 - [ ] Route the new write paths through the shared mutation layer. `presence.status_transition` and `command_state` read, edit, and write without a content-hash check, so a concurrent external edit between read and write is silently overwritten, the same gap already tracked for the TUI editing commands.
 - [ ] Verify the new `tui` workspace in real terminals across WSL, Windows Terminal, and native macOS/Linux. The interactive path is covered by a stub-curses test but has never run against a real curses build; confirm the input bar cursor position, command palette rendering, `--glyphs auto` degradation on legacy code pages, color themes, narrow-terminal column dropping, and auto-reload with a human at a real TTY.
 - [ ] Give the `tui` editing commands content-hash CAS. `_mutate_rows` in `lifetxt/tui_app.py` is now the single TUI write path for `/done`, `/status`, `/set`, `/due`, `/assign`, `/delete`, and `/timer`, and it validates the whole batch before writing, but it still reads through `fzf_helper` / `timer` helpers with no hash check, so an external edit between reload and write is silently overwritten. Fold it into the project-wide shared mutation layer rather than adding a second CAS implementation.
@@ -223,18 +222,16 @@ Hygiene for `notify`, `notify --watch`, and future timer/alarm delivery. Indepen
 
 The existing stdio MCP server should become a safer, more complete interface for AI clients without losing the local-first file model.
 
+- [ ] Expose the MCP prompts through the CLI and docs discovery path. `prompts/list` serves five workflows, but nothing outside an MCP client can list them, so they are invisible to users evaluating the server.
+- [ ] Add a `resources/subscribe` implementation or drop the capability flag. The server advertises `resources` with `subscribe: false`; a file watcher already exists for the TUI and could push change notifications.
+- [ ] Consider pagination for large MCP read results. `list_items` and `search_items` cap with `limit` but have no cursor, so a big file cannot be walked reliably.
+- [ ] Add a tool that returns the diagnostics from `check` so a model can repair a broken file instead of failing every read.
 - [ ] Align MCP tool input and output with JSON Schema definitions. Validate tool responses against the same schemas used for JSON export and Web API payloads.
-- [ ] Add or refine MCP tools for search, review, next actions, standup summary, workload summary, habit streaks, dependency graph, blockers, and timer control.
-- [ ] Make proposal mode the default for destructive or ambiguous MCP writes. Return a structured diff that can be applied by a human-approved `lifetxt apply` or equivalent command.
-- [ ] Align MCP proposal diffs with a reusable JSON Patch-style structure. Keep it compatible with future `lifetxt diff`, JSON Schema `$id` publication, and cross-project AI context tooling instead of inventing a chat-only diff shape.
-- [ ] Require MCP-created records to include source metadata such as `source:mcp`, unless the user explicitly disables it.
-- [ ] Generate IDs on the lifetxt side, not in the AI client. Avoid trusting AI-generated IDs for write operations.
-- [ ] Re-check file mtime and content hash before every MCP write. Return a conflict error if the file changed after the MCP client read it.
-- [ ] Ensure MCP, CLI, and Web API use one internal mutation path. Do not duplicate validation, ID generation, link checks, timer updates, or atomic-write behavior across surfaces.
-- [ ] Add MCP read-only mode tests. Confirm read tools still work and write tools return clear errors.
-- [ ] Add MCP edge-case tests for `get_review`, timer tools, search, cross-file items, empty files, invalid ranges, read-only mode, and conflict handling.
-- [ ] Publish ready-to-copy MCP client configuration snippets for Claude Desktop, Cursor, VS Code, and local-only multi-file use. Include read-only and write-enabled examples.
-- [ ] Add `docs/en/ai-integration.md` and `docs/ja/ai-integration.md`. Cover MCP setup, local LLM privacy patterns, CLI pipe patterns, JSON review prompts, and GitHub Actions summaries.
+- [ ] Decide whether MCP proposal mode should be the default rather than opt-in. Every write tool now accepts `dry_run` and returns a unified diff, but the default is still to apply; a `mcp.require_proposal` config option would let cautious users force review. Pairs with a `lifetxt apply` command that consumes a returned diff.
+- [ ] Give MCP proposals a structured diff alongside the unified text diff. `_proposal` currently returns human-readable diff lines, which a model must parse; an item-level `{op, id, before, after}` list would be machine-consumable and reusable by `lifetxt diff`.
+- [ ] Make the MCP content-hash check mandatory rather than opt-in. `get_file_state` returns `file_hash` and every write accepts `expected_file_hash`, but omitting it skips the check, so a careless client can still overwrite a concurrent edit. Decide whether to require it once the shared mutation layer exists.
+- [ ] Ensure MCP, CLI, and Web API use one internal mutation path. Presence transitions and capture shorthand are now shared modules, but each surface still calls its own write helper, and MCP proposal mode has to apply-then-roll-back because the write helpers are file-based rather than pure.
+- [ ] Add MCP edge-case tests for cross-file items, empty files, and invalid ranges. Read-only mode, conflict handling, timer tools, search, and proposal mode are covered in `tests/test_mcp_expansion.py`.
 
 ---
 

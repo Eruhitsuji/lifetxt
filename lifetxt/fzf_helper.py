@@ -384,19 +384,18 @@ def editor_command(editor, path, line=1):
         if name.endswith(suffix):
             name = name[: -len(suffix)]
 
-    if name in ("vim", "nvim", "vi", "nano", "helix", "hx"):
-        flag = "+%s" % line if name != "nano" else "+%s" % line
-        return [resolved] + extra + [flag, path]
-    if name in ("code", "code-insiders", "codium", "cursor", "windsurf"):
+    # Editors that take the line as a leading +N argument.
+    if name in ("vim", "nvim", "vi", "nano", "emacs", "emacsclient", "micro", "gedit"):
+        return [resolved] + extra + ["+%s" % line, path]
+    # Editors that take the line as a path:line suffix.
+    if name in ("helix", "hx"):
+        return [resolved] + extra + ["%s:%s" % (path, line)]
+    if name in ("code", "code-insiders", "codium", "vscodium", "cursor", "windsurf"):
         # --wait keeps the caller blocked until the tab is closed, which is
         # what "open in $EDITOR and come back" means.
         return [resolved] + extra + ["--wait", "-g", "%s:%s" % (path, line)]
     if name in ("subl", "sublime_text"):
         return [resolved] + extra + ["--wait", "%s:%s" % (path, line)]
-    if name in ("emacs", "emacsclient"):
-        return [resolved] + extra + ["+%s" % line, path]
-    if name in ("micro",):
-        return [resolved] + extra + ["%s:%s" % (path, line)]
     return [resolved] + extra + [path]
 
 

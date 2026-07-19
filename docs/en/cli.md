@@ -1538,14 +1538,19 @@ export EDITOR=vim        # add to your shell profile to persist
 { "editor": "code" }
 ```
 
+The config file is `.lifetxt.json` or `lifetxt.config.json` **in the current
+directory**, or the path in `$LIFETXT_CONFIG`. There is no global config
+location, so the `editor` key only applies when you run `lifetxt` from that
+directory; use `EDITOR` if you want it to apply everywhere.
+
 The setting may include flags, such as `code -n`. The executable is resolved
 through `PATH`, which is required on Windows where `code` is a `.CMD` that
 cannot be launched from a bare name. Editors that open a window are passed a
 wait flag so that `/edit` returns only after you close the file.
 
-Line numbers are passed to `vim`, `nvim`, `vi`, `nano`, `helix`, `emacs`,
-`micro`, VS Code and its forks, and Sublime Text. Any other editor simply
-receives the file path. When no editor is configured, the error names the exact
+Line numbers are passed as `+42` to `vim`, `nvim`, `vi`, `nano`, `emacs`,
+`micro`, and `gedit`, and as a `path:42` suffix to `helix`, VS Code and its
+forks, and Sublime Text. Any other editor simply receives the file path. When no editor is configured, the error names the exact
 command to run for your platform.
 
 Terminal editors are supported: the TUI releases the terminal before launching

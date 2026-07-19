@@ -458,11 +458,18 @@ class EditorResolutionTests(unittest.TestCase):
         else:
             self.assertIn("export EDITOR", message)
 
-    def test_terminal_editors_receive_the_line_number(self):
-        for name in ("vim", "nvim", "vi", "nano"):
+    def test_plus_line_editors_receive_the_line_number(self):
+        for name in ("vim", "nvim", "vi", "nano", "emacs", "micro"):
             command = fzf_helper.editor_command(name, "life.txt", 42)
-            self.assertIn("+42", command)
-            self.assertEqual("life.txt", command[-1])
+            self.assertIn("+42", command, name)
+            self.assertEqual("life.txt", command[-1], name)
+
+    def test_path_suffix_editors_receive_the_line_in_the_path(self):
+        # helix uses `hx file:42`, not vim's `+42`.
+        for name in ("helix", "hx"):
+            command = fzf_helper.editor_command(name, "life.txt", 42)
+            self.assertEqual("life.txt:42", command[-1], name)
+            self.assertNotIn("+42", command, name)
 
     def test_gui_editors_wait_so_the_caller_blocks_until_the_tab_closes(self):
         command = fzf_helper.editor_command("code", "life.txt", 42)

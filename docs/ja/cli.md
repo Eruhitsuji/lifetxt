@@ -1286,12 +1286,18 @@ export EDITOR=vim        # 永続化するには shell の profile に追記
 { "editor": "code" }
 ```
 
+config file は**カレントディレクトリ**の `.lifetxt.json` または `lifetxt.config.json`、
+あるいは `$LIFETXT_CONFIG` が指す path です。global な config 置き場はないため、
+`editor` key はそのディレクトリで `lifetxt` を実行したときだけ有効です。
+どこからでも有効にしたい場合は `EDITOR` を使ってください。
+
 `code -n` のように flag を含めて指定できます。実行 file は `PATH` から解決されます。
 Windows では `code` が `.CMD` であり、名前だけでは起動できないためこれが必要です。
 window を開く editor には wait flag を渡すため、`/edit` は file を閉じてから戻ります。
 
-行番号は `vim`、`nvim`、`vi`、`nano`、`helix`、`emacs`、`micro`、VS Code とその派生、
-Sublime Text に渡されます。それ以外の editor には file path のみを渡します。
+行番号は `vim`、`nvim`、`vi`、`nano`、`emacs`、`micro`、`gedit` には `+42` 形式で、
+`helix`、VS Code とその派生、Sublime Text には `path:42` 形式で渡されます。
+それ以外の editor には file path のみを渡します。
 editor が未設定の場合は、実行すべき command を platform ごとに明示した error になります。
 
 端末内 editor にも対応しています。TUI は editor を起動する前に端末を解放し、

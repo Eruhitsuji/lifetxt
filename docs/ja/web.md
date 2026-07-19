@@ -327,6 +327,35 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 view 切り替え(`Go to Dashboard` など)、quick-add、export、theme toggle、
 kiosk mode、agenda blocked filter の切り替えに対応しています。
 
+### スマートフォンでの利用
+
+ブラウザ UI はデスクトップだけでなくタッチ操作にも対応しています。
+
+**record の選択。** タッチデバイスでは checkbox が常に表示されます。
+デスクトップでは hover 時に表示されますが、指では hover できないため、
+この対応がないと何も選択できず、一括操作も slash command も対象を持てません。
+checkbox をタップすると選択され、一括操作の toolbar が画面下部の
+親指が届く位置に固定表示されます。
+
+**⌘ ボタン。** スマートフォンには `Ctrl+K`、`n`、`q`、`x` が存在しないため、
+右下のフローティングボタンから同じ入口をまとめて開けます。
+command、クイック追加、新規 record、status 設定、再読み込みが並び、
+「Commands」は palette を `/` 入力済みの状態で開きます。
+
+**レイアウト。** 要素が多い行（toolbar、view tab、filter）は
+全幅ボタンが縦に積み上がる代わりに横スクロールします。
+ページ自体が横に動くことはありません。
+dialog と record 詳細は中央の箱ではなくボトムシートとして開きます。
+
+**細部。** 小さい画面では入力欄を 16px にしています。
+iOS Safari はこれより小さい入力欄に focus すると拡大し、元に戻さないためです。
+タッチ対象は最低 44px を確保しています。
+固定要素は `env(safe-area-inset-*)` でノッチとホームインジケータを避け、
+全画面高の要素は `dvh` を使うため、URL バーの伸縮で内容が隠れません。
+
+デスクトップの表示は変わりません。
+フローティングボタンは非表示、一括操作 toolbar は通常配置、dialog は中央のままです。
+
 ### slash command
 
 `Ctrl+K` を押して `/` を入力すると、TUI と同じ command を実行できます。

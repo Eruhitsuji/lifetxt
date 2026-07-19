@@ -745,12 +745,22 @@ class ServeBindDiagnosticTests(unittest.TestCase):
 
         from lifetxt.cli import _preflight_bind
 
-        probe = socket.socket()
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-        probe.close()
+        # A just-released port can still be unbindable for a moment, and the
+        # probe deliberately does not set SO_REUSEADDR on Windows, so try a few
+        # candidates rather than asserting on one and racing the OS.
+        last_error = None
+        for _ in range(5):
+            probe = socket.socket()
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+            probe.close()
+            try:
+                _preflight_bind("127.0.0.1", port)
+                return
+            except ValueError as exc:
+                last_error = exc
 
-        _preflight_bind("127.0.0.1", port)
+        self.fail("no free port accepted the preflight check: %s" % last_error)
 
     def test_port_in_use_is_reported_with_a_suggestion(self):
         import socket

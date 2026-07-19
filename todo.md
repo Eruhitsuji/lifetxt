@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x80)
+Last updated: 2026-07-20 (updated x81)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -143,6 +143,23 @@ TUI inspector.
 - [ ] Decide how `archive` and `undo` interact with attachments. Archiving an item keeps its `file:` value pointing at a path that may later move; there is no rewrite or validation step.
 - [ ] Handle symlinked targets explicitly. They currently resolve transparently, so a symlink that escapes the life.txt directory is neither reported nor blocked.
 - [ ] Verify attachment behaviour on a case-sensitive filesystem. The `W405` case-mismatch check only has an observable effect on case-insensitive filesystems (Windows, macOS), and has not been exercised on Linux where the mismatch becomes a real failure.
+
+---
+
+## P1: Mobile Web UI
+
+The browser UI now targets touch: always-visible selection checkboxes, 44px
+targets, 16px form text, safe-area insets, `dvh` heights, horizontally
+scrolling toolbars, bottom-sheet dialogs, a bottom-docked bulk toolbar, and a
+floating action button that reaches the keyboard-only entry points.
+
+- [ ] Add a headless-browser test suite for the Web UI. The mobile rules are covered by static checks on the served page, which catch a rule being deleted but not a layout that breaks for another reason. A Chrome DevTools Protocol harness was used to verify this work by hand (device emulation, computed styles, tap simulation, screenshots) and should be turned into a committed suite. This also covers the long-standing "Playwright or equivalent browser tests" item.
+- [ ] Verify on real hardware. Everything was checked in Chrome device emulation; actual iOS Safari and Android Chrome differ on safe areas, `dvh` behaviour during URL-bar collapse, and momentum scrolling inside the horizontally scrolling toolbars.
+- [ ] Add swipe gestures for common row actions (complete, defer) once there is a way to undo them by touch.
+- [ ] Reconsider the floating button when a record is open. It currently sits above the bottom sheet's backdrop and is not needed there.
+- [ ] Give the horizontally scrolling toolbars a visible affordance. Nothing signals that the toolbar and view tabs scroll sideways; a fade or shadow at the edge would.
+- [ ] Decide whether the Items view should use a denser row layout on phones. Rows are comfortable to tap but show few records per screen.
+- [ ] Revisit PWA support now that the UI is usable on a phone. Offline caching, home-screen install, and a Web Share Target for capture are the natural next step, and the deferred entry lists this as blocked on mobile surfaces stabilising.
 
 ---
 
@@ -453,7 +470,7 @@ Useful ideas that should not block near-term releases. Revisit after the corresp
 - [ ] Consider server-side graph rendering so share and digest outputs can attach the same graph image without a browser.
 - [ ] Consider a full embedded Git server only if lightweight Git subprocess endpoints prove insufficient.
 - [ ] Consider static HTML export mode for the Web UI as a read-only snapshot.
-- [ ] Consider PWA support for the Web UI: offline caching, home-screen install, and a mobile quick-capture screen, plus Web Share Target registration so text shared from other apps lands in the inbox. This is the most direct answer to mobile input friction, but it needs the Web calendar/quick-add surfaces and write-conflict detection to stabilize first.
+- [ ] Consider PWA support for the Web UI: offline caching, home-screen install, and a mobile quick-capture screen, plus Web Share Target registration so text shared from other apps lands in the inbox. The touch layout now exists, so the remaining blocker is write-conflict detection.
 - [ ] Consider interactive plot mode in TUI after plot output is stable.
 - [ ] Consider integrating team presence into the TUI sidebar.
 

@@ -390,6 +390,35 @@ recently opened records when the query is empty, switches between views
 quick-add, export, theme toggle, kiosk mode, and agenda blocked-filter
 toggling.
 
+### On A Phone
+
+The browser UI is built for touch as well as a desktop.
+
+**Selecting records.** Checkboxes are always visible on a touch device. On a
+desktop they appear on hover, which a finger cannot do, so without this there
+would be no way to select anything and every bulk action and slash command
+would have nothing to act on. Tap a checkbox to select; the bulk toolbar then
+docks to the bottom of the screen within thumb reach.
+
+**The ⌘ button.** `Ctrl+K`, `n`, `q`, and `x` do not exist on a phone, so a
+floating button in the bottom-right corner opens a short menu with the same
+entry points: commands, quick add, new record, set status, and refresh.
+"Commands" opens the palette already in `/` mode.
+
+**Layout.** Crowded rows — the toolbar, view tabs, filter pills — scroll
+sideways rather than stacking into a wall of full-width buttons. The page
+itself never pans horizontally. Dialogs and the record detail open as bottom
+sheets instead of centred boxes.
+
+**Details.** Form controls are 16px on small screens, because iOS Safari zooms
+in on a smaller focused input and does not zoom back out. Touch targets are at
+least 44px. Fixed elements respect the display cutout and home indicator via
+`env(safe-area-inset-*)`, and full-height elements use `dvh` so the collapsing
+URL bar does not push content out of view.
+
+Nothing about the desktop layout changes: the floating button is hidden, the
+bulk toolbar stays inline, and dialogs stay centred.
+
 ### Slash Commands
 
 Press `Ctrl+K` and type `/` to run the same commands the TUI uses. The catalog

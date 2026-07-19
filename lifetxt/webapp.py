@@ -2420,7 +2420,7 @@ HTML_PAGE = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>life.txt</title>
   <style>
     :root {
@@ -4263,6 +4263,231 @@ HTML_PAGE = r"""<!doctype html>
       .detail-modal { width: 100%; max-height: 96vh; border-radius: var(--r-md); }
       #back-to-top { bottom: 1rem; left: 1rem; }
     }
+
+    /* ── Mobile and touch ────────────────────────────────────────────
+       Three concerns, deliberately separated:
+       - `pointer: coarse` rules are about fingers, at any screen size.
+       - width rules are about layout.
+       - safe-area insets are about notched hardware.
+    */
+
+    /* Notched phones: keep content out from under the cutout and the home
+       indicator. Paired with viewport-fit=cover on the meta tag. */
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    /* Mobile browsers count the collapsing URL bar in 100vh, so a full-height
+       element is taller than the visible area. dvh tracks the real viewport. */
+    @supports (height: 100dvh) {
+      body { min-height: 100dvh; }
+    }
+
+    /* A single overflowing element makes the whole page pan sideways, which
+       feels broken on a phone. Contain it rather than hunting every child. */
+    body { overflow-x: hidden; }
+    main, header, .section, .item { min-width: 0; }
+
+    /* Wide content scrolls inside its own box instead of the page. */
+    .table-scroll, .review-table-wrap, .team-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (pointer: coarse) {
+      /* Selection checkboxes are hover-revealed on desktop. A finger has no
+         hover, so without this there is no way to select a record at all, and
+         every bulk action and slash command has nothing to act on. */
+      .item-check {
+        opacity: 1;
+        width: 1.35rem;
+        height: 1.35rem;
+      }
+
+      /* Apple and Android both recommend ~44px minimum for touch targets. */
+      button,
+      .workspace-tab,
+      .filter-btn,
+      select {
+        min-height: 2.75rem;
+      }
+      .item-status-btn,
+      .icon-btn {
+        min-width: 2.75rem;
+      }
+
+      /* Hover-only affordances need a permanent equivalent. */
+      .item-actions { opacity: 1; }
+    }
+
+    @media (max-width: 680px) {
+      /* iOS Safari zooms the page when a focused input is under 16px, and
+         does not zoom back out. Keep form text at 16px on small screens. */
+      input, select, textarea {
+        font-size: 16px;
+      }
+
+      /* Safe areas. */
+      header {
+        padding-top: calc(.5rem + var(--safe-top));
+        padding-left: calc(.75rem + var(--safe-left));
+        padding-right: calc(.75rem + var(--safe-right));
+      }
+      main {
+        padding-left: calc(.75rem + var(--safe-left));
+        padding-right: calc(.75rem + var(--safe-right));
+        padding-bottom: calc(5.5rem + var(--safe-bottom));
+      }
+
+      /* The toolbar holds ~9 buttons. Stacking them buries the content, so
+         scroll them sideways instead and keep the row one line tall. */
+      header > .toolbar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: .35rem;
+        padding-bottom: .15rem;
+      }
+      header > .toolbar::-webkit-scrollbar { display: none; }
+      header > .toolbar > * {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      .workspace-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+      }
+      .workspace-tabs::-webkit-scrollbar { display: none; }
+      .workspace-tab { flex: 0 0 auto; }
+
+      /* Selection must work here, so undo the desktop rule that hid it. */
+      .item-check { display: block; }
+      .item {
+        grid-template-columns: auto auto auto minmax(0, 1fr);
+        row-gap: .2rem;
+      }
+      .item .meta { grid-column: 1 / -1; }
+
+      /* Bulk actions belong within thumb reach, not at the top of a long list. */
+      .bulk-toolbar.visible {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        margin: 0;
+        border-radius: 0;
+        border-top: 1px solid var(--line-strong);
+        padding: .5rem calc(.75rem + var(--safe-left)) calc(.5rem + var(--safe-bottom)) calc(.75rem + var(--safe-right));
+        box-shadow: var(--shadow-3);
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+      .bulk-toolbar.visible > * { flex: 0 0 auto; }
+
+      /* A centred dialog on a phone leaves dead space above and below and puts
+         the controls mid-screen. A bottom sheet reaches the thumb. */
+      .detail-drawer, .modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+      }
+      .detail-modal, .modal {
+        width: 100%;
+        max-width: 100%;
+        max-height: 92vh;
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
+        padding-bottom: calc(1rem + var(--safe-bottom));
+      }
+      @supports (max-height: 92dvh) {
+        .detail-modal, .modal { max-height: 92dvh; }
+      }
+
+      /* The palette is the only way to reach commands without a keyboard. */
+      .cmdk-backdrop { align-items: flex-start; padding: 0; }
+      .cmdk {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        padding-top: var(--safe-top);
+      }
+      .cmdk-list { max-height: 60vh; }
+      .cmdk-row { padding-block: .6rem; }
+
+      .quick-add-bar, .filter-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+      }
+      .quick-add-bar > *, .filter-bar > * { flex: 0 0 auto; }
+      .quick-add-bar input { flex: 1 1 12rem; min-width: 10rem; }
+
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: .82rem; }
+
+      /* Charts and graphs are unreadable when squeezed; let them scroll. */
+      .chart-wrap, .graph-wrap { overflow-x: auto; }
+    }
+
+    @media (max-width: 420px) {
+      .kpi-row { grid-template-columns: 1fr; }
+      .brand h1 { font-size: 1rem; }
+      .item { font-size: .92rem; }
+    }
+
+    /* ── Mobile action button ────────────────────────────────────────
+       Ctrl+K, n, and x do not exist on a phone. One reachable control opens
+       the command palette, which is the entry point to everything else. */
+    .mobile-fab {
+      display: none;
+      position: fixed;
+      right: calc(1rem + var(--safe-right));
+      bottom: calc(1rem + var(--safe-bottom));
+      z-index: 55;
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0;
+      box-shadow: var(--shadow-3);
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+    .mobile-fab:active { transform: scale(.94); }
+    .mobile-fab-menu {
+      display: none;
+      position: fixed;
+      right: calc(1rem + var(--safe-right));
+      bottom: calc(5rem + var(--safe-bottom));
+      z-index: 56;
+      flex-direction: column;
+      gap: .4rem;
+      align-items: stretch;
+      min-width: 11rem;
+      padding: .4rem;
+      background: var(--panel);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-3);
+    }
+    .mobile-fab-menu.open { display: flex; }
+    .mobile-fab-menu button { justify-content: flex-start; text-align: left; }
+
+    @media (max-width: 680px) {
+      .mobile-fab { display: block; }
+    }
+    .kiosk-mode .mobile-fab,
+    .display-mode .mobile-fab,
+    .kiosk-mode .mobile-fab-menu,
+    .display-mode .mobile-fab-menu { display: none !important; }
   </style>
 </head>
 <body>
@@ -4686,6 +4911,14 @@ HTML_PAGE = r"""<!doctype html>
   </div>
 
   <!-- Command palette -->
+  <button class="mobile-fab" id="mobile-fab" onclick="toggleMobileMenu()" aria-label="Open actions" aria-expanded="false" title="Actions">⌘</button>
+  <div class="mobile-fab-menu" id="mobile-fab-menu" role="menu" aria-label="Quick actions">
+    <button class="secondary" role="menuitem" onclick="mobileAction('command')">⌘ Commands…</button>
+    <button class="secondary" role="menuitem" onclick="mobileAction('add')">＋ Quick add</button>
+    <button class="secondary" role="menuitem" onclick="mobileAction('new')">✎ New record</button>
+    <button class="secondary" role="menuitem" onclick="mobileAction('presence')">◉ Set status</button>
+    <button class="secondary" role="menuitem" onclick="mobileAction('refresh')">⟳ Refresh</button>
+  </div>
   <div class="cmdk-backdrop" id="cmdk-backdrop" onclick="if(event.target===this)closeCmdk()">
     <div class="cmdk" role="dialog" aria-label="Command palette">
       <input id="cmdk-input" placeholder="Type / for commands, or search items…" autocomplete="off">
@@ -7523,6 +7756,34 @@ HTML_PAGE = r"""<!doctype html>
         showToast(err.message || `/${command.name} failed.`, "error");
       }
     }
+
+    // ── Mobile action button ───────────────────────────────────────
+    // A phone has no Ctrl+K, no n, and no x, so every keyboard-only entry
+    // point needs one reachable equivalent.
+    function toggleMobileMenu(show) {
+      const menu = document.getElementById("mobile-fab-menu");
+      const fab = document.getElementById("mobile-fab");
+      if (!menu) return;
+      const open = show === undefined ? !menu.classList.contains("open") : show;
+      menu.classList.toggle("open", open);
+      if (fab) fab.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function mobileAction(what) {
+      toggleMobileMenu(false);
+      if (what === "command") { openCmdk(); const i = document.getElementById("cmdk-input"); if (i) i.value = "/"; renderCmdk("/"); }
+      else if (what === "add") toggleQuickAdd(true);
+      else if (what === "new") newItem();
+      else if (what === "presence") togglePresence(true);
+      else if (what === "refresh") refreshAll();
+    }
+
+    document.addEventListener("click", (e) => {
+      const menu = document.getElementById("mobile-fab-menu");
+      if (!menu || !menu.classList.contains("open")) return;
+      if (e.target.closest("#mobile-fab-menu") || e.target.closest("#mobile-fab")) return;
+      toggleMobileMenu(false);
+    });
 
     function renderCmdkCommands(typed, list) {
       const matches = matchingCommands(typed);

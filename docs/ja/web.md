@@ -147,8 +147,10 @@ curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
-curl -X POST http://127.0.0.1:8000/api/status \n  -H "Content-Type: application/json" -d '{"state": "busy"}'
-curl -X POST http://127.0.0.1:8000/api/items/capture \n  -H "Content-Type: application/json" -d '{"text": "Buy milk @home ^tomorrow"}'
+curl -X POST http://127.0.0.1:8000/api/status \
+  -H "Content-Type: application/json" -d '{"state": "busy"}'
+curl -X POST http://127.0.0.1:8000/api/items/capture \
+  -H "Content-Type: application/json" -d '{"text": "Buy milk @home ^tomorrow"}'
 curl "http://127.0.0.1:8000/api/review?week=true"
 curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
 curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"

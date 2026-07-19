@@ -133,8 +133,6 @@ def bash_completion():
     algorithm_values = OPTION_VALUES["--algorithm"]
     theme_values = OPTION_VALUES["--theme"]
     keymap_values = OPTION_VALUES["--keymap"]
-    theme_values = OPTION_VALUES["--theme"]
-    keymap_values = OPTION_VALUES["--keymap"]
     return """# lifetxt bash completion
 _lifetxt_completion() {
   local cur prev
@@ -193,6 +191,8 @@ def zsh_completion():
     around_values = OPTION_VALUES["--around"]
     preset_values = OPTION_VALUES["--preset"]
     algorithm_values = OPTION_VALUES["--algorithm"]
+    theme_values = OPTION_VALUES["--theme"]
+    keymap_values = OPTION_VALUES["--keymap"]
     return """#compdef lifetxt
 # lifetxt zsh completion
 _lifetxt() {

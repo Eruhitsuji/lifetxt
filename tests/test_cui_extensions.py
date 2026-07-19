@@ -22,6 +22,35 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class CompletionTests(unittest.TestCase):
+    def test_every_shell_generator_runs(self):
+        """zsh_completion referenced values it never defined, so the command
+        raised NameError for every zsh user. Only bash was covered before."""
+        for name in ("bash", "zsh", "fish"):
+            generator = getattr(completion, "%s_completion" % name)
+
+            script = generator()
+
+            self.assertTrue(script.strip(), name)
+            self.assertNotIn("%(", script, "%s left an unsubstituted placeholder" % name)
+
+    def test_shell_generators_include_the_shared_option_values(self):
+        for name in ("bash", "zsh"):
+            script = getattr(completion, "%s_completion" % name)()
+
+            self.assertIn(completion.OPTION_VALUES["--theme"], script, name)
+            self.assertIn(completion.OPTION_VALUES["--keymap"], script, name)
+
+    def test_completion_command_writes_each_shell(self):
+        for shell in ("bash", "zsh", "fish"):
+            args = argparse.Namespace(completion_command=shell, output=None)
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                code = completion.cmd_completion(args)
+
+            self.assertEqual(0, code, shell)
+            self.assertTrue(output.getvalue().strip(), shell)
+
     def test_generates_completion_for_new_commands(self):
         script = completion.bash_completion()
 

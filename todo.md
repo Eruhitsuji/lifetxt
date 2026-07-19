@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x81)
+Last updated: 2026-07-20 (updated x82)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -153,6 +153,7 @@ targets, 16px form text, safe-area insets, `dvh` heights, horizontally
 scrolling toolbars, bottom-sheet dialogs, a bottom-docked bulk toolbar, and a
 floating action button that reaches the keyboard-only entry points.
 
+- [ ] Track down an intermittent full-suite failure. Two runs out of roughly ten failed with a single test, and neither reproduced on repeat runs of the suite or of the suspected tests in isolation; the failing name was lost to truncated output both times. Run the suite with `--tb=short -rf` captured to a file until it recurs, then fix the shared state or timing behind it.
 - [ ] Add a headless-browser test suite for the Web UI. The mobile rules are covered by static checks on the served page, which catch a rule being deleted but not a layout that breaks for another reason. A Chrome DevTools Protocol harness was used to verify this work by hand (device emulation, computed styles, tap simulation, screenshots) and should be turned into a committed suite. This also covers the long-standing "Playwright or equivalent browser tests" item.
 - [ ] Verify on real hardware. Everything was checked in Chrome device emulation; actual iOS Safari and Android Chrome differ on safe areas, `dvh` behaviour during URL-bar collapse, and momentum scrolling inside the horizontally scrolling toolbars.
 - [ ] Add swipe gestures for common row actions (complete, defer) once there is a way to undo them by touch.

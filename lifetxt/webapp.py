@@ -4959,7 +4959,8 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (opens the record editor)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
-        <tr><td>p</td><td>Toggle presence status bar</td></tr>\n        <tr><td>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
+        <tr><td>p</td><td>Toggle presence status bar</td></tr>
+        <tr><td>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
         <tr><td>r</td><td>Refresh current view</td></tr>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>

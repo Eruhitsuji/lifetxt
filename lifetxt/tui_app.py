@@ -661,11 +661,14 @@ def _session_enabled(state):
 
 
 class Command(object):
-    def __init__(self, name, usage, summary, handler):
+    def __init__(self, name, usage, summary, handler, alias=None):
         self.name = name
         self.usage = usage
         self.summary = summary
         self.handler = handler
+        # A one-or-two letter shorthand. Typing it exactly wins over fuzzy
+        # ranking, so /d is always /done and never /detail or /delete.
+        self.alias = alias
 
 
 def _cmd_help(state, argument):
@@ -830,15 +833,39 @@ def _cmd_detail(state, argument):
 def _cmd_done(state, argument):
     rows = state.target_rows()
     ids = ", ".join(row.get("id") or "?" for row in rows)
-    from .fzf_helper import update_item
+    stamp = _completion_value(state, argument)
+    from .timer import update_item_in_file
 
     id_key = state.options["id_key"]
 
     def apply_row(row):
-        update_item(row["source"], row["id"], id_key, status="[x]")
+        update_item_in_file(
+            row["source"], row["id"], id_key, status="[x]", set_details={"done": [stamp]}
+        )
 
     _mutate_rows(state, rows, "done %s" % ids, apply_row, require_task=True)
-    return ("success", "Marked done: %s" % ids)
+    return ("success", "Marked done (%s): %s" % (stamp, ids))
+
+
+def _completion_value(state, argument):
+    """Pick the done: value, honouring /done now and config done.precision."""
+    import datetime as _datetime
+
+    from .config import config_section
+
+    choice = (argument or "").strip().lower()
+    if choice and choice not in ("now", "today", "date"):
+        raise ValueError("Usage: /done [now|today]")
+    config = getattr(state.args, "config_data", None) or {}
+    precision = str(config_section(config, "done").get("precision") or "date").lower()
+    if choice == "now":
+        precision = "datetime"
+    elif choice in ("today", "date"):
+        precision = "date"
+    moment = _datetime.datetime.now()
+    if precision == "datetime":
+        return moment.strftime("%Y-%m-%dT%H:%M")
+    return moment.date().isoformat()
 
 
 def _cmd_status(state, argument):
@@ -887,16 +914,14 @@ def _cmd_due(state, argument):
     if not value:
         count = _set_row_details(state, rows, {"due": []}, "clear due")
         return ("success", "Cleared due: on %d row(s)." % count)
-    resolved = _resolve_date_token(value)
-    from .timeutil import parse_date_or_datetime
+    from .shorthand import ShorthandError
 
-    if parse_date_or_datetime(resolved) is None:
-        # The token set is deliberately closed. Guessing at free-form dates
+    try:
+        # The token set is deliberately closed; guessing at free-form dates
         # would write an unparseable due: value that only surfaces later.
-        raise ValueError(
-            "%r is not a date. Use YYYY-MM-DD, today, tomorrow, a weekday, next_week, +3d, or -1w."
-            % value
-        )
+        resolved = _resolve_date_token(value, strict=True)
+    except ShorthandError as exc:
+        raise ValueError(str(exc))
     count = _set_row_details(state, rows, {"due": [resolved]}, "due %s" % resolved)
     return ("success", "Set due:%s on %d row(s)." % (resolved, count))
 
@@ -934,26 +959,11 @@ def _cmd_delete(state, argument):
     return ("success", "Deleted %d row(s). /undo restores them." % count)
 
 
-def _resolve_date_token(value):
-    """Resolve the documented closed set of relative date tokens.
+def _resolve_date_token(value, strict=False):
+    """Delegate to the shared resolver so every surface accepts one token set."""
+    from .shorthand import resolve_date_token
 
-    Reuses the CLI resolver so `today`, `tomorrow`, weekday names, and
-    `next_week` mean the same thing in the TUI, and adds `+Nd` / `-Nd` offsets.
-    """
-    import datetime as _datetime
-
-    text = str(value).strip()
-    if text and text[0] in "+-" and text[1:].rstrip("dwDW").isdigit():
-        body = text[1:]
-        unit = body[-1].lower() if body[-1].lower() in ("d", "w") else "d"
-        amount = int(body.rstrip("dwDW"))
-        days = amount * (7 if unit == "w" else 1)
-        if text[0] == "-":
-            days = -days
-        return (_datetime.date.today() + _datetime.timedelta(days=days)).isoformat()
-    from .cli import _resolve_relative_date
-
-    return _resolve_relative_date(text)
+    return resolve_date_token(value, strict=strict)
 
 
 def _cmd_undo(state, argument):
@@ -1001,6 +1011,90 @@ def _suspend_terminal(state):
         return
     with suspend():
         yield
+
+
+def _cmd_state(state, argument):
+    """Record a presence status, closing the previously open one."""
+    from .presence import COMMON_STATES, status_transition
+
+    value = (argument or "").strip()
+    path = _write_target(state)
+    try:
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            text = handle.read()
+    except OSError:
+        text = ""
+
+    close_only = value.lower() in ("end", "off", "close", "")
+    if close_only and not value:
+        raise ValueError(
+            "Usage: /state %s ... or /state end to close the current status."
+            % "|".join(COMMON_STATES[:4])
+        )
+
+    parts = value.split(None, 1)
+    new_state = None if close_only else parts[0]
+    title = parts[1].strip() if len(parts) > 1 else None
+
+    result = status_transition(
+        text,
+        state=new_state,
+        title=title,
+        person="self",
+        id_key=state.options["id_key"],
+        close_only=close_only,
+    )
+    if result.unchanged:
+        return ("info", "Already %s. Nothing written." % result.unchanged)
+    new_text, closed = result.text, result.closed
+    _push_undo(state, path, "state %s" % (new_state or "end"))
+    from .atomic import atomic_write_text
+
+    atomic_write_text(path, new_text)
+    state.reload()
+    if close_only:
+        if not closed:
+            return ("info", "No open status to close.")
+        return ("success", "Closed status: %s" % _status_label(closed[0]))
+    if closed:
+        return ("success", "Status: %s (closed %d previous)" % (new_state, len(closed)))
+    return ("success", "Status: %s" % new_state)
+
+
+def _status_label(line):
+    """Title of a rendered status line, parsed so quoted titles stay intact."""
+    from .parser import parse_text
+
+    try:
+        items, _diagnostics = parse_text(str(line) + "\n")
+    except Exception:
+        items = []
+    if items:
+        return items[0].title
+    parts = str(line).split()
+    return parts[2] if len(parts) > 2 else str(line)
+
+
+def _cmd_now(state, argument):
+    """Show the current presence status without leaving the workspace."""
+    from .presence import active_status_items
+    from .parser import parse_text
+
+    path = _write_target(state)
+    try:
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            items, _diagnostics = parse_text(handle.read(), id_key=state.options["id_key"])
+    except OSError as exc:
+        raise ValueError("Could not read %s: %s" % (os.path.basename(path), exc))
+    open_items = active_status_items(items, person=(argument or "").strip() or None)
+    if not open_items:
+        return ("info", "No open status. Set one with /state busy.")
+    labels = []
+    for item in open_items:
+        values = item.details.get("state") or [""]
+        person = (item.details.get("person") or ["self"])[0]
+        labels.append("%s: %s since %s" % (person, values[0], (item.details.get("from") or [""])[0]))
+    return ("info", "  |  ".join(labels))
 
 
 def _cmd_add(state, argument):
@@ -1211,8 +1305,8 @@ def _cmd_window(state, argument):
 COMMANDS = (
     Command("help", "[QUERY]", "Toggle the reference, or search it", _cmd_help),
     Command("view", "all|tasks|agenda|status|next", "Switch which sections are listed", _cmd_view),
-    Command("next", "", "Show open, unblocked, non-someday actions by priority", _cmd_next),
-    Command("search", "TEXT", "Fuzzy filter every listed row", _cmd_search),
+    Command("next", "", "Show open, unblocked, non-someday actions by priority", _cmd_next, alias="n"),
+    Command("search", "TEXT", "Fuzzy filter every listed row", _cmd_search, alias="f"),
     Command("project", "NAME", "Filter by project: (empty clears)", _cmd_project),
     Command("context", "NAME", "Filter by context: (empty clears)", _cmd_context),
     Command("tag", "NAME", "Filter by tag: (empty clears)", _cmd_tag),
@@ -1220,16 +1314,18 @@ COMMANDS = (
     Command("clear", "", "Clear every filter and mark", _cmd_clear),
     Command("goto", "ID", "Move the selection to a record id", _cmd_goto),
     Command("mark", "toggle|all|none", "Mark rows for bulk actions", _cmd_mark),
-    Command("done", "", "Mark the marked or selected task-like rows done", _cmd_done),
+    Command("done", "[now]", "Mark rows done and record done:", _cmd_done, alias="d"),
+    Command("state", "STATE [TITLE] | end", "Record presence, closing the previous status", _cmd_state, alias="s"),
+    Command("now", "[PERSON]", "Show the current open presence status", _cmd_now),
     Command("status", "open|active|done|dropped", "Set the status of the marked or selected rows", _cmd_status),
     Command("set", "KEY VALUE", "Set a detail on the marked or selected rows", _cmd_set),
     Command("due", "DATE", "Set due: using today/tomorrow/+3d tokens", _cmd_due),
     Command("assign", "USER", "Set assignee: on the marked or selected rows", _cmd_assign),
-    Command("add", "TITLE", "Append a new open task to the write file", _cmd_add),
+    Command("add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"),
     Command("delete", "yes", "Delete the marked or selected rows (needs confirmation)", _cmd_delete),
-    Command("edit", "", "Open the selected row in $EDITOR", _cmd_edit),
-    Command("timer", "start|stop|status|cancel", "Track elapsed time on the selected row", _cmd_timer),
-    Command("undo", "", "Undo the last write made in this session", _cmd_undo),
+    Command("edit", "", "Open the selected row in $EDITOR", _cmd_edit, alias="e"),
+    Command("timer", "start|stop|status|cancel", "Track elapsed time on the selected row", _cmd_timer, alias="t"),
+    Command("undo", "", "Undo the last write made in this session", _cmd_undo, alias="u"),
     Command("export", "md|csv|json [PATH]", "Write the visible rows to a file", _cmd_export),
     Command("stats", "", "Toggle a summary of the visible rows", _cmd_stats),
     Command("detail", "", "Toggle the inspector panel", _cmd_detail),
@@ -1237,10 +1333,13 @@ COMMANDS = (
     Command("theme", "auto|dark|light|mono", "Change the color theme", _cmd_theme),
     Command("limit", "N", "Rows kept per section", _cmd_limit),
     Command("window", "12h", "Agenda window around now", _cmd_window),
-    Command("quit", "", "Leave the TUI", _cmd_quit),
+    Command("quit", "", "Leave the TUI", _cmd_quit, alias="q"),
 )
 
 COMMANDS_BY_NAME = dict((command.name, command) for command in COMMANDS)
+COMMANDS_BY_ALIAS = dict(
+    (command.alias, command) for command in COMMANDS if command.alias
+)
 
 
 def command_suggestions(text):
@@ -1251,6 +1350,10 @@ def command_suggestions(text):
     name = typed.split(" ", 1)[0]
     if not name:
         return [(command, []) for command in COMMANDS]
+    exact = COMMANDS_BY_ALIAS.get(name.lower())
+    if exact is not None:
+        rest = [(command, []) for command in COMMANDS if command is not exact]
+        return [(exact, list(range(len(exact.name))))] + rest
     scored = []
     for index, command in enumerate(COMMANDS):
         match = fuzzy_match(name, command.name)
@@ -1268,7 +1371,7 @@ def run_command(state, text):
     if not text:
         raise ValueError("Type a command name after /.")
     name, _, argument = text.partition(" ")
-    command = COMMANDS_BY_NAME.get(name.lower())
+    command = COMMANDS_BY_NAME.get(name.lower()) or COMMANDS_BY_ALIAS.get(name.lower())
     if command is None:
         suggestions = command_suggestions(name)
         hint = ""
@@ -1346,12 +1449,24 @@ def _write_target(state):
     return paths[0]
 
 
-def _quick_add_line(title, id_key, existing_ids=None):
+def _quick_add_line(title, id_key, existing_ids=None, shorthand=True):
     from .ids import generate_item_id
     from .model import Item
     from .serializer import item_to_line
+    from .shorthand import ShorthandError, parse_capture
 
-    item = Item("[ ]", "T", title, None, 0)
+    details = {}
+    if shorthand:
+        try:
+            parsed_title, details = parse_capture(title, strict_dates=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        if details:
+            if not parsed_title:
+                raise ValueError("Capture shorthand consumed the whole title.")
+            title = parsed_title
+
+    item = Item("[ ]", "T", title, details or None, 0)
     item.details[id_key] = [generate_item_id(item, existing_ids=existing_ids)]
     return item_to_line(item)
 

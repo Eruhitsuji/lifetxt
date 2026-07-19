@@ -82,6 +82,9 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/review` | 日付範囲の review report(完了 task、habit 達成率、journal、mood 推移、elapsed 集計) |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
+| `POST` | `/api/status` | 直前の open な status を閉じて presence を記録。body: `{"state": "busy"}`、`{"end": true}`、同じ状態を繰り返す場合は `"force": true` |
+| `POST` | `/api/items/capture` | plain text から task を追記。`@project #tag !priority ^due` を展開 |
+| `POST` | `/api/shorthand/parse` | 書き込まずに省略記法の展開を確認 |
 | `GET` | `/api/notifications` | Message 通知候補を表示 |
 | `GET` | `/api/chart/tasks` | task chart data |
 | `GET` | `/api/chart/habits` | habit chart data |
@@ -141,6 +144,8 @@ curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
+curl -X POST http://127.0.0.1:8000/api/status \n  -H "Content-Type: application/json" -d '{"state": "busy"}'
+curl -X POST http://127.0.0.1:8000/api/items/capture \n  -H "Content-Type: application/json" -d '{"text": "Buy milk @home ^tomorrow"}'
 curl "http://127.0.0.1:8000/api/review?week=true"
 curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
 curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
@@ -318,6 +323,27 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 `Ctrl+K` で Command Palette を開けます。fuzzy matching、recently opened records、
 view 切り替え(`Go to Dashboard` など)、quick-add、export、theme toggle、
 kiosk mode、agenda blocked filter の切り替えに対応しています。
+
+### クイック追加の省略記法と presence
+
+クイック追加の入力欄は、`[` で始まる完全な life.txt 行と、
+キャプチャ記号を含む plain text の両方を受け付けます。
+
+```
+Buy milk @home #errand !high ^tomorrow
+```
+
+`@` は `project:`、`#` は `tag:`、`!` は `priority:`、`^` は共有の相対日付トークン
+(`today`、`tomorrow`、曜日名、`+3d`) を使って `due:` を設定します。
+入力欄の下に実際に書き込まれる内容がリアルタイムで表示されます。
+展開はサーバ側で行われるため `lifetxt quick` と挙動がずれることはありません。
+
+`p` で presence バーを開きます。状態 (`busy`、タイトルを付けるなら `focus Deep work`)
+を入力して Enter で記録され、直前の open な status は同じ request 内で閉じられます。
+`End` は新しい status を開かずに現在の status を閉じます。
+すでに開いている状態と同じ状態を指定した場合は何も書き込まず、その旨を表示します。
+どちらも command palette の `Set status` / `End status` からも実行できます。
+
 
 browser 側の「Save View」機能はありません。共有したい view はそのまま URL として
 共有でき(filter、sort、view 選択はすべて query string に反映されます)、再利用する

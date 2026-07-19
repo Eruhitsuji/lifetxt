@@ -96,6 +96,7 @@ OPTION_VALUES = {
     "--algorithm": "auto xsk aesgcm",
     "--theme": "auto dark light mono",
     "--keymap": "prompt vim arrows",
+    "--state": "available busy focus meeting away commuting working offline sleeping",
     "--glyphs": "auto unicode ascii",
 }
 

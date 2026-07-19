@@ -1030,6 +1030,118 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             ),
         }
 
+    @app.post("/api/status", status_code=201)
+    def set_status(payload=Body(...)):
+        """Record a presence status, closing the previously open one.
+
+        One request performs the whole transition so a client cannot leave two
+        records looking current.
+        """
+        from .presence import status_transition
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        state_value = payload.get("state")
+        close_only = bool(payload.get("end"))
+        if not close_only and not state_value:
+            raise HTTPException(
+                status_code=400,
+                detail="state is required, or pass {\"end\": true} to close the current status.",
+            )
+
+        details = {}
+        for key in ("note", "project", "service", "visibility"):
+            value = payload.get(key)
+            if value:
+                details[key] = [str(value)]
+
+        path = app.state.writable_path
+        try:
+            with open(path, "r", encoding="utf-8-sig") as handle:
+                text = handle.read()
+        except OSError:
+            text = ""
+
+        try:
+            result = status_transition(
+                text,
+                state=state_value,
+                title=payload.get("title"),
+                person=payload.get("person") or "self",
+                details=details,
+                id_key=id_key_from_config(app.state.config),
+                close_only=close_only,
+                force=bool(payload.get("force")),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
+        if result.unchanged:
+            return {"closed": [], "opened": "", "unchanged": result.unchanged, "path": path}
+
+        write_text(path, result.text)
+        return {
+            "closed": result.closed,
+            "opened": result.opened,
+            "unchanged": "",
+            "path": path,
+        }
+
+    @app.post("/api/shorthand/parse")
+    def parse_shorthand(payload=Body(...)):
+        """Expand capture sigils without writing anything.
+
+        The browser uses this for the live preview under the quick-add box, so
+        the sigil rules never drift between the server and a JS reimplementation.
+        """
+        from .shorthand import ShorthandError, describe_sigils, parse_capture
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        text = str(payload.get("text") or "")
+        try:
+            title, details = parse_capture(text, strict_dates=True)
+        except ShorthandError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {
+            "title": title,
+            "details": details,
+            "sigils": [{"token": token, "expands_to": target} for token, target in describe_sigils()],
+        }
+
+    @app.post("/api/items/capture", status_code=201)
+    def capture_item(payload=Body(...)):
+        """Append a task from plain text, expanding capture sigils.
+
+        Building the line here rather than in the browser keeps one
+        serializer, so the Web UI cannot drift from `lifetxt quick`.
+        """
+        from .shorthand import ShorthandError, parse_capture
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        text = str(payload.get("text") or "").strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required.")
+        try:
+            title, details = parse_capture(text, strict_dates=True)
+        except ShorthandError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if not title:
+            raise HTTPException(
+                status_code=400,
+                detail="Capture shorthand consumed the whole title. Add a title.",
+            )
+
+        kind = str(payload.get("type") or "T")
+        item = Item("[ ]", kind, title, details or None)
+        ensure_item_id(item, key=id_key_from_config(app.state.config))
+        append_item_to_file(app.state.writable_path, item)
+        return {
+            "line": item_to_line(item),
+            "item": api_item(item, app.state.writable_path, id_key_from_config(app.state.config)),
+        }
+
     @app.post("/api/items", status_code=201)
     def create_item(payload=Body(...)):
         try:
@@ -4098,11 +4210,18 @@ HTML_PAGE = r"""<!doctype html>
           </select>
       </div>
       <div class="quick-add-bar" id="quick-add-bar" style="display:none">
-        <input id="quick-line" placeholder="[ ] T My_task  due:tomorrow  project:work" autocomplete="off" onkeydown="if((e=event).key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();quickAddLine();}">
+        <input id="quick-line" placeholder="Buy milk @home #errand !high ^tomorrow   (or a full [ ] T line)" autocomplete="off" oninput="previewShorthand()" onkeydown="if((e=event).key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();quickAddLine();}">
         <span id="quick-check-msg" class="check-msg"></span>
         <button onclick="quickAddLine()">Add</button>
         <span class="hint" style="font-size:.73rem;color:var(--muted)">Ctrl+↵</span>
         <span class="hint">q or Escape to close</span>
+      </div>
+      <div class="quick-add-bar" id="presence-bar" style="display:none">
+        <input id="presence-input" placeholder="busy  or  focus Deep work" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();setPresence();}">
+        <span id="presence-current" class="check-msg"></span>
+        <button onclick="setPresence()">Set</button>
+        <button onclick="endPresence()">End</button>
+        <span class="hint">closes the previous status automatically</span>
       </div>
       <div class="filter-bar" id="status-filter-bar">
         <button class="filter-btn" data-status="" onclick="setStatusFilter('')">All</button>
@@ -4449,6 +4568,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (opens the record editor)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
+        <tr><td>p</td><td>Toggle presence status bar</td></tr>
         <tr><td>r</td><td>Refresh current view</td></tr>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
@@ -4711,7 +4831,7 @@ HTML_PAGE = r"""<!doctype html>
       "": {
         label: "Items",
         description: "Search, filter, edit, and bulk-manage life.txt records.",
-        actions: [["New record", "newItem"], ["Quick add", "quickAdd"], ["Clear filters", "clearFilters"]],
+        actions: [["New record", "newItem"], ["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
       },
       dashboard: {
         label: "Dashboard",
@@ -4787,6 +4907,8 @@ HTML_PAGE = r"""<!doctype html>
     const VIEW_ACTIONS = {
       newItem: () => newItem(),
       quickAdd: () => toggleQuickAdd(true),
+      setStatus: () => togglePresence(true),
+      endStatus: () => endPresence(),
       clearFilters: () => clearAllFilters(),
       refresh: () => triggerRefresh(),
       items: () => switchWorkspace(""),
@@ -6700,17 +6822,117 @@ HTML_PAGE = r"""<!doctype html>
         document.getElementById("quick-line").select();
       }
     }
+    // ── Presence status ────────────────────────────────────────────
+    async function loadPresence() {
+      const el = document.getElementById("presence-current");
+      if (!el) return;
+      try {
+        const data = await api("/api/status?active=true");
+        const mine = (data.records || []).filter(r => r.active);
+        if (!mine.length) { el.textContent = "no open status"; el.className = "check-msg"; return; }
+        const r = mine[0];
+        el.textContent = "now: " + r.state + " since " + (r.from || "");
+        el.className = "check-msg ok";
+      } catch (err) {
+        el.textContent = "";
+      }
+    }
+
+    function togglePresence(show) {
+      const bar = document.getElementById("presence-bar");
+      if (!bar) return;
+      const visible = show === undefined ? bar.style.display === "none" : show;
+      bar.style.display = visible ? "" : "none";
+      if (visible) { loadPresence(); const i = document.getElementById("presence-input"); if (i) i.focus(); }
+    }
+
+    async function setPresence() {
+      const input = document.getElementById("presence-input");
+      const raw = (input.value || "").trim();
+      if (!raw) { showToast("Type a state such as busy.", "error"); return; }
+      const parts = raw.split(/\s+/);
+      const body = {state: parts[0]};
+      if (parts.length > 1) body.title = parts.slice(1).join(" ");
+      try {
+        const data = await api("/api/status", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body),
+        });
+        input.value = "";
+        const closed = (data.closed || []).length;
+        showToast("Status: " + body.state + (closed ? " (closed " + closed + " previous)" : ""), "success");
+        await loadPresence();
+        await refreshAll();
+      } catch (err) {
+        showToast("Status failed: " + (err.message || "error"), "error");
+      }
+    }
+
+    async function endPresence() {
+      try {
+        const data = await api("/api/status", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({end: true}),
+        });
+        if (!(data.closed || []).length) { showToast("No open status.", "info"); }
+        else { showToast("Status closed.", "success"); }
+        await loadPresence();
+        await refreshAll();
+      } catch (err) {
+        showToast("Close failed: " + (err.message || "error"), "error");
+      }
+    }
+
+    // ── Capture shorthand preview ──────────────────────────────────
+    let shorthandTimer = null;
+    function previewShorthand() {
+      const input = document.getElementById("quick-line");
+      const msgEl = document.getElementById("quick-check-msg");
+      if (!input || !msgEl) return;
+      const text = (input.value || "").trim();
+      if (shorthandTimer) clearTimeout(shorthandTimer);
+      if (!text || text.startsWith("[")) { msgEl.textContent = ""; msgEl.className = "check-msg"; return; }
+      shorthandTimer = setTimeout(async () => {
+        try {
+          const data = await api("/api/shorthand/parse", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({text}),
+          });
+          const bits = [];
+          Object.keys(data.details || {}).forEach(k => (data.details[k] || []).forEach(v => bits.push(k + ":" + v)));
+          msgEl.textContent = bits.length ? ("→ " + data.title + "  " + bits.join(" ")) : "";
+          msgEl.className = "check-msg ok";
+        } catch (err) {
+          msgEl.textContent = err.message || "";
+          msgEl.className = "check-msg err";
+        }
+      }, 200);
+    }
+
     async function quickAddLine() {
       const input = document.getElementById("quick-line");
       const line = input.value.trim();
       if (!line) return;
       const msgEl = document.getElementById("quick-check-msg");
       try {
-        await api("/api/items/raw", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({line}),
-        });
+        // A leading status marker means the user typed a full life.txt line.
+        // Anything else is plain text with capture shorthand.
+        if (line.startsWith("[")) {
+          await api("/api/items/raw", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({line}),
+          });
+        } else {
+          await api("/api/items/capture", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({text: line}),
+          });
+        }
         input.value = "";
         input.className = "";
         if (msgEl) { msgEl.textContent = ""; msgEl.className = "check-msg"; }
@@ -6776,6 +6998,7 @@ HTML_PAGE = r"""<!doctype html>
       }
       if (e.key === "x") { e.preventDefault(); kbToggleSelect(); return; }
       if (e.key === "q") { e.preventDefault(); toggleQuickAdd(); return; }
+      if (e.key === "p" || e.key === "P") { e.preventDefault(); togglePresence(); return; }
       if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
       if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
       if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }

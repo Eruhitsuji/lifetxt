@@ -1,7 +1,9 @@
 import argparse
+import contextlib
 import datetime
 import html
 import hashlib
+import io
 import json
 import os
 import sys
@@ -767,6 +769,7 @@ def build_parser():
 
     filter_command = subparsers.add_parser(
         "filter",
+        aliases=["f"],
         help="Filter life.txt items and output life.txt, JSON, or JSONL.",
     )
     _add_input_paths(filter_command)
@@ -917,6 +920,7 @@ def build_parser():
 
     agenda = subparsers.add_parser(
         "agenda",
+        aliases=["a"],
         help="Show items related to a datetime range.",
     )
     _add_input_paths(agenda)
@@ -1163,7 +1167,18 @@ def build_parser():
         aliases=["q"],
         help="Quickly capture a new item and append it to a file.",
     )
-    quick.add_argument("title", help="Item title. Use - to read a single line from stdin.")
+    quick.add_argument(
+        "title",
+        help=(
+            "Item title. Use - to read a single line from stdin. Capture shorthand is "
+            "expanded: @project #tag !priority ^due."
+        ),
+    )
+    quick.add_argument(
+        "--no-shorthand",
+        action="store_true",
+        help="Keep @ # ! ^ tokens in the title instead of expanding them into details.",
+    )
     quick.add_argument(
         "--type",
         dest="kind",
@@ -1194,6 +1209,7 @@ def build_parser():
 
     done_cmd = subparsers.add_parser(
         "done",
+        aliases=["d"],
         help=(
             "Mark a task as complete and append done:TODAY. For habit (H) items, "
             "append done:DATE to the completion log instead of changing status."
@@ -1214,6 +1230,16 @@ def build_parser():
         help="Completion date (YYYY-MM-DD). Defaults to today.",
     )
     done_cmd.add_argument(
+        "--now",
+        action="store_true",
+        help="Record done: with the current time, not just the date.",
+    )
+    done_cmd.add_argument(
+        "--date-only",
+        action="store_true",
+        help="Record done: with the date only, overriding config done.precision.",
+    )
+    done_cmd.add_argument(
         "--force",
         action="store_true",
         help="Allow logging a duplicate same-day habit completion.",
@@ -1224,6 +1250,111 @@ def build_parser():
         help="Show what would change without writing to the file.",
     )
     done_cmd.set_defaults(func=command_done)
+
+    state_cmd = subparsers.add_parser(
+        "state",
+        aliases=["s"],
+        help=(
+            "Record a presence status, closing the previous open one. "
+            "Use `status` to read the current state."
+        ),
+    )
+    state_cmd.add_argument(
+        "state",
+        nargs="?",
+        default=None,
+        help="New presence state, such as busy, focus, away, or offline.",
+    )
+    state_cmd.add_argument(
+        "path",
+        nargs="?",
+        default=None,
+        help="life.txt file to write to. Defaults to config write_file.",
+    )
+    state_cmd.add_argument("--title", default=None, help="Status title. Defaults to the state name.")
+    state_cmd.add_argument("--person", default=None, help="Person the status belongs to. Defaults to self.")
+    state_cmd.add_argument("--note", default=None, help="Free-text note stored as note:.")
+    state_cmd.add_argument("--project", default=None, help="Associated project stored as project:.")
+    state_cmd.add_argument("--service", default=None, help="Service stored as service:.")
+    state_cmd.add_argument("--visibility", default=None, help="Visibility stored as visibility:.")
+    state_cmd.add_argument(
+        "--at",
+        default=None,
+        help="Transition time (YYYY-MM-DDTHH:MM). Defaults to now.",
+    )
+    state_cmd.add_argument(
+        "--end",
+        action="store_true",
+        help="Close the current status without opening a new one.",
+    )
+    state_cmd.add_argument(
+        "--force",
+        action="store_true",
+        help="Record a new record even when the state is already open.",
+    )
+    state_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    state_cmd.set_defaults(func=command_state)
+
+    start_cmd = subparsers.add_parser(
+        "start",
+        help="Start work on a task: set it in progress, start the timer, and set presence.",
+    )
+    start_cmd.add_argument("path", help="life.txt file containing the item.")
+    start_cmd.add_argument("id", nargs="?", default=None, help="ID of the item to start.")
+    start_cmd.add_argument("--line", type=int, default=None, help="Line number of the item.")
+    start_cmd.add_argument("--text", default=None, help="Title substring to search for.")
+    start_cmd.add_argument(
+        "--state",
+        default="busy",
+        help="Presence state to record while working. Defaults to busy.",
+    )
+    start_cmd.add_argument(
+        "--no-presence",
+        action="store_true",
+        help="Do not record a presence status.",
+    )
+    start_cmd.add_argument(
+        "--no-timer",
+        action="store_true",
+        help="Do not start the task timer.",
+    )
+    start_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing.",
+    )
+    start_cmd.set_defaults(func=command_start)
+
+    stop_cmd = subparsers.add_parser(
+        "stop",
+        help="Stop work: stop the timer, write elapsed:, close presence, and optionally finish the task.",
+    )
+    stop_cmd.add_argument(
+        "path",
+        nargs="?",
+        default=None,
+        help="life.txt file. Defaults to the file recorded by the running timer.",
+    )
+    stop_cmd.add_argument(
+        "--done",
+        action="store_true",
+        help="Also mark the task complete and record done:.",
+    )
+    stop_cmd.add_argument(
+        "--no-presence",
+        action="store_true",
+        help="Leave the presence status open.",
+    )
+    stop_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing.",
+    )
+    stop_cmd.set_defaults(func=command_stop)
 
     complete_cmd = subparsers.add_parser(
         "complete",
@@ -3468,43 +3599,47 @@ def _load_file_directives(path):
         return {}
 
 
-_RELATIVE_DATE_WEEKDAYS = {
-    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-    "friday": 4, "saturday": 5, "sunday": 6,
-}
-
-
 def _resolve_relative_date(value, today=None):
     """Resolve relative date keywords to ISO YYYY-MM-DD strings.
 
-    Recognizes: today, tomorrow, weekday names (next occurrence),
-    next_WEEKDAY (always next week), next_week (next Monday).
-    Unknown values are returned unchanged.
+    Thin wrapper over shorthand.resolve_date_token so the CLI, TUI, Web UI, and
+    MCP all accept exactly the same tokens. Unknown values are returned
+    unchanged for backward compatibility.
     """
-    if today is None:
-        today = datetime.date.today()
-    text = str(value).lower().strip()
-    if text == "today":
-        return today.isoformat()
-    if text == "tomorrow":
-        return (today + datetime.timedelta(days=1)).isoformat()
-    if text in _RELATIVE_DATE_WEEKDAYS:
-        target_wd = _RELATIVE_DATE_WEEKDAYS[text]
-        days_ahead = target_wd - today.weekday()
-        if days_ahead <= 0:
-            days_ahead += 7
-        return (today + datetime.timedelta(days=days_ahead)).isoformat()
-    if text.startswith("next_") and text[5:] in _RELATIVE_DATE_WEEKDAYS:
-        target_wd = _RELATIVE_DATE_WEEKDAYS[text[5:]]
-        days_ahead = target_wd - today.weekday()
-        if days_ahead <= 0:
-            days_ahead += 7
-        days_ahead += 7
-        return (today + datetime.timedelta(days=days_ahead)).isoformat()
-    if text == "next_week":
-        days_to_monday = (7 - today.weekday()) % 7 or 7
-        return (today + datetime.timedelta(days=days_to_monday)).isoformat()
-    return value
+    from .shorthand import resolve_date_token
+
+    return resolve_date_token(value, today=today, strict=False)
+
+
+def _merge_capture_shorthand(item, args):
+    """Expand @project #tag !priority ^due out of a captured title.
+
+    Explicit flags win for single-valued keys; tags accumulate, because
+    `--tag a` plus `#b` on the same capture clearly means both.
+    """
+    if getattr(args, "no_shorthand", False):
+        return
+    from .shorthand import ShorthandError, parse_capture
+
+    try:
+        title, details = parse_capture(item.title, strict_dates=True)
+    except ShorthandError as exc:
+        raise ValueError(str(exc))
+    if not details:
+        return
+    if not title:
+        raise ValueError(
+            "Capture shorthand consumed the whole title. Quote it or pass --no-shorthand."
+        )
+    item.title = title
+    for key, values in details.items():
+        if key == "tag":
+            existing = item.details.setdefault(key, [])
+            for value in values:
+                if value not in existing:
+                    existing.append(value)
+        elif key not in item.details:
+            item.details[key] = list(values)
 
 
 def command_quick(args):
@@ -3530,6 +3665,7 @@ def command_quick(args):
         args.status = None
 
     item = build_item_from_args(args)
+    _merge_capture_shorthand(item, args)
     dest = args.append or config_write_file(config)
     file_directives = _load_file_directives(dest)
     apply_config_defaults_to_item(item, args, file_directives)
@@ -3606,6 +3742,267 @@ def _resolve_target_item(items, id_key, args, prompt_verb="Select"):
     raise ValueError("Specify an ID, --line N, or --text QUERY.")
 
 
+def _done_precision(args, config):
+    """Decide whether done: carries a time, honouring flags then config."""
+    if getattr(args, "date_only", False):
+        return "date"
+    if getattr(args, "now", False):
+        return "datetime"
+    section = config_section(config, "done")
+    value = str(section.get("precision") or "date").strip().lower()
+    if value not in ("date", "datetime"):
+        raise ValueError(
+            "config done.precision must be date or datetime, not %r." % section.get("precision")
+        )
+    return value
+
+
+def _completion_stamp(args, config, moment=None):
+    """Build the done: value at the configured precision.
+
+    Returns (value_written, date_object). The date object is what habit
+    duplicate-detection and repeat anchoring compare on, so adding a time never
+    changes which calendar day a completion belongs to.
+    """
+    date_arg = getattr(args, "date", None)
+    if date_arg:
+        parsed = parse_date_or_datetime(date_arg, is_end=False)
+        if parsed is None:
+            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
+        if _done_precision(args, config) == "datetime" and "T" in str(date_arg):
+            return parsed.strftime("%Y-%m-%dT%H:%M"), parsed.date()
+        return parsed.date().isoformat(), parsed.date()
+    moment = moment or datetime.datetime.now()
+    if _done_precision(args, config) == "datetime":
+        return moment.strftime("%Y-%m-%dT%H:%M"), moment.date()
+    return moment.date().isoformat(), moment.date()
+
+
+def _state_write_path(args, config):
+    path = getattr(args, "path", None) or config_write_file(config)
+    if not path:
+        raise ValueError("No output file. Pass a path or configure write_file in your config.")
+    return path
+
+
+def command_state(args):
+    """Record a presence status, closing the previously open one."""
+    from .presence import COMMON_STATES, format_timestamp, status_transition
+
+    config = _config(args)
+    path = _state_write_path(args, config)
+
+    if not getattr(args, "end", False) and not args.state:
+        raise ValueError(
+            "Pass a state such as: %s ... or use --end to close the current status."
+            % ", ".join(COMMON_STATES[:4])
+        )
+
+    moment = None
+    if getattr(args, "at", None):
+        parsed = parse_date_or_datetime(args.at, is_end=False)
+        if parsed is None:
+            raise ValueError("Invalid --at %r. Use YYYY-MM-DDTHH:MM." % args.at)
+        moment = parsed
+
+    details = OrderedDict()
+    for key in ("note", "project", "service", "visibility"):
+        value = getattr(args, key, None)
+        if value:
+            details[key] = [value]
+
+    try:
+        text = read_text(path)
+    except FileNotFoundError:
+        text = ""
+
+    result = status_transition(
+        text,
+        state=args.state,
+        title=getattr(args, "title", None),
+        person=getattr(args, "person", None) or "self",
+        moment=moment,
+        details=details,
+        id_key=id_key_from_config(config),
+        close_only=bool(getattr(args, "end", False)),
+        force=bool(getattr(args, "force", False)),
+    )
+    new_text, closed, opened = result.text, result.closed, result.opened
+
+    if result.unchanged:
+        sys.stdout.write(
+            "Already %s. Nothing written; use --force to start a new record.\n" % result.unchanged
+        )
+        return 0
+
+    if getattr(args, "dry_run", False):
+        for line in closed:
+            sys.stdout.write("[dry-run] Would close: %s\n" % line)
+        if opened:
+            sys.stdout.write("[dry-run] Would open: %s\n" % opened)
+        if not closed and not opened:
+            sys.stdout.write("[dry-run] No open status to close.\n")
+        return 0
+
+    _ensure_writable_path(path, config, "state")
+    _pre_write_backup(path, config, "state")
+    atomic_write_text(path, new_text)
+
+    for line in closed:
+        sys.stdout.write("Closed: %s\n" % line)
+    if opened:
+        sys.stdout.write("Opened: %s\n" % opened)
+    elif not closed:
+        sys.stdout.write("No open status to close at %s.\n" % format_timestamp(moment))
+    return 0
+
+
+def command_start(args):
+    """Start work: task in progress, timer running, presence recorded."""
+    from . import timer as timer_module
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("start requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Start:")
+    if aborted:
+        return 0
+    item_id = (target.details.get(id_key) or [""])[0]
+    if not item_id:
+        raise ValueError(
+            "Item %r has no %s:. Run `lifetxt ids --assign` first." % (target.title, id_key)
+        )
+
+    use_timer = not getattr(args, "no_timer", False)
+    use_presence = not getattr(args, "no_presence", False)
+
+    if getattr(args, "dry_run", False):
+        steps = []
+        if target.status == "[ ]":
+            steps.append("set %s in progress" % item_id)
+        if use_timer:
+            steps.append("start the timer")
+        if use_presence:
+            steps.append("record presence state:%s" % args.state)
+        sys.stdout.write("[dry-run] Would %s.\n" % ", ".join(steps or ["do nothing"]))
+        return 0
+
+    _ensure_writable_path(path, config, "start")
+    _pre_write_backup(path, config, "start")
+
+    if use_timer:
+        state_file = timer_module.timer_state_file(config)
+        if os.path.exists(state_file):
+            running = timer_module._read_state(state_file)
+            raise ValueError(
+                "A timer is already running for %s. Run `lifetxt stop` first." % running.get("id")
+            )
+        timer_args = argparse.Namespace(path=path, item_id=item_id, note=None, config_data=config)
+        with _captured_stdout():
+            timer_module.start_timer(timer_args)
+    elif target.status == "[ ]":
+        timer_module.update_item_in_file(path, item_id, id_key, status="[/]")
+
+    sys.stdout.write("Started: %s (%s)\n" % (item_id, target.title))
+
+    if use_presence:
+        command_state(
+            argparse.Namespace(
+                state=args.state,
+                path=config_write_file(config) or path,
+                title=target.title,
+                person=None,
+                note=None,
+                project=(target.details.get("project") or [None])[0],
+                service=None,
+                visibility=None,
+                at=None,
+                end=False,
+                force=False,
+                dry_run=False,
+                config_data=config,
+            )
+        )
+    return 0
+
+
+def command_stop(args):
+    """Stop work: stop the timer, close presence, optionally finish the task."""
+    from . import timer as timer_module
+
+    config = _config(args)
+    state_file = timer_module.timer_state_file(config)
+    if not os.path.exists(state_file):
+        raise ValueError("No running timer. Start one with `lifetxt start PATH ID`.")
+    running = timer_module._read_state(state_file)
+    path = getattr(args, "path", None) or running.get("file")
+    item_id = running.get("id")
+
+    if getattr(args, "dry_run", False):
+        actions = ["stop the timer and write elapsed: on %s" % item_id]
+        if getattr(args, "done", False):
+            actions.append("mark it done")
+        if not getattr(args, "no_presence", False):
+            actions.append("close the open presence status")
+        sys.stdout.write("[dry-run] Would %s.\n" % ", ".join(actions))
+        return 0
+
+    timer_module.stop_timer(argparse.Namespace(path=path, item_id=item_id, config_data=config))
+
+    if getattr(args, "done", False):
+        command_done(
+            argparse.Namespace(
+                path=path,
+                id=item_id,
+                line=None,
+                text=None,
+                date=None,
+                now=False,
+                date_only=False,
+                force=False,
+                dry_run=False,
+                config_data=config,
+            )
+        )
+
+    if not getattr(args, "no_presence", False):
+        command_state(
+            argparse.Namespace(
+                state=None,
+                path=config_write_file(config) or path,
+                title=None,
+                person=None,
+                note=None,
+                project=None,
+                service=None,
+                visibility=None,
+                at=None,
+                end=True,
+                force=False,
+                dry_run=False,
+                config_data=config,
+            )
+        )
+    return 0
+
+
+@contextlib.contextmanager
+def _captured_stdout():
+    """Swallow a helper command's stdout so the caller controls the output."""
+    buffer = io.StringIO()
+    original = sys.stdout
+    sys.stdout = buffer
+    try:
+        yield buffer
+    finally:
+        sys.stdout = original
+
+
 def command_done(args):
     config = _config(args)
     path = args.path
@@ -3619,18 +4016,12 @@ def command_done(args):
     if aborted:
         return 0
 
-    date_arg = getattr(args, "date", None)
-    if date_arg:
-        completion_date = parse_date_or_datetime(date_arg, is_end=False)
-        if completion_date is None:
-            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
-        completion_date = completion_date.date()
-    else:
-        completion_date = datetime.date.today()
-    date_iso = completion_date.isoformat()
+    date_iso, completion_date = _completion_stamp(args, config)
 
     if target.kind == "H":
-        return _command_done_habit(path, text, target, date_iso, config, args)
+        # Habit logs stay date-only: the log is one entry per calendar day, and
+        # a time would break same-day duplicate detection.
+        return _command_done_habit(path, text, target, completion_date.isoformat(), config, args)
 
     if target.status == "[x]":
         sys.stdout.write("Already done: %s\n" % target.title)

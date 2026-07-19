@@ -1666,7 +1666,8 @@ class WorkspaceFrameTests(unittest.TestCase):
         text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
 
         self.assertIn("/done", text)
-        self.assertIn("Mark the marked or selected task-like rows done", text)
+        # The palette shows each command's registered summary, whatever it says.
+        self.assertIn(tui_app.COMMANDS_BY_NAME["done"].summary, text)
 
     def test_two_pane_layout_appears_only_on_wide_terminals(self):
         state = self._state()

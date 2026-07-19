@@ -83,6 +83,9 @@ tools.
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/review` | Review report for a date window: completed tasks, habit completion, journal entries, mood trend, and elapsed time |
 | `GET` | `/api/status` | Show latest status / presence records |
+| `POST` | `/api/status` | Record a presence status, closing the previously open one. Body: `{"state": "busy"}`, `{"end": true}`, or add `"force": true` to repeat a state |
+| `POST` | `/api/items/capture` | Append a task from plain text, expanding `@project #tag !priority ^due` |
+| `POST` | `/api/shorthand/parse` | Preview shorthand expansion without writing |
 | `GET` | `/api/notifications` | Show due message notifications for a recipient |
 | `GET` | `/api/chart/tasks` | Task count chart data |
 | `GET` | `/api/chart/habits` | Habit completion chart data |
@@ -157,6 +160,9 @@ curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/notifications?recipient=self"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
+curl -X POST http://127.0.0.1:8000/api/status \n  -H "Content-Type: application/json" -d '{"state": "busy"}'
+curl -X POST http://127.0.0.1:8000/api/status \n  -H "Content-Type: application/json" -d '{"end": true}'
+curl -X POST http://127.0.0.1:8000/api/items/capture \n  -H "Content-Type: application/json" -d '{"text": "Buy milk @home ^tomorrow"}'
 curl "http://127.0.0.1:8000/api/review?week=true"
 curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
 curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
@@ -380,6 +386,26 @@ recently opened records when the query is empty, switches between views
 (`Go to Dashboard`, `Go to Focus`, ...), and includes common actions such as
 quick-add, export, theme toggle, kiosk mode, and agenda blocked-filter
 toggling.
+
+### Quick add shorthand and presence
+
+The quick-add input accepts either a full life.txt line (anything starting with
+`[`) or plain text with capture shorthand:
+
+```
+Buy milk @home #errand !high ^tomorrow
+```
+
+`@` sets `project:`, `#` adds `tag:`, `!` sets `priority:`, and `^` sets `due:`
+with the shared relative date tokens (`today`, `tomorrow`, weekday names,
+`+3d`). A live preview under the input shows exactly what will be written, and
+the expansion happens on the server so it cannot drift from `lifetxt quick`.
+
+Press `p` to open the presence bar. Type a state (`busy`, or `focus Deep work`
+to add a title) and press Enter to record it; the previously open status is
+closed in the same request. `End` closes the current status without opening a
+new one. Repeating the state that is already open writes nothing and reports it.
+Both actions are also in the command palette as `Set status` and `End status`.
 
 There is no browser-side "save view" feature: shareable views are plain URLs
 (every filter, sort, and view choice is reflected in the query string), and

@@ -96,6 +96,9 @@ python -m lifetxt template list
 | `from-jsonl` | Convert JSONL to life.txt |
 | `from-csv` | Convert CSV to life.txt |
 | `status` | Show the latest `S` status / presence record for each person |
+| `state` (`s`) | Record a presence status, closing the previously open one |
+| `start` | Start work: task in progress, timer running, presence recorded |
+| `stop` | Stop work: timer stopped with `elapsed:`, presence closed |
 | `notify` | Show or watch due type `M` message notifications |
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
@@ -111,7 +114,7 @@ python -m lifetxt template list
 | `init` | Interactive first-time setup: create life.txt and .lifetxt.json |
 | `doctor` | Check Python version, files, dependencies, and data issues |
 | `quick` (`q`) | Quickly capture a new item and append it to a file; `-` reads the title from stdin |
-| `done` | Mark a task done and append `done:TODAY`; on habit (`H`) items, append `done:DATE` to the completion log instead |
+| `done` (`d`) | Mark a task done and append `done:`; `--now` records the time. On habit (`H`) items, append `done:DATE` to the completion log instead |
 | `complete` | Complete a repeat-enabled task instance and materialize the next occurrence; behaves like `done` otherwise |
 | `assign` | Change the `assignee:` on an existing item |
 | `batch` | Apply a simple item command across multiple life.txt files |
@@ -278,6 +281,139 @@ CLI command coverage:
 | `git-hook` | no | Git hooks only | no | no |
 | `completion` | no | optional script output | no | no |
 | `serve` | yes | yes through API/UI | yes | URL/API filters |
+
+## 2.7 Shorthand Notation
+
+Frequently used operations have shorter forms. They are shared by the CLI, TUI,
+and Web UI, so a token means the same thing everywhere.
+
+### Capture sigils
+
+`quick`, the TUI `/add`, and the Web quick-add box expand four sigils out of the
+title:
+
+| Sigil | Expands to | Example |
+| --- | --- | --- |
+| `@NAME` | `project:NAME` | `@home` |
+| `#NAME` | `tag:NAME` | `#errand` |
+| `!VALUE` | `priority:VALUE` | `!high` |
+| `^DATE` | `due:DATE` | `^tomorrow` |
+
+```sh
+lifetxt q "Buy milk @home #errand !high ^tomorrow"
+# [ ] T "Buy milk" project:home tag:errand priority:high due:2026-07-20 id:task_...
+```
+
+Only whole whitespace-delimited words count, so `Mail a@b.com about it` keeps
+the address and `Compute 10 ^ 2` keeps the caret. Prefix a token with a
+backslash (`\@literal`) to keep it verbatim, or pass `--no-shorthand` to
+disable expansion for one capture. Repeated `#tags` accumulate; for
+single-valued keys an explicit flag such as `--project` wins over the sigil.
+
+A title made only of sigils is rejected rather than creating an untitled record,
+and an unrecognized `^date` fails loudly instead of writing an unparseable
+value.
+
+### Relative date tokens
+
+Anywhere a date is accepted — `--due`, `--do`, `--until`, `^` sigils, and the
+TUI `/due` — these tokens resolve to an ISO date:
+
+| Token | Meaning |
+| --- | --- |
+| `today` / `tomorrow` / `yesterday` | the obvious calendar day |
+| `monday` .. `sunday` | the next occurrence of that weekday |
+| `next_monday` .. `next_sunday` | that weekday next week |
+| `next_week` | the coming Monday |
+| `+3d` `-1w` `+2m` `+1y` | signed offsets in days, weeks, months, years |
+
+Month offsets clamp to a valid day, so 31 January `+1m` is 28 February. The set
+is closed: anything else is passed through unchanged where that is safe, and
+rejected where a real date is required.
+
+### Command aliases
+
+| Alias | Command |
+| --- | --- |
+| `q` | `quick` |
+| `d` | `done` |
+| `s` | `state` |
+| `a` | `agenda` |
+| `f` | `filter` |
+
+The TUI has its own one-letter aliases in the command palette: `/d` `/s` `/a`
+`/f` `/t` `/e` `/u` `/n` `/q`. An exact alias always wins over fuzzy ranking, so
+`/d` is `/done` and never `/detail` or `/delete`.
+
+---
+
+## 2.8 Presence Status
+
+`status` reads the current presence; `state` (alias `s`) writes it.
+
+```sh
+lifetxt s busy                          # open a status, closing the previous one
+lifetxt state focus --title "Deep Work" # with an explicit title
+lifetxt state busy --note "in the lab" --project research
+lifetxt state --end                     # close the current status
+lifetxt status                          # read the current status
+```
+
+A transition is one edit: the person's open `S` record gets `to:` plus `[x]`,
+and a new `[/]` record is appended with `from:`. Doing this by hand is what
+leaves two records that both look current.
+
+Switching to the state that is already open writes nothing and says so, because
+repeating `lifetxt s busy` would otherwise split one long busy block into a stub
+plus a new record and lose the real start time. Pass `--force` when you really
+want a new record. Use `--at YYYY-MM-DDTHH:MM` to backdate a transition, and
+`--person` for someone else. If two records are already open for the same
+person, a transition closes both rather than adding a third.
+
+---
+
+## 2.9 Completion Time
+
+`done` appends `done:` when it closes a task. The precision is configurable:
+
+```sh
+lifetxt done life.txt t1              # done:2026-07-19
+lifetxt done life.txt t1 --now        # done:2026-07-19T14:32
+lifetxt done life.txt t1 --date-only  # force a date even when config says datetime
+```
+
+```json
+{ "done": { "precision": "datetime" } }
+```
+
+`precision` accepts `date` (the default) or `datetime`; anything else fails
+loudly. Flags override config. Habit (`H`) completion logs stay date-only in
+every configuration, because the log is one entry per calendar day and a time
+would break same-day duplicate detection.
+
+The format spec already allows `done:` to be a date or a datetime, so turning
+this on does not change the file format.
+
+---
+
+## 2.10 Start And Stop
+
+`start` and `stop` combine the three edits that bracket a work session.
+
+```sh
+lifetxt start life.txt t1     # task -> [/], timer starts, presence -> busy
+lifetxt stop                  # timer stops and writes elapsed:, presence closes
+lifetxt stop --done           # also close the task and write done:
+```
+
+`start` accepts `--state` to use something other than `busy`, and
+`--no-timer` / `--no-presence` to skip either half. `stop` reads the running
+timer for the file and item, so it needs no arguments. Both support `--dry-run`.
+
+Only one timer runs at a time, shared with `lifetxt timer`, so `start` refuses
+to begin a second one and names the task already running.
+
+---
 
 ## 3. `check`
 
@@ -1239,6 +1375,7 @@ Example config:
 {
   "paths": ["life.txt", ".generated/google_calendar.life.txt"],
   "write_file": "life.txt",
+  "done": { "precision": "date" },
   "user": {
     "name": "self",
     "display_name": "Self",
@@ -1495,12 +1632,14 @@ row when nothing is marked.
 
 | Command | Purpose |
 | --- | --- |
-| `/done` | Mark task-like rows done |
+| `/done [now]` | Mark task-like rows done and record `done:`; `now` adds the time |
+| `/state STATE [TITLE]` | Record presence, closing the previous status; `/state end` closes it |
+| `/now` | Show the current open presence status |
 | `/status open\|active\|done\|dropped` | Set a status, using the same aliases as the CLI |
 | `/set KEY VALUE` | Set a detail; an empty value removes the key |
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
 | `/assign USER` | Set `assignee:` |
-| `/add TITLE` | Append a new open task to the configured write file |
+| `/add TITLE` | Append a new open task; capture sigils (`@ # ! ^`) are expanded |
 | `/delete yes` | Delete rows; refuses without the explicit `yes` |
 | `/edit` | Open the selected row in `$EDITOR` |
 | `/timer start\|stop\|status\|cancel` | Track elapsed time and write `elapsed:` on stop |
@@ -1555,6 +1694,9 @@ command to run for your platform.
 
 Terminal editors are supported: the TUI releases the terminal before launching
 the editor and restores the screen when it exits.
+
+Command aliases: `/d` done, `/s` state, `/a` add, `/f` search, `/t` timer,
+`/e` edit, `/u` undo, `/n` next, `/q` quit. An exact alias beats fuzzy ranking.
 
 #### Editing safety
 

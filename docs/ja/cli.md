@@ -97,6 +97,9 @@ python -m lifetxt template list
 | `from-jsonl` | JSONL を life.txt へ変換 |
 | `from-csv` | CSV を life.txt へ変換 |
 | `status` | `person:` ごとの最新 `S` status / presence を表示 |
+| `state` (`s`) | 直前の open な status を閉じて新しい presence status を記録 |
+| `start` | 作業開始: task を進行中に、timer 開始、presence を記録 |
+| `stop` | 作業終了: timer 停止して `elapsed:` を記録、presence を閉じる |
 | `notify` | type `M` の通知対象を表示、または常駐監視 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
@@ -112,7 +115,7 @@ python -m lifetxt template list
 | `init` | 対話形式の初回セットアップ。life.txt と .lifetxt.json を作成 |
 | `doctor` | Python version、file、dependency、data の問題を検査 |
 | `quick` (`q`) | 新規 item をすばやく作成して file に追記。title に `-` を渡すと stdin から読み込む |
-| `done` | task を完了にし `done:TODAY` を追記。habit (`H`) item では status を変えず、完了ログに `done:DATE` を追記する |
+| `done` (`d`) | task を完了にし `done:TODAY` を追記。habit (`H`) item では status を変えず、完了ログに `done:DATE` を追記する |（`--now` で時刻も記録）
 | `complete` | repeat 付き task のインスタンスを完了し、次回インスタンスを生成。repeat が無ければ `done` と同じ動作 |
 | `assign` | 既存 item の `assignee:` を変更 |
 | `batch` | 複数の life.txt file に対して単純な操作を一括適用 |
@@ -268,6 +271,136 @@ life.txt の detail は file 内では `key:value` です。`key=value` は `ass
 ### 2.y Cross-file input set
 
 1 回の command で読み込まれたファイル群は、ID check と reference 解決では 1 つの logical input set として扱われます。`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` は、同時に読み込まれた任意のファイル内の ID を参照できます。cross-file reference を解決したい場合は、関連ファイルをすべて path / glob / config paths で渡してください。
+
+## 2.7 省略記法
+
+よく使う操作には短い書き方があります。CLI、TUI、Web UI で共有されているため、
+同じ記法はどこでも同じ意味になります。
+
+### キャプチャ記号
+
+`quick`、TUI の `/add`、Web のクイック追加欄は、タイトル中の 4 つの記号を展開します。
+
+| 記号 | 展開結果 | 例 |
+| --- | --- | --- |
+| `@NAME` | `project:NAME` | `@home` |
+| `#NAME` | `tag:NAME` | `#errand` |
+| `!VALUE` | `priority:VALUE` | `!high` |
+| `^DATE` | `due:DATE` | `^tomorrow` |
+
+```sh
+lifetxt q "Buy milk @home #errand !high ^tomorrow"
+# [ ] T "Buy milk" project:home tag:errand priority:high due:2026-07-20 id:task_...
+```
+
+空白で区切られた単語全体のみが対象なので、`Mail a@b.com about it` はアドレスを保持し、
+`Compute 10 ^ 2` はキャレットを保持します。
+`\@literal` のように backslash を前置すればそのまま残り、`--no-shorthand` で
+そのキャプチャだけ展開を無効にできます。
+`#tag` は複数指定すると累積し、単一値の key は `--project` などの明示的な flag が優先されます。
+
+記号だけのタイトルはタイトルなしの record を作らずに拒否され、
+未知の `^date` は解釈不能な値を書き込まずに明示的に失敗します。
+
+### 相対日付トークン
+
+日付を受け取るすべての箇所（`--due`、`--do`、`--until`、`^` 記号、TUI の `/due`）で
+以下のトークンが ISO 日付に解決されます。
+
+| トークン | 意味 |
+| --- | --- |
+| `today` / `tomorrow` / `yesterday` | そのままの暦日 |
+| `monday` 〜 `sunday` | 次に来るその曜日 |
+| `next_monday` 〜 `next_sunday` | 翌週のその曜日 |
+| `next_week` | 次の月曜日 |
+| `+3d` `-1w` `+2m` `+1y` | 日・週・月・年単位の符号付きオフセット |
+
+月単位のオフセットは有効な日に丸められるため、1 月 31 日の `+1m` は 2 月 28 日になります。
+トークンは閉じた集合です。安全な箇所では未知の値をそのまま通し、
+実際の日付が必要な箇所では拒否します。
+
+### コマンドの短縮名
+
+| 短縮名 | コマンド |
+| --- | --- |
+| `q` | `quick` |
+| `d` | `done` |
+| `s` | `state` |
+| `a` | `agenda` |
+| `f` | `filter` |
+
+TUI の command palette にも 1 文字の別名があります: `/d` `/s` `/a` `/f` `/t` `/e`
+`/u` `/n` `/q`。別名の完全一致は fuzzy 順位より優先されるため、
+`/d` は必ず `/done` であり `/detail` や `/delete` にはなりません。
+
+---
+
+## 2.8 プレゼンス status
+
+`status` は現在の状態を読み、`state`（別名 `s`）が書き込みます。
+
+```sh
+lifetxt s busy                          # 直前の status を閉じて新しい status を開く
+lifetxt state focus --title "Deep Work" # タイトルを明示
+lifetxt state busy --note "in the lab" --project research
+lifetxt state --end                     # 現在の status を閉じる
+lifetxt status                          # 現在の status を読む
+```
+
+1 回の遷移で 2 つの編集を行います。その人の open な `S` record に `to:` と `[x]` を付け、
+`from:` を持つ新しい `[/]` record を追記します。
+手作業だとこの「閉じる」を忘れ、現在有効に見える record が 2 つ残ります。
+
+すでに開いている状態と同じ状態に切り替えた場合は何も書き込まずにその旨を表示します。
+`lifetxt s busy` を繰り返すと長い busy の区間が切れ端と新 record に分割され、
+本当の開始時刻が失われるためです。新しい record を作りたい場合は `--force` を渡します。
+`--at YYYY-MM-DDTHH:MM` で過去日時の遷移、`--person` で他人の status を扱えます。
+同じ人物の open な record が既に 2 つある場合は、3 つ目を足さずに両方を閉じます。
+
+---
+
+## 2.9 完了時刻
+
+`done` は task を閉じるときに `done:` を追記します。精度は設定できます。
+
+```sh
+lifetxt done life.txt t1              # done:2026-07-19
+lifetxt done life.txt t1 --now        # done:2026-07-19T14:32
+lifetxt done life.txt t1 --date-only  # config が datetime でも日付のみを強制
+```
+
+```json
+{ "done": { "precision": "datetime" } }
+```
+
+`precision` は `date`（既定）または `datetime` を受け付け、それ以外は明示的に失敗します。
+flag は config より優先されます。
+habit（`H`）の完了ログはどの設定でも日付のみです。ログは 1 暦日 1 件であり、
+時刻を入れると同日重複の検出が壊れるためです。
+
+format 仕様では `done:` は元から日付または日時を許容しているため、
+この設定を変えても file format は変わりません。
+
+---
+
+## 2.10 start と stop
+
+`start` と `stop` は作業セッションの前後に必要な 3 つの編集をまとめます。
+
+```sh
+lifetxt start life.txt t1     # task を [/] に、timer 開始、presence を busy に
+lifetxt stop                  # timer 停止して elapsed: を書き、presence を閉じる
+lifetxt stop --done           # さらに task を完了して done: を書く
+```
+
+`start` は `--state` で `busy` 以外を指定でき、`--no-timer` / `--no-presence` で
+どちらかを省略できます。`stop` は実行中の timer から file と item を読むため引数不要です。
+どちらも `--dry-run` に対応します。
+
+timer は `lifetxt timer` と共有され同時に 1 つだけなので、
+`start` は 2 つ目の開始を拒否し、実行中の task 名を表示します。
+
+---
 
 ## 3. `check`
 
@@ -1243,12 +1376,14 @@ usage と summary を表示し、`Tab` で選択中の候補を補完します�
 
 | command | 用途 |
 | --- | --- |
-| `/done` | task 系の row を完了 |
+| `/done [now]` | task 系の row を完了して `done:` を記録。`now` で時刻も記録 |
+| `/state STATE [TITLE]` | 直前の status を閉じて presence を記録。`/state end` で閉じる |
+| `/now` | 現在 open な presence status を表示 |
 | `/status open\|active\|done\|dropped` | CLI と同じ alias で status を設定 |
 | `/set KEY VALUE` | detail を設定。値を省略すると key を削除 |
 | `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |
 | `/assign USER` | `assignee:` を設定 |
-| `/add TITLE` | 設定された write file に未完了 task を追記 |
+| `/add TITLE` | write file に未完了 task を追記。記号 (`@ # ! ^`) を展開 |
 | `/delete yes` | row を削除。`yes` がないと拒否 |
 | `/edit` | 選択行を `$EDITOR` で開く |
 | `/timer start\|stop\|status\|cancel` | 経過時間を計測し、stop 時に `elapsed:` を書き込む |
@@ -1302,6 +1437,9 @@ editor が未設定の場合は、実行すべき command を platform ごとに
 
 端末内 editor にも対応しています。TUI は editor を起動する前に端末を解放し、
 終了時に画面を復元します。
+
+command の短縮名: `/d` done、`/s` state、`/a` add、`/f` search、`/t` timer、
+`/e` edit、`/u` undo、`/n` next、`/q` quit。完全一致の別名は fuzzy 順位より優先されます。
 
 #### 編集の安全性
 

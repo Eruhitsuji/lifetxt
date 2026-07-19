@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x75)
+Last updated: 2026-07-19 (updated x76)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -27,6 +27,8 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Test on the Python versions CI actually runs. The CI failure that went unnoticed from 2026-07-12 to 2026-07-19 was Linux-only: `curses` imports successfully there even with no terminal attached, so `run_curses_or_plain` called `curses.wrapper()` and `cbreak()` failed, while on Windows the import failed first and silently took the plain path. Local development runs Python 3.6 on Windows; CI runs 3.10/3.11/3.12 on Ubuntu. Add a documented way to run the suite against a CI-like environment before pushing (Docker, WSL, or `py -3.12`).
 - [ ] Make CI failures visible. Three consecutive weeks of red CI went unnoticed; consider a status badge in `readme.md` and/or failure notifications.
 - [ ] Add a CI job that runs the suite without the optional web dependencies. Every web test guards with `skipTest`, but one had lost its guard and only failed for contributors without the extras installed; a no-extras job would catch the next one.
+- [ ] Bring MCP up to parity with the new shorthand surfaces. `state`/presence transitions, capture sigils, and `done` precision now exist in the CLI, TUI, and Web API, but `lifetxt/mcp.py` exposes none of them, so an AI client still has to hand-write `S` records and close them itself. This is the widest remaining CLI/Web/MCP gap.
+- [ ] Route the new write paths through the shared mutation layer. `presence.status_transition` and `command_state` read, edit, and write without a content-hash check, so a concurrent external edit between read and write is silently overwritten, the same gap already tracked for the TUI editing commands.
 - [ ] Verify the new `tui` workspace in real terminals across WSL, Windows Terminal, and native macOS/Linux. The interactive path is covered by a stub-curses test but has never run against a real curses build; confirm the input bar cursor position, command palette rendering, `--glyphs auto` degradation on legacy code pages, color themes, narrow-terminal column dropping, and auto-reload with a human at a real TTY.
 - [ ] Give the `tui` editing commands content-hash CAS. `_mutate_rows` in `lifetxt/tui_app.py` is now the single TUI write path for `/done`, `/status`, `/set`, `/due`, `/assign`, `/delete`, and `/timer`, and it validates the whole batch before writing, but it still reads through `fzf_helper` / `timer` helpers with no hash check, so an external edit between reload and write is silently overwritten. Fold it into the project-wide shared mutation layer rather than adding a second CAS implementation.
 - [ ] Replace the TUI session undo stack with the shared mutation journal. It currently snapshots whole files per operation, which is correct but memory-hungry on large files and cannot be shared with CLI or Web undo.
@@ -111,8 +113,7 @@ Improvements to existing commands that affect daily workflow.
 
 - [ ] Add `--last-week`, `--last-month`, and `--year` convenience selectors to `review`. Implement shared range selectors in `review.resolve_review_range` so CLI, Web API, and MCP accept the same range names.
 - [ ] Extend `inbox --fzf` from selection-only output to optional follow-up actions after selector verification is complete. Support `show`, `assign`, `done`, and `edit` without bypassing validation or atomic writes.
-- [ ] Add clipboard capture and an `--edit` ($EDITOR) flow to `quick`, or a dedicated `lifetxt capture` wrapper. `quick -` already reads a single title line from stdin through the existing safe write path; clipboard support and multi-line `$EDITOR` composition are still missing.
-- [ ] Keep date-token parsing intentionally small and explicit. Support a documented closed set such as `today`, `tomorrow`, weekdays, and relative offsets; reject unrecognized natural-language dates instead of guessing.
+- [ ] Add clipboard capture and an `--edit` ($EDITOR) flow to `quick`. `quick -` reads a title from stdin and capture sigils (`@ # ! ^`) now cover the common metadata, so what is left is clipboard input and multi-line `$EDITOR` composition.
 - [ ] Promote `context:` to a first-class filter. Accept `--context` in `filter`, `agenda`, `next`, Web API, MCP, and shell completion. Prompt for context during inbox processing.
 - [ ] Add `lifetxt next`. Show actionable open tasks that are not blocked and not someday/maybe, sorted by priority, due date, and age. Reuse existing filter logic where possible.
 - [ ] Add `lifetxt habit today`. Materialize today's habit checkboxes from repeat-enabled habit definitions, idempotent per habit and date, with `--dry-run` support.
@@ -124,6 +125,23 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add a small shared query language before adding more per-surface filter flags. Support a closed grammar such as `tag:urgent AND NOT tag:archived AND due<2026-07-01`, fail loudly on unknown syntax, and reuse it for CLI `--query`, Web API, MCP, and named saved views.
 - [ ] Use East Asian Width-aware column widths in CLI table output. `_format_table` in `lifetxt/cli.py` measures cell width with `len()`, so tables with Japanese titles misalign; reuse the `unicodedata.east_asian_width` logic already used by the TUI.
 - [ ] Specify common CLI output behavior: `--json`, `--quiet`, `--verbose`, `--color=auto|always|never`, `NO_COLOR`, pager behavior, stdin `-`, and documented exit codes.
+
+---
+
+## P1: Shorthand Follow-ups
+
+Capture sigils (`@project #tag !priority ^due`), relative date tokens, command
+aliases, `state`/`start`/`stop`, and configurable `done` precision shipped
+across the CLI, TUI, and Web UI. These extend that work.
+
+- [ ] Decide whether capture sigils should be configurable. The four characters are hard-coded in `lifetxt/shorthand.py`; a user who writes titles containing `!` or `^` routinely can only escape them per token or pass `--no-shorthand`. Consider a config map, and weigh it against every surface having to agree on the same characters.
+- [ ] Add a `~context` sigil once `context:` is a first-class filter. It was left out deliberately so the sigil set stays small until the filter exists.
+- [ ] Support capture sigils in `assist` and the Web record editor. They currently only work in `quick`, TUI `/add`, and the Web quick-add box, which is an inconsistency users will trip over.
+- [ ] Let `state` reopen the previous status after an interruption, for example `lifetxt state --resume` to close a short `meeting` and return to whatever was open before it. Requires deciding whether the stack is derived from the file or stored.
+- [ ] Add `state --list` or shell completion for recently used state values. `COMMON_STATES` is a static list; real vocabularies drift per user.
+- [ ] Report elapsed time when closing a presence status. `state --end` writes `to:` but says nothing about how long the block lasted, which is the number a user actually wants.
+- [ ] Decide whether `stop` should also close presence when the timer was started outside `start`. It currently always closes the open status, which is surprising if the status was set by hand for an unrelated reason.
+- [ ] Add a `--json` output mode to `state`, `start`, and `stop` so scripts can consume the transition instead of parsing human text.
 
 ---
 

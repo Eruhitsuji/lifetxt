@@ -1967,6 +1967,97 @@ class TuiFallbackTests(unittest.TestCase):
         self.assertIn("lifetxt TUI", output.getvalue())
         self.assertIn("Install textual for a richer TUI", output.getvalue())
 
+    def test_curses_is_not_initialized_without_a_tty(self):
+        """Regression: curses imports fine on Linux even with no terminal, so
+        run_curses_or_plain used to call curses.wrapper() in CI, where cbreak()
+        fails. On Windows the import failed first, hiding the bug locally."""
+        wrapper_calls = []
+        fake_curses = types.ModuleType("curses")
+        fake_curses.error = RuntimeError
+        fake_curses.wrapper = lambda main: wrapper_calls.append(main)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
+            output = io.StringIO()
+            with patch.dict(sys.modules, {"curses": fake_curses}), redirect_stdout(output):
+                result = tui.run_curses_or_plain(args)
+
+        self.assertEqual(0, result)
+        self.assertEqual([], wrapper_calls, "curses.wrapper must not run without a TTY")
+        self.assertIn("lifetxt TUI", output.getvalue())
+
+    def test_curses_failure_falls_back_to_plain_output(self):
+        """A terminal that cannot drive curses must degrade, not traceback."""
+        class FakeCursesError(Exception):
+            pass
+
+        fake_curses = types.ModuleType("curses")
+        fake_curses.error = FakeCursesError
+
+        def wrapper(_main):
+            raise FakeCursesError("cbreak() returned ERR")
+
+        fake_curses.wrapper = wrapper
+
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
+            output = io.StringIO()
+            errors = io.StringIO()
+            with patch.dict(sys.modules, {"curses": fake_curses}), \
+                    patch.object(tui, "_stdout_is_tty", lambda: True), \
+                    redirect_stdout(output), redirect_stderr(errors):
+                result = tui.run_curses_or_plain(args)
+
+        self.assertEqual(0, result)
+        self.assertIn("lifetxt TUI", output.getvalue())
+        self.assertIn("Falling back to plain output", errors.getvalue())
+
+    def test_workspace_falls_back_to_plain_output_on_curses_failure(self):
+        class FakeCursesError(Exception):
+            pass
+
+        fake_curses = types.ModuleType("curses")
+        fake_curses.error = FakeCursesError
+
+        def wrapper(_main):
+            raise FakeCursesError("nocbreak() returned ERR")
+
+        fake_curses.wrapper = wrapper
+
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
+            output = io.StringIO()
+            errors = io.StringIO()
+            with patch.dict(sys.modules, {"curses": fake_curses}), \
+                    redirect_stdout(output), redirect_stderr(errors):
+                result = tui_app.run_workspace(args)
+
+        self.assertEqual(0, result)
+        self.assertIn("lifetxt TUI", output.getvalue())
+        self.assertIn("Falling back to plain output", errors.getvalue())
+
+    def test_run_textual_fallback_does_not_touch_curses_without_a_tty(self):
+        """The exact CI failure: textual missing -> run_curses_or_plain ->
+        curses.wrapper -> cbreak() error on a machine with real curses."""
+        wrapper_calls = []
+        fake_curses = types.ModuleType("curses")
+        fake_curses.error = RuntimeError
+        fake_curses.wrapper = lambda main: wrapper_calls.append(main)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
+            output = io.StringIO()
+
+            def run():
+                with patch.dict(sys.modules, {"curses": fake_curses}), redirect_stdout(output):
+                    return tui.run_textual(args)
+
+            result = self._with_module_forced_missing("textual", run)
+
+        self.assertEqual(0, result)
+        self.assertEqual([], wrapper_calls)
+        self.assertIn("lifetxt TUI", output.getvalue())
+
     def test_cmd_tui_never_crashes_regardless_of_optional_deps(self):
         with tempfile.TemporaryDirectory() as tmp:
             args = argparse.Namespace(paths=[self._life_path(tmp)])

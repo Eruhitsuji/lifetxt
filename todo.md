@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x74)
+Last updated: 2026-07-19 (updated x75)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -24,6 +24,9 @@ Design principles:
 
 Items in this section are already implemented or foundational enough that they should be verified or hardened before the next release.
 
+- [ ] Test on the Python versions CI actually runs. The CI failure that went unnoticed from 2026-07-12 to 2026-07-19 was Linux-only: `curses` imports successfully there even with no terminal attached, so `run_curses_or_plain` called `curses.wrapper()` and `cbreak()` failed, while on Windows the import failed first and silently took the plain path. Local development runs Python 3.6 on Windows; CI runs 3.10/3.11/3.12 on Ubuntu. Add a documented way to run the suite against a CI-like environment before pushing (Docker, WSL, or `py -3.12`).
+- [ ] Make CI failures visible. Three consecutive weeks of red CI went unnoticed; consider a status badge in `readme.md` and/or failure notifications.
+- [ ] Add a CI job that runs the suite without the optional web dependencies. Every web test guards with `skipTest`, but one had lost its guard and only failed for contributors without the extras installed; a no-extras job would catch the next one.
 - [ ] Verify the new `tui` workspace in real terminals across WSL, Windows Terminal, and native macOS/Linux. The interactive path is covered by a stub-curses test but has never run against a real curses build; confirm the input bar cursor position, command palette rendering, `--glyphs auto` degradation on legacy code pages, color themes, narrow-terminal column dropping, and auto-reload with a human at a real TTY.
 - [ ] Give the `tui` editing commands content-hash CAS. `_mutate_rows` in `lifetxt/tui_app.py` is now the single TUI write path for `/done`, `/status`, `/set`, `/due`, `/assign`, `/delete`, and `/timer`, and it validates the whole batch before writing, but it still reads through `fzf_helper` / `timer` helpers with no hash check, so an external edit between reload and write is silently overwritten. Fold it into the project-wide shared mutation layer rather than adding a second CAS implementation.
 - [ ] Replace the TUI session undo stack with the shared mutation journal. It currently snapshots whole files per operation, which is correct but memory-hungry on large files and cannot be shared with CLI or Web undo.

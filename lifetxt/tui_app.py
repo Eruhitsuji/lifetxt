@@ -2359,6 +2359,13 @@ def run_workspace(args):
         # A SIGINT delivered outside getch() (during a redraw, say) must still
         # leave the terminal restored and exit quietly.
         pass
+    except curses.error as exc:
+        # curses imports on Linux even with no terminal attached, so a failure
+        # here means the terminal cannot drive it. Fall back to plain output.
+        from .tui import render_dashboard_safe
+
+        sys.stderr.write("Falling back to plain output: %s\n" % exc)
+        sys.stdout.write(render_dashboard_safe(args))
     finally:
         watcher.stop()
     return 0

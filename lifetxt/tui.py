@@ -246,6 +246,14 @@ def run_curses_or_plain(args):
         sys.stdout.write(render_dashboard(args))
         return 0
 
+    # curses imports fine on Linux even with no terminal attached, but
+    # initializing it without a TTY fails inside curses.wrapper (cbreak() and
+    # then nocbreak() both raise). Check before touching curses rather than
+    # relying on the import failing, which only happens on Windows.
+    if not _stdout_is_tty():
+        sys.stdout.write(render_dashboard_safe(args))
+        return 0
+
     watcher = FileChangeWatcher(args.paths).start()
 
     def main(stdscr):
@@ -469,6 +477,11 @@ def run_curses_or_plain(args):
         curses.wrapper(main)
     except KeyboardInterrupt:
         pass
+    except curses.error as exc:
+        # The terminal cannot drive curses (no TTY, unsupported TERM, or a
+        # dumb terminal). Degrade to the plain dashboard instead of crashing.
+        sys.stderr.write("Falling back to plain output: %s\n" % exc)
+        sys.stdout.write(render_dashboard_safe(args))
     finally:
         watcher.stop()
     return 0

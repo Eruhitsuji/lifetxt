@@ -99,7 +99,7 @@ python -m lifetxt template list
 | `notify` | Show or watch due type `M` message notifications |
 | `agenda` | Show items related to a datetime range |
 | `assist` | Create or update life.txt items from prompts or flags |
-| `tui` | Show a terminal dashboard for tasks, agenda, and status |
+| `tui` | Open an interactive terminal workspace for tasks, agenda, and status |
 | `fzf` | Select filtered items with `fzf` or `peco` and run an action |
 | `timer` | Track elapsed time for one task-like item |
 | `stats` | Summarize task, habit, mood, and project activity |
@@ -1280,7 +1280,8 @@ Example config:
   },
   "tui": {
     "theme": "auto",
-    "keymap": "vim",
+    "keymap": "prompt",
+    "glyphs": "auto",
     "limit": 10,
     "agenda_window": "12h"
   },
@@ -1436,41 +1437,95 @@ see all three configurable levels side by side.
 
 ### 13.1 `tui`
 
-`tui` shows a terminal dashboard for open tasks, near-current agenda items, and
-active `S` status records.
+`tui` opens an interactive terminal workspace for open tasks, near-current
+agenda items, and active `S` status records.
 
 ```sh
 python -m lifetxt tui [path ...]
-python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15
-python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
+python -m lifetxt tui life.txt --theme dark --limit 15
+python -m lifetxt tui life.txt --keymap vim --agenda-window 1d
+python -m lifetxt tui life.txt --glyphs ascii
+python -m lifetxt tui life.txt --plain > snapshot.txt
 ```
 
-The command reads the same path forms as other life.txt commands. If the
-optional `textual` package is installed, a minimal Textual interface is used.
-Otherwise the command falls back to a dependency-free terminal view. The
-current dashboard uses a modern terminal layout with a top card summary, section
-focus, selected-row highlighting, and an always-visible `INSPECTOR` panel for
-the selected row.
-Use `?` or `H` for help. `--theme auto|dark|light|mono` controls curses colors,
-and `--keymap vim|arrows` changes the help/footer preset. Defaults can also be
-set in config under `tui.theme`, `tui.keymap`, `tui.limit`, and
-`tui.agenda_window`.
+On a real terminal, `tui` runs an interactive workspace: a persistent input bar
+at the bottom, a slash-command palette with fuzzy completion, live filtering as
+you type, one scrollable result list with section headers, and an inspector
+panel for the selected row. When stdout is not a TTY (piping or redirecting), or
+with `--plain`, the command prints a single plain-text dashboard snapshot
+instead, so `python -m lifetxt tui > snapshot.txt` still works.
 
-The dashboard has a selected row marked with `*`. With the default Vim-like
-keymap, `h` / `l` or Left/Right move section focus, `j` / `k` or Down/Up move
-the selected row, `Ctrl-D` / `Ctrl-U` and PageDown/PageUp move by half pages,
-`g` selects the first row, `G` selects the last row, `r` reloads, and `q`
-quits. `/` enters dashboard search, typing filters visible rows across tasks,
-agenda, and status, `Enter` applies the search, and `Esc` clears it. `Enter` /
-`o` opens an action menu for the selected row. `s` shows full
-detail, `d` marks a task-like row done when it has `id:` and source metadata,
-`e` opens the source in `$EDITOR`, and `f` filters by the selected row's first
-`project:` value. `Tab` / `n` and `p` remain section navigation aliases.
-When curses colors are available, section focus, selected rows, active tasks,
-completed items, status rows, errors, and the footer are color-highlighted.
-Plain text fallback output remains uncolored.
-The dashboard auto-reloads when input files change. If `watchdog` is installed,
-file events are used; otherwise the fallback checks file mtimes periodically.
+#### The input bar
+
+The input bar is always focused in the default `prompt` keymap. Typing plain
+text filters every listed row as you type, using a fuzzy matcher that scores
+substring hits above scattered subsequence hits and highlights the matched
+characters. Press `Enter` to commit the filter and clear the bar, or `Esc` to
+clear the bar and then the active filters.
+
+Typing `/` opens the command palette. It ranks commands with the same fuzzy
+matcher, shows each command's usage and summary, and completes the highlighted
+entry with `Tab`. `Enter` runs the typed command; if the name is not exact, the
+highlighted suggestion runs instead, so `/do` + `Enter` runs `/done`. An unknown
+command fails loudly and suggests the closest name.
+
+#### Commands
+
+| Command | Purpose |
+| --- | --- |
+| `/help` | Toggle the full key and command reference |
+| `/view all\|tasks\|agenda\|status` | Switch which sections are listed |
+| `/search TEXT` | Fuzzy filter every listed row |
+| `/project NAME` | Filter by `project:` (empty value clears it) |
+| `/sort natural\|due\|priority\|title\|status` | Change row ordering |
+| `/clear` | Clear search, project filter, and marks |
+| `/mark toggle\|all\|none` | Mark rows for bulk actions |
+| `/done` | Mark the marked rows done, or the selected row when nothing is marked |
+| `/add TITLE` | Append a new open task to the configured write file |
+| `/edit` | Open the selected row in `$EDITOR` |
+| `/undo` | Undo the last write made in this session |
+| `/detail` | Toggle the inspector panel |
+| `/reload` | Re-read every file now |
+| `/theme auto\|dark\|light\|mono` | Change the color theme |
+| `/limit N` | Rows kept per section |
+| `/window 12h` | Agenda window around now |
+| `/quit` | Leave the TUI |
+
+`/done` and `/add` go through the same validated, atomic write path as the CLI,
+and every write in a session is recorded so `/undo` can restore the file.
+
+#### Keys
+
+In the default `prompt` keymap: Up/Down move the selection (or the palette
+entry when it is open), PageUp/PageDown move by half a page, Home/End jump to
+the first or last row, `Ctrl-T` marks or unmarks the selected row, `Ctrl-P` /
+`Ctrl-N` recall previous input, `Ctrl-A` / `Ctrl-E` jump to the start or end of
+the input, `Ctrl-U` / `Ctrl-K` delete before or after the cursor, and `Ctrl-C`
+quits.
+
+`--keymap vim` starts in a navigation mode instead, where `j` / `k` move,
+`g` / `G` jump to the first or last row, `Space` marks, `Enter` toggles the
+inspector, `Tab` cycles views, `d` / `e` / `u` / `r` run done / edit / undo /
+reload, `/` starts a filter, `:` starts a command, `?` toggles help, and `q`
+quits.
+
+#### Appearance
+
+`--theme auto|dark|light|mono` controls colors, and `--glyphs
+auto|unicode|ascii` chooses the box-drawing set. `auto` probes the output
+encoding and falls back to ASCII when the terminal cannot represent the rounded
+borders, so Windows code pages degrade cleanly instead of raising. Column
+widths are East Asian Width-aware, so Japanese titles stay aligned, and the meta
+columns (project, due, priority) drop out one at a time as the terminal narrows
+rather than wrapping.
+
+Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
+`tui.limit`, and `tui.agenda_window`.
+
+The workspace auto-reloads when input files change. If `watchdog` is installed,
+file events are used; otherwise the fallback checks file mtimes periodically. A
+file that fails to parse shows an error panel with the diagnostic instead of
+exiting, so you can fix the file and watch it recover.
 
 ### 13.2 `fzf`
 

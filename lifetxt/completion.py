@@ -95,7 +95,8 @@ OPTION_VALUES = {
     "--preset": "ics markdown todoist github",
     "--algorithm": "auto xsk aesgcm",
     "--theme": "auto dark light mono",
-    "--keymap": "vim arrows",
+    "--keymap": "prompt vim arrows",
+    "--glyphs": "auto unicode ascii",
 }
 
 

@@ -100,7 +100,7 @@ python -m lifetxt template list
 | `notify` | type `M` の通知対象を表示、または常駐監視 |
 | `agenda` | 日時範囲に関連する item を表示 |
 | `assist` | 対話またはフラグで item を作成・更新 |
-| `tui` | task、agenda、status を端末ダッシュボードで表示 |
+| `tui` | task、agenda、status を対話的な端末 workspace で操作 |
 | `fzf` | `fzf` または `peco` で item を選択し action を実行 |
 | `timer` | item の作業時間を計測し `elapsed:` に記録 |
 | `stats` | task、habit、mood、project の統計を表示 |
@@ -1143,7 +1143,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
-| `tui.*` | TUI の既定値。`theme`、`keymap`、`limit`、`agenda_window` |
+| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
@@ -1192,34 +1192,86 @@ CLI フラグが優先されるため item は `writing` に分類されます�
 
 ### 13.1 `tui`
 
-`tui` は未完了 task、現在時刻付近の agenda、active な `S` status を端末上で表示する dashboard です。
+`tui` は未完了 task、現在時刻付近の agenda、active な `S` status を扱う対話的な端末 workspace です。
 
 ```sh
 python -m lifetxt tui [path ...]
-python -m lifetxt tui life.txt --theme dark --keymap vim --limit 15
-python -m lifetxt tui life.txt --theme light --keymap arrows --agenda-window 1d
+python -m lifetxt tui life.txt --theme dark --limit 15
+python -m lifetxt tui life.txt --keymap vim --agenda-window 1d
+python -m lifetxt tui life.txt --glyphs ascii
+python -m lifetxt tui life.txt --plain > snapshot.txt
 ```
 
-`textual` が利用可能な場合は最小限の Textual UI を使い、未導入の場合は依存なしの端末表示に fallback します。
-現在の dashboard は top card summary、section focus、選択行 highlight、常時表示の `INSPECTOR`
-panel を持つ端末向け layout です。
-`?` または `H` で help を表示します。`--theme auto|dark|light|mono` で curses 色を指定し、
-`--keymap vim|arrows` で help/footer の keymap preset を指定できます。既定値は config の
-`tui.theme`、`tui.keymap`、`tui.limit`、`tui.agenda_window` でも設定できます。
+端末上では `tui` は対話的な workspace を起動します。画面下部に常駐する input bar、
+fuzzy 補完付きの slash command palette、入力に追従する live filter、section header 付きの
+単一 scroll list、選択行の inspector panel で構成されます。
+stdout が TTY でない場合 (pipe や redirect) や `--plain` 指定時は、代わりに plain text の
+dashboard snapshot を 1 回出力するため、`python -m lifetxt tui > snapshot.txt` も従来どおり動作します。
 
-選択行は `*` で表示されます。既定 keymap は Vim 風です。
-`h` / `l` または Left/Right で section focus 移動、`j` / `k` または
-Down/Up で選択行移動、`Ctrl-D` / `Ctrl-U` と PageDown/PageUp で半ページ移動、
-`g` で先頭、`G` で末尾、`r` で reload、`q` で終了します。
-`/` で dashboard search に入り、入力した文字列で tasks / agenda / status の visible row を横断 filter します。
-`Enter` で search を適用し、`Esc` で解除します。
-`Enter` / `o` で選択行の action menu を開きます。`s` は詳細表示、`d` は `id:` と source を持つ
-task-like 行の完了、`e` は `$EDITOR` で source を開く、`f` は選択行の最初の `project:` で filter します。
-`Tab` / `n` と `p` も非 Vim 風の section 移動 alias として使えます。
-curses の色表示が利用できる場合は、focus section、選択行、active task、完了 item、
-status 行、error、footer を色付きで表示します。plain text fallback は色なしのままです。
+#### input bar
+
+既定の `prompt` keymap では input bar が常に focus されています。plain text を入力すると
+入力に追従して全 row を fuzzy filter します。substring 一致を scattered subsequence 一致より
+高く評価し、一致文字を highlight します。`Enter` で filter を確定して bar を消去し、
+`Esc` で bar を消去した後、さらに押すと有効な filter を解除します。
+
+`/` を入力すると command palette が開きます。row と同じ fuzzy matcher で command を順位付けし、
+usage と summary を表示し、`Tab` で選択中の候補を補完します。`Enter` は入力した command を実行し、
+名前が完全一致でない場合は選択中の候補を実行するため、`/do` + `Enter` で `/done` が動きます。
+未知の command は最も近い名前を提示して明示的に失敗します。
+
+#### command 一覧
+
+| command | 用途 |
+| --- | --- |
+| `/help` | key と command の一覧を表示 |
+| `/view all\|tasks\|agenda\|status` | 表示する section を切り替え |
+| `/search TEXT` | 全 row を fuzzy filter |
+| `/project NAME` | `project:` で filter (値なしで解除) |
+| `/sort natural\|due\|priority\|title\|status` | 並び順を変更 |
+| `/clear` | search、project filter、mark をすべて解除 |
+| `/mark toggle\|all\|none` | 一括操作用に row を mark |
+| `/done` | mark 済み row を完了。mark がなければ選択行を完了 |
+| `/add TITLE` | 設定された write file に未完了 task を追記 |
+| `/edit` | 選択行を `$EDITOR` で開く |
+| `/undo` | このセッションの直前の書き込みを取り消す |
+| `/detail` | inspector panel の表示切り替え |
+| `/reload` | 全 file を即時読み直す |
+| `/theme auto\|dark\|light\|mono` | 配色を変更 |
+| `/limit N` | section ごとの保持 row 数 |
+| `/window 12h` | 現在時刻を中心とした agenda window |
+| `/quit` | TUI を終了 |
+
+`/done` と `/add` は CLI と同じ検証済み atomic write path を通ります。
+セッション中の書き込みはすべて記録されるため、`/undo` で file を復元できます。
+
+#### key 操作
+
+既定の `prompt` keymap では、Up/Down で選択移動 (palette が開いている場合は候補移動)、
+PageUp/PageDown で半ページ移動、Home/End で先頭・末尾へ移動、`Ctrl-T` で選択行の mark 切り替え、
+`Ctrl-P` / `Ctrl-N` で入力履歴の呼び出し、`Ctrl-A` / `Ctrl-E` で入力の先頭・末尾へ移動、
+`Ctrl-U` / `Ctrl-K` で cursor 前後の削除、`Ctrl-C` で終了します。
+
+`--keymap vim` では navigation mode から開始します。`j` / `k` で移動、`g` / `G` で先頭・末尾、
+`Space` で mark、`Enter` で inspector 切り替え、`Tab` で view 循環、
+`d` / `e` / `u` / `r` で done / edit / undo / reload、`/` で filter 入力、`:` で command 入力、
+`?` で help、`q` で終了します。
+
+#### 表示
+
+`--theme auto|dark|light|mono` で配色、`--glyphs auto|unicode|ascii` で罫線文字を指定します。
+`auto` は出力 encoding を判定し、端末が丸角罫線を表現できない場合は ASCII に fallback するため、
+Windows の code page でも例外にならず安全に劣化します。
+列幅は East Asian Width を考慮するため日本語 title でも整列が崩れず、
+meta 列 (project、due、priority) は端末幅が狭くなると折り返さずに 1 列ずつ省略されます。
+
+既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`
+で設定できます。
+
 入力 file が変更されると自動 reload します。`watchdog` が利用可能な場合は file event を使い、
 未導入の場合は mtime を定期確認する fallback で動作します。
+parse に失敗した file は終了せずに diagnostic 付きの error panel を表示するため、
+file を修正すればそのまま復帰します。
 
 ### 13.2 `fzf`
 

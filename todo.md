@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-12 (updated x71)
+Last updated: 2026-07-19 (updated x72)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -24,7 +24,9 @@ Design principles:
 
 Items in this section are already implemented or foundational enough that they should be verified or hardened before the next release.
 
-- [ ] Verify `tui` in real terminals across WSL, Windows Terminal, and native macOS/Linux. Confirm Vim-like keymaps, `/` search, inspector panel readability, curses colors, narrow-terminal behavior, and auto-reload with a human at a real TTY.
+- [ ] Verify the new `tui` workspace in real terminals across WSL, Windows Terminal, and native macOS/Linux. The interactive path is covered by a stub-curses test but has never run against a real curses build; confirm the input bar cursor position, command palette rendering, `--glyphs auto` degradation on legacy code pages, color themes, narrow-terminal column dropping, and auto-reload with a human at a real TTY.
+- [ ] Decide whether `tui` `/done` and `/add` should adopt the shared mutation layer and content-hash CAS before the next release. They currently reuse `fzf_helper.update_item` and `cli.append_text`, so a concurrent external edit between reload and write is not detected; the session undo stack also snapshots whole files rather than journaling operations.
+- [ ] Add a screenshot or asciinema capture of the `tui` workspace for the docs. The written description in `docs/en/cli.md` and `docs/ja/cli.md` is now detailed but there is no visual reference.
 - [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco` binaries on Windows PowerShell and Unix-like shells. Confirm preview rendering plus `show`, `done`, `delete`, and `edit` actions end-to-end.
 - [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
 - [ ] Verify weekly and monthly Web chart rendering in a real browser. Confirm Chart.js labels, bucket boundaries, empty data behavior, and meaningful Y-axis labels.
@@ -116,6 +118,23 @@ Improvements to existing commands that affect daily workflow.
 - [ ] Add a small shared query language before adding more per-surface filter flags. Support a closed grammar such as `tag:urgent AND NOT tag:archived AND due<2026-07-01`, fail loudly on unknown syntax, and reuse it for CLI `--query`, Web API, MCP, and named saved views.
 - [ ] Use East Asian Width-aware column widths in CLI table output. `_format_table` in `lifetxt/cli.py` measures cell width with `len()`, so tables with Japanese titles misalign; reuse the `unicodedata.east_asian_width` logic already used by the TUI.
 - [ ] Specify common CLI output behavior: `--json`, `--quiet`, `--verbose`, `--color=auto|always|never`, `NO_COLOR`, pager behavior, stdin `-`, and documented exit codes.
+
+---
+
+## P1: TUI Workspace Follow-ups
+
+The prompt-first workspace (input bar, slash-command palette, fuzzy filtering,
+marks, session undo) shipped recently. These items expand it without changing
+the shape that already works.
+
+- [ ] Add a two-pane layout for wide terminals. The inspector is currently a bottom panel at every width; on terminals wider than about 120 columns a right-hand pane would show more record detail without shrinking the list.
+- [ ] Add `/timer start|stop|status` commands once the timer state model is settled. The workspace already has the mutation and toast plumbing needed to drive it.
+- [ ] Persist workspace session state between runs: last view, sort, project filter, and command history. Decide whether this belongs in `.cache/lifetxt/` and whether it should be opt-in.
+- [ ] Add a `/filter` command backed by the shared query language once that grammar exists, so the TUI, CLI `--query`, Web API, and MCP resolve the same expressions instead of the TUI having its own fuzzy-only filter.
+- [ ] Support editing a record inline from the workspace. `/edit` shells out to `$EDITOR`; a small in-TUI field editor for status, due, priority, and project would avoid leaving the session for common changes.
+- [ ] Add mouse support for row selection and tab switching behind a config flag. Terminal mouse reporting conflicts with terminal-native text selection, so it must be opt-in.
+- [ ] Extend the fuzzy matcher with per-field scoring. A query currently matches one flattened haystack per row, so a title hit and a body hit score the same.
+- [ ] Add a `/help` search mode for the command reference once the command list outgrows one screen.
 
 ---
 
@@ -318,7 +337,8 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Split browser static assets out of `lifetxt/webapp.py` before adding more complex Web UI features. Keep a build-free path if possible by serving package-data HTML/CSS/JS through StaticFiles or equivalent, but make JavaScript lintable and editor-friendly.
 - [ ] Split `lifetxt/cli.py` into command-focused modules with a thin dispatcher. Keep the public CLI stable, move shared formatting/filter/mutation helpers into internal modules, and reduce the risk of unrelated command regressions.
 - [ ] Add lightweight lint or syntax checks for extracted browser JavaScript once assets are split. This should run in CI without requiring a full frontend build chain.
-- [ ] Bring the optional Textual TUI path up to parity with the modern dependency-free dashboard. Reuse the same model for cards, search, inspector, action menu, and project filtering instead of keeping a minimal Static-only wrapper.
+- [ ] Decide the future of the optional Textual TUI path. The dependency-free workspace in `lifetxt/tui_app.py` is now the primary interface and is strictly richer than the Static-only Textual wrapper, which is only reached when curses is missing; either delete the Textual path or rebuild it on the shared `WorkspaceState` and frame model.
+- [ ] Split `lifetxt/tui_app.py` frame building from state handling if it keeps growing. Command handlers, key handling, and layout currently live in one module; a `tui/` package would keep each testable in isolation.
 
 ---
 

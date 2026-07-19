@@ -623,8 +623,18 @@ def build_parser():
     )
     tui.add_argument(
         "--keymap",
-        choices=("vim", "arrows"),
-        help="TUI keymap preset. Defaults to config tui.keymap or vim.",
+        choices=("prompt", "vim", "arrows"),
+        help="TUI keymap preset. prompt keeps the input bar focused; vim uses single-key navigation. Defaults to config tui.keymap or prompt.",
+    )
+    tui.add_argument(
+        "--glyphs",
+        choices=("auto", "unicode", "ascii"),
+        help="Box-drawing character set. Defaults to config tui.glyphs or auto.",
+    )
+    tui.add_argument(
+        "--plain",
+        action="store_true",
+        help="Print one plain-text dashboard snapshot instead of running the interactive workspace.",
     )
     tui.add_argument(
         "--limit",

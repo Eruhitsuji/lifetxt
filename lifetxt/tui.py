@@ -33,22 +33,48 @@ TUI_COLOR_STYLES = (
     "selected",
 )
 TUI_THEMES = ("auto", "dark", "light", "mono")
-TUI_KEYMAPS = ("vim", "arrows")
+TUI_KEYMAPS = ("prompt", "vim", "arrows")
+TUI_GLYPH_MODES = ("auto", "unicode", "ascii")
 DEFAULT_TUI_LIMIT = 10
 DEFAULT_TUI_AGENDA_WINDOW = "12h"
 
 
 def cmd_tui(args):
+    """Run the interactive workspace on a real terminal, plain text otherwise.
+
+    The prompt-first workspace in ``lifetxt.tui_app`` is the primary interface.
+    It needs a TTY and curses, so piping or redirecting `lifetxt tui` still
+    produces the dependency-free dashboard snapshot below.
+    """
+    if getattr(args, "plain", False) or not _stdout_is_tty():
+        sys.stdout.write(render_dashboard_safe(args))
+        return 0
+    try:
+        import curses  # noqa: F401
+    except ImportError:
+        curses = None
+    if curses is not None:
+        from .tui_app import run_workspace
+
+        return run_workspace(args)
     if _textual_available():
         return run_textual(args)
     return run_curses_or_plain(args)
+
+
+def _stdout_is_tty():
+    try:
+        return bool(sys.stdout.isatty())
+    except Exception:
+        return False
 
 
 def tui_options(args):
     config = getattr(args, "config_data", None) or {}
     tui_config = config_section(config, "tui")
     theme = getattr(args, "theme", None) or tui_config.get("theme") or "auto"
-    keymap = getattr(args, "keymap", None) or tui_config.get("keymap") or "vim"
+    keymap = getattr(args, "keymap", None) or tui_config.get("keymap") or "prompt"
+    glyphs = getattr(args, "glyphs", None) or tui_config.get("glyphs") or "auto"
     limit = getattr(args, "limit", None) or tui_config.get("limit") or DEFAULT_TUI_LIMIT
     agenda_window = (
         getattr(args, "agenda_window", None)
@@ -57,10 +83,13 @@ def tui_options(args):
     )
     theme = str(theme).lower()
     keymap = str(keymap).lower()
+    glyphs = str(glyphs).lower()
     if theme not in TUI_THEMES:
         theme = "auto"
     if keymap not in TUI_KEYMAPS:
-        keymap = "vim"
+        keymap = "prompt"
+    if glyphs not in TUI_GLYPH_MODES:
+        glyphs = "auto"
     try:
         limit = max(1, int(limit))
     except (TypeError, ValueError):
@@ -68,6 +97,7 @@ def tui_options(args):
     return {
         "theme": theme,
         "keymap": keymap,
+        "glyphs": glyphs,
         "limit": limit,
         "agenda_window": str(agenda_window),
         "id_key": id_key_from_config(config),
@@ -855,8 +885,9 @@ def render_inspector(row, project_filter=None, search_query=""):
     return "\n".join(lines)
 
 
-def dashboard_model(args, project_filter=None, search_query=""):
+def dashboard_model(args, project_filter=None, search_query="", limit=None):
     options = tui_options(args)
+    limit = options["limit"] if limit is None else max(1, int(limit))
     items = load_items(args.paths)
     project_values = [project_filter] if project_filter else None
     task_items = filter_items(items, open_only=True, kinds=["T"], projects=project_values)
@@ -873,19 +904,19 @@ def dashboard_model(args, project_filter=None, search_query=""):
             "key": "tasks",
             "title": "TASKS (open)",
             "empty": "No open tasks.",
-            "rows": task_rows[:options["limit"]],
+            "rows": task_rows[:limit],
         },
         {
             "key": "agenda",
             "title": "AGENDA (next %s and active intervals)" % options["agenda_window"],
             "empty": "No agenda items.",
-            "rows": agenda_rows[:options["limit"]],
+            "rows": agenda_rows[:limit],
         },
         {
             "key": "status",
             "title": "STATUS",
             "empty": "No active status.",
-            "rows": status_rows[:options["limit"]],
+            "rows": status_rows[:limit],
         },
     ]
     summary = {

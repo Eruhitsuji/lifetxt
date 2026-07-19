@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x78)
+Last updated: 2026-07-19 (updated x79)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -190,6 +190,7 @@ and session persistence. These items extend it further.
 ### API Stability and Security
 
 - [ ] Expand Web API documentation with full request and response examples for less-common routes, especially Git integration, timer endpoints, review, graph, blockers, parse, generated/read-only mode, and mutation error cases.
+- [ ] Consider falling back to a free port when the configured one cannot be bound. `serve` now fails with an actionable message naming the cause (including Windows reserved ranges), but a `--port auto` option would remove the manual step entirely.
 - [ ] Keep Web API default binding safe. Bind to localhost by default, document the security model, and require explicit configuration for non-localhost access.
 - [ ] Add `--token-env` and config/env-based bearer-token loading. Public deployment recipes should never require putting tokens directly in command lines, config examples, or life.txt content.
 - [ ] Publish and test OpenAPI output. Ensure it reflects read-only mode, write-file behavior, timer endpoints, review endpoints, and MCP-adjacent schemas.

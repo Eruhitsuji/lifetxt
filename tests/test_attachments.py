@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 from lifetxt import attachments as A
 from lifetxt.model import KNOWN_KEYS
@@ -730,6 +731,79 @@ class McpAttachmentTests(unittest.TestCase):
         result = call_tool("check_files", {}, context)
 
         self.assertEqual(0, result["problems"])
+
+
+class ServeBindDiagnosticTests(unittest.TestCase):
+    """`serve` should explain why a port cannot be bound.
+
+    uvicorn reports the OS error only after printing "Application startup
+    complete", which reads like success, so the failure is easy to miss.
+    """
+
+    def test_free_port_passes_preflight(self):
+        import socket
+
+        from lifetxt.cli import _preflight_bind
+
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+        probe.close()
+
+        _preflight_bind("127.0.0.1", port)
+
+    def test_port_in_use_is_reported_with_a_suggestion(self):
+        import socket
+
+        from lifetxt.cli import _preflight_bind
+
+        holder = socket.socket()
+        holder.bind(("127.0.0.1", 0))
+        holder.listen(1)
+        port = holder.getsockname()[1]
+        self.addCleanup(holder.close)
+
+        with self.assertRaises(ValueError) as caught:
+            _preflight_bind("127.0.0.1", port)
+
+        message = str(caught.exception)
+        self.assertIn("Cannot bind", message)
+        self.assertIn("--port", message)
+
+    def test_windows_reserved_port_message_names_the_real_cause(self):
+        from lifetxt.cli import _bind_error_message
+
+        error = OSError(13, "forbidden")
+        error.winerror = 10013
+
+        with unittest.mock.patch.object(os, "name", "nt"):
+            message = _bind_error_message("127.0.0.1", 8000, error)
+
+        self.assertIn("reserving that port", message)
+        self.assertIn("excludedportrange", message)
+        # "port in use" advice would send the user down a dead end here.
+        self.assertNotIn("Another process", message)
+
+    def test_port_in_use_message_is_distinct(self):
+        from lifetxt.cli import _bind_error_message
+
+        error = OSError(98, "in use")
+        error.winerror = 10048
+
+        message = _bind_error_message("127.0.0.1", 8000, error)
+
+        self.assertIn("Another process", message)
+        self.assertNotIn("reserving that port", message)
+
+    def test_privileged_port_message_on_posix(self):
+        from lifetxt.cli import _bind_error_message
+
+        error = OSError(13, "permission denied")
+
+        with unittest.mock.patch.object(os, "name", "posix"):
+            message = _bind_error_message("127.0.0.1", 80, error)
+
+        self.assertIn("elevated privileges", message)
 
 
 if __name__ == "__main__":

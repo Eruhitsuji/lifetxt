@@ -3276,9 +3276,60 @@ def command_serve(args):
                 "Refusing to start a writable public Web server without an API token. "
                 "Use --token-env ENVVAR, --read-only, or --insecure-public."
             )
+    _preflight_bind(host, port)
     app = create_app(paths=paths, writable_path=writable_path, config=config, read_only=read_only)
     uvicorn.run(app, host=host, port=port)
     return 0
+
+
+def _preflight_bind(host, port):
+    """Fail with an actionable message when the port cannot be bound.
+
+    uvicorn reports the raw OS error after it has already printed "Application
+    startup complete", which reads like a successful start. Checking first lets
+    the message name the actual cause, including the Windows case where a port
+    is administratively reserved even though nothing is listening on it.
+    """
+    import socket
+
+    probe = socket.socket(socket.AF_INET6 if ":" in str(host) else socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        probe.bind((host, int(port)))
+    except OSError as exc:
+        raise ValueError(_bind_error_message(host, port, exc))
+    finally:
+        probe.close()
+
+
+def _bind_error_message(host, port, exc):
+    errno = getattr(exc, "errno", None)
+    winerror = getattr(exc, "winerror", None)
+    lines = ["Cannot bind %s:%s (%s)." % (host, port, exc)]
+
+    in_use = errno in (48, 98) or winerror == 10048
+    forbidden = errno == 13 or winerror == 10013
+
+    if in_use:
+        lines.append("Another process is already using that port.")
+        lines.append("Stop it, or start on a different port: lifetxt serve --port 8080")
+    elif forbidden and os.name == "nt":
+        # Hyper-V, WSL, and Docker reserve blocks of ports on Windows. Nothing
+        # is listening, so "port in use" advice sends people down a dead end.
+        lines.append(
+            "Windows is reserving that port, so nothing can bind it even though "
+            "nothing is listening."
+        )
+        lines.append("Check the reserved ranges with:")
+        lines.append("  netsh interface ipv4 show excludedportrange protocol=tcp")
+        lines.append("Then start outside those ranges, for example:")
+        lines.append("  lifetxt serve --port 8080")
+    elif forbidden:
+        lines.append("Ports below 1024 need elevated privileges on this system.")
+        lines.append("Use a port above 1024, for example: lifetxt serve --port 8080")
+    else:
+        lines.append("Try a different --port, or --host 127.0.0.1.")
+    return "\n".join(lines)
 
 
 def _truthy_config(value):

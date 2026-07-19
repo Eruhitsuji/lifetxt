@@ -494,3 +494,41 @@ query parameter:
 | `id` | 指定 ID に接続する link だけを表示 |
 | `direction=incoming\|outgoing\|both` | `id` 指定時の方向 |
 | `limit` | 最大件数 |
+
+### port を bind できない場合
+
+`serve` がすぐ終了する場合、port を bind できていません。
+`lifetxt` は起動前に確認し、原因を明示します。
+
+```
+ERROR: Cannot bind 127.0.0.1:8000 ([WinError 10013] ...).
+Windows is reserving that port, so nothing can bind it even though nothing is listening.
+```
+
+**Windows の予約 port。** Hyper-V、WSL、Docker は port の範囲を予約します。
+予約された port は誰も listen していなくても bind できないため、
+`netstat` では何も見えず原因が分かりにくくなります。
+予約範囲は次で確認できます。
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+port 8000 は予約範囲に入っていることがよくあります。範囲外で起動してください。
+
+```sh
+lifetxt serve life.txt --port 8080
+```
+
+毎回指定しなくて済むよう config に既定値を設定することもできます。
+
+```json
+{ "web": { "port": 8080 } }
+```
+
+**port が使用中の場合。** 別のプロセスが掴んでいます。
+そのプロセスを止めるか、別の port を使ってください。
+
+**1024 未満の port。** macOS や Linux では管理者権限が必要です。
+1024 より大きい port を使ってください。
+

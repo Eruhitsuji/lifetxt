@@ -501,3 +501,40 @@ highlights only the changed cards.
 
 Files listed in config `sync_ics.generated_paths` or `sync_ics.output` are
 marked as generated in API responses and are treated as read-only in the GUI.
+
+### Port Cannot Be Bound
+
+If `serve` exits immediately, the port could not be bound. `lifetxt` checks
+before starting and names the cause:
+
+```
+ERROR: Cannot bind 127.0.0.1:8000 ([WinError 10013] ...).
+Windows is reserving that port, so nothing can bind it even though nothing is listening.
+```
+
+**Windows reserved ports.** Hyper-V, WSL, and Docker reserve blocks of ports.
+A reserved port cannot be bound even though nothing is listening on it, so
+`netstat` looks clear and the failure is confusing. List the reserved ranges:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+Port 8000 commonly falls inside a reserved range. Start outside it:
+
+```sh
+lifetxt serve life.txt --port 8080
+```
+
+Or set a default in config so you do not have to pass it every time:
+
+```json
+{ "web": { "port": 8080 } }
+```
+
+**Port already in use.** Another process holds it; stop that process or pick a
+different port.
+
+**Ports below 1024.** These need elevated privileges on macOS and Linux. Use a
+port above 1024.
+

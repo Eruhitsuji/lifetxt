@@ -703,7 +703,7 @@ class WorkspaceStateTests(unittest.TestCase):
     """Coverage for the prompt-first workspace in lifetxt.tui_app."""
 
     SAMPLE = (
-        "[ ] T Write_Report id:t1 project:work due:2026-07-20 priority:high\n"
+        "[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n"
         "[/] T Ship_Release id:t2 project:core\n"
         "[ ] T Buy_Milk id:t3 project:home\n"
     )
@@ -926,8 +926,496 @@ class WorkspaceStateTests(unittest.TestCase):
         self.assertEqual(0, state.cursor)
 
 
+class WorkspaceKeymapRegressionTests(unittest.TestCase):
+    """Regressions for the two reported TUI bugs."""
+
+    def _state(self, keymap):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T A id:t1\n[ ] T B id:t2\n")
+        args = argparse.Namespace(paths=[path], config_data={"tui": {"keymap": keymap}})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+        state.reload()
+        return state
+
+    def test_vim_mode_returns_to_nav_after_closing_help_opened_by_command(self):
+        state = self._state("vim")
+
+        tui_app.handle_key(state, ":")
+        for char in "help":
+            tui_app.handle_key(state, char)
+        tui_app.handle_key(state, "enter")
+        self.assertTrue(state.show_help)
+
+        tui_app.handle_key(state, "enter")
+
+        self.assertFalse(state.show_help)
+        self.assertEqual("nav", state.mode)
+        # j must navigate again instead of being typed into the input bar.
+        tui_app.handle_key(state, "j")
+        self.assertEqual("", state.input)
+        self.assertEqual(1, state.selected)
+
+    def test_vim_mode_returns_to_nav_after_a_search(self):
+        state = self._state("vim")
+
+        tui_app.handle_key(state, "/")
+        self.assertEqual("input", state.mode)
+        for char in "a":
+            tui_app.handle_key(state, char)
+        tui_app.handle_key(state, "enter")
+
+        self.assertEqual("nav", state.mode)
+        self.assertEqual("a", state.query)
+
+    def test_vim_mode_returns_to_nav_after_escaping_an_empty_input(self):
+        state = self._state("vim")
+
+        tui_app.handle_key(state, "/")
+        tui_app.handle_key(state, "escape")
+
+        self.assertEqual("nav", state.mode)
+
+    def test_prompt_keymap_keeps_the_input_bar_focused(self):
+        state = self._state("prompt")
+
+        tui_app.handle_key(state, "/")
+        for char in "help":
+            tui_app.handle_key(state, char)
+        tui_app.handle_key(state, "enter")
+        tui_app.handle_key(state, "enter")
+
+        self.assertEqual("input", state.mode)
+
+    def test_help_overlay_scrolls_and_resets_on_close(self):
+        state = self._state("prompt")
+        state.show_help = True
+
+        tui_app.handle_key(state, "down")
+        tui_app.handle_key(state, "down")
+        self.assertEqual(2, state.help_scroll)
+
+        tui_app.handle_key(state, "escape")
+        self.assertFalse(state.show_help)
+        self.assertEqual(0, state.help_scroll)
+
+
+class WorkspaceInterruptTests(unittest.TestCase):
+    """Ctrl-C must leave the TUI quietly rather than raising KeyboardInterrupt.
+
+    curses.wrapper uses cbreak(), which leaves ISIG enabled, so a real terminal
+    delivers SIGINT instead of key code 3.
+    """
+
+    def _curses_raising_on_getch(self):
+        module = types.ModuleType("curses")
+        for index, name in enumerate(("KEY_UP", "KEY_DOWN", "KEY_RESIZE", "KEY_ENTER")):
+            setattr(module, name, 300 + index)
+        for index, name in enumerate(("A_BOLD", "A_DIM", "A_REVERSE", "A_UNDERLINE")):
+            setattr(module, name, 1 << index)
+        for index, name in enumerate(("COLOR_BLACK", "COLOR_BLUE", "COLOR_CYAN", "COLOR_WHITE")):
+            setattr(module, name, index)
+        module.has_colors = lambda: False
+        module.curs_set = lambda number: None
+
+        class Screen:
+            def getmaxyx(self):
+                return (24, 80)
+
+            def timeout(self, milliseconds):
+                pass
+
+            def erase(self):
+                pass
+
+            def refresh(self):
+                pass
+
+            def move(self, row, column):
+                pass
+
+            def addstr(self, row, column, text, attr=0):
+                pass
+
+            def getch(self):
+                raise KeyboardInterrupt()
+
+        module.wrapper = lambda main: main(Screen())
+        return module
+
+    def test_workspace_exits_cleanly_on_sigint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            with patch.dict(sys.modules, {"curses": self._curses_raising_on_getch()}):
+                result = tui_app.run_workspace(args)
+
+        self.assertEqual(0, result)
+
+    def test_cmd_tui_swallows_sigint_from_the_interactive_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            args = argparse.Namespace(paths=[path], config_data={}, plain=False)
+
+            def boom(_args):
+                raise KeyboardInterrupt()
+
+            with patch.object(tui, "_stdout_is_tty", lambda: True), \
+                    patch.dict(sys.modules, {"curses": types.ModuleType("curses")}), \
+                    patch("lifetxt.tui_app.run_workspace", boom):
+                result = tui.cmd_tui(args)
+
+        self.assertEqual(0, result)
+
+
+class WorkspaceCommandTests(unittest.TestCase):
+    """Coverage for the row-editing, filtering, and export commands."""
+
+    SAMPLE = (
+        "[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high context:office tag:urgent\n"
+        "[/] T Ship_Release id:t2 project:core\n"
+        "[ ] T Buy_Milk id:t3 project:home context:errand\n"
+        "[?] T Someday_Idea id:t4 project:home\n"
+    )
+
+    def _state(self, text=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(self.SAMPLE if text is None else text)
+        args = argparse.Namespace(
+            paths=[path],
+            config_data={"tui": {"session": "off"}, "timer": {"state_file": os.path.join(tmp.name, "timer.json")}},
+        )
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+        state.reload()
+        return state, path, tmp.name
+
+    def _line_for(self, path, item_id):
+        with open(path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                if "id:%s" % item_id in line:
+                    return line.rstrip("\n")
+        raise AssertionError("no line with id:%s" % item_id)
+
+    def test_context_filter_narrows_and_clears(self):
+        state, _path, _tmp = self._state()
+
+        tui_app.run_command(state, "/context office")
+        state.refresh()
+        self.assertEqual(["Write_Report"], [row["title"] for row in state.rows])
+
+        tui_app.run_command(state, "/context")
+        state.refresh()
+        self.assertEqual(4, len(state.rows))
+
+    def test_tag_filter_narrows_and_ignores_a_leading_hash(self):
+        state, _path, _tmp = self._state()
+
+        tui_app.run_command(state, "/tag #urgent")
+        state.refresh()
+
+        self.assertEqual(["Write_Report"], [row["title"] for row in state.rows])
+
+    def test_next_view_excludes_someday_and_blocked_rows(self):
+        state, _path, _tmp = self._state(
+            self.SAMPLE + "[ ] T Blocked_Task id:t5 depends_on:t1\n[ ] T Maybe_Task id:t6 tag:someday\n"
+        )
+
+        tui_app.run_command(state, "/next")
+        state.refresh()
+        titles = [row["title"] for row in state.rows]
+
+        self.assertIn("Write_Report", titles)
+        self.assertNotIn("Someday_Idea", titles)
+        self.assertNotIn("Blocked_Task", titles)
+        self.assertNotIn("Maybe_Task", titles)
+
+    def test_goto_moves_the_selection_to_a_record_id(self):
+        state, _path, _tmp = self._state()
+
+        tui_app.run_command(state, "/goto t3")
+
+        self.assertEqual("Buy_Milk", state.selected_row()["title"])
+        with self.assertRaises(ValueError):
+            tui_app.run_command(state, "/goto nope")
+
+    def test_set_writes_a_detail_and_an_empty_value_removes_it(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t2")
+
+        tui_app.run_command(state, "/set owner dana")
+        self.assertIn("owner:dana", self._line_for(path, "t2"))
+
+        tui_app.run_command(state, "/goto t2")
+        tui_app.run_command(state, "/set owner")
+        self.assertNotIn("owner:", self._line_for(path, "t2"))
+
+    def test_due_accepts_relative_tokens(self):
+        import datetime as _datetime
+
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+
+        tui_app.run_command(state, "/due +3d")
+
+        expected = (_datetime.date.today() + _datetime.timedelta(days=3)).isoformat()
+        self.assertIn("due:%s" % expected, self._line_for(path, "t3"))
+
+    def test_agenda_rows_carry_their_source_and_stay_editable(self):
+        # A task whose due date falls inside the agenda window appears in both
+        # the tasks and agenda sections. The agenda copy used to lose its source
+        # file, which made every editing command fail on it.
+        soon = (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
+        state, path, _tmp = self._state("[ ] T Soon_Task id:t1 project:work due:%s\n" % soon)
+
+        agenda_rows = [row for row in state.rows if row["section"] == "agenda"]
+        self.assertTrue(agenda_rows, "expected the due task to appear in the agenda section")
+        for row in agenda_rows:
+            self.assertTrue(row.get("source"), "agenda row is missing its source file")
+
+        state.selected = state.rows.index(agenda_rows[0])
+        level, _message = tui_app.run_command(state, "/done")
+
+        self.assertEqual("success", level)
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertIn("[x] T Soon_Task", handle.read())
+
+    def test_due_rejects_a_value_that_is_not_a_date(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+
+        for bad in ("notadate", "2026-13-99"):
+            with self.assertRaises(ValueError) as caught:
+                tui_app.run_command(state, "/due %s" % bad)
+            self.assertIn("is not a date", str(caught.exception))
+
+        self.assertNotIn("due:", self._line_for(path, "t3"))
+
+    def test_limit_truncation_is_reported_rather_than_silent(self):
+        rows = "".join("[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30))
+        state, _path, _tmp = self._state(rows)
+        state.options["limit"] = 10
+        state.refresh()
+
+        self.assertEqual(10, len(state.rows))
+        self.assertEqual(20, state.hidden.get("tasks"))
+
+        # Visible on the section header, which cannot scroll out of view...
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 22))
+        self.assertIn("TASKS 10/30", text)
+        # ...and as a trailing row when the list is tall enough to reach it.
+        self.assertIn("more hidden by limit", tui_app.frame_to_text(tui_app.build_frame(state, 92, 40)))
+
+    def test_sorted_views_still_honour_the_limit(self):
+        rows = "".join("[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30))
+        state, _path, _tmp = self._state(rows)
+        state.options["limit"] = 10
+
+        tui_app.run_command(state, "/next")
+        state.refresh()
+
+        self.assertEqual(10, len(state.rows))
+        self.assertEqual(20, state.hidden.get("tasks"))
+
+    def test_status_uses_aliases_and_rejects_unknown_values(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t1")
+
+        tui_app.run_command(state, "/status active")
+        self.assertTrue(self._line_for(path, "t1").startswith("[/]"))
+
+        tui_app.run_command(state, "/goto t1")
+        with self.assertRaises(ValueError):
+            tui_app.run_command(state, "/status nonsense")
+
+    def test_assign_sets_and_clears_the_assignee(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+
+        tui_app.run_command(state, "/assign carol")
+        self.assertIn("assignee:carol", self._line_for(path, "t3"))
+
+    def test_bulk_set_applies_to_every_marked_row_with_one_undo(self):
+        state, path, _tmp = self._state()
+
+        tui_app.run_command(state, "/mark all")
+        tui_app.run_command(state, "/set owner dana")
+
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertEqual(4, handle.read().count("owner:dana"))
+
+        tui_app.run_command(state, "/undo")
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertEqual(self.SAMPLE, handle.read())
+
+    def test_delete_requires_confirmation_then_removes_the_row(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/delete")
+        self.assertIn("/delete yes", str(caught.exception))
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertIn("Buy_Milk", handle.read())
+
+        tui_app.run_command(state, "/goto t3")
+        tui_app.run_command(state, "/delete yes")
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertNotIn("Buy_Milk", handle.read())
+
+        tui_app.run_command(state, "/undo")
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertIn("Buy_Milk", handle.read())
+
+    def test_editing_a_row_without_an_id_is_rejected_before_any_write(self):
+        state, path, _tmp = self._state("[ ] T HasId id:t1\n[ ] T NoId project:x\n")
+
+        tui_app.run_command(state, "/mark all")
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/set owner dana")
+
+        self.assertIn("NoId", str(caught.exception))
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertNotIn("owner:", handle.read())
+
+    def test_timer_start_status_and_stop_write_elapsed(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+
+        self.assertIn("No running timer", tui_app.run_command(state, "/timer status")[1])
+        tui_app.run_command(state, "/timer start")
+        self.assertIn("t3", tui_app.run_command(state, "/timer status")[1])
+        level, message = tui_app.run_command(state, "/timer stop")
+
+        self.assertEqual("success", level)
+        self.assertIn("elapsed:", self._line_for(path, "t3"))
+
+    def test_timer_start_refuses_a_second_concurrent_timer(self):
+        state, _path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+        tui_app.run_command(state, "/timer start")
+
+        tui_app.run_command(state, "/goto t1")
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/timer start")
+
+        self.assertIn("already running", str(caught.exception))
+
+    def test_timer_cancel_discards_the_session_without_writing_elapsed(self):
+        state, path, _tmp = self._state()
+        tui_app.run_command(state, "/goto t3")
+        tui_app.run_command(state, "/timer start")
+
+        tui_app.run_command(state, "/timer cancel")
+
+        self.assertNotIn("elapsed:", self._line_for(path, "t3"))
+        self.assertIn("No running timer", tui_app.run_command(state, "/timer status")[1])
+
+    def test_export_writes_markdown_csv_and_json(self):
+        state, _path, tmp = self._state()
+
+        for fmt in tui_app.EXPORT_FORMATS:
+            target = os.path.join(tmp, "out.%s" % fmt)
+            level, _message = tui_app.run_command(state, "/export %s %s" % (fmt, target))
+            self.assertEqual("success", level)
+            with open(target, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            self.assertIn("Write_Report", content)
+
+        with self.assertRaises(ValueError):
+            tui_app.run_command(state, "/export xml")
+
+    def test_export_json_round_trips_and_csv_has_a_header(self):
+        import json as _json
+
+        state, _path, _tmp = self._state()
+
+        payload = _json.loads(tui_app.render_export(state.rows, "json"))
+        self.assertEqual(4, len(payload))
+        self.assertEqual("Write_Report", payload[0]["title"])
+
+        csv_text = tui_app.render_export(state.rows, "csv")
+        self.assertTrue(csv_text.startswith("section,status,type,title,id,project,due,priority"))
+
+    def test_help_search_ranks_matching_commands(self):
+        state, _path, _tmp = self._state()
+
+        level, message = tui_app.run_command(state, "/help timer")
+
+        self.assertEqual("info", level)
+        self.assertTrue(state.show_help)
+        self.assertEqual("timer", state.help_query)
+        self.assertIn("/timer", tui_app.help_entries("timer")[0][0])
+
+        with self.assertRaises(ValueError):
+            tui_app.run_command(state, "/help zzzzqqq")
+
+    def test_per_field_scoring_ranks_a_title_hit_above_a_detail_hit(self):
+        title_hit = {"title": "work", "details": {}}
+        detail_hit = {"title": "Something", "details": {"note": ["work"]}}
+
+        self.assertGreater(
+            tui_app.score_row("work", title_hit)[0],
+            tui_app.score_row("work", detail_hit)[0],
+        )
+
+    def test_session_round_trips_view_sort_and_filters(self):
+        state, _path, _tmp = self._state()
+        state.view = "tasks"
+        state.sort = "priority"
+        state.project = "home"
+        state.context = "errand"
+        state.history = ["/done"]
+
+        payload = tui_app.session_payload(state)
+        restored = tui_app.WorkspaceState(state.args, glyphs=tui_app.ASCII_GLYPHS)
+        tui_app.apply_session(restored, payload)
+
+        self.assertEqual("tasks", restored.view)
+        self.assertEqual("priority", restored.sort)
+        self.assertEqual("home", restored.project)
+        self.assertEqual("errand", restored.context)
+        self.assertEqual(["/done"], restored.history)
+
+    def test_session_ignores_values_that_are_no_longer_valid(self):
+        state, _path, _tmp = self._state()
+
+        tui_app.apply_session(state, {"view": "bogus", "sort": "bogus", "project": 42, "history": "nope"})
+
+        self.assertEqual("all", state.view)
+        self.assertEqual("natural", state.sort)
+        self.assertIsNone(state.project)
+
+    def test_session_save_and_load_use_the_configured_path(self):
+        state, _path, tmp = self._state()
+        state.args.config_data["tui"] = {"session_file": os.path.join(tmp, "session.json")}
+        state.view = "tasks"
+        state.sort = "title"
+
+        self.assertTrue(tui_app.save_session(state))
+        restored = tui_app.WorkspaceState(state.args, glyphs=tui_app.ASCII_GLYPHS)
+        self.assertTrue(tui_app.load_session(restored))
+
+        self.assertEqual("tasks", restored.view)
+        self.assertEqual("title", restored.sort)
+
+    def test_session_can_be_disabled_in_config(self):
+        state, _path, _tmp = self._state()
+
+        self.assertFalse(tui_app.save_session(state))
+        self.assertFalse(tui_app.load_session(state))
+
+
 class WorkspaceFrameTests(unittest.TestCase):
-    def _state(self, text="[ ] T Write_Report id:t1 project:work due:2026-07-20 priority:high\n"):
+    def _state(self, text="[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n"):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
@@ -1017,6 +1505,72 @@ class WorkspaceFrameTests(unittest.TestCase):
 
         self.assertIn("/done", text)
         self.assertIn("Mark the marked or selected task-like rows done", text)
+
+    def test_two_pane_layout_appears_only_on_wide_terminals(self):
+        state = self._state()
+
+        wide = tui_app.frame_to_text(tui_app.build_frame(state, 130, 24))
+        narrow = tui_app.frame_to_text(tui_app.build_frame(state, 90, 24))
+
+        # In two-pane mode the selection panel sits beside the list, so its
+        # border shares a line with a row rather than owning the line.
+        wide_rows = [
+            line
+            for line in tui_app.build_frame(state, 130, 24)
+            if any(style.startswith("status_") for _text, style in line)
+            and "selection" not in tui_app.spans_to_text(line)
+        ]
+        self.assertTrue(wide_rows)
+        self.assertIn("selection", wide)
+        self.assertIn("selection", narrow)
+        border = state.glyphs["v"]
+        beside = [
+            line
+            for line in tui_app.build_frame(state, 130, 24)
+            if any(style.startswith("status_") for _text, style in line)
+            and tui_app.spans_to_text(line).rstrip().endswith(border)
+        ]
+        self.assertTrue(beside, "expected a row line to end with the side panel border")
+
+    def test_two_pane_lines_never_exceed_the_terminal_width(self):
+        state = self._state()
+
+        for width in (118, 130, 200):
+            for line in tui_app.build_frame(state, width, 24):
+                self.assertLessEqual(tui_app.display_width(tui_app.spans_to_text(line)), width)
+
+    def test_stats_panel_breaks_visible_rows_down(self):
+        state = self._state("[ ] T A id:t1 project:work\n[x] T B id:t2 project:work\n[ ] T C id:t3 project:home\n")
+        state.show_stats = True
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
+
+        self.assertIn("STATS", text)
+        self.assertIn("by status", text)
+        self.assertIn("by project", text)
+        self.assertIn("work", text)
+
+    def test_help_search_shows_only_matching_commands(self):
+        state = self._state()
+        state.show_help = True
+        state.help_query = "timer"
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 40))
+
+        self.assertIn("/timer", text)
+        self.assertIn("matching", text)
+        self.assertNotIn("/theme", text)
+
+    def test_help_overlay_scrolls_when_it_exceeds_the_screen(self):
+        state = self._state()
+        state.show_help = True
+
+        first = tui_app.frame_to_text(tui_app.build_frame(state, 92, 20))
+        state.help_scroll = 12
+        second = tui_app.frame_to_text(tui_app.build_frame(state, 92, 20))
+
+        self.assertIn("more line(s) below", first)
+        self.assertNotEqual(first, second)
 
     def test_help_overlay_lists_every_command(self):
         state = self._state()

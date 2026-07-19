@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x72)
+Last updated: 2026-07-19 (updated x73)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -25,7 +25,8 @@ Design principles:
 Items in this section are already implemented or foundational enough that they should be verified or hardened before the next release.
 
 - [ ] Verify the new `tui` workspace in real terminals across WSL, Windows Terminal, and native macOS/Linux. The interactive path is covered by a stub-curses test but has never run against a real curses build; confirm the input bar cursor position, command palette rendering, `--glyphs auto` degradation on legacy code pages, color themes, narrow-terminal column dropping, and auto-reload with a human at a real TTY.
-- [ ] Decide whether `tui` `/done` and `/add` should adopt the shared mutation layer and content-hash CAS before the next release. They currently reuse `fzf_helper.update_item` and `cli.append_text`, so a concurrent external edit between reload and write is not detected; the session undo stack also snapshots whole files rather than journaling operations.
+- [ ] Give the `tui` editing commands content-hash CAS. `_mutate_rows` in `lifetxt/tui_app.py` is now the single TUI write path for `/done`, `/status`, `/set`, `/due`, `/assign`, `/delete`, and `/timer`, and it validates the whole batch before writing, but it still reads through `fzf_helper` / `timer` helpers with no hash check, so an external edit between reload and write is silently overwritten. Fold it into the project-wide shared mutation layer rather than adding a second CAS implementation.
+- [ ] Replace the TUI session undo stack with the shared mutation journal. It currently snapshots whole files per operation, which is correct but memory-hungry on large files and cannot be shared with CLI or Web undo.
 - [ ] Add a screenshot or asciinema capture of the `tui` workspace for the docs. The written description in `docs/en/cli.md` and `docs/ja/cli.md` is now detailed but there is no visual reference.
 - [ ] Verify `lifetxt fzf` and `inbox --fzf` with actual `fzf` and `peco` binaries on Windows PowerShell and Unix-like shells. Confirm preview rendering plus `show`, `done`, `delete`, and `edit` actions end-to-end.
 - [ ] Verify `notify --email` against real SMTP providers in a safe test account. Confirm STARTTLS, authentication failure messages, multiple comma-separated recipients, `--watch` seen-state behavior after successful send, and app-password guidance.
@@ -36,6 +37,8 @@ Items in this section are already implemented or foundational enough that they s
 - [ ] Add lock files and a shared mutation layer on top of the shared atomic write helper. Use one mutation path for CLI, Web API, MCP, background watchers, and future timer/alarm actions.
 - [ ] Add content-hash compare-and-swap protection to all writes before or alongside lock files. Capture the file hash at read time and abort loudly if the content changed before write; apply the same principle to CLI, Web API, MCP, notification seen-state, timer state, and undo/archive operations.
 - [ ] Add concurrent-write tests for quick add, item update, MCP write, notification acknowledgement, timer update, and archive operations. Fail loudly when the file changes between read and write.
+- [ ] Review the new `source` field on agenda records for public Web deployments. `agenda_records` now sets `record["source"]` (webapp.py already read it, and without it every TUI agenda row was read-only), so `/api/agenda`, `agenda --format json`, and MCP agenda output now include the originating file path. Decide whether read-only or public servers should strip or relativize it.
+- [ ] Audit the other row builders for the same missing-source class of bug. `_status_row` in `lifetxt/tui.py` takes `source` from the status record; confirm `latest_status_records` populates it, otherwise status rows are silently uneditable in the TUI the way agenda rows were.
 - [ ] Harden public Web deployments beyond startup checks. Git/admin subprocess routes must not rely on `request.client.host` loopback checks behind reverse proxies; add trusted-proxy and disabled-by-default controls.
 - [ ] Define the next release gate explicitly: timezone round-trip safety, shared mutation path with CAS, round-trip golden corpus, CI, packaging metadata cleanup, and published JSON Schema are blockers; timer expansion and decorative Web UI work are not.
 - [ ] Verify the new repeat-completion flow end-to-end on real files: `complete` materialization across `repeat_base: due|done`, `done habit` logging, MCP `complete_item`, undo after completion, and interaction with archive. These shipped recently and are the most likely new-feature breakage.
@@ -123,18 +126,21 @@ Improvements to existing commands that affect daily workflow.
 
 ## P1: TUI Workspace Follow-ups
 
-The prompt-first workspace (input bar, slash-command palette, fuzzy filtering,
-marks, session undo) shipped recently. These items expand it without changing
-the shape that already works.
+The workspace now covers navigation, filtering (`project`/`context`/`tag`/fuzzy),
+row editing (`/status`, `/set`, `/due`, `/assign`, `/delete`), `/timer`,
+`/export`, `/stats`, `/next`, `/goto`, searchable help, a two-pane wide layout,
+and session persistence. These items extend it further.
 
-- [ ] Add a two-pane layout for wide terminals. The inspector is currently a bottom panel at every width; on terminals wider than about 120 columns a right-hand pane would show more record detail without shrinking the list.
-- [ ] Add `/timer start|stop|status` commands once the timer state model is settled. The workspace already has the mutation and toast plumbing needed to drive it.
-- [ ] Persist workspace session state between runs: last view, sort, project filter, and command history. Decide whether this belongs in `.cache/lifetxt/` and whether it should be opt-in.
-- [ ] Add a `/filter` command backed by the shared query language once that grammar exists, so the TUI, CLI `--query`, Web API, and MCP resolve the same expressions instead of the TUI having its own fuzzy-only filter.
-- [ ] Support editing a record inline from the workspace. `/edit` shells out to `$EDITOR`; a small in-TUI field editor for status, due, priority, and project would avoid leaving the session for common changes.
+- [ ] Add a `/filter` command backed by the shared query language once that grammar exists, so the TUI, CLI `--query`, Web API, and MCP resolve the same expressions instead of the TUI keeping its own fuzzy-only filter plus one flag per field. Every new `/context`-style command is a reason to build the grammar sooner.
+- [ ] Add an in-place field editor. `/set KEY VALUE` covers scripted edits, but editing an existing value means retyping it; a small inline editor prefilled with the current value would cover the common case without leaving the session.
+- [ ] Add multi-line body editing to the workspace. `/set body ...` cannot express continuation lines, so bodies still require `/edit` and `$EDITOR`.
 - [ ] Add mouse support for row selection and tab switching behind a config flag. Terminal mouse reporting conflicts with terminal-native text selection, so it must be opt-in.
-- [ ] Extend the fuzzy matcher with per-field scoring. A query currently matches one flattened haystack per row, so a title hit and a body hit score the same.
-- [ ] Add a `/help` search mode for the command reference once the command list outgrows one screen.
+- [ ] Add `/timer pause` and `/timer resume`. The CLI already has them and the shared state file supports them; only the TUI commands are missing.
+- [ ] Let `/export` reuse the CLI exporters. `render_export` in `lifetxt/tui_app.py` writes rows independently so the output matches the screen exactly, but Markdown and CSV shapes now exist in two places and can drift from `markdown.py` and `csvio.py`.
+- [ ] Add a confirmation affordance better than `/delete yes`. Re-typing the command is safe but clumsy for bulk deletes; consider an inline confirm prompt in the input bar.
+- [ ] Show which rows a bulk command will touch before it runs. `/done` with 30 marked rows currently gives no preview.
+- [ ] Add a `/view` for archived records once multi-file semantics are specified.
+- [ ] Reconsider the per-section row limit for sorted views. The limit now always applies and reports truncation, but for `/next` and `/sort due` a global "top N" may be more useful than a per-section cap.
 
 ---
 
@@ -314,6 +320,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Expand `scripts/smoke_test.py` into named smoke profiles. Add `--profile cli`, `--profile web`, `--profile mcp`, and `--profile release` so CI, local debugging, and release checks can run the right subset quickly.
 - [ ] Add snapshot tests for important human-readable CLI output.
 - [ ] Add sync tests comparing model constants with English and Japanese format specs, CLI completion, editor snippets, and docs examples.
+- [ ] Add a guard against time-dependent test fixtures. TUI fixtures using a `due:` date near today drifted into the 12h agenda window as the clock advanced, so the same record appeared in both the tasks and agenda sections and assertions passed or failed depending on the hour. Fixtures are now pinned far in the future; consider injecting a fixed clock instead so the hazard cannot come back.
 - [ ] Add cross-platform tests for paths with spaces, glob expansion, Windows line endings, CJK terminal width, shell completion, and Windows console behavior.
 - [ ] Add glob input tests for `*.life.txt`, `*_life.txt`, directories, and `projects/**/*.life.txt` across all file-reading commands.
 - [ ] Add parser edge-case tests for nested quotes, invalid continuations, mixed indentation, duplicate IDs, Unicode normalization, CRLF, emoji, multi-value fields, and empty files.
@@ -338,7 +345,7 @@ Editor support should move beyond syntax highlighting while keeping the parser a
 - [ ] Split `lifetxt/cli.py` into command-focused modules with a thin dispatcher. Keep the public CLI stable, move shared formatting/filter/mutation helpers into internal modules, and reduce the risk of unrelated command regressions.
 - [ ] Add lightweight lint or syntax checks for extracted browser JavaScript once assets are split. This should run in CI without requiring a full frontend build chain.
 - [ ] Decide the future of the optional Textual TUI path. The dependency-free workspace in `lifetxt/tui_app.py` is now the primary interface and is strictly richer than the Static-only Textual wrapper, which is only reached when curses is missing; either delete the Textual path or rebuild it on the shared `WorkspaceState` and frame model.
-- [ ] Split `lifetxt/tui_app.py` frame building from state handling if it keeps growing. Command handlers, key handling, and layout currently live in one module; a `tui/` package would keep each testable in isolation.
+- [ ] Split `lifetxt/tui_app.py` into a `tui/` package. It now holds the state model, ~29 command handlers, key handling, frame building, session persistence, and the color palette in one module; commands and layout should become separate units so each is testable and reviewable in isolation.
 
 ---
 

@@ -1283,7 +1283,9 @@ Example config:
     "keymap": "prompt",
     "glyphs": "auto",
     "limit": 10,
-    "agenda_window": "12h"
+    "agenda_window": "12h",
+    "session": true,
+    "session_file": ".cache/lifetxt/tui_session.json"
   },
   "notifications": {
     "enabled": true,
@@ -1460,7 +1462,8 @@ instead, so `python -m lifetxt tui > snapshot.txt` still works.
 The input bar is always focused in the default `prompt` keymap. Typing plain
 text filters every listed row as you type, using a fuzzy matcher that scores
 substring hits above scattered subsequence hits and highlights the matched
-characters. Press `Enter` to commit the filter and clear the bar, or `Esc` to
+characters. Fields are weighted, so a title hit ranks above an id hit, which
+ranks above a hit buried in a detail value. Press `Enter` to commit the filter and clear the bar, or `Esc` to
 clear the bar and then the active filters.
 
 Typing `/` opens the command palette. It ranks commands with the same fuzzy
@@ -1471,28 +1474,90 @@ command fails loudly and suggests the closest name.
 
 #### Commands
 
+**Views and filters**
+
 | Command | Purpose |
 | --- | --- |
-| `/help` | Toggle the full key and command reference |
-| `/view all\|tasks\|agenda\|status` | Switch which sections are listed |
+| `/help [QUERY]` | Toggle the reference, or search it (`/help timer`) |
+| `/view all\|tasks\|agenda\|status\|next` | Switch which sections are listed |
+| `/next` | Open, unblocked, non-someday actions ordered by priority |
 | `/search TEXT` | Fuzzy filter every listed row |
 | `/project NAME` | Filter by `project:` (empty value clears it) |
+| `/context NAME` | Filter by `context:` (empty value clears it) |
+| `/tag NAME` | Filter by `tag:`, with or without a leading `#` |
 | `/sort natural\|due\|priority\|title\|status` | Change row ordering |
-| `/clear` | Clear search, project filter, and marks |
+| `/clear` | Clear every filter and mark |
+| `/goto ID` | Move the selection to a record id |
 | `/mark toggle\|all\|none` | Mark rows for bulk actions |
-| `/done` | Mark the marked rows done, or the selected row when nothing is marked |
+
+**Editing** — every command below applies to the marked rows, or to the selected
+row when nothing is marked.
+
+| Command | Purpose |
+| --- | --- |
+| `/done` | Mark task-like rows done |
+| `/status open\|active\|done\|dropped` | Set a status, using the same aliases as the CLI |
+| `/set KEY VALUE` | Set a detail; an empty value removes the key |
+| `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
+| `/assign USER` | Set `assignee:` |
 | `/add TITLE` | Append a new open task to the configured write file |
+| `/delete yes` | Delete rows; refuses without the explicit `yes` |
 | `/edit` | Open the selected row in `$EDITOR` |
+| `/timer start\|stop\|status\|cancel` | Track elapsed time and write `elapsed:` on stop |
 | `/undo` | Undo the last write made in this session |
+
+**Output and appearance**
+
+| Command | Purpose |
+| --- | --- |
+| `/export md\|csv\|json [PATH]` | Write the currently visible rows to a file |
+| `/stats` | Toggle a breakdown of visible rows by status, type, and project |
 | `/detail` | Toggle the inspector panel |
 | `/reload` | Re-read every file now |
-| `/theme auto\|dark\|light\|mono` | Change the color theme |
+| `/theme auto\|dark\|light\|mono` | Change the color theme, applied immediately |
 | `/limit N` | Rows kept per section |
 | `/window 12h` | Agenda window around now |
 | `/quit` | Leave the TUI |
 
-`/done` and `/add` go through the same validated, atomic write path as the CLI,
-and every write in a session is recorded so `/undo` can restore the file.
+#### Editing safety
+
+Every editing command runs through one internal mutation path. It validates all
+target rows *before* writing anything, so a bulk edit that includes a row
+without an `id:` fails loudly and changes nothing rather than applying to half
+the selection. The affected files are snapshotted as a single undo entry, so one
+`/undo` reverts a whole bulk operation, including `/delete`.
+
+Rows without an `id:` cannot be edited from the TUI. Run `lifetxt ids --assign`
+first.
+
+#### Timer
+
+`/timer start` starts a stopwatch on the selected row and flips a `[ ]` task to
+`[/]`. `/timer status` reports the running timer, `/timer stop` adds the elapsed
+minutes to any existing `elapsed:` value and clears the timer, and
+`/timer cancel` discards the session without writing `elapsed:`. The state file
+is shared with `lifetxt timer`, so only one timer runs at a time across both.
+
+#### Export
+
+`/export` writes the rows exactly as filtered and sorted on screen, so
+`/project work` then `/sort due` then `/export md report.md` produces a report of
+that view. Markdown emits a checkbox list grouped by section, CSV emits one
+header row plus one row per record, and JSON emits the full row objects
+including details.
+
+#### Row limits
+
+`tui.limit` (or `/limit N`) caps how many rows each section shows. Truncation is
+never silent: the section header shows `TASKS 10/30`, and a trailing
+`... 20 more hidden by limit:10` row appears at the end of the section.
+
+#### Session state
+
+View, sort, project/context/tag filters, inspector visibility, and command
+history are saved to `.cache/lifetxt/tui_session.json` on exit and restored on
+the next run. Values that are no longer valid are ignored rather than failing.
+Set `tui.session_file` to move the file, or `tui.session` to `off` to disable it.
 
 #### Keys
 
@@ -1501,15 +1566,23 @@ entry when it is open), PageUp/PageDown move by half a page, Home/End jump to
 the first or last row, `Ctrl-T` marks or unmarks the selected row, `Ctrl-P` /
 `Ctrl-N` recall previous input, `Ctrl-A` / `Ctrl-E` jump to the start or end of
 the input, `Ctrl-U` / `Ctrl-K` delete before or after the cursor, and `Ctrl-C`
-quits.
+quits cleanly without a traceback.
 
 `--keymap vim` starts in a navigation mode instead, where `j` / `k` move,
 `g` / `G` jump to the first or last row, `Space` marks, `Enter` toggles the
 inspector, `Tab` cycles views, `d` / `e` / `u` / `r` run done / edit / undo /
 reload, `/` starts a filter, `:` starts a command, `?` toggles help, and `q`
-quits.
+quits. `/` and `:` are one-shot: after `Enter` or `Esc` the input bar hands
+control back to navigation mode, so `j` and `k` move again immediately.
+
+While help is open, `j` / `k` and PageUp/PageDown scroll the reference, which is
+longer than one screen.
 
 #### Appearance
+
+On terminals at least 118 columns wide the inspector moves beside the list as a
+right-hand pane instead of sitting below it, and stacks one field per line so
+narrow panes do not clip values.
 
 `--theme auto|dark|light|mono` controls colors, and `--glyphs
 auto|unicode|ascii` chooses the box-drawing set. `auto` probes the output
@@ -1521,6 +1594,10 @@ rather than wrapping.
 
 Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
 `tui.limit`, and `tui.agenda_window`.
+
+Filtering and sorting run against a cached parse, so typing in the input bar
+does not re-read the files. A re-parse happens only when a file changes on disk,
+after a write, or on `/reload`.
 
 The workspace auto-reloads when input files change. If `watchdog` is installed,
 file events are used; otherwise the fallback checks file mtimes periodically. A

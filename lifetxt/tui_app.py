@@ -15,7 +15,9 @@ style from a line prefix, so the layout is testable without curses.
 import datetime
 import os
 import sys
+from collections import OrderedDict
 
+from .config import config_section
 from .tui import (
     TUI_SECTIONS,
     _char_display_width,
@@ -27,7 +29,7 @@ from .tui import (
 )
 
 
-WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS
+WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next",)
 WORKSPACE_SORTS = ("natural", "due", "priority", "title", "status")
 WORKSPACE_POLL_SECONDS = 0.25
 TOAST_SECONDS = 6.0
@@ -313,6 +315,56 @@ def row_haystack(row):
     return " ".join(str(part) for part in parts if part)
 
 
+# Field weights for scoring. A title hit should always outrank a hit buried in
+# a detail value, which a single flattened haystack cannot express.
+ROW_FIELD_WEIGHTS = (("title", 3.0), ("id", 2.0), ("project", 1.5), ("details", 1.0))
+
+SOMEDAY_STATUSES = ("[?]",)
+
+
+def score_row(query, row):
+    """Score a row per field and keep the best field's match for highlighting."""
+    query = str(query or "")
+    if not query:
+        return (0, [])
+    best = None
+    for field, weight in ROW_FIELD_WEIGHTS:
+        if field == "title":
+            text = str(row.get("title") or "")
+        elif field == "id":
+            text = str(row.get("id") or "")
+        elif field == "project":
+            text = str(row_project(row) or "")
+        else:
+            text = row_haystack(row)
+        if not text:
+            continue
+        match = fuzzy_match(query, text)
+        if match is None:
+            continue
+        scaled = match[0] * weight
+        if best is None or scaled > best[0]:
+            best = (scaled, match[1] if field == "title" else [])
+    return best
+
+
+def is_next_action(row):
+    """An actionable next step: open, not blocked, not someday/maybe."""
+    if row.get("status") not in ("[ ]", "[/]"):
+        return False
+    if row.get("status") in SOMEDAY_STATUSES:
+        return False
+    if row.get("blocked"):
+        return False
+    details = row.get("details") or {}
+    if details.get("depends_on"):
+        return False
+    tags = [str(value).lstrip("#").lower() for value in details.get("tag") or []]
+    if "someday" in tags or "maybe" in tags:
+        return False
+    return True
+
+
 def sort_rows(rows, sort_key):
     if sort_key == "due":
         return sorted(rows, key=lambda row: (row_due(row) == "", row_due(row), row.get("title", "")))
@@ -368,6 +420,12 @@ class WorkspaceState(object):
         self.sort = "natural"
         self.query = ""
         self.project = None
+        self.context = None
+        self.tag = None
+        self.show_stats = False
+        self.help_query = ""
+        self.help_scroll = 0
+        self.hidden = {}
         self.selected = 0
         self.scroll = 0
         self.input = ""
@@ -443,31 +501,33 @@ class WorkspaceState(object):
         if self._model is None:
             self.rows = []
             self.counts = {"tasks": 0, "agenda": 0, "status": 0, "total": 0}
+            self.hidden = {}
             return
 
         counts = {}
         rows = []
         for section in self._model["sections"]:
-            section_rows = section["rows"]
-            if self.project:
-                section_rows = [row for row in section_rows if row_project(row) == self.project]
+            section_rows = [row for row in section["rows"] if self._passes_filters(row)]
             counts[section["key"]] = len(section_rows)
-            if self.view in ("all", section["key"]):
+            if self.view in ("all", section["key"]) or (
+                self.view == "next" and section["key"] == "tasks"
+            ):
                 rows.extend(section_rows)
+
+        if self.view == "next":
+            rows = [row for row in rows if is_next_action(row)]
 
         query = self.effective_query
         if query:
             scored = []
             for row in rows:
-                match = fuzzy_match(query, row_haystack(row))
+                match = score_row(query, row)
                 if match:
                     scored.append((-match[0], len(scored), row))
             scored.sort()
             rows = [entry[2] for entry in scored]
         rows = sort_rows(rows, self.sort)
-
-        if not query and self.sort == "natural":
-            rows = _apply_section_limit(rows, self.options.get("limit") or 10)
+        rows, self.hidden = _apply_section_limit(rows, self.options.get("limit") or 10)
 
         self.rows = rows
         counts["total"] = len(rows)
@@ -479,20 +539,116 @@ class WorkspaceState(object):
         live_keys = set(row_key(row) for row in self.rows)
         self.marked = set(key for key in self.marked if key in live_keys)
 
+    def _passes_filters(self, row):
+        if self.project and row_project(row) != self.project:
+            return False
+        details = row.get("details") or {}
+        if self.context and self.context not in [str(v) for v in details.get("context") or []]:
+            return False
+        if self.tag and self.tag not in [str(v).lstrip("#") for v in details.get("tag") or []]:
+            return False
+        return True
+
     def reload(self):
         self.load()
         self.refresh()
 
 
 def _apply_section_limit(rows, limit):
+    """Cap rows per section and report how many were hidden.
+
+    The count matters: truncating silently would make a filtered list look
+    complete when it is not.
+    """
     seen = {}
     kept = []
+    hidden = {}
     for row in rows:
         section = row.get("section", "")
         seen[section] = seen.get(section, 0) + 1
         if seen[section] <= limit:
             kept.append(row)
-    return kept
+        else:
+            hidden[section] = hidden.get(section, 0) + 1
+    return kept, hidden
+
+
+# ---------------------------------------------------------------------------
+# session persistence
+# ---------------------------------------------------------------------------
+
+SESSION_FIELDS = ("view", "sort", "project", "context", "tag", "show_detail", "show_stats")
+SESSION_FILE = os.path.join(".cache", "lifetxt", "tui_session.json")
+
+
+def session_path(config=None):
+    section = config_section(config or {}, "tui")
+    return os.path.expanduser(section.get("session_file") or SESSION_FILE)
+
+
+def session_payload(state):
+    payload = OrderedDict()
+    for field in SESSION_FIELDS:
+        payload[field] = getattr(state, field)
+    payload["history"] = list(state.history[-50:])
+    return payload
+
+
+def save_session(state):
+    """Persist view/sort/filter choices so the next run starts where you left."""
+    if not _session_enabled(state):
+        return False
+    from .atomic import atomic_write_json
+
+    try:
+        atomic_write_json(session_path(getattr(state.args, "config_data", None)), session_payload(state))
+        return True
+    except OSError:
+        # A read-only or missing cache directory must never break quitting.
+        return False
+
+
+def load_session(state):
+    if not _session_enabled(state):
+        return False
+    import json
+
+    try:
+        with open(session_path(getattr(state.args, "config_data", None)), "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    apply_session(state, payload)
+    return True
+
+
+def apply_session(state, payload):
+    """Restore a saved session, ignoring any value that is no longer valid."""
+    view = payload.get("view")
+    if view in WORKSPACE_VIEWS:
+        state.view = view
+    sort_key = payload.get("sort")
+    if sort_key in WORKSPACE_SORTS:
+        state.sort = sort_key
+    for field in ("project", "context", "tag"):
+        value = payload.get(field)
+        setattr(state, field, str(value) if isinstance(value, str) and value else None)
+    for field in ("show_detail", "show_stats"):
+        if isinstance(payload.get(field), bool):
+            setattr(state, field, payload[field])
+    history = payload.get("history")
+    if isinstance(history, list):
+        state.history = [str(entry) for entry in history if isinstance(entry, str)][-50:]
+
+
+def _session_enabled(state):
+    section = config_section(getattr(state.args, "config_data", None) or {}, "tui")
+    value = section.get("session")
+    if value is None:
+        return True
+    return str(value).lower() not in ("0", "false", "no", "off")
 
 
 # ---------------------------------------------------------------------------
@@ -509,8 +665,43 @@ class Command(object):
 
 
 def _cmd_help(state, argument):
+    query = (argument or "").strip()
+    if query:
+        state.help_query = query
+        state.show_help = True
+        matches = help_entries(query)
+        if not matches:
+            state.help_query = ""
+            raise ValueError("Nothing in help matches %r." % query)
+        return ("info", "Help: %d entr(ies) matching %r." % (len(matches), query))
     state.show_help = not state.show_help
+    state.help_query = ""
     return ("info", "Help %s." % ("opened" if state.show_help else "closed"))
+
+
+def help_entries(query=""):
+    """Rank command help lines against a query using the row fuzzy matcher."""
+    entries = []
+    for command in COMMANDS:
+        usage = "/" + command.name + ((" " + command.usage) if command.usage else "")
+        entries.append((usage, command.summary))
+    query = str(query or "").strip()
+    if not query:
+        return entries
+    # Deliberately stricter than row search. A loose subsequence over the whole
+    # help line matches almost everything ("timer" is a subsequence of "Change
+    # the color theme"), which makes the result useless. Match the command name
+    # as a subsequence, or require a literal hit in the summary.
+    scored = []
+    for index, (usage, summary) in enumerate(entries):
+        name = usage.split(" ", 1)[0]
+        match = fuzzy_match(query, name)
+        if match is None and query.lower() in summary.lower():
+            match = (500, [])
+        if match:
+            scored.append((-match[0], index, (usage, summary)))
+    scored.sort()
+    return [entry[2] for entry in scored]
 
 
 def _cmd_quit(state, argument):
@@ -548,6 +739,46 @@ def _cmd_project(state, argument):
     return ("info", "Project filter: %s" % (value or "(cleared)"))
 
 
+def _cmd_context(state, argument):
+    value = (argument or "").strip()
+    state.context = value or None
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Context filter: %s" % (value or "(cleared)"))
+
+
+def _cmd_tag(state, argument):
+    value = (argument or "").strip().lstrip("#")
+    state.tag = value or None
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Tag filter: %s" % (value or "(cleared)"))
+
+
+def _cmd_next(state, argument):
+    """Switch to the actionable-next view: open, unblocked, not someday."""
+    state.view = "next"
+    state.sort = "priority"
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Next actions: open, unblocked, not someday/maybe.")
+
+
+def _cmd_goto(state, argument):
+    value = (argument or "").strip()
+    if not value:
+        raise ValueError("Usage: /goto ID")
+    for index, row in enumerate(state.rows):
+        if row.get("id") == value:
+            state.selected = index
+            return ("info", "Jumped to %s." % value)
+    for index, row in enumerate(state.rows):
+        if value.lower() in str(row.get("id") or "").lower():
+            state.selected = index
+            return ("info", "Jumped to %s." % row.get("id"))
+    raise ValueError("No visible row with id %r. Clear filters with /clear first." % value)
+
+
 def _cmd_sort(state, argument):
     value = (argument or "").strip().lower() or "natural"
     if value not in WORKSPACE_SORTS:
@@ -559,6 +790,8 @@ def _cmd_sort(state, argument):
 def _cmd_clear(state, argument):
     state.query = ""
     state.project = None
+    state.context = None
+    state.tag = None
     state.marked = set()
     state.selected = 0
     state.scroll = 0
@@ -592,28 +825,131 @@ def _cmd_detail(state, argument):
 
 def _cmd_done(state, argument):
     rows = state.target_rows()
-    if not rows:
-        raise ValueError("No row selected.")
-
-    # Validate every row before writing any of them, so a bad row in a bulk
-    # selection cannot leave the batch half applied.
-    for row in rows:
-        if not row.get("source") or not row.get("id"):
-            raise ValueError("%s needs a source file and an id: to mark done." % (row.get("title") or "Row"))
-        if row.get("type") not in DONE_KINDS:
-            raise ValueError("%s is not a task-like record." % (row.get("title") or "Row"))
-
+    ids = ", ".join(row.get("id") or "?" for row in rows)
     from .fzf_helper import update_item
 
     id_key = state.options["id_key"]
-    label = "done %s" % ", ".join(row["id"] for row in rows)
-    # One undo entry for the whole batch, so a single /undo reverts it all.
-    _push_undo(state, sorted(set(row["source"] for row in rows)), label)
-    for row in rows:
+
+    def apply_row(row):
         update_item(row["source"], row["id"], id_key, status="[x]")
-    state.marked = set()
-    state.reload()
-    return ("success", "Marked done: %s" % ", ".join(row["id"] for row in rows))
+
+    _mutate_rows(state, rows, "done %s" % ids, apply_row, require_task=True)
+    return ("success", "Marked done: %s" % ids)
+
+
+def _cmd_status(state, argument):
+    from .model import STATUS_ALIASES, VALID_STATUSES
+
+    value = (argument or "").strip()
+    if not value:
+        raise ValueError("Usage: /status open|active|done|dropped|deferred|pending")
+    status = STATUS_ALIASES.get(value.lower(), value)
+    if status not in VALID_STATUSES:
+        raise ValueError(
+            "Unknown status %r. Use one of: %s" % (value, ", ".join(sorted(set(STATUS_ALIASES))))
+        )
+    rows = state.target_rows()
+    ids = ", ".join(row.get("id") or "?" for row in rows)
+    from .fzf_helper import update_item
+
+    id_key = state.options["id_key"]
+
+    def apply_row(row):
+        update_item(row["source"], row["id"], id_key, status=status)
+
+    count = _mutate_rows(state, rows, "status %s %s" % (status, ids), apply_row)
+    return ("success", "Set %s on %d row(s)." % (status, count))
+
+
+def _cmd_set(state, argument):
+    parts = (argument or "").strip().split(None, 1)
+    if not parts:
+        raise ValueError("Usage: /set KEY VALUE  (empty VALUE removes the key)")
+    key = parts[0].strip()
+    value = parts[1].strip() if len(parts) > 1 else ""
+    if not key.replace("_", "").isalnum():
+        raise ValueError("Detail key %r is not a valid life.txt key." % key)
+    rows = state.target_rows()
+    details = {key: [value] if value else []}
+    count = _set_row_details(state, rows, details, "set %s on %d row(s)" % (key, len(rows)))
+    if value:
+        return ("success", "Set %s:%s on %d row(s)." % (key, value, count))
+    return ("success", "Removed %s: from %d row(s)." % (key, count))
+
+
+def _cmd_due(state, argument):
+    value = (argument or "").strip()
+    rows = state.target_rows()
+    if not value:
+        count = _set_row_details(state, rows, {"due": []}, "clear due")
+        return ("success", "Cleared due: on %d row(s)." % count)
+    resolved = _resolve_date_token(value)
+    from .timeutil import parse_date_or_datetime
+
+    if parse_date_or_datetime(resolved) is None:
+        # The token set is deliberately closed. Guessing at free-form dates
+        # would write an unparseable due: value that only surfaces later.
+        raise ValueError(
+            "%r is not a date. Use YYYY-MM-DD, today, tomorrow, a weekday, next_week, +3d, or -1w."
+            % value
+        )
+    count = _set_row_details(state, rows, {"due": [resolved]}, "due %s" % resolved)
+    return ("success", "Set due:%s on %d row(s)." % (resolved, count))
+
+
+def _cmd_assign(state, argument):
+    value = (argument or "").strip()
+    rows = state.target_rows()
+    if not value:
+        count = _set_row_details(state, rows, {"assignee": []}, "clear assignee")
+        return ("success", "Cleared assignee: on %d row(s)." % count)
+    count = _set_row_details(state, rows, {"assignee": [value]}, "assign %s" % value)
+    return ("success", "Assigned %d row(s) to %s." % (count, value))
+
+
+def _cmd_delete(state, argument):
+    rows = state.target_rows()
+    if not rows:
+        raise ValueError("No row selected.")
+    confirmed = (argument or "").strip().lower() in ("yes", "force", "confirm")
+    if not confirmed:
+        titles = ", ".join(row.get("title") or "?" for row in rows[:3])
+        more = " and %d more" % (len(rows) - 3) if len(rows) > 3 else ""
+        raise ValueError(
+            "Deleting %d row(s): %s%s. Re-run as `/delete yes` to confirm." % (len(rows), titles, more)
+        )
+    from .fzf_helper import delete_item
+
+    id_key = state.options["id_key"]
+    ids = ", ".join(row.get("id") or "?" for row in rows)
+
+    def apply_row(row):
+        delete_item(row["source"], row["id"], id_key)
+
+    count = _mutate_rows(state, rows, "delete %s" % ids, apply_row)
+    return ("success", "Deleted %d row(s). /undo restores them." % count)
+
+
+def _resolve_date_token(value):
+    """Resolve the documented closed set of relative date tokens.
+
+    Reuses the CLI resolver so `today`, `tomorrow`, weekday names, and
+    `next_week` mean the same thing in the TUI, and adds `+Nd` / `-Nd` offsets.
+    """
+    import datetime as _datetime
+
+    text = str(value).strip()
+    if text and text[0] in "+-" and text[1:].rstrip("dwDW").isdigit():
+        body = text[1:]
+        unit = body[-1].lower() if body[-1].lower() in ("d", "w") else "d"
+        amount = int(body.rstrip("dwDW"))
+        days = amount * (7 if unit == "w" else 1)
+        if text[0] == "-":
+            days = -days
+        return (_datetime.date.today() + _datetime.timedelta(days=days)).isoformat()
+    from .cli import _resolve_relative_date
+
+    return _resolve_relative_date(text)
 
 
 def _cmd_undo(state, argument):
@@ -664,6 +1000,166 @@ def _cmd_add(state, argument):
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
 
+def _cmd_export(state, argument):
+    parts = (argument or "").strip().split(None, 1)
+    fmt = (parts[0] if parts else "md").lower()
+    if fmt not in EXPORT_FORMATS:
+        raise ValueError("Unknown format %r. Use one of: %s" % (fmt, ", ".join(EXPORT_FORMATS)))
+    if not state.rows:
+        raise ValueError("Nothing to export: no visible rows.")
+    path = parts[1].strip() if len(parts) > 1 else "lifetxt-export.%s" % fmt
+    text = render_export(state.rows, fmt)
+    from .atomic import atomic_write_text
+
+    atomic_write_text(path, text)
+    return ("success", "Exported %d row(s) to %s." % (len(state.rows), path))
+
+
+def _cmd_stats(state, argument):
+    state.show_stats = not state.show_stats
+    return ("info", "Stats %s." % ("shown" if state.show_stats else "hidden"))
+
+
+def _cmd_timer(state, argument):
+    action = (argument or "").strip().lower() or "status"
+    if action not in ("start", "stop", "status", "cancel"):
+        raise ValueError("Usage: /timer start|stop|status|cancel")
+    from . import timer as timer_module
+
+    state_file = timer_module.timer_state_file(getattr(state.args, "config_data", None))
+    id_key = state.options["id_key"]
+
+    if action == "status":
+        if not os.path.exists(state_file):
+            return ("info", "No running timer.")
+        data = timer_module._read_state(state_file)
+        minutes = timer_module.state_elapsed_minutes(data, timer_module._now())
+        suffix = " (paused)" if data.get("paused_at") else ""
+        return ("info", "Timer %s: %s%s" % (data.get("id"), timer_module.format_elapsed(minutes), suffix))
+
+    if action == "cancel":
+        if not os.path.exists(state_file):
+            raise ValueError("No running timer to cancel.")
+        data = timer_module._read_state(state_file)
+        os.remove(state_file)
+        return ("success", "Canceled timer for %s. No elapsed: was written." % data.get("id"))
+
+    if action == "start":
+        if os.path.exists(state_file):
+            data = timer_module._read_state(state_file)
+            raise ValueError("A timer is already running for %s. Use /timer stop first." % data.get("id"))
+        row = state.selected_row()
+        if not row or not row.get("id") or not row.get("source"):
+            raise ValueError("Select a row with an id: to start a timer.")
+        now = timer_module._now()
+        timer_module._write_json(
+            state_file,
+            OrderedDict(
+                [
+                    ("id", row["id"]),
+                    ("file", row["source"]),
+                    ("started_at", timer_module.format_datetime(now)),
+                    ("accumulated_minutes", 0),
+                    ("paused_at", ""),
+                    ("note", ""),
+                ]
+            ),
+        )
+        if row.get("status") == "[ ]":
+            _push_undo(state, row["source"], "timer start %s" % row["id"])
+            timer_module.update_item_in_file(row["source"], row["id"], id_key, status="[/]")
+            state.reload()
+        return ("success", "Started timer for %s." % row["id"])
+
+    if not os.path.exists(state_file):
+        raise ValueError("No running timer to stop.")
+    data = timer_module._read_state(state_file)
+    path = data.get("file")
+    item_id = data.get("id")
+    minutes = timer_module.state_elapsed_minutes(data, timer_module._now())
+    item = timer_module.find_item_in_file(path, item_id, id_key)
+    total = minutes + sum(timer_module.parse_elapsed(value) for value in item.details.get("elapsed", []))
+    _push_undo(state, path, "timer stop %s" % item_id)
+    timer_module.update_item_in_file(
+        path, item_id, id_key, set_details={"elapsed": [timer_module.format_elapsed(total)]}
+    )
+    os.remove(state_file)
+    state.reload()
+    return ("success", "Stopped timer for %s: +%s, total %s." % (
+        item_id, timer_module.format_elapsed(minutes), timer_module.format_elapsed(total)))
+
+
+EXPORT_FORMATS = ("md", "csv", "json")
+
+
+def render_export(rows, fmt):
+    """Serialize the currently visible rows. Kept independent of the file
+    parser so an export always matches exactly what the screen shows."""
+    if fmt == "json":
+        import json
+
+        payload = [
+            {
+                "section": row.get("section", ""),
+                "status": row.get("status", ""),
+                "type": row.get("type", ""),
+                "title": row.get("title", ""),
+                "id": row.get("id", ""),
+                "source": row.get("source", ""),
+                "line": row.get("line"),
+                "details": dict(row.get("details") or {}),
+            }
+            for row in rows
+        ]
+        return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+    if fmt == "csv":
+        import csv
+        import io as _io
+
+        buffer = _io.StringIO()
+        writer = csv.writer(buffer, lineterminator="\n")
+        writer.writerow(["section", "status", "type", "title", "id", "project", "due", "priority", "source", "line"])
+        for row in rows:
+            writer.writerow(
+                [
+                    row.get("section", ""),
+                    row.get("status", ""),
+                    row.get("type", ""),
+                    row.get("title", ""),
+                    row.get("id", ""),
+                    row_project(row) or "",
+                    row_due(row),
+                    row_priority(row),
+                    row.get("source", ""),
+                    row.get("line") or "",
+                ]
+            )
+        return buffer.getvalue()
+
+    lines = ["# lifetxt export", ""]
+    section = None
+    for row in rows:
+        if row.get("section") != section:
+            section = row.get("section")
+            lines.append("")
+            lines.append("## %s" % str(section).title())
+            lines.append("")
+        mark = "x" if row.get("status") == "[x]" else " "
+        meta = []
+        if row_project(row):
+            meta.append("project:%s" % row_project(row))
+        if row_due(row):
+            meta.append("due:%s" % row_due(row))
+        if row_priority(row):
+            meta.append("priority:%s" % row_priority(row))
+        if row.get("id"):
+            meta.append("id:%s" % row["id"])
+        suffix = ("  _%s_" % " ".join(meta)) if meta else ""
+        lines.append("- [%s] %s%s" % (mark, row.get("title") or "(untitled)", suffix))
+    return "\n".join(lines).strip() + "\n"
+
+
 def _cmd_theme(state, argument):
     from .tui import TUI_THEMES
 
@@ -695,17 +1191,29 @@ def _cmd_window(state, argument):
 
 
 COMMANDS = (
-    Command("help", "", "Toggle the full key and command reference", _cmd_help),
-    Command("view", "all|tasks|agenda|status", "Switch which sections are listed", _cmd_view),
+    Command("help", "[QUERY]", "Toggle the reference, or search it", _cmd_help),
+    Command("view", "all|tasks|agenda|status|next", "Switch which sections are listed", _cmd_view),
+    Command("next", "", "Show open, unblocked, non-someday actions by priority", _cmd_next),
     Command("search", "TEXT", "Fuzzy filter every listed row", _cmd_search),
     Command("project", "NAME", "Filter by project: (empty clears)", _cmd_project),
+    Command("context", "NAME", "Filter by context: (empty clears)", _cmd_context),
+    Command("tag", "NAME", "Filter by tag: (empty clears)", _cmd_tag),
     Command("sort", "natural|due|priority|title|status", "Change row ordering", _cmd_sort),
-    Command("clear", "", "Clear search, project filter, and marks", _cmd_clear),
+    Command("clear", "", "Clear every filter and mark", _cmd_clear),
+    Command("goto", "ID", "Move the selection to a record id", _cmd_goto),
     Command("mark", "toggle|all|none", "Mark rows for bulk actions", _cmd_mark),
     Command("done", "", "Mark the marked or selected task-like rows done", _cmd_done),
+    Command("status", "open|active|done|dropped", "Set the status of the marked or selected rows", _cmd_status),
+    Command("set", "KEY VALUE", "Set a detail on the marked or selected rows", _cmd_set),
+    Command("due", "DATE", "Set due: using today/tomorrow/+3d tokens", _cmd_due),
+    Command("assign", "USER", "Set assignee: on the marked or selected rows", _cmd_assign),
     Command("add", "TITLE", "Append a new open task to the write file", _cmd_add),
+    Command("delete", "yes", "Delete the marked or selected rows (needs confirmation)", _cmd_delete),
     Command("edit", "", "Open the selected row in $EDITOR", _cmd_edit),
+    Command("timer", "start|stop|status|cancel", "Track elapsed time on the selected row", _cmd_timer),
     Command("undo", "", "Undo the last write made in this session", _cmd_undo),
+    Command("export", "md|csv|json [PATH]", "Write the visible rows to a file", _cmd_export),
+    Command("stats", "", "Toggle a summary of the visible rows", _cmd_stats),
     Command("detail", "", "Toggle the inspector panel", _cmd_detail),
     Command("reload", "", "Re-read every file now", _cmd_reload),
     Command("theme", "auto|dark|light|mono", "Change the color theme", _cmd_theme),
@@ -750,6 +1258,44 @@ def run_command(state, text):
             hint = " Did you mean /%s?" % suggestions[0][0].name
         raise ValueError("Unknown command /%s.%s" % (name, hint))
     return command.handler(state, argument.strip())
+
+
+def _mutate_rows(state, rows, label, apply_row, require_task=False):
+    """One write path for every row-editing TUI command.
+
+    Validates every target row before touching disk, snapshots the affected
+    files as a single undo entry, applies the change, then reloads. A bulk edit
+    therefore either applies to every row or to none of them, and one /undo
+    reverts the whole batch.
+    """
+    if not rows:
+        raise ValueError("No row selected.")
+    for row in rows:
+        if not row.get("source") or not row.get("id"):
+            raise ValueError(
+                "%s needs a source file and an id: to edit. Run `lifetxt ids --assign` first."
+                % (row.get("title") or "Row")
+            )
+        if require_task and row.get("type") not in DONE_KINDS:
+            raise ValueError("%s is not a task-like record." % (row.get("title") or "Row"))
+
+    _push_undo(state, sorted(set(row["source"] for row in rows)), label)
+    for row in rows:
+        apply_row(row)
+    state.marked = set()
+    state.reload()
+    return len(rows)
+
+
+def _set_row_details(state, rows, details, label):
+    from .timer import update_item_in_file
+
+    id_key = state.options["id_key"]
+
+    def apply_row(row):
+        update_item_in_file(row["source"], row["id"], id_key, set_details=details)
+
+    return _mutate_rows(state, rows, label, apply_row)
 
 
 def _push_undo(state, paths, label):
@@ -877,6 +1423,10 @@ def _context_label(state, width=None):
         parts.append("marked:%d" % len(state.marked))
     if state.project:
         parts.append("project:%s" % state.project)
+    if state.context:
+        parts.append("context:%s" % state.context)
+    if state.tag:
+        parts.append("tag:%s" % state.tag)
     if state.query:
         parts.append("search:%s" % state.query)
 
@@ -891,7 +1441,16 @@ def _context_label(state, width=None):
     return ""
 
 
+TWO_PANE_MIN_WIDTH = 118
+TWO_PANE_SIDE_WIDTH = 44
+
+
 def _build_body(state, width, height):
+    if state.show_stats:
+        return _build_stats(state, width, height)
+    if state.show_detail and width >= TWO_PANE_MIN_WIDTH:
+        return _build_two_pane(state, width, height)
+
     detail_height = 0
     if state.show_detail and height >= 10:
         detail_height = min(7, max(4, height // 3))
@@ -902,12 +1461,65 @@ def _build_body(state, width, height):
     return lines
 
 
+def _build_two_pane(state, width, height):
+    """Wide terminals get the list and the inspector side by side."""
+    side = TWO_PANE_SIDE_WIDTH
+    main_width = width - side - 1
+    left = _build_list(state, main_width, height)
+    right = _build_inspector(state, side, height)
+    lines = []
+    for index in range(height):
+        left_line = left[index] if index < len(left) else []
+        right_line = right[index] if index < len(right) else []
+        used = display_width(spans_to_text(left_line))
+        lines.append(
+            fit_spans(left_line, main_width)
+            + [(" " * max(1, main_width - used + 1), "default")]
+            + right_line
+        )
+    return lines
+
+
+def _build_stats(state, width, height):
+    """A compact breakdown of the rows currently visible."""
+    glyphs = state.glyphs
+    by_status = {}
+    by_project = {}
+    by_type = {}
+    for row in state.rows:
+        by_status[row.get("status") or "?"] = by_status.get(row.get("status") or "?", 0) + 1
+        by_type[row.get("type") or "?"] = by_type.get(row.get("type") or "?", 0) + 1
+        project = row_project(row) or "(none)"
+        by_project[project] = by_project.get(project, 0) + 1
+
+    lines = [[("  ", "default"), ("STATS", "section"), (" (visible rows)", "hint")], [("", "default")]]
+    lines.append([("  ", "default"), ("total ", "detail_key"), (str(len(state.rows)), "detail_value")])
+    lines.append([("", "default")])
+    for title, table in (("by status", by_status), ("by type", by_type), ("by project", by_project)):
+        lines.append([("  ", "default"), (title, "panel_title")])
+        for key, count in sorted(table.items(), key=lambda pair: (-pair[1], pair[0]))[:10]:
+            bar_width = max(0, min(30, int(count * 30.0 / max(1, len(state.rows)))))
+            lines.append(
+                [
+                    ("    ", "default"),
+                    (pad(fit(str(key), 22, glyphs), 24), "detail_key"),
+                    (pad(str(count), 5), "detail_value"),
+                    (glyphs["h"] * bar_width, "chrome"),
+                ]
+            )
+        lines.append([("", "default")])
+    lines.append([("  ", "default"), ("/stats closes this panel.", "hint")])
+    while len(lines) < height:
+        lines.append([("", "default")])
+    return lines[:height]
+
+
 def _build_list(state, width, height):
     glyphs = state.glyphs
     if not state.rows:
         return _empty_state(state, width, height)
 
-    entries = list_entries(state.rows)
+    entries = list_entries(state.rows, state.hidden)
     selected_entry = _entry_index_for_row(entries, state.selected)
     state.scroll = _clamp_scroll(state.scroll, selected_entry, len(entries), height)
 
@@ -915,11 +1527,31 @@ def _build_list(state, width, height):
     lines = []
     for entry in entries[state.scroll:state.scroll + height]:
         if entry["kind"] == "header":
+            label = entry["label"].upper()
+            hidden = state.hidden.get(entry["section"], 0)
+            # The trailing "+N more" row can scroll out of view on a short
+            # screen, so the count also rides on the always-visible header.
+            shown = sum(1 for row in state.rows if row.get("section") == entry["section"])
+            count = " %d/%d" % (shown, shown + hidden) if hidden else ""
+            rule = max(0, width - display_width(label) - display_width(count) - 5)
             lines.append(
                 [
                     ("  ", "default"),
-                    (entry["label"].upper(), "section"),
-                    (" " + glyphs["h"] * max(0, width - display_width(entry["label"]) - 5), "chrome"),
+                    (label, "section"),
+                    (count, "counter_warn" if hidden else "meta"),
+                    (" " + glyphs["h"] * rule, "chrome"),
+                ]
+            )
+            continue
+        if entry["kind"] == "more":
+            lines.append(
+                [
+                    ("    ", "default"),
+                    (
+                        "%s %d more hidden by limit:%s - raise with /limit N"
+                        % (glyphs["ellipsis"], entry["count"], state.options.get("limit")),
+                        "hint",
+                    ),
                 ]
             )
             continue
@@ -955,8 +1587,8 @@ def _row_line(state, row, selected, width, query):
     title_width = max(8, width - used - meta_width - 2)
     title = fit(row.get("title") or "(untitled)", title_width, glyphs)
 
-    match = fuzzy_match(query, title) if query else None
-    if match:
+    match = score_row(query, row) if query else None
+    if match and match[1]:
         spans.extend(highlight_spans(title, match[1], base_style))
     else:
         spans.append((title, base_style))
@@ -999,16 +1631,21 @@ def _row_meta(state, row, width):
     return spans
 
 
-def list_entries(rows):
+def list_entries(rows, hidden=None):
     """Group rows into section headers plus row entries for display."""
+    hidden = hidden or {}
     entries = []
     current = None
     for index, row in enumerate(rows):
         section = row.get("section", "")
         if section != current:
+            if current is not None and hidden.get(current):
+                entries.append({"kind": "more", "section": current, "count": hidden[current]})
             current = section
             entries.append({"kind": "header", "label": section, "section": section})
         entries.append({"kind": "row", "row": row, "index": index, "section": section})
+    if current is not None and hidden.get(current):
+        entries.append({"kind": "more", "section": current, "count": hidden[current]})
     return entries
 
 
@@ -1090,12 +1727,23 @@ def _build_inspector(state, width, height):
             if row.get("line"):
                 location += ":%s" % row["line"]
             meta.append(("at", location))
-        meta_spans = []
-        for key, value in meta:
-            meta_spans.append((key + " ", "detail_key"))
-            meta_spans.append((value + "   ", "detail_value"))
-        if meta_spans:
-            content.append(meta_spans)
+        if inner < 60:
+            # A narrow side pane cannot fit the fields on one line, and
+            # clipping would hide values entirely, so stack them.
+            for key, value in meta:
+                content.append(
+                    [
+                        (pad(key, 10), "detail_key"),
+                        (fit(value, inner - 13, glyphs), "detail_value"),
+                    ]
+                )
+        else:
+            meta_spans = []
+            for key, value in meta:
+                meta_spans.append((key + " ", "detail_key"))
+                meta_spans.append((value + "   ", "detail_value"))
+            if meta_spans:
+                content.append(meta_spans)
         body = (row.get("details") or {}).get("body") or []
         for value in body:
             for text in str(value).splitlines():
@@ -1227,16 +1875,26 @@ def _hint_line(state, width):
 
 def _build_help(state, width, height):
     glyphs = state.glyphs
-    lines = [[("  ", "default"), ("COMMANDS", "section")]]
-    for command in COMMANDS:
-        usage = ("/" + command.name + (" " + command.usage if command.usage else ""))
+    entries = help_entries(state.help_query)
+    header = [("  ", "default"), ("COMMANDS", "section")]
+    if state.help_query:
+        header.append((" matching %r " % state.help_query, "match"))
+        header.append(("(/help with no query shows all)", "hint"))
+    lines = [header]
+    for usage, summary in entries:
         lines.append(
             [
                 ("    ", "default"),
                 (pad(fit(usage, 34, glyphs), 36), "palette"),
-                (fit(command.summary, max(10, width - 42), glyphs), "hint"),
+                (fit(summary, max(10, width - 42), glyphs), "hint"),
             ]
         )
+    if state.help_query:
+        lines.append([("", "default")])
+        lines.append([("  ", "default"), ("Press ? or Esc to close help.", "hint")])
+        while len(lines) < height:
+            lines.append([("", "default")])
+        return lines[:height]
     lines.append([("", "default")])
     lines.append([("  ", "default"), ("KEYS", "section")])
     for key, label in _key_reference(state):
@@ -1259,9 +1917,24 @@ def _build_help(state, width, height):
             (state.sort, "detail_value"),
         ]
     )
-    while len(lines) < height:
-        lines.append([("", "default")])
-    return lines
+    return _scroll_help(state, lines, height)
+
+
+def _scroll_help(state, lines, height):
+    """The reference is longer than one screen, so it scrolls like the list."""
+    body = max(1, height - 1)
+    state.help_scroll = max(0, min(state.help_scroll, max(0, len(lines) - body)))
+    visible = lines[state.help_scroll:state.help_scroll + body]
+    while len(visible) < body:
+        visible.append([("", "default")])
+    more = len(lines) - state.help_scroll - body
+    if more > 0:
+        visible.append([("  ", "default"), ("%d more line(s) below - up/down to scroll" % more, "hint")])
+    elif state.help_scroll:
+        visible.append([("  ", "default"), ("up/down to scroll", "hint")])
+    else:
+        visible.append([("", "default")])
+    return visible[:height]
 
 
 def _key_reference(state):
@@ -1344,8 +2017,28 @@ def handle_key(state, key, page=5):
         state.running = False
         return True
 
-    if state.show_help and key in ("?", "escape", "q", "enter"):
-        state.show_help = False
+    if state.show_help:
+        if key in ("?", "escape", "q", "enter"):
+            state.show_help = False
+            state.help_query = ""
+            state.help_scroll = 0
+            _leave_input_mode(state)
+            return True
+        if key in ("down", "j", "ctrl-n"):
+            state.help_scroll += 1
+            return True
+        if key in ("up", "k", "ctrl-p"):
+            state.help_scroll = max(0, state.help_scroll - 1)
+            return True
+        if key in ("pgdn", "ctrl-d"):
+            state.help_scroll += page
+            return True
+        if key in ("pgup", "ctrl-u"):
+            state.help_scroll = max(0, state.help_scroll - page)
+            return True
+        if key in ("g", "home"):
+            state.help_scroll = 0
+            return True
         return True
 
     if state.mode == "nav":
@@ -1418,8 +2111,8 @@ def _handle_input_key(state, key, page):
             state.palette_index = 0
         elif state.query or state.project or state.marked:
             _safe_command(state, "/clear")
-        elif state.keymap != "prompt":
-            state.mode = "nav"
+        else:
+            _leave_input_mode(state)
         return True
     if key == "enter":
         _submit(state)
@@ -1524,6 +2217,7 @@ def _submit(state):
         state.cursor = 0
         state.palette_index = 0
         _safe_command(state, text)
+        _leave_input_mode(state)
         return
     state.query = text
     state.input = ""
@@ -1531,6 +2225,19 @@ def _submit(state):
     state.selected = 0
     state.scroll = 0
     state.notify("Search: %s" % text)
+    _leave_input_mode(state)
+
+
+def _leave_input_mode(state):
+    """Return to nav mode after a one-shot `/` or `:` entry.
+
+    Only the prompt keymap keeps the input bar focused permanently. In the vim
+    and arrows keymaps the input bar is entered for a single search or command
+    and must hand control back, the way `:cmd<Enter>` returns to normal mode.
+    """
+    if state.keymap != "prompt":
+        state.mode = "nav"
+        state.palette_index = 0
 
 
 def _recall_history(state, delta):
@@ -1574,6 +2281,7 @@ def run_workspace(args):
             curses.curs_set(1)
         except Exception:
             pass
+        load_session(state)
         state.reload()
         theme = state.options.get("theme", "auto")
         dirty = True
@@ -1595,7 +2303,14 @@ def run_workspace(args):
                 _place_cursor(stdscr, state, frame, width, height)
                 stdscr.refresh()
                 dirty = False
-            key = stdscr.getch()
+            try:
+                key = stdscr.getch()
+            except KeyboardInterrupt:
+                # curses.wrapper uses cbreak(), which leaves ISIG enabled, so
+                # Ctrl-C arrives as SIGINT rather than as key code 3. Treat it
+                # as the quit key instead of unwinding with a traceback.
+                state.running = False
+                continue
             if key == -1:
                 if state.toast and state.toast.expired():
                     state.toast = None
@@ -1605,9 +2320,14 @@ def run_workspace(args):
             name = normalize_key(curses, key)
             if handle_key(state, name, page=max(1, height // 2)):
                 dirty = True
+        save_session(state)
 
     try:
         curses.wrapper(main)
+    except KeyboardInterrupt:
+        # A SIGINT delivered outside getch() (during a redraw, say) must still
+        # leave the terminal restored and exit quietly.
+        pass
     finally:
         watcher.stop()
     return 0

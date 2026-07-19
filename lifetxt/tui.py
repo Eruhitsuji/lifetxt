@@ -53,13 +53,17 @@ def cmd_tui(args):
         import curses  # noqa: F401
     except ImportError:
         curses = None
-    if curses is not None:
-        from .tui_app import run_workspace
+    try:
+        if curses is not None:
+            from .tui_app import run_workspace
 
-        return run_workspace(args)
-    if _textual_available():
-        return run_textual(args)
-    return run_curses_or_plain(args)
+            return run_workspace(args)
+        if _textual_available():
+            return run_textual(args)
+        return run_curses_or_plain(args)
+    except KeyboardInterrupt:
+        # Quitting with Ctrl-C is a normal way to leave a TUI, not a crash.
+        return 0
 
 
 def _stdout_is_tty():
@@ -286,7 +290,12 @@ def run_curses_or_plain(args):
                 _draw_curses_text(stdscr, text, footer, scroll=scroll, color_attrs=color_attrs)
                 stdscr.refresh()
                 dirty = False
-            key = stdscr.getch()
+            try:
+                key = stdscr.getch()
+            except KeyboardInterrupt:
+                # cbreak() leaves ISIG enabled, so Ctrl-C arrives as SIGINT
+                # rather than as a key code. Quit instead of showing a traceback.
+                break
             if key == -1:
                 continue
             if search_editing:
@@ -458,6 +467,8 @@ def run_curses_or_plain(args):
 
     try:
         curses.wrapper(main)
+    except KeyboardInterrupt:
+        pass
     finally:
         watcher.stop()
     return 0

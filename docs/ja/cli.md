@@ -1143,7 +1143,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
-| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window` |
+| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
@@ -1212,7 +1212,8 @@ dashboard snapshot を 1 回出力するため、`python -m lifetxt tui > snapsh
 
 既定の `prompt` keymap では input bar が常に focus されています。plain text を入力すると
 入力に追従して全 row を fuzzy filter します。substring 一致を scattered subsequence 一致より
-高く評価し、一致文字を highlight します。`Enter` で filter を確定して bar を消去し、
+高く評価し、一致文字を highlight します。field には重み付けがあり、
+title の一致が id の一致より、id の一致が detail 値の一致より上位になります。`Enter` で filter を確定して bar を消去し、
 `Esc` で bar を消去した後、さらに押すと有効な filter を解除します。
 
 `/` を入力すると command palette が開きます。row と同じ fuzzy matcher で command を順位付けし、
@@ -1222,42 +1223,107 @@ usage と summary を表示し、`Tab` で選択中の候補を補完します�
 
 #### command 一覧
 
+**view と filter**
+
 | command | 用途 |
 | --- | --- |
-| `/help` | key と command の一覧を表示 |
-| `/view all\|tasks\|agenda\|status` | 表示する section を切り替え |
+| `/help [QUERY]` | 一覧の表示切り替え、または検索 (`/help timer`) |
+| `/view all\|tasks\|agenda\|status\|next` | 表示する section を切り替え |
+| `/next` | 未完了・blocked でない・someday でない次の行動を priority 順に表示 |
 | `/search TEXT` | 全 row を fuzzy filter |
 | `/project NAME` | `project:` で filter (値なしで解除) |
+| `/context NAME` | `context:` で filter (値なしで解除) |
+| `/tag NAME` | `tag:` で filter (先頭の `#` は省略可) |
 | `/sort natural\|due\|priority\|title\|status` | 並び順を変更 |
-| `/clear` | search、project filter、mark をすべて解除 |
+| `/clear` | filter と mark をすべて解除 |
+| `/goto ID` | 指定 id の行へ選択を移動 |
 | `/mark toggle\|all\|none` | 一括操作用に row を mark |
-| `/done` | mark 済み row を完了。mark がなければ選択行を完了 |
+
+**編集** — 以下は mark 済み row、mark がなければ選択行に適用されます。
+
+| command | 用途 |
+| --- | --- |
+| `/done` | task 系の row を完了 |
+| `/status open\|active\|done\|dropped` | CLI と同じ alias で status を設定 |
+| `/set KEY VALUE` | detail を設定。値を省略すると key を削除 |
+| `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |
+| `/assign USER` | `assignee:` を設定 |
 | `/add TITLE` | 設定された write file に未完了 task を追記 |
+| `/delete yes` | row を削除。`yes` がないと拒否 |
 | `/edit` | 選択行を `$EDITOR` で開く |
+| `/timer start\|stop\|status\|cancel` | 経過時間を計測し、stop 時に `elapsed:` を書き込む |
 | `/undo` | このセッションの直前の書き込みを取り消す |
+
+**出力と表示**
+
+| command | 用途 |
+| --- | --- |
+| `/export md\|csv\|json [PATH]` | 現在表示中の row を file に書き出す |
+| `/stats` | status / type / project 別の内訳を表示切り替え |
 | `/detail` | inspector panel の表示切り替え |
 | `/reload` | 全 file を即時読み直す |
-| `/theme auto\|dark\|light\|mono` | 配色を変更 |
+| `/theme auto\|dark\|light\|mono` | 配色を即時変更 |
 | `/limit N` | section ごとの保持 row 数 |
 | `/window 12h` | 現在時刻を中心とした agenda window |
 | `/quit` | TUI を終了 |
 
-`/done` と `/add` は CLI と同じ検証済み atomic write path を通ります。
-セッション中の書き込みはすべて記録されるため、`/undo` で file を復元できます。
+#### 編集の安全性
+
+編集系 command はすべて 1 つの内部 mutation path を通ります。
+書き込み前に対象 row をすべて検証するため、`id:` を持たない row を含む一括編集は
+明示的に失敗し、一部だけが適用されることはありません。
+対象 file は 1 つの undo entry として snapshot されるため、
+`/delete` を含む一括操作も `/undo` 1 回で元に戻せます。
+
+`id:` を持たない row は TUI から編集できません。先に `lifetxt ids --assign` を実行してください。
+
+#### timer
+
+`/timer start` は選択行の計測を開始し、`[ ]` の task を `[/]` に変更します。
+`/timer status` は実行中の timer を表示し、`/timer stop` は経過分を既存の `elapsed:` に
+加算して timer を終了、`/timer cancel` は `elapsed:` を書かずに破棄します。
+state file は `lifetxt timer` と共有されるため、両者を通じて同時に動く timer は 1 つだけです。
+
+#### export
+
+`/export` は画面上の filter と並び順をそのまま反映して書き出します。
+`/project work` → `/sort due` → `/export md report.md` でその view の報告書が作れます。
+Markdown は section ごとの checkbox list、CSV は header 1 行 + record 1 行ずつ、
+JSON は detail を含む row object を出力します。
+
+#### row の上限
+
+`tui.limit` (または `/limit N`) は section ごとの表示 row 数を制限します。
+省略は必ず表示されます。section header に `TASKS 10/30` と表示され、
+section 末尾に `... 20 more hidden by limit:10` の行が追加されます。
+
+#### session 状態
+
+view、sort、project / context / tag filter、inspector の表示状態、command 履歴は
+終了時に `.cache/lifetxt/tui_session.json` に保存され、次回起動時に復元されます。
+無効になった値は失敗せずに無視されます。
+`tui.session_file` で保存先を変更でき、`tui.session` を `off` にすると無効化されます。
 
 #### key 操作
 
 既定の `prompt` keymap では、Up/Down で選択移動 (palette が開いている場合は候補移動)、
 PageUp/PageDown で半ページ移動、Home/End で先頭・末尾へ移動、`Ctrl-T` で選択行の mark 切り替え、
 `Ctrl-P` / `Ctrl-N` で入力履歴の呼び出し、`Ctrl-A` / `Ctrl-E` で入力の先頭・末尾へ移動、
-`Ctrl-U` / `Ctrl-K` で cursor 前後の削除、`Ctrl-C` で終了します。
+`Ctrl-U` / `Ctrl-K` で cursor 前後の削除、`Ctrl-C` で traceback を出さずに終了します。
 
 `--keymap vim` では navigation mode から開始します。`j` / `k` で移動、`g` / `G` で先頭・末尾、
 `Space` で mark、`Enter` で inspector 切り替え、`Tab` で view 循環、
 `d` / `e` / `u` / `r` で done / edit / undo / reload、`/` で filter 入力、`:` で command 入力、
 `?` で help、`q` で終了します。
+`/` と `:` は一度きりの入力で、`Enter` または `Esc` の後は navigation mode に戻るため、
+すぐに `j` / `k` で移動できます。
+
+help 表示中は `j` / `k` と PageUp/PageDown で 1 画面に収まらない一覧を scroll できます。
 
 #### 表示
+
+端末幅が 118 列以上ある場合、inspector は下部ではなく右側の pane として list の横に表示され、
+狭い pane でも値が切れないよう 1 項目 1 行で表示されます。
 
 `--theme auto|dark|light|mono` で配色、`--glyphs auto|unicode|ascii` で罫線文字を指定します。
 `auto` は出力 encoding を判定し、端末が丸角罫線を表現できない場合は ASCII に fallback するため、
@@ -1267,6 +1333,10 @@ meta 列 (project、due、priority) は端末幅が狭くなると折り返さ�
 
 既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`
 で設定できます。
+
+filter と並び替えは cache された parse 結果に対して行われるため、
+input bar への入力で file を読み直すことはありません。
+再 parse は file が変更されたとき、書き込みの後、`/reload` のときだけ発生します。
 
 入力 file が変更されると自動 reload します。`watchdog` が利用可能な場合は file event を使い、
 未導入の場合は mtime を定期確認する fallback で動作します。

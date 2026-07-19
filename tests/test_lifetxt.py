@@ -813,6 +813,34 @@ class LifeTxtStatusCliTests(unittest.TestCase):
         self.assertNotIn("meeting", normalized)
 
 
+class AgendaRecordSourceTests(unittest.TestCase):
+    def test_agenda_records_carry_the_source_file_when_the_item_has_one(self):
+        from lifetxt.agenda import agenda_records, parse_agenda_range
+        from lifetxt.parser import parse_text
+
+        items, _diagnostics = parse_text("[ ] D Form due:2026-06-06T17:00\n")
+        for item in items:
+            item.source = "work.life.txt"
+        start, end = parse_agenda_range(around_text="2026-06-06", window_text="1d")
+
+        records = agenda_records(items, start, end)
+
+        self.assertTrue(records)
+        self.assertEqual("work.life.txt", records[0]["source"])
+
+    def test_agenda_records_omit_source_when_the_item_has_none(self):
+        from lifetxt.agenda import agenda_records, parse_agenda_range
+        from lifetxt.parser import parse_text
+
+        items, _diagnostics = parse_text("[ ] D Form due:2026-06-06T17:00\n")
+        start, end = parse_agenda_range(around_text="2026-06-06", window_text="1d")
+
+        records = agenda_records(items, start, end)
+
+        self.assertTrue(records)
+        self.assertNotIn("source", records[0])
+
+
 class LifeTxtAgendaCliTests(unittest.TestCase):
     def test_agenda_cli_outputs_items_in_datetime_range(self):
         text = (

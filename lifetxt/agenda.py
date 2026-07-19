@@ -147,6 +147,12 @@ def agenda_records(items, range_start, range_end):
         source_ids = item.details.get("id", [])
         if source_ids:
             record["source_id"] = str(source_ids[0])
+        # Carry the originating file so callers can edit the record they are
+        # looking at. webapp.py already reads record["source"], and without it
+        # every agenda row is read-only in the TUI.
+        item_source = getattr(item, "source", None)
+        if item_source:
+            record["source"] = item_source
         occurrence_start = primary.get("start")
         occurrence_end = primary.get("end")
         if occurrence_start:

@@ -1,7 +1,9 @@
 import argparse
+import contextlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -416,6 +418,159 @@ class StatsTests(unittest.TestCase):
         bar = stats.progress_bar(50, width=4)
 
         self.assertEqual("[##..]", bar)
+
+
+class EditorResolutionTests(unittest.TestCase):
+    """`/edit` and `fzf --action edit` must work on a machine where EDITOR was
+    never exported, and must build an argv the OS can actually execute."""
+
+    def setUp(self):
+        self._saved = {name: os.environ.get(name) for name in ("EDITOR", "VISUAL")}
+        for name in self._saved:
+            os.environ.pop(name, None)
+
+    def tearDown(self):
+        for name, value in self._saved.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+    def test_resolution_order_is_editor_then_visual_then_config(self):
+        self.assertIsNone(fzf_helper.resolve_editor({}))
+        self.assertEqual("vim", fzf_helper.resolve_editor({"editor": "vim"}))
+
+        os.environ["VISUAL"] = "nano"
+        self.assertEqual("nano", fzf_helper.resolve_editor({"editor": "vim"}))
+
+        os.environ["EDITOR"] = "code"
+        self.assertEqual("code", fzf_helper.resolve_editor({"editor": "vim"}))
+
+    def test_missing_editor_explains_how_to_set_one(self):
+        with self.assertRaises(ValueError) as caught:
+            fzf_helper.open_editor({"source": "life.txt", "line": 1}, config={})
+
+        message = str(caught.exception)
+        self.assertIn("EDITOR", message)
+        self.assertIn("editor", message)
+        if os.name == "nt":
+            self.assertIn("$env:EDITOR", message)
+        else:
+            self.assertIn("export EDITOR", message)
+
+    def test_terminal_editors_receive_the_line_number(self):
+        for name in ("vim", "nvim", "vi", "nano"):
+            command = fzf_helper.editor_command(name, "life.txt", 42)
+            self.assertIn("+42", command)
+            self.assertEqual("life.txt", command[-1])
+
+    def test_gui_editors_wait_so_the_caller_blocks_until_the_tab_closes(self):
+        command = fzf_helper.editor_command("code", "life.txt", 42)
+
+        self.assertIn("--wait", command)
+        self.assertIn("-g", command)
+        self.assertIn("life.txt:42", command)
+
+    def test_extra_flags_in_the_setting_are_preserved(self):
+        command = fzf_helper.editor_command("code -n", "life.txt", 7)
+
+        self.assertIn("-n", command)
+        self.assertLess(command.index("-n"), command.index("--wait"))
+
+    def test_quoted_path_with_spaces_stays_one_argument(self):
+        command = fzf_helper.editor_command('"C:/Program Files/App/ed.exe"', "life.txt", 3)
+
+        self.assertEqual("C:/Program Files/App/ed.exe", command[0])
+        self.assertEqual("life.txt", command[-1])
+
+    def test_executable_is_resolved_through_path(self):
+        # On Windows `code` is a .CMD that CreateProcess cannot start from a
+        # bare name, so the command must carry a resolved path.
+        resolved = shutil.which("notepad") or shutil.which("sh")
+        if not resolved:
+            self.skipTest("no known executable on PATH to resolve")
+        name = "notepad" if shutil.which("notepad") else "sh"
+
+        command = fzf_helper.editor_command(name, "life.txt", 1)
+
+        self.assertEqual(resolved, command[0])
+
+    def test_unknown_editor_falls_back_to_opening_the_file(self):
+        command = fzf_helper.editor_command("some-editor-9000", "life.txt", 5)
+
+        self.assertEqual(["some-editor-9000", "life.txt"], command)
+
+    def test_launch_failure_is_reported_with_guidance(self):
+        os.environ["EDITOR"] = "definitely-not-an-editor-9000"
+
+        with self.assertRaises(ValueError) as caught:
+            fzf_helper.open_editor({"source": "life.txt", "line": 1})
+
+        self.assertIn("Could not run editor", str(caught.exception))
+
+
+class WorkspaceEditSuspendTests(unittest.TestCase):
+    def test_edit_releases_the_terminal_around_the_editor(self):
+        """A terminal editor draws over the curses screen, so the TUI must
+        endwin() before spawning it and restore the screen afterwards."""
+        events = []
+
+        @contextlib.contextmanager
+        def suspend():
+            events.append("suspend")
+            try:
+                yield
+            finally:
+                events.append("restore")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+            state.reload()
+            state.suspend = suspend
+
+            with patch.object(fzf_helper, "open_editor", lambda *a, **k: events.append("editor")):
+                tui_app.run_command(state, "/edit")
+
+        self.assertEqual(["suspend", "editor", "restore"], events)
+
+    def test_edit_works_without_a_suspend_hook(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+            state.reload()
+
+            with patch.object(fzf_helper, "open_editor", lambda *a, **k: None):
+                level, message = tui_app.run_command(state, "/edit")
+
+        self.assertEqual("info", level)
+        self.assertIn("Editor closed", message)
+
+    def test_edit_passes_config_so_the_config_editor_key_is_honoured(self):
+        seen = {}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            config = {"editor": "vim", "tui": {"session": "off"}}
+            args = argparse.Namespace(paths=[path], config_data=config)
+            state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+            state.reload()
+
+            def capture(record, config=None):
+                seen["config"] = config
+
+            with patch.object(fzf_helper, "open_editor", capture):
+                tui_app.run_command(state, "/edit")
+
+        self.assertEqual("vim", (seen["config"] or {}).get("editor"))
 
 
 class FzfHelperTests(unittest.TestCase):

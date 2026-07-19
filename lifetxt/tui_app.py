@@ -12,6 +12,7 @@ built as styled spans (``[(text, style), ...]`` per line) instead of guessing a
 style from a line prefix, so the layout is testable without curses.
 """
 
+import contextlib
 import datetime
 import os
 import sys
@@ -426,6 +427,9 @@ class WorkspaceState(object):
         self.help_query = ""
         self.help_scroll = 0
         self.hidden = {}
+        # Set by the curses runner; lets commands release the terminal to a
+        # child process such as $EDITOR. None outside a curses session.
+        self.suspend = None
         self.selected = 0
         self.scroll = 0
         self.input = ""
@@ -972,17 +976,31 @@ def _cmd_edit(state, argument):
         raise ValueError("Selected row has no source file.")
     from .fzf_helper import open_editor
 
-    open_editor(
-        {
-            "id": row.get("id", ""),
-            "source": row.get("source", ""),
-            "line": row.get("line"),
-            "label": row.get("label", ""),
-            "body": "",
-            "text": row.get("text", ""),
-        }
-    )
+    record = {
+        "id": row.get("id", ""),
+        "source": row.get("source", ""),
+        "line": row.get("line"),
+        "label": row.get("label", ""),
+        "body": "",
+        "text": row.get("text", ""),
+    }
+    config = getattr(state.args, "config_data", None) or {}
+    # A terminal editor draws over the curses screen, so the TUI has to release
+    # the terminal for the duration of the child process and take it back after.
+    with _suspend_terminal(state):
+        open_editor(record, config=config)
+    state.reload()
     return ("info", "Editor closed for %s." % (row.get("id") or row.get("title") or "row"))
+
+
+@contextlib.contextmanager
+def _suspend_terminal(state):
+    suspend = getattr(state, "suspend", None)
+    if suspend is None:
+        yield
+        return
+    with suspend():
+        yield
 
 
 def _cmd_add(state, argument):
@@ -2273,8 +2291,21 @@ def run_workspace(args):
 
     watcher = FileChangeWatcher(getattr(args, "paths", []) or []).start()
 
+    @contextlib.contextmanager
+    def suspend(stdscr):
+        """Hand the terminal back to a child process, then reclaim it."""
+        curses.def_prog_mode()
+        curses.endwin()
+        try:
+            yield
+        finally:
+            curses.reset_prog_mode()
+            stdscr.redrawwin()
+            stdscr.refresh()
+
     def main(stdscr):
         state = WorkspaceState(args)
+        state.suspend = lambda: suspend(stdscr)
         color_attrs = init_colors(curses, state.options.get("theme", "auto"))
         stdscr.timeout(int(WORKSPACE_POLL_SECONDS * 1000))
         try:

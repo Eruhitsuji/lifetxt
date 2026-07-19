@@ -333,20 +333,84 @@ def replace_item_text(path, original_text, item):
     _write_text(path, "".join(lines))
 
 
-def open_editor(record):
-    editor = os.environ.get("EDITOR")
+def resolve_editor(config=None):
+    """Find the editor command, or return None.
+
+    Checks EDITOR, then VISUAL (both standard), then an `editor` key in config.
+    The config fallback matters on Windows, where neither variable is normally
+    set and exporting one is not the obvious move.
+    """
+    for name in ("EDITOR", "VISUAL"):
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return value
+    if isinstance(config, dict):
+        value = str(config.get("editor") or "").strip()
+        if value:
+            return value
+    return None
+
+
+def editor_help_message():
+    if os.name == "nt":
+        return (
+            "No editor configured. Set one with:\n"
+            '  $env:EDITOR = "code"                 (current PowerShell session)\n'
+            '  [Environment]::SetEnvironmentVariable("EDITOR", "code", "User")   (permanent)\n'
+            'or add "editor": "code" to your lifetxt config file.'
+        )
+    return (
+        "No editor configured. Set one with:\n"
+        "  export EDITOR=vim                    (add to your shell profile to persist)\n"
+        'or add "editor": "vim" to your lifetxt config file.'
+    )
+
+
+def editor_command(editor, path, line=1):
+    """Build the argv for an editor, honouring extra flags in the setting.
+
+    EDITOR may carry arguments ("code -n"), and on Windows the launcher is
+    often a .CMD that CreateProcess cannot start from a bare name, so the
+    executable is resolved through PATH (which honours PATHEXT) first.
+    """
+    parts = shlex.split(str(editor), posix=(os.name != "nt"))
+    if not parts:
+        raise ValueError(editor_help_message())
+    program = parts[0].strip('"')
+    extra = parts[1:]
+    resolved = shutil.which(program) or program
+    name = os.path.basename(program).lower()
+    for suffix in (".exe", ".cmd", ".bat"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+
+    if name in ("vim", "nvim", "vi", "nano", "helix", "hx"):
+        flag = "+%s" % line if name != "nano" else "+%s" % line
+        return [resolved] + extra + [flag, path]
+    if name in ("code", "code-insiders", "codium", "cursor", "windsurf"):
+        # --wait keeps the caller blocked until the tab is closed, which is
+        # what "open in $EDITOR and come back" means.
+        return [resolved] + extra + ["--wait", "-g", "%s:%s" % (path, line)]
+    if name in ("subl", "sublime_text"):
+        return [resolved] + extra + ["--wait", "%s:%s" % (path, line)]
+    if name in ("emacs", "emacsclient"):
+        return [resolved] + extra + ["+%s" % line, path]
+    if name in ("micro",):
+        return [resolved] + extra + ["%s:%s" % (path, line)]
+    return [resolved] + extra + [path]
+
+
+def open_editor(record, config=None):
+    editor = resolve_editor(config)
     if not editor:
-        raise ValueError("EDITOR is not set.")
-    path = record["source"]
-    line = record.get("line") or 1
-    name = os.path.basename(editor).lower()
-    if name in ("vim", "nvim", "vi"):
-        command = [editor, "+%s" % line, path]
-    elif "code" in name:
-        command = [editor, "-g", "%s:%s" % (path, line)]
-    else:
-        command = [editor, path]
-    return subprocess.call(command)
+        raise ValueError(editor_help_message())
+    command = editor_command(editor, record["source"], record.get("line") or 1)
+    try:
+        return subprocess.call(command)
+    except OSError as exc:
+        raise ValueError(
+            "Could not run editor %r: %s\n%s" % (editor, exc, editor_help_message())
+        )
 
 
 def _read_text(path):

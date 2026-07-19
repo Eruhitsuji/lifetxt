@@ -1519,6 +1519,38 @@ row when nothing is marked.
 | `/window 12h` | Agenda window around now |
 | `/quit` | Leave the TUI |
 
+#### Choosing an editor
+
+`/edit` (and `fzf --action edit`) resolves the editor from `EDITOR`, then
+`VISUAL`, then an `editor` key in the config file. The config key exists for
+Windows, where neither variable is normally set:
+
+```powershell
+$env:EDITOR = "code"                                               # this session
+[Environment]::SetEnvironmentVariable("EDITOR", "code", "User")    # permanent
+```
+
+```sh
+export EDITOR=vim        # add to your shell profile to persist
+```
+
+```json
+{ "editor": "code" }
+```
+
+The setting may include flags, such as `code -n`. The executable is resolved
+through `PATH`, which is required on Windows where `code` is a `.CMD` that
+cannot be launched from a bare name. Editors that open a window are passed a
+wait flag so that `/edit` returns only after you close the file.
+
+Line numbers are passed to `vim`, `nvim`, `vi`, `nano`, `helix`, `emacs`,
+`micro`, VS Code and its forks, and Sublime Text. Any other editor simply
+receives the file path. When no editor is configured, the error names the exact
+command to run for your platform.
+
+Terminal editors are supported: the TUI releases the terminal before launching
+the editor and restores the screen when it exits.
+
 #### Editing safety
 
 Every editing command runs through one internal mutation path. It validates all

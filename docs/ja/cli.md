@@ -1267,6 +1267,36 @@ usage と summary を表示し、`Tab` で選択中の候補を補完します�
 | `/window 12h` | 現在時刻を中心とした agenda window |
 | `/quit` | TUI を終了 |
 
+#### editor の指定
+
+`/edit` (および `fzf --action edit`) は `EDITOR`、`VISUAL`、config の `editor` key の
+順で editor を解決します。config key は、どちらの環境変数も通常設定されていない
+Windows のために用意されています。
+
+```powershell
+$env:EDITOR = "code"                                               # 現在のセッションのみ
+[Environment]::SetEnvironmentVariable("EDITOR", "code", "User")    # 永続化
+```
+
+```sh
+export EDITOR=vim        # 永続化するには shell の profile に追記
+```
+
+```json
+{ "editor": "code" }
+```
+
+`code -n` のように flag を含めて指定できます。実行 file は `PATH` から解決されます。
+Windows では `code` が `.CMD` であり、名前だけでは起動できないためこれが必要です。
+window を開く editor には wait flag を渡すため、`/edit` は file を閉じてから戻ります。
+
+行番号は `vim`、`nvim`、`vi`、`nano`、`helix`、`emacs`、`micro`、VS Code とその派生、
+Sublime Text に渡されます。それ以外の editor には file path のみを渡します。
+editor が未設定の場合は、実行すべき command を platform ごとに明示した error になります。
+
+端末内 editor にも対応しています。TUI は editor を起動する前に端末を解放し、
+終了時に画面を復元します。
+
 #### 編集の安全性
 
 編集系 command はすべて 1 つの内部 mutation path を通ります。

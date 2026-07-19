@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x73)
+Last updated: 2026-07-19 (updated x74)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -137,6 +137,8 @@ and session persistence. These items extend it further.
 - [ ] Add mouse support for row selection and tab switching behind a config flag. Terminal mouse reporting conflicts with terminal-native text selection, so it must be opt-in.
 - [ ] Add `/timer pause` and `/timer resume`. The CLI already has them and the shared state file supports them; only the TUI commands are missing.
 - [ ] Let `/export` reuse the CLI exporters. `render_export` in `lifetxt/tui_app.py` writes rows independently so the output matches the screen exactly, but Markdown and CSV shapes now exist in two places and can drift from `markdown.py` and `csvio.py`.
+- [ ] Add an `editor` entry to `config init` output and to the config schema work. `resolve_editor` now reads a top-level `editor` key, but `lifetxt config init` does not emit it, so the Windows fallback is discoverable only from the docs and the error message.
+- [ ] Verify `/edit` with a real terminal editor at a real TTY. The curses suspend/restore path (`def_prog_mode` / `endwin` / `reset_prog_mode` / `redrawwin`) is unit-tested only through a stub hook and has never run against a real curses build.
 - [ ] Add a confirmation affordance better than `/delete yes`. Re-typing the command is safe but clumsy for bulk deletes; consider an inline confirm prompt in the input bar.
 - [ ] Show which rows a bulk command will touch before it runs. `/done` with 30 marked rows currently gives no preview.
 - [ ] Add a `/view` for archived records once multi-file semantics are specified.

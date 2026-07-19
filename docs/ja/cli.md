@@ -98,6 +98,7 @@ python -m lifetxt template list
 | `from-csv` | CSV を life.txt へ変換 |
 | `status` | `person:` ごとの最新 `S` status / presence を表示 |
 | `state` (`s`) | 直前の open な status を閉じて新しい presence status を記録 |
+| `files` | `file:` / `dir:` attachment の確認・検証・hash 付与 |
 | `start` | 作業開始: task を進行中に、timer 開始、presence を記録 |
 | `stop` | 作業終了: timer 停止して `elapsed:` を記録、presence を閉じる |
 | `notify` | type `M` の通知対象を表示、または常駐監視 |
@@ -399,6 +400,61 @@ lifetxt stop --done           # さらに task を完了して done: を書く
 
 timer は `lifetxt timer` と共有され同時に 1 つだけなので、
 `start` は 2 つ目の開始を拒否し、実行中の task 名を表示します。
+
+---
+
+## 2.11 外部ファイルとディレクトリ
+
+`file:` と `dir:` は item をディスク上の対象と関連付けます。
+path は forward slash で保存され、shell の作業ディレクトリではなく
+**life.txt file** を基準に解決されるため、どこから実行しても同じ結果になります。
+
+```sh
+lifetxt files life.txt                 # 全 attachment と状態を一覧
+lifetxt files life.txt --update        # #sha256= hash を記録・更新
+lifetxt files life.txt --check         # 欠落や変更があれば exit 1
+lifetxt files life.txt --problems      # 対応が必要なものだけ表示
+lifetxt files life.txt --format json   # 機械可読出力
+```
+
+| status | 意味 |
+| --- | --- |
+| `ok` | 存在し、記録された hash と一致 |
+| `unhashed` | 存在するが hash 未記録 |
+| `changed` | 存在するが内容が hash と異なる |
+| `missing` | その path に何もない |
+| `wrong_type` | `file:` がディレクトリ、または `dir:` が file を指している |
+| `error` | 値を解析・読み取りできない |
+
+`--update` は同時に path を正規化するため、Windows 形式の `.\docs\spec.md` は
+`./docs/spec.md` になります。
+存在しない対象には誤解を招く hash を付けず、path のみを残します。
+
+`check` は attachment の診断を含みます。
+存在確認と移植性の検査は軽いため既定で行い、
+hash 検証は参照先 file を読みディレクトリを走査するため任意です。
+
+```sh
+lifetxt check life.txt                  # W401 欠落、W403 種別違い、W404 移植性
+lifetxt check life.txt --verify-files   # W402 内容変更を追加
+lifetxt check life.txt --no-files       # attachment の検査を省略
+lifetxt check life.txt --category files # attachment の診断のみ
+```
+
+ディレクトリの hash は version control や build のディレクトリを除外します。
+設定は次のとおりです。
+
+```json
+{
+  "attachments": {
+    "ignore": [".git", "node_modules", "__pycache__"],
+    "max_files": 2000,
+    "max_bytes": 209715200
+  }
+}
+```
+
+上限は `dir:` が巨大な場所を指したときに、固まらず明示的に失敗するためのものです。
 
 ---
 
@@ -1276,6 +1332,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `users`, `teams`, `tags` | user alias、team membership、tag alias/group |
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
+| `attachments.*` | `file:` / `dir:` の設定。`ignore`、`max_files`、`max_bytes` |
 | `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |

@@ -1,0 +1,27 @@
+# External file and directory attachments
+#
+# file: and dir: associate an item with something on disk. Paths use forward
+# slashes and resolve relative to THIS file, not the shell's working directory,
+# so the same life.txt gives the same answer from anywhere.
+#
+# Run `lifetxt files examples/attachments_life.txt --update` to record hashes,
+# then `lifetxt files examples/attachments_life.txt --check` to verify them.
+
+# A plain association: existence is checked, content is not.
+[ ] T Review_the_format_spec id:att_001 file:../docs/en/life_txt_format_spec.md project:docs
+
+# With a content hash. `check --verify-files` reports when the file changes.
+[ ] T Review_the_readme id:att_002 file:../readme.md#sha256=0000000000000000 project:docs
+
+# A directory. The hash is a recursive tree hash of its contents.
+[ ] T Tidy_the_examples id:att_003 dir:. project:docs
+
+# Several attachments on one item. Each hash travels with its own path, so the
+# pairing stays unambiguous no matter how many files are listed.
+[ ] T Compare_both_specs id:att_004 file:../docs/en/life_txt_format_spec.md file:../docs/ja/life_txt_format_spec.md
+
+# Paths with spaces are quoted like any other detail value.
+[N] N Quoting_example id:att_005 file:"./a name with spaces.md" note:"target does not exist; check reports W401"
+
+# A home-relative path stays portable across machines for the same user.
+[?] T Archive_old_notes id:att_006 dir:~/notes tag:someday

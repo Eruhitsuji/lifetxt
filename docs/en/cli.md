@@ -97,6 +97,7 @@ python -m lifetxt template list
 | `from-csv` | Convert CSV to life.txt |
 | `status` | Show the latest `S` status / presence record for each person |
 | `state` (`s`) | Record a presence status, closing the previously open one |
+| `files` | Inspect, verify, and hash `file:` and `dir:` attachments |
 | `start` | Start work: task in progress, timer running, presence recorded |
 | `stop` | Stop work: timer stopped with `elapsed:`, presence closed |
 | `notify` | Show or watch due type `M` message notifications |
@@ -412,6 +413,60 @@ timer for the file and item, so it needs no arguments. Both support `--dry-run`.
 
 Only one timer runs at a time, shared with `lifetxt timer`, so `start` refuses
 to begin a second one and names the task already running.
+
+---
+
+## 2.11 External Files And Directories
+
+`file:` and `dir:` associate an item with something on disk. Paths are stored
+with forward slashes and resolve relative to the **life.txt file**, not the
+shell's working directory, so the same file gives the same answer from anywhere.
+
+```sh
+lifetxt files life.txt                 # list every attachment and its status
+lifetxt files life.txt --update        # write or refresh #sha256= hashes
+lifetxt files life.txt --check         # exit 1 if anything is missing or changed
+lifetxt files life.txt --problems      # only show what needs attention
+lifetxt files life.txt --format json   # machine-readable
+```
+
+| Status | Meaning |
+| --- | --- |
+| `ok` | Exists and the recorded hash matches |
+| `unhashed` | Exists; no hash recorded yet |
+| `changed` | Exists but the content differs from the recorded hash |
+| `missing` | Nothing at that path |
+| `wrong_type` | `file:` points at a directory, or `dir:` at a file |
+| `error` | The value could not be parsed or read |
+
+`--update` normalizes the stored path at the same time, so a Windows-style
+`.\docs\spec.md` becomes `./docs/spec.md`. Missing targets keep their bare
+path rather than gaining a misleading hash.
+
+`check` includes attachment diagnostics. Existence and portability are checked
+by default because they are cheap; hash verification reads every referenced
+file and walks directory trees, so it is opt-in:
+
+```sh
+lifetxt check life.txt                  # W401 missing, W403 wrong type, W404 non-portable
+lifetxt check life.txt --verify-files   # adds W402 content changed
+lifetxt check life.txt --no-files       # skip attachment checks entirely
+lifetxt check life.txt --category files # only attachment diagnostics
+```
+
+Directory hashes exclude version-control and build directories. Configure with:
+
+```json
+{
+  "attachments": {
+    "ignore": [".git", "node_modules", "__pycache__"],
+    "max_files": 2000,
+    "max_bytes": 209715200
+  }
+}
+```
+
+The guards fail loudly rather than hanging when `dir:` points somewhere huge.
 
 ---
 
@@ -1376,6 +1431,7 @@ Example config:
   "paths": ["life.txt", ".generated/google_calendar.life.txt"],
   "write_file": "life.txt",
   "done": { "precision": "date" },
+  "attachments": { "ignore": [".git", "node_modules"], "max_files": 2000 },
   "user": {
     "name": "self",
     "display_name": "Self",

@@ -134,6 +134,7 @@ client can decide what needs confirmation.
 | `check_line` / `parse_item` | Validate or parse a line without writing |
 | `parse_shorthand` | Preview sigil and date-token expansion |
 | `get_file_state` | Paths, write target, read-only flag, content hashes |
+| `check_files` | Verify `file:`/`dir:` attachments: existence, type, hash, portability |
 | `timer_status` | The running timer, if any |
 
 ### Writing
@@ -147,6 +148,7 @@ client can decide what needs confirmation.
 | `complete_item` | Complete a repeat instance and materialize the next |
 | `delete_item` | Remove a record |
 | `set_status` | Record presence, closing the previously open status |
+| `attach_file` | Associate a file or directory with an item and record its hash |
 | `timer_start` / `timer_stop` / `timer_cancel` | Drive the shared timer |
 | `start_work` / `stop_work` | Bracket a work session in one call |
 | `create_message` / `reply_message` / `ack_message` / `snooze_message` | `M` record flow |

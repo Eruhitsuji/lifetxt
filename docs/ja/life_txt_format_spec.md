@@ -190,6 +190,57 @@ warning を出します。`parent:` を明示した場合は、明示値を優�
 - recommended key は、type や status ごとに最初に提示する短い推奨 key です。
 - custom key も構文上は有効で、保持されます。
 
+
+### 外部ファイルとディレクトリ
+
+`file:` と `dir:` は item をディスク上の対象と関連付けます。
+
+```
+[ ] T 仕様書レビュー id:t1 file:./docs/spec.md
+[ ] T 素材整理 id:t2 dir:./assets/images
+```
+
+値は path で、任意で content hash を続けられます。
+
+```
+file:./docs/spec.md#sha256=1a2b3c4d5e6f7890
+```
+
+hash は対象となる path と同じ値の中に入るため、1 つの item が複数 file を
+参照しても対応付けが曖昧になりません。
+
+```
+[ ] T レビュー id:t1 file:./docs/spec.md#sha256=1a2b3c4d5e6f7890 file:./docs/api.md#sha256=9f8e7d6c5b4a3210
+```
+
+**値の文法。** 区切りは *最後の* `#sha256=` です。したがって path 自体に `#` を
+含められます。digest は小文字の16進で、内容の SHA-256 の先頭 16 文字です。
+空白を含む path は他の detail 値と同様に引用符が必要です:
+`file:"./my docs/spec.md"`。
+
+**path の形式。** path は forward slash で保存され、
+コマンドを実行した shell の作業ディレクトリではなく、
+その item を含む life.txt file のディレクトリを基準に解決されます。
+file とそれについてのメモは一緒に移動しますが、たまたま居る shell は違うためです。
+`~` は home ディレクトリに展開されます。
+絶対パス、ドライブレター (`C:/...`)、UNC path (`//host/...`) も有効ですが
+machine 固有であり、validator は移植性の警告を出します。
+
+**ディレクトリの hash。** `dir:` の hash は tree hash です。
+配下の全 file の相対 path と内容を、path 順に並べて計算するため、
+filesystem の列挙順に依存しません。
+version control や build のディレクトリ (`.git`、`node_modules`、`__pycache__` など)
+は除外され、値が安定します。
+
+**検証。** `check` は対象が存在しない場合 (`W401`)、
+hash 記録後に内容が変わった場合 (`W402`、`--verify-files` 指定時のみ)、
+`file:` がディレクトリを指す・その逆 (`W403`)、
+移植性のない path 形式 (`W404`)、
+case を無視する filesystem でしか解決できない名前 (`W405`)、
+不正な値 (`W407`) を報告します。
+
+hash は任意です。指定しない場合は存在確認のみ行われます。
+
 ## 7. 基本 key group
 
 ### 7.1 Common keys
@@ -204,6 +255,8 @@ warning を出します。`parent:` を明示した場合は、明示値を優�
 | `note` | 短い補足メモ | `note:"Check later"` |
 | `body` | 長文本文。継続行でも記述可 | `body:short_text` |
 | `url` | 関連 URL | `url:https://example.com` |
+| `file` | 関連 file への path。任意で `#sha256=` | `file:./docs/spec.md` |
+| `dir` | 関連ディレクトリへの path。任意で `#sha256=` | `dir:./assets` |
 
 `id:` は読み込み対象の life.txt ファイル群の中で一意に保つことを推奨します。
 validator は重複IDを warning `W213` として報告します。id-based API や update は

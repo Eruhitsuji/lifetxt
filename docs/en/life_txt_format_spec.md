@@ -173,6 +173,54 @@ The format distinguishes known keys from recommended keys.
 
 This keeps the format extensible while making interactive help shorter.
 
+
+### External Files And Directories
+
+`file:` and `dir:` associate an item with something on disk:
+
+```
+[ ] T Review the spec id:t1 file:./docs/spec.md
+[ ] T Sort the assets id:t2 dir:./assets/images
+```
+
+The value is a path, optionally followed by a content hash:
+
+```
+file:./docs/spec.md#sha256=1a2b3c4d5e6f7890
+```
+
+The hash travels inside the same value as the path it describes, so an item may
+reference several files without the pairing becoming ambiguous:
+
+```
+[ ] T Review id:t1 file:./docs/spec.md#sha256=1a2b3c4d5e6f7890 file:./docs/api.md#sha256=9f8e7d6c5b4a3210
+```
+
+**Value grammar.** The separator is the *last* occurrence of `#sha256=`, so a
+path may itself contain `#`. The digest is lowercase hexadecimal, the first 16
+characters of the SHA-256 of the content. A path containing spaces must be
+quoted like any other detail value: `file:"./my docs/spec.md"`.
+
+**Path form.** Paths are stored with forward slashes and resolve relative to the
+directory of the life.txt file that contains the item, not the working
+directory of whatever shell ran the command. A file and the notes about it move
+together; the shell you happen to be in does not. `~` expands to the user's home
+directory. Absolute paths, drive letters (`C:/...`), and UNC paths (`//host/...`)
+are valid but machine-specific, and validators report them as non-portable.
+
+**Directory hashing.** A `dir:` hash is a tree hash: every file's relative path
+and content, sorted by path so the value does not depend on filesystem
+iteration order. Version-control and build directories (`.git`, `node_modules`,
+`__pycache__`, and similar) are excluded so the value stays stable.
+
+**Validation.** `check` reports missing targets (`W401`), content that changed
+since the hash was recorded (`W402`, only with `--verify-files`), a `file:` that
+points at a directory or vice versa (`W403`), non-portable path forms (`W404`),
+a name that only resolves on a case-insensitive filesystem (`W405`), and a
+malformed value (`W407`).
+
+A hash is optional. Without one the target is only checked for existence.
+
 ## 7. Core Key Groups
 
 These groups explain the common vocabulary. They are not a requirement for every
@@ -190,6 +238,8 @@ item.
 | `note` | Short human note | `note:"Check later"` |
 | `body` | Long text body; may use continuation lines | `body:short_text` |
 | `url` | Related URL | `url:https://example.com` |
+| `file` | Path to an associated file, optional `#sha256=` | `file:./docs/spec.md` |
+| `dir` | Path to an associated directory, optional `#sha256=` | `dir:./assets` |
 
 `id:` values should be unique across the loaded life.txt files. Validators
 report duplicate IDs as warning `W213`; id-based API and update operations may

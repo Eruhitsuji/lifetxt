@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-19 (updated x77)
+Last updated: 2026-07-19 (updated x78)
 
 This roadmap tracks remaining work after the current prototype updates and the next-feature planning pass. Completed items are removed. Existing `timer start` / `timer stop`, Web API / Web UI, and stdio MCP support are treated as baseline features; this file tracks stabilization, expansion, validation, documentation, and design work that still matters.
 
@@ -127,6 +127,25 @@ Improvements to existing commands that affect daily workflow.
 
 ---
 
+## P1: External File Attachments
+
+`file:` and `dir:` associate an item with a path on disk, with an optional
+`#sha256=` content hash. Existence, type, hash, and portability checks ship in
+`lifetxt files`, `check`, the MCP `check_files` / `attach_file` tools, and the
+TUI inspector.
+
+- [ ] Add a `lifetxt files --open ID` action that launches the associated file with the platform opener (`start`, `open`, `xdg-open`). This is the most obvious thing a user will try once a path is recorded, and it needs a careful allowlist so a life.txt from someone else cannot launch arbitrary programs.
+- [ ] Attach and verify from the TUI and Web UI. The inspector shows attachments and MCP can attach, but neither interactive surface can add one or run a verification pass.
+- [ ] Decide whether `file:` should support globs such as `./docs/*.md`. A glob cannot carry one content hash, so it would need a different verification story; keep single paths until there is a concrete need.
+- [ ] Cache directory hashes. `dir:` hashing walks the whole tree on every `--verify-files` run, which is slow for large directories; a cache keyed by (path, mtime, size) in `.cache/lifetxt/` would make verification cheap enough to run by default.
+- [ ] Report attachment status in the Web UI detail modal, including a link that resolves relative to the life.txt file.
+- [ ] Consider recording file size alongside the hash. Size is free to read and catches most changes without hashing, which would let a fast pre-check skip unchanged files.
+- [ ] Decide how `archive` and `undo` interact with attachments. Archiving an item keeps its `file:` value pointing at a path that may later move; there is no rewrite or validation step.
+- [ ] Handle symlinked targets explicitly. They currently resolve transparently, so a symlink that escapes the life.txt directory is neither reported nor blocked.
+- [ ] Verify attachment behaviour on a case-sensitive filesystem. The `W405` case-mismatch check only has an observable effect on case-insensitive filesystems (Windows, macOS), and has not been exercised on Linux where the mismatch becomes a real failure.
+
+---
+
 ## P1: Shorthand Follow-ups
 
 Capture sigils (`@project #tag !priority ^due`), relative date tokens, command
@@ -238,6 +257,7 @@ The existing stdio MCP server should become a safer, more complete interface for
 ## P1: Multiple Files, Sync, and External Tools
 
 - [ ] Document the recommended directory layout: `life.txt` for hand-written data, `.generated/` for sync output, `archive/` for archived items, and `.cache/lifetxt/` for undo, backup, timer, and notification state.
+- [ ] Extend attachment support to remote targets, or document that it is deliberately local-only. `file:` and `dir:` are filesystem paths; `url:` covers the remote case but has no existence or content check.
 - [ ] Define integration boundaries for calendar sources beyond ICS and for presence/message tools such as Teams, Discord, and Slack. Specify which fields are imported, exported, or read-only.
 - [ ] Define conflict policy for `sync-ics --merge-existing`. Decide whether local edits inside generated records are overwritten, preserved by selected keys, or reported as conflicts before replacement.
 - [ ] Add `to-ics` export. Preserve event times, all-day events, attendees where safe, recurrence where supported, and source UID metadata.

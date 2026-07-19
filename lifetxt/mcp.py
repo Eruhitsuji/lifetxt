@@ -179,7 +179,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_review", "get_graph", "get_blockers", "list_links", "list_status",
         "list_notifications", "list_messages", "get_file_state", "search_items",
         "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
-        "get_status", "parse_shorthand", "timer_status",
+        "get_status", "parse_shorthand", "timer_status", "check_files",
     ]
 )
 
@@ -397,6 +397,31 @@ def _tool_schemas():
             "Snooze a message notification.",
             {"id": _string("Message ID."), "duration": _string("Duration such as 10m."), "until": _string("Explicit snooze_until value.")},
             required=["id"],
+        ),
+        _tool(
+            "check_files",
+            "Verify file: and dir: attachments: existence, correct type, content "
+            "hash, and portability of the stored path.",
+            {
+                "id": _string("Only check attachments on this item id."),
+                "problems_only": _bool("Only return attachments with an issue."),
+                "no_verify": _bool("Skip hashing; check existence only."),
+            },
+        ),
+        _tool(
+            "attach_file",
+            "Attach a file or directory to an item and record its content hash. "
+            "The path is stored relative to the life.txt file with forward "
+            "slashes, so it resolves on every platform.",
+            {
+                "id": _string("Item id to attach to."),
+                "path": _string("Path to the file or directory."),
+                "key": _string("Force file or dir; otherwise chosen from what is on disk."),
+                "no_hash": _bool("Record the path without a content hash."),
+                "dry_run": _bool("Return a diff instead of writing."),
+                "expected_file_hash": _string("Reject the write if the file changed."),
+            },
+            required=["id", "path"],
         ),
         _tool(
             "get_file_state",
@@ -1356,6 +1381,151 @@ def _tool_snooze_message(args, context):
 # ---------------------------------------------------------------------------
 
 
+def _default_base_path(context):
+    """File that anchors relative attachment paths for single-file loads."""
+    return context.writable_path or (context.paths[0] if context.paths else None)
+
+
+def _tool_check_files(args, context):
+    """Verify file:/dir: attachments: existence, type, hash, and portability."""
+    from .attachments import (
+        STATUS_CHANGED,
+        STATUS_ERROR,
+        STATUS_MISSING,
+        STATUS_WRONG_TYPE,
+        attachment_records,
+        item_base_dir,
+    )
+
+    items, _diagnostics = _read_items(context)
+    wanted = args.get("id")
+    verify = not _truthy(args.get("no_verify"))
+    problems_only = _truthy(args.get("problems_only"))
+    id_key = _id_key(context)
+
+    rows = []
+    problems = 0
+    for item in items:
+        if wanted and wanted not in [str(v) for v in item.details.get(id_key, [])]:
+            continue
+        for record in attachment_records(
+            item,
+            base_dir=item_base_dir(item, _default_base_path(context)),
+            config=context.config,
+            verify=verify,
+        ):
+            broken = record["status"] in (
+                STATUS_MISSING, STATUS_CHANGED, STATUS_WRONG_TYPE, STATUS_ERROR
+            )
+            if broken:
+                problems += 1
+            if problems_only and not broken and not record["notes"]:
+                continue
+            rows.append(
+                {
+                    "id": (item.details.get(id_key) or [""])[0],
+                    "title": item.title,
+                    "key": record["key"],
+                    "path": record["path"],
+                    "status": record["status"],
+                    "hash": record["hash"],
+                    "actual_hash": record["actual_hash"],
+                    "notes": record["notes"],
+                }
+            )
+    return {"count": len(rows), "problems": problems, "attachments": rows}
+
+
+def _tool_attach_file(args, context):
+    """Attach a file or directory to an item, recording its content hash."""
+    from .attachments import (
+        DIR_KEY,
+        FILE_KEY,
+        AttachmentError,
+        hash_target,
+        item_base_dir,
+        join_value,
+        normalize_stored_path,
+        resolve_raw_path,
+    )
+
+    _require_writable(context)
+    _check_expected_hash(context, args)
+    item_id = str(args.get("id") or "").strip()
+    path_value = str(args.get("path") or "").strip()
+    if not item_id or not path_value:
+        raise ValueError("attach_file requires id and path.")
+
+    items, _diagnostics = _read_items(context)
+    item = find_item_by_id(items, item_id, key=_id_key(context))
+    if item is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+
+    base_dir = item_base_dir(item, _default_base_path(context))
+    try:
+        resolved = resolve_raw_path(path_value, base_dir)
+    except AttachmentError as exc:
+        raise ValueError(str(exc))
+    if not os.path.exists(resolved):
+        raise ValueError(
+            "%s does not exist (resolved to %s). Attachments are relative to the "
+            "life.txt file, not the working directory." % (path_value, resolved)
+        )
+
+    is_dir = os.path.isdir(resolved)
+    key = DIR_KEY if is_dir else FILE_KEY
+    if args.get("key") in (FILE_KEY, DIR_KEY) and args["key"] != key:
+        raise ValueError(
+            "%s is a %s; use key=%s." % (path_value, "directory" if is_dir else "file", key)
+        )
+
+    digest = ""
+    if not _truthy(args.get("no_hash")):
+        try:
+            digest = hash_target(resolved, is_dir=is_dir)
+        except AttachmentError as exc:
+            raise ValueError(str(exc))
+    value = join_value(normalize_stored_path(path_value), digest)
+
+    details = _copy_details(item.details)
+    existing = [str(v) for v in details.get(key, [])]
+    from .attachments import split_value as _split
+
+    kept = []
+    for old in existing:
+        try:
+            old_path, _old_hash = _split(old)
+        except AttachmentError:
+            kept.append(old)
+            continue
+        if normalize_stored_path(old_path) != normalize_stored_path(path_value):
+            kept.append(old)
+    details[key] = kept + [value]
+
+    payload = {"status": item.status, "type": item.kind, "title": item.title, "details": details}
+    if _dry_run(args):
+        return _preview_write(
+            context,
+            lambda: update_item_by_id_in_file(
+                context.writable_path, item_id, payload, key=_id_key(context)
+            ),
+            "Attach %s to %s" % (value, item_id),
+        )
+    updated = update_item_by_id_in_file(
+        context.writable_path, item_id, payload, key=_id_key(context)
+    )
+    return _applied(
+        context,
+        {
+            "id": item_id,
+            "key": key,
+            "value": value,
+            "item": api_item(updated, context.writable_path, _id_key(context)),
+        },
+        "Attach %s to %s" % (value, item_id),
+    )
+
+
 def _tool_set_status(args, context):
     """Record a presence status, closing the previously open one."""
     from .presence import status_transition
@@ -1867,6 +2037,8 @@ TOOL_HANDLERS = OrderedDict(
         ("timer_cancel", _tool_timer_cancel),
         ("start_work", _tool_start_work),
         ("stop_work", _tool_stop_work),
+        ("check_files", _tool_check_files),
+        ("attach_file", _tool_attach_file),
     ]
 )
 

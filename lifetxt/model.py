@@ -119,9 +119,13 @@ KNOWN_KEYS = (
     "url",
     "reason",
     "moved_to",
+    "file",
+    "dir",
 )
 
 REFERENCE_KEYS = ("parent", "ref", "depends_on", "blocks", "related")
+#: Keys whose value is a filesystem path, optionally with a #sha256= fragment.
+ATTACHMENT_KEYS = ("file", "dir")
 DURATION_KEYS = ("est", "elapsed")
 COMMON_RECOMMENDED_KEYS = ("id", "project", "tag", "note", "url")
 LINK_RECOMMENDED_KEYS = REFERENCE_KEYS

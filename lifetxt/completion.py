@@ -29,6 +29,7 @@ COMMANDS = (
     "archive",
     "quick",
     "done",
+    "files",
     "batch",
     "summary",
     "init",

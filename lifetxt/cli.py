@@ -121,6 +121,7 @@ DIAGNOSTIC_CATEGORIES = (
     "recurrence",
     "duration",
     "workflow",
+    "files",
     "semantic",
 )
 
@@ -194,6 +195,16 @@ def build_parser():
 
     check = subparsers.add_parser("check", help="Check life.txt syntax and warnings.")
     _add_input_paths(check)
+    check.add_argument(
+        "--verify-files",
+        action="store_true",
+        help="Also verify file:/dir: content hashes. Reads every referenced file.",
+    )
+    check.add_argument(
+        "--no-files",
+        action="store_true",
+        help="Skip file:/dir: attachment checks entirely.",
+    )
     check.add_argument(
         "--format",
         choices=("text", "json"),
@@ -1251,6 +1262,50 @@ def build_parser():
     )
     done_cmd.set_defaults(func=command_done)
 
+    files_cmd = subparsers.add_parser(
+        "files",
+        help="Inspect, verify, and hash file: and dir: attachments.",
+    )
+    _add_input_paths(files_cmd)
+    files_cmd.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero when an attachment is missing, changed, or the wrong type.",
+    )
+    files_cmd.add_argument(
+        "--update",
+        action="store_true",
+        help="Write or refresh the #sha256= hash on every resolvable attachment.",
+    )
+    files_cmd.add_argument(
+        "--problems",
+        action="store_true",
+        help="Only show attachments that are missing, changed, or non-portable.",
+    )
+    files_cmd.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Skip hashing; only resolve and check existence. Much faster on large trees.",
+    )
+    files_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Only inspect attachments on this item id.",
+    )
+    files_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    files_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --update, show what would change without writing.",
+    )
+    files_cmd.set_defaults(func=command_files)
+
     state_cmd = subparsers.add_parser(
         "state",
         aliases=["s"],
@@ -2233,7 +2288,9 @@ _W225_GUIDANCE = (
 
 
 def command_check(args):
-    items, diagnostics = _parse_life_inputs(args.paths, _config(args))
+    config = _config(args)
+    items, diagnostics = _parse_life_inputs(args.paths, config)
+    diagnostics = diagnostics + _attachment_diagnostics_for_check(items, config, args)
     ignore_codes = getattr(args, "ignore_codes", None)
     filtered_diagnostics = filter_diagnostics(
         diagnostics,
@@ -3783,6 +3840,149 @@ def _state_write_path(args, config):
     if not path:
         raise ValueError("No output file. Pass a path or configure write_file in your config.")
     return path
+
+
+def _attachment_diagnostics_for_check(items, config, args):
+    """Attachment warnings for `check`.
+
+    Existence and portability are always checked because they are cheap.
+    Hash verification touches every referenced file and can walk whole
+    directory trees, so it stays opt-in behind --verify-files; `lifetxt files`
+    is the command for that.
+    """
+    from .attachments import ATTACHMENT_KEYS, attachment_diagnostics
+
+    if not any(item.details.get(key) for item in items for key in ATTACHMENT_KEYS):
+        return []
+    if getattr(args, "no_files", False):
+        return []
+    return attachment_diagnostics(
+        items, config=config, verify=bool(getattr(args, "verify_files", False))
+    )
+
+
+def command_files(args):
+    """Inspect, verify, and refresh file:/dir: attachments."""
+    from .attachments import (
+        ATTACHMENT_KEYS,
+        STATUS_CHANGED,
+        STATUS_ERROR,
+        STATUS_MISSING,
+        STATUS_WRONG_TYPE,
+        attachment_records,
+        item_base_dir,
+        update_item_hashes,
+    )
+
+    config = _config(args)
+    id_key = id_key_from_config(config)
+    paths = _normalize_paths(args.paths, config)
+    verify = not getattr(args, "no_verify", False)
+    problem_statuses = (STATUS_MISSING, STATUS_CHANGED, STATUS_WRONG_TYPE, STATUS_ERROR)
+
+    rows = []
+    problems = 0
+    updates = []
+
+    for path in paths:
+        text = read_text(path)
+        items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        for item in items:
+            item.source = path
+        wanted = getattr(args, "item_id", None)
+        targets = [
+            item
+            for item in items
+            if not wanted or wanted in [str(v) for v in item.details.get(id_key, [])]
+        ]
+
+        if getattr(args, "update", False):
+            changed_any = False
+            for item in targets:
+                changes = update_item_hashes(item, base_dir=item_base_dir(item), config=config)
+                for key, old, new in changes:
+                    updates.append({"path": path, "item": item.title, "key": key, "from": old, "to": new})
+                    changed_any = True
+            if changed_any and not getattr(args, "dry_run", False):
+                _ensure_writable_path(path, config, "files")
+                _pre_write_backup(path, config, "files")
+                atomic_write_text(path, _render_items_preserving(text, items))
+
+        for item in targets:
+            base_dir = item_base_dir(item)
+            for record in attachment_records(item, base_dir=base_dir, config=config, verify=verify):
+                is_problem = record["status"] in problem_statuses or record["notes"]
+                if record["status"] in problem_statuses:
+                    problems += 1
+                if getattr(args, "problems", False) and not is_problem:
+                    continue
+                rows.append(
+                    OrderedDict(
+                        [
+                            ("source", path),
+                            ("id", (item.details.get(id_key) or [""])[0]),
+                            ("title", item.title),
+                            ("key", record["key"]),
+                            ("path", record["path"]),
+                            ("resolved", record["resolved"]),
+                            ("status", record["status"]),
+                            ("hash", record["hash"]),
+                            ("actual_hash", record["actual_hash"]),
+                            ("notes", record["notes"]),
+                        ]
+                    )
+                )
+
+    if getattr(args, "format", "text") == "json":
+        payload = {"count": len(rows), "problems": problems, "attachments": rows}
+        if updates:
+            payload["updates"] = updates
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    else:
+        for update in updates:
+            prefix = "[dry-run] " if getattr(args, "dry_run", False) else ""
+            sys.stdout.write("%shashed %s: %s\n" % (prefix, update["key"], update["to"]))
+        if rows:
+            table = [
+                OrderedDict(
+                    [
+                        ("status", row["status"]),
+                        ("key", row["key"]),
+                        ("path", row["path"]),
+                        ("id", row["id"]),
+                        ("title", row["title"]),
+                    ]
+                )
+                for row in rows
+            ]
+            columns = ["status", "key", "path", "id", "title"]
+            sys.stdout.write("\n".join(_format_table(table, columns)) + "\n")
+            for row in rows:
+                for note in row["notes"]:
+                    sys.stdout.write("  note %s:%s %s\n" % (row["key"], row["path"], note))
+        elif not updates:
+            sys.stdout.write("No file: or dir: attachments found.\n")
+
+    if getattr(args, "check", False) and problems:
+        sys.stderr.write("%d attachment problem(s).\n" % problems)
+        return 1
+    return 0
+
+
+def _render_items_preserving(original_text, items):
+    """Re-render only the lines that own an item, leaving everything else alone."""
+    lines = original_text.splitlines(True)
+    ending = "\r\n" if original_text.count("\r\n") else "\n"
+    for item in items:
+        if item.line is None:
+            continue
+        start = item.line - 1
+        end = getattr(item, "end_line", item.line) or item.line
+        lines[start:end] = (item_to_line(item) + ending).splitlines(True)
+    return "".join(lines)
 
 
 def command_state(args):
@@ -7931,6 +8131,8 @@ def diagnostic_category(diagnostic):
         return "workflow"
     if code in ("W222", "W226"):
         return "duration"
+    if code in ("W401", "W402", "W403", "W404", "W405", "W407"):
+        return "files"
     return "semantic"
 
 

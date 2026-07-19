@@ -132,6 +132,7 @@ client は確認が必要かどうかを判断できます。
 | `check_line` / `parse_item` | 書き込まずに行を検証・解析 |
 | `parse_shorthand` | 記号と日付トークンの展開を事前確認 |
 | `get_file_state` | path、書き込み先、read-only、content hash |
+| `check_files` | `file:`/`dir:` attachment の存在・種別・hash・移植性を検証 |
 | `timer_status` | 実行中の timer |
 
 ### 書き込み
@@ -145,6 +146,7 @@ client は確認が必要かどうかを判断できます。
 | `complete_item` | 繰り返し instance を完了し次回を生成 |
 | `delete_item` | record を削除 |
 | `set_status` | 直前の status を閉じて presence を記録 |
+| `attach_file` | file やディレクトリを item に関連付け、hash を記録 |
 | `timer_start` / `timer_stop` / `timer_cancel` | 共有 timer の操作 |
 | `start_work` / `stop_work` | 作業セッションを 1 回の呼び出しで開始・終了 |
 | `create_message` / `reply_message` / `ack_message` / `snooze_message` | `M` record の流れ |

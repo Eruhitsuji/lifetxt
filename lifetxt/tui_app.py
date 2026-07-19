@@ -1852,6 +1852,9 @@ def _build_inspector(state, width, height):
             value = row.get("id") if key == "id" else row_detail(row, key)
             if value:
                 meta.append((key, str(value)))
+        for key, label in (("file", "file"), ("dir", "dir")):
+            for value in (row.get("details") or {}).get(key) or []:
+                meta.append((label, _attachment_label(value)))
         if row.get("source"):
             location = os.path.basename(row["source"])
             if row.get("line"):
@@ -1884,6 +1887,17 @@ def _build_inspector(state, width, height):
         lines.append(_panel_row(glyphs, [], inner))
     lines.append([(glyphs["bl"] + glyphs["h"] * inner + glyphs["br"], "chrome")])
     return lines[:height]
+
+
+def _attachment_label(value):
+    """Show the path without the hash fragment, which is noise in a panel."""
+    from .attachments import AttachmentError, split_value
+
+    try:
+        path, _digest = split_value(value)
+    except AttachmentError:
+        return str(value)
+    return path
 
 
 def _panel_row(glyphs, spans, inner):

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x85)
+Last updated: 2026-07-20 (updated x86)
 
 This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
@@ -32,6 +32,7 @@ Design principles:
 - [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
 - [ ] Verify SMTP delivery with safe test accounts, including STARTTLS, authentication errors, multiple recipients, watcher state, and provider app-password guidance.
 - [ ] Add browser-level smoke tests for the Web UI, including mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, and accessibility focus behavior.
+- [ ] Automate the Web UI translation-coverage sweep. The current check is a manual headless-browser walk over every view; CI should fail when newly added chrome has no dictionary entry, and the sweep must keep reporting the record-content bucket so an over-broad exclusion cannot hide a real gap.
 - [ ] Define and enforce the next release gate: timezone-safe round trips, shared mutation with CAS, golden corpus, green CI, clean packaging metadata, and published schemas.
 
 ---
@@ -86,6 +87,9 @@ Design principles:
 - [ ] Add todo.txt and GitHub Markdown idempotency fixtures so repeated imports do not create duplicate records.
 - [ ] Verify attachment opening on Windows, macOS, and Linux, including spaces, symlinks, executable rejection, and paths outside the source directory.
 - [ ] Add a safe cache for large `dir:` hashes keyed by path metadata and content-verification state.
+- [ ] Expose RRULE expansion beyond the CLI: an agenda/Web/MCP preview of the next N occurrences of a rule, reusing `recurrence.expand` rather than re-deriving dates per surface.
+- [ ] Fix `WKST`: it is listed in `recurrence.SUPPORTED_PARTS`, so it is accepted without the "ignoring unsupported part" warning that `BYSETPOS` and friends correctly get, yet nothing reads it. Either honor it in weekly expansion or drop it from the supported list so users are warned.
+- [ ] Decide whether to extend the RRULE subset with `BYSETPOS`, `BYWEEKNO`, and `BYYEARDAY`, based on real use. These are currently rejected with a visible warning, which is the correct default.
 - [ ] Decide how archive and undo should handle attachments whose paths later move.
 
 ---
@@ -108,6 +112,8 @@ Design principles:
 
 - [ ] Define which document is authoritative for grammar, CLI behavior, Web/API behavior, and examples.
 - [ ] Add English/Japanese parity checks for headings, code blocks, command names, and stable examples.
+- [ ] Extract the Web UI Japanese dictionary from `webapp.py` into a data file that CLI, TUI, and MCP can share, so one translation exists per string instead of one per surface.
+- [ ] Decide the policy for languages beyond Japanese: how `web.language` falls back, whether partial dictionaries are allowed, and what an untranslated string should do.
 - [ ] Add worked examples and captures for TUI, Web views, timer, statistics, review, graph, attachments, invoice, standup, import/export, and recovery.
 - [ ] Document file splitting, generated files, archive files, cache files, multiple writers, backups, undo, and Git-based recovery.
 - [ ] Document sidecar lock files, CAS conflict recovery, cloud-sync and network-filesystem limitations, and safe manual cleanup.

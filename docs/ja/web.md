@@ -271,6 +271,33 @@ theme token 名は CSS 変数名から先頭の `--` を除いたものです。
 flat な config generator 向けに `"theme.accent"` や `"dashboard.cards"` の
 ような dotted key も利用できます。
 
+## 表示言語
+
+GUI は英語を原文とし、翻訳はブラウザ側で行います。セッションごとに切り替える
+場合は `?lang=ja`、workspace の既定にする場合は `.lifetxt.json` の
+`web.language` を設定します。
+
+```json
+{"web": {"language": "ja"}}
+```
+
+`?lang=` は config の値より優先されるため、共有 config でも `?lang=en` で
+英語表示に戻せます。未対応の値を指定した場合は英語になります。
+
+翻訳対象は次の 2 つの規則で決まります。
+
+- **UI の chrome は翻訳されます。** button、tab、view の説明文、keyboard help
+  の行、select の選択肢に加えて、その `title` / `placeholder` / `aria-label`
+  attribute も対象です。`View all 63 (55 more)`、`Open 2026-07-20 in Agenda`、
+  `3d overdue` のように値を含む label は pattern で照合するため、数値や日付は
+  そのまま保持されます。
+- **レコードは翻訳されません。** title、details、project、tag、人名は
+  `life.txt` の内容そのものなので、そのまま表示されます。`Done` という名前の
+  タスクは `Done` のままで、status 語の訳語に書き換えられることはありません。
+
+view は非同期に描画されるため、新しく描画された内容も監視して随時翻訳します。
+view の切り替え、更新、カレンダーの前後移動を行っても英語が残りません。
+
 ## URL parameter
 
 GUI は読み込み時に query parameter を読みます。bookmark、常時表示ディスプレイ、
@@ -321,6 +348,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `kiosk_filter=kind:T,status:[/]` | kiosk mode 専用の compact filter |
 | `kiosk_title=TEXT` | kiosk mode 時だけ表示する header title |
 | `theme=dark` または `theme=light` | theme を強制。`localStorage` を設定できない kiosk / 常時表示ディスプレイ向け |
+| `lang=ja` または `lang=en` | 表示言語。config の `web.language` より優先。レコードは翻訳されません |
 | `graph_root=ID`、`graph_depth=N` | Graph panel の初期 root/depth |
 
 ## Command Palette

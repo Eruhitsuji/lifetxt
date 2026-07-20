@@ -1794,6 +1794,67 @@ python -m lifetxt done life.txt habit_exercise --date 2026-06-01
 `done PATH ID [--date DATE]` は引き続き item を `[x]` にし `done:DATE`
 （省略時は今日）を設定します。
 
+### 13.10 `rrule`: 繰り返しルールの展開
+
+`repeat:` は単純な cadence（`daily`、`weekly`）と iCalendar の RRULE
+（`RRULE:FREQ=MONTHLY;BYDAY=1MO`）の両方を受け付けます。ルールの文字列だけでは
+実際の日付が分かりにくいため、`rrule` は `agenda` や `complete` が使うのと同じ
+具体的な日付に展開します。
+
+ルールを直接展開する:
+
+```bash
+python -m lifetxt rrule "RRULE:FREQ=MONTHLY;BYDAY=1MO" --from 2026-07-01 --count 3
+```
+
+```txt
+Every month on 1st Monday
+  1  2026-07-06  Mon
+  2  2026-08-03  Mon
+  3  2026-09-07  Mon
+```
+
+item に設定済みのルールを展開する:
+
+```bash
+python -m lifetxt rrule --path life.txt --id standup --count 4
+```
+
+option:
+
+| option | 意味 |
+|---|---|
+| `--path PATH`、`--id ID` | ルールを直接渡す代わりに既存 item の `repeat:` を読む |
+| `--from DATE` | 起点。省略時は今日、または item の `due:`/`do:`/`from:` |
+| `--after DATE`、`--before DATE` | 出力する期間を限定 |
+| `--count N` | 出力する最大件数（既定 10） |
+| `--format text\|json\|life` | 表形式、JSON、貼り付け可能な life.txt 行 |
+| `--type KIND`、`--title TEXT` | `--format life` で使う type と title |
+
+`--format life` はそのまま追記できるレコードを出力します。`complete` に頼らず
+決まった件数だけ実体化したい場合に便利です:
+
+```bash
+python -m lifetxt rrule weekly --from 2026-07-06 --count 2 --format life \
+  --type T --title Standup
+```
+
+```txt
+[ ] T Standup due:2026-07-06
+[ ] T Standup due:2026-07-13
+```
+
+対応している部分は `FREQ`、`INTERVAL`、`COUNT`、`UNTIL`、`BYDAY`（`1MO` や
+`-1FR` のような序数付きも含む）、`BYMONTHDAY`（月末を表す `-1` などの負値も
+含む）、`BYMONTH` です。対象外の部分は黙って無視せず stderr に報告します:
+
+```txt
+Ignoring unsupported RRULE part(s): BYSETPOS
+```
+
+日付のみの `UNTIL` はその日全体を含みます。`UNTIL=20260703` は 2026-07-03 を
+含み、その日の 0 時で打ち切られることはありません。
+
 ## 14. alias
 
 status alias:

@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 [project.scripts]
-lifetxt = "lifetxt.cli:main"
+lifetxt = "lifetxt.entrypoint:main"
 
 [project.optional-dependencies]
 web = [

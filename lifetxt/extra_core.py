@@ -1,0 +1,301 @@
+"""Query, navigation, and safe local action commands."""
+
+import argparse
+import calendar
+import csv
+import datetime
+import hashlib
+import io
+import json
+import math
+import os
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+import unicodedata
+from collections import OrderedDict
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
+from .atomic import atomic_write_text
+from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .model import Item
+from .parser import parse_text
+from .paths import expand_paths
+from .serializer import item_to_line
+from .timeutil import parse_elapsed
+
+from .extra_common import *
+
+
+def command_next(args, config_data):
+    items = _load_items(args.paths, config_data)
+    id_map = dict((_item_id(item), item) for item in items if _item_id(item))
+    selected = []
+    for item in items:
+        if item.kind != "T" or item.status not in OPEN_STATUSES:
+            continue
+        if _blocked(item, id_map):
+            continue
+        if args.user and not _filter_user(item, args.user):
+            continue
+        if args.project and args.project not in _values(item, "project"):
+            continue
+        if args.context and args.context not in _values(item, "context"):
+            continue
+        selected.append(item)
+    far_future = datetime.date.max
+    selected.sort(
+        key=lambda item: (
+            _priority_key(_first(item, "priority")),
+            _date_value(_first(item, "due")) or far_future,
+            _date_value(_first(item, "created")) or far_future,
+            item.line or 0,
+        )
+    )
+    if args.limit:
+        selected = selected[: args.limit]
+    if args.format == "json":
+        return _emit(_json_text([_item_record(item) for item in selected], args.pretty), args.output)
+    if args.format == "life":
+        return _emit("".join(item_to_line(item) + "\n" for item in selected), args.output)
+    rows = [
+        (_item_id(item) or "-", _first(item, "priority") or "-", _first(item, "due") or "-", _first(item, "project") or "-", item.title)
+        for item in selected
+    ]
+    return _emit(_table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows), args.output)
+
+
+def command_show(args, config_data):
+    items = _load_items(args.paths, config_data)
+    item = _find_item(items, args.id)
+    if args.format == "json":
+        return _emit(_json_text(_item_record(item), args.pretty), args.output)
+    if args.format == "life":
+        return _emit(item_to_line(item) + "\n", args.output)
+    id_map = dict((_item_id(candidate), candidate) for candidate in items if _item_id(candidate))
+    incoming = []
+    for candidate in items:
+        for key in ("parent", "ref", "depends_on", "blocks", "related"):
+            if args.id in _values(candidate, key):
+                incoming.append("%s:%s from %s" % (key, _item_id(candidate) or candidate.title, candidate.source))
+    parent_chain = []
+    seen = set()
+    current = item
+    while _first(current, "parent"):
+        parent_id = _first(current, "parent")
+        if parent_id in seen:
+            parent_chain.append(parent_id + " (cycle)")
+            break
+        seen.add(parent_id)
+        parent = id_map.get(parent_id)
+        if parent is None:
+            parent_chain.append(parent_id + " (missing)")
+            break
+        parent_chain.append("%s — %s" % (parent_id, parent.title))
+        current = parent
+    lines = [
+        "%s %s %s" % (item.status, item.kind, item.title),
+        "ID: %s" % (args.id,),
+        "Source: %s:%s" % (item.source, item.line),
+    ]
+    if parent_chain:
+        lines.append("Hierarchy: " + " <- ".join(parent_chain))
+    if item.details:
+        lines.append("Details:")
+        for key, values in item.details.items():
+            for value in values:
+                lines.append("  %s: %s" % (key, value))
+    if incoming:
+        lines.append("Incoming links:")
+        lines.extend("  " + value for value in incoming)
+    return _emit("\n".join(lines) + "\n", args.output)
+
+
+def _resolve_editor(args, config_data):
+    return args.editor or str(config_data.get("editor") or "") or os.environ.get("VISUAL") or os.environ.get("EDITOR") or ("notepad" if os.name == "nt" else "vi")
+
+
+def _editor_command(editor, path, line):
+    command = shlex.split(editor, posix=os.name != "nt")
+    if not command:
+        raise ValueError("Editor command is empty.")
+    executable = os.path.basename(command[0]).lower()
+    if executable in ("code", "code-insiders", "codium"):
+        command.extend(("-g", "%s:%s" % (path, line)))
+    elif executable in ("subl", "sublime_text"):
+        command.append("%s:%s" % (path, line))
+    elif executable in ("vim", "vi", "nvim", "nano", "emacs"):
+        command.extend(("+%s" % line, path))
+    else:
+        command.append(path)
+    return command
+
+
+def command_edit(args, config_data):
+    items = _load_items(args.paths, config_data, allow_stdin=False)
+    item = _find_item(items, args.id)
+    command = _editor_command(_resolve_editor(args, config_data), item.source, item.line or 1)
+    if args.dry_run:
+        sys.stdout.write(" ".join(shlex.quote(part) for part in command) + "\n")
+        return 0
+    return subprocess.call(command)
+
+
+def command_path(args, config_data, config_path):
+    config_dir = os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
+    inputs = [_resolved_path(path, config_dir) for path in (config_paths(config_data) or ["life.txt"])]
+    timer = config_section(config_data, "timer")
+    notifications = config_section(config_data, "notifications")
+    data = OrderedDict(
+        (
+            ("config", _resolved_path(config_data.get("_path") or config_path) if (config_data.get("_path") or config_path) else None),
+            ("inputs", inputs),
+            ("write_file", _resolved_path(config_write_file(config_data) or inputs[0], config_dir)),
+            ("editor", str(config_data.get("editor") or "")),
+            ("timer_state", _resolved_path(timer.get("state_file") or "~/.lifetxt_timer.json", config_dir)),
+            ("notification_state", _resolved_path(notifications.get("state_file") or ".cache/lifetxt/notifications.json", config_dir)),
+            ("cache_dir", _resolved_path(".cache/lifetxt", config_dir)),
+        )
+    )
+    if args.format == "json":
+        return _emit(_json_text(data, args.pretty))
+    lines = []
+    for key, value in data.items():
+        if isinstance(value, list):
+            lines.append("%s:" % key)
+            lines.extend("  %s" % entry for entry in value)
+        else:
+            lines.append("%s: %s" % (key, value or "(not set)"))
+    return _emit("\n".join(lines) + "\n")
+
+
+def _group_values(item, group):
+    if group == "status":
+        return [item.status]
+    if group == "type":
+        return [item.kind]
+    if group == "person":
+        for key in ("assignee", "owner", "person", "user"):
+            values = _values(item, key)
+            if values:
+                return values
+        return []
+    return _values(item, group)
+
+
+def command_count(args, config_data):
+    items = _load_items(args.paths, config_data)
+    counts = {}
+    for item in items:
+        values = _group_values(item, args.by) or ["(none)"]
+        for value in set(values):
+            counts[value] = counts.get(value, 0) + 1
+    rows = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0].lower()))
+    if args.format == "json":
+        return _emit(_json_text(OrderedDict(rows), args.pretty), args.output)
+    if args.format == "csv":
+        stream = io.StringIO()
+        writer = csv.writer(stream, lineterminator="\n")
+        writer.writerow((args.by, "count"))
+        writer.writerows(rows)
+        return _emit(stream.getvalue(), args.output)
+    return _emit(_table((args.by.upper(), "COUNT"), rows), args.output)
+
+
+def command_workload(args, config_data):
+    items = _load_items(args.paths, config_data)
+    today = datetime.date.today()
+    cutoff = today + datetime.timedelta(days=args.due_soon_days)
+    data = {}
+    for item in items:
+        if item.kind != "T" or item.status not in OPEN_STATUSES:
+            continue
+        people = _values(item, "assignee") or _values(item, "owner") or ["(unassigned)"]
+        due = _date_value(_first(item, "due"))
+        for person in set(people):
+            bucket = data.setdefault(person, {"open": 0, "due_soon": 0, "overdue": 0, "in_progress": 0})
+            bucket["open"] += 1
+            if item.status == "[/]":
+                bucket["in_progress"] += 1
+            if due is not None and due < today:
+                bucket["overdue"] += 1
+            elif due is not None and due <= cutoff:
+                bucket["due_soon"] += 1
+    ordered = OrderedDict((name, data[name]) for name in sorted(data))
+    if args.format == "json":
+        return _emit(_json_text(ordered, args.pretty))
+    rows = [(name, values["open"], values["in_progress"], values["due_soon"], values["overdue"]) for name, values in ordered.items()]
+    return _emit(_table(("PERSON", "OPEN", "DOING", "DUE SOON", "OVERDUE"), rows))
+
+
+def _attachment_value(value):
+    marker = "#sha256="
+    return value.split(marker, 1)[0] if marker in value else value
+
+
+def _is_within(path, root):
+    try:
+        return os.path.commonpath((os.path.realpath(path), os.path.realpath(root))) == os.path.realpath(root)
+    except ValueError:
+        return False
+
+
+def command_files_open(args, config_data):
+    items = _load_items(args.paths, config_data, allow_stdin=False)
+    item = _find_item(items, args.open_id)
+    attachments = []
+    for key in ("file", "dir"):
+        for value in _values(item, key):
+            attachments.append((key, value))
+    if not attachments:
+        raise ValueError("Item %s has no file: or dir: attachment." % args.open_id)
+    if args.index < 1 or args.index > len(attachments):
+        raise ValueError("--index must be between 1 and %s." % len(attachments))
+    key, raw = attachments[args.index - 1]
+    value = _attachment_value(raw)
+    if "://" in value or "\x00" in value:
+        raise ValueError("Only local filesystem attachments can be opened.")
+    base = os.path.dirname(item.source)
+    path = value if os.path.isabs(value) else os.path.join(base, value)
+    path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+    if not os.path.exists(path):
+        raise ValueError("Attachment does not exist: %s" % path)
+    if key == "file" and not os.path.isfile(path):
+        raise ValueError("file: attachment is not a file: %s" % path)
+    if key == "dir" and not os.path.isdir(path):
+        raise ValueError("dir: attachment is not a directory: %s" % path)
+    if not args.allow_outside and not _is_within(path, base):
+        raise ValueError("Attachment resolves outside the life.txt directory; pass --allow-outside to confirm.")
+    extension = os.path.splitext(path)[1].lower()
+    if os.path.isfile(path) and not args.allow_unsafe and (extension in BLOCKED_OPENERS or os.access(path, os.X_OK)):
+        raise ValueError("Refusing to open a potentially executable attachment; pass --allow-unsafe to confirm.")
+    if args.dry_run:
+        sys.stdout.write(path + "\n")
+        return 0
+    if os.name == "nt":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return 0
+    command = ["open", path] if sys.platform == "darwin" else ["xdg-open", path]
+    return subprocess.call(command)
+
+
+def command_someday(args, config_data):
+    items = _load_items(args.paths, config_data)
+    today = datetime.date.today()
+    cutoff = today - datetime.timedelta(days=args.days)
+    selected = []
+    for item in items:
+        if item.status != "[?]":
+            continue
+        touched = _latest_date(item, ("updated", "created", "do", "due", "on"))
+        if touched is None or touched <= cutoff:
+            selected.append(item)
+    selected.sort(key=lambda item: (_latest_date(item) or datetime.date.min, item.title.lower()))
+    if args.format == "json":
+        return _emit(_json_text([_item_record(item) for item in selected], args.pretty), args.output)
+    if args.format == "life":
+        return _emit("".join(item_to_line(item) + "\n" for item in selected), args.output)
+    rows = [(_item_id(item) or "-", (_latest_date(item) or datetime.date.min).isoformat() if _latest_date(item) else "unknown", _first(item, "project") or "-", item.title) for item in selected]
+    return _emit(_table(("ID", "LAST TOUCHED", "PROJECT", "TITLE"), rows), args.output)

@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x87)
+Last updated: 2026-07-20 (updated x88)
 
 This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
@@ -99,7 +99,9 @@ Design principles:
 ## P2: CLI, Packaging, and Distribution
 
 - [ ] Route the `extra_cli` commands (`next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo`) through `build_parser`. Completion now special-cases them via `entrypoint._EXTRA_COMMANDS`, but `--help`, generated docs, and per-command option completion still cannot see their flags.
-- [ ] Cache `completion values` results keyed by file path and mtime. A lookup reparses the whole file on every keypress-triggered completion (~250 ms for 200 records), which is noticeable on large files.
+- [ ] Cache `completion values` results keyed by file path and mtime. A lookup reparses the whole file on every keypress-triggered completion (~250 ms for 200 records), which is noticeable on large files. `GET /api/complete` has the same problem: it re-reads every path per keystroke.
+- [ ] Complete command arguments in the Web UI command palette, which still only matches command names. The inline widget covers the text fields but not `Ctrl+K`.
+- [ ] Offer completion candidates in the CLI's own interactive prompt (`assist --interactive`), the last input surface with no completion at all.
 - [ ] Split `lifetxt/cli.py` into command-focused modules with a thin registry-based dispatcher.
 - [ ] Split `lifetxt/tui_app.py` into state, command, layout, and rendering modules.
 - [ ] Raise the supported Python baseline to `>=3.10` after clean-environment verification and remove obsolete compatibility code deliberately.

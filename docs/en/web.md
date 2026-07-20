@@ -333,6 +333,55 @@ Supported theme token names mirror the CSS variables without the leading
 tokens. Dotted keys such as `"theme.accent"` and `"dashboard.cards"` are also
 accepted for flat config generators.
 
+## Completion
+
+Text fields complete the values your file already uses, so you reuse
+`project:research` instead of creating `project:reserach` beside it. The
+candidates come from the same layer as the shell completion scripts, the TUI,
+and the MCP `complete` tool, so every surface agrees.
+
+The quick-add bar completes each token as you reach it:
+
+| Typing | Completes |
+|---|---|
+| `@` | project |
+| `#` | tag |
+| `!` | priority |
+| `^` | date words (`tomorrow`, `next_friday`, `+3d`) |
+| `KEY:` | that key's values, e.g. `assignee:` offers people |
+| a bare word after the title | detail key names |
+
+The presence bar completes presence states, and the record editor completes
+inside its Details box.
+
+Keys: `↑`/`↓` to move, `Tab` or `Enter` to accept, `Esc` to dismiss, and
+`Ctrl+Space` to ask for suggestions without typing more. Tapping a suggestion
+works on a phone. `Enter` accepts the suggestion rather than submitting the
+bar, so a half-typed word cannot be filed by accident.
+
+### `GET /api/complete`
+
+The endpoint behind it, also useful on its own:
+
+```bash
+curl 'http://127.0.0.1:8000/api/complete?kind=project&prefix=re&limit=10'
+```
+
+```json
+{"kind": "project", "prefix": "re", "candidates": ["research"]}
+```
+
+| Parameter | Meaning |
+|---|---|
+| `kind` | `state`, `project`, `tag`, `person`, `id`, `type`, `status`, `context`, `priority`, `key`, `team`, `service`, `channel` |
+| `prefix` | Optional filter; prefix matches rank above substring matches |
+| `limit` | Maximum candidates, clamped to 200 (default 20) |
+
+`person` spans `person:`, `owner:`, `assignee:`, `attendee:`, `sender:`,
+`recipient:`, and `user:` at once. `state` and `priority` list the documented
+values first, then any others your file uses. An unknown `kind` returns 400
+with the supported list.
+
 ## Interface Language
 
 The GUI ships English as its source language and translates the interface in

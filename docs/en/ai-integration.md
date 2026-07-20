@@ -133,6 +133,7 @@ client can decide what needs confirmation.
 | `list_messages` | `M` records |
 | `check_line` / `parse_item` | Validate or parse a line without writing |
 | `parse_shorthand` | Preview sigil and date-token expansion |
+| `complete` | Values the file already uses for a kind, so you reuse rather than reinvent |
 | `get_file_state` | Paths, write target, read-only flag, content hashes |
 | `check_files` | Verify `file:`/`dir:` attachments: existence, type, hash, portability |
 | `timer_status` | The running timer, if any |
@@ -164,6 +165,28 @@ The same shorthand the CLI and TUI accept works here:
 produces `[ ] T "Buy milk" project:home tag:errand priority:high due:2026-07-20
 source:mcp id:task_...`. Call `parse_shorthand` with no arguments to get the
 full token list, which is useful to include in a system prompt.
+
+### Reusing existing values
+
+The most common way an agent degrades a file is by inventing a near-duplicate:
+`project:reserach` beside `project:research`, or a fresh `assignee:` spelling
+for someone already recorded. `complete` lists what the file already uses:
+
+```json
+{"name": "complete", "arguments": {"kind": "project", "prefix": "re"}}
+```
+
+```json
+{"kind": "project", "prefix": "re", "count": 1, "values": ["research"]}
+```
+
+Call it with no `kind` to list the supported kinds: `state`, `project`, `tag`,
+`person`, `id`, `type`, `status`, `context`, `priority`, `key`, `team`,
+`service`, and `channel`. `person` spans every people-shaped key at once, and
+`state` and `priority` list the documented values before the file's own.
+
+Prefer checking `complete` before writing a detail whose value is a name you
+did not read from this file in the current session.
 
 ---
 

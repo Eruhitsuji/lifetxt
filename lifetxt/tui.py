@@ -953,6 +953,9 @@ def dashboard_model(args, project_filter=None, search_query="", limit=None):
         "focus": "tasks",
         "sections": sections,
         "summary": summary,
+        # The parsed records, so argument completion can offer the projects,
+        # tags, ids, and people this file actually uses without re-reading it.
+        "items": items,
     }
 
 

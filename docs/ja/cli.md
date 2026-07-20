@@ -1411,6 +1411,28 @@ usage と summary を表示し、`Tab` で選択中の候補を補完します�
 名前が完全一致でない場合は選択中の候補を実行するため、`/do` + `Enter` で `/done` が動きます。
 未知の command は最も近い名前を提示して明示的に失敗します。
 
+command 名の後に空白を入れると、palette はその command の**引数の値**の一覧に
+切り替わり、`Tab` はそちらを補完します:
+
+```txt
+/state <TAB>     available busy focus meeting away commuting …
+/timer <TAB>     start stop status cancel
+/due tomo<TAB>   tomorrow
+/project re<TAB> （ファイル内の "re" で始まる project）
+/goto <TAB>      （ファイル内のレコード id）
+```
+
+選択肢が固定の command（`/view`、`/sort`、`/status`、`/mark`、`/timer`、
+`/export`、`/theme`）は自身の語を提示します。その他は開いているファイルを読むため、
+`/project`、`/context`、`/tag`、`/goto`、`/assign`、`/now`、`/state` は
+ファイルに実在する project・context・tag・id・人名を提示します。文書化された
+一覧にない独自の presence state も含まれます。`/due` は shorthand が受け付ける
+日付語を提示します。`/search` や `/add` のように自由記述を取る command では
+何も提示しません。
+
+上下キーで候補を移動し、`Tab` で選択中のものを確定します。ここで得られる候補は
+shell completion script・Web UI・MCP の `complete` tool と同一です。
+
 #### command 一覧
 
 **view と filter**

@@ -148,7 +148,81 @@ COMMAND_SUBCOMMANDS = {
 }
 
 #: Kinds that `completion values` can read out of a life.txt file.
-VALUE_KINDS = ("state", "project", "tag", "person", "id", "type", "status")
+VALUE_KINDS = ("state", "project", "tag", "person", "id", "type", "status",
+               "context", "priority", "key", "team", "service", "channel")
+
+#: Detail keys whose values feed each kind. One place to look when adding a
+#: kind, and the reason `person` spans every people-shaped key at once.
+_KIND_DETAIL_KEYS = {
+    "state": ("state",),
+    "project": ("project",),
+    "tag": ("tag",),
+    "id": ("id",),
+    "context": ("context",),
+    "priority": ("priority",),
+    "team": ("team",),
+    "service": ("service",),
+    "channel": ("channel",),
+    "person": ("person", "owner", "assignee", "attendee", "sender", "recipient", "user"),
+}
+
+#: Values worth offering before a file contains any, so a new file still
+#: completes usefully. Merged ahead of the file's own values.
+_KIND_BUILTINS = {
+    "state": COMMON_STATES,
+    "priority": ("high", "medium", "low"),
+}
+
+
+def candidates(kind, prefix="", items=None, paths=None, limit=None):
+    """Ranked completion candidates for one kind, shared by every surface.
+
+    `items` lets a caller that already holds parsed records (the Web API and
+    the TUI both do) avoid re-reading the file; `paths` is the CLI's route.
+    Ranking puts prefix matches ahead of substring matches so typing `bu`
+    offers `busy` before `debug`.
+    """
+    if kind not in VALUE_KINDS:
+        raise ValueError("Unknown completion kind %r. Use one of: %s"
+                         % (kind, ", ".join(VALUE_KINDS)))
+
+    if kind == "type":
+        pool = _TYPE_ALIAS_WORDS + list(VALID_TYPES)
+    elif kind == "status":
+        pool = _STATUS_ALIAS_WORDS + list(VALID_STATUSES)
+    elif kind == "key":
+        pool = sorted(KNOWN_KEYS)
+    else:
+        found = _values_from_items(items, kind) if items is not None else _values_from_files(kind, paths)
+        pool = _unique_ordered(list(_KIND_BUILTINS.get(kind, ())) + list(found))
+
+    ranked = _rank(pool, prefix)
+    if limit is not None and limit >= 0:
+        ranked = ranked[:limit]
+    return ranked
+
+
+def _rank(pool, prefix):
+    """Prefix matches first, then substring matches, each keeping pool order."""
+    needle = str(prefix or "").strip().lower()
+    if not needle:
+        return list(pool)
+
+    starts, contains = [], []
+    for value in pool:
+        lowered = str(value).lower()
+        if lowered.startswith(needle):
+            starts.append(value)
+        elif needle in lowered:
+            contains.append(value)
+    return starts + contains
+
+
+def _values_from_items(items, kind):
+    values = []
+    for item in items or ():
+        values.extend(_item_values(item, kind))
+    return _unique_ordered(value for value in values if value)
 
 
 def cmd_completion(args):
@@ -227,20 +301,10 @@ def _values_from_files(kind, paths):
 
 def _item_values(item, kind):
     details = getattr(item, "details", None) or {}
-    if kind == "id":
-        return _detail_list(details, "id")
-    if kind == "project":
-        return _detail_list(details, "project")
-    if kind == "tag":
-        return _detail_list(details, "tag")
-    if kind == "state":
-        return _detail_list(details, "state")
-    if kind == "person":
-        people = []
-        for key in ("person", "owner", "assignee", "attendee", "sender", "recipient", "user"):
-            people.extend(_detail_list(details, key))
-        return people
-    return []
+    values = []
+    for key in _KIND_DETAIL_KEYS.get(kind, ()):
+        values.extend(_detail_list(details, key))
+    return values
 
 
 def _detail_list(details, key):

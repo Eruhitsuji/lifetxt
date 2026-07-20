@@ -573,11 +573,6 @@ def next_repeat_occurrence(item, repeat_base, completion_date):
         raise ValueError(
             "Unrecognized repeat:%s value; cannot materialize the next occurrence." % repeat_value
         )
-    if rule.get("byday"):
-        raise ValueError(
-            "complete does not support BYDAY repeat rules for instance materialization yet; "
-            "edit the due date manually."
-        )
 
     repeat_base = str(repeat_base or "due").strip().lower()
     if repeat_base not in ("due", "done"):
@@ -598,11 +593,58 @@ def next_repeat_occurrence(item, repeat_base, completion_date):
     else:
         anchor = datetime.combine(completion_date, time())
 
-    next_dt = _next_repeat_datetime(anchor, rule["repeat"], rule["interval"])
+    next_dt = _next_occurrence_after(item, anchor, rule)
+    if next_dt is None:
+        return anchor_key, None, rule
     until = rule.get("until")
     if until is not None and next_dt > until:
         return anchor_key, None, rule
     return anchor_key, next_dt, rule
+
+
+def _next_occurrence_after(item, anchor, rule):
+    """First occurrence strictly after the anchor.
+
+    Simple rules keep the original arithmetic; anything with BYDAY,
+    BYMONTHDAY, or BYMONTH goes through the shared expander, which is the only
+    place that knows how those interact.
+    """
+    from .recurrence import RecurrenceError, rule_for_item, expand
+
+    # Decide from the shared parse, not from this module's rule: the local
+    # BYDAY parser drops positional forms such as 1MO, so relying on it would
+    # quietly fall back to plain month arithmetic and land on the wrong day.
+    try:
+        expanded_rule = rule_for_item(item)
+    except RecurrenceError as exc:
+        raise ValueError(str(exc))
+    if expanded_rule is None or not (
+        expanded_rule["byday"] or expanded_rule["bymonthday"] or expanded_rule["bymonth"]
+    ):
+        return _next_repeat_datetime(anchor, rule["repeat"], rule["interval"])
+
+    try:
+        series_start = _series_start(item, anchor)
+        upcoming = expand(
+            expanded_rule,
+            series_start,
+            after=anchor + timedelta(minutes=1),
+            limit=1,
+        )
+    except RecurrenceError as exc:
+        raise ValueError(str(exc))
+    return upcoming[0] if upcoming else None
+
+
+def _series_start(item, anchor):
+    """Anchor the expansion at the item's own start so BYDAY phases line up."""
+    for key in ("due", "do", "from"):
+        values = item.details.get(key)
+        if values:
+            parsed = parse_date_or_datetime(values[0], is_end=False)
+            if parsed is not None:
+                return min(parsed, anchor)
+    return anchor
 
 
 def _add_repeat_matches(matches, item, range_start, range_end):
@@ -631,6 +673,19 @@ def _add_repeat_matches(matches, item, range_start, range_end):
         effective_end = effective_start + timedelta(days=366)
     if until is not None and until < effective_end:
         effective_end = until
+
+    if _add_shared_rrule_matches(
+        matches,
+        item,
+        key,
+        anchor_start,
+        anchor_end,
+        effective_end,
+        range_start,
+        range_end,
+        rule["label"],
+    ):
+        return
 
     byday = rule.get("byday")
     if byday:
@@ -790,6 +845,64 @@ def _positive_int_text(value, default):
     if number <= 0:
         return default
     return number
+
+
+def _add_shared_rrule_matches(
+    matches,
+    item,
+    key,
+    anchor_start,
+    anchor_end,
+    effective_end,
+    range_start,
+    range_end,
+    repeat_label,
+):
+    """Expand a BY*-bearing RRULE with the shared recurrence engine.
+
+    The local parser understands only plain BYDAY, so positional forms such as
+    1MO or -1FR, plus BYMONTHDAY and BYMONTH, used to be dropped and the series
+    silently collapsed to the anchor. Returns False when the rule is outside
+    the shared subset so the caller can keep its own arithmetic.
+    """
+    from .recurrence import RecurrenceError, expand, rule_for_item
+
+    try:
+        rule = rule_for_item(item)
+    except RecurrenceError:
+        return False
+    if rule is None or not (rule["byday"] or rule["bymonthday"] or rule["bymonth"]):
+        return False
+
+    duration = anchor_end - anchor_start
+    try:
+        occurrences = expand(
+            rule,
+            anchor_start,
+            before=effective_end,
+            limit=_MAX_REPEAT_MATCHES,
+        )
+    except RecurrenceError:
+        return False
+
+    emitted = 0
+    for occurrence_index, current in enumerate(occurrences, 1):
+        current_end = current + duration
+        _add_match(
+            matches,
+            "repeat:%s" % key,
+            current,
+            current_end,
+            range_start,
+            range_end,
+            repeat=repeat_label,
+            occurrence_index=occurrence_index,
+        )
+        if _overlaps(current, current_end, range_start, range_end):
+            emitted += 1
+            if emitted >= _MAX_REPEAT_MATCHES:
+                break
+    return True
 
 
 def _add_rrule_byday_matches(

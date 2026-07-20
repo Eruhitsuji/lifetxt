@@ -2105,6 +2105,69 @@ same function the Web UI heatmap and `stats --habits` already use, so all
 surfaces agree. Non-habit `done` is unchanged: `done PATH ID [--date DATE]`
 still marks the item `[x]` and sets `done:DATE` (defaulting to today).
 
+### 13.10 `rrule`: expanding a recurrence
+
+`repeat:` accepts both plain cadences (`daily`, `weekly`) and iCalendar rules
+(`RRULE:FREQ=MONTHLY;BYDAY=1MO`). The rule text alone rarely makes the actual
+dates obvious, so `rrule` expands one into the concrete occurrences that
+`agenda` and `complete` will use.
+
+Expand a rule directly:
+
+```bash
+python -m lifetxt rrule "RRULE:FREQ=MONTHLY;BYDAY=1MO" --from 2026-07-01 --count 3
+```
+
+```txt
+Every month on 1st Monday
+  1  2026-07-06  Mon
+  2  2026-08-03  Mon
+  3  2026-09-07  Mon
+```
+
+Or expand the rule already stored on an item:
+
+```bash
+python -m lifetxt rrule --path life.txt --id standup --count 4
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `--path PATH`, `--id ID` | Read `repeat:` from an existing item instead of passing a rule |
+| `--from DATE` | Series start; defaults to today, or the item's `due:`/`do:`/`from:` |
+| `--after DATE`, `--before DATE` | Restrict output to a window |
+| `--count N` | Maximum occurrences to print (default 10) |
+| `--format text\|json\|life` | Human-readable table, machine-readable JSON, or ready-to-paste life.txt lines |
+| `--type KIND`, `--title TEXT` | Type and title used by `--format life` |
+
+`--format life` emits records you can append directly, which is useful for
+materializing a fixed number of instances instead of relying on `complete`:
+
+```bash
+python -m lifetxt rrule weekly --from 2026-07-06 --count 2 --format life \
+  --type T --title Standup
+```
+
+```txt
+[ ] T Standup due:2026-07-06
+[ ] T Standup due:2026-07-13
+```
+
+The supported subset is `FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`
+(including positional forms such as `1MO` and `-1FR`), `BYMONTHDAY`
+(including negative offsets such as `-1` for the last day), and `BYMONTH`.
+Parts outside that subset are reported on stderr rather than silently
+ignored:
+
+```txt
+Ignoring unsupported RRULE part(s): BYSETPOS
+```
+
+A date-only `UNTIL` covers the whole day, so `UNTIL=20260703` includes an
+occurrence on 2026-07-03 rather than cutting off at midnight.
+
 ## 14. Aliases
 
 Status aliases include:

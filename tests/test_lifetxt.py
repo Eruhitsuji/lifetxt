@@ -2742,15 +2742,32 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
                 content = f.read()
             self.assertEqual(source, content)
 
-    def test_complete_byday_rule_unsupported_fails_loud(self):
+    def test_complete_byday_rule_materializes_the_next_weekday(self):
+        # 2026-07-06 is a Monday, so the next occurrence of MO,WE,FR is the
+        # Wednesday. This used to be refused outright.
         source = '[ ] T ByDay repeat:"RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR" due:2026-07-06 id:s3\n'
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
             stdout, stderr, code = run_cli("complete", path, "s3")
-            self.assertEqual(1, code)
-            self.assertIn("BYDAY", stderr)
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-07-08", content)
+
+    def test_complete_positional_byday_rule_materializes_correctly(self):
+        # First Monday of August 2026 is the 3rd; of September, the 7th.
+        source = '[ ] T Board repeat:"RRULE:FREQ=MONTHLY;BYDAY=1MO" due:2026-08-03 id:s4\n'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(source)
+            stdout, stderr, code = run_cli("complete", path, "s4")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-09-07", content)
 
     def test_complete_repeat_base_done_anchors_on_completion_date(self):
         source = "[ ] T DoneBased repeat:weekly repeat_base:done id:d1\n"
@@ -7672,16 +7689,34 @@ class LifeTxtAssignEdgeCaseTests(unittest.TestCase):
             self.assertIn("ref:bug001", content)
 
 
+_NEUTRAL_CWD = None
+
+
+def _neutral_cwd():
+    """A scratch directory with no lifetxt config in it."""
+    global _NEUTRAL_CWD
+    if _NEUTRAL_CWD is None or not os.path.isdir(_NEUTRAL_CWD):
+        _NEUTRAL_CWD = tempfile.mkdtemp(prefix="lifetxt-cli-")
+    return _NEUTRAL_CWD
+
+
 def run_cli(*args, **kwargs):
     input_text = kwargs.get("input_text")
     env_update = kwargs.get("env_update")
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    # Run from a neutral directory. With cwd=ROOT_DIR, a real .lifetxt.json
+    # left in the repository becomes the config for every test: its `paths`
+    # override stdin input and its `write_file` redirects writes. PYTHONPATH
+    # keeps `python -m lifetxt` importable from outside the tree.
+    env["PYTHONPATH"] = os.pathsep.join(
+        [ROOT_DIR] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
+    )
     if env_update:
         env.update(env_update)
     process = subprocess.Popen(
         [sys.executable, "-m", "lifetxt"] + list(args),
-        cwd=ROOT_DIR,
+        cwd=kwargs.get("cwd") or _neutral_cwd(),
         env=env,
         stdin=subprocess.PIPE if input_text is not None else None,
         stdout=subprocess.PIPE,

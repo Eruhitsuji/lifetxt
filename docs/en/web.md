@@ -333,6 +333,35 @@ Supported theme token names mirror the CSS variables without the leading
 tokens. Dotted keys such as `"theme.accent"` and `"dashboard.cards"` are also
 accepted for flat config generators.
 
+## Interface Language
+
+The GUI ships English as its source language and translates the interface in
+the browser. Set the language per session with `?lang=ja`, or make it the
+default for a workspace with `web.language` in `.lifetxt.json`:
+
+```json
+{"web": {"language": "ja"}}
+```
+
+`?lang=` overrides the config value, so a shared config can still be viewed in
+English with `?lang=en`. Any other value falls back to English.
+
+Two rules govern what gets translated:
+
+- **Interface chrome is translated.** Buttons, tabs, view guides, keyboard-help
+  rows, select options, and the `title`, `placeholder`, and `aria-label`
+  attributes behind them. Labels that embed a live value — `View all 63 (55
+  more)`, `Open 2026-07-20 in Agenda`, `3d overdue` — are matched by pattern so
+  the numbers and dates pass through untouched.
+- **Your records are never translated.** Titles, details, projects, tags, and
+  people come from `life.txt` and are rendered verbatim. A task you named
+  `Done` stays `Done`; it is not rewritten into the translation of the status
+  word.
+
+Views render asynchronously, so the page keeps watching for newly rendered
+content and translates it as it appears. Switching views, refreshing, or
+paging through the calendar does not leave English fragments behind.
+
 ## URL Parameters
 
 The GUI reads query parameters on load. This is useful for bookmarks, wall
@@ -383,6 +412,7 @@ Supported parameters:
 | `kiosk_filter=kind:T,status:[/]` | Kiosk-only compact filter expression |
 | `kiosk_title=TEXT` | Header title shown only in kiosk mode |
 | `theme=dark` or `theme=light` | Force the color theme; useful for kiosks and wall displays where `localStorage` cannot be pre-seeded |
+| `lang=ja` or `lang=en` | Interface language, overriding config `web.language`; records are never translated |
 | `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
 
 ## Command Palette

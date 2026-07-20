@@ -269,7 +269,11 @@ def command_files_open(args, config_data):
     if not args.allow_outside and not _is_within(path, base):
         raise ValueError("Attachment resolves outside the life.txt directory; pass --allow-outside to confirm.")
     extension = os.path.splitext(path)[1].lower()
-    if os.path.isfile(path) and not args.allow_unsafe and (extension in BLOCKED_OPENERS or os.access(path, os.X_OK)):
+    # os.access(X_OK) is meaningless on Windows: it reports True for any
+    # readable file, which would block every attachment. There, the extension
+    # blocklist above is the signal that actually distinguishes an executable.
+    executable_bit = os.name != "nt" and os.access(path, os.X_OK)
+    if os.path.isfile(path) and not args.allow_unsafe and (extension in BLOCKED_OPENERS or executable_bit):
         raise ValueError("Refusing to open a potentially executable attachment; pass --allow-unsafe to confirm.")
     if args.dry_run:
         sys.stdout.write(path + "\n")

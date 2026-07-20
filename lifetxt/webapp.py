@@ -4616,7 +4616,7 @@ HTML_PAGE = r"""<!doctype html>
       </div>
       <div id="filter-chips" class="filter-chips"></div>
       <div id="stats-summary" class="stats-summary" style="display:none"></div>
-      <div id="diagnostics"></div>
+      <div id="diagnostics" data-no-i18n></div>
       <div id="bulk-toolbar" class="bulk-toolbar">
         <span id="bulk-count" class="bulk-toolbar-count">0 selected</span>
         <button class="secondary" onclick="bulkMarkDone()" title="Mark selected as done">✓ Done</button>
@@ -4632,7 +4632,7 @@ HTML_PAGE = r"""<!doctype html>
         <button class="danger" onclick="bulkDelete()" title="Delete selected">Delete</button>
         <button class="secondary" onclick="bulkClearSelection()" title="Clear selection">✕ Clear</button>
       </div>
-      <div id="items" class="content"></div>
+      <div id="items" class="content" data-no-i18n></div>
     </section>
     <section class="dashboard-section page" data-page="dashboard">
       <div class="section-head">
@@ -4672,7 +4672,7 @@ HTML_PAGE = r"""<!doctype html>
                  onkeydown="if(event.key==='Enter'){event.preventDefault();focusQuickAdd();}">
           <button onclick="focusQuickAdd()">Add</button>
         </div>
-        <div id="focus-list" class="focus-list"><div class="empty">Loading…</div></div>
+        <div id="focus-list" class="focus-list" data-no-i18n><div class="empty">Loading…</div></div>
       </div>
     </section>
     <section class="review-section page" data-page="review">
@@ -4696,15 +4696,15 @@ HTML_PAGE = r"""<!doctype html>
         <div class="dash-grid">
           <div class="dash-card">
             <div class="dash-card-title">✅ Completed</div>
-            <div id="review-completed" class="dash-list"><div class="empty">Loading…</div></div>
+            <div id="review-completed" class="dash-list" data-no-i18n><div class="empty">Loading…</div></div>
           </div>
           <div class="dash-card">
             <div class="dash-card-title">🔁 Habits</div>
-            <div id="review-habits" class="dash-list"><div class="empty">Loading…</div></div>
+            <div id="review-habits" class="dash-list" data-no-i18n><div class="empty">Loading…</div></div>
           </div>
           <div class="dash-card">
             <div class="dash-card-title">📓 Journal &amp; mood</div>
-            <div id="review-journal" class="dash-list"><div class="empty">Loading…</div></div>
+            <div id="review-journal" class="dash-list" data-no-i18n><div class="empty">Loading…</div></div>
           </div>
           <div class="dash-card">
             <div class="dash-card-title">⏱️ Elapsed by project</div>
@@ -4763,7 +4763,7 @@ HTML_PAGE = r"""<!doctype html>
             <button class="graph-export-btn" onclick="exportGraphSvg()" title="Download graph as SVG">⇩ SVG</button>
             <button class="graph-export-btn" onclick="exportGraphPng()" title="Download graph as PNG">⇩ PNG</button>
           </div>
-          <div id="graph-panel" class="graph-panel"><div class="empty">Open this panel to load the ID graph.</div></div>
+          <div id="graph-panel" class="graph-panel" data-no-i18n><div class="empty">Open this panel to load the ID graph.</div></div>
         </div>
       </section>
       <section class="agenda-section page" data-page="agenda">
@@ -4795,7 +4795,7 @@ HTML_PAGE = r"""<!doctype html>
           <button class="secondary" onclick="loadTeam()" title="Refresh team board">↺</button>
         </div>
         <div class="section-body">
-          <div id="team-board" class="team-grid"><div class="empty">Loading…</div></div>
+          <div id="team-board" class="team-grid" data-no-i18n><div class="empty">Loading…</div></div>
         </div>
       </section>
       <section class="timeline-section page" data-page="timeline">
@@ -4836,7 +4836,7 @@ HTML_PAGE = r"""<!doctype html>
         </div>
         <div class="section-body">
           <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
-          <div id="notifications" class="stack"></div>
+          <div id="notifications" class="stack" data-no-i18n></div>
         </div>
       </section>
   </main>
@@ -4877,7 +4877,7 @@ HTML_PAGE = r"""<!doctype html>
           <label class="wide" style="margin-top:.35rem">Import raw line
             <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
           </label>
-          <div id="import-raw-preview" class="parse-preview" style="display:none"></div>
+          <div id="import-raw-preview" class="parse-preview" style="display:none" data-no-i18n></div>
           <div class="actions" style="margin-top:.25rem">
             <button type="button" onclick="importRawLine()">Import</button>
             <button type="button" class="secondary" onclick="toggleImportRaw(false)">Cancel</button>
@@ -4906,7 +4906,7 @@ HTML_PAGE = r"""<!doctype html>
         </div>
         <button class="drawer-close-btn" onclick="closeDrawer()" title="Close (Esc)">✕</button>
       </div>
-      <div class="drawer-body" id="drawer-body"></div>
+      <div class="drawer-body" id="drawer-body" data-no-i18n></div>
     </div>
   </div>
 
@@ -4984,7 +4984,7 @@ HTML_PAGE = r"""<!doctype html>
     <div class="modal">
       <h3>Undo history</h3>
       <p class="modal-hint">The browser keeps the last five undoable actions from this session.</p>
-      <div id="undo-history-list" class="undo-history-list"></div>
+      <div id="undo-history-list" class="undo-history-list" data-no-i18n></div>
       <div class="actions" style="margin-top:1rem">
         <button class="secondary" onclick="closeUndoHistoryModal()">Close</button>
       </div>
@@ -5049,41 +5049,523 @@ HTML_PAGE = r"""<!doctype html>
         document.documentElement.style.setProperty(cssVarName(key), String(value).trim());
       }
     }
-    // ── Minimal i18n for static chrome (web.language / ?lang=) ─────
-    // Only UI chrome is translated; user record content stays untouched.
-    const UI_LABELS = {
+    // ── Interface language (web.language / ?lang=) ─────────────────
+    // Translation is keyed by the English source string, so a new label in the
+    // markup only needs a dictionary entry rather than an id or a data
+    // attribute at the call site. Everything the user reads goes through one
+    // pass: text nodes, title/placeholder/aria-label attributes, and strings
+    // built in JavaScript via t().
+    //
+    // User content is never translated. Containers holding record data carry
+    // data-no-i18n and the walker skips those subtrees entirely.
+    const UI_STRINGS = {
       ja: {
-        tabs: {
-          dashboard: "🏠 ダッシュボード", "": "📋 アイテム", agenda: "📅 予定",
-          timeline: "🕒 タイムライン", focus: "🎯 フォーカス", review: "📝 レビュー",
-          messages: "💬 メッセージ", team: "🟢 チーム", status: "👥 ステータス",
-          notifications: "🔔 通知", stats: "📊 統計", graph: "🕸️ グラフ",
-          display: "🪧 表示", kiosk: "🖥️ キオスク",
-        },
-        subtitle: "プレーンテキストのタスク・予定・在席・メモ。",
-        buttons: {"notif-btn": "通知", "refresh-btn": "更新"},
+        // Chrome and navigation
+        "Plain text tasks, schedule, presence, and notes.": "プレーンテキストのタスク・予定・在席・メモ。",
+        "Skip to content": "本文へスキップ",
+        "Dashboard": "ダッシュボード",
+        "Items": "アイテム",
+        "Agenda": "予定",
+        "Timeline": "タイムライン",
+        "Calendar": "カレンダー",
+        "Focus": "フォーカス",
+        "Review": "レビュー",
+        "Messages": "メッセージ",
+        "Team": "チーム",
+        "Status": "ステータス",
+        "Notifications": "通知",
+        "Stats": "統計",
+        "Graph": "グラフ",
+        "Display": "表示",
+        "Kiosk": "キオスク",
+        "Refresh": "更新",
+        "Search": "検索",
+        "Search (/)": "検索 (/)",
+        "Apply": "適用",
+        "All": "すべて",
+        "All types": "すべての種類",
+        "Add": "追加",
+        "Create": "作成",
+        "Cancel": "キャンセル",
+        "Close": "閉じる",
+        "Save": "保存",
+        "Delete": "削除",
+        "Edit": "編集",
+        "Done": "完了",
+        "Open": "未完了",
+        "In Progress": "進行中",
+        "Cancelled": "中止",
+        "Deferred": "延期",
+        "Pending": "保留",
+        "Note": "メモ",
+        "Details": "詳細",
+        "Duplicate": "複製",
+        "Export": "エクスポート",
+        "Export…": "エクスポート…",
+        "Import": "インポート",
+        "Today": "今日",
+        "Week": "週",
+        "Month": "月",
+        "Daily": "日次",
+        "Weekly": "週次",
+        "Monthly": "月次",
+        "Asc": "昇順",
+        "Desc": "降順",
+        "Line": "行",
+        "Title": "タイトル",
+        "Type": "種類",
+        "Project": "プロジェクト",
+        "Tag": "タグ",
+        "Priority": "優先度",
+        "Owner": "担当",
+        "Person": "人物",
+        "Limit": "上限",
+        "No grouping": "グループ化なし",
+        "Set status…": "ステータスを設定…",
+        "Set project…": "プロジェクトを設定…",
+        "Clear": "クリア",
+        "Clear filters": "フィルタを解除",
+        "New record": "新規レコード",
+        "Quick add": "クイック追加",
+        "Set status": "ステータス設定",
+        "End status": "ステータス終了",
+        "Commit": "コミット",
+        "Commit message": "コミットメッセージ",
+        "Copy ID": "IDをコピー",
+        "Copy Link": "リンクをコピー",
+        "Copy Title": "タイトルをコピー",
+        "Copy Markdown": "Markdownをコピー",
+        "Copy Line Number": "行番号をコピー",
+        "Keyboard shortcuts": "キーボードショートカット",
+        "Command palette (actions + jump to item)": "コマンドパレット(操作 + アイテムへ移動)",
+        "Close modal / palette / blur input": "モーダル/パレットを閉じる・入力を解除",
+        "Create a new record or select an editable row.": "レコードを新規作成するか、編集可能な行を選択してください。",
+        "Search, filter, edit, and bulk-manage life.txt records.": "life.txt レコードの検索・絞り込み・編集・一括操作。",
+        "Deadline": "期限",
+        "Reminder": "リマインダー",
+        "Habit": "習慣",
+        "Event": "イベント",
+        "Task": "タスク",
+        "Journal": "ジャーナル",
+        "Message": "メッセージ",
+        "Presence": "在席",
+        // KPI and count chrome
+        "New": "新規",
+        "Notifications ○": "通知 ○",
+        "items": "件",
+        "total": "合計",
+        "open": "未完了",
+        "done": "完了",
+        "overdue": "期限超過",
+        "Blocked": "ブロック中",
+        "selected": "件選択中",
+        "No items found.": "アイテムがありません。",
+        "No agenda items found.": "予定はありません。",
+        "Loading...": "読み込み中...",
+        "Loading…": "読み込み中…",
+        ", / . (Calendar)": ", / . (カレンダー)",
+        "t / m (Calendar)": "t / m (カレンダー)",
+        "Projects": "プロジェクト",
+        "Journal & mood": "日誌と気分",
+        "Needs attention": "要対応",
+        "Nothing overdue or blocked.": "期限超過・ブロック中の項目はありません。",
+        "Elapsed by project": "プロジェクト別の経過時間",
+        "Completions (last 14 days)": "完了数 (直近14日)",
+        "active": "進行中",
+        "deferred": "保留",
+        "available": "対応可能",
+        "busy": "取り込み中",
+        "maybe": "未定",
+        "ongoing": "継続中",
+        "note": "メモ",
+        "action": "アクション",
+        "weekly": "毎週",
+        "dashboard": "ダッシュボード",
+        "agenda": "予定",
+        "timeline": "タイムライン",
+        "calendar": "カレンダー",
+        "focus": "フォーカス",
+        "review": "レビュー",
+        "messages": "メッセージ",
+        "team": "チーム",
+        "status": "ステータス",
+        "notifications": "通知",
+        "stats": "統計",
+        "graph": "グラフ",
+        "A compact overview of open work, agenda pressure, messages, and presence.": "未完了の作業・予定の逼迫度・メッセージ・在席状況をまとめて表示します。",
+        "Combine presence, open workload, and recent messages per person.": "人ごとの在席状況・未完了の作業量・最近のメッセージをまとめます。",
+        "Explore dependencies, references, parent-child links, and related records.": "依存関係・参照・親子リンク・関連レコードを可視化します。",
+        "Filter message records and manage notification-oriented conversations.": "メッセージレコードを絞り込み、通知向けのやり取りを管理します。",
+        "Inspect charted trends for tasks, projects, messages, and journal fields.": "タスク・プロジェクト・メッセージ・日誌の傾向をグラフで確認します。",
+        "Place due, do, and event records on a month or week grid; click any entry to open it.": "期限・実施予定・イベントを月/週のグリッドに配置します。項目をクリックすると開きます。",
+        "Prioritize open, actionable work and reduce noisy context while planning.": "着手可能な未完了作業を優先し、計画中の余計な情報を減らします。",
+        "Review dated work in the selected range, including blocked and upcoming records.": "選択期間の日付付き作業を、ブロック中・今後の予定も含めて確認します。",
+        "Review pending notification records, acknowledge them, or request browser alerts.": "未処理の通知レコードを確認し、既読にするかブラウザ通知を許可します。",
+        "See dated records on a chronological board with empty-range guidance.": "日付付きレコードを時系列ボードで表示します。該当がない期間も案内します。",
+        "Show the latest presence state for each person or active status records only.": "各人の最新の在席状態、または進行中のステータスのみを表示します。",
+        "Summarize completed, carried, blocked, and planned work for a chosen period.": "指定期間の完了・繰り越し・ブロック中・予定の作業を要約します。",
+        "Month/week calendar grid of dated records": "日付付きレコードの月/週カレンダー",
+        "Views": "ビュー",
+        "Actions": "操作",
+        "Quick actions": "クイック操作",
+        "Statistics": "統計",
+        "Team board": "チームボード",
+        "Status view": "ステータスビュー",
+        "Tasks": "タスク",
+        "Habits": "習慣",
+        "Heatmap": "ヒートマップ",
+        "Completed": "完了",
+        "Mood": "気分",
+        "Depth": "深さ",
+        "Rows": "行数",
+        "From": "開始",
+        "To": "終了",
+        "Force": "力学",
+        "Ring": "リング",
+        "Remove": "削除",
+        "Back to top": "先頭へ戻る",
+        "Go to Agenda": "予定へ移動",
+        "Go to Calendar": "カレンダーへ移動",
+        "Go to Dashboard": "ダッシュボードへ移動",
+        "Go to Display mode": "ディスプレイモードへ移動",
+        "Go to Focus": "フォーカスへ移動",
+        "Go to Graph": "グラフへ移動",
+        "Go to Items": "アイテムへ移動",
+        "Go to Kiosk mode": "キオスクモードへ移動",
+        "Go to Messages": "メッセージへ移動",
+        "Go to Notifications": "通知へ移動",
+        "Go to Review": "レビューへ移動",
+        "Go to Stats": "統計へ移動",
+        "Go to Stats view": "統計ビューへ移動",
+        "Go to Status": "ステータスへ移動",
+        "Go to Team": "チームへ移動",
+        "Go to Timeline": "タイムラインへ移動",
+        "Refresh all": "すべて更新",
+        "Refresh calendar": "カレンダーを更新",
+        "Refresh charts": "グラフを更新",
+        "Refresh current view": "現在のビューを更新",
+        "Refresh dashboard": "ダッシュボードを更新",
+        "Refresh dependency graph": "依存グラフを更新",
+        "Refresh focus list": "フォーカス一覧を更新",
+        "Refresh graph": "グラフを更新",
+        "Refresh review": "レビューを更新",
+        "Refresh statistics": "統計を更新",
+        "Refresh status": "ステータスを更新",
+        "Refresh team board": "チームボードを更新",
+        "Refresh timeline": "タイムラインを更新",
+        "Filter by type": "種別で絞り込む",
+        "Group items": "アイテムをグループ化",
+        "Sort by": "並び替え",
+        "Sort order": "並び順",
+        "Active only": "進行中のみ",
+        "Still open": "未完了",
+        "Overdue": "期限超過",
+        "Due today": "今日が期限",
+        "Open tasks": "未完了タスク",
+        "Habits tracked": "記録中の習慣",
+        "Journal entries": "日誌エントリ",
+        "Items blocked by open dependencies": "未完了の依存によりブロック中のアイテム",
+        "Elapsed": "経過時間",
+        "Current time": "現在時刻",
+        "This week": "今週",
+        "This month": "今月",
+        "Last week": "先週",
+        "Last month": "先月",
+        "Next 24h": "今後24時間",
+        "Review range": "レビュー期間",
+        "Review start date": "レビュー開始日",
+        "Review end date": "レビュー終了日",
+        "Timeline range": "タイムライン期間",
+        "Max rows": "最大行数",
+        "Max agenda rows (0 = all)": "予定の最大行数 (0 = すべて)",
+        "Root id (optional)": "ルートID (任意)",
+        "Month grid": "月グリッド",
+        "Single-week grid": "週グリッド",
+        "By Status": "ステータス別",
+        "By Type": "種別別",
+        "‹ Prev": "‹ 前へ",
+        "Next ›": "次へ ›",
+        "Previous period (,)": "前の期間 (,)",
+        "Next period (.)": "次の期間 (.)",
+        "Jump to current period (t)": "現在の期間へ (t)",
+        "Previous / next calendar period": "前/次のカレンダー期間",
+        "Jump to today / toggle month/week": "今日へ移動 / 月・週の切り替え",
+        "Calendar navigation": "カレンダー操作",
+        "Layered left-to-right": "左から右へのレイヤー配置",
+        "Layered top-to-bottom": "上から下へのレイヤー配置",
+        "Force-directed layout (physics simulation)": "力学レイアウト (物理シミュレーション)",
+        "Ring layout (focus in center)": "リングレイアウト (中心にフォーカス)",
+        "New item": "新規アイテム",
+        "New Record": "新規レコード",
+        "New message": "新規メッセージ",
+        "Import raw": "生の行を取り込む",
+        "New item (opens the record editor)": "新規アイテム (レコードエディタを開く)",
+        "Create a new record (n)": "新規レコードを作成 (n)",
+        "Add a task due today… (Enter)": "今日が期限のタスクを追加… (Enter)",
+        "Buy milk @home #errand !high ^tomorrow   (or a full [ ] T line)": "牛乳を買う @home #errand !high ^tomorrow   (完全な [ ] T 行も可)",
+        "Paste a raw life.txt line to populate the form": "life.txt の行を貼り付けるとフォームに反映されます",
+        "Suggested keys: due: est: project: tag: assignee: depends_on: parent:": "推奨キー: due: est: project: tag: assignee: depends_on: parent:",
+        "Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.": "? バッジにカーソルを合わせると項目の説明が表示されます。種別ごとの推奨キーは詳細欄の上に表示されます。",
+        "Update life.txt": "life.txt を更新",
+        "Clear selection": "選択を解除",
+        "Delete selected": "選択項目を削除",
+        "Mark selected as done": "選択項目を完了にする",
+        "Set project on selected items": "選択項目のプロジェクトを設定",
+        "Set status of selected items": "選択項目のステータスを設定",
+        "Toggle bulk selection on focused item": "フォーカス中の項目の一括選択を切り替え",
+        "Item context menu": "アイテムのコンテキストメニュー",
+        "Copy deep link to this item": "このアイテムへのリンクをコピー",
+        "Copy item ID to clipboard": "アイテムIDをクリップボードにコピー",
+        "Copy item as Markdown": "アイテムをMarkdownとしてコピー",
+        "Open actions": "操作を開く",
+        "Open agenda": "予定を開く",
+        "Open focus": "フォーカスを開く",
+        "Open focused item in detail modal": "フォーカス中の項目を詳細モーダルで開く",
+        "Jump to line number": "行番号へ移動",
+        "Jump to line number (opens detail modal)": "行番号へ移動 (詳細モーダルを開く)",
+        "Prev / next item in detail modal": "詳細モーダルで前/次の項目へ",
+        "Prev / next status filter": "前/次のステータスフィルタ",
+        "Move keyboard focus down / up in item list": "アイテム一覧でフォーカスを上下に移動",
+        "Export items as CSV": "アイテムをCSVで書き出す",
+        "Export items as JSON": "アイテムをJSONで書き出す",
+        "Export items as Markdown": "アイテムをMarkdownで書き出す",
+        "Download the currently filtered items": "絞り込み中のアイテムをダウンロード",
+        "Download chart data as CSV": "グラフのデータをCSVでダウンロード",
+        "Download graph as PNG": "グラフをPNGでダウンロード",
+        "Download graph as SVG": "グラフをSVGでダウンロード",
+        "Toggle dark mode": "ダークモードを切り替え",
+        "Toggle dark mode (d)": "ダークモードを切り替え (d)",
+        "Toggle high-contrast theme": "ハイコントラストテーマを切り替え",
+        "Toggle reduced motion": "アニメーション低減を切り替え",
+        "Toggle compact density": "コンパクト表示を切り替え",
+        "Toggle fullscreen": "全画面を切り替え",
+        "Toggle fullscreen (f)": "全画面を切り替え (f)",
+        "Toggle display mode": "ディスプレイモードを切り替え",
+        "Toggle kiosk mode": "キオスクモードを切り替え",
+        "Toggle quick-add bar": "クイック追加バーを切り替え",
+        "Toggle agenda blocked filter": "予定のブロック中フィルタを切り替え",
+        "Toggle between active-only and latest record for everyone": "「進行中のみ」と「全員の最新レコード」を切り替え",
+        "Cycle: show all / only blocked / hide blocked": "切り替え: すべて表示 / ブロック中のみ / ブロック中を隠す",
+        "Exit display mode": "ディスプレイモードを終了",
+        "Exit kiosk mode (Esc)": "キオスクモードを終了 (Esc)",
+        "Open a read-focused wall display mode": "閲覧向けのウォールディスプレイモードを開く",
+        "Open or toggle Display mode": "ディスプレイモードを開く/切り替える",
+        "Command palette": "コマンドパレット",
+        "Command palette (Ctrl+K)": "コマンドパレット (Ctrl+K)",
+        "Ctrl+K display": "Ctrl+K 表示",
+        "Type / for commands, or search items…": "/ でコマンド、そのまま入力でアイテム検索…",
+        "Focus search": "検索にフォーカス",
+        "Show / hide this help": "このヘルプを表示/非表示",
+        "Keyboard shortcuts help": "キーボードショートカットのヘルプ",
+        "Close modal / palette / blur input / exit kiosk": "モーダル/パレットを閉じる・入力を解除・キオスクを終了",
+        "Show undo history": "取り消し履歴を表示",
+        "Enable alerts": "通知を有効化",
+        "Notifications: not yet requested": "通知: 未許可",
+        "Open notifications / enable browser alerts": "通知を開く / ブラウザ通知を有効化",
+        "No elapsed time recorded.": "経過時間の記録はありません。",
       },
     };
+
+    //: Labels that embed a date, count, or duration. A dictionary keyed by
+    //: the whole string could never match these, so each language provides a
+    //: pattern whose $1/$2 placeholders carry the numbers across untouched.
+    const I18N_PATTERNS = {
+      ja: [
+        [/^Open (\d{4}-\d{2}-\d{2}) in Agenda$/, "$1 を予定で開く"],
+        [/^(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})$/, "$1 〜 $2"],
+        [/^View all (\d+) \((\d+) more\)$/, "すべて表示 $1 件 (他 $2 件)"],
+        [/^View all (\d+) →$/, "すべて表示 $1 件 →"],
+        [/^\+(\d+) more$/, "他 $1 件"],
+        [/^Done \((\d+)d\)$/, "完了 ($1日)"],
+        [/^Started (.+)$/, "$1 に開始"],
+        [/^started (\d+) mins? ago$/, "$1 分前に開始"],
+        [/^started (\d+) hrs? ago$/, "$1 時間前に開始"],
+        [/^(\d+)d overdue$/, "$1 日超過"],
+        [/^(\d+)d ago$/, "$1 日前"],
+        [/^(\d+) days$/, "$1 日間"],
+        [/^occ #(\d+)$/, "第 $1 回"],
+      ],
+    };
+
+    //: Classes whose text is life.txt content rather than interface chrome.
+    const I18N_RECORD_CLASSES = [
+      "item", "item-title", "title", "meta", "source",
+      "tl-entry", "tl-title", "cal-entry", "cal-entry-title",
+      "focus-row", "focus-row-title", "focus-row-main", "focus-row-meta",
+      "team-card", "msg-row", "diagnostic", "dash-item", "kpi-value",
+      "dash-row-title", "person-status-title", "person-msg-title", "person-meta",
+      "tl-card-title", "tl-card-meta", "message-thread-meta",
+    ];
+
+    //: Attribute values users read, translated with the same dictionary.
+    const I18N_ATTRIBUTES = ["title", "placeholder", "aria-label"];
+
+    let _i18nApplying = false;
+
     function currentLanguage() {
       const urlLang = (new URLSearchParams(location.search).get("lang") || "").toLowerCase();
       return urlLang || String(appConfig?.web?.language || "").toLowerCase();
     }
-    function applyLanguage() {
-      const lang = currentLanguage();
-      const dict = UI_LABELS[lang];
-      document.documentElement.setAttribute("lang", lang || "en");
-      if (!dict) return;
-      document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
-        const label = dict.tabs[btn.dataset.view || ""];
-        if (label) btn.textContent = label;
+
+    function i18nDictionary() {
+      return UI_STRINGS[currentLanguage()] || null;
+    }
+
+    // Labels here are rarely bare words: they carry a leading icon, a live
+    // count such as "Open (108)", or a shortcut hint such as "Refresh (r)".
+    // Exact matching alone would leave most of the chrome untranslated, so
+    // the affixes are peeled off, the core is translated, and they go back on.
+    const I18N_PREFIX = /^([^\p{L}\p{N}]+)(.*)$/u;
+    // The ASCII parens are written as escapes because they sit inside
+    // character classes, where they cannot balance, and the page-wide
+    // bracket-balance smoke test counts every bracket in the script.
+    const I18N_SUFFIX = /^(.*?)(\s*[\u0028\uFF08][^\u0029\uFF09]*[\u0029\uFF09])$/u;
+
+    /** Translate a string built in JavaScript. Falls back to the source. */
+    function t(text) {
+      const dict = i18nDictionary();
+      if (!dict) return text;
+      return translateString(String(text), dict);
+    }
+
+    function translateString(text, dict) {
+      const trimmed = String(text).trim();
+      if (!trimmed) return text;
+      if (dict[trimmed]) return dict[trimmed];
+      const whole = translateByPattern(trimmed);
+      if (whole) return whole;
+
+      let prefix = "";
+      let core = trimmed;
+      const prefixMatch = I18N_PREFIX.exec(core);
+      if (prefixMatch && prefixMatch[2]) {
+        prefix = prefixMatch[1];
+        core = prefixMatch[2];
+        // "📈 Completions (last 14 days)" is one dictionary key once the icon
+        // is gone, so try it before the suffix rule splits off "(last 14 days)".
+        if (dict[core.trim()]) return prefix + dict[core.trim()];
+      }
+
+      let suffix = "";
+      const suffixMatch = I18N_SUFFIX.exec(core);
+      if (suffixMatch && suffixMatch[1].trim()) {
+        core = suffixMatch[1];
+        suffix = suffixMatch[2];
+      }
+
+      const base = core.trim();
+      const replacement = dict[base] || translateByPattern(base);
+      if (!replacement) return text;
+      return prefix + replacement + suffix;
+    }
+
+    /** Translate a label whose text embeds a date, count, or duration. */
+    function translateByPattern(text) {
+      const patterns = I18N_PATTERNS[currentLanguage()];
+      if (!patterns) return "";
+      for (const [regex, template] of patterns) {
+        const match = regex.exec(text);
+        if (match) {
+          return template.replace(/\$(\d)/g, (_, index) => match[Number(index)] || "");
+        }
+      }
+      return "";
+    }
+
+    function translateTree(root) {
+      const dict = i18nDictionary();
+      if (!dict || !root) return;
+
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          // Never touch user content, scripts, styles, or editable fields.
+          if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          let el = node.parentElement;
+          while (el) {
+            if (el.hasAttribute && el.hasAttribute("data-no-i18n")) return NodeFilter.FILTER_REJECT;
+            // Rendered record rows carry life.txt content, so a record titled
+            // "Done" must not be rewritten as if it were a button label.
+            if (el.classList && I18N_RECORD_CLASSES.some(c => el.classList.contains(c))) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            const tag = el.tagName;
+            if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA") return NodeFilter.FILTER_REJECT;
+            if (el.isContentEditable) return NodeFilter.FILTER_REJECT;
+            el = el.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
       });
-      const subtitle = document.getElementById("app-subtitle");
-      if (subtitle && dict.subtitle) subtitle.textContent = dict.subtitle;
-      for (const [id, text] of Object.entries(dict.buttons || {})) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = text;
+
+      const pending = [];
+      let node = walker.nextNode();
+      while (node) {
+        pending.push(node);
+        node = walker.nextNode();
+      }
+      for (const textNode of pending) {
+        const raw = textNode.nodeValue;
+        const trimmed = raw.trim();
+        const replacement = translateString(trimmed, dict);
+        if (replacement !== trimmed) {
+          // Keep the original surrounding whitespace so layout does not shift.
+          textNode.nodeValue = raw.replace(trimmed, replacement);
+        }
+      }
+
+      const scope = root.querySelectorAll ? root : document;
+      for (const name of I18N_ATTRIBUTES) {
+        scope.querySelectorAll("[" + name + "]").forEach(el => {
+          if (el.closest("[data-no-i18n]")) return;
+          const value = el.getAttribute(name);
+          const trimmed = String(value || "").trim();
+          const replacement = translateString(trimmed, dict);
+          if (replacement !== trimmed) {
+            if (!el.hasAttribute("data-i18n-" + name)) {
+              el.setAttribute("data-i18n-" + name, trimmed);
+            }
+            el.setAttribute(name, replacement);
+          }
+        });
       }
     }
+
+    function applyLanguage() {
+      const lang = currentLanguage();
+      document.documentElement.setAttribute("lang", lang || "en");
+      if (!i18nDictionary()) return;
+      _i18nApplying = true;
+      try {
+        translateTree(document.body);
+      } finally {
+        _i18nApplying = false;
+      }
+    }
+
+    // Views re-render constantly. Observing the document keeps every rendered
+    // view translated without having to remember a call at each render site.
+    function startLanguageObserver() {
+      if (!i18nDictionary() || typeof MutationObserver === "undefined") return;
+      let scheduled = false;
+      const observer = new MutationObserver(() => {
+        if (_i18nApplying || scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+          scheduled = false;
+          applyLanguage();
+        });
+      });
+      // Views render asynchronously and set title/placeholder text as they go,
+      // so attribute changes need watching too, not just inserted nodes.
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: I18N_ATTRIBUTES,
+      });
+    }
+
     function configuredDashboardCards() {
       const raw = appConfig?.web?.dashboard?.cards;
       const list = Array.isArray(raw)
@@ -7012,6 +7494,7 @@ HTML_PAGE = r"""<!doctype html>
       applyConfiguredDashboard();
       initAccessibilityPrefs();
       applyLanguage();
+      startLanguageObserver();
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {

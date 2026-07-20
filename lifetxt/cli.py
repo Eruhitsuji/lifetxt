@@ -1306,6 +1306,60 @@ def build_parser():
     )
     files_cmd.set_defaults(func=command_files)
 
+    rrule_cmd = subparsers.add_parser(
+        "rrule",
+        help="Expand a recurrence rule into concrete occurrences.",
+    )
+    rrule_cmd.add_argument(
+        "rule",
+        nargs="?",
+        default=None,
+        help='Rule to expand, such as daily or "RRULE:FREQ=WEEKLY;BYDAY=MO,WE".',
+    )
+    rrule_cmd.add_argument(
+        "--path",
+        default=None,
+        help="life.txt file to read a rule from instead of passing one.",
+    )
+    rrule_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Expand the repeat: of this item id (requires --path).",
+    )
+    rrule_cmd.add_argument(
+        "--from",
+        dest="start",
+        default=None,
+        help="Series start (YYYY-MM-DD or with a time). Defaults to today, or the item's due/do/from.",
+    )
+    rrule_cmd.add_argument("--after", default=None, help="Only show occurrences on or after this date.")
+    rrule_cmd.add_argument("--before", default=None, help="Only show occurrences on or before this date.")
+    rrule_cmd.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="Maximum occurrences to print. Defaults to 10.",
+    )
+    rrule_cmd.add_argument(
+        "--format",
+        choices=("text", "json", "life"),
+        default="text",
+        help="Output format. life emits one deadline record per occurrence.",
+    )
+    rrule_cmd.add_argument(
+        "--type",
+        dest="kind",
+        default="D",
+        help="Item type for --format life. Defaults to D.",
+    )
+    rrule_cmd.add_argument(
+        "--title",
+        default=None,
+        help="Title for --format life. Defaults to the source item's title.",
+    )
+    rrule_cmd.set_defaults(func=command_rrule)
+
     state_cmd = subparsers.add_parser(
         "state",
         aliases=["s"],
@@ -4051,6 +4105,117 @@ def _render_items_preserving(original_text, items):
         end = getattr(item, "end_line", item.line) or item.line
         lines[start:end] = (item_to_line(item) + ending).splitlines(True)
     return "".join(lines)
+
+
+def command_rrule(args):
+    """Expand a recurrence rule into occurrences."""
+    from .recurrence import RecurrenceError, describe, expand, parse_rule, rule_for_item
+
+    config = _config(args)
+    source_item = None
+    rule = None
+    start_text = getattr(args, "start", None)
+
+    if getattr(args, "item_id", None):
+        if not args.path:
+            raise ValueError("--id requires --path FILE.")
+        id_key = id_key_from_config(config)
+        items, _diagnostics = _parse_life_inputs([args.path], config)
+        matches = [
+            item for item in items if args.item_id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError("No item with %s:%s in %s." % (id_key, args.item_id, args.path))
+        source_item = matches[0]
+        try:
+            rule = rule_for_item(source_item)
+        except RecurrenceError as exc:
+            raise ValueError(str(exc))
+        if rule is None:
+            raise ValueError("Item %s has no repeat: value." % args.item_id)
+        if not start_text:
+            for key in ("due", "do", "from"):
+                values = source_item.details.get(key)
+                if values:
+                    start_text = str(values[0])
+                    break
+    elif args.rule:
+        try:
+            rule = parse_rule(args.rule)
+        except RecurrenceError as exc:
+            raise ValueError(str(exc))
+    else:
+        raise ValueError("Pass a rule, or --path FILE --id ID to expand an item's repeat:.")
+
+    start = datetime.datetime.now().replace(second=0, microsecond=0)
+    if start_text:
+        parsed = parse_date_or_datetime(_resolve_relative_date(start_text), is_end=False)
+        if parsed is None:
+            raise ValueError("Invalid --from %r." % start_text)
+        start = parsed
+
+    after = _rrule_boundary(getattr(args, "after", None), is_end=False)
+    before = _rrule_boundary(getattr(args, "before", None), is_end=True)
+    limit = args.count if args.count and args.count > 0 else 10
+
+    try:
+        occurrences = expand(rule, start, after=after, before=before, limit=limit)
+        description = describe(rule)
+    except RecurrenceError as exc:
+        raise ValueError(str(exc))
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("rule", rule["label"]),
+                ("description", description),
+                ("frequency", rule["name"]),
+                ("interval", rule["interval"]),
+                ("count", rule["count"]),
+                ("until", rule["until"].isoformat() if rule["until"] else None),
+                ("unsupported", list(rule["unsupported"])),
+                ("start", start.isoformat()),
+                ("occurrences", [moment.isoformat() for moment in occurrences]),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    if args.format == "life":
+        title = args.title or (source_item.title if source_item else "Occurrence")
+        lines = []
+        for moment in occurrences:
+            item = Item("[ ]", args.kind, title, OrderedDict([("due", [_rrule_stamp(moment)])]), 0)
+            lines.append(item_to_line(item))
+        write_text(None, "\n".join(lines) + ("\n" if lines else ""))
+        return 0
+
+    sys.stdout.write("%s\n" % description)
+    if rule["unsupported"]:
+        sys.stderr.write(
+            "Ignoring unsupported RRULE part(s): %s\n" % ", ".join(rule["unsupported"])
+        )
+    if not occurrences:
+        sys.stdout.write("No occurrences in range.\n")
+        return 0
+    for index, moment in enumerate(occurrences, 1):
+        sys.stdout.write("%3d  %s  %s\n" % (index, _rrule_stamp(moment), moment.strftime("%a")))
+    return 0
+
+
+def _rrule_stamp(moment):
+    if moment.hour or moment.minute:
+        return moment.strftime("%Y-%m-%dT%H:%M")
+    return moment.date().isoformat()
+
+
+def _rrule_boundary(value, is_end):
+    if not value:
+        return None
+    parsed = parse_date_or_datetime(_resolve_relative_date(value), is_end=is_end)
+    if parsed is None:
+        raise ValueError("Invalid date %r." % value)
+    return parsed
 
 
 def command_state(args):

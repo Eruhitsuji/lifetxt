@@ -83,7 +83,22 @@ class CompletionTests(unittest.TestCase):
         parser = cli.build_parser()
         commands = _subcommand_names(parser)
 
-        self.assertEqual(commands, completion._command_names())
+        offered = completion._command_names()
+
+        self.assertEqual([], sorted(set(commands) - set(offered)))
+        # Nothing may be offered that is neither a subparser nor an extra
+        # command, so a typo here cannot introduce a candidate that fails.
+        allowed = set(commands) | set(completion._extra_command_names())
+        self.assertEqual([], sorted(set(offered) - allowed))
+
+    def test_completion_offers_commands_routed_outside_the_parser(self):
+        # `next`, `standup`, and friends never reach build_parser, so deriving
+        # completion from argparse alone silently dropped them from every shell.
+        offered = completion._command_names()
+
+        for command in ("next", "show", "edit", "path", "count",
+                        "invoice", "standup", "to-ics", "from-todo"):
+            self.assertIn(command, offered)
 
     def test_completion_options_cover_argparse_long_options(self):
         parser = cli.build_parser()

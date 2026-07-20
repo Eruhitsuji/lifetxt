@@ -774,9 +774,26 @@ def build_parser():
         shell_parser.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
         shell_parser.set_defaults(func=command_completion)
     completion_install = completion_subparsers.add_parser("install", help="Print installation instructions.")
-    completion_install.add_argument("--shell", choices=("bash", "zsh", "fish"), help="Shell to show instructions for.")
+    completion_install.add_argument("--shell", choices=("bash", "zsh", "fish", "powershell"), help="Shell to show instructions for.")
     completion_install.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
     completion_install.set_defaults(func=command_completion)
+    # Called by the generated scripts while the user is typing, so it prints
+    # bare candidates and stays quiet when the file is missing or unreadable.
+    from .completion import VALUE_KINDS
+
+    completion_values = completion_subparsers.add_parser(
+        "values",
+        help="Print completion candidates read from a life.txt file.",
+    )
+    completion_values.add_argument(
+        "--kind",
+        choices=VALUE_KINDS,
+        required=True,
+        help="Candidate kind to print, one per line.",
+    )
+    completion_values.add_argument("path", nargs="*", help="life.txt file(s) to read. Defaults to config paths.")
+    completion_values.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    completion_values.set_defaults(func=command_completion)
 
     filter_command = subparsers.add_parser(
         "filter",

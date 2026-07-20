@@ -5127,6 +5127,7 @@ HTML_PAGE = r"""<!doctype html>
         "Clear filters": "フィルタを解除",
         "New record": "新規レコード",
         "Quick add": "クイック追加",
+        "Commands…": "コマンド…",
         "Set status": "ステータス設定",
         "End status": "ステータス終了",
         "Commit": "コミット",
@@ -7689,13 +7690,35 @@ HTML_PAGE = r"""<!doctype html>
     }
 
     // ── Quick-add bar ──────────────────────────────────────────────
+
+    /**
+     * Both editing bars live inside the Items page, so un-hiding one while
+     * another view is active toggles a zero-size element and looks like a
+     * dead button. Switch to Items first, which is where the result of the
+     * edit shows up anyway.
+     */
+    function revealItemsPage() {
+      if (VIEW_PAGE[currentView()] === "items") return;
+      switchWorkspace("");
+    }
+
+    /** Bring a just-revealed bar into view; the FAB sits far below it. */
+    function focusBarInput(inputId, select) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.focus();
+      if (select) input.select();
+      if (input.scrollIntoView) {
+        input.scrollIntoView({block: "center", behavior: "smooth"});
+      }
+    }
+
     function toggleQuickAdd(show) {
       const bar = document.getElementById("quick-add-bar");
-      bar.style.display = (show === undefined ? bar.style.display === "none" : show) ? "" : "none";
-      if (bar.style.display !== "none") {
-        document.getElementById("quick-line").focus();
-        document.getElementById("quick-line").select();
-      }
+      const wanted = show === undefined ? bar.style.display === "none" : show;
+      if (wanted) revealItemsPage();
+      bar.style.display = wanted ? "" : "none";
+      if (wanted) focusBarInput("quick-line", true);
     }
     // ── Presence status ────────────────────────────────────────────
     async function loadPresence() {
@@ -7717,8 +7740,12 @@ HTML_PAGE = r"""<!doctype html>
       const bar = document.getElementById("presence-bar");
       if (!bar) return;
       const visible = show === undefined ? bar.style.display === "none" : show;
+      if (visible) revealItemsPage();
       bar.style.display = visible ? "" : "none";
-      if (visible) { loadPresence(); const i = document.getElementById("presence-input"); if (i) i.focus(); }
+      if (visible) {
+        loadPresence();
+        focusBarInput("presence-input", false);
+      }
     }
 
     async function setPresence() {

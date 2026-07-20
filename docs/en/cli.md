@@ -2014,11 +2014,69 @@ Use `--no-commit-msg` when only validation is desired.
 python -m lifetxt completion bash
 python -m lifetxt completion zsh -o ~/.zfunc/_lifetxt
 python -m lifetxt completion fish -o ~/.config/fish/completions/lifetxt.fish
+python -m lifetxt completion powershell -o $HOME\Documents\PowerShell\lifetxt-completion.ps1
 python -m lifetxt completion install --shell bash
 ```
 
 `completion install` prints commands only. It does not modify shell startup
 files automatically.
+
+Everything the scripts offer is derived from the CLI's own argument parser, so
+a new command or flag appears in completion as soon as it exists.
+
+**Options are scoped to the command being typed.** `lifetxt check --<TAB>`
+offers only the ten flags `check` accepts, not every flag in the program:
+
+```txt
+lifetxt check --<TAB>
+  --help --verify-files --no-files --format --warnings-as-errors
+  --ignore --severity --code --category --config
+```
+
+**Values are completed too.** Fixed sets such as `--type`, `--format`,
+`--theme`, and `--state` come from the format definitions. Subcommands are
+completed as well, so `lifetxt timer <TAB>` offers `start stop status cancel`.
+
+Presence states are completed both as a flag value and as the positional that
+`state`, `s`, and `start` take, which is the form most people type:
+
+```txt
+lifetxt state <TAB>
+  available busy focus meeting away commuting working offline sleeping
+```
+
+#### Candidates from your own file
+
+`state:` is free-form, and projects, tags, IDs, and people are entirely yours,
+so the built-in lists cannot know them. The scripts call a helper command to
+read the current file:
+
+```bash
+python -m lifetxt completion values --kind state
+python -m lifetxt completion values --kind project life.txt
+```
+
+| `--kind` | Candidates |
+|---|---|
+| `state` | The documented states, followed by any others in your file |
+| `project`, `tag`, `id` | Values present in the file |
+| `person` | `person:`, `owner:`, `assignee:`, `attendee:`, `sender:`, `recipient:`, `user:` |
+| `type`, `status` | The format's own sets; no file needed |
+
+Paths default to the config `paths`. Because a shell runs this while you are
+typing, it never fails loudly: an unreadable or missing file yields the
+built-in candidates rather than an error that would corrupt your prompt.
+
+So a file using `state:hyperfocus` completes it alongside the documented set:
+
+```txt
+lifetxt state <TAB>
+  available busy focus meeting away commuting working offline sleeping hyperfocus
+```
+
+PowerShell note: `lifetxt check --<TAB>` does not fire, because PowerShell
+treats a bare `--` as the end-of-parameters marker and never calls the
+completer. Type at least one more character (`lifetxt check --v<TAB>`).
 
 ### 13.8 `deps`
 

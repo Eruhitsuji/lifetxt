@@ -1,9 +1,25 @@
-import os
+"""Shell completion scripts.
 
-from .atomic import atomic_write_text
+Everything a shell offers is derived from `lifetxt/cli.py`'s argparse tree and
+from `lifetxt/model.py`, so a new command or flag shows up in completion the
+moment it exists rather than when someone remembers to update a list here.
+
+Three kinds of candidate are produced:
+
+* **Commands** - the subparser names, with their help text as the description.
+* **Options** - scoped to the command being typed. Offering every flag in the
+  program for every command produced hundreds of wrong candidates.
+* **Values** - the arguments a flag or positional takes. Static sets live in
+  `OPTION_VALUES`; the ones that depend on the user's file (`state`, project,
+  tag, person, id) are fetched at completion time via `completion values`.
+"""
+
+import os
 import sys
 
+from .atomic import atomic_write_text
 from .model import KNOWN_KEYS, STATUS_ALIASES, TYPE_ALIASES, VALID_STATUSES, VALID_TYPES
+from .presence import COMMON_STATES
 
 
 COMMANDS = (
@@ -97,22 +113,58 @@ OPTION_VALUES = {
     "--algorithm": "auto xsk aesgcm",
     "--theme": "auto dark light mono",
     "--keymap": "prompt vim arrows",
-    "--state": "available busy focus meeting away commuting working offline sleeping",
+    # `state:` is free-form in the format, so this is the documented set from
+    # presence.py rather than a closed list. `completion values --kind state`
+    # adds whatever the user's own file already uses.
+    "--state": " ".join(COMMON_STATES),
     "--glyphs": "auto unicode ascii",
+    "--order": "asc desc",
+    "--sort": "line time title type status source",
+    "--visibility": "public team private",
+    "--shell": "bash zsh fish powershell",
+    "--group": "project tag type status person day week month",
+    "--interval": "day week month",
+    "--action": "open edit copy print",
+    "--tool": "fzf peco",
 }
+
+#: Positional arguments worth completing, keyed by command. The value is the
+#: `OPTION_VALUES` key whose candidates apply to the first positional.
+#: `state busy` is the form people actually type, so completing only `--state`
+#: would miss the common case.
+COMMAND_POSITIONAL_VALUES = {
+    "state": "--state",
+    "s": "--state",
+    "start": "--state",
+    "completion": None,  # handled by the subcommand list below
+}
+
+#: Commands whose first positional is a fixed word list rather than a path.
+COMMAND_SUBCOMMANDS = {
+    "completion": ("bash", "zsh", "fish", "powershell", "install", "values"),
+    "timer": ("start", "stop", "status", "cancel"),
+    "git-hook": ("install", "uninstall", "status"),
+    "config": ("show", "path", "init"),
+}
+
+#: Kinds that `completion values` can read out of a life.txt file.
+VALUE_KINDS = ("state", "project", "tag", "person", "id", "type", "status")
 
 
 def cmd_completion(args):
-    if args.completion_command == "install":
+    command = args.completion_command
+    if command == "install":
         output = install_instructions(args.shell)
-    elif args.completion_command == "bash":
+    elif command == "bash":
         output = bash_completion()
-    elif args.completion_command == "zsh":
+    elif command == "zsh":
         output = zsh_completion()
-    elif args.completion_command == "fish":
+    elif command == "fish":
         output = fish_completion()
+    elif command == "values":
+        output = dynamic_values(getattr(args, "kind", None), getattr(args, "path", None))
     else:
-        raise ValueError("completion requires bash, zsh, fish, or install.")
+        raise ValueError("completion requires bash, zsh, fish, values, or install.")
 
     if getattr(args, "output", None):
         _write_text(args.output, output)
@@ -121,45 +173,167 @@ def cmd_completion(args):
     return 0
 
 
+def dynamic_values(kind, paths=None):
+    """Candidates read from the user's own file, one per line.
+
+    Shells call this while the user is typing, so it must never fail loudly:
+    an unreadable or missing file yields the built-in candidates instead of an
+    error that would corrupt the completion display.
+    """
+    if kind not in VALUE_KINDS:
+        raise ValueError("completion values --kind must be one of: %s" % ", ".join(VALUE_KINDS))
+
+    if kind == "type":
+        return "\n".join(_TYPE_ALIAS_WORDS + list(VALID_TYPES)) + "\n"
+    if kind == "status":
+        return "\n".join(_STATUS_ALIAS_WORDS + list(VALID_STATUSES)) + "\n"
+
+    found = _values_from_files(kind, paths)
+    if kind == "state":
+        # The documented states come first so a fresh file still completes.
+        found = _unique_ordered(list(COMMON_STATES) + found)
+    return ("\n".join(found) + "\n") if found else ""
+
+
+def _values_from_files(kind, paths):
+    try:
+        from .config import config_paths, load_config
+        from .parser import parse_text
+        from .paths import expand_paths
+    except Exception:
+        return []
+
+    try:
+        candidates = list(paths) if paths else list(config_paths(load_config(None)) or [])
+        if not candidates:
+            candidates = ["life.txt"]
+        resolved = expand_paths(candidates)
+    except Exception:
+        return []
+
+    values = []
+    for path in resolved:
+        try:
+            with open(path, "r", encoding="utf-8-sig") as handle:
+                # parse_text returns (items, errors); parse errors elsewhere in
+                # the file must not stop the valid lines from completing.
+                items = parse_text(handle.read())[0]
+        except Exception:
+            continue
+        for item in items:
+            values.extend(_item_values(item, kind))
+    return _unique_ordered(value for value in values if value)
+
+
+def _item_values(item, kind):
+    details = getattr(item, "details", None) or {}
+    if kind == "id":
+        return _detail_list(details, "id")
+    if kind == "project":
+        return _detail_list(details, "project")
+    if kind == "tag":
+        return _detail_list(details, "tag")
+    if kind == "state":
+        return _detail_list(details, "state")
+    if kind == "person":
+        people = []
+        for key in ("person", "owner", "assignee", "attendee", "sender", "recipient", "user"):
+            people.extend(_detail_list(details, key))
+        return people
+    return []
+
+
+def _detail_list(details, key):
+    value = details.get(key)
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(entry) for entry in value]
+    return [str(value)]
+
+
+def _value_case_entries():
+    """(`option`, `candidates`) pairs shared by the generated shell scripts."""
+    return sorted(OPTION_VALUES.items())
+
+
 def bash_completion():
     commands = " ".join(_command_names())
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
-    type_values = OPTION_VALUES["--type"]
-    status_values = OPTION_VALUES["--status"]
-    format_values = OPTION_VALUES["--format"]
-    window_values = OPTION_VALUES["--window"]
-    around_values = OPTION_VALUES["--around"]
-    preset_values = OPTION_VALUES["--preset"]
-    algorithm_values = OPTION_VALUES["--algorithm"]
-    theme_values = OPTION_VALUES["--theme"]
-    keymap_values = OPTION_VALUES["--keymap"]
+
+    value_cases = "\n".join(
+        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;' % (option, values)
+        for option, values in _value_case_entries()
+    )
+
+    # Per-command options. Without this every command offered every flag in
+    # the program, which buried the handful that actually applied.
+    command_cases = "\n".join(
+        '    %s) opts="%s" ;;' % (name, " ".join(_command_options(name)))
+        for name in _command_names()
+        if _command_options(name)
+    )
+
+    subcommand_cases = "\n".join(
+        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;' % (name, " ".join(words))
+        for name, words in sorted(COMMAND_SUBCOMMANDS.items())
+    )
+
+    positional_cases = "\n".join(
+        '    %s) COMPREPLY=( $(compgen -W "$(%s)" -- "$cur") ); return 0 ;;'
+        % (name, _dynamic_call(COMMAND_POSITIONAL_VALUES[name]))
+        for name in sorted(COMMAND_POSITIONAL_VALUES)
+        if COMMAND_POSITIONAL_VALUES[name]
+    )
+
     return """# lifetxt bash completion
+_lifetxt_values() {
+  # Candidates from the user's own file, with the built-in list as fallback.
+  lifetxt completion values --kind "$1" 2>/dev/null
+}
 _lifetxt_completion() {
-  local cur prev
+  local cur prev cmd opts i
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-  case "$prev" in
-    --type) COMPREPLY=( $(compgen -W "%(type_values)s" -- "$cur") ); return 0 ;;
-    --status) COMPREPLY=( $(compgen -W "%(status_values)s" -- "$cur") ); return 0 ;;
-    --format) COMPREPLY=( $(compgen -W "%(format_values)s" -- "$cur") ); return 0 ;;
-    --window) COMPREPLY=( $(compgen -W "%(window_values)s" -- "$cur") ); return 0 ;;
-    --around) COMPREPLY=( $(compgen -W "%(around_values)s" -- "$cur") ); return 0 ;;
-    --preset) COMPREPLY=( $(compgen -W "%(preset_values)s" -- "$cur") ); return 0 ;;
-    --algorithm) COMPREPLY=( $(compgen -W "%(algorithm_values)s" -- "$cur") ); return 0 ;;
-    --theme) COMPREPLY=( $(compgen -W "%(theme_values)s" -- "$cur") ); return 0 ;;
-    --keymap) COMPREPLY=( $(compgen -W "%(keymap_values)s" -- "$cur") ); return 0 ;;
-  esac
+  cmd=""
+  for ((i=1; i<COMP_CWORD; i++)); do
+    case "${COMP_WORDS[i]}" in
+      -*) ;;
+      *) cmd="${COMP_WORDS[i]}"; break ;;
+    esac
+  done
 
-  if [[ "$cur" == -* ]]; then
-    COMPREPLY=( $(compgen -W "%(options)s" -- "$cur") )
-    return 0
-  fi
+  case "$prev" in
+%(value_cases)s
+    --project) COMPREPLY=( $(compgen -W "$(_lifetxt_values project)" -- "$cur") ); return 0 ;;
+    --tag|--tag-all|--exclude-tag) COMPREPLY=( $(compgen -W "$(_lifetxt_values tag)" -- "$cur") ); return 0 ;;
+    --id|--match-id) COMPREPLY=( $(compgen -W "$(_lifetxt_values id)" -- "$cur") ); return 0 ;;
+    --person|--owner|--assignee|--attendee|--sender|--recipient|--user) COMPREPLY=( $(compgen -W "$(_lifetxt_values person)" -- "$cur") ); return 0 ;;
+  esac
 
   if [[ $COMP_CWORD -le 1 ]]; then
     COMPREPLY=( $(compgen -W "%(commands)s" -- "$cur") )
     return 0
+  fi
+
+  if [[ "$cur" == -* ]]; then
+    opts=""
+    case "$cmd" in
+%(command_cases)s
+    esac
+    [[ -z "$opts" ]] && opts="%(options)s"
+    COMPREPLY=( $(compgen -W "$opts" -- "$cur") )
+    return 0
+  fi
+
+  # The word right after the command: a fixed subcommand or a value list.
+  if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "$cmd" ]]; then
+    case "$cmd" in
+%(subcommand_cases)s
+%(positional_cases)s
+    esac
   fi
 
   COMPREPLY=( $(compgen -f -X '!*.txt' -- "$cur") $(compgen -f -X '!*.life.txt' -- "$cur") $(compgen -f -X '!*_life.txt' -- "$cur") )
@@ -168,52 +342,82 @@ complete -F _lifetxt_completion lifetxt
 """ % {
         "commands": commands,
         "options": options,
-        "type_values": type_values,
-        "status_values": status_values,
-        "format_values": format_values,
-        "window_values": window_values,
-        "around_values": around_values,
-        "preset_values": preset_values,
-        "algorithm_values": algorithm_values,
-        "theme_values": theme_values,
-        "keymap_values": keymap_values,
+        "value_cases": value_cases,
+        "command_cases": command_cases,
+        "subcommand_cases": subcommand_cases,
+        "positional_cases": positional_cases,
     }
 
 
+def _dynamic_call(option_key):
+    kind = option_key.lstrip("-")
+    return "_lifetxt_values %s" % kind
+
+
 def zsh_completion():
-    commands = " ".join(_command_names())
+    commands = " ".join(
+        "'%s:%s'" % (name, _command_help(name).replace(":", " ").replace("'", ""))
+        for name in _command_names()
+    )
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
-    type_values = OPTION_VALUES["--type"]
-    status_values = " ".join("'%s'" % value for value in VALID_STATUSES)
-    status_words = " ".join(_STATUS_ALIAS_WORDS)
-    format_values = OPTION_VALUES["--format"]
-    window_values = OPTION_VALUES["--window"]
-    around_values = OPTION_VALUES["--around"]
-    preset_values = OPTION_VALUES["--preset"]
-    algorithm_values = OPTION_VALUES["--algorithm"]
-    theme_values = OPTION_VALUES["--theme"]
-    keymap_values = OPTION_VALUES["--keymap"]
+
+    value_cases = "\n".join(
+        "    %s) _values '%s' %s; return ;;"
+        % (option, option.lstrip("-"), " ".join(values.split()))
+        for option, values in _value_case_entries()
+    )
+    command_cases = "\n".join(
+        "      %s) _values 'option' %s; return ;;" % (name, " ".join(_command_options(name)))
+        for name in _command_names()
+        if _command_options(name)
+    )
+    subcommand_cases = "\n".join(
+        "      %s) _values 'subcommand' %s; return ;;" % (name, " ".join(words))
+        for name, words in sorted(COMMAND_SUBCOMMANDS.items())
+    )
+    positional_cases = "\n".join(
+        "      %s) _values 'state' ${(f)\"$(lifetxt completion values --kind state 2>/dev/null)\"}; return ;;" % name
+        for name in sorted(COMMAND_POSITIONAL_VALUES)
+        if COMMAND_POSITIONAL_VALUES[name]
+    )
+
     return """#compdef lifetxt
 # lifetxt zsh completion
 _lifetxt() {
   local -a commands options
+  local cmd i
   commands=(%(commands)s)
   options=(%(options)s)
+
+  cmd=""
+  for (( i = 2; i < CURRENT; i++ )); do
+    case "$words[i]" in
+      -*) ;;
+      *) cmd="$words[i]"; break ;;
+    esac
+  done
+
   case "$words[CURRENT-1]" in
-    --type) _values 'type' %(type_values)s; return ;;
-    --status) _values 'status' %(status_words)s %(status_values)s; return ;;
-    --format) _values 'format' %(format_values)s; return ;;
-    --window) _values 'window' %(window_values)s; return ;;
-    --around) _values 'around' %(around_values)s; return ;;
-    --preset) _values 'preset' %(preset_values)s; return ;;
-    --algorithm) _values 'algorithm' %(algorithm_values)s; return ;;
-    --theme) _values 'theme' %(theme_values)s; return ;;
-    --keymap) _values 'keymap' %(keymap_values)s; return ;;
+%(value_cases)s
+    --project) _values 'project' ${(f)"$(lifetxt completion values --kind project 2>/dev/null)"}; return ;;
+    --tag|--tag-all|--exclude-tag) _values 'tag' ${(f)"$(lifetxt completion values --kind tag 2>/dev/null)"}; return ;;
+    --id|--match-id) _values 'id' ${(f)"$(lifetxt completion values --kind id 2>/dev/null)"}; return ;;
+    --person|--owner|--assignee|--attendee|--sender|--recipient|--user) _values 'person' ${(f)"$(lifetxt completion values --kind person 2>/dev/null)"}; return ;;
   esac
+
   if [[ CURRENT -eq 2 ]]; then
-    _values 'command' $commands
+    _describe 'command' commands
   elif [[ "$PREFIX" == -* ]]; then
+    case "$cmd" in
+%(command_cases)s
+    esac
     _values 'option' $options
+  elif [[ "$words[CURRENT-1]" == "$cmd" ]]; then
+    case "$cmd" in
+%(subcommand_cases)s
+%(positional_cases)s
+    esac
+    _files -g '*.txt'
   else
     _files -g '*.txt'
   fi
@@ -222,36 +426,61 @@ _lifetxt "$@"
 """ % {
         "commands": commands,
         "options": options,
-        "type_values": type_values,
-        "status_words": status_words,
-        "status_values": status_values,
-        "format_values": format_values,
-        "window_values": window_values,
-        "around_values": around_values,
-        "preset_values": preset_values,
-        "algorithm_values": algorithm_values,
-        "theme_values": theme_values,
-        "keymap_values": keymap_values,
+        "value_cases": value_cases,
+        "command_cases": command_cases,
+        "subcommand_cases": subcommand_cases,
+        "positional_cases": positional_cases,
     }
 
 
 def fish_completion():
     lines = ["# lifetxt fish completion"]
     for command in _command_names():
-        lines.append("complete -c lifetxt -f -n '__fish_use_subcommand' -a '%s'" % command)
-    for option in sorted(set(COMMON_OPTIONS + _all_options())):
-        if option.startswith("--"):
-            lines.append("complete -c lifetxt -l %s" % option[2:])
-    status_values = " ".join(['"%s"' % value for value in VALID_STATUSES])
-    lines.append("complete -c lifetxt -l type -a '%s'" % OPTION_VALUES["--type"])
-    lines.append("complete -c lifetxt -l status -a '%s %s'" % (" ".join(_STATUS_ALIAS_WORDS), status_values))
-    lines.append("complete -c lifetxt -l format -a '%s'" % OPTION_VALUES["--format"])
-    lines.append("complete -c lifetxt -l window -a '%s'" % OPTION_VALUES["--window"])
-    lines.append("complete -c lifetxt -l around -a '%s'" % OPTION_VALUES["--around"])
-    lines.append("complete -c lifetxt -l preset -a '%s'" % OPTION_VALUES["--preset"])
-    lines.append("complete -c lifetxt -l algorithm -a '%s'" % OPTION_VALUES["--algorithm"])
-    lines.append("complete -c lifetxt -l theme -a '%s'" % OPTION_VALUES["--theme"])
-    lines.append("complete -c lifetxt -l keymap -a '%s'" % OPTION_VALUES["--keymap"])
+        lines.append(
+            "complete -c lifetxt -f -n '__fish_use_subcommand' -a '%s' -d '%s'"
+            % (command, _command_help(command).replace("'", ""))
+        )
+
+    # Options are offered only under the commands that accept them.
+    for command in _command_names():
+        command_options = _command_options(command)
+        if not command_options:
+            continue
+        for option in command_options:
+            lines.append(
+                "complete -c lifetxt -n '__fish_seen_subcommand_from %s' -l %s"
+                % (command, option[2:])
+            )
+
+    for option, values in _value_case_entries():
+        lines.append("complete -c lifetxt -l %s -a '%s'" % (option[2:], values))
+
+    for name, words in sorted(COMMAND_SUBCOMMANDS.items()):
+        lines.append(
+            "complete -c lifetxt -f -n '__fish_seen_subcommand_from %s' -a '%s'"
+            % (name, " ".join(words))
+        )
+
+    for name in sorted(COMMAND_POSITIONAL_VALUES):
+        if not COMMAND_POSITIONAL_VALUES[name]:
+            continue
+        lines.append(
+            "complete -c lifetxt -f -n '__fish_seen_subcommand_from %s' "
+            "-a '(lifetxt completion values --kind state 2>/dev/null)'" % name
+        )
+
+    for kind, option_names in (
+        ("project", ("project",)),
+        ("tag", ("tag", "tag-all", "exclude-tag")),
+        ("id", ("id", "match-id")),
+        ("person", ("person", "owner", "assignee", "attendee", "sender", "recipient", "user")),
+    ):
+        for option_name in option_names:
+            lines.append(
+                "complete -c lifetxt -l %s -a '(lifetxt completion values --kind %s 2>/dev/null)'"
+                % (option_name, kind)
+            )
+
     return "\n".join(lines) + "\n"
 
 
@@ -282,6 +511,9 @@ lifetxt completion zsh > ~/.zfunc/_lifetxt
 
 # fish
 lifetxt completion fish > ~/.config/fish/completions/lifetxt.fish
+
+# powershell
+lifetxt completion powershell -o $HOME\\Documents\\PowerShell\\lifetxt-completion.ps1
 """
 
 
@@ -380,21 +612,90 @@ def _all_options():
     return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + list(_parser_long_options()) + detail_options))
 
 
+def _extra_command_names():
+    """Commands the entrypoint routes to `extra_cli` instead of the parser.
+
+    They are real, working commands (`next`, `standup`, `invoice`, ...) but
+    they never reach `build_parser`, so deriving completion from argparse
+    alone silently dropped them from every shell.
+    """
+    try:
+        from .entrypoint import _EXTRA_COMMANDS
+
+        return tuple(sorted(_EXTRA_COMMANDS))
+    except Exception:
+        return ()
+
+
 def _command_names():
-    return tuple(_unique_ordered(list(_parser_command_names()) or list(COMMANDS)))
+    names = list(_parser_command_names()) or list(COMMANDS)
+    return tuple(_unique_ordered(names + list(_extra_command_names())))
 
 
-def _parser_command_names():
+#: Building the parser is expensive and generating a script asks for every
+#: command's options, so the tree is built once per process rather than ~70
+#: times. Cleared by `_reset_parser_cache` in tests.
+_SUBPARSER_CACHE = {}
+
+
+def _reset_parser_cache():
+    _SUBPARSER_CACHE.clear()
+
+
+def _subparser_map():
+    """Command name -> its argparse subparser, or an empty mapping."""
+    if "map" in _SUBPARSER_CACHE:
+        return _SUBPARSER_CACHE["map"]
+
     try:
         from . import cli
 
         parser = cli.build_parser()
     except Exception:
-        return ()
+        return {}
+
+    found = {}
     for action in parser._actions:
         if action.__class__.__name__ == "_SubParsersAction":
-            return tuple(action.choices.keys())
-    return ()
+            found = dict(action.choices)
+            break
+    _SUBPARSER_CACHE["map"] = found
+    return found
+
+
+def _command_options(name):
+    """Long options accepted by one command, including its own subcommands."""
+    subparser = _subparser_map().get(name)
+    if subparser is None:
+        return ()
+
+    options = []
+
+    def walk(arg_parser):
+        for action in arg_parser._actions:
+            for option in getattr(action, "option_strings", ()):
+                if option.startswith("--"):
+                    options.append(option)
+            if action.__class__.__name__ == "_SubParsersAction":
+                for nested in action.choices.values():
+                    walk(nested)
+
+    walk(subparser)
+    return tuple(_unique_ordered(options + list(COMMON_OPTIONS)))
+
+
+def _command_help(name):
+    """One-line description shown beside a command in zsh and fish menus."""
+    subparser = _subparser_map().get(name)
+    text = (getattr(subparser, "description", "") or "").strip()
+    if not text:
+        return name
+    first = text.split("\n")[0].strip()
+    return first[:70]
+
+
+def _parser_command_names():
+    return tuple(_subparser_map().keys())
 
 
 def _parser_long_options():

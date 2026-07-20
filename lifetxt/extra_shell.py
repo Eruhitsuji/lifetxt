@@ -30,15 +30,139 @@ from .extra_common import *
 
 
 def _powershell_completion_script():
-    commands = sorted(
-        set(
-            (
-                "agenda", "archive", "assist", "batch", "check", "cleanup", "complete", "completion", "config", "count", "demo", "deps", "doctor", "done", "edit", "files", "filter", "from-csv", "from-json", "from-jsonl", "from-markdown", "from-todo", "fzf", "git-hook", "health", "ids", "import-ics", "inbox", "invoice", "links", "markdown", "mcp", "next", "notify", "path", "quick", "review", "search", "serve", "show", "standup", "start", "state", "stats", "status", "stop", "summary", "sync-ics", "timer", "to-csv", "to-ics", "to-json", "to-jsonl", "tui", "undo", "who"
-            )
-        )
+    """Native argument completion for PowerShell.
+
+    Everything is derived from `completion.py`, which reads the argparse tree,
+    so this cannot drift the way the previous hand-maintained command list did
+    (it had lost `rrule`, `tag`, `plot`, and `lint`, and still listed commands
+    that no longer existed).
+    """
+    from .completion import (
+        COMMAND_SUBCOMMANDS,
+        OPTION_VALUES,
+        _command_names,
+        _command_options,
+        _command_help,
     )
-    quoted = ", ".join("'%s'" % value for value in commands)
-    return """# lifetxt PowerShell native argument completion\n$LifetxtCommands = @(%s)\nRegister-ArgumentCompleter -Native -CommandName lifetxt -ScriptBlock {\n    param($wordToComplete, $commandAst, $cursorPosition)\n    $tokens = $commandAst.CommandElements\n    if ($tokens.Count -le 2) {\n        $LifetxtCommands | Where-Object { $_ -like \"$wordToComplete*\" } | ForEach-Object {\n            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)\n        }\n    }\n}\n""" % quoted
+
+    commands = _command_names()
+    command_list = ", ".join("'%s'" % name for name in commands)
+    help_map = "\n".join(
+        "    '%s' = '%s'" % (name, _command_help(name).replace("'", ""))
+        for name in commands
+    )
+    option_map = "\n".join(
+        "    '%s' = @(%s)" % (name, ", ".join("'%s'" % opt for opt in _command_options(name)))
+        for name in commands
+        if _command_options(name)
+    )
+    value_map = "\n".join(
+        "    '%s' = @(%s)" % (option, ", ".join("'%s'" % word for word in values.split()))
+        for option, values in sorted(OPTION_VALUES.items())
+    )
+    subcommand_map = "\n".join(
+        "    '%s' = @(%s)" % (name, ", ".join("'%s'" % word for word in words))
+        for name, words in sorted(COMMAND_SUBCOMMANDS.items())
+    )
+
+    return """# lifetxt PowerShell native argument completion
+$LifetxtCommands = @(%(commands)s)
+$LifetxtCommandHelp = @{
+%(help_map)s
+}
+$LifetxtCommandOptions = @{
+%(option_map)s
+}
+$LifetxtOptionValues = @{
+%(value_map)s
+}
+$LifetxtSubcommands = @{
+%(subcommand_map)s
+}
+
+function Get-LifetxtDynamicValue($kind) {
+    # Candidates from the user's own file. Completion must stay silent when
+    # the file is missing, so failures fall back to an empty list.
+    try { & lifetxt completion values --kind $kind 2>$null } catch { @() }
+}
+
+Register-ArgumentCompleter -Native -CommandName lifetxt -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $tokens = @($commandAst.CommandElements | ForEach-Object { $_.ToString() })
+    $result = { param($text, $tip)
+        [System.Management.Automation.CompletionResult]::new($text, $text, 'ParameterValue', $tip)
+    }
+
+    # Index from 1 explicitly: `$tokens[1..0]` is a *reverse* range in
+    # PowerShell, so on a bare `lifetxt ` it would hand back the exe name and
+    # the command list would never be offered.
+    $command = $null
+    for ($i = 1; $i -lt $tokens.Count; $i++) {
+        if ($tokens[$i] -notlike '-*') { $command = $tokens[$i]; break }
+    }
+
+    $previous = ''
+    if ($tokens.Count -ge 2) { $previous = $tokens[$tokens.Count - 1] }
+    if ($previous -eq $wordToComplete -and $tokens.Count -ge 3) {
+        $previous = $tokens[$tokens.Count - 2]
+    }
+
+    # A value for the flag just typed.
+    if ($LifetxtOptionValues.ContainsKey($previous)) {
+        return $LifetxtOptionValues[$previous] |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object { & $result $_ $previous }
+    }
+    $dynamic = @{
+        '--project' = 'project'; '--tag' = 'tag'; '--tag-all' = 'tag';
+        '--exclude-tag' = 'tag'; '--id' = 'id'; '--match-id' = 'id';
+        '--person' = 'person'; '--owner' = 'person'; '--assignee' = 'person';
+        '--attendee' = 'person'; '--sender' = 'person'; '--recipient' = 'person'
+    }
+    if ($dynamic.ContainsKey($previous)) {
+        return Get-LifetxtDynamicValue $dynamic[$previous] |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object { & $result $_ $previous }
+    }
+
+    # The command name itself.
+    if (-not $command -or $command -eq $wordToComplete) {
+        return $LifetxtCommands |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object { & $result $_ $LifetxtCommandHelp[$_] }
+    }
+
+    # Options, scoped to the command being typed.
+    if ($wordToComplete -like '-*') {
+        $options = $LifetxtCommandOptions[$command]
+        if (-not $options) { $options = @('--config', '--help') }
+        return $options |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object { & $result $_ $command }
+    }
+
+    # A fixed subcommand, or a presence state for the state commands.
+    if ($previous -eq $command) {
+        if ($LifetxtSubcommands.ContainsKey($command)) {
+            return $LifetxtSubcommands[$command] |
+                Where-Object { $_ -like "$wordToComplete*" } |
+                ForEach-Object { & $result $_ $command }
+        }
+        if (@('state', 's', 'start') -contains $command) {
+            return Get-LifetxtDynamicValue 'state' |
+                Where-Object { $_ -like "$wordToComplete*" } |
+                ForEach-Object { & $result $_ 'state' }
+        }
+    }
+}
+""" % {
+        "commands": command_list,
+        "help_map": help_map,
+        "option_map": option_map,
+        "value_map": value_map,
+        "subcommand_map": subcommand_map,
+    }
 
 
 def command_completion(args):

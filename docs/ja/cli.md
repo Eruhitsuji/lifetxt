@@ -1709,10 +1709,68 @@ python -m lifetxt git-hook uninstall
 python -m lifetxt completion bash
 python -m lifetxt completion zsh -o ~/.zfunc/_lifetxt
 python -m lifetxt completion fish -o ~/.config/fish/completions/lifetxt.fish
+python -m lifetxt completion powershell -o $HOME\Documents\PowerShell\lifetxt-completion.ps1
 python -m lifetxt completion install --shell bash
 ```
 
 `completion install` は導入手順を表示するだけで、shell startup file は自動変更しません。
+
+候補はすべて CLI 自身の argument parser から生成されるため、コマンドや flag を
+追加すればその時点で補完に現れます。
+
+**option は入力中のコマンドに限定されます。** `lifetxt check --<TAB>` は
+プログラム全体の flag ではなく `check` が受け付ける 10 個だけを提示します:
+
+```txt
+lifetxt check --<TAB>
+  --help --verify-files --no-files --format --warnings-as-errors
+  --ignore --severity --code --category --config
+```
+
+**値も補完されます。** `--type`、`--format`、`--theme`、`--state` などの固定集合は
+フォーマット定義に由来します。subcommand も補完され、`lifetxt timer <TAB>` は
+`start stop status cancel` を提示します。
+
+presence の state は flag の値としてだけでなく、`state`・`s`・`start` が取る
+positional としても補完されます。実際に入力するのはこの形です:
+
+```txt
+lifetxt state <TAB>
+  available busy focus meeting away commuting working offline sleeping
+```
+
+#### 自分のファイルからの候補
+
+`state:` は自由記述であり、project・tag・id・人名は利用者固有のものなので、
+組み込みの一覧では表現できません。生成された script は補助コマンドを呼び出して
+現在のファイルを読みます:
+
+```bash
+python -m lifetxt completion values --kind state
+python -m lifetxt completion values --kind project life.txt
+```
+
+| `--kind` | 候補 |
+|---|---|
+| `state` | 文書化された state に続けて、ファイル内の独自 state |
+| `project`、`tag`、`id` | ファイル内に存在する値 |
+| `person` | `person:`、`owner:`、`assignee:`、`attendee:`、`sender:`、`recipient:`、`user:` |
+| `type`、`status` | フォーマット自身の集合。ファイル不要 |
+
+path 省略時は config の `paths` を使います。shell は入力中にこれを実行するため、
+決して fail-loud にはなりません。読めないファイルや存在しないファイルの場合は、
+prompt を壊すエラーではなく組み込みの候補を返します。
+
+そのため `state:hyperfocus` を使っているファイルでは次のようになります:
+
+```txt
+lifetxt state <TAB>
+  available busy focus meeting away commuting working offline sleeping hyperfocus
+```
+
+PowerShell の注意点: `lifetxt check --<TAB>` は動作しません。PowerShell は単独の
+`--` を「パラメータ終端」として扱い、completer を呼び出さないためです。
+`lifetxt check --v<TAB>` のように 1 文字以上入力してください。
 
 ### 13.8 `deps`
 

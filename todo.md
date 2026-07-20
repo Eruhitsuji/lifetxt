@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x86)
+Last updated: 2026-07-20 (updated x87)
 
 This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
@@ -30,8 +30,10 @@ Design principles:
 - [ ] Resolve the repeated `body:` plus continuation ambiguity and document the lossless canonical representation or reject the form explicitly.
 - [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, and auto-reload.
 - [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
+- [ ] Add a completion regression test that sources the generated bash script and drives `_lifetxt_completion` directly. The current tests assert on the generated text, which cannot catch a script that is syntactically valid but behaves wrongly.
 - [ ] Verify SMTP delivery with safe test accounts, including STARTTLS, authentication errors, multiple recipients, watcher state, and provider app-password guidance.
 - [ ] Add browser-level smoke tests for the Web UI, including mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, and accessibility focus behavior.
+- [ ] Warn when `serve PATH` reads one file but writes to a different one because config `write_file` overrides it. A POSIX `write_file` on Windows silently resolves drive-relative and creates a file the user never asked for, with the UI reporting success.
 - [ ] Automate the Web UI translation-coverage sweep. The current check is a manual headless-browser walk over every view; CI should fail when newly added chrome has no dictionary entry, and the sweep must keep reporting the record-content bucket so an over-broad exclusion cannot hide a real gap.
 - [ ] Define and enforce the next release gate: timezone-safe round trips, shared mutation with CAS, golden corpus, green CI, clean packaging metadata, and published schemas.
 
@@ -96,6 +98,8 @@ Design principles:
 
 ## P2: CLI, Packaging, and Distribution
 
+- [ ] Route the `extra_cli` commands (`next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo`) through `build_parser`. Completion now special-cases them via `entrypoint._EXTRA_COMMANDS`, but `--help`, generated docs, and per-command option completion still cannot see their flags.
+- [ ] Cache `completion values` results keyed by file path and mtime. A lookup reparses the whole file on every keypress-triggered completion (~250 ms for 200 records), which is noticeable on large files.
 - [ ] Split `lifetxt/cli.py` into command-focused modules with a thin registry-based dispatcher.
 - [ ] Split `lifetxt/tui_app.py` into state, command, layout, and rendering modules.
 - [ ] Raise the supported Python baseline to `>=3.10` after clean-environment verification and remove obsolete compatibility code deliberately.

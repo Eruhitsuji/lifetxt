@@ -857,6 +857,9 @@ Options:
 | `--append` | Append to `--output` instead of overwriting it |
 | `--project PROJECT` | Add `project:PROJECT` to every imported event |
 | `--tag TAG` | Add `tag:TAG` to every imported event; repeatable |
+| `--expand-rrule` | Write one record per occurrence instead of a single record carrying `repeat:RRULE:` |
+| `--expand-until DATE` | Expand occurrences up to this date; defaults to one year out |
+| `--expand-count N` | Maximum occurrences per recurring event; capped at 500 |
 | `--preset PRESET` | Input preset. `ics` is the default. `markdown`, `todoist`, and `github` import Markdown task lists, Todoist CSV exports, and GitHub Issues JSON exports as task items |
 
 Mapping:
@@ -889,6 +892,53 @@ Notes:
   to the machine's local timezone before writing `YYYY-MM-DDTHH:MM`.
 - `RRULE` values are preserved as `repeat:RRULE:...`; supported RRULE subsets
   are expanded later by `agenda` and time filters, not during import.
+
+#### Expanding recurring events at import time
+
+By default a recurring event stays one record with `repeat:RRULE:...`. That is
+compact and keeps the rule authoritative, and `agenda`, `rrule`, and the
+calendar view all evaluate it on demand.
+
+`--expand-rrule` writes one record per occurrence instead:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics --expand-rrule --expand-until 2026-12-31
+```
+
+```txt
+[ ] E "Team standup" id:standup@example.com_20260706 source:ics uid:standup@example.com from:2026-07-06T09:00 repeat_base:2026-07-06
+[ ] E "Team standup" id:standup@example.com_20260708 source:ics uid:standup@example.com from:2026-07-08T09:00 repeat_base:2026-07-06
+```
+
+Use it when occurrences need to be handled individually — completing,
+annotating, or rescheduling one date without touching the series — or when
+something downstream reads the file but cannot evaluate an RRULE.
+
+Each occurrence gets:
+
+- a unique `id:` of `UID_YYYYMMDD`, since occurrences share one UID
+- the original `uid:`, so instances stay traceable to the calendar event
+- `repeat_base:` naming the series anchor
+- no `repeat:`, because the instance is a concrete date, not a series
+
+Bounds, so one open-ended rule cannot fill the file:
+
+| Situation | Result |
+|---|---|
+| Rule has `COUNT` or `UNTIL` | Honored as written |
+| Neither, and no `--expand-until` | One year from the series start |
+| Any case | Hard ceiling of 500 occurrences per event |
+
+`EXDATE` is honored, so an occurrence the feed has cancelled is not written
+back out as a real event. `RDATE` (a one-off occurrence added outside the
+rule) is not yet expanded.
+
+An event whose rule cannot be expanded — an unsupported `FREQ`, a missing
+start — is written in the compact form rather than dropped. Losing a calendar
+entry would be worse than leaving it unexpanded.
+
+Re-running `sync-ics --expand-rrule --merge-existing` is idempotent: the dated
+ids match, so occurrences are updated rather than duplicated.
 
 Examples:
 
@@ -939,6 +989,7 @@ Options:
 | `--soft-delete-missing` | With `--merge-existing`, mark existing `source:ics` events missing from the feed as `[-]` with `reason:missing_from_feed` |
 | `--project PROJECT` | Add `project:PROJECT` to every synced event |
 | `--tag TAG` | Add `tag:TAG` to every synced event; repeatable |
+| `--expand-rrule`, `--expand-until DATE`, `--expand-count N` | Write one record per occurrence; see [5.1](#51-import-ics). Idempotent with `--merge-existing` |
 | `--timeout SECONDS` | Fetch timeout; defaults to 30 |
 | `--user-agent VALUE` | HTTP User-Agent header |
 
@@ -2238,8 +2289,8 @@ python -m lifetxt rrule weekly --from 2026-07-06 --count 2 --format life \
 
 The supported subset is `FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`
 (including positional forms such as `1MO` and `-1FR`), `BYMONTHDAY`
-(including negative offsets such as `-1` for the last day), and `BYMONTH`.
-Parts outside that subset are reported on stderr rather than silently
+(including negative offsets such as `-1` for the last day), `BYMONTH`, and
+`WKST`. Parts outside that subset are reported on stderr rather than silently
 ignored:
 
 ```txt
@@ -2248,6 +2299,41 @@ Ignoring unsupported RRULE part(s): BYSETPOS
 
 A date-only `UNTIL` covers the whole day, so `UNTIL=20260703` includes an
 occurrence on 2026-07-03 rather than cutting off at midnight.
+
+#### `WKST`: which day starts a week
+
+`WKST` names the first day of the week and defaults to Monday. It changes the
+result whenever `INTERVAL` skips weeks, because it decides which week a date
+belongs to. These two rules differ only in `WKST` (the example is from RFC
+5545 §3.8.5.3):
+
+```bash
+python -m lifetxt rrule "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO" \
+  --from 1997-08-05
+python -m lifetxt rrule "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU" \
+  --from 1997-08-05
+```
+
+```txt
+WKST=MO  →  Aug 5, 10, 19, 24
+WKST=SU  →  Aug 5, 17, 19, 31
+```
+
+With `WKST=MO` the Sunday closes its week, so Aug 10 still belongs to the
+first selected week. With `WKST=SU` a Sunday opens a new week, so Aug 10 falls
+in the skipped week and Aug 17 is the next match. The week start also fixes
+the order within a week, which is why the Sunday precedes the Tuesday above.
+
+`--format json` reports it as `week_start`, and `describe` mentions it only
+when the interval makes it matter:
+
+```txt
+Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
+```
+
+A position in `BYDAY` (`2MO`) applies only to `FREQ=MONTHLY` and
+`FREQ=YEARLY`. Weekly and daily expansion ignores the number, so `check`
+warns rather than letting `FREQ=WEEKLY;BYDAY=2MO` quietly mean every Monday.
 
 ## 14. Aliases
 

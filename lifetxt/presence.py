@@ -64,6 +64,7 @@ def active_status_items(items, person=None):
 #: transition was skipped, and empty otherwise. Access fields by name; the
 #: tuple has four of them, so positional unpacking into three will fail.
 StatusTransition = namedtuple("StatusTransition", "text closed opened unchanged")
+StatusFileTransition = namedtuple("StatusFileTransition", "transition mutation")
 
 
 def status_transition(
@@ -128,7 +129,16 @@ def status_transition(
 
     opened_line = ""
     if not close_only:
-        new_item = _build_status_item(state, title, person, stamp, details, id_key, item_id, items)
+        new_item = _build_status_item(
+            state,
+            title,
+            person,
+            stamp,
+            details,
+            id_key,
+            item_id,
+            items,
+        )
         opened_line = item_to_line(new_item)
         if lines and not lines[-1].endswith(("\n", "\r")):
             lines[-1] = lines[-1] + ending
@@ -137,7 +147,52 @@ def status_transition(
     return StatusTransition("".join(lines), closed_lines, opened_line, "")
 
 
-def _build_status_item(state, title, person, stamp, details, id_key, item_id, existing_items):
+def status_transition_file(
+    path,
+    expected_hash=None,
+    operation="presence.status_transition",
+    lock_timeout=5.0,
+    stale_lock_after=300.0,
+    **transition_kwargs
+):
+    """Apply :func:`status_transition` through the shared mutation contract.
+
+    Callers that loaded the file earlier should pass that snapshot's
+    ``content_hash``. A newer external edit then raises ``MutationConflict``
+    instead of being overwritten. The returned object exposes both the semantic
+    transition and the generic mutation hashes/result.
+    """
+    from .mutation import mutate_text
+
+    captured = {}
+
+    def transform(text):
+        transition = status_transition(text, **transition_kwargs)
+        captured["transition"] = transition
+        return transition.text
+
+    mutation = mutate_text(
+        path,
+        transform,
+        expected_hash=expected_hash,
+        operation=operation,
+        create=False,
+        lock_timeout=lock_timeout,
+        stale_lock_after=stale_lock_after,
+    )
+    return StatusFileTransition(captured["transition"], mutation)
+
+
+def _build_status_item(
+    state,
+    title,
+    person,
+    stamp,
+    details,
+    id_key,
+    item_id,
+    existing_items,
+):
     resolved_title = str(title or "").strip() or str(state).strip().title()
     ordered = OrderedDict()
     ordered["from"] = [stamp]
@@ -146,7 +201,9 @@ def _build_status_item(state, title, person, stamp, details, id_key, item_id, ex
     for key, values in (details or {}).items():
         if key in ("from", "to", "state", "person"):
             continue
-        ordered[key] = list(values) if isinstance(values, (list, tuple)) else [values]
+        ordered[key] = (
+            list(values) if isinstance(values, (list, tuple)) else [values]
+        )
 
     item = Item(STATUS_ACTIVE, "S", resolved_title, ordered, 0)
     if item_id:

@@ -11,13 +11,175 @@ _DATE_RE = re.compile(r"^\d{8}$")
 _DATETIME_RE = re.compile(r"^\d{8}T\d{4}(\d{2})?Z?$")
 
 
-def items_from_ics_text(text, project=None, tags=None):
-    """Convert VEVENT components in iCalendar text to life.txt event items."""
+def items_from_ics_text(text, project=None, tags=None, expand=False,
+                        expand_until=None, expand_count=None):
+    """Convert VEVENT components in iCalendar text to life.txt event items.
 
+    By default a recurring event stays one record carrying `repeat:RRULE:...`,
+    which is compact and keeps the rule authoritative. With ``expand`` each
+    occurrence becomes its own record instead, which is what you want when the
+    consumer cannot evaluate an RRULE, or when occurrences need to be
+    completed, annotated, or rescheduled individually.
+    """
     items = []
     for event in _parse_vevents(text):
-        items.append(_event_to_item(event, project=project, tags=tags or []))
+        item = _event_to_item(event, project=project, tags=tags or [])
+        if not expand:
+            items.append(item)
+            continue
+        items.extend(
+            _expanded_occurrences(
+                item, event, until=expand_until, count=expand_count
+            )
+        )
     return items
+
+
+#: How far ahead an unbounded rule is materialized when nothing else caps it.
+DEFAULT_EXPAND_DAYS = 365
+#: A hard ceiling so a daily rule cannot fill a file with tens of thousands
+#: of records because a window was left wide.
+MAX_EXPAND_OCCURRENCES = 500
+
+
+def _expanded_occurrences(item, event=None, until=None, count=None):
+    """One record per occurrence, or the original item when it does not repeat.
+
+    Anything that cannot be expanded - no rule, an unsupported rule, a missing
+    start - yields the original record unchanged rather than being dropped.
+    Silently losing a calendar entry is far worse than leaving it compact.
+    """
+    from .recurrence import RecurrenceError, expand, rule_for_item
+
+    try:
+        rule = rule_for_item(item)
+    except RecurrenceError:
+        rule = None
+    if rule is None:
+        return [item]
+
+    start = _series_start(item)
+    if start is None:
+        return [item]
+
+    limit = count or rule.get("count") or MAX_EXPAND_OCCURRENCES
+    limit = max(1, min(int(limit), MAX_EXPAND_OCCURRENCES))
+    horizon = until
+    if horizon is None and not rule.get("count"):
+        horizon = start + timedelta(days=DEFAULT_EXPAND_DAYS)
+
+    try:
+        moments = list(expand(rule, start, before=horizon, limit=limit))
+    except RecurrenceError:
+        return [item]
+
+    # A feed cancels a single occurrence with EXDATE. Materializing it anyway
+    # would put an event on the calendar that the source already removed.
+    excluded = _excluded_datetimes(event)
+    if excluded:
+        moments = [moment for moment in moments if moment not in excluded]
+
+    if not moments:
+        return [item]
+
+    return [_occurrence_item(item, start, moment) for moment in moments]
+
+
+def _excluded_datetimes(event):
+    """EXDATE values as datetimes, matched against expanded occurrences.
+
+    EXDATE may repeat and may list several comma-separated values, and an
+    all-day series excludes whole dates rather than instants, so date-only
+    entries are compared at midnight the way the expansion emits them.
+    """
+    if not event:
+        return frozenset()
+
+    excluded = set()
+    for prop in _properties(event, "EXDATE"):
+        for chunk in str(prop.value or "").split(","):
+            text = chunk.strip()
+            if not text:
+                continue
+            parsed = _parse_temporal_value(text)
+            if parsed is not None:
+                excluded.add(parsed)
+    return frozenset(excluded)
+
+
+def _parse_temporal_value(text):
+    """A bare ICS DATE or DATE-TIME as a naive local datetime, or None."""
+    value = text.strip()
+    if value.endswith("Z"):
+        try:
+            moment = datetime.strptime(value, "%Y%m%dT%H%M%SZ")
+        except ValueError:
+            return None
+        # Occurrences are emitted in local time, so UTC has to be converted
+        # or an exclusion would silently fail to match.
+        return moment.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
+    for pattern in ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M", "%Y%m%d"):
+        try:
+            return datetime.strptime(value, pattern)
+        except ValueError:
+            continue
+    return None
+
+
+def _series_start(item):
+    """The anchor date the rule counts from: `on:`, `from:`, `due:`, or `do:`."""
+    from .timeutil import parse_date_or_datetime
+
+    details = item.details or {}
+    for key in ("on", "from", "due", "do"):
+        values = details.get(key)
+        if not values:
+            continue
+        raw = values[0] if isinstance(values, (list, tuple)) else values
+        try:
+            parsed = parse_date_or_datetime(str(raw))
+        except Exception:
+            continue
+        if parsed is None:
+            continue
+        if isinstance(parsed, datetime):
+            return parsed
+        return datetime(parsed.year, parsed.month, parsed.day)
+    return None
+
+
+def _occurrence_item(item, series_start, moment):
+    """A concrete record for one occurrence of a recurring event."""
+    details = OrderedDict()
+    timed = moment.hour or moment.minute or moment.second
+    stamp = moment.strftime("%Y-%m-%dT%H:%M") if timed else moment.strftime("%Y-%m-%d")
+
+    for key, values in (item.details or {}).items():
+        if key == "repeat":
+            # The instance is concrete; keeping the rule would make every
+            # occurrence look like the head of its own series.
+            continue
+        if key == "id":
+            # Occurrences share a UID, so the id needs the date to stay unique.
+            base = values[0] if isinstance(values, (list, tuple)) else values
+            details["id"] = ["%s_%s" % (base, moment.strftime("%Y%m%d"))]
+            continue
+        if key in ("on", "from", "due", "do"):
+            details[key] = [stamp]
+            continue
+        details[key] = list(values) if isinstance(values, (list, tuple)) else [values]
+
+    # `repeat_base` already means "the anchor this series counts from", so the
+    # link back to the original event needs no new key.
+    details["repeat_base"] = [series_start.strftime("%Y-%m-%d")]
+
+    return Item(
+        status=item.status,
+        kind=item.kind,
+        title=item.title,
+        details=details,
+        line=item.line,
+    )
 
 
 def _parse_vevents(text):

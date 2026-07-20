@@ -793,6 +793,9 @@ python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJ
 | `--append` | `--output` を上書きせず追記 |
 | `--project PROJECT` | すべての取り込み予定に `project:PROJECT` を追加 |
 | `--tag TAG` | すべての取り込み予定に `tag:TAG` を追加。複数回指定可能 |
+| `--expand-rrule` | `repeat:RRULE:` を持つ 1 レコードではなく、発生ごとに 1 レコードを書き出す |
+| `--expand-until DATE` | この日付まで展開。既定は 1 年先 |
+| `--expand-count N` | 1 予定あたりの最大発生数。上限 500 |
 
 変換対応:
 
@@ -823,6 +826,52 @@ python -m lifetxt import-ics [path ...] [-o life.txt] [--append] [--project PROJ
   `YYYY-MM-DDTHH:MM` で出力します。
 - `RRULE` は `repeat:RRULE:...` として保持します。対応している subset は
   import 時ではなく、`agenda` と time filter で後から展開します。
+
+#### 取り込み時に繰り返し予定を展開する
+
+既定では繰り返し予定は `repeat:RRULE:...` を持つ 1 レコードのままです。
+これは簡潔でルールが正本となり、`agenda`・`rrule`・カレンダー表示が
+必要に応じて評価します。
+
+`--expand-rrule` を付けると、発生ごとに 1 レコードを書き出します:
+
+```sh
+python -m lifetxt import-ics google_calendar.ics --expand-rrule --expand-until 2026-12-31
+```
+
+```txt
+[ ] E "Team standup" id:standup@example.com_20260706 source:ics uid:standup@example.com from:2026-07-06T09:00 repeat_base:2026-07-06
+[ ] E "Team standup" id:standup@example.com_20260708 source:ics uid:standup@example.com from:2026-07-08T09:00 repeat_base:2026-07-06
+```
+
+個々の発生を独立して扱いたい場合 —— 系列に触れずに 1 日だけ完了・注記・
+日程変更したい場合 —— や、下流のツールが RRULE を評価できない場合に使います。
+
+各発生には次が付きます:
+
+- `UID_YYYYMMDD` 形式の一意な `id:`（発生は UID を共有するため）
+- 元の `uid:`。カレンダー上の予定へ辿れます
+- 系列の起点を示す `repeat_base:`
+- `repeat:` は付きません。個々の発生は系列ではなく確定した日付だからです
+
+1 つのルールがファイルを埋め尽くさないための上限:
+
+| 条件 | 結果 |
+|---|---|
+| ルールに `COUNT` や `UNTIL` がある | そのまま尊重 |
+| どちらもなく `--expand-until` もない | 系列の起点から 1 年 |
+| いずれの場合も | 1 予定あたり 500 件が上限 |
+
+`EXDATE` は尊重されるため、フィード側で取り消された発生が実在の予定として
+書き出されることはありません。`RDATE`（ルール外に追加された単発の発生）は
+まだ展開しません。
+
+展開できないルール（未対応の `FREQ`、開始日時の欠落）を持つ予定は、
+削除せず簡潔な形式のまま書き出します。カレンダーの予定を失う方が、
+展開されないまま残るより遥かに問題だからです。
+
+`sync-ics --expand-rrule --merge-existing` の再実行は冪等です。日付入りの id が
+一致するため、発生は重複せず更新されます。
 
 例:
 
@@ -858,6 +907,7 @@ python -m lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o .generated/google
 | `--dry-run` | 取得して生成結果を表示するが、出力ファイルと cache は書かない |
 | `--project PROJECT` | すべての同期予定に `project:PROJECT` を追加 |
 | `--tag TAG` | すべての同期予定に `tag:TAG` を追加。複数回指定可能 |
+| `--expand-rrule`、`--expand-until DATE`、`--expand-count N` | 発生ごとに 1 レコードを書き出す。詳細は 5.1 を参照。`--merge-existing` との併用は冪等 |
 | `--timeout SECONDS` | 取得 timeout。既定値は 30 |
 | `--user-agent VALUE` | HTTP User-Agent header |
 
@@ -1926,7 +1976,7 @@ python -m lifetxt rrule weekly --from 2026-07-06 --count 2 --format life \
 
 対応している部分は `FREQ`、`INTERVAL`、`COUNT`、`UNTIL`、`BYDAY`（`1MO` や
 `-1FR` のような序数付きも含む）、`BYMONTHDAY`（月末を表す `-1` などの負値も
-含む）、`BYMONTH` です。対象外の部分は黙って無視せず stderr に報告します:
+含む）、`BYMONTH`、`WKST` です。対象外の部分は黙って無視せず stderr に報告します:
 
 ```txt
 Ignoring unsupported RRULE part(s): BYSETPOS
@@ -1934,6 +1984,40 @@ Ignoring unsupported RRULE part(s): BYSETPOS
 
 日付のみの `UNTIL` はその日全体を含みます。`UNTIL=20260703` は 2026-07-03 を
 含み、その日の 0 時で打ち切られることはありません。
+
+#### `WKST`: 週の開始曜日
+
+`WKST` は週の開始曜日を指定し、既定は月曜日です。`INTERVAL` が週を飛ばす場合、
+ある日付がどの週に属するかが変わるため、結果が変化します。次の 2 つは `WKST`
+だけが異なります（RFC 5545 §3.8.5.3 の例）:
+
+```bash
+python -m lifetxt rrule "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO" \
+  --from 1997-08-05
+python -m lifetxt rrule "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU" \
+  --from 1997-08-05
+```
+
+```txt
+WKST=MO  →  8月 5, 10, 19, 24 日
+WKST=SU  →  8月 5, 17, 19, 31 日
+```
+
+`WKST=MO` では日曜日が週の最終日なので 8/10 は最初の対象週に含まれます。
+`WKST=SU` では日曜日が週の開始日となるため 8/10 はスキップされる週に入り、
+次の該当日は 8/17 になります。週の開始曜日は週内の並び順も決めるため、
+上の例では日曜日が火曜日より先に現れます。
+
+`--format json` では `week_start` として出力され、`describe` は結果が変わりうる
+場合にのみ言及します:
+
+```txt
+Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
+```
+
+`BYDAY` の序数（`2MO`）が意味を持つのは `FREQ=MONTHLY` と `FREQ=YEARLY` だけです。
+週次・日次の展開では数値が無視されるため、`FREQ=WEEKLY;BYDAY=2MO` が黙って
+「毎週月曜日」になることのないよう `check` が警告します。
 
 ## 14. alias
 

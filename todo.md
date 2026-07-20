@@ -1,6 +1,6 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x88)
+Last updated: 2026-07-20 (updated x89)
 
 This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
@@ -90,8 +90,10 @@ Design principles:
 - [ ] Verify attachment opening on Windows, macOS, and Linux, including spaces, symlinks, executable rejection, and paths outside the source directory.
 - [ ] Add a safe cache for large `dir:` hashes keyed by path metadata and content-verification state.
 - [ ] Expose RRULE expansion beyond the CLI: an agenda/Web/MCP preview of the next N occurrences of a rule, reusing `recurrence.expand` rather than re-deriving dates per surface.
-- [ ] Fix `WKST`: it is listed in `recurrence.SUPPORTED_PARTS`, so it is accepted without the "ignoring unsupported part" warning that `BYSETPOS` and friends correctly get, yet nothing reads it. Either honor it in weekly expansion or drop it from the supported list so users are warned.
 - [ ] Decide whether to extend the RRULE subset with `BYSETPOS`, `BYWEEKNO`, and `BYYEARDAY`, based on real use. These are currently rejected with a visible warning, which is the correct default.
+- [ ] Add a drift guard so the validator's RRULE messages cannot outlive the engine again. `_SUPPORTED_RRULE_KEYS` is now derived, but the per-part wording (which FREQ values honor a BYDAY position, for instance) is still written by hand in two places.
+- [ ] Support `RDATE`, the counterpart to the `EXDATE` handling `--expand-rrule` already has. Feeds use it to add a one-off occurrence outside the rule, which expansion currently drops.
+- [ ] Let `--expand-rrule` re-expand on a rolling window. A file expanded once goes stale as its horizon passes, and `--merge-existing` only refreshes dates still inside the new window.
 - [ ] Decide how archive and undo should handle attachments whose paths later move.
 
 ---

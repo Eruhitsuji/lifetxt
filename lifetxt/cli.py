@@ -461,6 +461,20 @@ def build_parser():
         help="Add this tag: detail to every imported event. Can be repeated.",
     )
     import_ics.add_argument(
+        "--expand-rrule",
+        action="store_true",
+        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
+    )
+    import_ics.add_argument(
+        "--expand-until",
+        help="Expand occurrences up to this date. Defaults to one year out.",
+    )
+    import_ics.add_argument(
+        "--expand-count",
+        type=int,
+        help="Maximum occurrences per recurring event. Capped at 500.",
+    )
+    import_ics.add_argument(
         "--preset",
         choices=("ics", "markdown", "todoist", "github"),
         default="ics",
@@ -517,6 +531,20 @@ def build_parser():
         action="append",
         default=[],
         help="Add this tag: detail to every synced event. Can be repeated.",
+    )
+    sync_ics.add_argument(
+        "--expand-rrule",
+        action="store_true",
+        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
+    )
+    sync_ics.add_argument(
+        "--expand-until",
+        help="Expand occurrences up to this date. Defaults to one year out.",
+    )
+    sync_ics.add_argument(
+        "--expand-count",
+        type=int,
+        help="Maximum occurrences per recurring event. Capped at 500.",
     )
     sync_ics.add_argument(
         "--timeout",
@@ -2916,6 +2944,19 @@ def _markdown_location(record):
     return "item"
 
 
+def _expand_horizon(args):
+    """The date recurring events are materialized up to, or None for the default."""
+    value = getattr(args, "expand_until", None)
+    if not value:
+        return None
+    parsed = parse_date_or_datetime(str(value))
+    if parsed is None:
+        raise ValueError("--expand-until %r is not a date." % value)
+    if isinstance(parsed, datetime.datetime):
+        return parsed
+    return datetime.datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59)
+
+
 def command_import_ics(args):
     if args.append and not args.output:
         raise ValueError("--append requires --output.")
@@ -2930,6 +2971,9 @@ def command_import_ics(args):
                     text,
                     project=args.project,
                     tags=args.tag,
+                    expand=bool(getattr(args, "expand_rrule", False)),
+                    expand_until=_expand_horizon(args),
+                    expand_count=getattr(args, "expand_count", None),
                 )
             )
         elif preset == "markdown":
@@ -3211,6 +3255,9 @@ def command_sync_ics(args):
                 decode_ics_bytes(data),
                 project=project,
                 tags=tags,
+                expand=bool(getattr(args, "expand_rrule", False)),
+                expand_until=_expand_horizon(args),
+                expand_count=getattr(args, "expand_count", None),
             )
         )
 
@@ -4126,7 +4173,14 @@ def _render_items_preserving(original_text, items):
 
 def command_rrule(args):
     """Expand a recurrence rule into occurrences."""
-    from .recurrence import RecurrenceError, describe, expand, parse_rule, rule_for_item
+    from .recurrence import (
+        WEEKDAY_NAMES,
+        RecurrenceError,
+        describe,
+        expand,
+        parse_rule,
+        rule_for_item,
+    )
 
     config = _config(args)
     source_item = None
@@ -4190,6 +4244,9 @@ def command_rrule(args):
                 ("interval", rule["interval"]),
                 ("count", rule["count"]),
                 ("until", rule["until"].isoformat() if rule["until"] else None),
+                # Two rules differing only in WKST produce different dates, so
+                # the week start has to be visible when comparing output.
+                ("week_start", WEEKDAY_NAMES[rule["wkst"]]),
                 ("unsupported", list(rule["unsupported"])),
                 ("start", start.isoformat()),
                 ("occurrences", [moment.isoformat() for moment in occurrences]),

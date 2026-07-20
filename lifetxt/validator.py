@@ -29,9 +29,16 @@ from .timeutil import (
 
 _KEY_STYLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _RRULE_PREFIX = "RRULE:"
-_SUPPORTED_RRULE_KEYS = set(("FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY"))
-_SUPPORTED_RRULE_FREQS = set(("DAILY", "WEEKLY", "MONTHLY", "YEARLY"))
-_SUPPORTED_RRULE_BYDAY_FREQS = set(("DAILY", "WEEKLY"))
+from .recurrence import FREQ_NAMES as _RRULE_FREQ_NAMES, SUPPORTED_PARTS as _RRULE_SUPPORTED_PARTS
+
+# Derived from recurrence.py, which owns expansion. Hand-maintained copies
+# drifted: BYMONTHDAY, BYMONTH, and positional BYDAY were all warned about as
+# "not expanded" long after the engine learned to expand them.
+_SUPPORTED_RRULE_KEYS = set(_RRULE_SUPPORTED_PARTS)
+_SUPPORTED_RRULE_FREQS = set(_RRULE_FREQ_NAMES)
+#: A leading number in BYDAY only means something for these frequencies; the
+#: weekly and daily expansions ignore it, so saying `2MO` there is misleading.
+_POSITIONAL_BYDAY_FREQS = set(("MONTHLY", "YEARLY"))
 _RRULE_WEEKDAYS = set(("MO", "TU", "WE", "TH", "FR", "SA", "SU"))
 _DURATION_VALUE_RE = re.compile(r"^\d+(?:h(?:\d+m)?|m)$|^\d+$")
 
@@ -334,18 +341,28 @@ def _is_rrule_until(value):
 
 
 def _rrule_byday_warning(freq, value):
-    if freq and freq not in _SUPPORTED_RRULE_BYDAY_FREQS:
-        return "RRULE BYDAY is expanded only for FREQ=DAILY or FREQ=WEEKLY."
     for raw_part in str(value or "").split(","):
         code = raw_part.strip().upper()
         if not code:
             return "RRULE BYDAY should list weekday codes such as MO,WE,FR."
-        if len(code) != 2 or code not in _RRULE_WEEKDAYS:
+
+        position, weekday = _split_byday_entry(code)
+        if weekday not in _RRULE_WEEKDAYS:
+            return "RRULE BYDAY should list weekday codes such as MO,WE,FR."
+        if position and freq and freq not in _POSITIONAL_BYDAY_FREQS:
+            # Expansion drops the number here, so the rule would quietly mean
+            # "every Monday" rather than the second one.
             return (
-                "RRULE BYDAY supports only plain weekday codes such as MO,WE,FR; "
-                "positional values such as 1MO are stored but not expanded."
+                "RRULE BYDAY position %s is ignored for FREQ=%s; positions apply "
+                "to FREQ=MONTHLY or FREQ=YEARLY." % (position, freq)
             )
     return None
+
+
+def _split_byday_entry(code):
+    """Split `-1FR` into ("-1", "FR"); a plain `FR` yields ("", "FR")."""
+    weekday = code[-2:]
+    return code[:-2], weekday
 
 
 def _rrule_warning(item, message):

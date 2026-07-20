@@ -37,6 +37,9 @@ WEEKDAY_NAMES = dict((value, key) for key, value in WEEKDAY_CODES.items())
 #: Parts we understand. Anything else is reported by `unsupported_parts`.
 SUPPORTED_PARTS = ("FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY", "BYMONTHDAY", "BYMONTH", "WKST")
 
+#: RFC 5545 defaults the week start to Monday when WKST is absent.
+DEFAULT_WKST = WEEKDAY_CODES["MO"]
+
 #: Hard ceiling so a rule with no COUNT or UNTIL cannot spin forever.
 DEFAULT_MAX_OCCURRENCES = 500
 SAFETY_ITERATIONS = 100000
@@ -86,12 +89,14 @@ def parse_rule(value, interval=None, count=None, until=None):
         byday=_parse_byday(parts.get("BYDAY")),
         bymonthday=_parse_int_list(parts.get("BYMONTHDAY"), "BYMONTHDAY", 1, 31, allow_negative=True),
         bymonth=_parse_int_list(parts.get("BYMONTH"), "BYMONTH", 1, 12),
+        wkst=_parse_wkst(parts.get("WKST")),
     )
     rule["unsupported"] = [key for key in parts if key.upper() not in SUPPORTED_PARTS]
     return rule
 
 
-def _rule(label, freq, interval=1, count=None, until=None, byday=(), bymonthday=(), bymonth=()):
+def _rule(label, freq, interval=1, count=None, until=None, byday=(), bymonthday=(),
+          bymonth=(), wkst=DEFAULT_WKST):
     return OrderedDict(
         [
             ("label", label),
@@ -103,9 +108,20 @@ def _rule(label, freq, interval=1, count=None, until=None, byday=(), bymonthday=
             ("byday", tuple(byday)),
             ("bymonthday", tuple(bymonthday)),
             ("bymonth", tuple(bymonth)),
+            ("wkst", wkst),
             ("unsupported", []),
         ]
     )
+
+
+def _parse_wkst(value):
+    """The weekday a week starts on. RFC 5545 defaults to Monday."""
+    if not value:
+        return DEFAULT_WKST
+    code = str(value).strip().upper()
+    if code not in WEEKDAY_CODES:
+        raise RecurrenceError("WKST %r is not a weekday code such as MO or SU." % value)
+    return WEEKDAY_CODES[code]
 
 
 def parse_rrule_parts(value):
@@ -273,12 +289,21 @@ def _candidates(rule, start):
 
     if name == "weekly":
         if byday:
-            week_start = start.date() - timedelta(days=start.weekday())
+            # WKST decides which week a date belongs to, which changes the
+            # result whenever INTERVAL > 1: with WKST=SU a Sunday starts a new
+            # week, with WKST=MO it closes the previous one. It also fixes the
+            # order within a week, since the week runs from WKST onward rather
+            # than always from Monday.
+            wkst = rule.get("wkst", DEFAULT_WKST)
+            week_start = start.date() - timedelta(days=(start.weekday() - wkst) % 7)
+            ordered = sorted(set(weekday for _position, weekday in byday),
+                             key=lambda weekday: (weekday - wkst) % 7)
             guard = 0
             while guard < SAFETY_ITERATIONS:
                 guard += 1
-                for _position, weekday in sorted(set(byday)):
-                    moment = datetime.combine(week_start + timedelta(days=weekday), moment_time)
+                for weekday in ordered:
+                    offset = (weekday - wkst) % 7
+                    moment = datetime.combine(week_start + timedelta(days=offset), moment_time)
                     if moment >= start and _matches_month(moment, bymonth):
                         yield moment
                 week_start = week_start + timedelta(weeks=interval)
@@ -413,10 +438,13 @@ def describe(rule):
         text = "Every %d %ss" % (interval, unit)
 
     if rule["byday"]:
+        # Only the monthly and yearly expansions honor a position, so naming
+        # one for a weekly rule would describe behavior that does not happen.
+        positional = name in ("monthly", "yearly")
         parts = []
         for position, weekday in rule["byday"]:
             label = calendar.day_name[weekday]
-            if position:
+            if position and positional:
                 parts.append("%s %s" % (_ordinal(position), label))
             else:
                 parts.append(label)
@@ -428,6 +456,10 @@ def describe(rule):
         )
     if rule["bymonth"]:
         text += " in " + ", ".join(calendar.month_name[number] for number in rule["bymonth"])
+    # Only worth saying when it can change the dates: a non-default week start
+    # matters once the interval skips weeks.
+    if name == "weekly" and interval > 1 and rule.get("wkst", DEFAULT_WKST) != DEFAULT_WKST:
+        text += " (weeks start %s)" % calendar.day_name[rule["wkst"]]
     if rule["count"]:
         text += ", %d times" % rule["count"]
     if rule["until"]:

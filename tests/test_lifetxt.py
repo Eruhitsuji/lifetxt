@@ -514,8 +514,8 @@ class LifeTxtParserTests(unittest.TestCase):
     def test_unsupported_rrule_features_warn_w223(self):
         _items, diagnostics = parse_text(
             "[ ] H Hourly repeat:RRULE:FREQ=HOURLY at:09:00\n"
-            "[ ] H Positional repeat:RRULE:FREQ=MONTHLY;BYDAY=1MO at:09:00\n"
-            "[ ] H MonthFilter repeat:RRULE:FREQ=WEEKLY;BYMONTH=6 at:09:00\n"
+            "[ ] H SetPos repeat:RRULE:FREQ=MONTHLY;BYSETPOS=1 at:09:00\n"
+            "[ ] H WeeklyPos repeat:RRULE:FREQ=WEEKLY;BYDAY=2MO at:09:00\n"
             "[ ] H BadCount repeat:RRULE:FREQ=DAILY;COUNT=zero at:09:00\n"
         )
 
@@ -523,9 +523,23 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertGreaterEqual(len(warnings), 4)
         messages = "\n".join(d.message for d in warnings)
         self.assertIn("FREQ=HOURLY", messages)
-        self.assertIn("BYDAY", messages)
-        self.assertIn("BYMONTH", messages)
+        self.assertIn("BYSETPOS", messages)
+        # A position is ignored for weekly rules, so the rule would quietly
+        # mean "every Monday" rather than the second one.
+        self.assertIn("ignored for FREQ=WEEKLY", messages)
         self.assertIn("COUNT", messages)
+
+    def test_expandable_rrule_features_do_not_warn(self):
+        # These all warned as "stored but not expanded" long after the shared
+        # engine learned to expand them, which trained users to ignore W223.
+        _items, diagnostics = parse_text(
+            "[ ] H Positional repeat:RRULE:FREQ=MONTHLY;BYDAY=1MO at:09:00\n"
+            "[ ] H MonthFilter repeat:RRULE:FREQ=WEEKLY;BYMONTH=6 at:09:00\n"
+            "[ ] H MonthDay repeat:RRULE:FREQ=MONTHLY;BYMONTHDAY=-1 at:09:00\n"
+            "[ ] H WeekStart repeat:RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=SU;WKST=SU at:09:00\n"
+        )
+
+        self.assertEqual([], [d.message for d in diagnostics if d.code == "W223"])
 
     def test_check_cli_rrule_warning_is_recurrence_category(self):
         stdout, stderr, code = run_cli(

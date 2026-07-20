@@ -1,8 +1,8 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x84)
+Last updated: 2026-07-20 (updated x85)
 
-This is the active roadmap after the 2026-07-20 CLI workflow and CI batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
+This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
 Priority guide:
 
@@ -22,7 +22,6 @@ Design principles:
 
 ## P0: Release Safety and Correctness
 
-- [ ] Build the shared mutation layer on top of atomic writes. Add content-hash compare-and-swap, lock files, and one operation contract for CLI, TUI, Web API, MCP, notification, timer, archive, and undo writes.
 - [ ] Route `presence.status_transition`, TUI `_mutate_rows`, Web writes, MCP writes, timer updates, and notification acknowledgement through the shared mutation layer.
 - [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error.
 - [ ] Fix timezone-offset data loss. Preserve aware datetime values for JSON/JSONL/CSV round trips and normalize only for comparisons.
@@ -61,6 +60,7 @@ Design principles:
 - [ ] Expose named review ranges (`last-week`, `last-month`, and `year`) through Web API and MCP, using `review.resolve_review_range` rather than duplicating date math.
 - [ ] Decide which new report commands need Web API or MCP equivalents based on demonstrated daily use; avoid adding surfaces only for symmetry.
 - [ ] Add structured proposal metadata and item-level diffs for MCP writes, then require an expected file hash or an explicit unsafe override.
+- [ ] Add mutation-lock observability to `doctor`: list active and stale sidecar locks, show owner metadata, and clean up only locks proven stale.
 
 ---
 
@@ -110,6 +110,7 @@ Design principles:
 - [ ] Add English/Japanese parity checks for headings, code blocks, command names, and stable examples.
 - [ ] Add worked examples and captures for TUI, Web views, timer, statistics, review, graph, attachments, invoice, standup, import/export, and recovery.
 - [ ] Document file splitting, generated files, archive files, cache files, multiple writers, backups, undo, and Git-based recovery.
+- [ ] Document sidecar lock files, CAS conflict recovery, cloud-sync and network-filesystem limitations, and safe manual cleanup.
 - [ ] Package the VS Code grammar/snippets as an installable extension and generate key lists from model definitions.
 - [ ] Add editor support for directives, encrypted values, folding, file icons, and syntax-highlight snapshots.
 - [ ] Add a lossless parser/CST with source spans before implementing LSP edits.

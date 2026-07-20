@@ -686,7 +686,7 @@ def _session_enabled(state):
 
 
 class Command(object):
-    def __init__(self, name, usage, summary, handler, alias=None):
+    def __init__(self, name, usage, summary, handler, alias=None, values=None):
         self.name = name
         self.usage = usage
         self.summary = summary
@@ -694,6 +694,10 @@ class Command(object):
         # A one-or-two letter shorthand. Typing it exactly wins over fuzzy
         # ranking, so /d is always /done and never /detail or /delete.
         self.alias = alias
+        # Where Tab gets argument candidates: a tuple of literal words, or a
+        # `completion` kind name resolved against the loaded records so the
+        # TUI offers the same values the shell and Web UI do.
+        self.values = values
 
 
 def _cmd_help(state, argument):
@@ -1329,33 +1333,42 @@ def _cmd_window(state, argument):
 
 COMMANDS = (
     Command("help", "[QUERY]", "Toggle the reference, or search it", _cmd_help),
-    Command("view", "all|tasks|agenda|status|next", "Switch which sections are listed", _cmd_view),
+    Command("view", "all|tasks|agenda|status|next", "Switch which sections are listed", _cmd_view,
+            values=("all", "tasks", "agenda", "status", "next")),
     Command("next", "", "Show open, unblocked, non-someday actions by priority", _cmd_next, alias="n"),
     Command("search", "TEXT", "Fuzzy filter every listed row", _cmd_search, alias="f"),
-    Command("project", "NAME", "Filter by project: (empty clears)", _cmd_project),
-    Command("context", "NAME", "Filter by context: (empty clears)", _cmd_context),
-    Command("tag", "NAME", "Filter by tag: (empty clears)", _cmd_tag),
-    Command("sort", "natural|due|priority|title|status", "Change row ordering", _cmd_sort),
+    Command("project", "NAME", "Filter by project: (empty clears)", _cmd_project, values="project"),
+    Command("context", "NAME", "Filter by context: (empty clears)", _cmd_context, values="context"),
+    Command("tag", "NAME", "Filter by tag: (empty clears)", _cmd_tag, values="tag"),
+    Command("sort", "natural|due|priority|title|status", "Change row ordering", _cmd_sort,
+            values=("natural", "due", "priority", "title", "status")),
     Command("clear", "", "Clear every filter and mark", _cmd_clear),
-    Command("goto", "ID", "Move the selection to a record id", _cmd_goto),
-    Command("mark", "toggle|all|none", "Mark rows for bulk actions", _cmd_mark),
-    Command("done", "[now]", "Mark rows done and record done:", _cmd_done, alias="d"),
-    Command("state", "STATE [TITLE] | end", "Record presence, closing the previous status", _cmd_state, alias="s"),
-    Command("now", "[PERSON]", "Show the current open presence status", _cmd_now),
-    Command("status", "open|active|done|dropped", "Set the status of the marked or selected rows", _cmd_status),
-    Command("set", "KEY VALUE", "Set a detail on the marked or selected rows", _cmd_set),
-    Command("due", "DATE", "Set due: using today/tomorrow/+3d tokens", _cmd_due),
-    Command("assign", "USER", "Set assignee: on the marked or selected rows", _cmd_assign),
+    Command("goto", "ID", "Move the selection to a record id", _cmd_goto, values="id"),
+    Command("mark", "toggle|all|none", "Mark rows for bulk actions", _cmd_mark,
+            values=("toggle", "all", "none")),
+    Command("done", "[now]", "Mark rows done and record done:", _cmd_done, alias="d",
+            values=("now",)),
+    Command("state", "STATE [TITLE] | end", "Record presence, closing the previous status", _cmd_state, alias="s",
+            values="state"),
+    Command("now", "[PERSON]", "Show the current open presence status", _cmd_now, values="person"),
+    Command("status", "open|active|done|dropped", "Set the status of the marked or selected rows", _cmd_status,
+            values=("open", "active", "done", "dropped")),
+    Command("set", "KEY VALUE", "Set a detail on the marked or selected rows", _cmd_set, values="key"),
+    Command("due", "DATE", "Set due: using today/tomorrow/+3d tokens", _cmd_due, values="date"),
+    Command("assign", "USER", "Set assignee: on the marked or selected rows", _cmd_assign, values="person"),
     Command("add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"),
     Command("delete", "yes", "Delete the marked or selected rows (needs confirmation)", _cmd_delete),
     Command("edit", "", "Open the selected row in $EDITOR", _cmd_edit, alias="e"),
-    Command("timer", "start|stop|status|cancel", "Track elapsed time on the selected row", _cmd_timer, alias="t"),
+    Command("timer", "start|stop|status|cancel", "Track elapsed time on the selected row", _cmd_timer, alias="t",
+            values=("start", "stop", "status", "cancel")),
     Command("undo", "", "Undo the last write made in this session", _cmd_undo, alias="u"),
-    Command("export", "md|csv|json [PATH]", "Write the visible rows to a file", _cmd_export),
+    Command("export", "md|csv|json [PATH]", "Write the visible rows to a file", _cmd_export,
+            values=("md", "csv", "json")),
     Command("stats", "", "Toggle a summary of the visible rows", _cmd_stats),
     Command("detail", "", "Toggle the inspector panel", _cmd_detail),
     Command("reload", "", "Re-read every file now", _cmd_reload),
-    Command("theme", "auto|dark|light|mono", "Change the color theme", _cmd_theme),
+    Command("theme", "auto|dark|light|mono", "Change the color theme", _cmd_theme,
+            values=("auto", "dark", "light", "mono")),
     Command("limit", "N", "Rows kept per section", _cmd_limit),
     Command("window", "12h", "Agenda window around now", _cmd_window),
     Command("quit", "", "Leave the TUI", _cmd_quit, alias="q"),
@@ -1386,6 +1399,80 @@ def command_suggestions(text):
             scored.append((-match[0], index, command, match[1]))
     scored.sort()
     return [(entry[2], entry[3]) for entry in scored]
+
+
+#: Date words `due:` accepts. Grammar rather than file content, so they are
+#: listed here instead of being read out of the records.
+DATE_TOKENS = (
+    "today", "tomorrow", "yesterday",
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "next_monday", "next_tuesday", "next_wednesday", "next_thursday",
+    "next_friday", "next_saturday", "next_sunday", "next_week",
+    "+1d", "+3d", "+1w", "-1w", "+1m", "+1y",
+)
+
+
+def argument_suggestions(state, text):
+    """Candidates for the argument being typed, or [] when there are none.
+
+    Returns (prefix, values): `prefix` is the partial word Tab should replace.
+    """
+    typed = str(text or "")
+    if typed.startswith("/"):
+        typed = typed[1:]
+    if " " not in typed:
+        return ("", [])
+
+    name, _, argument = typed.partition(" ")
+    command = COMMANDS_BY_NAME.get(name.lower()) or COMMANDS_BY_ALIAS.get(name.lower())
+    if command is None or not command.values:
+        return ("", [])
+
+    # Only the word under the cursor is completed; earlier words stay put.
+    prefix = argument.rsplit(" ", 1)[-1] if argument else ""
+
+    if isinstance(command.values, tuple):
+        pool = list(command.values)
+    elif command.values == "date":
+        pool = list(DATE_TOKENS)
+    else:
+        pool = _record_values(state, command.values)
+
+    lowered = prefix.lower()
+    starts = [value for value in pool if value.lower().startswith(lowered)]
+    contains = [value for value in pool if lowered and lowered in value.lower()
+                and not value.lower().startswith(lowered)]
+    return (prefix, starts + contains)
+
+
+def _record_values(state, kind):
+    """File-derived candidates, from the records the TUI already parsed."""
+    try:
+        from .completion import candidates
+
+        model = getattr(state, "_model", None) or {}
+        return candidates(kind, "", items=model.get("items") or [])
+    except Exception:
+        # Completion is an assist: a failure must not break the input line.
+        return []
+
+
+def apply_argument_completion(state):
+    """Accept the highlighted argument candidate. True when something changed.
+
+    The palette lists the candidates, so this takes whichever one up/down has
+    landed on rather than always the first.
+    """
+    prefix, values = argument_suggestions(state, state.input)
+    if not values:
+        return False
+
+    index = max(0, min(getattr(state, "palette_index", 0), len(values) - 1))
+    base = state.input[: len(state.input) - len(prefix)]
+    state.input = base + values[index]
+    state.cursor = len(state.input)
+    state.palette_index = 0
+    return True
 
 
 def run_command(state, text):
@@ -1977,8 +2064,38 @@ def _placeholder(state):
     return "type to filter, / for commands, ? for help"
 
 
+def _build_argument_palette(state, width, prefix, values):
+    """List the values for the argument being typed."""
+    glyphs = state.glyphs
+    state.palette_index = max(0, min(state.palette_index, len(values) - 1))
+    size = max(1, min(6, len(values)))
+    start = max(0, min(state.palette_index - size + 1, len(values) - size))
+    start = min(start, state.palette_index)
+
+    lines = []
+    for offset, value in enumerate(values[start:start + size]):
+        index = start + offset
+        active = index == state.palette_index
+        style = "palette_active" if active else "palette"
+        spans = [(glyphs["cursor"] + " " if active else "  ", style)]
+        # The typed part is highlighted so it is obvious what is being matched.
+        matched = len(prefix) if value.lower().startswith(prefix.lower()) else 0
+        spans.extend(highlight_spans(value, list(range(matched)), style))
+        lines.append(spans)
+
+    if len(values) > size:
+        lines.append([("  ", "default"),
+                      ("%d more" % (len(values) - size), "hint")])
+    return lines
+
+
 def _build_palette(state, width):
     glyphs = state.glyphs
+
+    prefix, values = argument_suggestions(state, state.input)
+    if values:
+        return _build_argument_palette(state, width, prefix, values)
+
     suggestions = command_suggestions(state.input)
     if not suggestions:
         return [[("  ", "default"), ("no matching command", "hint")]]
@@ -2291,6 +2408,10 @@ def _handle_input_key(state, key, page):
         return True
     if key == "tab":
         if state.palette_open:
+            # Past the command name, Tab completes the value being typed
+            # rather than re-completing the name that is already there.
+            if apply_argument_completion(state):
+                return True
             suggestions = command_suggestions(state.input)
             if suggestions:
                 command = suggestions[state.palette_index][0]
@@ -2333,10 +2454,11 @@ def _handle_input_key(state, key, page):
         return True
     if key in ("up", "down"):
         if state.palette_open:
-            suggestions = command_suggestions(state.input)
-            if suggestions:
-                delta = -1 if key == "up" else 1
-                state.palette_index = max(0, min(state.palette_index + delta, len(suggestions) - 1))
+            delta = -1 if key == "up" else 1
+            _, argument_values = argument_suggestions(state, state.input)
+            options = argument_values or [entry[0] for entry in command_suggestions(state.input)]
+            if options:
+                state.palette_index = max(0, min(state.palette_index + delta, len(options) - 1))
         else:
             _move(state, -1 if key == "up" else 1)
         return True

@@ -131,6 +131,7 @@ client は確認が必要かどうかを判断できます。
 | `list_messages` | `M` record |
 | `check_line` / `parse_item` | 書き込まずに行を検証・解析 |
 | `parse_shorthand` | 記号と日付トークンの展開を事前確認 |
+| `complete` | その kind でファイルが既に使っている値。新語を作らず再利用するため |
 | `get_file_state` | path、書き込み先、read-only、content hash |
 | `check_files` | `file:`/`dir:` attachment の存在・種別・hash・移植性を検証 |
 | `timer_status` | 実行中の timer |
@@ -163,6 +164,29 @@ CLI や TUI と同じ省略記法が使えます:
 source:mcp id:task_...` を生成します。
 `parse_shorthand` を引数なしで呼ぶと全トークン一覧が得られるため、
 system prompt に含めると有用です。
+
+### 既存の値の再利用
+
+agent がファイルを劣化させる最も多いパターンは、ごく近い別語を作ってしまう
+ことです。`project:research` の隣に `project:reserach` を作る、既に記録済みの
+人物に別表記の `assignee:` を与える、といった例です。`complete` は
+ファイルが既に使っている値を返します:
+
+```json
+{"name": "complete", "arguments": {"kind": "project", "prefix": "re"}}
+```
+
+```json
+{"kind": "project", "prefix": "re", "count": 1, "values": ["research"]}
+```
+
+`kind` なしで呼ぶと対応 kind の一覧が得られます: `state`、`project`、`tag`、
+`person`、`id`、`type`、`status`、`context`、`priority`、`key`、`team`、
+`service`、`channel`。`person` は人物系の key をまとめて対象にし、`state` と
+`priority` は文書化された値をファイル固有の値より先に並べます。
+
+そのセッションで実際に読んでいない名前を detail の値として書く場合は、
+先に `complete` で確認することを推奨します。
 
 ---
 

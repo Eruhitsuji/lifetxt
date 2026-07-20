@@ -180,6 +180,7 @@ READ_ONLY_TOOLS = frozenset(
         "list_notifications", "list_messages", "get_file_state", "search_items",
         "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
         "get_status", "parse_shorthand", "timer_status", "check_files",
+        "complete",
     ]
 )
 
@@ -526,6 +527,21 @@ def _tool_schemas():
             {
                 "text": _string("Text to expand."),
                 "date": _string("A single date token to resolve."),
+            },
+        ),
+        _tool(
+            "complete",
+            "Values already used in this file for a detail kind: projects, "
+            "tags, ids, people, presence states, contexts. Use it to reuse an "
+            "existing value instead of inventing a near-duplicate. Call with "
+            "no kind to list the supported kinds.",
+            {
+                "kind": _string(
+                    "One of: state, project, tag, person, id, type, status, "
+                    "context, priority, key, team, service, channel."
+                ),
+                "prefix": _string("Only values starting with or containing this."),
+                "limit": _integer("Maximum values to return. Defaults to 50."),
             },
         ),
         _tool(
@@ -1651,6 +1667,39 @@ def _tool_capture_item(args, context):
     )
 
 
+def _tool_complete(args, context):
+    """Values this file already uses, so agents reuse rather than reinvent.
+
+    Backed by the same `completion` layer as the shell scripts, the Web UI,
+    and the TUI, so every surface offers the same candidates.
+    """
+    from .completion import VALUE_KINDS, candidates
+
+    kind = args.get("kind")
+    if not kind:
+        return {"kinds": list(VALUE_KINDS)}
+    if kind not in VALUE_KINDS:
+        raise ValueError(
+            "Unknown kind %r. Use one of: %s" % (kind, ", ".join(VALUE_KINDS))
+        )
+
+    limit = args.get("limit")
+    try:
+        limit = int(limit) if limit is not None else 50
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 500))
+
+    items, _diagnostics = _read_items(context)
+    values = candidates(kind, args.get("prefix") or "", items=items, limit=limit)
+    return {
+        "kind": kind,
+        "prefix": args.get("prefix") or "",
+        "count": len(values),
+        "values": values,
+    }
+
+
 def _tool_parse_shorthand(args, _context):
     """Preview capture-sigil expansion without writing anything."""
     from .shorthand import (
@@ -2031,6 +2080,7 @@ TOOL_HANDLERS = OrderedDict(
         ("set_status", _tool_set_status),
         ("capture_item", _tool_capture_item),
         ("parse_shorthand", _tool_parse_shorthand),
+        ("complete", _tool_complete),
         ("timer_status", _tool_timer_status),
         ("timer_start", _tool_timer_start),
         ("timer_stop", _tool_timer_stop),

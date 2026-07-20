@@ -271,6 +271,54 @@ theme token 名は CSS 変数名から先頭の `--` を除いたものです。
 flat な config generator 向けに `"theme.accent"` や `"dashboard.cards"` の
 ような dotted key も利用できます。
 
+## 補完
+
+テキスト入力欄では、ファイル内で既に使っている値が補完されます。
+`project:research` の隣に `project:reserach` を作ってしまう事故を防げます。
+候補は shell completion script・TUI・MCP の `complete` tool と同じ層から
+取得するため、すべての面で一致します。
+
+quick-add bar はトークンごとに補完します:
+
+| 入力 | 補完対象 |
+|---|---|
+| `@` | project |
+| `#` | tag |
+| `!` | priority |
+| `^` | 日付語（`tomorrow`、`next_friday`、`+3d`） |
+| `KEY:` | その key の値。例えば `assignee:` は人名 |
+| title の後の裸の語 | detail の key 名 |
+
+presence bar では presence state を、レコード編集の Details 欄でも補完します。
+
+キー操作: `↑`/`↓` で移動、`Tab` または `Enter` で確定、`Esc` で閉じる、
+`Ctrl+Space` で入力を増やさずに候補を要求。スマートフォンではタップで確定できます。
+`Enter` は bar の送信ではなく候補の確定に使われるため、入力途中の語が
+誤って登録されることはありません。
+
+### `GET /api/complete`
+
+上記の裏側にある endpoint です。単体でも利用できます:
+
+```bash
+curl 'http://127.0.0.1:8000/api/complete?kind=project&prefix=re&limit=10'
+```
+
+```json
+{"kind": "project", "prefix": "re", "candidates": ["research"]}
+```
+
+| parameter | 意味 |
+|---|---|
+| `kind` | `state`、`project`、`tag`、`person`、`id`、`type`、`status`、`context`、`priority`、`key`、`team`、`service`、`channel` |
+| `prefix` | 任意の絞り込み。前方一致が部分一致より上位 |
+| `limit` | 最大件数。200 に制限（既定 20） |
+
+`person` は `person:`・`owner:`・`assignee:`・`attendee:`・`sender:`・
+`recipient:`・`user:` をまとめて対象にします。`state` と `priority` は
+文書化された値を先に並べ、その後にファイル固有の値を続けます。未知の `kind` は
+対応一覧を添えて 400 を返します。
+
 ## 表示言語
 
 GUI は英語を原文とし、翻訳はブラウザ側で行います。セッションごとに切り替える

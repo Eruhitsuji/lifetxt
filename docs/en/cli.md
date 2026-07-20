@@ -1665,6 +1665,29 @@ entry with `Tab`. `Enter` runs the typed command; if the name is not exact, the
 highlighted suggestion runs instead, so `/do` + `Enter` runs `/done`. An unknown
 command fails loudly and suggests the closest name.
 
+Once the command name is followed by a space, the palette switches to listing
+that command's **argument values** and `Tab` completes those instead:
+
+```txt
+/state <TAB>     available busy focus meeting away commuting …
+/timer <TAB>     start stop status cancel
+/due tomo<TAB>   tomorrow
+/project re<TAB> (the projects in your file starting with "re")
+/goto <TAB>      (the record ids in your file)
+```
+
+Fixed-choice commands (`/view`, `/sort`, `/status`, `/mark`, `/timer`,
+`/export`, `/theme`) offer their own words. The rest read the file you have
+open, so `/project`, `/context`, `/tag`, `/goto`, `/assign`, `/now`, and
+`/state` offer the projects, contexts, tags, ids, and people it already
+contains — including presence states of your own beyond the documented set.
+`/due` offers the date words the shorthand accepts. Commands taking free text,
+such as `/search` and `/add`, offer nothing.
+
+Up/Down move through the candidates and `Tab` accepts the highlighted one.
+These are the same candidates the shell completion scripts, the Web UI, and
+the MCP `complete` tool return.
+
 #### Commands
 
 **Views and filters**

@@ -5,6 +5,7 @@ from collections import OrderedDict
 from datetime import datetime, time
 
 from .atomic import atomic_write_text
+from .completion import VALUE_KINDS as _COMPLETION_KINDS, candidates as completion_candidates
 from .agenda import (
     agenda_records,
     filter_items,
@@ -309,6 +310,41 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         )
         records = limit_items(records, limit)
         return links_response(records, diagnostics)
+
+    @app.get("/api/complete")
+    def get_complete(
+        kind=Query(...),
+        prefix="",
+        limit=20,
+    ):
+        """Completion candidates for the browser, from the same source as the
+        shell scripts and the TUI. Typing drives this, so an unreadable file
+        yields the built-in candidates rather than an error."""
+        try:
+            requested = int(limit)
+        except (TypeError, ValueError):
+            requested = 20
+        requested = max(1, min(requested, 200))
+
+        if kind not in _COMPLETION_KINDS:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "UNKNOWN_KIND",
+                    "message": "Unknown completion kind %r." % kind,
+                    "detail": {"supported": list(_COMPLETION_KINDS)},
+                },
+            )
+
+        try:
+            items, _ = read_life_inputs(app.state.paths, app.state.config)
+        except Exception:
+            items = []
+        return {
+            "kind": kind,
+            "prefix": prefix or "",
+            "candidates": completion_candidates(kind, prefix or "", items=items, limit=requested),
+        }
 
     @app.post("/api/check-line")
     def check_line(payload=Body(...)):
@@ -4182,6 +4218,46 @@ HTML_PAGE = r"""<!doctype html>
       color: var(--ink);
       outline: none;
     }
+    /* Inline completion popup, shared by every input that completes. */
+    .cpl-pop {
+      position: absolute;
+      z-index: 60;
+      min-width: 11rem;
+      max-width: min(22rem, 90vw);
+      max-height: 15rem;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--line-strong);
+      border-radius: .5rem;
+      box-shadow: var(--shadow-2);
+      padding: .25rem;
+      display: none;
+    }
+    .cpl-pop.open { display: block; }
+    .cpl-row {
+      padding: .4rem .55rem;
+      border-radius: .35rem;
+      cursor: pointer;
+      font-size: .86rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cpl-row.focus, .cpl-row:hover { background: var(--soft); }
+    .cpl-row .cpl-kind {
+      float: right;
+      font-size: .68rem;
+      color: var(--muted);
+      margin-left: .6rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    @media (pointer: coarse) {
+      /* Finger-sized rows, and 16px keeps iOS from zooming the page. */
+      .cpl-row { padding: .62rem .6rem; font-size: 1rem; }
+      .cpl-pop { max-height: 40vh; }
+    }
+
     .cmdk-list { max-height: 46vh; overflow-y: auto; padding: .35rem; }
     .cmdk-row {
       display: flex;
@@ -7496,6 +7572,7 @@ HTML_PAGE = r"""<!doctype html>
       initAccessibilityPrefs();
       applyLanguage();
       startLanguageObserver();
+      setupCompletion();
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
@@ -9137,6 +9214,8 @@ HTML_PAGE = r"""<!doctype html>
         `<label>Title<input id="drawer-edit-title" value="${escapeHtml(item.title)}" required autocomplete="off"></label>` +
         `<label>Details<textarea id="drawer-edit-details" rows="7" placeholder="due:2026-01-01&#10;project:work">${escapeHtml(detailsToText(item.details))}</textarea></label>` +
         `</form>`;
+      // Freshly built markup, so its completion has to be wired up again.
+      setupCompletion();
       document.getElementById("drawer-edit-title").focus();
     }
 
@@ -10582,6 +10661,269 @@ HTML_PAGE = r"""<!doctype html>
         if (data?.item) { openDrawer(data.item); selectItem(data.item); }
         else showToast("No item at line " + lineNum, "error");
       } catch(e) { showToast("Line " + lineNum + ": " + e.message, "error"); }
+    }
+
+    // ── Inline completion ─────────────────────────────────────────
+    //
+    // One widget serves every input that completes. A field supplies a
+    // *resolver* that looks at the text and the caret and answers "what is
+    // being typed right now" as {kind, prefix, start, end}; the widget owns
+    // fetching, ranking display, keyboard handling, and replacement.
+    //
+    // Candidates come from /api/complete, which reads the same life.txt the
+    // shell completion and the TUI read, so all three agree.
+
+    const CPL_STATIC = {
+      // Date words the shorthand accepts. These are grammar, not file
+      // content, so they never need a round trip.
+      date: ["today", "tomorrow", "yesterday", "monday", "tuesday", "wednesday",
+             "thursday", "friday", "saturday", "sunday", "next_monday",
+             "next_tuesday", "next_wednesday", "next_thursday", "next_friday",
+             "next_saturday", "next_sunday", "next_week",
+             "+1d", "+3d", "+1w", "-1w", "+1m", "+1y"],
+    };
+
+    let _cplPop = null;
+    let _cplState = null;
+    let _cplSeq = 0;
+
+    function cplPopup() {
+      if (_cplPop) return _cplPop;
+      _cplPop = document.createElement("div");
+      _cplPop.className = "cpl-pop";
+      _cplPop.setAttribute("role", "listbox");
+      _cplPop.setAttribute("data-no-i18n", "");
+      document.body.appendChild(_cplPop);
+      return _cplPop;
+    }
+
+    function cplClose() {
+      const pop = cplPopup();
+      pop.classList.remove("open");
+      pop.innerHTML = "";
+      if (_cplState) _cplState.items = [];
+    }
+
+    function cplIsOpen() {
+      return cplPopup().classList.contains("open");
+    }
+
+    async function cplFetch(kind, prefix) {
+      if (CPL_STATIC[kind]) {
+        const needle = String(prefix || "").toLowerCase();
+        return CPL_STATIC[kind].filter(v => v.toLowerCase().startsWith(needle));
+      }
+      try {
+        const data = await api(`/api/complete?kind=${encodeURIComponent(kind)}` +
+                               `&prefix=${encodeURIComponent(prefix || "")}&limit=20`);
+        return data.candidates || [];
+      } catch (e) {
+        // Completion is an assist, never a blocker: a failed lookup just
+        // means no suggestions, not an error banner over the user's typing.
+        return [];
+      }
+    }
+
+    function cplRender(input, token, values) {
+      const pop = cplPopup();
+      if (!values.length) { cplClose(); return; }
+
+      _cplState = {input: input, token: token, items: values, index: 0};
+      pop.innerHTML = values.map((value, i) =>
+        `<div class="cpl-row${i === 0 ? " focus" : ""}" role="option" data-index="${i}">` +
+        `<span class="cpl-kind">${escapeHtml(token.kind)}</span>${escapeHtml(value)}</div>`
+      ).join("");
+
+      const rect = input.getBoundingClientRect();
+      pop.style.left = `${Math.round(rect.left + window.scrollX)}px`;
+      pop.style.top = `${Math.round(rect.bottom + window.scrollY + 4)}px`;
+      pop.style.minWidth = `${Math.round(Math.min(rect.width, 340))}px`;
+      pop.classList.add("open");
+
+      // Flip above the field when the popup would fall off the viewport,
+      // which is the normal case for a bar near the bottom on a phone.
+      const popRect = pop.getBoundingClientRect();
+      if (popRect.bottom > window.innerHeight && rect.top > popRect.height) {
+        pop.style.top = `${Math.round(rect.top + window.scrollY - popRect.height - 4)}px`;
+      }
+    }
+
+    function cplMove(delta) {
+      if (!_cplState || !_cplState.items.length) return;
+      const count = _cplState.items.length;
+      _cplState.index = (_cplState.index + delta + count) % count;
+      const pop = cplPopup();
+      pop.querySelectorAll(".cpl-row").forEach((row, i) => {
+        row.classList.toggle("focus", i === _cplState.index);
+        if (i === _cplState.index && row.scrollIntoView) {
+          row.scrollIntoView({block: "nearest"});
+        }
+      });
+    }
+
+    function cplAccept(index) {
+      if (!_cplState || !_cplState.items.length) return false;
+      const chosen = _cplState.items[index === undefined ? _cplState.index : index];
+      if (chosen === undefined) return false;
+
+      const input = _cplState.input;
+      const token = _cplState.token;
+      const before = input.value.slice(0, token.start);
+      const after = input.value.slice(token.end);
+      input.value = before + chosen + after;
+      const caret = (before + chosen).length;
+      input.setSelectionRange(caret, caret);
+
+      cplClose();
+      // Let the field's own oninput logic (shorthand preview, validation)
+      // see the completed text.
+      input.dispatchEvent(new Event("input", {bubbles: true}));
+      input.focus();
+      return true;
+    }
+
+    /**
+     * Wire an input for completion.
+     * `resolver(value, caret)` returns {kind, prefix, start, end} or null.
+     */
+    function attachCompletion(input, resolver) {
+      if (!input || input.dataset.cplBound === "1") return;
+      input.dataset.cplBound = "1";
+      input.setAttribute("autocomplete", "off");
+
+      let timer = null;
+      const refresh = () => {
+        const caret = input.selectionStart === null ? input.value.length : input.selectionStart;
+        const token = resolver(input.value, caret);
+        if (!token) { cplClose(); return; }
+        const seq = ++_cplSeq;
+        cplFetch(token.kind, token.prefix).then(values => {
+          // A slower earlier request must not overwrite a newer one.
+          if (seq !== _cplSeq || document.activeElement !== input) return;
+          cplRender(input, token, values);
+        });
+      };
+
+      input.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(refresh, 90);
+      });
+      input.addEventListener("keydown", event => {
+        if (!cplIsOpen()) {
+          // Ctrl+Space asks for suggestions without typing more, matching
+          // the habit shells train.
+          if (event.key === " " && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            refresh();
+          }
+          return;
+        }
+        if (event.key === "ArrowDown") { event.preventDefault(); cplMove(1); }
+        else if (event.key === "ArrowUp") { event.preventDefault(); cplMove(-1); }
+        else if (event.key === "Tab" || event.key === "Enter") {
+          // Enter would otherwise submit the bar before the word is finished.
+          if (cplAccept()) event.preventDefault();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          cplClose();
+        }
+      });
+      input.addEventListener("blur", () => setTimeout(cplClose, 140));
+    }
+
+    document.addEventListener("mousedown", event => {
+      const row = event.target.closest && event.target.closest(".cpl-row");
+      if (!row) { if (cplIsOpen()) cplClose(); return; }
+      // mousedown, not click: blur would close the popup first on a tap.
+      event.preventDefault();
+      cplAccept(Number(row.dataset.index));
+    });
+
+    // ── Token resolvers ───────────────────────────────────────────
+
+    /** The whitespace-delimited word the caret sits in. */
+    function cplWordAt(value, caret) {
+      let start = caret;
+      while (start > 0 && !/\s/.test(value[start - 1])) start--;
+      let end = caret;
+      while (end < value.length && !/\s/.test(value[end])) end++;
+      return {start: start, end: end, text: value.slice(start, caret)};
+    }
+
+    //: Detail keys whose values are worth completing, and the kind to use.
+    const CPL_KEY_KINDS = {
+      project: "project", tag: "tag", context: "context", priority: "priority",
+      state: "state", person: "person", owner: "person", assignee: "person",
+      attendee: "person", sender: "person", recipient: "person", user: "person",
+      team: "team", service: "service", channel: "channel",
+      id: "id", parent: "id", depends_on: "id", blocks: "id", related: "id", ref: "id",
+      due: "date", do: "date", on: "date", from: "date", to: "date", until: "date",
+    };
+
+    /** Shorthand sigils and `key:value` pairs, anywhere in the line. */
+    function cplCaptureToken(value, caret) {
+      const word = cplWordAt(value, caret);
+      const typed = word.text;
+      if (!typed) return null;
+
+      const sigils = {"@": "project", "#": "tag", "!": "priority", "^": "date"};
+      const kind = sigils[typed[0]];
+      if (kind) {
+        return {kind: kind, prefix: typed.slice(1), start: word.start + 1, end: word.end};
+      }
+
+      const colon = typed.indexOf(":");
+      if (colon > 0) {
+        const key = typed.slice(0, colon);
+        const mapped = CPL_KEY_KINDS[key];
+        if (mapped) {
+          return {
+            kind: mapped,
+            prefix: typed.slice(colon + 1),
+            start: word.start + colon + 1,
+            end: word.end,
+          };
+        }
+        return null;
+      }
+
+      // A bare first word is the title, not a key; only offer key names once
+      // the user is past it.
+      if (word.start === 0) return null;
+      return {kind: "key", prefix: typed, start: word.start, end: word.end};
+    }
+
+    /** `busy` or `focus Deep work`: only the leading state word completes. */
+    function cplPresenceToken(value, caret) {
+      const word = cplWordAt(value, caret);
+      if (word.start !== 0) return null;
+      return {kind: "state", prefix: word.text, start: 0, end: word.end};
+    }
+
+    /** A field holding exactly one value of a known kind. */
+    function cplWholeValue(kind) {
+      return (value, caret) => ({
+        kind: kind,
+        prefix: value.slice(0, caret),
+        start: 0,
+        end: value.length,
+      });
+    }
+
+    /** Attach every field that exists on the current page. */
+    function setupCompletion() {
+      const byId = (id, resolver) => attachCompletion(document.getElementById(id), resolver);
+      byId("quick-line", cplCaptureToken);
+      byId("presence-input", cplPresenceToken);
+      byId("import-raw-input", cplCaptureToken);
+      byId("focus-quick-title", cplCaptureToken);
+      byId("edit-details", cplCaptureToken);
+      byId("review-project", cplWholeValue("project"));
+      byId("graph-root", cplWholeValue("id"));
+      // The drawer editor is built on demand, so it is attached again after
+      // each render rather than once at startup.
+      byId("drawer-edit-details", cplCaptureToken);
     }
 
     // ── Tag datalist autocomplete ──────────────────────────────────

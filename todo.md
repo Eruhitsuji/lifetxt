@@ -1,8 +1,8 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-22 (updated x91)
+Last updated: 2026-07-22 (updated x92)
 
-This is the active roadmap after the 2026-07-22 round-trip golden corpus, multiline-body safety, and executable completion regression batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
+This is the active roadmap after the 2026-07-22 timezone-aware datetime preservation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
 Priority guide:
 
@@ -36,7 +36,6 @@ Feature-track order after the P0 release gate:
 
 - [ ] Route `presence.status_transition`, TUI `_mutate_rows`, Web writes, MCP writes, timer updates, and notification acknowledgement through the shared mutation layer.
 - [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error.
-- [ ] Fix timezone-offset data loss. Preserve aware datetime values for JSON/JSONL/CSV round trips and normalize only for comparisons.
 - [ ] Define timezone rules for naive values, `#! timezone:`, `defaults.timezone`, CLI overrides, display, filtering, and completion-date boundaries.
 - [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, and auto-reload.
 - [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
@@ -153,6 +152,7 @@ The goal is to make lifetxt the place where users decide what to do next and rea
 - [ ] Add invoice policy documentation and fixtures for rounding, rates, currencies, missing project names, and malformed elapsed values.
 - [ ] Add standup team mode only after per-user output is stable; preserve a script-friendly JSON shape.
 - [ ] Add ICS round-trip fixtures for all-day events, offset-aware events, attendees, recurrence, escaped text, and UID collisions.
+- [ ] Add timezone fixtures for monthly and yearly recurrence, time-only offsets, DST transitions, non-hour offsets, and mixed aware/naive boundaries after the timezone-precedence policy is defined.
 - [ ] Define overwrite and conflict behavior before adding bidirectional calendar synchronization or `sync-ics --merge-existing` expansion.
 - [ ] Add todo.txt and GitHub Markdown idempotency fixtures so repeated imports do not create duplicate records.
 - [ ] Verify attachment opening on Windows, macOS, and Linux, including spaces, symlinks, executable rejection, and paths outside the source directory.

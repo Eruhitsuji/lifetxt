@@ -17,6 +17,58 @@ DATETIME_RE = re.compile(
 TIME_RE = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:?\d{2})?$")
 
 
+class LifeDateTime(datetime):
+    """Datetime that keeps authored offsets without breaking legacy comparisons.
+
+    lifetxt historically converted offset-aware values to the host's local time
+    and removed ``tzinfo`` during parsing.  That made ordering work with naive
+    values, but destroyed the original offset before callers could serialize or
+    inspect it.  ``LifeDateTime`` preserves ``tzinfo`` and applies the old local
+    naive normalization only when an ordering comparison or datetime subtraction
+    mixes aware and naive values.
+
+    Equality intentionally retains Python's normal datetime semantics: an aware
+    value is not equal to a naive value merely because their local wall-clock
+    representations happen to match.
+    """
+
+    def _comparison_value(self):
+        return comparison_datetime(self)
+
+    def __lt__(self, other):
+        if isinstance(other, datetime):
+            return self._comparison_value() < comparison_datetime(other)
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, datetime):
+            return self._comparison_value() <= comparison_datetime(other)
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, datetime):
+            return self._comparison_value() > comparison_datetime(other)
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, datetime):
+            return self._comparison_value() >= comparison_datetime(other)
+        return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, datetime):
+            return self._comparison_value() - comparison_datetime(other)
+        result = datetime.__sub__(self, other)
+        if isinstance(result, datetime) and not isinstance(result, LifeDateTime):
+            return _life_datetime(result)
+        return result
+
+    def __rsub__(self, other):
+        if isinstance(other, datetime):
+            return comparison_datetime(other) - self._comparison_value()
+        return NotImplemented
+
+
 def is_date(value):
     return parse_date(value) is not None
 
@@ -39,6 +91,7 @@ def parse_date(value):
 
 
 def parse_datetime(value):
+    """Parse a life.txt datetime without discarding an explicit UTC offset."""
     if not isinstance(value, str) or not DATETIME_RE.match(value):
         return None
     text = _normalize_timezone(value)
@@ -52,12 +105,9 @@ def parse_datetime(value):
     )
     for fmt in formats:
         try:
-            parsed = datetime.strptime(text, fmt)
+            return LifeDateTime.strptime(text, fmt)
         except ValueError:
             continue
-        if parsed.tzinfo is not None:
-            return parsed.astimezone().replace(tzinfo=None)
-        return parsed
     return None
 
 
@@ -93,17 +143,86 @@ def parse_date_or_datetime(value, is_end=False):
     if parsed_date is None:
         return None
     if is_end:
-        return datetime.combine(parsed_date, time(23, 59, 59))
-    return datetime.combine(parsed_date, time(0, 0, 0))
+        return LifeDateTime.combine(parsed_date, time(23, 59, 59))
+    return LifeDateTime.combine(parsed_date, time(0, 0, 0))
+
+
+def comparison_datetime(value):
+    """Return a naive datetime suitable for legacy ordering and subtraction.
+
+    Aware values are converted to the host's local timezone and then stripped of
+    ``tzinfo``.  Naive values are copied unchanged.  This is deliberately a
+    comparison-only representation; callers that display or serialize a value
+    must keep the original aware datetime.
+    """
+    if not isinstance(value, datetime):
+        raise TypeError("comparison_datetime expects a datetime value.")
+    if _is_aware(value):
+        local = value.astimezone()
+        return datetime(
+            local.year,
+            local.month,
+            local.day,
+            local.hour,
+            local.minute,
+            local.second,
+            local.microsecond,
+            fold=getattr(local, "fold", 0),
+        )
+    return datetime(
+        value.year,
+        value.month,
+        value.day,
+        value.hour,
+        value.minute,
+        value.second,
+        value.microsecond,
+        fold=getattr(value, "fold", 0),
+    )
 
 
 def format_datetime(value):
+    """Format a datetime while retaining seconds, fractions, and UTC offset."""
+    if not isinstance(value, datetime):
+        raise TypeError("format_datetime expects a datetime value.")
     if getattr(value, "microsecond", 0):
-        text = value.strftime(DATETIME_FRACTION_FORMAT)
-        return text.rstrip("0").rstrip(".")
-    if getattr(value, "second", 0):
-        return value.strftime(DATETIME_SECONDS_FORMAT)
-    return value.strftime(DATETIME_FORMAT)
+        text = value.strftime(DATETIME_FRACTION_FORMAT).rstrip("0").rstrip(".")
+    elif getattr(value, "second", 0):
+        text = value.strftime(DATETIME_SECONDS_FORMAT)
+    else:
+        text = value.strftime(DATETIME_FORMAT)
+    return text + _format_timezone_offset(value)
+
+
+def _life_datetime(value):
+    if isinstance(value, LifeDateTime):
+        return value
+    return LifeDateTime(
+        value.year,
+        value.month,
+        value.day,
+        value.hour,
+        value.minute,
+        value.second,
+        value.microsecond,
+        tzinfo=value.tzinfo,
+        fold=getattr(value, "fold", 0),
+    )
+
+
+def _is_aware(value):
+    return value.tzinfo is not None and value.utcoffset() is not None
+
+
+def _format_timezone_offset(value):
+    if not _is_aware(value):
+        return ""
+    total_seconds = int(value.utcoffset().total_seconds())
+    sign = "+" if total_seconds >= 0 else "-"
+    total_seconds = abs(total_seconds)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes = remainder // 60
+    return "%s%02d:%02d" % (sign, hours, minutes)
 
 
 def _normalize_timezone(value):

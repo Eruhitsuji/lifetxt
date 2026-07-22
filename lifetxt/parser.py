@@ -78,12 +78,13 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                     )
                 )
                 continue
-            if current_item.details.get("body") and not current_body_continuation:
+            body_values = current_item.details.get("body") or []
+            if len(body_values) > 1 and not current_body_continuation:
                 diagnostics.append(
                     Diagnostic(
                         "error",
                         "E022",
-                        "A body continuation cannot follow an inline body: detail. Use either one inline body:value or only | continuation lines.",
+                        "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
                         line_no,
                         leading_spaces + 1,
                     )

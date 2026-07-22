@@ -34,18 +34,33 @@ First paragraph.\n\nThird line after a blank line.
 
 The serializer uses this continuation form when an item has exactly one `body:` value containing a newline.
 
-## Forms that are intentionally rejected
-
-Do not combine an inline `body:` detail with `|` continuation lines:
+For backward compatibility, one inline `body:` value may be followed by continuation lines:
 
 ```txt
-[N] N Note body:inline
+[N] N Note body:First_line
+| Second line
+```
+
+This has one unambiguous target and parses as `First_line\nSecond line`. Its canonical serialized form removes the inline detail and uses only continuation lines:
+
+```txt
+[N] N Note
+| First_line
+| Second line
+```
+
+## Forms that are intentionally rejected
+
+A continuation block must not follow repeated inline `body:` details:
+
+```txt
+[N] N Note body:first body:second
 | ambiguous continuation
 ```
 
-The continuation could mean "append to the inline value" or "create another body value". The parser therefore reports error `E022` at the continuation line.
+The continuation has no marker saying whether it belongs to `first`, `second`, or a new value. The parser therefore reports error `E022` at the continuation line and leaves the repeated inline values unchanged.
 
-Repeated single-line body values remain valid and lossless:
+Repeated single-line body values remain valid and lossless when there is no continuation block:
 
 ```txt
 [N] N Note body:first body:second
@@ -58,7 +73,7 @@ However, repeated `body:` values cannot be serialized when any value is multilin
 Use one of these forms:
 
 - one short inline value: `body:short_text`;
-- repeated inline values when every value is single-line; or
+- repeated inline values when every value is single-line and no `|` block follows; or
 - one continuation block for one multiline value.
 
-Never mix the inline and continuation forms on the same item. This fail-loud rule prevents a formatter, converter, editor integration, or future LSP action from silently changing the data model.
+A single inline value followed by continuation lines remains accepted for compatibility and canonicalizes to the continuation-only form. Never add a continuation block after repeated `body:` values. This fail-loud boundary prevents a formatter, converter, editor integration, or future LSP action from silently changing the data model.

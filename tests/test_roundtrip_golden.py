@@ -111,21 +111,29 @@ class GoldenRoundTripTests(unittest.TestCase):
             self.assertEqual(expected_from, restored[0].details["from"][0])
             self.assertEqual(expected_to, restored[0].details["to"][0])
 
-    def test_inline_body_and_continuation_are_rejected(self):
-        text = "[N] N Note body:inline\n| continuation\n"
+    def test_repeated_body_and_continuation_are_rejected(self):
+        text = "[N] N Note body:first body:second\n| continuation\n"
         items, diagnostics = parse_text(text)
         errors = [diagnostic for diagnostic in diagnostics if diagnostic.code == "E022"]
         self.assertEqual(1, len(items))
         self.assertEqual(1, len(errors))
         self.assertEqual(2, errors[0].line)
         self.assertEqual(1, errors[0].column)
+        self.assertEqual(["first", "second"], items[0].details["body"])
 
-    def test_indented_ambiguous_body_reports_continuation_column(self):
-        text = "  [N] N Note body:inline\n  | continuation\n"
+    def test_indented_repeated_body_reports_continuation_column(self):
+        text = "  [N] N Note body:first body:second\n  | continuation\n"
         _items, diagnostics = parse_text(text)
         error = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E022")
         self.assertEqual(2, error.line)
         self.assertEqual(3, error.column)
+
+    def test_single_inline_body_continuation_remains_compatible_and_canonicalizes(self):
+        text = "[N] N Note body:First_line\n| Second line\n"
+        items, diagnostics = parse_text(text)
+        self.assertNotIn("E022", _error_codes(diagnostics))
+        self.assertEqual("First_line\nSecond line", items[0].details["body"][0])
+        self.assertEqual("[N] N Note\n| First_line\n| Second line", item_to_line(items[0]))
 
     def test_repeated_body_with_multiline_value_cannot_serialize(self):
         item = Item(

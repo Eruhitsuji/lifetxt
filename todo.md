@@ -1,8 +1,8 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-22 (updated x92)
+Last updated: 2026-07-22 (updated x93)
 
-This is the active roadmap after the 2026-07-22 timezone-aware datetime preservation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
+This is the active roadmap after the 2026-07-22 shared mutation routing batch for CLI compatibility writes, TUI row and presence changes, Web and MCP writes, timer updates, and notification acknowledgement. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
 Priority guide:
 
@@ -34,8 +34,7 @@ Feature-track order after the P0 release gate:
 
 ## P0: Release Safety and Correctness
 
-- [ ] Route `presence.status_transition`, TUI `_mutate_rows`, Web writes, MCP writes, timer updates, and notification acknowledgement through the shared mutation layer.
-- [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error.
+- [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error, and replacement-style compatibility callers must be converted to in-lock semantic transforms or pass the exact snapshot hash they read.
 - [ ] Define timezone rules for naive values, `#! timezone:`, `defaults.timezone`, CLI overrides, display, filtering, and completion-date boundaries.
 - [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, and auto-reload.
 - [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
@@ -68,6 +67,8 @@ Feature-track order after the P0 release gate:
 - [ ] Define surface-neutral operations for query, add, update, delete, done, repeat completion, agenda, next-action selection, timer actions, links, attachments, timezone conversion, messaging, proposals, saved views, and remote workspace access.
 - [ ] Build contract tests that run the same fixtures through the shared Python layer and every applicable public surface.
 - [ ] Generate a command/capability matrix and fail CI when required CLI, TUI, Web, or MCP behavior drifts without an explicit exception.
+- [ ] Retire the `compat_writes` bridge when the TUI/fzf and CLI module splits reach their write commands. Import `lifetxt.mutation` directly, give each operation a stable name, and run semantic transforms against the in-lock current text instead of submitting a precomputed whole-file replacement.
+- [ ] Add a CI write-route audit that rejects new authoritative `open(..., "w")`, direct `os.replace`, and `atomic_write_bytes` calls outside the allow-listed mutation/atomic commit boundary.
 - [ ] Move the new extension dispatcher commands into the unified parser registry once the CLI module split begins, so generated help and every completion backend stay authoritative.
 - [ ] Expose named review ranges (`last-week`, `last-month`, and `year`) through Web API and MCP, using `review.resolve_review_range` rather than duplicating date math.
 - [ ] Decide which new report commands need Web API or MCP equivalents based on demonstrated daily use; avoid adding surfaces only for symmetry.

@@ -10,7 +10,7 @@
     {
       "name": "multiline-body-unicode",
       "input": "[N] J \"研究日誌\" on:2026-07-22\n| 朝の確認\n|\n| Finished ✅\n",
-      "canonical": "[N] J \"研究日誌\" on:2026-07-22\n| 朝の確認\n|\n| Finished ✅\n",
+      "canonical": "[N] J 研究日誌 on:2026-07-22\n| 朝の確認\n|\n| Finished ✅\n",
       "csv_roundtrip": true
     },
     {

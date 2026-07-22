@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "repeated-details",
+      "input": "[ ] T Task tag:a tag:b recipient:alice recipient:bob\n",
+      "canonical": "[ ] T Task tag:a tag:b recipient:alice recipient:bob\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "multiline-body-unicode",
+      "input": "[N] J \"研究日誌\" on:2026-07-22\n| 朝の確認\n|\n| Finished ✅\n",
+      "canonical": "[N] J \"研究日誌\" on:2026-07-22\n| 朝の確認\n|\n| Finished ✅\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "physical-line-continuation",
+      "input": "[ ] T Long_Task \\\r\n  due:2026-07-23 project:research\r\n",
+      "canonical": "[ ] T Long_Task due:2026-07-23 project:research\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "offset-aware-unicode-event",
+      "input": "[ ] E \"東京 meeting\" from:2026-07-22T09:30:15.25+09:00 to:2026-07-22T10:45:00+09:00 attendee:山田\n",
+      "canonical": "[ ] E \"東京 meeting\" from:2026-07-22T09:30:15.25+09:00 to:2026-07-22T10:45:00+09:00 attendee:山田\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "crlf-document",
+      "input": "[ ] T First id:first\r\n[ ] T Second id:second\r\n",
+      "canonical": "[ ] T First id:first\n[ ] T Second id:second\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "empty-document",
+      "input": "",
+      "canonical": "",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "hierarchy-parent-inference",
+      "input": "[ ] T Parent id:p1\n  [ ] T Child id:c1\n",
+      "canonical": "[ ] T Parent id:p1\n  [ ] T Child id:c1 parent:p1\n",
+      "csv_roundtrip": false
+    },
+    {
+      "name": "repeated-single-line-body-values",
+      "input": "[N] N Note body:first body:second\n",
+      "canonical": "[N] N Note body:first body:second\n",
+      "csv_roundtrip": true
+    },
+    {
+      "name": "quoted-escapes",
+      "input": "[N] N \"Quoted \\\"title\\\"\" note:\"C:\\\\docs\\\\note.txt\"\n",
+      "canonical": "[N] N \"Quoted \\\"title\\\"\" note:\"C:\\\\docs\\\\note.txt\"\n",
+      "csv_roundtrip": true
+    }
+  ]
+}

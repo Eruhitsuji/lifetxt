@@ -16,8 +16,12 @@ def item_to_line(item):
         if not _KEY_RE.match(key):
             raise ValueError("Invalid detail key %r." % key)
         if key == "body" and _has_multiline_value(values):
-            for value in values:
-                continuation_lines.extend(_body_continuation_lines(value))
+            if len(values) != 1:
+                raise ValueError(
+                    "Multiline body text requires exactly one body: value; "
+                    "repeated body: values cannot be represented losslessly with | continuation lines."
+                )
+            continuation_lines.extend(_body_continuation_lines(values[0]))
             continue
         for value in values:
             parts.append("%s:%s" % (key, encode_string(value)))

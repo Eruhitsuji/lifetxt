@@ -1,8 +1,8 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-20 (updated x90)
+Last updated: 2026-07-22 (updated x91)
 
-This is the active roadmap after the 2026-07-20 shared mutation foundation batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
+This is the active roadmap after the 2026-07-22 round-trip golden corpus, multiline-body safety, and executable completion regression batch. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
 Priority guide:
 
@@ -38,11 +38,8 @@ Feature-track order after the P0 release gate:
 - [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error.
 - [ ] Fix timezone-offset data loss. Preserve aware datetime values for JSON/JSONL/CSV round trips and normalize only for comparisons.
 - [ ] Define timezone rules for naive values, `#! timezone:`, `defaults.timezone`, CLI overrides, display, filtering, and completion-date boundaries.
-- [ ] Add a parse-serialize-parse golden corpus before expanding formatting or LSP edits. Include repeated details, multiline bodies, continuations, offsets, Unicode, CRLF, empty files, and hierarchy.
-- [ ] Resolve the repeated `body:` plus continuation ambiguity and document the lossless canonical representation or reject the form explicitly.
 - [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, and auto-reload.
 - [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
-- [ ] Add a completion regression test that sources the generated bash script and drives `_lifetxt_completion` directly. The current tests assert on the generated text, which cannot catch a script that is syntactically valid but behaves wrongly.
 - [ ] Verify SMTP delivery with safe test accounts, including STARTTLS, authentication errors, multiple recipients, watcher state, and provider app-password guidance.
 - [ ] Add browser-level smoke tests for the Web UI, including mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, and accessibility focus behavior.
 - [ ] Warn when `serve PATH` reads one file but writes to a different one because config `write_file` overrides it. A POSIX `write_file` on Windows silently resolves drive-relative and creates a file the user never asked for, with the UI reporting success.
@@ -63,6 +60,7 @@ Feature-track order after the P0 release gate:
 - [ ] Add `check --format json` as a stable diagnostics API with source, line, span, code, severity, message, and fix hints.
 - [ ] Add conservative typo suggestions and mechanical `check --fix` repairs only after the canonical form and golden corpus are stable.
 - [ ] Define the concrete life.txt Format 1.0 compatibility boundary and migration checklist.
+- [ ] Version the golden-corpus compatibility policy. Retain canonical-output and diagnostic expectations for every released format version, run previous corpora against new parsers and serializers in CI, and require an explicit migration note before an intentional canonical-output change.
 
 ---
 

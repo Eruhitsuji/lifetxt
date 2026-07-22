@@ -136,7 +136,7 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
 
     def test_web_notification_ack_routes_through_shared_layer(self):
         path = self.path()
-        self.write(path, "[ ] M Ping id:M-1 recipient:self\n")
+        self.write(path, "[ ] M Ping id:M-1 sender:self recipient:self\n")
         with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
             item = webapp.ack_message_in_file(
                 path,

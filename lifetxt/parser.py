@@ -46,10 +46,11 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
     diagnostics = []
     current_item = None
     current_has_error = False
+    current_body_continuation = False
     hierarchy_stack = []
 
     def finish_current():
-        nonlocal current_item, current_has_error
+        nonlocal current_item, current_has_error, current_body_continuation
         if current_item is None:
             return
         items.append(current_item)
@@ -57,6 +58,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
             diagnostics.extend(validate_item(current_item))
         current_item = None
         current_has_error = False
+        current_body_continuation = False
 
     logical_lines, continuation_diagnostics = _logical_lines(text)
     diagnostics.extend(continuation_diagnostics)
@@ -76,7 +78,21 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                     )
                 )
                 continue
+            body_values = current_item.details.get("body") or []
+            if len(body_values) > 1 and not current_body_continuation:
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        "E022",
+                        "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
+                        line_no,
+                        leading_spaces + 1,
+                    )
+                )
+                current_has_error = True
+                continue
             _append_body_continuation(current_item, stripped_line)
+            current_body_continuation = True
             current_item.end_line = end_line
             if current_item.source_text is None:
                 current_item.source_text = line
@@ -93,10 +109,12 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
             item.end_line = end_line
             current_item = item
             current_has_error = _has_error(line_diagnostics)
+            current_body_continuation = False
             _push_hierarchy_item(item, hierarchy_stack)
         elif _has_error(line_diagnostics):
             current_item = None
             current_has_error = False
+            current_body_continuation = False
     finish_current()
     if check_ids:
         diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))

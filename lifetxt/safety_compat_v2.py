@@ -81,7 +81,7 @@ def _patch_doctor_dispatch():
 
 
 def _patch_revision_conflict_output():
-    from . import extra_safety
+    from . import extra_cli, extra_safety
     from .mutation import MutationConflict
 
     original = extra_safety.command_safety
@@ -107,6 +107,7 @@ def _patch_revision_conflict_output():
 
     command_safety._lifetxt_revision_conflict_output_v2 = True
     extra_safety.command_safety = command_safety
+    extra_cli.command_safety = command_safety
 
 
 def _patch_stable_diagnostic_shape():

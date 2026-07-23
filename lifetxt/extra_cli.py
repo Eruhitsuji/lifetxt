@@ -182,6 +182,7 @@ def _build_parser(command):
         parser.add_argument("--authentication", choices=("token", "session", "proxy", "none"), default="token")
         _add_output(parser)
     elif command == "doctor":
+        parser.add_argument("--workspace-safety", action="store_true", required=True)
         parser.add_argument("paths", nargs="*")
         parser.add_argument("--write-file")
         parser.add_argument("--archive", action="append", default=[])

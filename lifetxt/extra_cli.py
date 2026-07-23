@@ -8,6 +8,13 @@ from .extra_core import (command_next, command_show, command_edit, command_path,
 from .extra_reports import command_invoice, command_standup
 from .extra_convert import command_to_ics, command_from_todo, command_from_markdown
 from .extra_shell import command_completion, command_quick_journal
+from .extra_safety import command_capabilities, command_format, command_safety
+
+
+def _add_output(parser, choices=("text", "json"), default="json"):
+    parser.add_argument("--format", choices=choices, default=default)
+    parser.add_argument("--pretty", action="store_true")
+    parser.add_argument("-o", "--output")
 
 
 def _build_parser(command):
@@ -116,6 +123,48 @@ def _build_parser(command):
         parser.add_argument("--editor")
         parser.add_argument("--body-file")
         parser.add_argument("--dry-run", action="store_true")
+    elif command == "safety":
+        subparsers = parser.add_subparsers(dest="safety_action", required=True)
+        locks = subparsers.add_parser("locks")
+        locks.add_argument("paths", nargs="*")
+        locks.add_argument("--stale-after", type=float, default=300.0)
+        _add_output(locks)
+        target = subparsers.add_parser("serve-target")
+        target.add_argument("paths", nargs="*")
+        target.add_argument("--write-file")
+        _add_output(target)
+        timezone = subparsers.add_parser("timezone")
+        timezone.add_argument("paths", nargs="*")
+        timezone.add_argument("--timezone")
+        _add_output(timezone)
+        routes = subparsers.add_parser("write-routes")
+        routes.add_argument("--root")
+        routes.add_argument("--strict", action="store_true")
+        _add_output(routes)
+        gate = subparsers.add_parser("release-gate")
+        gate.add_argument("paths", nargs="*")
+        gate.add_argument("--root")
+        _add_output(gate)
+    elif command == "format":
+        subparsers = parser.add_subparsers(dest="format_action", required=True)
+        info = subparsers.add_parser("info")
+        info.add_argument("path")
+        _add_output(info)
+        check = subparsers.add_parser("check")
+        check.add_argument("path")
+        _add_output(check)
+        canon = subparsers.add_parser("canon")
+        canon.add_argument("path")
+        canon.add_argument("--write", action="store_true")
+        canon.add_argument("--strict", action="store_true")
+        _add_output(canon)
+        schemas = subparsers.add_parser("schemas")
+        schemas.add_argument("directory", nargs="?", default="dist/schemas")
+        _add_output(schemas)
+    elif command == "capabilities":
+        parser.add_argument("--read-only", action="store_true")
+        parser.add_argument("--authentication", choices=("token", "session", "proxy", "none"), default="token")
+        _add_output(parser)
     else:
         raise ValueError("Unsupported extended command: %s" % command)
     return parser
@@ -159,4 +208,10 @@ def main(argv=None, config_path=None):
         return command_completion(args)
     if command == "quick":
         return command_quick_journal(args, config_data)
+    if command == "safety":
+        return command_safety(args, config_data)
+    if command == "format":
+        return command_format(args, config_data)
+    if command == "capabilities":
+        return command_capabilities(args, config_data)
     raise ValueError("Unsupported extended command: %s" % command)

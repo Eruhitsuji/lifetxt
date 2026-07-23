@@ -1,0 +1,15 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/conflict-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempted_change": {"type": "object"},
+    "current_item": {"type": ["object", "null"]},
+    "current_revision": {"type": "string"},
+    "error": {"const": "CONFLICT"},
+    "expected_revision": {"type": "string"}
+  },
+  "required": ["error", "expected_revision", "current_revision", "attempted_change"],
+  "title": "lifetxt conflict v1",
+  "type": "object"
+}

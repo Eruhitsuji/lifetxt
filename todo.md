@@ -1,8 +1,8 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-22 (updated x93)
+Last updated: 2026-07-23 (updated x94)
 
-This is the active roadmap after the 2026-07-22 shared mutation routing batch for CLI compatibility writes, TUI row and presence changes, Web and MCP writes, timer updates, and notification acknowledgement. Completed items are removed. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
+This is the active roadmap after the 2026-07-23 release-safety and Format 1.0 foundation batch. The batch added revision-required operation contracts and concurrent stale-writer tests for seven high-risk write classes, timezone precedence inspection, lock and serve-target diagnostics, a write-route audit, an executable release gate, Format 1.0 version/canonical tooling, stable diagnostics, versioned schemas, and a versioned capability document. Completed items are removed; partially completed items are rewritten to describe only the remaining work. The previous detailed roadmap is preserved unchanged in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md) for traceability.
 
 Priority guide:
 
@@ -34,46 +34,44 @@ Feature-track order after the P0 release gate:
 
 ## P0: Release Safety and Correctness
 
-- [ ] Add concurrent-write tests for quick capture, item update, MCP writes, notification acknowledgement, timer state, archive, and undo. Every stale write must fail with a clear conflict error, and replacement-style compatibility callers must be converted to in-lock semantic transforms or pass the exact snapshot hash they read.
-- [ ] Define timezone rules for naive values, `#! timezone:`, `defaults.timezone`, CLI overrides, display, filtering, and completion-date boundaries.
-- [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, and auto-reload.
-- [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells.
+- [ ] Migrate the existing quick capture, item update, MCP, notification acknowledgement, timer, archive, and undo handlers onto `lifetxt.safe_ops` or equivalent in-lock semantic operations. Expose the source revision each client read, require that revision on every replacement-style write, map `ExpectedRevisionRequired` and `MutationConflict` into stable CLI/Web/MCP errors, and retain the new one-winner/one-conflict concurrency fixtures for every public surface.
+- [ ] Apply the documented timezone precedence (CLI override, `#! timezone:`, `defaults.timezone`, host) to actual display, filtering, recurrence, timer, notification, and completion-date boundaries. Define naive-value interpretation, time-only offset behavior, DST gap/fold handling, and non-hour offsets rather than limiting the policy to inspection and validation.
+- [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals. Cover colors, glyph fallback, narrow layouts, editor suspension, auto-reload, and mutation-conflict presentation.
+- [ ] Verify `fzf` and `peco` actions end-to-end on Windows PowerShell and Unix-like shells, including stale revisions, multi-selection, preview quoting, edit suspension, delete confirmation, and non-ASCII paths.
 - [ ] Verify SMTP delivery with safe test accounts, including STARTTLS, authentication errors, multiple recipients, watcher state, and provider app-password guidance.
-- [ ] Add browser-level smoke tests for the Web UI, including mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, and accessibility focus behavior.
-- [ ] Warn when `serve PATH` reads one file but writes to a different one because config `write_file` overrides it. A POSIX `write_file` on Windows silently resolves drive-relative and creates a file the user never asked for, with the UI reporting success.
-- [ ] Automate the Web UI translation-coverage sweep. The current check is a manual headless-browser walk over every view; CI should fail when newly added chrome has no dictionary entry, and the sweep must keep reporting the record-content bucket so an over-broad exclusion cannot hide a real gap.
-- [ ] Define and enforce the next release gate: timezone-safe round trips, shared mutation with CAS, golden corpus, green CI, clean packaging metadata, and published schemas.
+- [ ] Add browser-level smoke tests for the Web UI, including mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, conflict responses, and accessibility focus behavior.
+- [ ] Integrate `safety serve-target` into `serve` startup so a read/write mismatch is reported before the first request. Resolve configured paths with platform-aware absolute-path rules and reject Windows drive-relative targets instead of merely reporting them through the diagnostic command.
+- [ ] Automate the Web UI translation-coverage sweep. CI must fail when newly added chrome has no dictionary entry, while separately reporting record content and user-authored text so an over-broad exclusion cannot hide a real gap.
+- [ ] Make `safety release-gate` a required CI profile. Add clean-wheel installation, schema validation with a standards-compliant validator, packaging metadata checks, golden-corpus policy checks, translation coverage, and the strict write-route baseline before allowing release tags.
 
 ---
 
 ## P1: Format 1.0 and Data Semantics
 
-- [ ] Add a `format_version` directive and a migration/versioning policy. Define how unversioned and stale files are reported.
-- [ ] Define `LIFETXT_CANON_V1`: UTF-8 without BOM, LF endings, NFC normalization, whitespace, quoting, detail ordering, repeated-key ordering, and continuation representation.
-- [ ] Specify case-sensitivity rules for detail keys, tags, IDs, contexts, users, teams, groups, areas, and projects.
-- [ ] Specify multi-file semantics: ID uniqueness, glob ordering, cross-file links, archive references, source metadata, and write-target selection.
-- [ ] Document metadata directive placement and precedence across CLI flags, config, file directives, and built-in defaults.
-- [ ] Publish stable JSON Schemas for JSON, JSONL, Web API payloads, MCP outputs, remote capabilities, conflict responses, proposals, saved views, and message delivery state under `dist/`, with HTTPS `$id` values and CI validation.
-- [ ] Add diagnostics for Unicode normalization, BOM, CRLF, mixed indentation, invalid directives, duplicate IDs across files and archives, dangling links, dependency cycles, missing parents, and corrupt timer state.
-- [ ] Add `check --format json` as a stable diagnostics API with source, line, span, code, severity, message, and fix hints.
-- [ ] Add conservative typo suggestions and mechanical `check --fix` repairs only after the canonical form and golden corpus are stable.
-- [ ] Define the concrete life.txt Format 1.0 compatibility boundary and migration checklist.
+- [ ] Enforce `#! format_version: 1` in the parser and every write surface. Keep unversioned files readable in compatibility mode, refuse unsupported versions on mutation, add explicit migration commands, and preserve a read-only inspection path for newer versions.
+- [ ] Complete `LIFETXT_CANON_V1` beyond the implemented UTF-8/BOM, LF, NFC, trailing-whitespace, lowercase-key, and final-newline rules. Define quoting, escaping, detail ordering, repeated-key ordering, continuation representation, comments, directive placement, and idempotent serializer output with golden fixtures.
+- [ ] Enforce and test the documented multi-file semantics: workspace-wide ID uniqueness, deterministic glob/input order, cross-file links, archive references, source metadata, generated-file behavior, and explicit write-target selection.
+- [ ] Expand the published schema bundle beyond item, diagnostic, capability, and conflict documents. Add JSON/JSONL exports, Web API payloads, MCP outputs, proposals, saved views, remote profiles, group definitions, message delivery state, and release-manifest schemas under `dist/schemas/`; validate examples and schema `$ref` resolution in CI.
+- [ ] Extend stable diagnostics beyond BOM, line endings, NFC, trailing whitespace, key case, final newline, duplicate directives, and format version. Add mixed indentation, malformed directives, duplicate IDs across active files and archives, dangling links, dependency cycles, missing parents, corrupt timer state, invalid timezone directives, and unsafe write-target diagnostics.
+- [ ] Route the legacy `check --format json` interface to the new stable diagnostic shape. Preserve `source`, `line`, `column`, `span`, `code`, `severity`, `message`, and `hint`, publish compatibility guarantees, and add fixtures that compare CLI, Web, and MCP diagnostics.
+- [ ] Add conservative typo suggestions and mechanical `check --fix` repairs only after the remaining canonical ordering and quoting rules are stable. Every fix must be revision-checked, idempotent, reviewable as a diff, and limited to unambiguous transformations.
+- [ ] Define the concrete life.txt Format 1.0 compatibility boundary and migration checklist, including downgrade behavior, unsupported-directive handling, schema version compatibility, remote capability negotiation, and required release notes for intentional canonical-output changes.
 - [ ] Version the golden-corpus compatibility policy. Retain canonical-output and diagnostic expectations for every released format version, run previous corpora against new parsers and serializers in CI, and require an explicit migration note before an intentional canonical-output change.
 
 ---
 
 ## P1: Shared Surface Contracts
 
-- [ ] Define surface-neutral operations for query, add, update, delete, done, repeat completion, agenda, next-action selection, timer actions, links, attachments, timezone conversion, messaging, proposals, saved views, and remote workspace access.
-- [ ] Build contract tests that run the same fixtures through the shared Python layer and every applicable public surface.
-- [ ] Generate a command/capability matrix and fail CI when required CLI, TUI, Web, or MCP behavior drifts without an explicit exception.
+- [ ] Expand the new revision-required operation contracts into a complete surface-neutral operation layer for query, add, update, delete, done, repeat completion, agenda, next-action selection, timer actions, links, attachments, timezone conversion, messaging, proposals, saved views, and remote workspace access.
+- [ ] Build contract tests that run the same fixtures through the shared Python layer and every applicable public surface. Include success, validation failure, stale revision, lock timeout, read-only mode, missing capability, and partial multi-file failure cases.
+- [ ] Generate a command/capability matrix and fail CI when required CLI, TUI, Web, or MCP behavior drifts without an explicit documented exception. Derive the versioned `capabilities` document from the same registry rather than maintaining its operation list by hand.
 - [ ] Retire the `compat_writes` bridge when the TUI/fzf and CLI module splits reach their write commands. Import `lifetxt.mutation` directly, give each operation a stable name, and run semantic transforms against the in-lock current text instead of submitting a precomputed whole-file replacement.
-- [ ] Add a CI write-route audit that rejects new authoritative `open(..., "w")`, direct `os.replace`, and `atomic_write_bytes` calls outside the allow-listed mutation/atomic commit boundary.
-- [ ] Move the new extension dispatcher commands into the unified parser registry once the CLI module split begins, so generated help and every completion backend stay authoritative.
+- [ ] Turn `safety write-routes` into a CI baseline that distinguishes authoritative life.txt/state writes from exports, caches, tests, and generated artifacts. Reject new `open(..., "w"|"a"|"x")`, direct `os.replace`, and `atomic_write_bytes` calls outside an reviewed allow-list, and require an explanation when the baseline changes.
+- [ ] Move all extension dispatcher commands, including `safety`, `format`, and `capabilities`, into the unified parser registry once the CLI module split begins, so generated help and every completion backend stay authoritative.
 - [ ] Expose named review ranges (`last-week`, `last-month`, and `year`) through Web API and MCP, using `review.resolve_review_range` rather than duplicating date math.
 - [ ] Decide which new report commands need Web API or MCP equivalents based on demonstrated daily use; avoid adding surfaces only for symmetry.
 - [ ] Add structured proposal metadata and item-level diffs for MCP and external writes, then require an expected file hash or an explicit unsafe override.
-- [ ] Add mutation-lock observability to `doctor`: list active and stale sidecar locks, show owner metadata, and clean up only locks proven stale.
+- [ ] Integrate the implemented lock inspection into `doctor`: list active and stale sidecar locks, show owner metadata and PID liveness, scan configured workspace targets, and clean up only locks proven stale after an explicit confirmation or non-interactive force flag.
 - [ ] Define a shared query language and saved-view schema before adding more one-off filtering options. Reuse the same grammar in CLI, TUI, Web UI, MCP, remote clients, dashboards, sharing, and automation.
 
 ---
@@ -84,13 +82,13 @@ This track starts only after shared mutation routing, external revision precondi
 
 - [ ] Add single-user Remote Safe Mode with password login and/or trusted reverse-proxy authentication while retaining token authentication for API clients.
 - [ ] Use secure server-side sessions, protected cookies, CSRF protection for browser writes, login throttling, session expiration and revocation, security headers, and environment-backed secret loading.
-- [ ] Add a versioned capability endpoint that reports server version, format/schema versions, supported operations, authentication mode, read-only state, writable targets, revision-precondition support, and optional features.
+- [ ] Expose the implemented versioned capability document through Web API and MCP. Report server version, format/canonical/schema versions, registry-derived operations, authentication mode, read-only state, writable targets, revision-precondition support, and optional features; validate every response against `capability-v1.schema.json`.
 - [ ] Define a shared `WorkspaceBackend` interface with `LocalFileBackend` and `RemoteApiBackend` implementations so CLI and TUI commands do not reimplement local-versus-remote behavior.
 - [ ] Add remote profile management, for example `lifetxt remote add|list|show|test|remove NAME`, storing URLs and non-secret preferences in config while referencing credentials through environment variables or operating-system credential facilities.
 - [ ] Add read-only remote operation for `list`, `show`, `filter`, `agenda`, `next`, `review`, `messages`, `status`, `links`, `graph`, and completion before enabling writes.
 - [ ] Add `lifetxt tui --remote NAME` with read-only browsing first. Reuse the normal TUI rendering and command catalog rather than building a separate remote TUI.
 - [ ] Add conflict-aware remote create, update, delete, done, timer, message, and acknowledgement operations only after the Web API exposes source-file revisions and requires `ETag` / `If-Match` or an equivalent expected revision.
-- [ ] Make remote conflicts show the expected revision, current revision, current server item, and the user's attempted change. Never overwrite automatically or describe a comparison as true three-way merge without a retained base representation.
+- [ ] Make remote conflicts validate against `conflict-v1.schema.json` and show the expected revision, current revision, current server item, and the user's attempted change. Never overwrite automatically or describe a comparison as true three-way merge without a retained base representation.
 - [ ] Start remote refresh with explicit reload and bounded polling. Add SSE or WebSocket updates only after polling behavior and reconnect semantics are proven insufficient.
 - [ ] Keep remote/local transfer explicit through commands such as export, copy, or proposal import. Do not implement background bidirectional file synchronization in this track.
 - [ ] Add connection diagnostics for TLS, authentication, server compatibility, clock skew, schema mismatch, unavailable capabilities, read-only mode, and proxy configuration.
@@ -140,7 +138,7 @@ The goal is to make lifetxt the place where users decide what to do next and rea
 - [ ] Decide the timer scope boundary before adding persistent alarm or Pomodoro complexity.
 - [ ] Define one timer state model for start, stop, pause, resume, cancel, crash recovery, stale-state detection, and optional item association.
 - [ ] Decide whether `timer alarm`, `timer pomodoro`, and `timer log` belong in core or should remain delegated to operating-system tools.
-- [ ] Add timer state validation, cross-platform locking, midnight/timezone tests, and corruption recovery.
+- [ ] Connect the revision-required `timer_state` contract to all timer commands and Web/MCP handlers. Add state-schema validation, cross-platform locking, midnight/timezone tests, corruption recovery, stale-state diagnostics, and safe reset/backup behavior.
 - [ ] Add notification backend abstraction for terminal, Linux, macOS, Windows, email, and Web UI delivery.
 - [ ] Add quiet hours, persisted acknowledgement, recurring reminder acknowledgement, and shared snooze presets.
 
@@ -153,7 +151,7 @@ The goal is to make lifetxt the place where users decide what to do next and rea
 - [ ] Add invoice policy documentation and fixtures for rounding, rates, currencies, missing project names, and malformed elapsed values.
 - [ ] Add standup team mode only after per-user output is stable; preserve a script-friendly JSON shape.
 - [ ] Add ICS round-trip fixtures for all-day events, offset-aware events, attendees, recurrence, escaped text, and UID collisions.
-- [ ] Add timezone fixtures for monthly and yearly recurrence, time-only offsets, DST transitions, non-hour offsets, and mixed aware/naive boundaries after the timezone-precedence policy is defined.
+- [ ] Add timezone fixtures for monthly and yearly recurrence, time-only offsets, DST gaps and folds, non-hour offsets, mixed aware/naive boundaries, and each configured precedence source. Verify CLI, Web, MCP, timer, notification, and completion-date behavior against the same fixture table.
 - [ ] Define overwrite and conflict behavior before adding bidirectional calendar synchronization or `sync-ics --merge-existing` expansion.
 - [ ] Add todo.txt and GitHub Markdown idempotency fixtures so repeated imports do not create duplicate records.
 - [ ] Verify attachment opening on Windows, macOS, and Linux, including spaces, symlinks, executable rejection, and paths outside the source directory.
@@ -186,7 +184,7 @@ Theme tokens and Dashboard card order/limits already exist. The remaining work i
 
 ## P2: CLI, Packaging, and Distribution
 
-- [ ] Route the `extra_cli` commands (`next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo`) through `build_parser`. Completion now special-cases them via `entrypoint._EXTRA_COMMANDS`, but `--help`, generated docs, and per-command option completion still cannot see their flags.
+- [ ] Route the `extra_cli` commands (`next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo`, `from-markdown`, `safety`, `format`, and `capabilities`) through `build_parser`. Completion currently special-cases them via `entrypoint._EXTRA_COMMANDS`, but `--help`, generated docs, and per-command option completion still cannot see their flags authoritatively.
 - [ ] Cache `completion values` results keyed by file path and mtime. A lookup reparses the whole file on every keypress-triggered completion (~250 ms for 200 records), which is noticeable on large files. `GET /api/complete` has the same problem: it re-reads every path per keystroke.
 - [ ] Complete command arguments in the Web UI command palette, which still only matches command names. The inline widget covers the text fields but not `Ctrl+K`.
 - [ ] Offer completion candidates in the CLI's own interactive prompt (`assist --interactive`), the last input surface with no completion at all.
@@ -194,7 +192,7 @@ Theme tokens and Dashboard card order/limits already exist. The remaining work i
 - [ ] Split `lifetxt/tui_app.py` into state, command, layout, and rendering modules.
 - [ ] Raise the supported Python baseline to `>=3.10` after clean-environment verification and remove obsolete compatibility code deliberately.
 - [ ] Expand CI to Ubuntu, Windows, and macOS, add coverage, and retain the dependency-free job as a required check.
-- [ ] Expand `scripts/run_ci_like.py` with named profiles (`cli`, `web`, `mcp`, and `release`) and an optional `doctor --ci` front end.
+- [ ] Expand `scripts/run_ci_like.py` with named profiles (`cli`, `web`, `mcp`, and `release`) and an optional `doctor --ci` front end. Make the release profile invoke `safety release-gate`.
 - [ ] Verify editable install, optional extras, console scripts, PowerShell usage, build artifacts, and clean-wheel installation.
 - [ ] Add release documentation and automation: changelog, semantic versioning, build, tag, PyPI publication, and post-release smoke checks.
 - [ ] Add `CONTRIBUTING.md`, issue templates, pre-commit configuration, `SECURITY.md`, supported-version policy, and private vulnerability reporting.
@@ -205,12 +203,12 @@ Theme tokens and Dashboard card order/limits already exist. The remaining work i
 ## P2: Documentation, Editor, and LSP
 
 - [ ] Define which document is authoritative for grammar, CLI behavior, Web/API behavior, and examples.
-- [ ] Add English/Japanese parity checks for headings, code blocks, command names, and stable examples.
+- [ ] Add English/Japanese parity checks for headings, code blocks, command names, and stable examples, including the new release-safety documents.
 - [ ] Extract the Web UI Japanese dictionary from `webapp.py` into a data file that CLI, TUI, and MCP can share, so one translation exists per string instead of one per surface.
 - [ ] Decide the policy for languages beyond Japanese: how `web.language` falls back, whether partial dictionaries are allowed, and what an untranslated string should do.
-- [ ] Add worked examples and captures for TUI, Web views, timer, statistics, review, graph, attachments, invoice, standup, import/export, remote workspace use, group messaging, saved views, and recovery.
-- [ ] Document file splitting, generated files, archive files, cache files, multiple writers, backups, undo, Git-based recovery, remote workspaces, authentication, and proposal review.
-- [ ] Document sidecar lock files, CAS conflict recovery, cloud-sync and network-filesystem limitations, and safe manual cleanup.
+- [ ] Add worked examples and captures for TUI, Web views, timer, statistics, review, graph, attachments, invoice, standup, import/export, safety diagnostics, Format 1.0 migration, remote workspace use, group messaging, saved views, and recovery.
+- [ ] Document file splitting, generated files, archive files, cache files, multiple writers, backups, undo, Git-based recovery, remote workspaces, authentication, proposal review, release-gate operation, and schema compatibility.
+- [ ] Expand the sidecar lock and CAS documentation with cloud-sync and network-filesystem limitations, stale-lock evidence requirements, safe manual cleanup, expected-revision examples for every public surface, and conflict troubleshooting.
 - [ ] Package the VS Code grammar/snippets as an installable extension and generate key lists from model definitions.
 - [ ] Add editor support for directives, encrypted values, folding, file icons, and syntax-highlight snapshots.
 - [ ] Add a lossless parser/CST with source spans before implementing LSP edits.

@@ -1,0 +1,18 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/diagnostic-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {"type": "string"},
+    "column": {"type": ["integer", "null"]},
+    "hint": {"type": "string"},
+    "line": {"type": ["integer", "null"]},
+    "message": {"type": "string"},
+    "severity": {"enum": ["info", "warning", "error"]},
+    "source": {"type": ["string", "null"]},
+    "span": {"type": "object"}
+  },
+  "required": ["severity", "code", "message", "source", "line", "column", "span", "hint"],
+  "title": "lifetxt diagnostic v1",
+  "type": "object"
+}

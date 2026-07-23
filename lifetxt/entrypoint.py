@@ -29,6 +29,18 @@ _EXTRA_COMMANDS = frozenset(
     )
 )
 
+_DOCTOR_SAFETY_FLAGS = frozenset(
+    (
+        "--workspace-safety",
+        "--archive",
+        "--timer-state",
+        "--revision-metrics",
+        "--cleanup-stale",
+        "--fold-policy",
+        "--gap-policy",
+    )
+)
+
 
 def _extract_config_arg(argv):
     raw = list(sys.argv[1:] if argv is None else argv)
@@ -145,6 +157,15 @@ def _print_help():
     return 0
 
 
+def _uses_workspace_safety_doctor(argv):
+    for value in argv:
+        if value in _DOCTOR_SAFETY_FLAGS:
+            return True
+        if any(value.startswith(flag + "=") for flag in _DOCTOR_SAFETY_FLAGS):
+            return True
+    return False
+
+
 def main(argv=None):
     try:
         raw, cleaned, config_path = _extract_config_arg(argv)
@@ -194,7 +215,7 @@ def main(argv=None):
             from .extra_cli import main as extra_main
 
             return extra_main(cleaned, config_path=config_path)
-        if command == "doctor" and "--workspace-safety" in cleaned:
+        if command == "doctor" and _uses_workspace_safety_doctor(cleaned[1:]):
             from .extra_cli import main as extra_main
 
             return extra_main(cleaned, config_path=config_path)

@@ -1,0 +1,19 @@
+{
+  "policy_version": 1,
+  "required_checks": [
+    "mutation_cas",
+    "timezone_roundtrip",
+    "packaging_metadata",
+    "golden_policy",
+    "schema_validation",
+    "translation_coverage",
+    "write_route_baseline"
+  ],
+  "release_requires": {
+    "clean_wheel_install": true,
+    "standards_compliant_schema_validation": true,
+    "strict_write_route_baseline": true,
+    "translation_coverage": true,
+    "golden_corpus_policy": true
+  }
+}

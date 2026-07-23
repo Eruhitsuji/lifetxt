@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/timezone-policy-v1.schema.json",
+  "title": "lifetxt timezone policy v1",
+  "type": "object",
+  "required": ["timezone", "source", "valid", "precedence", "fold_policy", "gap_policy"],
+  "properties": {
+    "timezone": {"type": "string"},
+    "source": {"enum": ["cli", "file", "config", "host"]},
+    "valid": {"type": "boolean"},
+    "error": {"type": "string"},
+    "precedence": {"type": "array", "items": {"type": "string"}},
+    "fold_policy": {"enum": ["error", "earlier", "later"]},
+    "gap_policy": {"enum": ["error", "next", "previous"]},
+    "naive_values": {"type": "string"},
+    "aware_values": {"type": "string"},
+    "time_only_values": {"type": "string"},
+    "sample": {"type": "object"}
+  },
+  "additionalProperties": true
+}

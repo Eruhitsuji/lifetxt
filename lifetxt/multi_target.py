@@ -23,8 +23,10 @@ TargetResult = namedtuple(
     "TargetResult", "path kind before_hash after_hash changed created deleted"
 )
 MultiTargetResult = namedtuple(
-    "MultiTargetResult", "operation targets compensated"
+    "MultiTargetResult",
+    "operation targets compensated transaction_id journal_path recovery_required",
 )
+MultiTargetResult.__new__.__defaults__ = (None, None, False)
 
 
 class MultiTargetError(RuntimeError):
@@ -89,6 +91,9 @@ def apply_multi_target(
     lock_timeout=5.0,
     stale_lock_after=300.0,
     failure_hook=None,
+    journal_dir=None,
+    journal=True,
+    transaction_id=None,
 ):
     """Stage and commit all plans, compensating any partial commit on failure."""
     plans = list(plans or [])
@@ -101,6 +106,7 @@ def apply_multi_target(
     plan_by_path = dict((plan.path, plan) for plan in plans)
     staged = []
     committed = []
+    journal_handle = None
     with contextlib.ExitStack() as stack:
         for path in ordered_paths:
             stack.enter_context(
@@ -113,18 +119,42 @@ def apply_multi_target(
             )
         for path in ordered_paths:
             staged.append(_stage(plan_by_path[path], operation))
+        if journal:
+            from .transaction_journal import journal_directory, prepare
+
+            resolved_journal_dir = journal_dir or journal_directory(writable_path=ordered_paths[0])
+            journal_handle = prepare(
+                operation,
+                staged,
+                resolved_journal_dir,
+                transaction_id_value=transaction_id,
+            )
+            journal_handle.set_state("committing")
         try:
             for index, row in enumerate(staged):
                 if failure_hook is not None:
                     failure_hook("before_commit", row["plan"], index)
                 _commit_staged(row)
                 committed.append(row)
+                if journal_handle is not None:
+                    journal_handle.mark_target(index, commit_state="committed")
                 if failure_hook is not None:
                     failure_hook("after_commit", row["plan"], index)
                 _verify_staged(row, operation)
+                if journal_handle is not None:
+                    journal_handle.mark_target(index, commit_state="verified")
         except Exception as exc:
-            rollback_errors = _compensate(committed)
+            if journal_handle is not None:
+                journal_handle.set_state("compensating", error=exc)
+            rollback_errors = _compensate(committed, journal_handle=journal_handle)
+            if journal_handle is not None:
+                journal_handle.set_state(
+                    "compensated" if not rollback_errors else "recovery_required",
+                    error=None if not rollback_errors else "; ".join(str(error) for error in rollback_errors),
+                )
             raise MultiTargetCommitError(operation, exc, rollback_errors)
+        if journal_handle is not None:
+            journal_handle.set_state("committed")
     results = []
     for row in staged:
         before = row["before"]
@@ -139,7 +169,14 @@ def apply_multi_target(
                 row["plan"].delete and before.exists,
             )
         )
-    return MultiTargetResult(operation, results, False)
+    return MultiTargetResult(
+        operation,
+        results,
+        False,
+        None if journal_handle is None else journal_handle.load()["transaction_id"],
+        None if journal_handle is None else journal_handle.path,
+        False,
+    )
 
 
 def text_plan(path, transform, expected_hash, create=False, default="", validate=None):
@@ -197,17 +234,25 @@ def timer_and_item_transaction(
     item_transform,
     item_expected_hash,
     operation="timer_and_item",
+    timer_delete=False,
+    journal_dir=None,
+    transaction_id=None,
 ):
     """Commit timer JSON state and associated life.txt semantic change together."""
+    timer_plan = (
+        delete_plan(timer_path, timer_expected_hash, kind="json")
+        if timer_delete
+        else json_plan(
+            timer_path,
+            timer_transform,
+            timer_expected_hash,
+            create=timer_expected_hash == MISSING_HASH,
+            default={},
+        )
+    )
     return apply_multi_target(
         [
-            json_plan(
-                timer_path,
-                timer_transform,
-                timer_expected_hash,
-                create=timer_expected_hash == MISSING_HASH,
-                default={},
-            ),
+            timer_plan,
             text_plan(
                 item_path,
                 item_transform,
@@ -217,6 +262,8 @@ def timer_and_item_transaction(
             ),
         ],
         operation=operation,
+        journal_dir=journal_dir,
+        transaction_id=transaction_id,
     )
 
 
@@ -226,6 +273,8 @@ def attachment_and_item_transaction(
     item_transform,
     item_expected_hash,
     operation="attachment_and_item",
+    journal_dir=None,
+    transaction_id=None,
 ):
     """Commit an attachment create/update/delete and its life.txt reference together."""
     if not isinstance(attachment_plan, TargetPlan) or attachment_plan.kind != "bytes":
@@ -242,6 +291,8 @@ def attachment_and_item_transaction(
             ),
         ],
         operation=operation,
+        journal_dir=journal_dir,
+        transaction_id=transaction_id,
     )
 
 
@@ -335,6 +386,7 @@ def _commit_staged(row):
             os.unlink(plan.path)
         except FileNotFoundError:
             pass
+        _fsync_parent(plan.path)
     else:
         mutation.atomic_write_bytes(plan.path, row["replacement_bytes"])
 
@@ -351,10 +403,20 @@ def _verify_staged(row, operation):
         )
 
 
-def _compensate(committed):
+def _compensate(committed, journal_handle=None):
     errors = []
+    target_indexes = {}
+    if journal_handle is not None:
+        try:
+            target_indexes = dict(
+                (target["path"], int(target["index"]))
+                for target in journal_handle.load().get("targets", [])
+            )
+        except Exception:
+            target_indexes = {}
     for row in reversed(committed):
         plan = row["plan"]
+        index = target_indexes.get(plan.path)
         before = row["before"]
         try:
             if before.exists:
@@ -370,11 +432,30 @@ def _compensate(committed):
                     os.unlink(plan.path)
                 except FileNotFoundError:
                     pass
+                _fsync_parent(plan.path)
             restored = _snapshot(plan)
             if restored.content_hash != before.content_hash:
                 raise MultiTargetError(
                     "Compensation verification failed for %s." % plan.path
                 )
+            if journal_handle is not None and index is not None:
+                journal_handle.mark_target(index, compensation_state="verified")
         except Exception as exc:
+            if journal_handle is not None and index is not None:
+                journal_handle.mark_target(index, compensation_state="failed", error=exc)
             errors.append(exc)
     return errors
+
+
+def _fsync_parent(path):
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    try:
+        descriptor = os.open(directory, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)

@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from .model import normalize_type
 from .parser import parse_text
+from .timezone_policy import today as timezone_today
 from .timeutil import parse_date, parse_date_or_datetime
 
 
@@ -41,7 +42,7 @@ def cmd_stats(args):
 
 def stats_range(start_text=None, end_text=None, today=None):
     if today is None:
-        today = date.today()
+        today = timezone_today()
     if end_text:
         end_date = _parse_date_only(end_text)
     else:

@@ -1,16 +1,39 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-profile-v1.schema.json",
-  "title": "lifetxt remote profile v1",
-  "type": "object",
-  "required": ["profile_version", "name", "url", "read_only"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "properties": {
-    "profile_version": {"const": "1"},
-    "name": {"type": "string", "minLength": 1},
-    "url": {"type": "string", "pattern": "^https://"},
-    "read_only": {"type": "boolean"},
-    "token_env": {"type": ["string", "null"]},
-    "poll_seconds": {"type": "number", "minimum": 1}
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "poll_seconds": {
+      "minimum": 1,
+      "type": "number"
+    },
+    "profile_version": {
+      "const": "1"
+    },
+    "read_only": {
+      "type": "boolean"
+    },
+    "token_env": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "url": {
+      "pattern": "^https://",
+      "type": "string"
+    }
   },
-  "additionalProperties": false
+  "required": [
+    "profile_version",
+    "name",
+    "url",
+    "read_only"
+  ],
+  "title": "lifetxt remote profile v1",
+  "type": "object"
 }

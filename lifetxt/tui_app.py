@@ -891,7 +891,9 @@ def _completion_value(state, argument):
         precision = "datetime"
     elif choice in ("today", "date"):
         precision = "date"
-    moment = _datetime.datetime.now()
+    from .timezone_policy import now as timezone_now
+
+    moment = timezone_now().replace(tzinfo=None)
     if precision == "datetime":
         return moment.strftime("%Y-%m-%dT%H:%M")
     return moment.date().isoformat()

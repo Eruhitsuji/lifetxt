@@ -1,5 +1,7 @@
 import datetime
 import random
+
+from .timezone_policy import local_now_naive
 from collections import OrderedDict
 
 from .model import Item, VALID_TYPES, normalize_type
@@ -28,7 +30,7 @@ def parse_demo_base_datetime(value=None, now=None):
             raise ValueError("--date must be YYYY-MM-DD or YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.")
         return parsed.replace(microsecond=0)
     if now is None:
-        now = datetime.datetime.now()
+        now = local_now_naive()
     return now.replace(second=0, microsecond=0)
 
 

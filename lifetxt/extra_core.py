@@ -4,6 +4,8 @@ import argparse
 import calendar
 import csv
 import datetime
+
+from .timezone_policy import today as timezone_today
 import hashlib
 import io
 import json
@@ -206,7 +208,7 @@ def command_count(args, config_data):
 
 def command_workload(args, config_data):
     items = _load_items(args.paths, config_data)
-    today = datetime.date.today()
+    today = timezone_today()
     cutoff = today + datetime.timedelta(days=args.due_soon_days)
     data = {}
     for item in items:
@@ -287,7 +289,7 @@ def command_files_open(args, config_data):
 
 def command_someday(args, config_data):
     items = _load_items(args.paths, config_data)
-    today = datetime.date.today()
+    today = timezone_today()
     cutoff = today - datetime.timedelta(days=args.days)
     selected = []
     for item in items:

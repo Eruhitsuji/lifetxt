@@ -1,17 +1,45 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/proposal-v1.schema.json",
-  "title": "lifetxt proposal v1",
-  "type": "object",
-  "required": ["proposal_version", "id", "operation", "source", "expected_revision", "changes", "warnings"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
   "properties": {
-    "proposal_version": {"const": "1"},
-    "id": {"type": "string"},
-    "operation": {"type": "string"},
-    "source": {"type": "string"},
-    "expected_revision": {"type": "string"},
-    "changes": {"type": "array", "items": {"type": "object"}},
-    "warnings": {"type": "array", "items": {"type": "string"}}
+    "changes": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "expected_revision": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "operation": {
+      "type": "string"
+    },
+    "proposal_version": {
+      "const": "1"
+    },
+    "source": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
   },
-  "additionalProperties": true
+  "required": [
+    "proposal_version",
+    "id",
+    "operation",
+    "source",
+    "expected_revision",
+    "changes",
+    "warnings"
+  ],
+  "title": "lifetxt proposal v1",
+  "type": "object"
 }

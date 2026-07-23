@@ -11,6 +11,8 @@ the same edit.
 """
 
 import datetime
+
+from .timezone_policy import local_now_naive
 from collections import OrderedDict, namedtuple
 
 from .model import Item
@@ -39,7 +41,7 @@ COMMON_STATES = (
 
 def format_timestamp(moment=None):
     """Status datetimes are minute precision, matching the format examples."""
-    moment = moment or datetime.datetime.now()
+    moment = moment or local_now_naive()
     return moment.strftime("%Y-%m-%dT%H:%M")
 
 

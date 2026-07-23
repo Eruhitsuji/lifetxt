@@ -4,6 +4,8 @@ import argparse
 import calendar
 import csv
 import datetime
+
+from .timezone_policy import today as timezone_today
 import hashlib
 import io
 import json
@@ -177,7 +179,7 @@ def command_completion(args):
 
 
 def command_quick_journal(args, config_data):
-    day = _parse_date(args.date, "journal date") if args.date else datetime.date.today()
+    day = _parse_date(args.date, "journal date") if args.date else timezone_today()
     if args.body_file:
         with open(args.body_file, "r", encoding="utf-8-sig") as handle:
             body = handle.read().strip()

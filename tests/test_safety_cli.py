@@ -75,13 +75,21 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         self.assertTrue(json.loads(stdout)["mismatch"])
 
-    def test_format_schemas_command_writes_four_documents(self):
+    def test_format_schemas_command_writes_release_manifest_document(self):
         directory = self.path("schemas")
         code, stdout, stderr = self.run_command(["format", "schemas", directory, "--pretty"])
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(4, len(report["files"]))
-        self.assertEqual(4, len(os.listdir(directory)))
+        self.assertEqual(5, len(report["files"]))
+        self.assertEqual(5, len(os.listdir(directory)))
+        self.assertIn("release-manifest-v1.schema.json", report["files"])
+        with open(
+            os.path.join(directory, "release-manifest-v1.schema.json"),
+            "r",
+            encoding="utf-8",
+        ) as handle:
+            schema = json.load(handle)
+        self.assertEqual("lifetxt release manifest v1", schema["title"])
 
 
 if __name__ == "__main__":

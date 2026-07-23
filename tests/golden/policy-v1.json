@@ -1,0 +1,18 @@
+{
+  "policy_version": 1,
+  "corpus_version": 1,
+  "minimum_cases": 9,
+  "required_fields": ["name", "input", "canonical", "csv_roundtrip"],
+  "required_cases": [
+    "repeated-details",
+    "multiline-body-unicode",
+    "physical-line-continuation",
+    "offset-aware-unicode-event",
+    "crlf-document",
+    "empty-document",
+    "hierarchy-parent-inference",
+    "repeated-single-line-body-values",
+    "quoted-escapes"
+  ],
+  "change_policy": "Changing canonical output or removing a required case requires a corpus version bump and an explicit migration note."
+}

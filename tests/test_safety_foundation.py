@@ -124,7 +124,14 @@ class SafetyFoundationTests(unittest.TestCase):
 
     def test_schema_bundle_has_https_ids_and_required_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(4, len(bundle))
+        expected = {
+            "item-v1.schema.json",
+            "diagnostic-v1.schema.json",
+            "capability-v1.schema.json",
+            "conflict-v1.schema.json",
+            "release-manifest-v1.schema.json",
+        }
+        self.assertEqual(expected, set(bundle))
         for schema in bundle.values():
             self.assertTrue(schema["$id"].startswith("https://"))
             self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])

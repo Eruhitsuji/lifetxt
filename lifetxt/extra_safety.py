@@ -7,6 +7,7 @@ import os
 import sys
 
 from .extra_common import _json_text, _load_config, _resolved_input_paths, _write_output
+from .release_policy import release_gate
 from .safety_foundation import (
     CANON_VERSION,
     FORMAT_VERSION,
@@ -18,7 +19,6 @@ from .safety_foundation import (
     format_version_report,
     inspect_locks,
     read_text_exact,
-    release_gate,
     resolve_timezone_policy,
     schema_bundle,
     serve_target_diagnostic,

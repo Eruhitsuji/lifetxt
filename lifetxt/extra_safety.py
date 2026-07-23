@@ -6,8 +6,10 @@ import json
 import os
 import sys
 
+from .doctor import doctor_report
 from .extra_common import _json_text, _load_config, _resolved_input_paths, _write_output
 from .release_policy import release_gate
+from .revision_telemetry import RevisionMetricsStore, store_from_config
 from .safety_foundation import (
     CANON_VERSION,
     FORMAT_VERSION,
@@ -19,12 +21,12 @@ from .safety_foundation import (
     format_version_report,
     inspect_locks,
     read_text_exact,
-    resolve_timezone_policy,
     schema_bundle,
     serve_target_diagnostic,
     stable_diagnostics,
     write_schema_bundle,
 )
+from .timezone_policy import policy_report
 
 
 def command_safety(args, config_data):
@@ -46,7 +48,31 @@ def command_safety(args, config_data):
         paths = _resolved_input_paths(args.paths, config_data)
         if paths and paths[0] != "-" and os.path.exists(paths[0]):
             text, _raw, _bom = read_text_exact(paths[0])
-        report = resolve_timezone_policy(config_data, text=text, cli_timezone=args.timezone)
+        report = policy_report(
+            config_data,
+            text=text,
+            cli_timezone=args.timezone,
+            sample=getattr(args, "sample", None),
+            fold_policy=getattr(args, "fold_policy", "error"),
+            gap_policy=getattr(args, "gap_policy", "error"),
+        )
+        return _output(report, args, failure=not report.get("valid", False))
+    if action == "revisions":
+        paths = _resolved_input_paths(args.paths, config_data)
+        from .config import config_write_file
+        write_path = config_write_file(config_data) or (paths[0] if paths else None)
+        store = store_from_config(config_data, writable_path=write_path)
+        if getattr(args, "metrics_path", None):
+            store = RevisionMetricsStore(
+                args.metrics_path,
+                mode=store.mode,
+                window_days=store.window_days,
+            )
+        if getattr(args, "reset", False):
+            report = store.reset(getattr(args, "expected_hash", None))
+        else:
+            report = store.snapshot()
+        report["metrics_revision"] = store.content_hash()
         return _output(report, args)
     if action == "write-routes":
         root = os.path.abspath(args.root or os.getcwd())
@@ -59,6 +85,27 @@ def command_safety(args, config_data):
         report = release_gate(root, paths=paths)
         return _output(report, args, failure=not report["ok"])
     raise ValueError("Unknown safety action: %s" % action)
+
+
+def command_doctor(args, config_data):
+    paths = _resolved_input_paths(args.paths, config_data)
+    from .config import config_write_file
+    write_path = args.write_file or config_write_file(config_data) or (paths[0] if paths else None)
+    report = doctor_report(
+        paths,
+        config=config_data,
+        write_path=write_path,
+        timer_paths=getattr(args, "timer_state", None),
+        archive_paths=getattr(args, "archive", None),
+        revision_metrics_path=getattr(args, "revision_metrics", None),
+        cli_timezone=getattr(args, "timezone", None),
+        fold_policy=getattr(args, "fold_policy", "error"),
+        gap_policy=getattr(args, "gap_policy", "error"),
+        stale_after=getattr(args, "stale_after", 300.0),
+        cleanup_stale=getattr(args, "cleanup_stale", False),
+        force=getattr(args, "force", False),
+    )
+    return _output(report, args, failure=not report["ok"])
 
 
 def command_format(args, _config_data):

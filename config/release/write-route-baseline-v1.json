@@ -1,0 +1,5 @@
+{
+  "baseline_version": 1,
+  "description": "Reviewed pre-existing direct write call shapes. Line numbers are intentionally excluded so harmless edits do not churn the baseline; new path/call pairs fail the release gate.",
+  "allowed": []
+}

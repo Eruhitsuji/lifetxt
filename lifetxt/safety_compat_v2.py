@@ -13,6 +13,7 @@ def install_safety_compat_v2():
     if _INSTALLED:
         return
     _patch_cli_timezone_installer()
+    _patch_doctor_dispatch()
     _patch_revision_conflict_output()
     _patch_stable_diagnostic_shape()
     _INSTALLED = True
@@ -60,6 +61,23 @@ def _patch_cli_timezone_installer():
         cli_module.main = main
 
     runtime_safety_v2.install_cli_timezone_context = install_cli_timezone_context
+
+
+def _patch_doctor_dispatch():
+    from . import extra_cli
+
+    original = extra_cli.main
+    if getattr(original, "_lifetxt_doctor_dispatch_v2", False):
+        return
+
+    def main(argv=None, config_path=None):
+        raw = list(argv or [])
+        if raw and raw[0] == "doctor" and "--workspace-safety" not in raw:
+            raw.insert(1, "--workspace-safety")
+        return original(raw, config_path=config_path)
+
+    main._lifetxt_doctor_dispatch_v2 = True
+    extra_cli.main = main
 
 
 def _patch_revision_conflict_output():

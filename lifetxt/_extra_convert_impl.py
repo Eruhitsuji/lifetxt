@@ -18,6 +18,8 @@ import unicodedata
 from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+from .timezone_policy import today as timezone_today, utcnow
+
 from .atomic import atomic_write_text
 from .config import config_paths, config_section, config_user_name, config_write_file, load_config
 from .model import Item
@@ -86,7 +88,7 @@ def _ics_datetime(value):
 
 def command_to_ics(args, config_data):
     items = _load_items(args.paths, config_data)
-    now = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now = utcnow().strftime("%Y%m%dT%H%M%SZ")
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//lifetxt//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:%s" % _ics_escape(args.calendar_name)]
     for item in items:
         if item.kind != "E" or item.status in ("[-]", "[>]"):
@@ -226,7 +228,7 @@ def command_from_markdown(args, config_data):
             if refs:
                 details["ref"] = ["github#%s" % value for value in refs]
             if done:
-                details["done"] = [datetime.date.today().isoformat()]
+                details["done"] = [timezone_today().isoformat()]
             while stack and stack[-1][0] >= indent:
                 stack.pop()
             if stack:

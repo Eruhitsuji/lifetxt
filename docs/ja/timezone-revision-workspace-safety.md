@@ -224,7 +224,7 @@ lifetxt doctor life.txt \
 
 ## 6. 公開schema
 
-Schema bundleはDraft 2020-12の16文書になりました。新規documentは次を対象にします。
+Schema bundleはDraft 2020-12の21文書になりました。新規documentは次を対象にします。
 
 - revision metrics
 - timezone policy
@@ -237,6 +237,10 @@ Schema bundleはDraft 2020-12の16文書になりました。新規documentは�
 - remote profile
 - group
 - per-recipient delivery state
+- transaction journalとrecovery
+- strict timer operation
+- redacted support bundle
+- revision migration evidence
 
 Authoritative bundleを生成します。
 

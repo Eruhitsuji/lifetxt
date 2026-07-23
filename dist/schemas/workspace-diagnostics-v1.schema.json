@@ -1,59 +1,153 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/workspace-diagnostics-v1.schema.json",
-  "title": "lifetxt workspace diagnostics v1",
-  "type": "object",
-  "required": ["ok", "paths", "item_count", "diagnostic_count", "severity_counts", "diagnostics"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "properties": {
-    "ok": {"type": "boolean"},
-    "paths": {"type": "array", "items": {"type": "string"}},
-    "archive_paths": {"type": "array", "items": {"type": "string"}},
-    "file_reports": {"type": "object"},
-    "item_count": {"type": "integer", "minimum": 0},
-    "diagnostic_count": {"type": "integer", "minimum": 0},
-    "severity_counts": {"type": "object"},
-    "diagnostics": {
-      "type": "array",
+    "archive_paths": {
       "items": {
-        "type": "object",
-        "required": ["severity", "code", "message", "source", "line", "column", "span", "hint"],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "diagnostic_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "diagnostics": {
+      "items": {
+        "additionalProperties": false,
         "properties": {
-          "severity": {"enum": ["info", "warning", "error"]},
-          "code": {"type": "string"},
-          "message": {"type": "string"},
-          "source": {"type": ["string", "null"]},
-          "line": {"type": ["integer", "null"]},
-          "column": {"type": ["integer", "null"]},
+          "code": {
+            "type": "string"
+          },
+          "column": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "hint": {
+            "type": "string"
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ]
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "span": {
-            "type": "object",
-            "required": ["start", "end"],
+            "additionalProperties": false,
             "properties": {
-              "start": {
-                "type": "object",
-                "required": ["line", "column"],
-                "properties": {
-                  "line": {"type": ["integer", "null"]},
-                  "column": {"type": ["integer", "null"]}
-                },
-                "additionalProperties": false
-              },
               "end": {
-                "type": "object",
-                "required": ["line", "column"],
+                "additionalProperties": false,
                 "properties": {
-                  "line": {"type": ["integer", "null"]},
-                  "column": {"type": ["integer", "null"]}
+                  "column": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "line": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
                 },
-                "additionalProperties": false
+                "required": [
+                  "line",
+                  "column"
+                ],
+                "type": "object"
+              },
+              "start": {
+                "additionalProperties": false,
+                "properties": {
+                  "column": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "line": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "line",
+                  "column"
+                ],
+                "type": "object"
               }
             },
-            "additionalProperties": false
-          },
-          "hint": {"type": "string"}
+            "required": [
+              "start",
+              "end"
+            ],
+            "type": "object"
+          }
         },
-        "additionalProperties": false
-      }
+        "required": [
+          "severity",
+          "code",
+          "message",
+          "source",
+          "line",
+          "column",
+          "span",
+          "hint"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "file_reports": {
+      "type": "object"
+    },
+    "item_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "severity_counts": {
+      "type": "object"
     }
   },
-  "additionalProperties": false
+  "required": [
+    "ok",
+    "paths",
+    "item_count",
+    "diagnostic_count",
+    "severity_counts",
+    "diagnostics"
+  ],
+  "title": "lifetxt workspace diagnostics v1",
+  "type": "object"
 }

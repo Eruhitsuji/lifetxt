@@ -1,8 +1,11 @@
 {
-  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-metrics-v1.schema.json",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-migration-evidence-v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
+    "exported_at_utc": {
+      "type": "string"
+    },
     "last_persisted_at": {
       "type": [
         "string",
@@ -16,14 +19,7 @@
       ]
     },
     "legacy_fallback_by_path": {
-      "additionalProperties": {
-        "minimum": 0,
-        "type": "integer"
-      },
       "type": "object"
-    },
-    "legacy_fallback_enabled": {
-      "type": "boolean"
     },
     "legacy_fallback_last_used": {
       "type": [
@@ -35,38 +31,18 @@
       "minimum": 0,
       "type": "integer"
     },
-    "metrics_path": {
+    "metrics_revision": {
       "type": "string"
     },
     "migration_window_days": {
       "minimum": 0,
       "type": "integer"
     },
-    "observation_days": {
-      "minimum": 0,
-      "type": [
-        "number",
-        "null"
-      ]
-    },
     "observation_started_at": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string"
     },
     "ready_to_require_revisions": {
       "type": "boolean"
-    },
-    "reason": {
-      "type": "string"
-    },
-    "removal_condition": {
-      "type": "string"
-    },
-    "required_observation_days": {
-      "minimum": 0,
-      "type": "integer"
     },
     "revision_mode": {
       "enum": [
@@ -79,19 +55,19 @@
     },
     "server_instance_id": {
       "type": "string"
-    },
-    "zero_usage": {
-      "type": "boolean"
     }
   },
   "required": [
     "schema_version",
+    "exported_at_utc",
+    "metrics_revision",
+    "server_instance_id",
     "revision_mode",
-    "migration_window_days",
+    "observation_started_at",
     "legacy_fallback_total",
     "legacy_fallback_by_path",
     "ready_to_require_revisions"
   ],
-  "title": "lifetxt revision migration metrics v1",
+  "title": "lifetxt revision migration evidence v1",
   "type": "object"
 }

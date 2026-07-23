@@ -21,6 +21,11 @@
       "path": "lifetxt/safety_foundation.py",
       "call": "open(w)",
       "reason": "Generated JSON Schema publication output, not an authoritative life.txt/state mutation."
+    },
+    {
+      "path": "lifetxt/transaction_journal.py",
+      "call": "os.replace",
+      "reason": "Durable transaction-journal primitive. The implementation fsyncs the temporary file, atomically replaces the journal/artifact path, and fsyncs the parent directory so interrupted multi-target operations remain recoverable. This reviewed low-level operational-state writer is intentionally separate from authoritative life.txt mutation routing."
     }
   ]
 }

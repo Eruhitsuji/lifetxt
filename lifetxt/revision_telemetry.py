@@ -240,8 +240,99 @@ class RevisionMetricsStore(object):
         )
         return self.snapshot(now=now)
 
+    def export_evidence(self, output_path, now=None):
+        report = self.snapshot(now=now)
+        evidence = {
+            "schema_version": SCHEMA_VERSION,
+            "exported_at_utc": utc_now_text(now),
+            "metrics_revision": self.content_hash(),
+            "server_instance_id": report.get("server_instance_id"),
+            "revision_mode": report.get("revision_mode"),
+            "migration_window_days": report.get("migration_window_days"),
+            "observation_started_at": report.get("observation_started_at"),
+            "legacy_fallback_total": report.get("legacy_fallback_total"),
+            "legacy_fallback_by_path": report.get("legacy_fallback_by_path"),
+            "legacy_fallback_last_used": report.get("legacy_fallback_last_used"),
+            "last_reset_at": report.get("last_reset_at"),
+            "last_persisted_at": report.get("last_persisted_at"),
+            "ready_to_require_revisions": report.get("ready_to_require_revisions"),
+        }
+        payload = json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        from .atomic import atomic_write_text
+
+        atomic_write_text(os.path.abspath(output_path), payload, encoding="utf-8")
+        evidence["output_path"] = os.path.abspath(output_path)
+        return evidence
+
+    def relocate(self, destination, expected_hash, delete_source=False):
+        if expected_hash is None or str(expected_hash).strip() == "":
+            raise RevisionTelemetryError("Relocation requires the current metrics expected_hash.")
+        source_snapshot = read_text_snapshot(self.path, allow_missing=True)
+        if source_snapshot.content_hash == MISSING_HASH:
+            raise RevisionTelemetryError("Revision metrics do not exist: %s" % self.path)
+        destination = os.path.abspath(destination)
+        if destination == self.path:
+            report = self.snapshot()
+            report.update({"relocated": False, "source_path": self.path, "destination_path": destination})
+            return report
+        from .multi_target import apply_multi_target, bytes_plan, delete_plan
+
+        plans = [
+            bytes_plan(
+                destination,
+                lambda _current: source_snapshot_bytes(source_snapshot),
+                MISSING_HASH,
+                create=True,
+            )
+        ]
+        if delete_source:
+            plans.append(delete_plan(self.path, expected_hash, kind="bytes"))
+        else:
+            # Verify the source revision under the same ordered lock without changing it.
+            plans.append(
+                bytes_plan(
+                    self.path,
+                    lambda current: current,
+                    expected_hash,
+                    create=False,
+                )
+            )
+        result = apply_multi_target(
+            plans,
+            operation="revision_telemetry.relocate",
+            journal_dir=os.path.join(os.path.dirname(self.path), ".lifetxt-transactions"),
+        )
+        relocated = RevisionMetricsStore(destination, mode=self.mode, window_days=self.window_days)
+        report = relocated.snapshot()
+        report.update(
+            {
+                "relocated": True,
+                "source_path": self.path,
+                "destination_path": destination,
+                "source_deleted": bool(delete_source),
+                "transaction_id": result.transaction_id,
+                "journal_path": result.journal_path,
+                "metrics_revision": relocated.content_hash(),
+            }
+        )
+        if report.get("server_instance_id") != source_snapshot_json(source_snapshot).get("server_instance_id"):
+            raise RevisionTelemetryError("Relocated telemetry changed server_instance_id.")
+        return report
+
     def content_hash(self):
         return read_text_snapshot(self.path, allow_missing=True).content_hash
+
+
+def source_snapshot_bytes(snapshot):
+    from .mutation import _encode_text
+    return _encode_text(snapshot.text, encoding=snapshot.encoding, bom=snapshot.bom)
+
+
+def source_snapshot_json(snapshot):
+    try:
+        return json.loads(snapshot.text)
+    except (TypeError, ValueError):
+        raise RevisionTelemetryError("Revision metrics source is invalid JSON.")
 
 
 def store_from_config(config=None, writable_path=None):

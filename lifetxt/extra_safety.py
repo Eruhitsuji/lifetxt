@@ -10,6 +10,10 @@ from .doctor import doctor_report
 from .extra_common import _json_text, _load_config, _resolved_input_paths, _write_output
 from .release_policy import release_gate
 from .revision_telemetry import RevisionMetricsStore, store_from_config
+from .transaction_journal import (
+    abandon_with_backup, cleanup_terminal, compensate, export_evidence,
+    inspect_journal, journal_directory, list_journals, resume,
+)
 from .safety_foundation import (
     CANON_VERSION,
     FORMAT_VERSION,
@@ -70,10 +74,62 @@ def command_safety(args, config_data):
             )
         if getattr(args, "reset", False):
             report = store.reset(getattr(args, "expected_hash", None))
+        elif getattr(args, "relocate", None):
+            report = store.relocate(
+                getattr(args, "relocate"),
+                expected_hash=getattr(args, "expected_hash", None),
+                delete_source=bool(getattr(args, "delete_source", False)),
+            )
         else:
             report = store.snapshot()
-        report["metrics_revision"] = store.content_hash()
+        report["metrics_revision"] = store.content_hash() if os.path.exists(store.path) else report.get("metrics_revision")
+        if getattr(args, "export_evidence", None):
+            report["evidence"] = store.export_evidence(getattr(args, "export_evidence"))
         return _output(report, args)
+    if action == "transactions":
+        from .config import config_write_file
+        write_path = config_write_file(config_data)
+        root = os.path.abspath(
+            getattr(args, "journal_dir", None)
+            or journal_directory(config_data, writable_path=write_path)
+        )
+        tx_action = getattr(args, "transaction_action", "list")
+        journal = getattr(args, "journal", None)
+        if journal and not os.path.isabs(journal):
+            candidate = os.path.join(root, journal)
+            journal = candidate if candidate.endswith("journal.json") else os.path.join(candidate, "journal.json")
+        if tx_action == "list":
+            rows = list_journals(root, include_terminal=True)
+            report = {"journal_dir": root, "count": len(rows), "transactions": rows}
+        elif tx_action == "inspect":
+            if not journal:
+                raise ValueError("transactions inspect requires --journal PATH_OR_ID.")
+            report = inspect_journal(journal)
+        elif tx_action == "resume":
+            if not journal:
+                raise ValueError("transactions resume requires --journal PATH_OR_ID.")
+            report = resume(journal)
+        elif tx_action == "compensate":
+            if not journal:
+                raise ValueError("transactions compensate requires --journal PATH_OR_ID.")
+            report = compensate(journal)
+        elif tx_action == "abandon":
+            if not journal or not getattr(args, "backup_dir", None):
+                raise ValueError("transactions abandon requires --journal and --backup-dir.")
+            report = abandon_with_backup(journal, args.backup_dir)
+        elif tx_action == "export":
+            if not journal or not getattr(args, "output", None):
+                raise ValueError("transactions export requires --journal and --output.")
+            report = export_evidence(journal, args.output)
+            args.output = None
+        else:
+            report = cleanup_terminal(
+                root,
+                older_than_days=getattr(args, "older_than_days", 30.0),
+                force=bool(getattr(args, "force", False)),
+            )
+        failure = bool(report.get("recovery_required") or report.get("errors"))
+        return _output(report, args, failure=failure)
     if action == "write-routes":
         root = os.path.abspath(args.root or os.getcwd())
         findings = audit_python_writes(root)
@@ -98,6 +154,9 @@ def command_doctor(args, config_data):
         timer_paths=getattr(args, "timer_state", None),
         archive_paths=getattr(args, "archive", None),
         revision_metrics_path=getattr(args, "revision_metrics", None),
+        journal_dir=getattr(args, "journal_dir", None),
+        cleanup_transactions=getattr(args, "cleanup_transactions", False),
+        transaction_retention_days=getattr(args, "transaction_retention_days", 30.0),
         cli_timezone=getattr(args, "timezone", None),
         fold_policy=getattr(args, "fold_policy", "error"),
         gap_policy=getattr(args, "gap_policy", "error"),
@@ -105,6 +164,14 @@ def command_doctor(args, config_data):
         cleanup_stale=getattr(args, "cleanup_stale", False),
         force=getattr(args, "force", False),
     )
+    if getattr(args, "support_bundle", None):
+        from .support_bundle import write_support_bundle
+        bundle = write_support_bundle(report, args.support_bundle)
+        report["support_bundle"] = {
+            "output": bundle["output"],
+            "sha256": bundle["sha256"],
+            "redacted": True,
+        }
     return _output(report, args, failure=not report["ok"])
 
 

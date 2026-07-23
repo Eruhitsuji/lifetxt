@@ -10,6 +10,8 @@ import json
 import sys
 from collections import OrderedDict
 
+from .timezone_policy import today as timezone_today
+
 
 _EXTRA_COMMANDS = frozenset(
     (
@@ -101,7 +103,7 @@ def _legacy_main(argv):
 def _review_selector_args(argv, today=None):
     """Translate review convenience selectors into the legacy shared range flags."""
     args = list(argv)
-    today = today or datetime.date.today()
+    today = today or timezone_today()
     selectors = [name for name in ("--last-week", "--last-month", "--year") if name in args]
     if not selectors:
         return args

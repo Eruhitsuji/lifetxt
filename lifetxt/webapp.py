@@ -56,6 +56,7 @@ from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
+from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
 
@@ -105,7 +106,7 @@ def _quiet_stdout():
 
 def create_app(paths=None, writable_path=None, config=None, read_only=False):
     try:
-        from fastapi import Body, FastAPI, HTTPException, Query, Request
+        from fastapi import Body, FastAPI, HTTPException, Query, Request, Response
         from fastapi.responses import HTMLResponse, JSONResponse
     except ImportError as exc:
         raise RuntimeError(
@@ -1141,70 +1142,105 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_timer():
         from . import timer as timer_module
 
-        state_file = timer_module.timer_state_file(app.state.config)
-        if not os.path.exists(state_file):
-            return {"running": False}
-        state = timer_module._read_state(state_file)
-        minutes = timer_module.state_elapsed_minutes(state, timer_module._now())
-        return {
-            "running": True,
-            "id": state.get("id"),
-            "file": state.get("file"),
-            "started_at": state.get("started_at"),
-            "paused": bool(state.get("paused_at")),
-            "elapsed_minutes": minutes,
-            "elapsed": timer_module.format_elapsed(minutes),
-        }
+        return timer_module.timer_status_data(config=app.state.config, paths=app.state.paths)
 
     @app.post("/api/timer")
-    def post_timer(payload=Body(...)):
-        """Drive the single shared timer: start, stop, or cancel."""
+    def post_timer(response: Response, payload=Body(...)):
+        """Drive the shared timer with explicit state and item revisions."""
         from . import timer as timer_module
+        from .mutation import MutationConflict
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
         action = str(payload.get("action") or "").strip().lower()
-        if action not in ("start", "stop", "cancel"):
-            raise HTTPException(status_code=400, detail="action must be start, stop, or cancel.")
-
-        state_file = timer_module.timer_state_file(app.state.config)
-        id_key = id_key_from_config(app.state.config)
-
-        if action == "start":
-            item_id = str(payload.get("id") or "").strip()
-            if not item_id:
-                raise HTTPException(status_code=400, detail="id is required to start a timer.")
-            if os.path.exists(state_file):
-                running = timer_module._read_state(state_file)
-                raise HTTPException(
-                    status_code=409,
-                    detail="A timer is already running for %s." % running.get("id"),
-                )
-            try:
-                with _quiet_stdout():
-                    timer_module.start_timer(
-                        _timer_args(app.state.writable_path, item_id, app.state.config)
-                    )
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=error_detail(exc))
-            return {"running": True, "id": item_id}
-
-        if not os.path.exists(state_file):
-            raise HTTPException(status_code=409, detail="No running timer.")
-        state = timer_module._read_state(state_file)
-
-        if action == "cancel":
-            os.remove(state_file)
-            return {"running": False, "id": state.get("id"), "elapsed_written": False}
+        if action not in ("start", "stop", "pause", "resume", "cancel"):
+            raise HTTPException(
+                status_code=400,
+                detail="action must be start, stop, pause, resume, or cancel.",
+            )
+        required = getattr(app.state, "revision_mode", "observe") == "required"
+        timer_revision = payload.get("timer_revision")
+        item_revision = payload.get("item_revision")
+        needs_item = action in ("start", "stop")
+        missing = []
+        if timer_revision in (None, ""):
+            missing.append("timer_revision")
+        if needs_item and item_revision in (None, ""):
+            missing.append("item_revision")
+        if required and missing:
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "PRECONDITION_REQUIRED",
+                    "message": "Timer writes require revisions for every touched target.",
+                    "missing": missing,
+                },
+            )
+        if missing:
+            response.headers["X-Lifetxt-Legacy-Revision-Fallback"] = "used"
+            response.headers["Deprecation"] = "true"
 
         try:
-            with _quiet_stdout():
-                timer_module.stop_timer(
-                    _timer_args(state.get("file"), state.get("id"), app.state.config)
+            if action == "start":
+                item_id = str(payload.get("id") or "").strip()
+                if not item_id:
+                    raise HTTPException(status_code=400, detail="id is required to start a timer.")
+                result = timer_module.start_timer_transaction(
+                    app.state.writable_path,
+                    item_id,
+                    note=payload.get("note"),
+                    config=app.state.config,
+                    expected_item_revision=item_revision,
+                    expected_timer_revision=timer_revision,
+                    require_revisions=required,
                 )
+                result["elapsed_written"] = False
+                return result
+            if action == "stop":
+                result = timer_module.stop_timer_transaction(
+                    config=app.state.config,
+                    expected_item_revision=item_revision,
+                    expected_timer_revision=timer_revision,
+                    require_revisions=required,
+                )
+                result["elapsed_written"] = True
+                return result
+            if action == "pause":
+                return timer_module.pause_timer_transaction(
+                    config=app.state.config,
+                    expected_timer_revision=timer_revision,
+                    require_revision=required,
+                )
+            if action == "resume":
+                return timer_module.resume_timer_transaction(
+                    config=app.state.config,
+                    expected_timer_revision=timer_revision,
+                    require_revision=required,
+                )
+            result = timer_module.cancel_timer_transaction(
+                config=app.state.config,
+                expected_timer_revision=timer_revision,
+                require_revision=required,
+            )
+            if not result.get("canceled"):
+                raise HTTPException(status_code=409, detail="No running timer.")
+            result["elapsed_written"] = False
+            return result
+        except MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "path": exc.path,
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                    "operation": exc.operation,
+                },
+            )
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {"running": False, "id": state.get("id"), "elapsed_written": True}
+            message = error_detail(exc)
+            status = 409 if "already running" in message or "No running timer" in message else 400
+            raise HTTPException(status_code=status, detail=message)
 
     @app.post("/api/status", status_code=201)
     def set_status(payload=Body(...)):
@@ -1454,7 +1490,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 raise HTTPException(status_code=400, detail="Invalid date %r. Use YYYY-MM-DD." % date_value)
             completion_date = completion_dt.date()
         else:
-            completion_date = datetime.now().date()
+            completion_date = timezone_today()
         date_iso = completion_date.isoformat()
 
         next_item = None
@@ -2346,7 +2382,7 @@ def split_line_ending(line):
 
 def _now(value=None):
     if value is None:
-        value = datetime.now()
+        value = local_now_naive()
     return value.replace(second=0, microsecond=0)
 
 

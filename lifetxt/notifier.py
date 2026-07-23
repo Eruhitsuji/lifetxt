@@ -8,6 +8,7 @@ from datetime import datetime
 from .agenda import parse_duration
 from .atomic import atomic_write_json
 from .serializer import item_to_line
+from .timezone_policy import local_now_naive
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime, parse_datetime
 
 
@@ -22,7 +23,7 @@ def notification_records(
     grace="2m",
 ):
     if now is None:
-        now = datetime.now().replace(second=0, microsecond=0)
+        now = local_now_naive().replace(second=0, microsecond=0)
     if recipient is None:
         recipient = "self"
 
@@ -217,7 +218,7 @@ def save_notification_state(path, state):
 
 def mark_notifications_seen(state, records, now=None):
     if now is None:
-        now = datetime.now().replace(second=0, microsecond=0)
+        now = local_now_naive().replace(second=0, microsecond=0)
     seen = state.setdefault("seen", OrderedDict())
     for record in records:
         key = record.get("notification_id")

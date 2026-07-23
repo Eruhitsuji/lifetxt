@@ -40,13 +40,18 @@ from .release_schema_extension import (
 from .release_policy_compat import (
     install_release_policy_compatibility as _install_release_policy_compatibility,
 )
+from .release_manifest_validation import (
+    install_release_manifest_validation as _install_release_manifest_validation,
+)
 
 _install_release_translation_parser()
 _install_release_manifest_schema()
 _install_release_policy_compatibility()
+_install_release_manifest_validation()
 del _install_release_translation_parser
 del _install_release_manifest_schema
 del _install_release_policy_compatibility
+del _install_release_manifest_validation
 
 __all__ = [
     "Diagnostic",

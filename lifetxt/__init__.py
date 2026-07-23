@@ -27,6 +27,16 @@ _install_runtime_compatibility()
 del _install_runtime_contracts
 del _install_runtime_compatibility
 
+# The release translation scanner parses a JavaScript object rather than JSON.
+# Install the layout-independent extractor once so tests and CI use the same
+# parser for multiline production markup and compact generated fixtures.
+from .release_translation import (
+    install_release_translation_parser as _install_release_translation_parser,
+)
+
+_install_release_translation_parser()
+del _install_release_translation_parser
+
 __all__ = [
     "Diagnostic",
     "Item",

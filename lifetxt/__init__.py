@@ -34,13 +34,18 @@ del _install_runtime_compatibility
 from .release_translation import (
     install_release_translation_parser as _install_release_translation_parser,
 )
+from .release_schema_extension import (
+    install_release_manifest_schema as _install_release_manifest_schema,
+)
 from .release_policy_compat import (
     install_release_policy_compatibility as _install_release_policy_compatibility,
 )
 
 _install_release_translation_parser()
+_install_release_manifest_schema()
 _install_release_policy_compatibility()
 del _install_release_translation_parser
+del _install_release_manifest_schema
 del _install_release_policy_compatibility
 
 __all__ = [

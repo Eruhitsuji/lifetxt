@@ -1,0 +1,15 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/capability-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "capability_version": {"const": "1"},
+    "format_versions": {"items": {"type": "string"}, "type": "array"},
+    "operations": {"items": {"type": "string"}, "type": "array"},
+    "revision_preconditions": {"type": "object"},
+    "schema_versions": {"items": {"type": "string"}, "type": "array"}
+  },
+  "required": ["capability_version", "format_versions", "schema_versions", "operations", "revision_preconditions"],
+  "title": "lifetxt capability v1",
+  "type": "object"
+}

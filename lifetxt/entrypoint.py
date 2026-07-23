@@ -23,6 +23,9 @@ _EXTRA_COMMANDS = frozenset(
         "to-ics",
         "from-todo",
         "from-markdown",
+        "safety",
+        "format",
+        "capabilities",
     )
 )
 
@@ -128,10 +131,13 @@ def _print_help():
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
+        "Release-safety and Format 1.0 commands:\n"
+        "  safety locks|serve-target|timezone|write-routes|release-gate\n"
+        "  format info|check|canon|schemas, capabilities\n"
         "Additional flags:\n"
         "  review --last-week|--last-month|--year [YYYY]|--someday\n"
         "  files --open ID, who --workload, quick --journal, completion powershell\n"
-        "See docs/en/new-cli-workflows.md for examples.\n"
+        "See docs/en/new-cli-workflows.md and docs/en/release-safety-foundations.md.\n"
     )
     return 0
 

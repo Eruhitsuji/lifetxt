@@ -26,7 +26,6 @@ _EXTRA_COMMANDS = frozenset(
         "safety",
         "format",
         "capabilities",
-        "doctor",
     )
 )
 
@@ -136,7 +135,8 @@ def _print_help():
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
         "Release-safety and Format 1.0 commands:\n"
         "  safety locks|serve-target|timezone|revisions|write-routes|release-gate\n"
-        "  format info|check|canon|schemas, capabilities, doctor\n"
+        "  format info|check|canon|schemas, capabilities\n"
+        "  doctor --workspace-safety\n"
         "Additional flags:\n"
         "  review --last-week|--last-month|--year [YYYY]|--someday\n"
         "  files --open ID, who --workload, quick --journal, completion powershell\n"
@@ -191,6 +191,10 @@ def main(argv=None):
         if command == "completion" and (
             "powershell" in cleaned or ("install" in cleaned and "--shell" in cleaned and "powershell" in cleaned)
         ):
+            from .extra_cli import main as extra_main
+
+            return extra_main(cleaned, config_path=config_path)
+        if command == "doctor" and "--workspace-safety" in cleaned:
             from .extra_cli import main as extra_main
 
             return extra_main(cleaned, config_path=config_path)

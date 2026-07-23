@@ -1,0 +1,74 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/release-manifest-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "minProperties": 1,
+      "type": "object"
+    },
+    "fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "package": {
+      "const": "lifetxt"
+    },
+    "package_version": {
+      "type": "string"
+    },
+    "release_policy_version": {
+      "type": "string"
+    },
+    "versions": {
+      "additionalProperties": true,
+      "properties": {
+        "canon": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "canon",
+        "schema",
+        "capability"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "release_policy_version",
+    "package",
+    "package_version",
+    "versions",
+    "checks",
+    "ok",
+    "fingerprint"
+  ],
+  "title": "lifetxt release manifest v1",
+  "type": "object"
+}

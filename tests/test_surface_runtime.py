@@ -39,6 +39,19 @@ class SurfaceRuntimeTests(unittest.TestCase):
     def initial_text(self):
         return "#! format_version: 1\n[ ] T Existing id:T-1\n"
 
+    def public_tool(self, name, arguments, context):
+        response = mcp.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+            context,
+        )
+        self.assertNotIn("error", response)
+        return response["result"]["structuredContent"]
+
     def test_transaction_stages_one_commit_and_rejects_stale_revision(self):
         path = self.path()
         self.write(path, self.initial_text())
@@ -77,7 +90,7 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertTrue(result.changed)
         self.assertTrue(self.read(path).endswith("# ok\n"))
 
-    def test_registry_capability_matrix_is_honest_about_partial_multi_path_operations(self):
+    def test_registry_capability_matrix_is_honest_about_partial_operations(self):
         matrix = {row["operation"]: row for row in operation_matrix()}
         self.assertTrue(matrix["create"]["revision_required"])
         self.assertTrue(matrix["acknowledge"]["revision_required"])
@@ -123,12 +136,12 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertTrue(schemas["get_capabilities"]["annotations"]["readOnlyHint"])
         self.assertIn("range", schemas["get_review"]["inputSchema"]["properties"])
 
-    def test_mcp_create_requires_revision_commits_and_returns_new_revision(self):
+    def test_mcp_jsonrpc_create_requires_revision_and_rejects_stale(self):
         path = self.path()
         self.write(path, self.initial_text())
         context = McpContext(paths=[path], writable_path=path)
 
-        missing = mcp.call_tool(
+        missing = self.public_tool(
             "create_item",
             {"type": "T", "title": "No revision", "details": {}},
             context,
@@ -137,7 +150,7 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertNotIn("No revision", self.read(path))
 
         revision = read_text_snapshot(path).content_hash
-        created = mcp.call_tool(
+        created = self.public_tool(
             "create_item",
             {
                 "type": "T",
@@ -151,7 +164,7 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertEqual(created["revision"], read_text_snapshot(path).content_hash)
         self.assertIn("Created safely", self.read(path))
 
-        stale = mcp.call_tool(
+        stale = self.public_tool(
             "create_item",
             {
                 "type": "T",
@@ -165,7 +178,19 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertEqual(stale["expected_revision"], revision)
         self.assertNotIn("Stale", self.read(path))
 
-    def test_mcp_repeat_completion_is_one_staged_commit(self):
+    def test_direct_mcp_helper_remains_backward_compatible(self):
+        path = self.path()
+        self.write(path, self.initial_text())
+        context = McpContext(paths=[path], writable_path=path)
+        result = mcp.call_tool(
+            "create_item",
+            {"type": "T", "title": "Embedded helper", "details": {}},
+            context,
+        )
+        self.assertIn("item", result)
+        self.assertIn("Embedded helper", self.read(path))
+
+    def test_mcp_repeat_completion_is_one_public_transaction(self):
         path = self.path()
         self.write(
             path,
@@ -174,7 +199,7 @@ class SurfaceRuntimeTests(unittest.TestCase):
         )
         context = McpContext(paths=[path], writable_path=path)
         revision = read_text_snapshot(path).content_hash
-        result = mcp.call_tool(
+        result = self.public_tool(
             "complete_item",
             {
                 "id": "T-weekly",
@@ -184,8 +209,7 @@ class SurfaceRuntimeTests(unittest.TestCase):
             context,
         )
         self.assertNotIn("error", result)
-        text = self.read(path)
-        items, diagnostics = lifetxt.parse_text(text)
+        items, diagnostics = lifetxt.parse_text(self.read(path))
         self.assertFalse([d for d in diagnostics if d.severity == "error"])
         self.assertEqual(len(items), 2)
         self.assertEqual(items[0].status, "[x]")
@@ -231,12 +255,16 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
 
         return TestClient(webapp.create_app(paths=self.path, writable_path=self.path))
 
-    def test_web_etag_precondition_conflict_and_browser_bridge(self):
+    def test_web_strict_session_precondition_conflict_and_browser_bridge(self):
         client = self.client()
         listing = client.get("/api/items")
         self.assertEqual(listing.status_code, 200)
         revision = listing.headers.get("etag")
         self.assertTrue(revision)
+
+        discovered = client.get("/api/revision")
+        self.assertEqual(discovered.status_code, 200)
+        self.assertEqual(discovered.json()["revision"], revision.strip('"'))
 
         missing = client.post(
             "/api/items",
@@ -268,6 +296,15 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
         self.assertEqual(capabilities.json()["surface"], "web")
         self.assertEqual(capabilities.headers.get("etag"), next_revision)
 
+    def test_legacy_web_write_is_allowed_with_visible_warning(self):
+        client = self.client()
+        response = client.post(
+            "/api/items",
+            json={"status": "[ ]", "type": "T", "title": "Legacy", "details": {}},
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertIn("Legacy write", response.headers.get("warning", ""))
+
     def test_web_repeat_completion_commits_update_and_next_item_together(self):
         with open(self.path, "w", encoding="utf-8", newline="") as handle:
             handle.write(
@@ -298,10 +335,7 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
 
     def test_serve_target_rejects_windows_drive_relative_write_path(self):
         with self.assertRaises(ValueError):
-            webapp.create_app(
-                paths=[self.path],
-                writable_path="C:relative\\life.txt",
-            )
+            webapp.create_app(paths=[self.path], writable_path="C:relative\\life.txt")
 
     def test_serve_target_warns_when_read_and_write_targets_differ(self):
         other = os.path.join(self.temp_dir.name, "other.txt")

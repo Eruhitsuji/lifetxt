@@ -53,6 +53,15 @@ del _install_release_manifest_schema
 del _install_release_policy_compatibility
 del _install_release_manifest_validation
 
+# Apply the next P0/P1 safety layer after the compatibility and release-policy
+# adapters exist. This keeps the package dependency-free while adding persistent
+# revision telemetry, explicit timezone contexts, workspace diagnostics,
+# compensated multi-target operations, and the expanded schema bundle.
+from .runtime_safety_v2 import install_runtime_safety_v2 as _install_runtime_safety_v2
+
+_install_runtime_safety_v2()
+del _install_runtime_safety_v2
+
 __all__ = [
     "Diagnostic",
     "Item",

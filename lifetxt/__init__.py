@@ -27,15 +27,21 @@ _install_runtime_compatibility()
 del _install_runtime_contracts
 del _install_runtime_compatibility
 
-# The release translation scanner parses a JavaScript object rather than JSON.
-# Install the layout-independent extractor once so tests and CI use the same
-# parser for multiline production markup and compact generated fixtures.
+# Release checks must behave identically on compact/generated markup and on
+# Python 3.10, where tomllib is not part of the standard library. Keep these
+# compatibility adapters dependency-free; the strict release job still installs
+# jsonschema/build/twine for publication-only validation.
 from .release_translation import (
     install_release_translation_parser as _install_release_translation_parser,
 )
+from .release_policy_compat import (
+    install_release_policy_compatibility as _install_release_policy_compatibility,
+)
 
 _install_release_translation_parser()
+_install_release_policy_compatibility()
 del _install_release_translation_parser
+del _install_release_policy_compatibility
 
 __all__ = [
     "Diagnostic",

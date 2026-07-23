@@ -11,6 +11,10 @@ from lifetxt.release_policy import (
     translation_coverage_report,
     write_route_baseline_report,
 )
+from lifetxt.release_policy_compat import (
+    release_policy_definition_report,
+    translation_policy_report,
+)
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,6 +78,14 @@ class ReleasePolicyTests(unittest.TestCase):
         report = translation_coverage_report(html)
         self.assertTrue(report["ok"], report)
 
+    def test_repository_translation_baseline_allows_known_debt_but_no_new_gap(self):
+        report = translation_policy_report(ROOT)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(report["new_missing"], [])
+        self.assertGreater(len(report["known_missing"]), 0)
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["all_missing"], report["known_missing"])
+
     def test_write_route_baseline_rejects_new_path_call_pairs(self):
         with tempfile.TemporaryDirectory() as root:
             package = os.path.join(root, "lifetxt")
@@ -100,13 +112,27 @@ class ReleasePolicyTests(unittest.TestCase):
             report = write_route_baseline_report(root)
             self.assertTrue(report["ok"], report)
 
+    def test_repository_write_route_baseline_has_no_new_pairs(self):
+        report = write_route_baseline_report(ROOT)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(report["new_findings"], [])
+        self.assertGreater(report["finding_count"], 0)
+
+    def test_release_policy_definition_lists_available_required_checks(self):
+        manifest = release_manifest(ROOT, require_validator=False)
+        report = release_policy_definition_report(ROOT, manifest["checks"])
+        self.assertTrue(report["ok"], report)
+        self.assertFalse(report["errors"])
+
     def test_release_manifest_has_deterministic_fingerprint(self):
         first = release_manifest(ROOT, require_validator=False)
         second = release_manifest(ROOT, require_validator=False)
+        self.assertTrue(first["ok"], first)
         self.assertEqual(first["fingerprint"], second["fingerprint"])
         self.assertEqual(first["release_policy_version"], "1")
         self.assertIn("translation_coverage", first["checks"])
         self.assertIn("write_route_baseline", first["checks"])
+        self.assertIn("release_policy_definition", first["checks"])
 
 
 if __name__ == "__main__":

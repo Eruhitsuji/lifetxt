@@ -30,7 +30,10 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual("locks", _build_parser("safety").parse_args(["locks"]).safety_action)
         self.assertEqual("info", _build_parser("format").parse_args(["info", "life.txt"]).format_action)
         self.assertEqual("token", _build_parser("capabilities").parse_args([]).authentication)
-        self.assertEqual("json", _build_parser("doctor").parse_args([]).format)
+        self.assertEqual(
+            "json",
+            _build_parser("doctor").parse_args(["--workspace-safety"]).format,
+        )
 
     def test_capabilities_command_returns_versioned_json(self):
         code, stdout, stderr = self.run_command(["capabilities", "--pretty"])

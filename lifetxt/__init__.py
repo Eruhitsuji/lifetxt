@@ -59,11 +59,14 @@ del _install_release_manifest_validation
 # compensated multi-target operations, and the expanded schema bundle.
 from .runtime_safety_v2 import install_runtime_safety_v2 as _install_runtime_safety_v2
 from .schema_validation_v2 import install_schema_validation_v2 as _install_schema_validation_v2
+from .safety_compat_v2 import install_safety_compat_v2 as _install_safety_compat_v2
 
 _install_runtime_safety_v2()
 _install_schema_validation_v2()
+_install_safety_compat_v2()
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
+del _install_safety_compat_v2
 
 __all__ = [
     "Diagnostic",

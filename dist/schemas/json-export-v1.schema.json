@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/json-export-v1.schema.json",
+  "title": "lifetxt JSON export v1",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["status", "type", "title", "details"],
+    "properties": {
+      "status": {"type": "string"},
+      "type": {"type": "string"},
+      "title": {"type": "string"},
+      "details": {"type": "object"}
+    },
+    "additionalProperties": true
+  }
+}

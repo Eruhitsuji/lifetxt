@@ -1,8 +1,8 @@
 # 公開surfaceのrevision契約
 
-Web APIとMCPによるlife.txt書き込みは、`lifetxt.mutation` と同じ楽観的並行制御契約を使用します。
+Web APIとMCPによるlife.txt書き込みは、`lifetxt.mutation` と同じ楽観的並行制御契約を利用できます。
 
-clientは最初に現在の書き込み対象fileのrevisionを読み取ります。次の書き込みは、そのrevisionが現在も完全に一致する場合にだけ成功します。これにより、古いbrowser tabやMCP clientが新しいfileを黙って上書きすることを防ぎます。
+revision対応clientは、最初に現在の書き込み対象fileのrevisionを読み取ります。次の書き込みは、そのrevisionが現在も完全に一致する場合にだけ成功します。これにより、古いbrowser tabやMCP clientが新しいfileを黙って上書きすることを防ぎます。
 
 ## Web API
 
@@ -13,13 +13,14 @@ ETag: "<sha256>"
 X-Lifetxt-Revision: <sha256>
 ```
 
-ETagはresponse作成時に使用した書き込み対象life.txtのsnapshotを示します。明示的にrevisionを取得することもできます。
+ETagはresponse作成時に使用した書き込み対象life.txtのsnapshotを示します。次のいずれかを読み取ると、clientはstrict revision契約へ移行します。
 
 ```http
 GET /api/revision
+GET /api/capabilities
 ```
 
-対応するlife.txt書き込みendpointでは次のいずれかが必須です。
+その後、対応するlife.txt書き込みendpointでは次のいずれかが必須です。
 
 ```http
 If-Match: "<sha256>"
@@ -31,11 +32,27 @@ If-Match: "<sha256>"
 X-Lifetxt-Expected-Revision: <sha256>
 ```
 
+最初のrequestからstrict動作を要求する場合は次を指定できます。
+
+```http
+X-Lifetxt-Require-Revision: true
+```
+
 組み込みWeb UIには小さな `fetch` bridgeを追加しています。revisionを取得し、対応する書き込みへ `If-Match` を追加し、response ETagから保持中のrevisionを更新します。
 
-### Revisionがない場合
+### Compatibility transition
 
-revisionなしの書き込みはHTTP 428を返します。
+revision契約をまだ取得しておらずrevisionも送信しないlegacy clientは、一時的に受け入れます。serverはrequest直前のrevisionを取得し、1つのCAS transactionとして処理し、次のwarningを返します。
+
+```http
+Warning: 299 lifetxt "Legacy write without client revision; fetch /api/revision and send If-Match."
+```
+
+このfallbackは既存local API clientを維持しますが、clientがさらに古いresponseを基に変更を作ったことまでは検出できません。新しいcodeは必ずrevisionを取得して送信してください。fallbackの削除は、client移行状況を確認した後のP0として残します。
+
+### Strict modeでrevisionがない場合
+
+strict書き込みにrevisionがない場合はHTTP 428を返します。
 
 ```json
 {
@@ -76,7 +93,7 @@ revisionなしの書き込みはHTTP 428を返します。
 
 ## MCP
 
-書き込み前に `get_file_state` を呼び、返された `file_hash` を保持します。
+公開JSON-RPC書き込み前に `get_file_state` を呼び、返された `file_hash` を保持します。
 
 ```json
 {
@@ -85,7 +102,7 @@ revisionなしの書き込みはHTTP 428を返します。
 }
 ```
 
-revision保護対象toolのinput schemaでは `expected_file_hash` が必須です。対象にはitem作成・更新・完了・削除、message作成・返信・acknowledgement・snooze、status変更、captureが含まれます。
+revision保護対象toolの公開input schemaでは `expected_file_hash` が必須です。対象にはitem作成・更新・完了・削除、message作成・返信・acknowledgement・snooze、status変更、captureが含まれます。
 
 ```json
 {
@@ -95,7 +112,9 @@ revision保護対象toolのinput schemaでは `expected_file_hash` が必須で�
 }
 ```
 
-成功結果には新しい `revision` と `file_hash` が含まれます。revision不足・競合時はWeb APIと同じprecondition/conflict fieldを返します。
+成功したJSON-RPC resultには新しい `revision` と `file_hash` が含まれます。revision不足・競合時はWeb APIと同じprecondition/conflict fieldを返します。
+
+埋め込み用途の直接Python APIである `mcp.call_tool` は後方互換を維持します。strict契約は外部clientが使用する実際のMCP JSON-RPC `tools/call` 境界へ適用します。
 
 MCP serverには次も追加しています。
 
@@ -150,4 +169,4 @@ MCP例：
 
 operation matrixでは、timerとattachment操作について完全なrevision enforcementを主張していません。これらはtimer JSON stateやattachment storageなど、書き込み対象life.txt以外も変更する可能性があります。同じatomicityを保証するにはmulti-target transaction設計が必要です。
 
-実terminalでのTUI/fzf確認、SMTP配送test、browser engineを使ったaccessibility smoke test、全date境界へのtimezone適用、release gateのCI必須化は別roadmap項目として残しています。
+実terminalでのTUI/fzf確認、SMTP配送test、browser engineを使ったaccessibility smoke test、全date境界へのtimezone適用、release gateのCI必須化、legacy Web fallbackの削除は別roadmap項目として残しています。

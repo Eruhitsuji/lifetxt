@@ -1,5 +1,26 @@
 {
   "baseline_version": 1,
   "description": "Reviewed pre-existing direct write call shapes. Line numbers are intentionally excluded so harmless edits do not churn the baseline; new path/call pairs fail the release gate.",
-  "allowed": []
+  "allowed": [
+    {
+      "path": "lifetxt/cli.py",
+      "call": "open(w)",
+      "reason": "Existing undo/backup cache snapshots and JSON configuration output. Authoritative life.txt writes remain routed through mutation; config output should move to a dedicated atomic config writer in a future cleanup."
+    },
+    {
+      "path": "lifetxt/cli.py",
+      "call": "open(a)",
+      "reason": "Existing explicit digest/template append targets. These are user-selected output paths and remain visible technical debt until append operations gain semantic CAS contracts."
+    },
+    {
+      "path": "lifetxt/fzf_helper.py",
+      "call": "open(w)",
+      "reason": "Legacy private writer patched at package initialization by compat_writes. Remove this allowance when fzf_helper imports mutation directly."
+    },
+    {
+      "path": "lifetxt/safety_foundation.py",
+      "call": "open(w)",
+      "reason": "Generated JSON Schema publication output, not an authoritative life.txt/state mutation."
+    }
+  ]
 }

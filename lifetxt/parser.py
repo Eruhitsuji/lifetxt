@@ -36,7 +36,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
 
     Returns ``(items, diagnostics)``. Blank lines and comment lines are ignored.
     Lines that start with ``|`` continue the previous item as a multiline
-    ``body:`` detail. A trailing ``\`` joins the following physical line into
+    ``body:`` detail. A trailing ``\\`` joins the following physical line into
     the current logical line before parsing. Item lines may be indented with
     spaces to express a visual hierarchy; when possible, the parser adds an
     implicit ``parent:`` detail that points to the nearest less-indented

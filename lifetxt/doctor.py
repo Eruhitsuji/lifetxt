@@ -6,6 +6,7 @@ import importlib.util
 import os
 
 from .revision_telemetry import store_from_config
+from .transaction_journal import cleanup_terminal, inspect_journal, journal_directory, list_journals
 from .safety_foundation import inspect_locks, read_text_exact, serve_target_diagnostic
 from .timezone_policy import policy_report
 from .workspace_diagnostics import workspace_diagnostics
@@ -18,6 +19,9 @@ def doctor_report(
     timer_paths=None,
     archive_paths=None,
     revision_metrics_path=None,
+    journal_dir=None,
+    cleanup_transactions=False,
+    transaction_retention_days=30.0,
     cli_timezone=None,
     fold_policy="error",
     gap_policy="error",
@@ -42,6 +46,38 @@ def doctor_report(
     if revision_metrics_path:
         store.path = os.path.abspath(revision_metrics_path)
     revision = store.snapshot()
+    if not timer_paths:
+        try:
+            from .timer import timer_state_file
+            timer_paths = [timer_state_file(config)]
+        except Exception:
+            timer_paths = []
+    resolved_journal_dir = os.path.abspath(
+        journal_dir or journal_directory(config, writable_path=write_path or None)
+    )
+    transaction_rows = list_journals(resolved_journal_dir, include_terminal=True)
+    transaction_details = []
+    for row in transaction_rows:
+        if row.get("state") == "corrupt":
+            transaction_details.append(row)
+            continue
+        try:
+            transaction_details.append(inspect_journal(row["journal_path"]))
+        except Exception as exc:
+            broken = dict(row)
+            broken.update({"state": "corrupt", "recovery_required": True, "error": str(exc)})
+            transaction_details.append(broken)
+    transaction_cleanup = cleanup_terminal(
+        resolved_journal_dir,
+        older_than_days=transaction_retention_days,
+        force=bool(force and cleanup_transactions),
+    ) if cleanup_transactions else {
+        "journal_dir": resolved_journal_dir,
+        "requested": False,
+        "removed": [],
+        "skipped": [],
+        "errors": [],
+    }
     locks_before = inspect_locks(paths + list(timer_paths or []), stale_after=stale_after)
     cleanup = cleanup_stale_locks(
         locks_before,
@@ -57,6 +93,7 @@ def doctor_report(
         timer_paths=timer_paths,
         write_path=write_path,
         revision_metrics_path=store.path,
+        journal_dir=resolved_journal_dir,
     )
     dependencies = optional_dependency_report()
     hard_failures = []
@@ -68,6 +105,10 @@ def doctor_report(
         hard_failures.append("diagnostics")
     if cleanup.get("errors"):
         hard_failures.append("lock_cleanup")
+    if transaction_cleanup.get("errors"):
+        hard_failures.append("transaction_cleanup")
+    if any(row.get("recovery_required") or row.get("state") == "corrupt" for row in transaction_details):
+        hard_failures.append("transaction_recovery")
     return {
         "ok": not hard_failures,
         "hard_failures": hard_failures,
@@ -86,6 +127,16 @@ def doctor_report(
             "after": locks_after,
         },
         "diagnostics": diagnostics,
+        "transactions": {
+            "journal_dir": resolved_journal_dir,
+            "count": len(transaction_details),
+            "recovery_required": any(
+                row.get("recovery_required") or row.get("state") == "corrupt"
+                for row in transaction_details
+            ),
+            "records": transaction_details,
+            "cleanup": transaction_cleanup,
+        },
         "optional_dependencies": dependencies,
     }
 

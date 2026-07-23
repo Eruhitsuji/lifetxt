@@ -1,16 +1,44 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/delivery-state-v1.schema.json",
-  "title": "lifetxt per-recipient delivery state v1",
-  "type": "object",
-  "required": ["delivery_version", "message_id", "recipient", "state", "updated_at"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "properties": {
-    "delivery_version": {"const": "1"},
-    "message_id": {"type": "string"},
-    "recipient": {"type": "string"},
-    "state": {"enum": ["pending", "delivered", "failed", "read", "acknowledged", "skipped"]},
-    "updated_at": {"type": "string"},
-    "error": {"type": ["string", "null"]}
+    "delivery_version": {
+      "const": "1"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "message_id": {
+      "type": "string"
+    },
+    "recipient": {
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "pending",
+        "delivered",
+        "failed",
+        "read",
+        "acknowledged",
+        "skipped"
+      ]
+    },
+    "updated_at": {
+      "type": "string"
+    }
   },
-  "additionalProperties": false
+  "required": [
+    "delivery_version",
+    "message_id",
+    "recipient",
+    "state",
+    "updated_at"
+  ],
+  "title": "lifetxt per-recipient delivery state v1",
+  "type": "object"
 }

@@ -4,6 +4,8 @@ import argparse
 import calendar
 import csv
 import datetime
+
+from .timezone_policy import today as timezone_today
 import hashlib
 import io
 import json
@@ -54,7 +56,7 @@ def _round_minutes(minutes, increment):
 
 def command_invoice(args, config_data):
     items = _load_items(args.paths, config_data)
-    today = datetime.date.today()
+    today = timezone_today()
     if args.start:
         start = _parse_date(args.start, "from date")
     else:
@@ -128,7 +130,7 @@ def _assigned_to(item, user, include_unassigned=False):
 
 def command_standup(args, config_data):
     items = _load_items(args.paths, config_data)
-    day = _parse_date(args.date, "standup date") if args.date else datetime.date.today()
+    day = _parse_date(args.date, "standup date") if args.date else timezone_today()
     yesterday = day - datetime.timedelta(days=1)
     user = args.user or config_user_name(config_data)
     id_map = dict((_item_id(item), item) for item in items if _item_id(item))

@@ -1,19 +1,57 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/doctor-v1.schema.json",
-  "title": "lifetxt doctor report v1",
-  "type": "object",
-  "required": ["ok", "hard_failures", "workspace", "timezone", "write_target", "revision_migration", "locks", "diagnostics", "optional_dependencies"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "properties": {
-    "ok": {"type": "boolean"},
-    "hard_failures": {"type": "array", "items": {"type": "string"}},
-    "workspace": {"type": "object"},
-    "timezone": {"$ref": "timezone-policy-v1.schema.json"},
-    "write_target": {"type": "object"},
-    "revision_migration": {"$ref": "revision-metrics-v1.schema.json"},
-    "locks": {"type": "object"},
-    "diagnostics": {"$ref": "workspace-diagnostics-v1.schema.json"},
-    "optional_dependencies": {"type": "object", "additionalProperties": {"type": "boolean"}}
+    "diagnostics": {
+      "$ref": "workspace-diagnostics-v1.schema.json"
+    },
+    "hard_failures": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "locks": {
+      "type": "object"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "optional_dependencies": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "type": "object"
+    },
+    "revision_migration": {
+      "$ref": "revision-metrics-v1.schema.json"
+    },
+    "timezone": {
+      "$ref": "timezone-policy-v1.schema.json"
+    },
+    "transactions": {
+      "type": "object"
+    },
+    "workspace": {
+      "type": "object"
+    },
+    "write_target": {
+      "type": "object"
+    }
   },
-  "additionalProperties": false
+  "required": [
+    "ok",
+    "hard_failures",
+    "workspace",
+    "timezone",
+    "write_target",
+    "revision_migration",
+    "locks",
+    "diagnostics",
+    "transactions",
+    "optional_dependencies"
+  ],
+  "title": "lifetxt doctor report v1",
+  "type": "object"
 }

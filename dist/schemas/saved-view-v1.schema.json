@@ -1,15 +1,37 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/saved-view-v1.schema.json",
-  "title": "lifetxt saved view v1",
-  "type": "object",
-  "required": ["view_version", "name", "query"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
   "properties": {
-    "view_version": {"const": "1"},
-    "name": {"type": "string", "minLength": 1},
-    "query": {"type": "string"},
-    "sort": {"type": "array", "items": {"type": "string"}},
-    "limit": {"type": ["integer", "null"], "minimum": 1}
+    "limit": {
+      "minimum": 1,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "query": {
+      "type": "string"
+    },
+    "sort": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "view_version": {
+      "const": "1"
+    }
   },
-  "additionalProperties": true
+  "required": [
+    "view_version",
+    "name",
+    "query"
+  ],
+  "title": "lifetxt saved view v1",
+  "type": "object"
 }

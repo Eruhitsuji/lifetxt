@@ -1,0 +1,30 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/support-bundle-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_at_utc": {
+      "type": "string"
+    },
+    "extra": {
+      "type": "object"
+    },
+    "redaction": {
+      "type": "string"
+    },
+    "report": {
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "created_at_utc",
+    "redaction",
+    "report"
+  ],
+  "title": "lifetxt redacted support bundle v1",
+  "type": "object"
+}

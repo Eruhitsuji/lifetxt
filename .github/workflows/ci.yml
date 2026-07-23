@@ -104,21 +104,51 @@ jobs:
           python -m lifetxt summary examples/minimal_life.txt
           python -m lifetxt completion powershell > /tmp/lifetxt-completion.ps1
 
+  release-gate:
+    name: Required release policy and clean wheel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run isolated release profile
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_ci_like.py --profile release --python python3.12 2>&1 | tee release-gate.log
+
+      - name: Upload release policy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-policy-evidence
+          if-no-files-found: warn
+          path: |
+            release-gate.log
+            .cache/release-policy-manifest.json
+
   ci-visibility:
     name: Keep main-branch CI failures visible
     if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: [test, no-web-extras]
+    needs: [test, no-web-extras, release-gate]
     runs-on: ubuntu-latest
     env:
       TEST_RESULT: ${{ needs.test.result }}
       NO_WEB_RESULT: ${{ needs['no-web-extras'].result }}
+      RELEASE_RESULT: ${{ needs['release-gate'].result }}
     steps:
       - name: Open, update, or close the CI failure issue
         uses: actions/github-script@v7
         with:
           script: |
             const title = "CI failure on main";
-            const failed = process.env.TEST_RESULT !== "success" || process.env.NO_WEB_RESULT !== "success";
+            const failed = process.env.TEST_RESULT !== "success" || process.env.NO_WEB_RESULT !== "success" || process.env.RELEASE_RESULT !== "success";
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -133,6 +163,7 @@ jobs:
                 "",
                 `- Matrix result: \`${process.env.TEST_RESULT}\``,
                 `- No-Web result: \`${process.env.NO_WEB_RESULT}\``,
+                `- Release gate result: \`${process.env.RELEASE_RESULT}\``,
                 `- Run: ${runUrl}`,
                 "",
                 "This issue is maintained automatically and closes after the next successful main-branch run.",

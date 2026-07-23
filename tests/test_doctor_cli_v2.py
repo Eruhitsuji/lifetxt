@@ -9,7 +9,6 @@ import unittest
 
 from lifetxt import entrypoint
 from lifetxt.extra_cli import _build_parser
-from lifetxt.mutation import read_text_snapshot
 from lifetxt.revision_telemetry import RevisionMetricsStore
 
 
@@ -33,8 +32,9 @@ class DoctorCliV2Tests(unittest.TestCase):
 
     def test_parsers_register_doctor_revisions_and_timezone_policies(self):
         doctor = _build_parser("doctor").parse_args(
-            [self.life, "--fold-policy", "later", "--gap-policy", "next"]
+            ["--workspace-safety", self.life, "--fold-policy", "later", "--gap-policy", "next"]
         )
+        self.assertTrue(doctor.workspace_safety)
         self.assertEqual("later", doctor.fold_policy)
         self.assertEqual("next", doctor.gap_policy)
         revisions = _build_parser("safety").parse_args(
@@ -50,6 +50,7 @@ class DoctorCliV2Tests(unittest.TestCase):
         code, stdout, stderr = self.run_command(
             [
                 "doctor",
+                "--workspace-safety",
                 self.life,
                 "--revision-metrics",
                 self.metrics,
@@ -113,7 +114,10 @@ class DoctorCliV2Tests(unittest.TestCase):
             ]
         )
         self.assertEqual(1, code)
-        self.assertIn("conflict", stderr.lower())
+        conflict = json.loads(stdout)
+        self.assertEqual("CONFLICT", conflict["error"])
+        self.assertEqual(revision, conflict["expected_revision"])
+        self.assertRegex(conflict["current_revision"], r"^[0-9a-f]{64}$")
 
     def test_safety_timezone_can_interpret_sample(self):
         code, stdout, stderr = self.run_command(
@@ -147,6 +151,7 @@ class DoctorCliV2Tests(unittest.TestCase):
         code, stdout, stderr = self.run_command(
             [
                 "doctor",
+                "--workspace-safety",
                 self.life,
                 "--cleanup-stale",
                 "--stale-after",
@@ -161,6 +166,7 @@ class DoctorCliV2Tests(unittest.TestCase):
         code, stdout, stderr = self.run_command(
             [
                 "doctor",
+                "--workspace-safety",
                 self.life,
                 "--cleanup-stale",
                 "--force",

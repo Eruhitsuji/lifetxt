@@ -30,6 +30,10 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual("locks", _build_parser("safety").parse_args(["locks"]).safety_action)
         self.assertEqual("info", _build_parser("format").parse_args(["info", "life.txt"]).format_action)
         self.assertEqual("token", _build_parser("capabilities").parse_args([]).authentication)
+        self.assertEqual(
+            "json",
+            _build_parser("doctor").parse_args(["--workspace-safety"]).format,
+        )
 
     def test_capabilities_command_returns_versioned_json(self):
         code, stdout, stderr = self.run_command(["capabilities", "--pretty"])
@@ -75,14 +79,22 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         self.assertTrue(json.loads(stdout)["mismatch"])
 
-    def test_format_schemas_command_writes_release_manifest_document(self):
+    def test_format_schemas_command_writes_expanded_contract_bundle(self):
         directory = self.path("schemas")
         code, stdout, stderr = self.run_command(["format", "schemas", directory, "--pretty"])
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(5, len(report["files"]))
-        self.assertEqual(5, len(os.listdir(directory)))
-        self.assertIn("release-manifest-v1.schema.json", report["files"])
+        self.assertEqual(16, len(report["files"]))
+        self.assertEqual(16, len(os.listdir(directory)))
+        for name in (
+            "release-manifest-v1.schema.json",
+            "revision-metrics-v1.schema.json",
+            "timezone-policy-v1.schema.json",
+            "doctor-v1.schema.json",
+            "proposal-v1.schema.json",
+            "delivery-state-v1.schema.json",
+        ):
+            self.assertIn(name, report["files"])
         with open(
             os.path.join(directory, "release-manifest-v1.schema.json"),
             "r",

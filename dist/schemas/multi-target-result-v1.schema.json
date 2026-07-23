@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/multi-target-result-v1.schema.json",
+  "title": "lifetxt multi-target mutation result v1",
+  "type": "object",
+  "required": ["operation", "targets", "compensated"],
+  "properties": {
+    "operation": {"type": "string"},
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "before_hash", "after_hash", "changed", "created", "deleted"],
+        "properties": {
+          "path": {"type": "string"},
+          "kind": {"enum": ["text", "json", "bytes"]},
+          "before_hash": {"type": "string"},
+          "after_hash": {"type": "string"},
+          "changed": {"type": "boolean"},
+          "created": {"type": "boolean"},
+          "deleted": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "compensated": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

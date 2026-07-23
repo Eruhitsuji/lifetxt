@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/workspace-diagnostics-v1.schema.json",
+  "title": "lifetxt workspace diagnostics v1",
+  "type": "object",
+  "required": ["ok", "paths", "item_count", "diagnostic_count", "severity_counts", "diagnostics"],
+  "properties": {
+    "ok": {"type": "boolean"},
+    "paths": {"type": "array", "items": {"type": "string"}},
+    "archive_paths": {"type": "array", "items": {"type": "string"}},
+    "file_reports": {"type": "object"},
+    "item_count": {"type": "integer", "minimum": 0},
+    "diagnostic_count": {"type": "integer", "minimum": 0},
+    "severity_counts": {"type": "object"},
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "code", "message", "source", "line", "column", "span", "hint"],
+        "properties": {
+          "severity": {"enum": ["info", "warning", "error"]},
+          "code": {"type": "string"},
+          "message": {"type": "string"},
+          "source": {"type": ["string", "null"]},
+          "line": {"type": ["integer", "null"]},
+          "column": {"type": ["integer", "null"]},
+          "span": {
+            "type": "object",
+            "required": ["start", "end"],
+            "properties": {
+              "start": {
+                "type": "object",
+                "required": ["line", "column"],
+                "properties": {
+                  "line": {"type": ["integer", "null"]},
+                  "column": {"type": ["integer", "null"]}
+                },
+                "additionalProperties": false
+              },
+              "end": {
+                "type": "object",
+                "required": ["line", "column"],
+                "properties": {
+                  "line": {"type": ["integer", "null"]},
+                  "column": {"type": ["integer", "null"]}
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "hint": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

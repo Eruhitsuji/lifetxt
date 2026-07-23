@@ -1,20 +1,29 @@
 """Dispatcher for compatibility-preserving extended CLI commands."""
 
 import argparse
+import os
 import sys
 
-from .extra_common import _load_config
+from .extra_common import _load_config, _resolved_input_paths
 from .extra_core import (command_next, command_show, command_edit, command_path, command_count, command_workload, command_files_open, command_someday)
 from .extra_reports import command_invoice, command_standup
 from .extra_convert import command_to_ics, command_from_todo, command_from_markdown
 from .extra_shell import command_completion, command_quick_journal
-from .extra_safety import command_capabilities, command_format, command_safety
+from .extra_safety import command_capabilities, command_doctor, command_format, command_safety
+from .safety_foundation import read_text_exact
+from .timezone_policy import resolve_timezone_name, timezone_context
 
 
 def _add_output(parser, choices=("text", "json"), default="json"):
     parser.add_argument("--format", choices=choices, default=default)
     parser.add_argument("--pretty", action="store_true")
     parser.add_argument("-o", "--output")
+
+
+def _add_timezone_policy(parser):
+    parser.add_argument("--timezone")
+    parser.add_argument("--fold-policy", choices=("error", "earlier", "later"), default="error")
+    parser.add_argument("--gap-policy", choices=("error", "next", "previous"), default="error")
 
 
 def _build_parser(command):
@@ -100,7 +109,7 @@ def _build_parser(command):
         parser.add_argument("--pretty", action="store_true")
     elif command == "review":
         parser.add_argument("paths", nargs="*")
-        parser.add_argument("--someday", action="store_true",required=True)
+        parser.add_argument("--someday", action="store_true", required=True)
         parser.add_argument("--days", "--older-than", dest="days", type=int, default=30)
         parser.add_argument("--format", choices=("text", "json", "life"), default="text")
         parser.add_argument("--pretty", action="store_true")
@@ -135,8 +144,15 @@ def _build_parser(command):
         _add_output(target)
         timezone = subparsers.add_parser("timezone")
         timezone.add_argument("paths", nargs="*")
-        timezone.add_argument("--timezone")
+        _add_timezone_policy(timezone)
+        timezone.add_argument("--sample")
         _add_output(timezone)
+        revisions = subparsers.add_parser("revisions")
+        revisions.add_argument("paths", nargs="*")
+        revisions.add_argument("--metrics-path")
+        revisions.add_argument("--reset", action="store_true")
+        revisions.add_argument("--expected-hash")
+        _add_output(revisions)
         routes = subparsers.add_parser("write-routes")
         routes.add_argument("--root")
         routes.add_argument("--strict", action="store_true")
@@ -165,9 +181,43 @@ def _build_parser(command):
         parser.add_argument("--read-only", action="store_true")
         parser.add_argument("--authentication", choices=("token", "session", "proxy", "none"), default="token")
         _add_output(parser)
+    elif command == "doctor":
+        parser.add_argument("--workspace-safety", action="store_true", required=True)
+        parser.add_argument("paths", nargs="*")
+        parser.add_argument("--write-file")
+        parser.add_argument("--archive", action="append", default=[])
+        parser.add_argument("--timer-state", action="append", default=[])
+        parser.add_argument("--revision-metrics")
+        parser.add_argument("--stale-after", type=float, default=300.0)
+        parser.add_argument("--cleanup-stale", action="store_true")
+        parser.add_argument("--force", action="store_true")
+        _add_timezone_policy(parser)
+        _add_output(parser)
     else:
         raise ValueError("Unsupported extended command: %s" % command)
     return parser
+
+
+def _timezone_for_args(args, config_data):
+    paths = []
+    if hasattr(args, "paths"):
+        try:
+            paths = _resolved_input_paths(args.paths, config_data)
+        except Exception:
+            paths = []
+    text = ""
+    for path in paths:
+        if path and path != "-" and os.path.exists(path):
+            try:
+                text, _raw, _bom = read_text_exact(path)
+                break
+            except OSError:
+                continue
+    return resolve_timezone_name(
+        config_data,
+        text=text,
+        cli_timezone=getattr(args, "timezone", None),
+    )
 
 
 def main(argv=None, config_path=None):
@@ -178,6 +228,12 @@ def main(argv=None, config_path=None):
     parser = _build_parser(command)
     args = parser.parse_args(argv[1:])
     config_data = _load_config(config_path)
+    timezone_name = _timezone_for_args(args, config_data)
+    with timezone_context(timezone_name):
+        return _dispatch(command, args, config_data, config_path)
+
+
+def _dispatch(command, args, config_data, config_path):
     if command == "next":
         return command_next(args, config_data)
     if command == "show":
@@ -214,4 +270,6 @@ def main(argv=None, config_path=None):
         return command_format(args, config_data)
     if command == "capabilities":
         return command_capabilities(args, config_data)
+    if command == "doctor":
+        return command_doctor(args, config_data)
     raise ValueError("Unsupported extended command: %s" % command)

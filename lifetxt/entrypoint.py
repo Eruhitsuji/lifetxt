@@ -29,6 +29,18 @@ _EXTRA_COMMANDS = frozenset(
     )
 )
 
+_DOCTOR_SAFETY_FLAGS = frozenset(
+    (
+        "--workspace-safety",
+        "--archive",
+        "--timer-state",
+        "--revision-metrics",
+        "--cleanup-stale",
+        "--fold-policy",
+        "--gap-policy",
+    )
+)
+
 
 def _extract_config_arg(argv):
     raw = list(sys.argv[1:] if argv is None else argv)
@@ -79,9 +91,11 @@ def _install_config_template_extension():
 
 def _legacy_main(argv):
     _install_config_template_extension()
-    from .cli import main as legacy_main
+    from . import cli as cli_module
+    from .runtime_safety_v2 import install_cli_timezone_context
 
-    return legacy_main(argv)
+    install_cli_timezone_context(cli_module)
+    return cli_module.main(argv)
 
 
 def _review_selector_args(argv, today=None):
@@ -132,14 +146,24 @@ def _print_help():
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
         "Release-safety and Format 1.0 commands:\n"
-        "  safety locks|serve-target|timezone|write-routes|release-gate\n"
+        "  safety locks|serve-target|timezone|revisions|write-routes|release-gate\n"
         "  format info|check|canon|schemas, capabilities\n"
+        "  doctor --workspace-safety\n"
         "Additional flags:\n"
         "  review --last-week|--last-month|--year [YYYY]|--someday\n"
         "  files --open ID, who --workload, quick --journal, completion powershell\n"
         "See docs/en/new-cli-workflows.md and docs/en/release-safety-foundations.md.\n"
     )
     return 0
+
+
+def _uses_workspace_safety_doctor(argv):
+    for value in argv:
+        if value in _DOCTOR_SAFETY_FLAGS:
+            return True
+        if any(value.startswith(flag + "=") for flag in _DOCTOR_SAFETY_FLAGS):
+            return True
+    return False
 
 
 def main(argv=None):
@@ -188,6 +212,10 @@ def main(argv=None):
         if command == "completion" and (
             "powershell" in cleaned or ("install" in cleaned and "--shell" in cleaned and "powershell" in cleaned)
         ):
+            from .extra_cli import main as extra_main
+
+            return extra_main(cleaned, config_path=config_path)
+        if command == "doctor" and _uses_workspace_safety_doctor(cleaned[1:]):
             from .extra_cli import main as extra_main
 
             return extra_main(cleaned, config_path=config_path)

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-metrics-v1.schema.json",
+  "title": "lifetxt revision migration metrics v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "revision_mode",
+    "migration_window_days",
+    "legacy_fallback_total",
+    "legacy_fallback_by_path",
+    "ready_to_require_revisions"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "server_instance_id": {"type": "string"},
+    "revision_mode": {"enum": ["observe", "required"]},
+    "migration_window_days": {"type": "integer", "minimum": 0},
+    "observation_started_at": {"type": ["string", "null"]},
+    "legacy_fallback_total": {"type": "integer", "minimum": 0},
+    "legacy_fallback_by_path": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "legacy_fallback_last_used": {"type": ["string", "null"]},
+    "last_reset_at": {"type": ["string", "null"]},
+    "last_persisted_at": {"type": ["string", "null"]},
+    "legacy_fallback_enabled": {"type": "boolean"},
+    "zero_usage": {"type": "boolean"},
+    "observation_days": {"type": ["number", "null"], "minimum": 0},
+    "required_observation_days": {"type": "integer", "minimum": 0},
+    "ready_to_require_revisions": {"type": "boolean"},
+    "reason": {"type": "string"},
+    "metrics_path": {"type": "string"},
+    "removal_condition": {"type": "string"}
+  },
+  "additionalProperties": true
+}

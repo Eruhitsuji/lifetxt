@@ -1,16 +1,20 @@
 """Compatibility edges for the public-surface runtime adapter.
 
-Kept separate from the main adapter so the core transaction code stays focused
-on request semantics. These wrappers preserve historical call signatures,
-normalize the older missing-file hash representation used by MCP, and ensure a
-Web response body and its ETag come from the same writable-file snapshot.
+The public protocols gain strict revision contracts without changing internal
+Python helper semantics. MCP's direct ``call_tool`` remains an embeddable API;
+JSON-RPC ``tools/call`` is the strict public boundary. Web clients enter strict
+mode by discovering `/api/revision` or `/api/capabilities`, while legacy clients
+receive a server-captured revision and a deprecation warning until the planned
+compatibility removal.
 """
 
 from . import mutation
 from .mutation import MISSING_HASH, MutationConflict
 from .surface_runtime import (
     OPERATION_REGISTRY,
+    _ORIGINALS,
     active_transaction,
+    current_revision,
     etag_value,
     normalize_revision,
     transaction_scope,
@@ -18,6 +22,7 @@ from .surface_runtime import (
 
 
 _INSTALLED = False
+_REVISION_COOKIE = "lifetxt_revision_contract"
 
 
 def install_runtime_compatibility():
@@ -26,6 +31,7 @@ def install_runtime_compatibility():
         return
     _patch_mutation_signature()
     _patch_capability_matrix()
+    _scope_mcp_contract_to_jsonrpc()
     _patch_mcp_expected_hash()
     _patch_web_path_shape_and_reads()
     _INSTALLED = True
@@ -85,6 +91,36 @@ def _patch_capability_matrix():
     surface_runtime.operation_matrix = operation_matrix
 
 
+def _scope_mcp_contract_to_jsonrpc():
+    """Keep direct Python calls compatible and enforce CAS at JSON-RPC."""
+    from . import mcp
+
+    strict_call_tool = mcp.call_tool
+    if getattr(strict_call_tool, "_lifetxt_jsonrpc_scoped", False):
+        return
+    legacy_call_tool = _ORIGINALS.get("mcp_call_tool", strict_call_tool)
+    original_handle_request = mcp.handle_request
+
+    def handle_request(request, context):
+        if isinstance(request, dict) and request.get("method") == "tools/call":
+            request_id = request.get("id")
+            params = request.get("params") or {}
+            try:
+                name = params.get("name")
+                arguments = params.get("arguments") or {}
+                result = strict_call_tool(name, arguments, context)
+                return mcp._jsonrpc_result(request_id, mcp._tool_result(result))
+            except ValueError as exc:
+                return mcp._jsonrpc_error(request_id, -32000, str(exc))
+            except Exception as exc:
+                return mcp._jsonrpc_error(request_id, -32603, str(exc))
+        return original_handle_request(request, context)
+
+    strict_call_tool._lifetxt_jsonrpc_scoped = True
+    mcp.call_tool = legacy_call_tool
+    mcp.handle_request = handle_request
+
+
 def _patch_mcp_expected_hash():
     from . import mcp
 
@@ -139,22 +175,65 @@ def _patch_web_path_shape_and_reads():
         )
 
         @app.middleware("http")
-        async def _read_snapshot_contract(request, call_next):
+        async def _compatibility_and_read_snapshot_contract(request, call_next):
             method = request.method.upper()
             path = request.url.path
-            if method not in ("GET", "HEAD") or not path.startswith("/api/"):
-                return await call_next(request)
-            with transaction_scope(
-                app.state.writable_path,
-                expected_hash=None,
-                operation="web.read",
-                require_revision=False,
-            ) as transaction:
+            unsafe = method in ("POST", "PUT", "PATCH", "DELETE")
+            life_api_write = (
+                unsafe
+                and path.startswith("/api/")
+                and not path.startswith("/api/git/")
+                and path not in (
+                    "/api/check-line",
+                    "/api/items/parse",
+                    "/api/shorthand/parse",
+                    "/api/timer",
+                )
+            )
+            strict = (
+                request.cookies.get(_REVISION_COOKIE) == "1"
+                or str(request.headers.get("x-lifetxt-require-revision") or "").lower()
+                in ("1", "true", "yes", "on")
+            )
+            supplied = (
+                "if-match" in request.headers
+                or "x-lifetxt-expected-revision" in request.headers
+            )
+            compatibility_revision = None
+            if life_api_write and not strict and not supplied:
+                compatibility_revision = current_revision(app.state.writable_path)
+                headers = list(request.scope.get("headers") or [])
+                headers.append((b"if-match", etag_value(compatibility_revision).encode("ascii")))
+                request.scope["headers"] = headers
+
+            if method in ("GET", "HEAD") and path.startswith("/api/"):
+                with transaction_scope(
+                    app.state.writable_path,
+                    expected_hash=None,
+                    operation="web.read",
+                    require_revision=False,
+                ) as transaction:
+                    response = await call_next(request)
+                    revision = transaction.before.content_hash
+                    response.headers["ETag"] = etag_value(revision)
+                    response.headers["X-Lifetxt-Revision"] = revision
+            else:
                 response = await call_next(request)
-                revision = transaction.before.content_hash
-                response.headers["ETag"] = etag_value(revision)
-                response.headers["X-Lifetxt-Revision"] = revision
-                return response
+
+            if compatibility_revision is not None:
+                response.headers["Warning"] = (
+                    '299 lifetxt "Legacy write without client revision; fetch '
+                    '/api/revision and send If-Match."'
+                )
+            if path in ("/api/revision", "/api/capabilities") and response.status_code < 400:
+                response.set_cookie(
+                    _REVISION_COOKIE,
+                    "1",
+                    httponly=True,
+                    samesite="strict",
+                    path="/",
+                )
+            return response
 
         return app
 

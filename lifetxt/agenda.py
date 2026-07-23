@@ -12,6 +12,7 @@ from .model import (
     normalize_type,
 )
 from .serializer import item_to_line
+from .timezone_policy import local_now_naive
 from .timeutil import (
     parse_date,
     parse_date_or_datetime,
@@ -62,7 +63,7 @@ def parse_agenda_range(
 ):
     """Parse CLI range options into half-open start/end datetimes."""
     if now is None:
-        now = datetime.now().replace(second=0, microsecond=0)
+        now = local_now_naive().replace(second=0, microsecond=0)
 
     if (start_text or end_text) and around_text:
         raise ValueError("Use either --from/--to or --around, not both.")
@@ -108,7 +109,7 @@ def parse_duration(value):
 
 def parse_optional_time_range(after_text=None, before_text=None, now=None):
     if now is None:
-        now = datetime.now().replace(second=0, microsecond=0)
+        now = local_now_naive().replace(second=0, microsecond=0)
     range_start = None
     range_end = None
     if after_text:

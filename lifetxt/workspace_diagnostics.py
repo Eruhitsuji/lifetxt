@@ -123,6 +123,7 @@ def workspace_diagnostics(
     timer_paths=None,
     write_path=None,
     revision_metrics_path=None,
+    journal_dir=None,
 ):
     active_paths = _normalized_existing(paths)
     archive_paths = _normalized_existing(archive_paths)
@@ -156,6 +157,8 @@ def workspace_diagnostics(
             )
     if revision_metrics_path:
         rows.extend(_revision_metrics_diagnostics(revision_metrics_path))
+    if journal_dir:
+        rows.extend(_transaction_diagnostics(journal_dir))
     rows = _deduplicate(_sort_diagnostics(rows))
     return OrderedDict(
         (
@@ -340,6 +343,84 @@ def _revision_metrics_diagnostics(path):
             "Migrate clients to revision discovery and If-Match before enabling required mode.",
         )
     ]
+
+
+def _transaction_diagnostics(journal_dir):
+    from .transaction_journal import TERMINAL_STATES, inspect_journal, list_journals
+
+    rows = []
+    for summary in list_journals(journal_dir, include_terminal=True):
+        path = summary.get("journal_path")
+        state = summary.get("state")
+        if state == "corrupt":
+            rows.append(
+                diagnostic(
+                    "error",
+                    "F123",
+                    "Corrupt transaction journal: %s" % summary.get("error"),
+                    path,
+                    1,
+                    1,
+                    "Restore the journal directory from backup or export it before explicit abandonment.",
+                )
+            )
+            continue
+        if state in TERMINAL_STATES:
+            continue
+        try:
+            report = inspect_journal(path)
+        except Exception as exc:
+            rows.append(
+                diagnostic(
+                    "error",
+                    "F123",
+                    "Cannot inspect transaction journal: %s" % exc,
+                    path,
+                    1,
+                    1,
+                    "Preserve the journal and use safety transactions inspect/export.",
+                )
+            )
+            continue
+        diverged = [row["path"] for row in report.get("observed_targets", []) if row.get("relation") == "diverged"]
+        if diverged:
+            rows.append(
+                diagnostic(
+                    "error",
+                    "F126",
+                    "Transaction recovery target diverged from both recorded revisions: %s."
+                    % ", ".join(diverged),
+                    path,
+                    1,
+                    1,
+                    "Do not resume or compensate automatically; inspect and abandon only with a complete backup.",
+                )
+            )
+        if state in ("compensating", "compensation_failed", "recovery_required"):
+            rows.append(
+                diagnostic(
+                    "error",
+                    "F125",
+                    "Interrupted or failed transaction compensation in state %s." % state,
+                    path,
+                    1,
+                    1,
+                    "Run safety transactions inspect, then compensate or abandon with backup.",
+                )
+            )
+        else:
+            rows.append(
+                diagnostic(
+                    "error",
+                    "F124",
+                    "Interrupted transaction commit in state %s." % state,
+                    path,
+                    1,
+                    1,
+                    "Run safety transactions inspect, then resume or compensate explicitly.",
+                )
+            )
+    return rows
 
 
 def _normalized_existing(paths):

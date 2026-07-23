@@ -21,6 +21,244 @@ def _object(name, title, required, properties, additional=False):
     }
 
 
+def _recovery_schema_bundle():
+    target = {
+        "type": "object",
+        "required": [
+            "index", "path", "kind", "before_hash", "after_hash",
+            "commit_state", "compensation_state",
+        ],
+        "properties": {
+            "index": {"type": "integer", "minimum": 0},
+            "path": {"type": "string"},
+            "kind": {"enum": ["text", "json", "bytes"]},
+            "before_hash": {"type": "string"},
+            "after_hash": {"type": "string"},
+            "changed": {"type": "boolean"},
+            "created": {"type": "boolean"},
+            "deleted": {"type": "boolean"},
+            "before_artifact": {"type": ["string", "null"]},
+            "after_artifact": {"type": ["string", "null"]},
+            "commit_state": {"type": "string"},
+            "compensation_state": {"type": "string"},
+            "last_error": {"type": ["string", "null"]},
+        },
+        "additionalProperties": False,
+    }
+    return OrderedDict(
+        (
+            (
+                "transaction-journal-v1.schema.json",
+                _object(
+                    "transaction-journal-v1.schema.json",
+                    "lifetxt durable transaction journal v1",
+                    [
+                        "schema_version", "transaction_id", "operation", "state",
+                        "created_at_utc", "updated_at_utc", "targets",
+                    ],
+                    {
+                        "schema_version": {"const": 1},
+                        "transaction_id": {"type": "string", "minLength": 1},
+                        "operation": {"type": "string", "minLength": 1},
+                        "state": {
+                            "enum": [
+                                "prepared", "committing", "committed", "compensating",
+                                "compensated", "recovery_required", "resume_failed",
+                                "compensation_failed", "abandoned",
+                            ]
+                        },
+                        "created_at_utc": {"type": "string"},
+                        "updated_at_utc": {"type": "string"},
+                        "terminal_at_utc": {"type": ["string", "null"]},
+                        "last_error": {"type": ["string", "null"]},
+                        "targets": {"type": "array", "minItems": 1, "items": target},
+                    },
+                    additional=False,
+                ),
+            ),
+            (
+                "transaction-recovery-v1.schema.json",
+                _object(
+                    "transaction-recovery-v1.schema.json",
+                    "lifetxt transaction recovery report v1",
+                    [
+                        "transaction_id", "operation", "state", "journal_path",
+                        "recovery_required", "observed_targets", "available_actions",
+                    ],
+                    {
+                        "transaction_id": {"type": "string"},
+                        "operation": {"type": "string"},
+                        "state": {"type": "string"},
+                        "journal_path": {"type": "string"},
+                        "recovery_required": {"type": "boolean"},
+                        "observed_targets": {"type": "array", "items": {"type": "object"}},
+                        "available_actions": {"type": "array", "items": {"type": "string"}},
+                    },
+                    additional=True,
+                ),
+            ),
+            (
+                "timer-operation-v1.schema.json",
+                _object(
+                    "timer-operation-v1.schema.json",
+                    "lifetxt timer operation result v1",
+                    [
+                        "running", "operation", "timer_revision", "transaction_id",
+                        "journal_path", "recovery_required",
+                    ],
+                    {
+                        "running": {"type": "boolean"},
+                        "operation": {"type": "string"},
+                        "id": {"type": ["string", "null"]},
+                        "timer_revision": {"type": "string"},
+                        "item_revision": {"type": ["string", "null"]},
+                        "transaction_id": {"type": ["string", "null"]},
+                        "journal_path": {"type": ["string", "null"]},
+                        "recovery_required": {"type": "boolean"},
+                        "elapsed_minutes": {"type": "integer", "minimum": 0},
+                    },
+                    additional=True,
+                ),
+            ),
+            (
+                "support-bundle-v1.schema.json",
+                _object(
+                    "support-bundle-v1.schema.json",
+                    "lifetxt redacted support bundle v1",
+                    ["schema_version", "created_at_utc", "redaction", "report"],
+                    {
+                        "schema_version": {"const": 1},
+                        "created_at_utc": {"type": "string"},
+                        "redaction": {"type": "string"},
+                        "report": {"type": "object"},
+                        "extra": {"type": "object"},
+                    },
+                    additional=False,
+                ),
+            ),
+            (
+                "revision-migration-evidence-v1.schema.json",
+                _object(
+                    "revision-migration-evidence-v1.schema.json",
+                    "lifetxt revision migration evidence v1",
+                    [
+                        "schema_version", "exported_at_utc", "metrics_revision",
+                        "server_instance_id", "revision_mode", "observation_started_at",
+                        "legacy_fallback_total", "legacy_fallback_by_path",
+                        "ready_to_require_revisions",
+                    ],
+                    {
+                        "schema_version": {"const": 1},
+                        "exported_at_utc": {"type": "string"},
+                        "metrics_revision": {"type": "string"},
+                        "server_instance_id": {"type": "string"},
+                        "revision_mode": {"enum": ["observe", "required"]},
+                        "migration_window_days": {"type": "integer", "minimum": 0},
+                        "observation_started_at": {"type": "string"},
+                        "legacy_fallback_total": {"type": "integer", "minimum": 0},
+                        "legacy_fallback_by_path": {"type": "object"},
+                        "legacy_fallback_last_used": {"type": ["string", "null"]},
+                        "last_reset_at": {"type": ["string", "null"]},
+                        "last_persisted_at": {"type": ["string", "null"]},
+                        "ready_to_require_revisions": {"type": "boolean"},
+                    },
+                    additional=False,
+                ),
+            ),
+        )
+    )
+
+
+def _recovery_schema_samples():
+    target = {
+        "index": 0,
+        "path": "/tmp/life.txt",
+        "kind": "text",
+        "before_hash": "0" * 64,
+        "after_hash": "1" * 64,
+        "changed": True,
+        "created": False,
+        "deleted": False,
+        "before_artifact": "before-000.bin",
+        "after_artifact": "after-000.bin",
+        "commit_state": "verified",
+        "compensation_state": "pending",
+        "last_error": None,
+    }
+    return OrderedDict(
+        (
+            (
+                "transaction-journal-v1.schema.json",
+                {
+                    "schema_version": 1,
+                    "transaction_id": "tx-1",
+                    "operation": "timer.start",
+                    "state": "committed",
+                    "created_at_utc": "2026-07-24T00:00:00Z",
+                    "updated_at_utc": "2026-07-24T00:00:01Z",
+                    "terminal_at_utc": "2026-07-24T00:00:01Z",
+                    "last_error": None,
+                    "targets": [target],
+                },
+            ),
+            (
+                "transaction-recovery-v1.schema.json",
+                {
+                    "transaction_id": "tx-1",
+                    "operation": "timer.start",
+                    "state": "committed",
+                    "journal_path": "/tmp/tx-1/journal.json",
+                    "recovery_required": False,
+                    "observed_targets": [],
+                    "available_actions": ["inspect", "export", "cleanup"],
+                },
+            ),
+            (
+                "timer-operation-v1.schema.json",
+                {
+                    "running": True,
+                    "operation": "timer.start",
+                    "id": "T-1",
+                    "timer_revision": "1" * 64,
+                    "item_revision": "2" * 64,
+                    "transaction_id": "tx-1",
+                    "journal_path": "/tmp/tx-1/journal.json",
+                    "recovery_required": False,
+                    "elapsed_minutes": 0,
+                },
+            ),
+            (
+                "support-bundle-v1.schema.json",
+                {
+                    "schema_version": 1,
+                    "created_at_utc": "2026-07-24T00:00:00Z",
+                    "redaction": "paths pseudonymized",
+                    "report": {},
+                    "extra": {},
+                },
+            ),
+            (
+                "revision-migration-evidence-v1.schema.json",
+                {
+                    "schema_version": 1,
+                    "exported_at_utc": "2026-07-24T00:00:00Z",
+                    "metrics_revision": "0" * 64,
+                    "server_instance_id": "server-1",
+                    "revision_mode": "observe",
+                    "migration_window_days": 14,
+                    "observation_started_at": "2026-07-10T00:00:00Z",
+                    "legacy_fallback_total": 0,
+                    "legacy_fallback_by_path": {},
+                    "legacy_fallback_last_used": None,
+                    "last_reset_at": None,
+                    "last_persisted_at": "2026-07-24T00:00:00Z",
+                    "ready_to_require_revisions": True,
+                },
+            ),
+        )
+    )
+
+
 def extended_schema_bundle():
     point = {
         "type": "object",
@@ -62,7 +300,7 @@ def extended_schema_bundle():
         },
         "additionalProperties": True,
     }
-    return OrderedDict(
+    result = OrderedDict(
         (
             (
                 "revision-metrics-v1.schema.json",
@@ -146,7 +384,7 @@ def extended_schema_bundle():
                 _object(
                     "doctor-v1.schema.json",
                     "lifetxt doctor report v1",
-                    ["ok", "hard_failures", "workspace", "timezone", "write_target", "revision_migration", "locks", "diagnostics", "optional_dependencies"],
+                    ["ok", "hard_failures", "workspace", "timezone", "write_target", "revision_migration", "locks", "diagnostics", "transactions", "optional_dependencies"],
                     {
                         "ok": {"type": "boolean"},
                         "hard_failures": {"type": "array", "items": {"type": "string"}},
@@ -156,6 +394,7 @@ def extended_schema_bundle():
                         "revision_migration": {"$ref": "revision-metrics-v1.schema.json"},
                         "locks": {"type": "object"},
                         "diagnostics": {"$ref": "workspace-diagnostics-v1.schema.json"},
+                        "transactions": {"type": "object"},
                         "optional_dependencies": {"type": "object", "additionalProperties": {"type": "boolean"}},
                     },
                     additional=False,
@@ -187,6 +426,9 @@ def extended_schema_bundle():
                             },
                         },
                         "compensated": {"type": "boolean"},
+                        "transaction_id": {"type": ["string", "null"]},
+                        "journal_path": {"type": ["string", "null"]},
+                        "recovery_required": {"type": "boolean"},
                     },
                     additional=False,
                 ),
@@ -287,6 +529,9 @@ def extended_schema_bundle():
         )
     )
 
+    result.update(_recovery_schema_bundle())
+    return result
+
 
 def extended_schema_samples():
     empty_diag = {
@@ -316,7 +561,7 @@ def extended_schema_samples():
         "fold_policy": "error",
         "gap_policy": "error",
     }
-    return OrderedDict(
+    result = OrderedDict(
         (
             ("revision-metrics-v1.schema.json", metrics),
             ("timezone-policy-v1.schema.json", timezone),
@@ -332,12 +577,13 @@ def extended_schema_samples():
                     "revision_migration": metrics,
                     "locks": {},
                     "diagnostics": empty_diag,
+                    "transactions": {"journal_dir": "/tmp/transactions", "count": 0, "recovery_required": False, "records": [], "cleanup": {}},
                     "optional_dependencies": {},
                 },
             ),
             (
                 "multi-target-result-v1.schema.json",
-                {"operation": "sample", "targets": [], "compensated": False},
+                {"operation": "sample", "targets": [], "compensated": False, "transaction_id": None, "journal_path": None, "recovery_required": False},
             ),
             (
                 "json-export-v1.schema.json",
@@ -372,6 +618,9 @@ def extended_schema_samples():
             ),
         )
     )
+
+    result.update(_recovery_schema_samples())
+    return result
 
 
 def install_extended_schemas():

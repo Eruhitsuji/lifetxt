@@ -14,6 +14,8 @@ fails loudly at the caller instead of silently writing an unparseable value.
 """
 
 import datetime
+
+from .timezone_policy import today as timezone_today
 import re
 
 
@@ -61,7 +63,7 @@ def resolve_date_token(value, today=None, strict=False):
     callers use when the value must be a real date.
     """
     if today is None:
-        today = datetime.date.today()
+        today = timezone_today()
     raw = str(value if value is not None else "").strip()
     text = raw.lower()
     if not text:

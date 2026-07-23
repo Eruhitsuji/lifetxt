@@ -1,17 +1,30 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/json-export-v1.schema.json",
-  "title": "lifetxt JSON export v1",
-  "type": "array",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "items": {
-    "type": "object",
-    "required": ["status", "type", "title", "details"],
+    "additionalProperties": true,
     "properties": {
-      "status": {"type": "string"},
-      "type": {"type": "string"},
-      "title": {"type": "string"},
-      "details": {"type": "object"}
+      "details": {
+        "type": "object"
+      },
+      "status": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
     },
-    "additionalProperties": true
-  }
+    "required": [
+      "status",
+      "type",
+      "title",
+      "details"
+    ],
+    "type": "object"
+  },
+  "title": "lifetxt JSON export v1",
+  "type": "array"
 }

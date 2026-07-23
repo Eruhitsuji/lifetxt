@@ -81,6 +81,7 @@ from .links import (
 )
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
+from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime, parse_date_or_datetime
 from .notifier import (
     format_notification_email,
@@ -733,14 +734,20 @@ def build_parser():
     timer_start.add_argument("path", help="life.txt file containing the item.")
     timer_start.add_argument("--id", dest="item_id", required=True, help="Item ID to time.")
     timer_start.add_argument("--note", help="Optional note stored in timer state.")
+    timer_start.add_argument("--item-revision", help="Expected SHA-256 revision of life.txt.")
+    timer_start.add_argument("--timer-revision", help="Expected timer-state revision; use <missing> when idle.")
     timer_start.set_defaults(func=command_timer)
     timer_pause = timer_subparsers.add_parser("pause", help="Pause the running timer.")
+    timer_pause.add_argument("--timer-revision", help="Expected timer-state SHA-256 revision.")
     timer_pause.set_defaults(func=command_timer)
     timer_resume = timer_subparsers.add_parser("resume", help="Resume a paused timer.")
+    timer_resume.add_argument("--timer-revision", help="Expected timer-state SHA-256 revision.")
     timer_resume.set_defaults(func=command_timer)
     timer_stop = timer_subparsers.add_parser("stop", help="Stop the running timer.")
     timer_stop.add_argument("path", nargs="?", help="life.txt file. Defaults to the file stored in timer state.")
     timer_stop.add_argument("--id", dest="item_id", help="Expected running item ID.")
+    timer_stop.add_argument("--item-revision", help="Expected SHA-256 revision of life.txt.")
+    timer_stop.add_argument("--timer-revision", help="Expected timer-state SHA-256 revision.")
     timer_stop.set_defaults(func=command_timer)
     timer_status = timer_subparsers.add_parser("status", help="Show the running timer.")
     timer_status.add_argument("paths", nargs="*", metavar="path", help="Optional life.txt files used to resolve the title.")
@@ -753,6 +760,7 @@ def build_parser():
     timer_summary.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
     timer_summary.set_defaults(func=command_timer)
     timer_cancel = timer_subparsers.add_parser("cancel", help="Cancel the running timer without updating an item.")
+    timer_cancel.add_argument("--timer-revision", help="Expected timer-state SHA-256 revision.")
     timer_cancel.set_defaults(func=command_timer)
 
     stats = subparsers.add_parser(
@@ -3887,7 +3895,7 @@ def _merge_capture_shorthand(item, args):
 
 def command_quick(args):
     config = _config(args)
-    today = datetime.date.today()
+    today = timezone_today()
 
     if args.title == "-":
         stdin_title = sys.stdin.readline().rstrip("\r\n")
@@ -4015,7 +4023,7 @@ def _completion_stamp(args, config, moment=None):
         if _done_precision(args, config) == "datetime" and "T" in str(date_arg):
             return parsed.strftime("%Y-%m-%dT%H:%M"), parsed.date()
         return parsed.date().isoformat(), parsed.date()
-    moment = moment or datetime.datetime.now()
+    moment = moment or local_now_naive()
     if _done_precision(args, config) == "datetime":
         return moment.strftime("%Y-%m-%dT%H:%M"), moment.date()
     return moment.date().isoformat(), moment.date()
@@ -4218,7 +4226,7 @@ def command_rrule(args):
     else:
         raise ValueError("Pass a rule, or --path FILE --id ID to expand an item's repeat:.")
 
-    start = datetime.datetime.now().replace(second=0, microsecond=0)
+    start = local_now_naive().replace(second=0, microsecond=0)
     if start_text:
         parsed = parse_date_or_datetime(_resolve_relative_date(start_text), is_end=False)
         if parsed is None:
@@ -4657,7 +4665,7 @@ def command_complete(args):
             raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
         completion_date = completion_dt.date()
     else:
-        completion_date = datetime.date.today()
+        completion_date = timezone_today()
     date_iso = completion_date.isoformat()
 
     repeat_value = _first_detail_value(target, "repeat")
@@ -5082,7 +5090,7 @@ def command_init(args):
         sys.stdout.flush()
         project = sys.stdin.readline().strip()
 
-    today = datetime.date.today().isoformat()
+    today = timezone_today().isoformat()
 
     life_lines = []
     life_lines.append("#! self: %s" % name)
@@ -5262,7 +5270,7 @@ def command_assign(args):
     sys.stdout.write("Assigned to %s: %s\n" % (args.to, updated_line))
 
     if args.notify:
-        today = datetime.date.today().isoformat()
+        today = timezone_today().isoformat()
         sender = getattr(args, "from_user", None) or config_user_name(config) or "self"
         target_ids = target.details.get(id_key, [])
         ref_val = str(target_ids[0]) if target_ids else (item_id or "(no-id)")
@@ -5278,7 +5286,7 @@ def command_assign(args):
 def command_health(args):
     config = _config(args)
     items, diagnostics = _parse_or_exit(args.paths, config)
-    today = datetime.date.today()
+    today = timezone_today()
     since_days = getattr(args, "since", 30)
     lookahead_days = getattr(args, "lookahead", 7)
     ignore_codes = set(c.upper() for c in _split_csv_args(getattr(args, "ignore", None)))
@@ -5624,7 +5632,7 @@ def command_cleanup(args):
             ("action", "lifetxt inbox %s" % path_label),
         ]))
 
-    today_date = datetime.date.today()
+    today_date = timezone_today()
     cutoff = today_date - datetime.timedelta(days=90)
     old_done_count = sum(
         1 for item in items
@@ -6357,7 +6365,7 @@ def command_plot(args):
 
     start_str = getattr(args, "start", None)
     end_str = getattr(args, "end", None)
-    today = datetime.date.today()
+    today = timezone_today()
     start = _parse_date_only(start_str) if start_str else (today - datetime.timedelta(days=90))
     end = _parse_date_only(end_str) if end_str else today
 
@@ -6502,7 +6510,7 @@ def command_export_heatmap(args):
     config = _config(args)
     paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
     items, _ = _parse_life_inputs(paths, config)
-    today = datetime.date.today()
+    today = timezone_today()
     end = _parse_date_only(getattr(args, "end", None)) if getattr(args, "end", None) else today
     start = _parse_date_only(getattr(args, "start", None)) if getattr(args, "start", None) else end - datetime.timedelta(days=364)
     if end < start:
@@ -6829,7 +6837,7 @@ def command_snapshot(args):
         src_dir = os.path.dirname(os.path.abspath(src))
         snap_dir = args.snapshot_dir or os.path.join(src_dir, "snapshots")
         os.makedirs(snap_dir, exist_ok=True)
-        date_prefix = datetime.date.today().isoformat()
+        date_prefix = timezone_today().isoformat()
         basename = os.path.basename(src)
         dest = os.path.join(snap_dir, "%s_%s" % (date_prefix, basename))
     if os.path.abspath(dest) == os.path.abspath(src):
@@ -8242,7 +8250,7 @@ def _pre_write_backup(path, config, op):
     except FileNotFoundError:
         return
 
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = local_now_naive().strftime("%Y%m%d_%H%M%S")
     basename = os.path.basename(path)
 
     undo_root = _undo_cache_dir(config)
@@ -8606,7 +8614,7 @@ def command_watch(args):
         if show_timestamp:
             sys.stdout.write(
                 "\n[watch] %s  running: %s\n"
-                % (datetime.datetime.now().isoformat(timespec="seconds"), " ".join(cmd))
+                % (local_now_naive().isoformat(timespec="seconds"), " ".join(cmd))
             )
             sys.stdout.flush()
         try:
@@ -8932,7 +8940,7 @@ def command_decrypt(args):
 
 
 def _share_range_label(args):
-    today = datetime.date.today()
+    today = timezone_today()
     if getattr(args, "week", False):
         start = today - datetime.timedelta(days=today.weekday())
         end = start + datetime.timedelta(days=6)
@@ -9175,7 +9183,7 @@ def command_digest(args):
 
 
 def _resolve_template_placeholders(text, today=None):
-    today = today or datetime.date.today()
+    today = today or timezone_today()
     days_to_next_monday = (7 - today.weekday()) % 7 or 7
     next_monday = today + datetime.timedelta(days=days_to_next_monday)
     next_week = today + datetime.timedelta(days=7)

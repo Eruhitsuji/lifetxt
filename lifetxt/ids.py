@@ -151,7 +151,9 @@ def generate_item_id(item, existing_ids=None, prefix=None, now=None):
     if existing_ids is None:
         existing_ids = set()
     if now is None:
-        now = datetime.now().replace(microsecond=0)
+        from .timezone_policy import now as timezone_now
+
+        now = timezone_now().replace(microsecond=0, tzinfo=None)
     prefix = _safe_id_part(prefix or DEFAULT_ID_PREFIXES.get(item.kind, "item"))
     base = "%s_%s" % (prefix, now.strftime("%Y%m%d%H%M%S"))
     candidate = base

@@ -1,14 +1,35 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/group-v1.schema.json",
-  "title": "lifetxt group definition v1",
-  "type": "object",
-  "required": ["group_version", "name", "members"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "properties": {
-    "group_version": {"const": "1"},
-    "name": {"type": "string", "minLength": 1},
-    "members": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "disabled_members": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+    "disabled_members": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "group_version": {
+      "const": "1"
+    },
+    "members": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    }
   },
-  "additionalProperties": false
+  "required": [
+    "group_version",
+    "name",
+    "members"
+  ],
+  "title": "lifetxt group definition v1",
+  "type": "object"
 }

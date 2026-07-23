@@ -35,6 +35,7 @@ from .notifier import notification_records
 from .parser import parse_text
 from .serializer import item_to_line
 from .status_summary import latest_status_records
+from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime, parse_date_or_datetime
 from .webapp import (
     ack_message_in_file,
@@ -556,18 +557,27 @@ def _tool_schemas():
                 "id": _string("Item id to track."),
                 "note": _string("Optional note stored with the timer state."),
                 "dry_run": _bool("Describe the change instead of applying it."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "timer_revision": _string("Expected timer-state revision; use <missing> when idle."),
             },
             required=["id"],
         ),
         _tool(
             "timer_stop",
             "Stop the running timer and add the elapsed minutes to elapsed:.",
-            {"dry_run": _bool("Describe the change instead of applying it.")},
+            {
+                "dry_run": _bool("Describe the change instead of applying it."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "timer_revision": _string("Expected timer-state SHA-256 revision."),
+            },
         ),
         _tool(
             "timer_cancel",
             "Discard the running timer without writing elapsed:.",
-            {"dry_run": _bool("Describe the change instead of applying it.")},
+            {
+                "dry_run": _bool("Describe the change instead of applying it."),
+                "timer_revision": _string("Expected timer-state SHA-256 revision."),
+            },
         ),
         _tool(
             "start_work",
@@ -1183,7 +1193,7 @@ def _tool_complete_item(args, context):
             raise ValueError("Invalid date %r. Use YYYY-MM-DD." % date_value)
         completion_date = completion_dt.date()
     else:
-        completion_date = datetime.now().date()
+        completion_date = timezone_today()
     date_iso = completion_date.isoformat()
 
     repeat_value = item.details.get("repeat")
@@ -1741,7 +1751,7 @@ def _completion_value(context, args):
         precision = "datetime"
     if precision not in ("date", "datetime"):
         raise ValueError("config done.precision must be date or datetime.")
-    moment = datetime.now()
+    moment = local_now_naive()
     if precision == "datetime":
         return moment.strftime("%Y-%m-%dT%H:%M")
     return moment.date().isoformat()
@@ -1761,20 +1771,13 @@ def _timer_state_file(context):
 def _tool_timer_status(_args, context):
     from . import timer as timer_module
 
-    path = _timer_state_file(context)
-    if not os.path.exists(path):
-        return {"running": False}
-    state = timer_module._read_state(path)
-    minutes = timer_module.state_elapsed_minutes(state, timer_module._now())
-    return {
-        "running": True,
-        "id": state.get("id"),
-        "file": state.get("file"),
-        "started_at": state.get("started_at"),
-        "paused": bool(state.get("paused_at")),
-        "elapsed_minutes": minutes,
-        "elapsed": timer_module.format_elapsed(minutes),
-    }
+    return timer_module.timer_status_data(config=context.config, paths=context.paths)
+
+
+def _timer_revisions_required(context):
+    from .revision_telemetry import revision_mode
+
+    return revision_mode(context.config) == "required"
 
 
 def _tool_timer_start(args, context):
@@ -1784,68 +1787,76 @@ def _tool_timer_start(args, context):
     item_id = str(args.get("id") or "").strip()
     if not item_id:
         raise ValueError("timer_start requires id.")
-    path = _timer_state_file(context)
-    if os.path.exists(path):
-        running = timer_module._read_state(path)
-        raise ValueError("A timer is already running for %s. Stop it first." % running.get("id"))
-
     items, _diagnostics = _read_items(context)
     item = find_item_by_id(items, item_id, key=_id_key(context))
     if item is None:
         raise ValueError("Item id:%s was not found." % item_id)
-
     if _dry_run(args):
         return {
             "applied": False,
             "proposal": True,
             "summary": "Start a timer for %s and set it in progress" % item_id,
             "id": item_id,
+            "required_revisions": ["item_revision", "timer_revision"],
         }
-
     source = getattr(item, "source", None) or context.writable_path
-    timer_module.start_timer(
-        _namespace(path=source, item_id=item_id, note=args.get("note"), config_data=context.config)
+    result = timer_module.start_timer_transaction(
+        source,
+        item_id,
+        note=args.get("note"),
+        config=context.config,
+        expected_item_revision=args.get("item_revision"),
+        expected_timer_revision=args.get("timer_revision"),
+        require_revisions=_timer_revisions_required(context),
     )
-    return _applied(context, {"id": item_id, "running": True}, "Timer started for %s" % item_id)
+    return _applied(context, result, "Timer started for %s" % item_id)
 
 
 def _tool_timer_stop(args, context):
     from . import timer as timer_module
 
     _require_writable(context)
-    path = _timer_state_file(context)
-    if not os.path.exists(path):
+    status = timer_module.timer_status_data(config=context.config, paths=context.paths)
+    if not status.get("running"):
         raise ValueError("No running timer.")
-    state = timer_module._read_state(path)
     if _dry_run(args):
         return {
             "applied": False,
             "proposal": True,
-            "summary": "Stop the timer for %s and write elapsed:" % state.get("id"),
-            "id": state.get("id"),
+            "summary": "Stop the timer for %s and write elapsed:" % status.get("id"),
+            "id": status.get("id"),
+            "required_revisions": ["item_revision", "timer_revision"],
         }
-    timer_module.stop_timer(
-        _namespace(path=state.get("file"), item_id=state.get("id"), config_data=context.config)
+    result = timer_module.stop_timer_transaction(
+        config=context.config,
+        expected_item_revision=args.get("item_revision"),
+        expected_timer_revision=args.get("timer_revision"),
+        require_revisions=_timer_revisions_required(context),
     )
-    return _applied(context, {"id": state.get("id"), "running": False}, "Timer stopped")
+    return _applied(context, result, "Timer stopped")
 
 
 def _tool_timer_cancel(args, context):
     from . import timer as timer_module
 
     _require_writable(context)
-    path = _timer_state_file(context)
-    if not os.path.exists(path):
+    status = timer_module.timer_status_data(config=context.config, paths=context.paths)
+    if not status.get("running"):
         raise ValueError("No running timer to cancel.")
-    state = timer_module._read_state(path)
     if _dry_run(args):
         return {
             "applied": False,
             "proposal": True,
-            "summary": "Discard the timer for %s without writing elapsed:" % state.get("id"),
+            "summary": "Discard the timer for %s without writing elapsed:" % status.get("id"),
+            "required_revisions": ["timer_revision"],
         }
-    os.remove(path)
-    return {"applied": True, "proposal": False, "id": state.get("id"), "running": False}
+    result = timer_module.cancel_timer_transaction(
+        config=context.config,
+        expected_timer_revision=args.get("timer_revision"),
+        require_revision=_timer_revisions_required(context),
+    )
+    result.update({"applied": True, "proposal": False})
+    return result
 
 
 def _tool_start_work(args, context):
@@ -2003,8 +2014,8 @@ def _tool_get_workload(args, context):
     from .nextaction import is_actionable
 
     items, _diagnostics = _read_items(context)
-    today = datetime.now().date().isoformat()
-    soon = (datetime.now().date() + timedelta(days=7)).isoformat()
+    today = timezone_today().isoformat()
+    soon = (timezone_today() + timedelta(days=7)).isoformat()
 
     people = OrderedDict()
     for item in items:
@@ -2212,7 +2223,7 @@ def _require_writable(context):
 
 
 def _now_text():
-    return datetime.now().replace(second=0, microsecond=0).isoformat(timespec="minutes")
+    return local_now_naive().replace(second=0, microsecond=0).isoformat(timespec="minutes")
 
 
 def _tool_result(result):

@@ -1,0 +1,73 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-migration-evidence-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exported_at_utc": {
+      "type": "string"
+    },
+    "last_persisted_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_reset_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "legacy_fallback_by_path": {
+      "type": "object"
+    },
+    "legacy_fallback_last_used": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "legacy_fallback_total": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "metrics_revision": {
+      "type": "string"
+    },
+    "migration_window_days": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "observation_started_at": {
+      "type": "string"
+    },
+    "ready_to_require_revisions": {
+      "type": "boolean"
+    },
+    "revision_mode": {
+      "enum": [
+        "observe",
+        "required"
+      ]
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "server_instance_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "exported_at_utc",
+    "metrics_revision",
+    "server_instance_id",
+    "revision_mode",
+    "observation_started_at",
+    "legacy_fallback_total",
+    "legacy_fallback_by_path",
+    "ready_to_require_revisions"
+  ],
+  "title": "lifetxt revision migration evidence v1",
+  "type": "object"
+}

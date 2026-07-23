@@ -224,7 +224,7 @@ Before unlinking, doctor rechecks that the lock is still proven stale and that i
 
 ## 6. Published schemas
 
-The schema bundle now contains 16 Draft 2020-12 documents. New documents cover:
+The schema bundle now contains 21 Draft 2020-12 documents. New documents cover:
 
 - revision metrics;
 - timezone policy;
@@ -236,7 +236,11 @@ The schema bundle now contains 16 Draft 2020-12 documents. New documents cover:
 - saved views;
 - remote profiles;
 - groups;
-- per-recipient delivery state.
+- per-recipient delivery state;
+- transaction journal and recovery;
+- strict timer operations;
+- redacted support bundles;
+- revision-migration evidence.
 
 Generate the authoritative bundle:
 

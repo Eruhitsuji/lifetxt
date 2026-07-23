@@ -10,6 +10,8 @@ all produce the same result shape from these two functions.
 import calendar
 import datetime
 
+from .timezone_policy import today as timezone_today
+
 from .stats import longest_streak_days, streak_days
 from .timeutil import parse_elapsed
 
@@ -46,7 +48,7 @@ def resolve_named_review_range(selector, year=None, today=None):
     MCP, and future CLI/TUI saved ranges.  It delegates final validation and
     date-window construction to :func:`resolve_review_range`.
     """
-    today = today or datetime.date.today()
+    today = today or timezone_today()
     selector = str(selector or "").strip().lower()
     if selector not in NAMED_REVIEW_RANGES:
         raise ValueError(
@@ -86,7 +88,7 @@ def resolve_review_range(week=False, month=None, from_date=None, to_date=None, t
     from/to with current-week-start and today as fallbacks. Raises
     ValueError for malformed month or date values.
     """
-    today = today or datetime.date.today()
+    today = today or timezone_today()
     if week:
         start = today - datetime.timedelta(days=today.weekday())
         return start, start + datetime.timedelta(days=6)
@@ -120,7 +122,7 @@ def format_review_elapsed(minutes):
 
 def build_review(items, start, end, project=None, id_key="id", today=None):
     """Aggregate a review report dict for items inside the date window."""
-    today = today or datetime.date.today()
+    today = today or timezone_today()
     if project:
         items = [i for i in items if project in [str(v) for v in i.details.get("project", [])]]
 

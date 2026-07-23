@@ -1,0 +1,132 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-journal-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_at_utc": {
+      "type": "string"
+    },
+    "last_error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "operation": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "state": {
+      "enum": [
+        "prepared",
+        "committing",
+        "committed",
+        "compensating",
+        "compensated",
+        "recovery_required",
+        "resume_failed",
+        "compensation_failed",
+        "abandoned"
+      ]
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "after_artifact": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "after_hash": {
+            "type": "string"
+          },
+          "before_artifact": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "before_hash": {
+            "type": "string"
+          },
+          "changed": {
+            "type": "boolean"
+          },
+          "commit_state": {
+            "type": "string"
+          },
+          "compensation_state": {
+            "type": "string"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "index": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "json",
+              "bytes"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "path",
+          "kind",
+          "before_hash",
+          "after_hash",
+          "commit_state",
+          "compensation_state"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "terminal_at_utc": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "transaction_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "updated_at_utc": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "transaction_id",
+    "operation",
+    "state",
+    "created_at_utc",
+    "updated_at_utc",
+    "targets"
+  ],
+  "title": "lifetxt durable transaction journal v1",
+  "type": "object"
+}

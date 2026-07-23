@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 import unittest
-import warnings
 
 from lifetxt import mcp, webapp
 from lifetxt.doctor import doctor_report
@@ -16,9 +15,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class SchemaExtensionsV2Tests(unittest.TestCase):
-    def test_bundle_contains_sixteen_generated_and_published_documents(self):
+    def test_bundle_contains_twenty_one_generated_and_published_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(16, len(bundle))
+        self.assertEqual(21, len(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
@@ -31,13 +30,14 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
         if optional["validator_available"]:
             strict = schema_validation_report(ROOT, require_validator=True)
             self.assertTrue(strict["ok"], strict)
-            self.assertEqual(16, strict["schema_count"])
-            self.assertEqual(16, strict["sample_count"])
-            self.assertEqual("local published bundle", strict["reference_resolution"])
+            self.assertEqual(21, strict["schema_count"])
+            self.assertEqual(21, strict["sample_count"])
+            self.assertEqual("network-free referencing.Registry over published bundle", strict["reference_resolution"])
 
     @unittest.skipUnless(importlib.util.find_spec("jsonschema") is not None, "jsonschema not installed")
     def test_real_doctor_report_validates_with_references(self):
-        from jsonschema import Draft202012Validator, RefResolver
+        from jsonschema import Draft202012Validator
+        from referencing import Registry, Resource
 
         with tempfile.TemporaryDirectory() as directory:
             life = os.path.join(directory, "life.txt")
@@ -51,17 +51,13 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
             )
             bundle = schema_bundle()
             schema = bundle["doctor-v1.schema.json"]
-            store = {}
+            registry = Registry()
             for name, value in bundle.items():
-                store[name] = value
-                store[value["$id"]] = value
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                validator = Draft202012Validator(
-                    schema,
-                    resolver=RefResolver.from_schema(schema, store=store),
-                )
-                errors = list(validator.iter_errors(report))
+                resource = Resource.from_contents(value)
+                registry = registry.with_resource(name, resource)
+                registry = registry.with_resource(value["$id"], resource)
+            validator = Draft202012Validator(schema, registry=registry)
+            errors = list(validator.iter_errors(report))
             self.assertEqual([], errors)
 
 

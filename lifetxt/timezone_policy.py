@@ -22,6 +22,7 @@ _TIME_RE = re.compile(
     r"^(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,6}))?)?(Z|[+-]\d{2}:?\d{2})?$"
 )
 _TIMEZONE_CONTEXT = contextvars.ContextVar("lifetxt_timezone", default=None)
+_CLOCK_CONTEXT = contextvars.ContextVar("lifetxt_clock", default=None)
 
 
 class TimezonePolicyError(ValueError):
@@ -36,6 +37,16 @@ def timezone_context(name):
         yield name
     finally:
         _TIMEZONE_CONTEXT.reset(token)
+
+
+@contextlib.contextmanager
+def clock_context(value):
+    """Temporarily provide a deterministic clock value or zero-argument callable."""
+    token = _CLOCK_CONTEXT.set(value)
+    try:
+        yield value
+    finally:
+        _CLOCK_CONTEXT.reset(token)
 
 
 def current_timezone_name(default="local"):
@@ -169,7 +180,7 @@ def interpret_time(value, anchor_date=None, timezone_name=None, fold_policy="err
     """Interpret a time-only value on ``anchor_date`` without discarding offsets."""
     if isinstance(anchor_date, str):
         anchor_date = parse_date(anchor_date)
-    anchor_date = anchor_date or datetime.date.today()
+    anchor_date = anchor_date or today(timezone_name)
     if not isinstance(anchor_date, datetime.date):
         raise TimezonePolicyError("Invalid anchor date: %r" % anchor_date)
     if isinstance(value, datetime.time):
@@ -224,7 +235,30 @@ def comparison_datetime(value, timezone_name=None):
 
 
 def now(timezone_name=None):
-    return datetime.datetime.now(timezone_info(timezone_name))
+    source = _CLOCK_CONTEXT.get()
+    if source is None:
+        return datetime.datetime.now(timezone_info(timezone_name))
+    value = source() if callable(source) else source
+    if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+        value = datetime.datetime.combine(value, datetime.time.min)
+    if not isinstance(value, datetime.datetime):
+        raise TypeError("clock_context expects a date, datetime, or callable returning one.")
+    zone = timezone_info(timezone_name)
+    if value.tzinfo is None or value.utcoffset() is None:
+        return localize_datetime(value, timezone_name, fold_policy="earlier", gap_policy="next")
+    return value.astimezone(zone)
+
+
+def today(timezone_name=None):
+    return now(timezone_name).date()
+
+
+def utcnow():
+    return now("UTC")
+
+
+def local_now_naive(timezone_name=None):
+    return now(timezone_name).replace(tzinfo=None)
 
 
 def policy_report(config=None, text="", cli_timezone=None, sample=None, fold_policy="error", gap_policy="error"):

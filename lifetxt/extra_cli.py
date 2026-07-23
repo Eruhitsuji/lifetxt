@@ -152,7 +152,23 @@ def _build_parser(command):
         revisions.add_argument("--metrics-path")
         revisions.add_argument("--reset", action="store_true")
         revisions.add_argument("--expected-hash")
+        revisions.add_argument("--export-evidence")
+        revisions.add_argument("--relocate")
+        revisions.add_argument("--delete-source", action="store_true")
         _add_output(revisions)
+        transactions = subparsers.add_parser("transactions")
+        transactions.add_argument(
+            "transaction_action",
+            nargs="?",
+            default="list",
+            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup"),
+        )
+        transactions.add_argument("--journal-dir")
+        transactions.add_argument("--journal")
+        transactions.add_argument("--backup-dir")
+        transactions.add_argument("--older-than-days", type=float, default=30.0)
+        transactions.add_argument("--force", action="store_true")
+        _add_output(transactions)
         routes = subparsers.add_parser("write-routes")
         routes.add_argument("--root")
         routes.add_argument("--strict", action="store_true")
@@ -188,6 +204,10 @@ def _build_parser(command):
         parser.add_argument("--archive", action="append", default=[])
         parser.add_argument("--timer-state", action="append", default=[])
         parser.add_argument("--revision-metrics")
+        parser.add_argument("--journal-dir")
+        parser.add_argument("--support-bundle")
+        parser.add_argument("--cleanup-transactions", action="store_true")
+        parser.add_argument("--transaction-retention-days", type=float, default=30.0)
         parser.add_argument("--stale-after", type=float, default=300.0)
         parser.add_argument("--cleanup-stale", action="store_true")
         parser.add_argument("--force", action="store_true")

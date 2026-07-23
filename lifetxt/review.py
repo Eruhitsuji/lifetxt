@@ -14,6 +14,7 @@ from .stats import longest_streak_days, streak_days
 from .timeutil import parse_elapsed
 
 OPEN_TASK_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
+NAMED_REVIEW_RANGES = ("last-week", "last-month", "year")
 
 
 def parse_date_only(value):
@@ -36,6 +37,46 @@ def latest_item_date(item):
             if parsed and (best is None or parsed > best):
                 best = parsed
     return best
+
+
+def resolve_named_review_range(selector, year=None, today=None):
+    """Resolve last-week, last-month, or year through the shared range rules.
+
+    This is the single public implementation used by the Web request adapter,
+    MCP, and future CLI/TUI saved ranges.  It delegates final validation and
+    date-window construction to :func:`resolve_review_range`.
+    """
+    today = today or datetime.date.today()
+    selector = str(selector or "").strip().lower()
+    if selector not in NAMED_REVIEW_RANGES:
+        raise ValueError(
+            "Unknown review range %r. Use %s."
+            % (selector, ", ".join(NAMED_REVIEW_RANGES))
+        )
+    if selector == "last-week":
+        current_monday = today - datetime.timedelta(days=today.weekday())
+        start = current_monday - datetime.timedelta(days=7)
+        end = current_monday - datetime.timedelta(days=1)
+        return resolve_review_range(
+            from_date=start.isoformat(),
+            to_date=end.isoformat(),
+            today=today,
+        )
+    if selector == "last-month":
+        first_this_month = today.replace(day=1)
+        previous = first_this_month - datetime.timedelta(days=1)
+        return resolve_review_range(
+            month="%04d-%02d" % (previous.year, previous.month),
+            today=today,
+        )
+    selected_year = today.year if year in (None, "") else int(year)
+    if selected_year < 1 or selected_year > 9999:
+        raise ValueError("Review year must be between 1 and 9999.")
+    return resolve_review_range(
+        from_date="%04d-01-01" % selected_year,
+        to_date="%04d-12-31" % selected_year,
+        today=today,
+    )
 
 
 def resolve_review_range(week=False, month=None, from_date=None, to_date=None, today=None):

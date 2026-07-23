@@ -8,6 +8,8 @@ receive a server-captured revision and a deprecation warning until the planned
 compatibility removal.
 """
 
+import datetime
+
 from . import mutation
 from .mutation import MISSING_HASH, MutationConflict
 from .surface_runtime import (
@@ -173,6 +175,23 @@ def _patch_web_path_shape_and_reads():
             config=config,
             read_only=read_only,
         )
+        app.state.revision_contract_metrics = {
+            "legacy_fallback_enabled": True,
+            "legacy_fallback_total": 0,
+            "legacy_fallback_by_path": {},
+            "legacy_fallback_last_used": None,
+        }
+
+        @app.get("/api/revision-metrics")
+        def revision_metrics():
+            metrics = app.state.revision_contract_metrics
+            return {
+                "legacy_fallback_enabled": metrics["legacy_fallback_enabled"],
+                "legacy_fallback_total": metrics["legacy_fallback_total"],
+                "legacy_fallback_by_path": dict(metrics["legacy_fallback_by_path"]),
+                "legacy_fallback_last_used": metrics["legacy_fallback_last_used"],
+                "removal_condition": "Remove the fallback after supported clients report zero usage during the documented migration window.",
+            }
 
         @app.middleware("http")
         async def _compatibility_and_read_snapshot_contract(request, call_next):
@@ -205,6 +224,17 @@ def _patch_web_path_shape_and_reads():
                 headers = list(request.scope.get("headers") or [])
                 headers.append((b"if-match", etag_value(compatibility_revision).encode("ascii")))
                 request.scope["headers"] = headers
+                metrics = app.state.revision_contract_metrics
+                metrics["legacy_fallback_total"] += 1
+                metrics["legacy_fallback_by_path"][path] = (
+                    metrics["legacy_fallback_by_path"].get(path, 0) + 1
+                )
+                metrics["legacy_fallback_last_used"] = (
+                    datetime.datetime.now(datetime.timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
 
             if method in ("GET", "HEAD") and path.startswith("/api/"):
                 with transaction_scope(
@@ -225,6 +255,8 @@ def _patch_web_path_shape_and_reads():
                     '299 lifetxt "Legacy write without client revision; fetch '
                     '/api/revision and send If-Match."'
                 )
+                response.headers["Deprecation"] = "true"
+                response.headers["X-Lifetxt-Legacy-Revision-Fallback"] = "used"
             if path in ("/api/revision", "/api/capabilities") and response.status_code < 400:
                 response.set_cookie(
                     _REVISION_COOKIE,

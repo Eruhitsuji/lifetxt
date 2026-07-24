@@ -129,7 +129,7 @@ DIAGNOSTIC_CATEGORIES = (
 
 def main(argv=None):
     try:
-        argv, config_path = _extract_config_arg(argv)
+        argv, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -142,8 +142,14 @@ def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
     args.config = config_path
+    args.workspace = workspace_name
     try:
         args.config_data = load_config(config_path)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    try:
+        _maybe_apply_workspace(args)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -164,6 +170,7 @@ def _extract_config_arg(argv):
         raw = list(argv)
 
     config_path = None
+    workspace_name = None
     cleaned = []
     index = 0
     while index < len(raw):
@@ -178,9 +185,19 @@ def _extract_config_arg(argv):
             config_path = value.split("=", 1)[1]
             index += 1
             continue
+        if value == "--workspace":
+            if index + 1 >= len(raw):
+                raise ValueError("--workspace requires a name.")
+            workspace_name = raw[index + 1]
+            index += 2
+            continue
+        if value.startswith("--workspace="):
+            workspace_name = value.split("=", 1)[1]
+            index += 1
+            continue
         cleaned.append(value)
         index += 1
-    return cleaned, config_path
+    return cleaned, config_path, workspace_name
 
 
 def build_parser():
@@ -191,6 +208,10 @@ def build_parser():
     parser.add_argument(
         "--config",
         help="External JSON config file. May also be set with LIFETXT_CONFIG.",
+    )
+    parser.add_argument(
+        "--workspace",
+        help="Named workspace to resolve inputs and write target from.",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -647,6 +668,93 @@ def build_parser():
         help="Print the loaded config as JSON.",
     )
     config_show.set_defaults(func=command_config_show)
+
+    config_effective = config_subparsers.add_parser(
+        "effective",
+        help="Print effective config after defaults, profile, and env precedence.",
+    )
+    config_effective.add_argument("--profile", help="Named profile to apply.")
+    config_effective.set_defaults(func=command_config_effective)
+
+    config_sources = config_subparsers.add_parser(
+        "sources",
+        help="Show each effective key with its value and provenance.",
+    )
+    config_sources.add_argument("--profile", help="Named profile to apply.")
+    config_sources.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON rows."
+    )
+    config_sources.set_defaults(func=command_config_sources)
+
+    config_get = config_subparsers.add_parser(
+        "get", help="Print one effective value by dotted path (a.b.c)."
+    )
+    config_get.add_argument("path", help="Dotted config path, e.g. defaults.timezone.")
+    config_get.add_argument("--profile", help="Named profile to apply.")
+    config_get.set_defaults(func=command_config_get)
+
+    config_set = config_subparsers.add_parser(
+        "set", help="Set one config value by dotted path and write the file."
+    )
+    config_set.add_argument("path", help="Dotted config path, e.g. web.port.")
+    config_set.add_argument("value", help="New value (parsed as JSON, else string).")
+    config_set.add_argument(
+        "-o", "--output", help="Config file to write. Defaults to the loaded file."
+    )
+    config_set.set_defaults(func=command_config_set)
+
+    config_unset = config_subparsers.add_parser(
+        "unset", help="Remove one config value by dotted path and write the file."
+    )
+    config_unset.add_argument("path", help="Dotted config path to remove.")
+    config_unset.add_argument(
+        "-o", "--output", help="Config file to write. Defaults to the loaded file."
+    )
+    config_unset.set_defaults(func=command_config_unset)
+
+    config_explain = config_subparsers.add_parser(
+        "explain", help="Explain a config key using the authoritative registry."
+    )
+    config_explain.add_argument("path", help="Dotted config path to explain.")
+    config_explain.set_defaults(func=command_config_explain)
+
+    workspace_command = subparsers.add_parser(
+        "workspace",
+        help="Inspect and validate named workspaces and their source manifests.",
+    )
+    workspace_subparsers = workspace_command.add_subparsers(dest="workspace_command")
+    ws_list = workspace_subparsers.add_parser(
+        "list", help="List configured workspaces."
+    )
+    ws_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    ws_list.set_defaults(func=command_workspace_list)
+
+    ws_show = workspace_subparsers.add_parser(
+        "show", help="Show one workspace's resolved source manifest."
+    )
+    ws_show.add_argument("name", nargs="?", help="Workspace name. Defaults to the default workspace.")
+    ws_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    ws_show.set_defaults(func=command_workspace_show)
+
+    ws_files = workspace_subparsers.add_parser(
+        "files", help="List the files a workspace resolves to."
+    )
+    ws_files.add_argument("name", nargs="?", help="Workspace name. Defaults to the default workspace.")
+    ws_files.add_argument(
+        "--resolved",
+        action="store_true",
+        help="Show role, mode, origin, and resolved path for each file.",
+    )
+    ws_files.add_argument("--json", action="store_true", help="Emit JSON.")
+    ws_files.set_defaults(func=command_workspace_files)
+
+    ws_validate = workspace_subparsers.add_parser(
+        "validate", help="Validate a workspace and report diagnostics."
+    )
+    ws_validate.add_argument("name", nargs="?", help="Workspace name. Defaults to the default workspace.")
+    ws_validate.add_argument("--all", action="store_true", help="Validate every workspace.")
+    ws_validate.add_argument("--json", action="store_true", help="Emit JSON.")
+    ws_validate.set_defaults(func=command_workspace_validate)
 
     tui = subparsers.add_parser(
         "tui",
@@ -7392,6 +7500,256 @@ def command_config_show(args):
     return 0
 
 
+def command_config_effective(args):
+    from .config_layers import redacted_effective
+
+    merged, _provenance = redacted_effective(
+        _config(args), profile=getattr(args, "profile", None)
+    )
+    write_text(None, json.dumps(merged, ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
+def command_config_sources(args):
+    from .config_layers import flatten_provenance
+
+    rows = flatten_provenance(_config(args), profile=getattr(args, "profile", None))
+    if getattr(args, "json", False):
+        payload = [
+            OrderedDict((("path", path), ("value", value), ("source", source)))
+            for path, value, source in rows
+        ]
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    width = max((len(path) for path, _v, _s in rows), default=0)
+    for path, value, source in rows:
+        write_text(None, "%-*s  %-18s  %s\n" % (width, path, source, json.dumps(value, ensure_ascii=False)))
+    return 0
+
+
+def command_config_get(args):
+    from .config_layers import effective_config, get_dotted
+
+    merged, _provenance = effective_config(_config(args), profile=getattr(args, "profile", None))
+    _sentinel = object()
+    value = get_dotted(merged, args.path, _sentinel)
+    if value is _sentinel:
+        sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
+        return 1
+    if isinstance(value, (dict, list)):
+        write_text(None, json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, "%s\n" % json.dumps(value, ensure_ascii=False))
+    return 0
+
+
+def command_config_set(args):
+    from .config_layers import set_dotted
+
+    config = _config(args)
+    target = args.output or config.get("_path")
+    if not target:
+        raise ValueError("No config file to write. Run config init first or pass --output.")
+    data = _config_without_runtime(config)
+    try:
+        value = json.loads(args.value)
+    except (ValueError, TypeError):
+        value = args.value
+    set_dotted(data, args.path, value)
+    _write_config_file(target, data)
+    write_text(None, "Set %s in %s\n" % (args.path, target))
+    return 0
+
+
+def command_config_unset(args):
+    from .config_layers import unset_dotted
+
+    config = _config(args)
+    target = args.output or config.get("_path")
+    if not target:
+        raise ValueError("No config file to write. Run config init first or pass --output.")
+    data = _config_without_runtime(config)
+    if not unset_dotted(data, args.path):
+        sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
+        return 1
+    _write_config_file(target, data)
+    write_text(None, "Removed %s from %s\n" % (args.path, target))
+    return 0
+
+
+def command_config_explain(args):
+    from .config_registry import explain_key
+
+    entry = explain_key(args.path)
+    if entry is None:
+        sys.stderr.write("ERROR: No registered metadata for %s\n" % args.path)
+        return 1
+    write_text(None, "%s\n" % args.path)
+    for key, value in entry.items():
+        if value is None:
+            continue
+        label = key.replace("_", " ")
+        write_text(None, "  %-16s %s\n" % (label + ":", value))
+    return 0
+
+
+def _config_without_runtime(config):
+    data = OrderedDict()
+    for key, value in (config or {}).items():
+        if key in ("_path", "_active_workspace"):
+            continue
+        data[key] = value
+    return data
+
+
+def _write_config_file(path, data):
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    write_text(path, text)
+
+
+def _workspace_diag_line(row):
+    return "  [%s] %s: %s" % (row["severity"].upper(), row["code"], row["message"])
+
+
+def command_workspace_list(args):
+    from .workspace import workspace_summaries
+
+    summaries = workspace_summaries(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(summaries, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not summaries:
+        write_text(None, "No workspaces configured.\n")
+        return 0
+    for summary in summaries:
+        marker = "*" if summary["default"] else " "
+        tags = []
+        if summary["legacy"]:
+            tags.append("legacy")
+        if not summary["ok"]:
+            tags.append("has-errors")
+        suffix = (" [%s]" % ", ".join(tags)) if tags else ""
+        write_text(
+            None,
+            "%s %s  (%d source(s), %d file(s)) -> %s%s\n"
+            % (
+                marker,
+                summary["name"],
+                summary["source_count"],
+                summary["input_count"],
+                summary["write_file"] or "(none)",
+                suffix,
+            ),
+        )
+    return 0
+
+
+def command_workspace_show(args):
+    from .workspace import resolve_workspace
+
+    try:
+        resolution = resolve_workspace(_config(args), getattr(args, "name", None) or getattr(args, "workspace", None))
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(resolution, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "workspace: %s%s\n" % (resolution["name"], " (legacy)" if resolution["legacy"] else ""))
+    write_text(None, "base_dir: %s\n" % resolution["base_dir"])
+    write_text(None, "write_file: %s\n" % (resolution["write_file"] or "(none)"))
+    write_text(None, "sources:\n")
+    for record in resolution["sources"]:
+        write_text(
+            None,
+            "  - %s  role=%s writable=%s visible=%s priority=%d\n"
+            % (
+                record["path"],
+                record["role"],
+                record["writable"],
+                record["default_visible"],
+                record["priority"],
+            ),
+        )
+    if resolution["diagnostics"]:
+        write_text(None, "diagnostics:\n")
+        for row in resolution["diagnostics"]:
+            write_text(None, _workspace_diag_line(row) + "\n")
+    return 0
+
+
+def command_workspace_files(args):
+    from .workspace import resolve_workspace
+
+    try:
+        resolution = resolve_workspace(_config(args), getattr(args, "name", None) or getattr(args, "workspace", None))
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    rows = []
+    for record in resolution["sources"]:
+        for path in record["files"]:
+            rows.append(
+                OrderedDict(
+                    (
+                        ("path", path),
+                        ("role", record["role"]),
+                        ("mode", "rw" if record["writable"] else "ro"),
+                        ("origin", record["path"]),
+                        ("matched_glob", record["matched_glob"]),
+                        ("exists", os.path.exists(path)),
+                    )
+                )
+            )
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if getattr(args, "resolved", False):
+        for row in rows:
+            write_text(
+                None,
+                "%s  role=%s mode=%s origin=%s exists=%s\n"
+                % (row["path"], row["role"], row["mode"], row["origin"], row["exists"]),
+            )
+    else:
+        for row in rows:
+            write_text(None, "%s\n" % row["path"])
+    return 0
+
+
+def command_workspace_validate(args):
+    from .workspace import resolve_workspace, iter_workspace_definitions
+
+    config = _config(args)
+    if getattr(args, "all", False):
+        names = list(iter_workspace_definitions(config).keys())
+    else:
+        names = [getattr(args, "name", None) or getattr(args, "workspace", None)]
+    reports = []
+    overall_ok = True
+    for name in names:
+        try:
+            resolution = resolve_workspace(config, name)
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        overall_ok = overall_ok and resolution["ok"]
+        reports.append(resolution)
+    if getattr(args, "json", False):
+        payload = [
+            OrderedDict((("name", r["name"]), ("ok", r["ok"]), ("diagnostics", r["diagnostics"])))
+            for r in reports
+        ]
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0 if overall_ok else 1
+    for resolution in reports:
+        status = "OK" if resolution["ok"] else "ERRORS"
+        write_text(None, "workspace %s: %s\n" % (resolution["name"], status))
+        for row in resolution["diagnostics"]:
+            write_text(None, _workspace_diag_line(row) + "\n")
+    return 0 if overall_ok else 1
+
+
 def command_tui(args):
     args.paths = _normalize_paths(args.paths, _config(args), stdin_when_empty=False) or ["life.txt"]
     from .tui import cmd_tui
@@ -8069,6 +8427,38 @@ def _auto_id_scan_paths(args):
 
 def _config(args):
     return getattr(args, "config_data", None) or {}
+
+
+def _workspace_resolution_active(config, workspace_name):
+    if workspace_name:
+        return True
+    if not isinstance(config, dict):
+        return False
+    return bool(config.get("workspaces") or config.get("default_workspace"))
+
+
+def _maybe_apply_workspace(args):
+    """Inject resolved workspace inputs/write target into the loaded config.
+
+    Legacy top-level ``paths`` / ``write_file`` configurations are left byte
+    identical: resolution only activates when a workspace is requested with
+    ``--workspace`` or the config declares ``workspaces`` / ``default_workspace``.
+    Downstream ``config_paths`` / ``config_write_file`` then transparently see
+    the resolved sources without every command needing to change.
+    """
+    config = getattr(args, "config_data", None)
+    workspace_name = getattr(args, "workspace", None)
+    if not config or not _workspace_resolution_active(config, workspace_name):
+        return
+    from .workspace import resolve_workspace
+
+    resolution = resolve_workspace(config, workspace_name or None)
+    config["paths"] = list(resolution["input_paths"])
+    if resolution["write_file"]:
+        config["write_file"] = resolution["write_file"]
+    if resolution["generated_paths"]:
+        config.setdefault("generated_paths", list(resolution["generated_paths"]))
+    config["_active_workspace"] = resolution["name"]
 
 
 def _config_generated_paths(config):

@@ -1,0 +1,71 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/workspace-source-manifest-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "archive_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "base_dir": {
+      "type": "string"
+    },
+    "default_visible_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "generated_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "input_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "legacy": {
+      "type": "boolean"
+    },
+    "manifest_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "sources": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "write_file": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "manifest_version",
+    "name",
+    "sources"
+  ],
+  "title": "lifetxt workspace source manifest v1",
+  "type": "object"
+}

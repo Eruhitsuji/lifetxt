@@ -1,0 +1,189 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/config-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "config_version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "default_workspace": {
+      "type": "string"
+    },
+    "defaults": {
+      "additionalProperties": true,
+      "properties": {
+        "person": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "profiles": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "workspaces": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "properties": {
+          "paths": {
+            "items": {
+              "oneOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default_visible": {
+                      "type": "boolean"
+                    },
+                    "exclude": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "format": {
+                      "type": "string"
+                    },
+                    "generated_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "priority": {
+                      "type": "integer"
+                    },
+                    "privacy": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "primary",
+                        "input",
+                        "generated",
+                        "archive",
+                        "readonly",
+                        "reference"
+                      ]
+                    },
+                    "watch": {
+                      "type": "boolean"
+                    },
+                    "writable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "oneOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default_visible": {
+                      "type": "boolean"
+                    },
+                    "exclude": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "format": {
+                      "type": "string"
+                    },
+                    "generated_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "priority": {
+                      "type": "integer"
+                    },
+                    "privacy": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "primary",
+                        "input",
+                        "generated",
+                        "archive",
+                        "readonly",
+                        "reference"
+                      ]
+                    },
+                    "watch": {
+                      "type": "boolean"
+                    },
+                    "writable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "write_file": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "write_file": {
+      "type": "string"
+    }
+  },
+  "title": "lifetxt configuration v1",
+  "type": "object"
+}

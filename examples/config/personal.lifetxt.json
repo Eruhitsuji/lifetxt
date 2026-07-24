@@ -1,0 +1,17 @@
+{
+  "config_version": 1,
+  "default_workspace": "personal",
+  "workspaces": {
+    "personal": {
+      "sources": [
+        "life.txt",
+        { "path": ".generated/google_calendar.life.txt", "role": "generated" }
+      ],
+      "write_file": "life.txt"
+    }
+  },
+  "defaults": {
+    "person": "self",
+    "timezone": "Asia/Tokyo"
+  }
+}

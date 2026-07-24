@@ -1,0 +1,49 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-preflight-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "journal_dir": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "permissions": {
+      "type": "object"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "policy_file": {
+      "type": "object"
+    },
+    "usage": {
+      "type": "object"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "ok",
+    "journal_dir",
+    "policy",
+    "policy_file",
+    "usage",
+    "permissions",
+    "warnings",
+    "errors"
+  ],
+  "title": "lifetxt transaction startup preflight v1",
+  "type": "object"
+}

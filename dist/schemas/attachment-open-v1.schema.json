@@ -1,0 +1,49 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-open-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "action": {
+      "const": "open"
+    },
+    "attachment_revision": {
+      "type": "string"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "executed": {
+      "type": "boolean"
+    },
+    "metadata_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata_written": {
+      "type": "boolean"
+    },
+    "path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "action",
+    "path",
+    "attachment_revision",
+    "command",
+    "metadata_written"
+  ],
+  "title": "lifetxt attachment open plan v1",
+  "type": "object"
+}

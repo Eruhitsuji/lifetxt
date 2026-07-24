@@ -1,0 +1,62 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/editor-session-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "after_revision": {
+      "type": "string"
+    },
+    "before_revision": {
+      "type": "string"
+    },
+    "changed": {
+      "type": "boolean"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "current_revision": {
+      "type": "string"
+    },
+    "diff": {
+      "type": "string"
+    },
+    "edited_revision": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "reconciled": {
+      "type": "boolean"
+    },
+    "review_only": {
+      "type": "boolean"
+    },
+    "source_changed_while_editing": {
+      "type": "boolean"
+    },
+    "temporary_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "written": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "path",
+    "before_revision",
+    "current_revision",
+    "changed",
+    "written",
+    "diff"
+  ],
+  "title": "lifetxt safe editor session v1",
+  "type": "object"
+}

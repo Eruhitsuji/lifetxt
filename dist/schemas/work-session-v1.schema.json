@@ -1,0 +1,56 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/work-session-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "done": {
+      "type": "boolean"
+    },
+    "elapsed_added": {
+      "type": "string"
+    },
+    "elapsed_total": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "item_revision": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "journal_path": {
+      "type": "string"
+    },
+    "presence": {
+      "type": "string"
+    },
+    "recovery_required": {
+      "type": "boolean"
+    },
+    "running": {
+      "type": "boolean"
+    },
+    "timer_revision": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "transaction_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "running",
+    "id",
+    "transaction_id",
+    "journal_path",
+    "recovery_required",
+    "item_revision",
+    "timer_revision"
+  ],
+  "title": "lifetxt compound work session v1",
+  "type": "object"
+}

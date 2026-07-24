@@ -17,6 +17,7 @@ from .config import (
 from .ids import id_key_from_config
 from .parser import parse_text
 from .serializer import item_to_line
+from .write_operations import current_revision, mutate_item_files, mutate_items
 
 
 def cmd_fzf(args):
@@ -57,13 +58,16 @@ def load_filtered_items(args):
     items = []
     include_source = len(args.paths or []) != 1
     for path in args.paths:
-        with open(path, "r", encoding="utf-8-sig") as handle:
-            path_items, diagnostics = parse_text(handle.read(), id_key=_id_key(args))
+        from .mutation import read_text_snapshot
+
+        source_snapshot = read_text_snapshot(path)
+        path_items, diagnostics = parse_text(source_snapshot.text, id_key=_id_key(args))
         errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
         if errors:
             raise ValueError(errors[0].format())
         for item in path_items:
             item.source = path
+            item.source_revision = source_snapshot.content_hash
         items.extend(path_items)
 
     range_start, range_end = parse_optional_time_range(
@@ -132,9 +136,7 @@ def run_action(action, records, args):
             sys.stdout.write(record["text"] + "\n")
         return 0
     if action == "done":
-        for record in records:
-            require_id(record)
-            update_item(record["source"], record["id"], _id_key(args), status="[x]")
+        _apply_record_changes(records, args, status="[x]", operation="fzf.done")
         sys.stdout.write("Marked %d item(s) done.\n" % len(records))
         return 0
     if action == "delete":
@@ -144,9 +146,7 @@ def run_action(action, records, args):
         if answer != "delete":
             sys.stdout.write("Canceled.\n")
             return 0
-        for record in records:
-            require_id(record)
-            delete_item(record["source"], record["id"], _id_key(args))
+        _apply_record_changes(records, args, delete=True, operation="fzf.delete")
         sys.stdout.write("Deleted %d item(s).\n" % len(records))
         return 0
     if action == "edit":
@@ -176,6 +176,7 @@ def encode_item(item, key):
             ("label", title),
             ("body", body),
             ("text", item_to_line(item)),
+            ("revision", getattr(item, "source_revision", "") or ""),
         ]
     )
     return "\t".join([encode_record(record), display_label(record)])
@@ -222,6 +223,7 @@ def decode_record(token):
             ("label", str(data.get("label") or "")),
             ("body", str(data.get("body") or "")),
             ("text", str(data.get("text") or "")),
+            ("revision", str(data.get("revision") or "")),
         ]
     )
 
@@ -288,39 +290,52 @@ def require_id(record):
         raise ValueError("Selected item has no id:. Run `lifetxt ids --assign` first.")
 
 
-def update_item(path, item_id, key, status=None):
-    text = _read_text(path)
-    items, diagnostics = parse_text(text, id_key=key)
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
-    if errors:
-        raise ValueError(errors[0].format())
-    matches = [item for item in items if item_id in item.details.get(key, [])]
-    if len(matches) != 1:
-        raise ValueError("Expected exactly one item with %s:%s." % (key, item_id))
-    item = matches[0]
-    if status:
-        item.status = status
-    replace_item_text(path, text, item)
+def _apply_record_changes(records, args, status=None, delete=False, operation="fzf.mutate"):
+    file_changes = OrderedDict()
+    for record in records:
+        require_id(record)
+        path = record.get("source")
+        if not path:
+            raise ValueError("Selected item has no source file.")
+        revision = record.get("revision") or current_revision(path, allow_missing=False)
+        spec = file_changes.setdefault(
+            path, {"expected_revision": revision, "changes": []}
+        )
+        if spec["expected_revision"] != revision:
+            raise ValueError("Selected rows from %s have inconsistent revisions. Reload and retry." % path)
+        spec["changes"].append(
+            {"id": record["id"], "status": status, "delete": delete}
+        )
+    return mutate_item_files(
+        file_changes,
+        id_key=_id_key(args),
+        operation=operation,
+    )
 
 
-def delete_item(path, item_id, key):
-    text = _read_text(path)
-    lines = text.splitlines(True)
-    items, diagnostics = parse_text(text, id_key=key)
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
-    if errors:
-        raise ValueError(errors[0].format())
-    matches = [item for item in items if item_id in item.details.get(key, [])]
-    if len(matches) != 1:
-        raise ValueError("Expected exactly one item with %s:%s." % (key, item_id))
-    item = matches[0]
-    start = item.line - 1
-    end = getattr(item, "end_line", item.line) or item.line
-    del lines[start:end]
-    _write_text(path, "".join(lines))
+def update_item(path, item_id, key, status=None, expected_revision=None, set_details=None):
+    return mutate_items(
+        path,
+        [{"id": item_id, "status": status, "set_details": set_details or {}}],
+        id_key=key,
+        expected_revision=expected_revision,
+        operation="fzf.item_update",
+    )
+
+
+def delete_item(path, item_id, key, expected_revision=None):
+    return mutate_items(
+        path,
+        [{"id": item_id, "delete": True}],
+        id_key=key,
+        expected_revision=expected_revision,
+        operation="fzf.item_delete",
+    )
 
 
 def replace_item_text(path, original_text, item):
+    from .mutation import hash_text, write_text
+
     lines = original_text.splitlines(True)
     start = item.line - 1
     end = getattr(item, "end_line", item.line) or item.line
@@ -330,7 +345,13 @@ def replace_item_text(path, original_text, item):
     elif lines and lines[end - 1].endswith("\r"):
         ending = "\r"
     lines[start:end] = (item_to_line(item) + ending).splitlines(True)
-    _write_text(path, "".join(lines))
+    return write_text(
+        path,
+        "".join(lines),
+        expected_hash=hash_text(original_text),
+        operation="fzf.replace_item",
+        create=False,
+    )
 
 
 def resolve_editor(config=None):
@@ -413,13 +434,22 @@ def open_editor(record, config=None):
 
 
 def _read_text(path):
-    with open(path, "r", encoding="utf-8-sig") as handle:
-        return handle.read()
+    from .mutation import read_text_snapshot
+
+    return read_text_snapshot(path).text
 
 
 def _write_text(path, text):
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
+    from .mutation import read_text_snapshot, write_text
+
+    snap = read_text_snapshot(path, allow_missing=True)
+    return write_text(
+        path,
+        text,
+        expected_hash=snap.content_hash,
+        operation="fzf_helper.write_text",
+        create=not snap.exists,
+    )
 
 
 def _id_key(args):

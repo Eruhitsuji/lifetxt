@@ -28,6 +28,7 @@ _EXTRA_COMMANDS = frozenset(
         "safety",
         "format",
         "capabilities",
+        "attachment",
     )
 )
 
@@ -148,7 +149,8 @@ def _print_help():
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
         "Release-safety and Format 1.0 commands:\n"
-        "  safety locks|serve-target|timezone|revisions|write-routes|release-gate\n"
+        "  safety locks|serve-target|timezone|revisions|transactions|write-routes|release-gate\n"
+        "  attachment put|reference|delete|status\n"
         "  format info|check|canon|schemas, capabilities\n"
         "  doctor --workspace-safety\n"
         "Additional flags:\n"

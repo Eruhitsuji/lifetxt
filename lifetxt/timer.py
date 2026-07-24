@@ -591,13 +591,18 @@ def updated_item_text(text, item_id, key, status=None, set_details=None):
     return "".join(lines), updated
 
 
-def update_item_in_file(path, item_id, key, status=None, set_details=None):
-    text = _read_text(path)
-    replacement, updated = updated_item_text(
-        text, item_id, key, status=status, set_details=set_details
+def update_item_in_file(path, item_id, key, status=None, set_details=None, expected_revision=None):
+    from .write_operations import mutate_items
+    result = mutate_items(
+        path,
+        [{"id": item_id, "status": status, "set_details": set_details or {}}],
+        id_key=key,
+        expected_revision=expected_revision,
+        operation="timer.item_update",
     )
-    _write_text(path, replacement)
-    return updated
+    snapshot = mutation.read_text_snapshot(path)
+    item = find_item_in_text(snapshot.text, item_id, key, path)
+    return item_to_line(item)
 
 
 def load_items(paths):

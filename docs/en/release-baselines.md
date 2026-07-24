@@ -25,10 +25,11 @@ Record content is never baseline material. Elements marked `data-no-i18n` and kn
 
 Each allowance contains a reason. Current categories include:
 
-- undo/backup cache output;
-- explicit digest/template append output;
-- the legacy fzf helper writer that is replaced at runtime by `compat_writes`;
-- generated JSON Schema publication output.
+- undo/backup/configuration cache output that is not authoritative `life.txt` data;
+- generated JSON Schema publication output;
+- durable transaction-journal publication through `os.replace`.
+
+Quick capture, journal append, digest/template append, fzf/peco actions, archive, tag merge, TUI edits, attachments, and compound work sessions now use semantic CAS or journal-backed transactions and no longer need direct-write allowances.
 
 The baseline does not contain line numbers. Refactoring a file therefore does not create false failures, while introducing a new call shape or a direct write in another module fails the gate.
 

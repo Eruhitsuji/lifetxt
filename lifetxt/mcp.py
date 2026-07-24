@@ -181,13 +181,13 @@ READ_ONLY_TOOLS = frozenset(
         "list_notifications", "list_messages", "get_file_state", "search_items",
         "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
         "get_status", "parse_shorthand", "timer_status", "check_files",
-        "complete",
+        "complete", "attachment_state",
     ]
 )
 
 #: Tools that can remove or overwrite existing content.
 DESTRUCTIVE_TOOLS = frozenset(
-    ["delete_item", "set_status", "timer_cancel", "update_item", "stop_work"]
+    ["delete_item", "set_status", "timer_cancel", "update_item", "stop_work", "attachment_delete"]
 )
 
 
@@ -422,8 +422,40 @@ def _tool_schemas():
                 "no_hash": _bool("Record the path without a content hash."),
                 "dry_run": _bool("Return a diff instead of writing."),
                 "expected_file_hash": _string("Reject the write if the file changed."),
+                "attachment_revision": _string("Expected attachment SHA-256 revision for file references."),
             },
             required=["id", "path"],
+        ),
+        _tool(
+            "attachment_put",
+            "Create or replace an attachment and update its life.txt reference in one journal-backed transaction.",
+            {
+                "id": _string("Item ID."),
+                "path": _string("Attachment destination relative to life.txt."),
+                "content_base64": _string("Attachment bytes encoded as base64."),
+                "content_text": _string("UTF-8 text content; mutually exclusive with content_base64."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "attachment_revision": _string("Expected attachment revision or <missing>."),
+                "allow_executable": _bool("Allow executable/script attachment content."),
+            },
+            required=["id", "path"],
+        ),
+        _tool(
+            "attachment_delete",
+            "Delete an attachment and remove its life.txt reference in one journal-backed transaction.",
+            {
+                "id": _string("Item ID."),
+                "path": _string("Attachment path relative to life.txt."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "attachment_revision": _string("Expected attachment SHA-256 revision."),
+            },
+            required=["id", "path"],
+        ),
+        _tool(
+            "attachment_state",
+            "Inspect attachment confinement, type, executable state, and revision.",
+            {"path": _string("Attachment path relative to life.txt.")},
+            required=["path"],
         ),
         _tool(
             "get_file_state",
@@ -589,6 +621,8 @@ def _tool_schemas():
                 "no_timer": _bool("Skip starting the timer."),
                 "no_presence": _bool("Skip recording presence."),
                 "dry_run": _bool("Describe the change instead of applying it."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "timer_revision": _string("Expected timer-state revision; use <missing> when idle."),
             },
             required=["id"],
         ),
@@ -600,6 +634,8 @@ def _tool_schemas():
                 "done": _bool("Also mark the task complete."),
                 "no_presence": _bool("Leave the presence status open."),
                 "dry_run": _bool("Describe the change instead of applying it."),
+                "item_revision": _string("Expected life.txt SHA-256 revision."),
+                "timer_revision": _string("Expected timer-state SHA-256 revision."),
             },
         ),
     ]
@@ -1505,6 +1541,25 @@ def _tool_attach_file(args, context):
             "%s is a %s; use key=%s." % (path_value, "directory" if is_dir else "file", key)
         )
 
+    if not is_dir and not _dry_run(args):
+        from .attachment_transactions import reference_attachment
+        report = reference_attachment(
+            context.writable_path,
+            item_id,
+            path_value,
+            item_revision=args.get("expected_file_hash"),
+            attachment_expected_revision=args.get("attachment_revision"),
+            config=context.config,
+            require_revisions=_timer_revisions_required(context),
+        )
+        refreshed, _diagnostics = _read_items(context)
+        updated = find_item_by_id(refreshed, item_id, key=_id_key(context))
+        report["key"] = FILE_KEY
+        report["item"] = api_item(updated, context.writable_path, _id_key(context))
+        return _applied(
+            context, report, "Attach %s to %s" % (report.get("value"), item_id)
+        )
+
     digest = ""
     if not _truthy(args.get("no_hash")):
         try:
@@ -1550,6 +1605,64 @@ def _tool_attach_file(args, context):
         },
         "Attach %s to %s" % (value, item_id),
     )
+
+
+def _tool_attachment_put(args, context):
+    import base64
+    from .attachment_transactions import put_attachment
+
+    _require_writable(context)
+    item_id = str(args.get("id") or "").strip()
+    path_value = str(args.get("path") or "").strip()
+    if not item_id or not path_value:
+        raise ValueError("attachment_put requires id and path.")
+    encoded = args.get("content_base64")
+    text = args.get("content_text")
+    if encoded not in (None, "") and text not in (None, ""):
+        raise ValueError("Use only one of content_base64 or content_text.")
+    if encoded not in (None, ""):
+        try:
+            payload = base64.b64decode(str(encoded), validate=True)
+        except Exception as exc:
+            raise ValueError("Invalid content_base64: %s" % exc)
+    elif text is not None:
+        payload = str(text).encode("utf-8")
+    else:
+        raise ValueError("attachment_put requires content_base64 or content_text.")
+    return put_attachment(
+        context.writable_path, item_id, path_value, payload,
+        item_revision=args.get("item_revision") or args.get("expected_file_hash"),
+        attachment_expected_revision=args.get("attachment_revision"),
+        config=context.config,
+        allow_executable=_truthy(args.get("allow_executable")),
+        require_revisions=_timer_revisions_required(context),
+    )
+
+
+def _tool_attachment_delete(args, context):
+    from .attachment_transactions import delete_attachment
+
+    _require_writable(context)
+    item_id = str(args.get("id") or "").strip()
+    path_value = str(args.get("path") or "").strip()
+    if not item_id or not path_value:
+        raise ValueError("attachment_delete requires id and path.")
+    return delete_attachment(
+        context.writable_path, item_id, path_value,
+        item_revision=args.get("item_revision") or args.get("expected_file_hash"),
+        attachment_expected_revision=args.get("attachment_revision"),
+        config=context.config,
+        require_revisions=_timer_revisions_required(context),
+    )
+
+
+def _tool_attachment_state(args, context):
+    from .attachment_transactions import attachment_state
+
+    path_value = str(args.get("path") or "").strip()
+    if not path_value:
+        raise ValueError("attachment_state requires path.")
+    return attachment_state(context.writable_path, path_value, config=context.config)
 
 
 def _tool_set_status(args, context):
@@ -1860,7 +1973,9 @@ def _tool_timer_cancel(args, context):
 
 
 def _tool_start_work(args, context):
-    """Task in progress, timer running, presence recorded, in one call."""
+    """Start task, timer, and presence in one journal-backed transaction."""
+    from .work_session import start_work_transaction
+
     _require_writable(context)
     item_id = str(args.get("id") or "").strip()
     if not item_id:
@@ -1869,50 +1984,51 @@ def _tool_start_work(args, context):
     item = find_item_by_id(items, item_id, key=_id_key(context))
     if item is None:
         raise ValueError("Item id:%s was not found." % item_id)
-
     state_value = args.get("state") or "busy"
     if _dry_run(args):
         return {
-            "applied": False,
-            "proposal": True,
-            "summary": "Set %s in progress, start its timer, and set presence to %s"
-            % (item_id, state_value),
+            "applied": False, "proposal": True,
+            "summary": "Start %s, timer, and presence %s as one transaction" % (item_id, state_value),
+            "required_revisions": ["item_revision", "timer_revision"],
         }
-
-    steps = []
-    if not _truthy(args.get("no_timer")):
-        steps.append(_tool_timer_start({"id": item_id}, context))
-    if not _truthy(args.get("no_presence")):
-        steps.append(
-            _tool_set_status(
-                {"state": state_value, "title": item.title, "force": False}, context
-            )
-        )
-    return _applied(context, {"id": item_id, "steps": steps}, "Started work on %s" % item_id)
+    result = start_work_transaction(
+        context.writable_path, item_id, state=state_value,
+        use_timer=not _truthy(args.get("no_timer")),
+        use_presence=not _truthy(args.get("no_presence")),
+        config=context.config,
+        expected_item_revision=args.get("item_revision"),
+        expected_timer_revision=args.get("timer_revision"),
+        require_revisions=_timer_revisions_required(context),
+    )
+    result.update({"applied": True, "proposal": False})
+    return result
 
 
 def _tool_stop_work(args, context):
-    """Stop the timer, close presence, and optionally finish the task."""
+    """Stop timer, update task, and close presence in one transaction."""
+    from .work_session import stop_work_transaction
+
     _require_writable(context)
     status = _tool_timer_status({}, context)
     if not status.get("running"):
         raise ValueError("No running timer.")
-    item_id = status.get("id")
-
     if _dry_run(args):
         return {
-            "applied": False,
-            "proposal": True,
-            "summary": "Stop the timer for %s, close presence%s"
-            % (item_id, ", and mark it done" if _truthy(args.get("done")) else ""),
+            "applied": False, "proposal": True,
+            "summary": "Stop %s and close the compound work session" % status.get("id"),
+            "required_revisions": ["item_revision", "timer_revision"],
         }
-
-    steps = [_tool_timer_stop({}, context)]
-    if _truthy(args.get("done")):
-        steps.append(_tool_mark_done({"id": item_id}, context))
-    if not _truthy(args.get("no_presence")):
-        steps.append(_tool_set_status({"end": True}, context))
-    return _applied(context, {"id": item_id, "steps": steps}, "Stopped work on %s" % item_id)
+    result = stop_work_transaction(
+        path=status.get("file"),
+        done=_truthy(args.get("done")),
+        close_presence=not _truthy(args.get("no_presence")),
+        config=context.config,
+        expected_item_revision=args.get("item_revision"),
+        expected_timer_revision=args.get("timer_revision"),
+        require_revisions=_timer_revisions_required(context),
+    )
+    result.update({"applied": True, "proposal": False})
+    return result
 
 
 def _namespace(**kwargs):
@@ -2100,6 +2216,9 @@ TOOL_HANDLERS = OrderedDict(
         ("stop_work", _tool_stop_work),
         ("check_files", _tool_check_files),
         ("attach_file", _tool_attach_file),
+        ("attachment_put", _tool_attachment_put),
+        ("attachment_delete", _tool_attachment_delete),
+        ("attachment_state", _tool_attachment_state),
     ]
 )
 

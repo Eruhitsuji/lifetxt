@@ -1,0 +1,30 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/fault-injection-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "boundary": {
+      "type": "string"
+    },
+    "details": {
+      "type": "object"
+    },
+    "evidence_preserved": {
+      "type": "boolean"
+    },
+    "raised": {
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "boundary",
+    "raised",
+    "evidence_preserved"
+  ],
+  "title": "lifetxt deterministic transaction fault drill v1",
+  "type": "object"
+}

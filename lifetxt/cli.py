@@ -1156,6 +1156,7 @@ def build_parser():
     )
     archive.add_argument("paths", nargs="+", metavar="path", help="Source life.txt file(s).")
     archive.add_argument("--dest", required=True, metavar="DEST", help="Archive file to append items to.")
+    archive.add_argument("--revision", action="append", default=[], metavar="PATH=SHA256", help="Expected revision for a source or destination path. Can be repeated.")
     archive.add_argument(
         "--status",
         action="append",
@@ -1254,6 +1255,7 @@ def build_parser():
         metavar="FILE",
         help="File to append the new item to. Defaults to write_file in config.",
     )
+    quick.add_argument("--revision", help="Expected SHA-256 revision of the append target.")
     quick.add_argument(
         "--no-check",
         action="store_true",
@@ -1484,6 +1486,9 @@ def build_parser():
         action="store_true",
         help="Do not start the task timer.",
     )
+    start_cmd.add_argument("--item-revision", help="Expected SHA-256 revision of life.txt.")
+    start_cmd.add_argument("--timer-revision", help="Expected timer-state revision; use <missing> when idle.")
+    start_cmd.add_argument("--require-revisions", action="store_true", help="Reject missing item/timer revisions.")
     start_cmd.add_argument(
         "--dry-run",
         action="store_true",
@@ -1511,6 +1516,9 @@ def build_parser():
         action="store_true",
         help="Leave the presence status open.",
     )
+    stop_cmd.add_argument("--item-revision", help="Expected SHA-256 revision of life.txt.")
+    stop_cmd.add_argument("--timer-revision", help="Expected timer-state SHA-256 revision.")
+    stop_cmd.add_argument("--require-revisions", action="store_true", help="Reject missing item/timer revisions.")
     stop_cmd.add_argument(
         "--dry-run",
         action="store_true",
@@ -1772,6 +1780,7 @@ def build_parser():
         help="Restore a file to its state before the most recent write operation.",
     )
     undo_cmd.add_argument("path", help="life.txt file to restore.")
+    undo_cmd.add_argument("--revision", help="Expected current SHA-256 revision before restoring.")
     undo_cmd.add_argument(
         "--list",
         action="store_true",
@@ -2120,6 +2129,8 @@ def build_parser():
     tag_merge_cmd.add_argument("new", help="Canonical tag value to merge into.")
     tag_merge_cmd.add_argument("path", help="File to update.")
     tag_merge_cmd.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    tag_merge_cmd.add_argument("--revision", help="Expected life.txt SHA-256 revision.")
+    tag_merge_cmd.add_argument("--config-revision", help="Expected config JSON SHA-256 revision.")
     tag_merge_cmd.set_defaults(func=command_tag_merge)
     tag_cmd.set_defaults(func=lambda args: tag_cmd.print_help())
 
@@ -2251,6 +2262,7 @@ def build_parser():
     digest_cmd.add_argument("--smtp-user-env", metavar="ENVVAR", default="LIFETXT_SMTP_USER", help="Environment variable with the SMTP username (--format email).")
     digest_cmd.add_argument("--smtp-pass-env", metavar="ENVVAR", default="LIFETXT_SMTP_PASS", help="Environment variable with the SMTP password (--format email).")
     digest_cmd.add_argument("--path", dest="digest_path", help="Local file to append Markdown to (--format file).")
+    digest_cmd.add_argument("--revision", help="Expected SHA-256 revision of the local digest file.")
     digest_cmd.add_argument("--dry-run", action="store_true", help="Build the digest and print what would be sent without making a network request or writing.")
     digest_cmd.set_defaults(func=command_digest)
 
@@ -2266,6 +2278,7 @@ def build_parser():
     template_apply_cmd.add_argument("name", help="Template name (key under config templates).")
     template_apply_cmd.add_argument("--append", metavar="FILE", required=True, help="File to append the expanded template to.")
     template_apply_cmd.add_argument("--dry-run", action="store_true", help="Preview the expanded template without writing.")
+    template_apply_cmd.add_argument("--revision", help="Expected SHA-256 revision of the append target.")
     template_apply_cmd.set_defaults(func=command_template_apply)
 
     return parser
@@ -3568,6 +3581,19 @@ def _split_archive_text(raw_text, items, archive_id_set,
     return "".join(archive_out), "".join(remainder_out)
 
 
+def _path_revision_map(values):
+    result = {}
+    for raw in values or []:
+        text = str(raw)
+        if "=" not in text:
+            raise ValueError("--revision must use PATH=SHA256.")
+        path, revision = text.rsplit("=", 1)
+        if not path.strip() or not revision.strip():
+            raise ValueError("--revision must use PATH=SHA256.")
+        result[os.path.abspath(path.strip())] = revision.strip()
+    return result
+
+
 def command_archive(args):
     config = _config(args)
     paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
@@ -3590,10 +3616,14 @@ def command_archive(args):
         raise ValueError("--max-items must be a positive integer.")
 
     id_key = id_key_from_config(config)
+    from .mutation import read_text_snapshot
     file_texts = OrderedDict()
+    file_snapshots = OrderedDict()
     file_items = OrderedDict()
     for path in paths:
-        text = read_text(path)
+        snapshot = read_text_snapshot(path)
+        text = snapshot.text
+        file_snapshots[path] = snapshot
         file_texts[path] = text
         items, _diags = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
         for item in items:
@@ -3749,9 +3779,28 @@ def command_archive(args):
         else:
             archive_text = _items_to_life_text(candidates)
 
+    from .mutation import MISSING_HASH, read_text_snapshot
+    from .transaction_journal import journal_directory
+    from .write_operations import commit_text_replacements
+
+    revisions = _path_revision_map(getattr(args, "revision", None))
+    destination = os.path.abspath(args.dest)
+    source_absolutes = [os.path.abspath(path) for path in paths]
+    if destination in source_absolutes:
+        raise ValueError("Archive destination must be different from every source file.")
+
     _ensure_writable_path(args.dest, config, "archive")
     _pre_write_backup(args.dest, config, "archive")
-    append_text(args.dest, archive_text)
+    dest_snapshot = read_text_snapshot(args.dest, allow_missing=True)
+    prefix = "" if not dest_snapshot.text or dest_snapshot.text.endswith(("\n", "\r")) else dest_snapshot.newline
+    replacements = {
+        destination: {
+            "text": dest_snapshot.text + prefix + archive_text,
+            "expected_revision": revisions.get(destination, dest_snapshot.content_hash),
+            "create": dest_snapshot.content_hash == MISSING_HASH,
+            "validate_life": True,
+        }
+    }
 
     if mode == "move":
         archive_ids = {id(item) for item in candidates}
@@ -3775,6 +3824,8 @@ def command_archive(args):
                         return promoted
                 return item
 
+            remainder_text = None
+            needs_write = False
             if preserve:
                 path_archive_ids = {
                     id(item) for item in candidates
@@ -3790,10 +3841,6 @@ def command_archive(args):
                     file_texts[path], items, path_archive_ids, remainder_overrides=ro
                 )
                 needs_write = bool(path_archive_ids) or bool(ro)
-                if needs_write:
-                    _ensure_writable_path(path, config, "archive")
-                    _pre_write_backup(path, config, "archive")
-                    atomic_write_text(path, remainder_text)
             else:
                 remaining_raw = [item for item in items if id(item) not in archive_ids]
                 remaining = [_promote_item(item) for item in remaining_raw]
@@ -3801,11 +3848,29 @@ def command_archive(args):
                     id(r) != id(o) for r, o in zip(remaining, remaining_raw)
                 )
                 if needs_write:
-                    _ensure_writable_path(path, config, "archive")
-                    _pre_write_backup(path, config, "archive")
-                    atomic_write_text(path, _items_to_life_text(remaining))
+                    remainder_text = _items_to_life_text(remaining)
+            if needs_write:
+                _ensure_writable_path(path, config, "archive")
+                _pre_write_backup(path, config, "archive")
+                absolute = os.path.abspath(path)
+                source_snapshot = file_snapshots[path]
+                replacements[absolute] = {
+                    "text": remainder_text,
+                    "expected_revision": revisions.get(absolute, source_snapshot.content_hash),
+                    "create": False,
+                    "validate_life": True,
+                }
 
-    sys.stdout.write("Archived %d item(s) to %s.\n" % (len(candidates), args.dest))
+    result = commit_text_replacements(
+        replacements,
+        operation="archive.%s" % mode,
+        journal_dir=journal_directory(config, writable_path=args.dest),
+        config=config,
+    )
+    sys.stdout.write(
+        "Archived %d item(s) to %s (transaction %s).\n"
+        % (len(candidates), args.dest, result.transaction_id)
+    )
     return 0
 
 
@@ -3937,7 +4002,12 @@ def command_quick(args):
 
     _ensure_writable_path(dest, config, "quick")
     _pre_write_backup(dest, config, "quick")
-    append_text(dest, line + "\n")
+    from .write_operations import append_life_records
+    append_life_records(
+        dest, line + "\n",
+        expected_revision=getattr(args, "revision", None),
+        operation="quick.capture",
+    )
     sys.stdout.write("%s\n" % line)
     return 0
 
@@ -4077,9 +4147,13 @@ def command_files(args):
     rows = []
     problems = 0
     updates = []
+    file_revisions = {}
 
     for path in paths:
-        text = read_text(path)
+        from .mutation import read_text_snapshot
+        _snapshot = read_text_snapshot(path)
+        text = _snapshot.text
+        file_revisions[path] = _snapshot.content_hash
         items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
         if _has_error(diagnostics):
             _print_diagnostics(diagnostics)
@@ -4103,7 +4177,13 @@ def command_files(args):
             if changed_any and not getattr(args, "dry_run", False):
                 _ensure_writable_path(path, config, "files")
                 _pre_write_backup(path, config, "files")
-                atomic_write_text(path, _render_items_preserving(text, items))
+                from .mutation import write_text as mutation_write_text
+                mutation_write_text(
+                    path, _render_items_preserving(text, items),
+                    expected_hash=file_revisions[path],
+                    operation="files.update_hashes",
+                    create=False,
+                )
 
         for item in targets:
             base_dir = item_base_dir(item)
@@ -4326,13 +4406,10 @@ def command_state(args):
         if value:
             details[key] = [value]
 
-    try:
-        text = read_text(path)
-    except FileNotFoundError:
-        text = ""
-
+    from .mutation import read_text_snapshot
+    snapshot = read_text_snapshot(path, allow_missing=True)
     result = status_transition(
-        text,
+        snapshot.text,
         state=args.state,
         title=getattr(args, "title", None),
         person=getattr(args, "person", None) or "self",
@@ -4342,7 +4419,7 @@ def command_state(args):
         close_only=bool(getattr(args, "end", False)),
         force=bool(getattr(args, "force", False)),
     )
-    new_text, closed, opened = result.text, result.closed, result.opened
+    closed, opened = result.closed, result.opened
 
     if result.unchanged:
         sys.stdout.write(
@@ -4361,7 +4438,21 @@ def command_state(args):
 
     _ensure_writable_path(path, config, "state")
     _pre_write_backup(path, config, "state")
-    atomic_write_text(path, new_text)
+    from .presence import status_transition_file
+    written = status_transition_file(
+        path,
+        expected_hash=snapshot.content_hash,
+        operation="state.transition",
+        state=args.state,
+        title=getattr(args, "title", None),
+        person=getattr(args, "person", None) or "self",
+        moment=moment,
+        details=details,
+        id_key=id_key_from_config(config),
+        close_only=bool(getattr(args, "end", False)),
+        force=bool(getattr(args, "force", False)),
+    )
+    closed, opened = written.transition.closed, written.transition.opened
 
     for line in closed:
         sys.stdout.write("Closed: %s\n" % line)
@@ -4373,8 +4464,8 @@ def command_state(args):
 
 
 def command_start(args):
-    """Start work: task in progress, timer running, presence recorded."""
-    from . import timer as timer_module
+    """Start task, optional timer, and presence as one recoverable operation."""
+    from .work_session import start_work_transaction
 
     config = _config(args)
     path = args.path
@@ -4383,126 +4474,49 @@ def command_start(args):
     id_key = id_key_from_config(config)
     text = read_text(path)
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
-
     target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Start:")
     if aborted:
         return 0
     item_id = (target.details.get(id_key) or [""])[0]
     if not item_id:
-        raise ValueError(
-            "Item %r has no %s:. Run `lifetxt ids --assign` first." % (target.title, id_key)
-        )
-
-    use_timer = not getattr(args, "no_timer", False)
-    use_presence = not getattr(args, "no_presence", False)
-
+        raise ValueError("Item %r has no %s:. Run `lifetxt ids --assign` first." % (target.title, id_key))
     if getattr(args, "dry_run", False):
-        steps = []
-        if target.status == "[ ]":
-            steps.append("set %s in progress" % item_id)
-        if use_timer:
-            steps.append("start the timer")
-        if use_presence:
-            steps.append("record presence state:%s" % args.state)
-        sys.stdout.write("[dry-run] Would %s.\n" % ", ".join(steps or ["do nothing"]))
+        sys.stdout.write("[dry-run] Would start work on %s as one transaction.\n" % item_id)
         return 0
-
-    _ensure_writable_path(path, config, "start")
-    _pre_write_backup(path, config, "start")
-
-    if use_timer:
-        state_file = timer_module.timer_state_file(config)
-        if os.path.exists(state_file):
-            running = timer_module._read_state(state_file)
-            raise ValueError(
-                "A timer is already running for %s. Run `lifetxt stop` first." % running.get("id")
-            )
-        timer_args = argparse.Namespace(path=path, item_id=item_id, note=None, config_data=config)
-        with _captured_stdout():
-            timer_module.start_timer(timer_args)
-    elif target.status == "[ ]":
-        timer_module.update_item_in_file(path, item_id, id_key, status="[/]")
-
-    sys.stdout.write("Started: %s (%s)\n" % (item_id, target.title))
-
-    if use_presence:
-        command_state(
-            argparse.Namespace(
-                state=args.state,
-                path=config_write_file(config) or path,
-                title=target.title,
-                person=None,
-                note=None,
-                project=(target.details.get("project") or [None])[0],
-                service=None,
-                visibility=None,
-                at=None,
-                end=False,
-                force=False,
-                dry_run=False,
-                config_data=config,
-            )
-        )
+    result = start_work_transaction(
+        path, item_id, state=args.state,
+        use_timer=not getattr(args, "no_timer", False),
+        use_presence=not getattr(args, "no_presence", False),
+        config=config,
+        expected_item_revision=getattr(args, "item_revision", None),
+        expected_timer_revision=getattr(args, "timer_revision", None),
+        require_revisions=bool(getattr(args, "require_revisions", False)),
+    )
+    sys.stdout.write("Started: %s (%s) transaction:%s\n" % (item_id, target.title, result.get("transaction_id")))
     return 0
 
 
 def command_stop(args):
-    """Stop work: stop the timer, close presence, optionally finish the task."""
-    from . import timer as timer_module
+    """Stop timer, update task, and close presence in one transaction."""
+    from .work_session import stop_work_transaction
 
     config = _config(args)
-    state_file = timer_module.timer_state_file(config)
-    if not os.path.exists(state_file):
-        raise ValueError("No running timer. Start one with `lifetxt start PATH ID`.")
-    running = timer_module._read_state(state_file)
-    path = getattr(args, "path", None) or running.get("file")
-    item_id = running.get("id")
-
     if getattr(args, "dry_run", False):
-        actions = ["stop the timer and write elapsed: on %s" % item_id]
-        if getattr(args, "done", False):
-            actions.append("mark it done")
-        if not getattr(args, "no_presence", False):
-            actions.append("close the open presence status")
-        sys.stdout.write("[dry-run] Would %s.\n" % ", ".join(actions))
+        sys.stdout.write("[dry-run] Would stop the active work session as one transaction.\n")
         return 0
-
-    timer_module.stop_timer(argparse.Namespace(path=path, item_id=item_id, config_data=config))
-
-    if getattr(args, "done", False):
-        command_done(
-            argparse.Namespace(
-                path=path,
-                id=item_id,
-                line=None,
-                text=None,
-                date=None,
-                now=False,
-                date_only=False,
-                force=False,
-                dry_run=False,
-                config_data=config,
-            )
-        )
-
-    if not getattr(args, "no_presence", False):
-        command_state(
-            argparse.Namespace(
-                state=None,
-                path=config_write_file(config) or path,
-                title=None,
-                person=None,
-                note=None,
-                project=None,
-                service=None,
-                visibility=None,
-                at=None,
-                end=True,
-                force=False,
-                dry_run=False,
-                config_data=config,
-            )
-        )
+    result = stop_work_transaction(
+        path=getattr(args, "path", None),
+        done=bool(getattr(args, "done", False)),
+        close_presence=not getattr(args, "no_presence", False),
+        config=config,
+        expected_item_revision=getattr(args, "item_revision", None),
+        expected_timer_revision=getattr(args, "timer_revision", None),
+        require_revisions=bool(getattr(args, "require_revisions", False)),
+    )
+    sys.stdout.write(
+        "Stopped: %s +%s total %s transaction:%s\n"
+        % (result["id"], result["elapsed_added"], result["elapsed_total"], result.get("transaction_id"))
+    )
     return 0
 
 
@@ -5039,7 +5053,12 @@ def command_undo(args):
     except OSError as exc:
         raise ValueError("Failed to read undo snapshot: %s" % exc)
 
-    atomic_write_text(path, content)
+    from .write_operations import restore_text
+    restore_text(
+        path, content,
+        expected_revision=getattr(args, "revision", None),
+        operation="undo.restore",
+    )
     try:
         os.unlink(snapshot_path)
     except OSError:
@@ -8200,13 +8219,8 @@ def append_line(path, line):
 def append_text(path, text):
     if not text:
         return
-    existing = ""
-    try:
-        existing = read_text(path)
-    except FileNotFoundError:
-        pass
-    prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
-    atomic_write_text(path, existing + prefix + text)
+    from .write_operations import append_text as semantic_append_text
+    return semantic_append_text(path, text, operation="cli.append", create=True)
 
 
 def _undo_cache_dir(config):
@@ -8666,46 +8680,56 @@ def command_tag_merge(args):
     new_tag = args.new
     path = args.path
     dry_run = getattr(args, "dry_run", False)
-    text = read_text(path)
-    id_key = id_key_from_config(_config(args))
-    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
-    lines = text.splitlines(keepends=True)
-    changed = 0
-    import re as _re
-    for item in items:
-        if old_tag in item.details.get("tag", []):
-            ln = item.line
-            if ln and 0 < ln <= len(lines):
-                new_line = _re.sub(
-                    r"(\btag:\s*)" + _re.escape(old_tag) + r"(\b|$)",
-                    r"\g<1>" + new_tag,
-                    lines[ln - 1],
-                )
-                if new_line != lines[ln - 1]:
-                    lines[ln - 1] = new_line
-                    changed += 1
+    config = _config(args)
+    from .write_operations import merge_tag_and_alias
+    from .transaction_journal import journal_directory
+
+    # Dry-run computes the semantic transform against an isolated temporary copy.
+    if dry_run:
+        from .write_operations import transform_items_text
+        text = read_text(path)
+        id_key = id_key_from_config(config)
+        items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        changes = []
+        for item in items:
+            values = [str(value) for value in item.details.get("tag", [])]
+            if old_tag not in values:
+                continue
+            ids = item.details.get(id_key) or []
+            if not ids:
+                raise ValueError("Cannot merge tag on an item without %s:." % id_key)
+            merged = []
+            for value in values:
+                candidate = new_tag if value == old_tag else value
+                if candidate not in merged:
+                    merged.append(candidate)
+            changes.append({"id": str(ids[0]), "set_details": {"tag": merged}})
+        if not changes:
+            sys.stdout.write("Tag %r not found in %s.\n" % (old_tag, path))
+            return 0
+        transform_items_text(text, changes, id_key=id_key)
+        sys.stdout.write("Would merge %d item(s): tag %r -> %r in %s.\n" % (len(changes), old_tag, new_tag, path))
+        return 0
+
+    _ensure_writable_path(path, config, "tag merge")
+    config_path = getattr(args, "config", None) or ".lifetxt.json"
+    result, changed = merge_tag_and_alias(
+        path, old_tag, new_tag,
+        config_path=config_path,
+        life_revision=getattr(args, "revision", None),
+        config_revision=getattr(args, "config_revision", None),
+        id_key=id_key_from_config(config),
+        journal_dir=journal_directory(config, writable_path=path),
+        config=config,
+    )
     if changed == 0:
         sys.stdout.write("Tag %r not found in %s.\n" % (old_tag, path))
         return 0
-    new_text = "".join(lines)
-    if dry_run:
-        sys.stdout.write("Would merge %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
-        return 0
-    _ensure_writable_path(path, _config(args), "tag merge")
-    atomic_write_text(path, new_text)
-    sys.stdout.write("Merged %d occurrence(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
-    config_path = getattr(args, "config", None) or ".lifetxt.json"
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, encoding="utf-8") as _cf:
-                cfg = json.load(_cf)
-            cfg.setdefault("tag_aliases", {})[old_tag] = new_tag
-            with open(config_path, "w", encoding="utf-8") as _cf:
-                json.dump(cfg, _cf, ensure_ascii=False, indent=2)
-                _cf.write("\n")
-            sys.stdout.write("Added tag alias %r -> %r to %s.\n" % (old_tag, new_tag, config_path))
-        except Exception as exc:
-            sys.stdout.write("WARNING: Could not update config: %s\n" % exc)
+    sys.stdout.write("Merged %d item(s): tag %r -> %r in %s.\n" % (changed, old_tag, new_tag, path))
+    sys.stdout.write("Updated alias in %s (transaction %s).\n" % (config_path, result.transaction_id))
     return 0
 
 
@@ -9172,10 +9196,13 @@ def command_digest(args):
         if dry_run:
             sys.stdout.write("[dry-run] Would append digest to %s:\n%s\n" % (digest_path, message))
             return 0
-        existing = read_text(digest_path) if os.path.exists(digest_path) else ""
-        prefix = "\n" if existing and not existing.endswith("\n") else ""
-        with open(digest_path, "a", encoding="utf-8", newline="\n") as handle:
-            handle.write(prefix + "\n" + message + "\n")
+        from .write_operations import append_text as semantic_append_text
+        semantic_append_text(
+            digest_path, "\n" + message + "\n",
+            expected_revision=getattr(args, "revision", None),
+            operation="digest.append",
+            create=True,
+        )
         sys.stdout.write("Appended digest to %s.\n" % digest_path)
         return 0
 
@@ -9222,9 +9249,11 @@ def command_template_apply(args):
         return 0
 
     target = args.append
-    existing = read_text(target) if os.path.exists(target) else ""
-    prefix = "\n" if existing and not existing.endswith("\n") else ""
-    with open(target, "a", encoding="utf-8", newline="\n") as handle:
-        handle.write(prefix + expanded)
+    from .write_operations import append_life_records
+    append_life_records(
+        target, expanded,
+        expected_revision=getattr(args, "revision", None),
+        operation="template.apply",
+    )
     sys.stdout.write("Appended template %r (%d line(s)) to %s.\n" % (name, len(expanded_lines), target))
     return 0

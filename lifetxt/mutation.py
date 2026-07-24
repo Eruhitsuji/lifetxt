@@ -400,14 +400,36 @@ def mutate_text(
 
 def write_text(
     path,
-    text,
+    text=None,
     expected_hash=None,
     operation="write",
     create=True,
     validate=None,
+    transform=None,
+    default_text="",
     **kwargs
 ):
-    """Replace a text file through the shared CAS and lock contract."""
+    """Write text through the shared CAS and lock contract.
+
+    ``transform`` keeps semantic mutations inside the acquired lock while still
+    routing every authoritative text write through this public entry point.
+    Callers must provide either replacement ``text`` or ``transform``, not both.
+    """
+    if transform is not None:
+        if text is not None:
+            raise TypeError("write_text accepts either text or transform, not both.")
+        if not callable(transform):
+            raise TypeError("write_text transform must be callable.")
+        return mutate_text(
+            path,
+            transform,
+            expected_hash=expected_hash,
+            operation=operation,
+            validate=validate,
+            create=create,
+            default_text=default_text,
+            **kwargs
+        )
     if not isinstance(text, str):
         raise TypeError("write_text expects text.")
     return mutate_text(
@@ -417,6 +439,7 @@ def write_text(
         operation=operation,
         validate=validate,
         create=create,
+        default_text=default_text,
         **kwargs
     )
 

@@ -1,4 +1,4 @@
-name: Export truncated PR13 repair part
+name: Correct PR13 repair patch byte
 
 on:
   pull_request:
@@ -6,18 +6,47 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  correct:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/repair-pr13-implementation' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/repair-pr13-implementation
-      - uses: actions/upload-artifact@v4
-        with:
-          name: repair-part-04a0
-          path: .github/repair-patch/part-04a0
-          if-no-files-found: error
+          fetch-depth: 0
+      - name: Insert the verified missing character
+        run: |
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+
+          path = Path('.github/repair-patch/part-04a0')
+          data = path.read_text()
+          current = sha256(data.encode()).hexdigest()
+          expected_bad = 'efbe35478ccc14ce22a63f9ebd35a1a66bf0afdf99aa8b0ed92843e3020b4d90'
+          expected_good = '50ca497a3ead967bc9d9a4733aa9f17a25030faa926aa9ae2785ffd96b48ec16'
+          if current == expected_good:
+              raise SystemExit(0)
+          if current != expected_bad or len(data) != 1999:
+              raise SystemExit(f'unexpected part-04a0 state: len={len(data)} sha256={current}')
+          if data[1488:1512] != 'oaZ8Lc2V+trjVkMdADw7PX1d':
+              raise SystemExit(f'unexpected context: {data[1488:1512]!r}')
+          data = data[:1500] + '7' + data[1500:]
+          corrected = sha256(data.encode()).hexdigest()
+          if len(data) != 2000 or corrected != expected_good:
+              raise SystemExit(f'correction failed: len={len(data)} sha256={corrected}')
+          path.write_text(data)
+          PY
+      - name: Commit correction when needed
+        run: |
+          if git diff --quiet -- .github/repair-patch/part-04a0; then
+            exit 0
+          fi
+          git add .github/repair-patch/part-04a0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Correct recovered PR13 patch byte'
+          git push origin HEAD:agent/repair-pr13-implementation

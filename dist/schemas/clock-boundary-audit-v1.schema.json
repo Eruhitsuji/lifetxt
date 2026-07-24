@@ -1,0 +1,42 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/clock-boundary-audit-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "baseline_version": {
+      "const": 1
+    },
+    "classifications": {
+      "type": "object"
+    },
+    "finding_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "new_findings": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "stale_allowances": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "ok",
+    "baseline_version",
+    "finding_count",
+    "new_findings",
+    "stale_allowances",
+    "classifications"
+  ],
+  "title": "lifetxt direct host-clock boundary audit v1",
+  "type": "object"
+}

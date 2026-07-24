@@ -1,0 +1,33 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/semantic-write-result-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "after_hash": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "before_hash": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "changed": {
+      "type": "boolean"
+    },
+    "operation": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "before_hash",
+    "after_hash",
+    "changed",
+    "operation"
+  ],
+  "title": "lifetxt semantic write result v1",
+  "type": "object"
+}

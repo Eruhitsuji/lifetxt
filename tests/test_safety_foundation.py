@@ -146,6 +146,14 @@ class SafetyFoundationTests(unittest.TestCase):
             "timer-operation-v1.schema.json",
             "support-bundle-v1.schema.json",
             "revision-migration-evidence-v1.schema.json",
+            "attachment-transaction-v1.schema.json",
+            "transaction-policy-v1.schema.json",
+            "backup-integrity-v1.schema.json",
+            "semantic-write-result-v1.schema.json",
+            "fault-injection-report-v1.schema.json",
+            "archive-operation-v1.schema.json",
+            "work-session-v1.schema.json",
+            "clock-boundary-audit-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

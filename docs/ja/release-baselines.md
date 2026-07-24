@@ -25,10 +25,11 @@ Record contentはbaselineの対象ではありません。`data-no-i18n`と既�
 
 各allowanceには理由があります。現在の分類は次のとおりです。
 
-- undo/backup cache出力
-- 明示的なdigest/template append出力
-- runtimeで`compat_writes`に置換されるlegacy fzf helper writer
+- authoritativeな`life.txt` dataではないundo/backup/configuration cache出力
 - generated JSON Schema公開出力
+- durable transaction journalを公開する`os.replace`
+
+Quick capture、journal append、digest/template append、fzf/peco action、archive、tag merge、TUI edit、attachment、compound work sessionはsemantic CASまたはjournal-backed transactionへ移行済みで、direct-write allowanceは不要です。
 
 Baselineにはline numberを含めません。そのため通常のrefactoringでは誤検出せず、別moduleへのdirect write追加や新しいcall shapeはgateを失敗させます。
 

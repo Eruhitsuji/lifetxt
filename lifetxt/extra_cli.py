@@ -10,6 +10,7 @@ from .extra_reports import command_invoice, command_standup
 from .extra_convert import command_to_ics, command_from_todo, command_from_markdown
 from .extra_shell import command_completion, command_quick_journal
 from .extra_safety import command_capabilities, command_doctor, command_format, command_safety
+from .extra_attachment import command_attachment
 from .safety_foundation import read_text_exact
 from .timezone_policy import resolve_timezone_name, timezone_context
 
@@ -131,7 +132,24 @@ def _build_parser(command):
         parser.add_argument("--tag", dest="tags", action="append", default=[])
         parser.add_argument("--editor")
         parser.add_argument("--body-file")
+        parser.add_argument("--revision", help="Expected SHA-256 revision of the journal target.")
         parser.add_argument("--dry-run", action="store_true")
+    elif command == "attachment":
+        subparsers = parser.add_subparsers(dest="attachment_action", required=True)
+        for action in ("put", "reference", "delete", "status"):
+            child = subparsers.add_parser(action)
+            child.add_argument("path", help="life.txt file containing the item.")
+            if action != "status":
+                child.add_argument("--id", required=True, help="Item ID receiving the attachment reference.")
+            child.add_argument("--file", required=True, help="Stored attachment path relative to life.txt.")
+            if action == "put":
+                child.add_argument("--source", required=True, help="Source file whose bytes are copied into the attachment target.")
+                child.add_argument("--allow-executable", action="store_true")
+            child.add_argument("--item-revision", help="Expected life.txt SHA-256 revision.")
+            child.add_argument("--attachment-revision", help="Expected attachment SHA-256 revision or <missing>.")
+            child.add_argument("--require-revisions", action="store_true", help="Reject missing item/attachment revisions.")
+            child.add_argument("--allow-symlink", action="store_true")
+            _add_output(child)
     elif command == "safety":
         subparsers = parser.add_subparsers(dest="safety_action", required=True)
         locks = subparsers.add_parser("locks")
@@ -161,12 +179,13 @@ def _build_parser(command):
             "transaction_action",
             nargs="?",
             default="list",
-            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup"),
+            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup", "policy", "archive", "verify-backup"),
         )
         transactions.add_argument("--journal-dir")
         transactions.add_argument("--journal")
         transactions.add_argument("--backup-dir")
-        transactions.add_argument("--older-than-days", type=float, default=30.0)
+        transactions.add_argument("--archive-dir")
+        transactions.add_argument("--older-than-days", type=float)
         transactions.add_argument("--force", action="store_true")
         _add_output(transactions)
         routes = subparsers.add_parser("write-routes")
@@ -284,6 +303,8 @@ def _dispatch(command, args, config_data, config_path):
         return command_completion(args)
     if command == "quick":
         return command_quick_journal(args, config_data)
+    if command == "attachment":
+        return command_attachment(args, config_data)
     if command == "safety":
         return command_safety(args, config_data)
     if command == "format":

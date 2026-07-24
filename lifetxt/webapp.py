@@ -1242,6 +1242,172 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             status = 409 if "already running" in message or "No running timer" in message else 400
             raise HTTPException(status_code=status, detail=message)
 
+    @app.get("/api/work-session")
+    def get_work_session():
+        from . import timer as timer_module
+        return timer_module.timer_status_data(config=app.state.config, paths=app.state.paths)
+
+    @app.post("/api/work-session")
+    def mutate_work_session(response: Response, payload=Body(...)):
+        from .mutation import MutationConflict
+        from .work_session import start_work_transaction, stop_work_transaction
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        action = str(payload.get("action") or "").strip().lower()
+        if action not in ("start", "stop"):
+            raise HTTPException(status_code=400, detail="action must be start or stop.")
+        required = getattr(app.state, "revision_mode", "observe") == "required"
+        item_revision = payload.get("item_revision")
+        timer_revision = payload.get("timer_revision")
+        missing = [
+            name for name, value in (("item_revision", item_revision), ("timer_revision", timer_revision))
+            if value in (None, "")
+        ]
+        if required and missing:
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "PRECONDITION_REQUIRED",
+                    "message": "Work-session writes require item and timer revisions.",
+                    "missing": missing,
+                },
+            )
+        if missing:
+            response.headers["X-Lifetxt-Legacy-Revision-Fallback"] = "used"
+            response.headers["Deprecation"] = "true"
+        try:
+            if action == "start":
+                item_id = str(payload.get("id") or "").strip()
+                if not item_id:
+                    raise ValueError("id is required to start work.")
+                return start_work_transaction(
+                    app.state.writable_path, item_id,
+                    state=payload.get("state") or "busy",
+                    use_timer=not bool(payload.get("no_timer")),
+                    use_presence=not bool(payload.get("no_presence")),
+                    config=app.state.config,
+                    expected_item_revision=item_revision,
+                    expected_timer_revision=timer_revision,
+                    require_revisions=required,
+                )
+            return stop_work_transaction(
+                path=payload.get("path"),
+                done=bool(payload.get("done")),
+                close_presence=not bool(payload.get("no_presence")),
+                config=app.state.config,
+                expected_item_revision=item_revision,
+                expected_timer_revision=timer_revision,
+                require_revisions=required,
+            )
+        except MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "path": exc.path,
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                    "operation": exc.operation,
+                },
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
+    @app.get("/api/attachments/state")
+    def get_attachment_state(path: str = Query(...)):
+        from .attachment_transactions import attachment_state
+        try:
+            return attachment_state(
+                app.state.writable_path, path, config=app.state.config
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
+    @app.post("/api/attachments")
+    def mutate_attachment(response: Response, payload=Body(...)):
+        import base64
+        from .attachment_transactions import (
+            delete_attachment, put_attachment, reference_attachment,
+        )
+        from .mutation import MutationConflict
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        action = str(payload.get("action") or "").strip().lower()
+        if action not in ("put", "reference", "delete"):
+            raise HTTPException(status_code=400, detail="action must be put, reference, or delete.")
+        item_id = str(payload.get("id") or "").strip()
+        stored_path = str(payload.get("path") or "").strip()
+        if not item_id or not stored_path:
+            raise HTTPException(status_code=400, detail="id and path are required.")
+        required = getattr(app.state, "revision_mode", "observe") == "required"
+        item_revision = payload.get("item_revision")
+        attachment_revision = payload.get("attachment_revision")
+        missing = []
+        if item_revision in (None, ""):
+            missing.append("item_revision")
+        if attachment_revision in (None, ""):
+            missing.append("attachment_revision")
+        if required and missing:
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "PRECONDITION_REQUIRED",
+                    "message": "Attachment writes require revisions for every touched target.",
+                    "missing": missing,
+                },
+            )
+        if missing:
+            response.headers["X-Lifetxt-Legacy-Revision-Fallback"] = "used"
+            response.headers["Deprecation"] = "true"
+        try:
+            common = dict(
+                item_revision=item_revision,
+                attachment_expected_revision=attachment_revision,
+                config=app.state.config,
+                require_revisions=required,
+            )
+            if action == "reference":
+                return reference_attachment(
+                    app.state.writable_path, item_id, stored_path, **common
+                )
+            if action == "delete":
+                return delete_attachment(
+                    app.state.writable_path, item_id, stored_path, **common
+                )
+            encoded = payload.get("content_base64")
+            text = payload.get("content_text")
+            if encoded not in (None, "") and text not in (None, ""):
+                raise ValueError("Use only one of content_base64 or content_text.")
+            if encoded not in (None, ""):
+                try:
+                    data = base64.b64decode(str(encoded), validate=True)
+                except Exception as exc:
+                    raise ValueError("Invalid content_base64: %s" % exc)
+            elif text is not None:
+                data = str(text).encode("utf-8")
+            else:
+                raise ValueError("put requires content_base64 or content_text.")
+            return put_attachment(
+                app.state.writable_path, item_id, stored_path, data,
+                allow_executable=bool(payload.get("allow_executable")),
+                **common
+            )
+        except MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "path": exc.path,
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                    "operation": exc.operation,
+                },
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
     @app.post("/api/status", status_code=201)
     def set_status(payload=Body(...)):
         """Record a presence status, closing the previously open one.

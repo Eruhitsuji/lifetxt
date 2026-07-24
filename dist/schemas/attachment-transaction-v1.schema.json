@@ -1,0 +1,80 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-transaction-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "put",
+        "reference",
+        "delete"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "journal_path": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "recovery_required": {
+      "type": "boolean"
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "after_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "before_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "before_revision",
+          "after_revision",
+          "created",
+          "deleted"
+        ],
+        "type": "object"
+      },
+      "minItems": 2,
+      "type": "array"
+    },
+    "transaction_id": {
+      "type": "string"
+    },
+    "value": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "action",
+    "id",
+    "path",
+    "transaction_id",
+    "journal_path",
+    "recovery_required",
+    "targets"
+  ],
+  "title": "lifetxt attachment transaction v1",
+  "type": "object"
+}

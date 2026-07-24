@@ -124,6 +124,8 @@ def workspace_diagnostics(
     write_path=None,
     revision_metrics_path=None,
     journal_dir=None,
+    config=None,
+    transaction_backup_paths=None,
 ):
     active_paths = _normalized_existing(paths)
     archive_paths = _normalized_existing(archive_paths)
@@ -140,6 +142,7 @@ def workspace_diagnostics(
         for item in parsed:
             items.append((path, item))
     rows.extend(_workspace_id_and_link_diagnostics(items, set(archive_paths)))
+    rows.extend(_attachment_diagnostics(items, config or {}))
     rows.extend(_timer_diagnostics(timer_paths or []))
     if write_path:
         target = serve_target_diagnostic(active_paths, write_path)
@@ -158,7 +161,8 @@ def workspace_diagnostics(
     if revision_metrics_path:
         rows.extend(_revision_metrics_diagnostics(revision_metrics_path))
     if journal_dir:
-        rows.extend(_transaction_diagnostics(journal_dir))
+        rows.extend(_transaction_diagnostics(journal_dir, config=config or {}))
+    rows.extend(_backup_diagnostics(transaction_backup_paths or []))
     rows = _deduplicate(_sort_diagnostics(rows))
     return OrderedDict(
         (
@@ -345,10 +349,105 @@ def _revision_metrics_diagnostics(path):
     ]
 
 
-def _transaction_diagnostics(journal_dir):
-    from .transaction_journal import TERMINAL_STATES, inspect_journal, list_journals
+def _attachment_diagnostics(items, config):
+    from .attachment_transactions import AttachmentTransactionError, attachment_state
+    from .attachments import split_value
 
     rows = []
+    for source, item in items:
+        for key in ("file", "dir"):
+            for raw in item.details.get(key, []):
+                try:
+                    stored_path, _digest = split_value(raw)
+                    state = attachment_state(source, stored_path, config=config, allow_symlink=True)
+                except (ValueError, AttachmentTransactionError) as exc:
+                    rows.append(
+                        diagnostic(
+                            "error", "F127",
+                            "Attachment path is outside the configured root or invalid: %s" % exc,
+                            source, item.line or 1, 1,
+                            "Move the attachment under attachments.root and update the stored relative path.",
+                        )
+                    )
+                    continue
+                if state.get("is_symlink"):
+                    rows.append(
+                        diagnostic(
+                            "error", "F128",
+                            "Attachment reference resolves through a symlink: %s." % stored_path,
+                            source, item.line or 1, 1,
+                            "Replace the symlink with a regular confined file or adopt an explicit reviewed policy.",
+                        )
+                    )
+                if state.get("executable"):
+                    rows.append(
+                        diagnostic(
+                            "warning", "F129",
+                            "Attachment is executable or script-like: %s." % stored_path,
+                            source, item.line or 1, 1,
+                            "Store non-executable evidence by default; review before enabling executable attachments.",
+                        )
+                    )
+    return rows
+
+
+def _backup_diagnostics(paths):
+    from .transaction_journal import verify_backup
+
+    rows = []
+    for path in paths or []:
+        absolute = os.path.abspath(path)
+        if not os.path.exists(absolute):
+            continue
+        try:
+            report = verify_backup(absolute)
+            if not report.get("ok"):
+                raise ValueError("integrity manifest does not match backup contents")
+        except Exception as exc:
+            rows.append(
+                diagnostic(
+                    "error", "F132",
+                    "Incomplete or corrupt recovery backup: %s" % exc,
+                    absolute, 1, 1,
+                    "Do not discard the source journal; recreate and verify a complete backup manifest.",
+                )
+            )
+    return rows
+
+
+def _transaction_diagnostics(journal_dir, config=None):
+    from .transaction_journal import (
+        TERMINAL_STATES, inspect_journal, journal_policy_report, list_journals,
+    )
+
+    rows = []
+    absolute_root = os.path.abspath(journal_dir)
+    policy = journal_policy_report(absolute_root, config=config or {})
+    for violation in policy.get("violations", []):
+        code = "F134" if violation == "permissions" else "F131"
+        rows.append(
+            diagnostic(
+                "error", code,
+                "Transaction journal policy violation: %s." % violation,
+                absolute_root, 1, 1,
+                "Run safety transactions policy and archive or clean terminal evidence before new writes.",
+            )
+        )
+    if os.path.isdir(absolute_root):
+        for name in sorted(os.listdir(absolute_root)):
+            directory = os.path.join(absolute_root, name)
+            if not os.path.isdir(directory):
+                continue
+            journal_path = os.path.join(directory, "journal.json")
+            if not os.path.exists(journal_path) and os.listdir(directory):
+                rows.append(
+                    diagnostic(
+                        "error", "F133",
+                        "Transaction artifact directory has no journal.json: %s." % name,
+                        directory, 1, 1,
+                        "Preserve the directory as crash evidence; inspect artifacts before cleanup.",
+                    )
+                )
     for summary in list_journals(journal_dir, include_terminal=True):
         path = summary.get("journal_path")
         state = summary.get("state")
@@ -379,6 +478,18 @@ def _transaction_diagnostics(journal_dir):
                     1,
                     1,
                     "Preserve the journal and use safety transactions inspect/export.",
+                )
+            )
+            continue
+        if report.get("read_only"):
+            compatibility = report.get("version_compatibility") or {}
+            rows.append(
+                diagnostic(
+                    "error", "F130",
+                    "Unsupported transaction journal version %r; inspection is read-only."
+                    % compatibility.get("actual"),
+                    path, 1, 1,
+                    "Use a compatible lifetxt version or export evidence without attempting recovery.",
                 )
             )
             continue

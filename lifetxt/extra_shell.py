@@ -208,6 +208,8 @@ def command_quick_journal(args, config_data):
         legacy_args.extend(("--mood", args.mood))
     if args.project:
         legacy_args.extend(("--project", args.project))
+    if getattr(args, "revision", None):
+        legacy_args.extend(("--revision", args.revision))
     for tag in args.tags or []:
         legacy_args.extend(("--tag", tag))
     if args.dry_run:

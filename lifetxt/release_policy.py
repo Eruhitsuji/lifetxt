@@ -470,6 +470,8 @@ def release_manifest(root, paths=None, require_validator=True):
     reports["schema_validation"] = schema_validation_report(root, require_validator=require_validator)
     reports["translation_coverage"] = translation_coverage_report()
     reports["write_route_baseline"] = write_route_baseline_report(root)
+    from .clock_contract import clock_boundary_report
+    reports["clock_boundary_audit"] = clock_boundary_report(root)
     for path in paths or []:
         try:
             reports["format:%s" % path] = stable_diagnostics(path)

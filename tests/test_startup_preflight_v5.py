@@ -19,6 +19,8 @@ class StartupPreflightTests(unittest.TestCase):
             )
             self.assertTrue(context.transaction_preflight["ok"])
             self.assertTrue(os.path.isdir(journal))
+            self.assertEqual(context.transaction_preflight["policy_file"]["state"], "missing")
+            self.assertEqual(context.transaction_preflight["errors"], [])
 
 
 if __name__ == "__main__":

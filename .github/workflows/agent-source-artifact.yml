@@ -1,4 +1,4 @@
-name: Repair PR13 implementation
+name: Export merged PR13 patch parts
 
 on:
   pull_request:
@@ -6,46 +6,20 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  export:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/repair-pr13-implementation' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/repair-pr13-implementation
-          fetch-depth: 0
-      - name: Diagnose or apply recovered patch
-        run: |
-          latest_message="$(git log -1 --format=%s)"
-          if [ "$latest_message" = "Record PR13 repair diagnostic" ] || [ "$latest_message" = "Apply recovered PR13 implementation" ]; then
-            exit 0
-          fi
-          cat .github/agent-patch/part-* | base64 -d | gzip -d > /tmp/lifetxt.patch
-          set +e
-          git apply --check /tmp/lifetxt.patch 2> /tmp/apply-error.txt
-          apply_status=$?
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "$apply_status" -ne 0 ]; then
-            {
-              echo "patch_sha256=$(sha256sum /tmp/lifetxt.patch | awk '{print $1}')"
-              echo "patch_bytes=$(wc -c < /tmp/lifetxt.patch)"
-              echo "parts:"
-              sha256sum .github/agent-patch/part-*
-              echo "apply_error:"
-              cat /tmp/apply-error.txt
-            } > .github/pr13-repair-diagnostic.txt
-            git add .github/pr13-repair-diagnostic.txt
-            git commit -m "Record PR13 repair diagnostic"
-            git push origin HEAD:agent/repair-pr13-implementation
-            exit 0
-          fi
-          git apply --index /tmp/lifetxt.patch
-          rm -rf .github/agent-patch
-          git add -A
-          git commit -m "Apply recovered PR13 implementation"
-          git push origin HEAD:agent/repair-pr13-implementation
+      - name: Archive merged patch parts
+        run: tar -czf /tmp/pr13-patch-parts.tar.gz .github/agent-patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr13-patch-parts
+          path: /tmp/pr13-patch-parts.tar.gz
+          if-no-files-found: error

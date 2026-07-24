@@ -8,6 +8,8 @@ from lifetxt.workspace import (
     iter_workspace_definitions,
     normalize_source,
     resolve_workspace,
+    source_reason,
+    workspace_doctor,
     workspace_summaries,
 )
 from lifetxt.config_layers import (
@@ -170,6 +172,60 @@ class WorkspaceResolutionTests(unittest.TestCase):
         self.assertTrue(record["default_visible"])
         self.assertEqual(100, record["priority"])
 
+    def test_generated_write_target_is_error(self):
+        self.write("gen.life.txt")
+        config = self.config(
+            {
+                "workspaces": {
+                    "w": {
+                        "sources": [{"path": "gen.life.txt", "role": "generated"}],
+                        "write_file": "gen.life.txt",
+                    }
+                }
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        codes = {row["code"] for row in resolution["diagnostics"]}
+        self.assertIn("WS012", codes)
+        self.assertFalse(resolution["ok"])
+
+    def test_symlink_alias_detected(self):
+        target = self.write("life.txt")
+        link = os.path.join(self.root, "alias.txt")
+        try:
+            os.symlink(target, link)
+        except (OSError, NotImplementedError, AttributeError):
+            self.skipTest("symlinks not permitted in this environment")
+        config = self.config({"workspaces": {"w": {"sources": ["life.txt", "alias.txt"]}}})
+        resolution = resolve_workspace(config, "w")
+        codes = {row["code"] for row in resolution["diagnostics"]}
+        self.assertIn("WS011", codes)
+
+    def test_source_reason_describes_source(self):
+        record = normalize_source({"path": "notes/*.txt", "role": "reference", "required": True}, self.root)
+        record["matched_glob"] = True
+        record["exclude"] = []
+        reason = source_reason(record)
+        self.assertIn("role=reference", reason)
+        self.assertIn("required", reason)
+
+    def test_workspace_doctor_aggregates(self):
+        self.write("life.txt")
+        config = self.config(
+            {
+                "default_workspace": "a",
+                "workspaces": {
+                    "a": {"sources": ["life.txt"]},
+                    "b": {"sources": ["life.txt"]},
+                },
+            }
+        )
+        report = workspace_doctor(config)
+        self.assertEqual(2, report["workspace_count"])
+        self.assertEqual("a", report["default_workspace"])
+        # Both workspaces resolve the same physical file -> reported as shared.
+        self.assertTrue(report["shared_files"])
+
 
 class ConfigLayerTests(unittest.TestCase):
     def test_precedence_default_config_profile_env(self):
@@ -230,12 +286,29 @@ class ExampleConfigTests(unittest.TestCase):
         data["_path"] = path
         return data
 
+    EXAMPLE_NAMES = (
+        "personal.lifetxt.json",
+        "work.lifetxt.json",
+        "project-multi-file.lifetxt.json",
+        "generated-calendar.lifetxt.json",
+        "team.lifetxt.json",
+        "kiosk.lifetxt.json",
+    )
+
     def test_examples_resolve_default_workspace(self):
-        for name in ("personal.lifetxt.json", "work.lifetxt.json", "project-multi-file.lifetxt.json"):
+        for name in self.EXAMPLE_NAMES:
             config = self._load(name)
             resolution = resolve_workspace(config)
             self.assertEqual(1, resolution["manifest_version"])
             self.assertIsNotNone(resolution["name"])
+
+    def test_examples_pass_config_validation(self):
+        from lifetxt.config_validation import validate_config
+
+        for name in self.EXAMPLE_NAMES:
+            config = self._load(name)
+            errors = [row for row in validate_config(config) if row["severity"] == "error"]
+            self.assertEqual([], errors, name)
 
     def test_examples_validate_against_config_schema(self):
         import importlib.util
@@ -247,10 +320,10 @@ class ExampleConfigTests(unittest.TestCase):
 
         schema = schema_bundle()["config-v1.schema.json"]
         validator = Draft202012Validator(schema)
-        for name in ("personal.lifetxt.json", "work.lifetxt.json", "project-multi-file.lifetxt.json"):
+        for name in self.EXAMPLE_NAMES:
             config = self._load(name)
             config.pop("_path", None)
-            errors = sorted(validator.iter_errors(config), key=lambda e: e.path)
+            errors = sorted(validator.iter_errors(config), key=lambda e: list(e.path))
             self.assertEqual([], [e.message for e in errors], name)
 
 

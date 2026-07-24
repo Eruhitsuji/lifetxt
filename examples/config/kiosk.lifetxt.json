@@ -1,0 +1,13 @@
+{
+  "config_version": 1,
+  "default_workspace": "kiosk",
+  "workspaces": {
+    "kiosk": {
+      "sources": [
+        { "path": "life.txt", "role": "readonly", "writable": false },
+        { "path": ".generated/*.life.txt", "role": "generated", "writable": false }
+      ]
+    }
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

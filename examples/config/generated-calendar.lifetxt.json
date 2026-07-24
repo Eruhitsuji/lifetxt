@@ -1,0 +1,26 @@
+{
+  "config_version": 1,
+  "default_workspace": "calendar",
+  "workspaces": {
+    "calendar": {
+      "sources": [
+        "life.txt",
+        {
+          "path": ".generated/google_calendar.life.txt",
+          "role": "generated",
+          "generated_by": "sync-ics",
+          "writable": false
+        }
+      ],
+      "write_file": "life.txt"
+    }
+  },
+  "sync_ics": {
+    "output": ".generated/google_calendar.life.txt",
+    "generated_paths": [".generated/google_calendar.life.txt"],
+    "sources": [
+      { "name": "google", "url_env": "LIFETXT_GOOGLE_CAL_ICS", "tags": ["google"] }
+    ]
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

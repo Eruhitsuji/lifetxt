@@ -718,6 +718,23 @@ def build_parser():
     config_explain.add_argument("path", help="Dotted config path to explain.")
     config_explain.set_defaults(func=command_config_explain)
 
+    config_check = config_subparsers.add_parser(
+        "check", help="Validate the config against config-v1 and the credential policy."
+    )
+    config_check.add_argument("--json", action="store_true", help="Emit JSON.")
+    config_check.set_defaults(func=command_config_check)
+
+    config_migrate = config_subparsers.add_parser(
+        "migrate", help="Migrate legacy paths/write_file into the versioned workspace model."
+    )
+    config_migrate.add_argument(
+        "--dry-run", action="store_true", help="Show changes without writing."
+    )
+    config_migrate.add_argument(
+        "-o", "--output", help="Config file to write. Defaults to the loaded file."
+    )
+    config_migrate.set_defaults(func=command_config_migrate)
+
     workspace_command = subparsers.add_parser(
         "workspace",
         help="Inspect and validate named workspaces and their source manifests.",
@@ -755,6 +772,12 @@ def build_parser():
     ws_validate.add_argument("--all", action="store_true", help="Validate every workspace.")
     ws_validate.add_argument("--json", action="store_true", help="Emit JSON.")
     ws_validate.set_defaults(func=command_workspace_validate)
+
+    ws_doctor = workspace_subparsers.add_parser(
+        "doctor", help="Aggregate health of every workspace and shared files."
+    )
+    ws_doctor.add_argument("--json", action="store_true", help="Emit JSON.")
+    ws_doctor.set_defaults(func=command_workspace_doctor)
 
     tui = subparsers.add_parser(
         "tui",
@@ -7556,8 +7579,9 @@ def command_config_set(args):
     except (ValueError, TypeError):
         value = args.value
     set_dotted(data, args.path, value)
-    _write_config_file(target, data)
+    report = _write_config_file(target, data)
     write_text(None, "Set %s in %s\n" % (args.path, target))
+    _print_config_write_notes(report)
     return 0
 
 
@@ -7572,9 +7596,71 @@ def command_config_unset(args):
     if not unset_dotted(data, args.path):
         sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
         return 1
-    _write_config_file(target, data)
+    report = _write_config_file(target, data)
     write_text(None, "Removed %s from %s\n" % (args.path, target))
+    _print_config_write_notes(report)
     return 0
+
+
+def command_config_check(args):
+    from .config_validation import validation_report
+
+    report = validation_report(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return 0 if report["ok"] else 1
+    status = "OK" if report["ok"] else "ERRORS"
+    write_text(None, "config check: %s (config_version=%s, writable=%s)\n"
+               % (status, report["config_version"], report["writable"]))
+    for row in report["diagnostics"]:
+        location = (" @ %s" % row["path"]) if row.get("path") else ""
+        write_text(None, "  [%s] %s: %s%s\n"
+                   % (row["severity"].upper(), row["code"], row["message"], location))
+    return 0 if report["ok"] else 1
+
+
+def command_config_migrate(args):
+    from .config_migration import migrate_config
+
+    config = _config(args)
+    migrated, changes = migrate_config(config)
+    if not changes:
+        write_text(None, "Configuration is already current; no changes.\n")
+        return 0
+    write_text(None, "Planned changes:\n")
+    for change in changes:
+        write_text(None, "  - %s\n" % change)
+    if getattr(args, "dry_run", False):
+        write_text(None, "(dry run: nothing written)\n")
+        return 0
+    target = args.output or config.get("_path")
+    if not target:
+        raise ValueError("No config file to write. Run config init first or pass --output.")
+    report = _write_config_file(target, migrated)
+    write_text(None, "Wrote migrated config to %s\n" % target)
+    _print_config_write_notes(report)
+    return 0
+
+
+def command_workspace_doctor(args):
+    from .workspace import workspace_doctor
+
+    report = workspace_doctor(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return 0 if report["ok"] else 1
+    write_text(None, "workspace doctor: %s (%d workspace(s), default=%s)\n"
+               % ("OK" if report["ok"] else "ERRORS", report["workspace_count"], report["default_workspace"]))
+    for entry in report["workspaces"]:
+        marker = "*" if entry["default"] else " "
+        write_text(None, "%s %s: %s (%d file(s)) -> %s\n"
+                   % (marker, entry["name"], "OK" if entry["ok"] else "ERRORS",
+                      entry["input_count"], entry["write_file"] or "(none)"))
+        for row in entry["diagnostics"]:
+            write_text(None, "    [%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    for shared in report["shared_files"]:
+        write_text(None, "shared: %s (%s)\n" % (shared["path"], ", ".join(shared["workspaces"])))
+    return 0 if report["ok"] else 1
 
 
 def command_config_explain(args):
@@ -7603,8 +7689,19 @@ def _config_without_runtime(config):
 
 
 def _write_config_file(path, data):
-    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    write_text(path, text)
+    from .config_writer import write_config
+
+    return write_config(path, data)
+
+
+def _print_config_write_notes(report):
+    if not report:
+        return
+    if report.get("backup"):
+        write_text(None, "  backup: %s\n" % report["backup"])
+    for row in report.get("warnings") or []:
+        location = (" @ %s" % row["path"]) if row.get("path") else ""
+        write_text(None, "  [WARNING] %s: %s%s\n" % (row["code"], row["message"], location))
 
 
 def _workspace_diag_line(row):
@@ -7686,8 +7783,11 @@ def command_workspace_files(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    from .workspace import source_reason
+
     rows = []
     for record in resolution["sources"]:
+        reason = source_reason(record)
         for path in record["files"]:
             rows.append(
                 OrderedDict(
@@ -7697,6 +7797,7 @@ def command_workspace_files(args):
                         ("mode", "rw" if record["writable"] else "ro"),
                         ("origin", record["path"]),
                         ("matched_glob", record["matched_glob"]),
+                        ("reason", reason),
                         ("exists", os.path.exists(path)),
                     )
                 )
@@ -7708,8 +7809,8 @@ def command_workspace_files(args):
         for row in rows:
             write_text(
                 None,
-                "%s  role=%s mode=%s origin=%s exists=%s\n"
-                % (row["path"], row["role"], row["mode"], row["origin"], row["exists"]),
+                "%s  role=%s mode=%s origin=%s exists=%s reason=(%s)\n"
+                % (row["path"], row["role"], row["mode"], row["origin"], row["exists"], row["reason"]),
             )
     else:
         for row in rows:

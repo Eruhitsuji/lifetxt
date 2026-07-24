@@ -174,6 +174,8 @@ def _is_life_api_write(method, path):
         "/api/items/parse",
         "/api/shorthand/parse",
         "/api/timer",
+        "/api/attachments",
+        "/api/work-session",
     )
 
 

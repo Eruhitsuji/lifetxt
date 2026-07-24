@@ -863,16 +863,10 @@ def _cmd_done(state, argument):
     rows = state.target_rows()
     ids = ", ".join(row.get("id") or "?" for row in rows)
     stamp = _completion_value(state, argument)
-    from .timer import update_item_in_file
+    def change_for_row(row):
+        return {"id": row["id"], "status": "[x]", "set_details": {"done": [stamp]}}
 
-    id_key = state.options["id_key"]
-
-    def apply_row(row):
-        update_item_in_file(
-            row["source"], row["id"], id_key, status="[x]", set_details={"done": [stamp]}
-        )
-
-    _mutate_rows(state, rows, "done %s" % ids, apply_row, require_task=True)
+    _mutate_rows(state, rows, "done %s" % ids, change_for_row, require_task=True)
     return ("success", "Marked done (%s): %s" % (stamp, ids))
 
 
@@ -912,14 +906,10 @@ def _cmd_status(state, argument):
         )
     rows = state.target_rows()
     ids = ", ".join(row.get("id") or "?" for row in rows)
-    from .fzf_helper import update_item
+    def change_for_row(row):
+        return {"id": row["id"], "status": status}
 
-    id_key = state.options["id_key"]
-
-    def apply_row(row):
-        update_item(row["source"], row["id"], id_key, status=status)
-
-    count = _mutate_rows(state, rows, "status %s %s" % (status, ids), apply_row)
+    count = _mutate_rows(state, rows, "status %s %s" % (status, ids), change_for_row)
     return ("success", "Set %s on %d row(s)." % (status, count))
 
 
@@ -978,15 +968,12 @@ def _cmd_delete(state, argument):
         raise ValueError(
             "Deleting %d row(s): %s%s. Re-run as `/delete yes` to confirm." % (len(rows), titles, more)
         )
-    from .fzf_helper import delete_item
-
-    id_key = state.options["id_key"]
     ids = ", ".join(row.get("id") or "?" for row in rows)
 
-    def apply_row(row):
-        delete_item(row["source"], row["id"], id_key)
+    def change_for_row(row):
+        return {"id": row["id"], "delete": True}
 
-    count = _mutate_rows(state, rows, "delete %s" % ids, apply_row)
+    count = _mutate_rows(state, rows, "delete %s" % ids, change_for_row)
     return ("success", "Deleted %d row(s). /undo restores them." % count)
 
 
@@ -1000,11 +987,24 @@ def _resolve_date_token(value, strict=False):
 def _cmd_undo(state, argument):
     if not state.undo_stack:
         raise ValueError("Nothing to undo in this session.")
-    snapshots, label = state.undo_stack.pop()
-    from .atomic import atomic_write_text
+    snapshots, label = state.undo_stack[-1]
+    from .write_operations import commit_text_replacements
 
-    for path, text in snapshots:
-        atomic_write_text(path, text)
+    replacements = {}
+    for row in snapshots:
+        path, text, expected_revision = row
+        replacements[path] = {
+            "text": text,
+            "expected_revision": expected_revision,
+            "validate_life": True,
+        }
+    commit_text_replacements(
+        replacements,
+        operation="tui.undo",
+        journal_dir=_tui_journal_dir(state),
+        config=getattr(state.args, "config_data", None) or {},
+    )
+    state.undo_stack.pop()
     state.reload()
     return ("success", "Undid %s." % label)
 
@@ -1067,21 +1067,36 @@ def _cmd_state(state, argument):
     new_state = None if close_only else parts[0]
     title = parts[1].strip() if len(parts) > 1 else None
 
-    result = status_transition(
-        text,
-        state=new_state,
-        title=title,
-        person="self",
-        id_key=state.options["id_key"],
-        close_only=close_only,
-    )
-    if result.unchanged:
-        return ("info", "Already %s. Nothing written." % result.unchanged)
-    new_text, closed = result.text, result.closed
-    _push_undo(state, path, "state %s" % (new_state or "end"))
-    from .atomic import atomic_write_text
+    from . import mutation
 
-    atomic_write_text(path, new_text)
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    outcome = {"closed": [], "unchanged": None}
+
+    def transform(current_text):
+        result = status_transition(
+            current_text,
+            state=new_state,
+            title=title,
+            person="self",
+            id_key=state.options["id_key"],
+            close_only=close_only,
+        )
+        outcome["closed"] = list(result.closed or [])
+        outcome["unchanged"] = result.unchanged
+        return result.text
+
+    write_result = mutation.mutate_text(
+        path,
+        transform,
+        expected_hash=before.content_hash,
+        operation="tui.state",
+        create=not before.exists,
+        default_text="",
+    )
+    if outcome["unchanged"]:
+        return ("info", "Already %s. Nothing written." % outcome["unchanged"])
+    closed = outcome["closed"]
+    _remember_undo(state, {path: before}, {path: write_result.after_hash}, "state %s" % (new_state or "end"))
     state.reload()
     if close_only:
         if not closed:
@@ -1135,10 +1150,14 @@ def _cmd_add(state, argument):
     path = _write_target(state)
     existing = set(row.get("id") for row in state.rows if row.get("id"))
     line = _quick_add_line(title, state.options["id_key"], existing_ids=existing)
-    _push_undo(state, path, "add %s" % title)
-    from .cli import append_text
+    from . import mutation
+    from .write_operations import append_life_records
 
-    append_text(path, line + "\n")
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    result = append_life_records(
+        path, line + "\n", expected_revision=before.content_hash, operation="tui.add"
+    )
+    _remember_undo(state, {path: before}, {path: result.after_hash}, "add %s" % title)
     state.reload()
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
@@ -1167,69 +1186,54 @@ def _cmd_timer(state, argument):
     action = (argument or "").strip().lower() or "status"
     if action not in ("start", "stop", "status", "cancel"):
         raise ValueError("Usage: /timer start|stop|status|cancel")
+    from . import mutation
     from . import timer as timer_module
 
-    state_file = timer_module.timer_state_file(getattr(state.args, "config_data", None))
-    id_key = state.options["id_key"]
-
+    config = getattr(state.args, "config_data", None) or {}
+    state_file = timer_module.timer_state_file(config)
     if action == "status":
-        if not os.path.exists(state_file):
+        data = timer_module.timer_status_data(config=config, paths=getattr(state.args, "paths", None))
+        if not data.get("running"):
             return ("info", "No running timer.")
-        data = timer_module._read_state(state_file)
-        minutes = timer_module.state_elapsed_minutes(data, timer_module._now())
-        suffix = " (paused)" if data.get("paused_at") else ""
-        return ("info", "Timer %s: %s%s" % (data.get("id"), timer_module.format_elapsed(minutes), suffix))
+        suffix = " (paused)" if data.get("paused") else ""
+        return ("info", "Timer %s: %s%s" % (data.get("id"), data.get("elapsed"), suffix))
 
     if action == "cancel":
-        if not os.path.exists(state_file):
+        snapshot = mutation.read_text_snapshot(state_file, allow_missing=True)
+        if not snapshot.exists:
             raise ValueError("No running timer to cancel.")
-        data = timer_module._read_state(state_file)
-        os.remove(state_file)
+        data = timer_module.cancel_timer_transaction(
+            config=config, expected_timer_revision=snapshot.content_hash, require_revision=True
+        )
         return ("success", "Canceled timer for %s. No elapsed: was written." % data.get("id"))
 
     if action == "start":
-        if os.path.exists(state_file):
-            data = timer_module._read_state(state_file)
-            raise ValueError("A timer is already running for %s. Use /timer stop first." % data.get("id"))
         row = state.selected_row()
         if not row or not row.get("id") or not row.get("source"):
             raise ValueError("Select a row with an id: to start a timer.")
-        now = timer_module._now()
-        timer_module._write_json(
-            state_file,
-            OrderedDict(
-                [
-                    ("id", row["id"]),
-                    ("file", row["source"]),
-                    ("started_at", timer_module.format_datetime(now)),
-                    ("accumulated_minutes", 0),
-                    ("paused_at", ""),
-                    ("note", ""),
-                ]
-            ),
+        item_snapshot = mutation.read_text_snapshot(row["source"])
+        timer_snapshot = mutation.read_text_snapshot(state_file, allow_missing=True)
+        result = timer_module.start_timer_transaction(
+            row["source"], row["id"], config=config,
+            expected_item_revision=item_snapshot.content_hash,
+            expected_timer_revision=timer_snapshot.content_hash,
+            require_revisions=True,
         )
-        if row.get("status") == "[ ]":
-            _push_undo(state, row["source"], "timer start %s" % row["id"])
-            timer_module.update_item_in_file(row["source"], row["id"], id_key, status="[/]")
-            state.reload()
-        return ("success", "Started timer for %s." % row["id"])
+        state.reload()
+        return ("success", "Started timer for %s (transaction %s)." % (row["id"], result.get("transaction_id")))
 
-    if not os.path.exists(state_file):
+    status = timer_module.timer_status_data(config=config, paths=getattr(state.args, "paths", None))
+    if not status.get("running"):
         raise ValueError("No running timer to stop.")
-    data = timer_module._read_state(state_file)
-    path = data.get("file")
-    item_id = data.get("id")
-    minutes = timer_module.state_elapsed_minutes(data, timer_module._now())
-    item = timer_module.find_item_in_file(path, item_id, id_key)
-    total = minutes + sum(timer_module.parse_elapsed(value) for value in item.details.get("elapsed", []))
-    _push_undo(state, path, "timer stop %s" % item_id)
-    timer_module.update_item_in_file(
-        path, item_id, id_key, set_details={"elapsed": [timer_module.format_elapsed(total)]}
+    result = timer_module.stop_timer_transaction(
+        path=status.get("file"), item_id=status.get("id"), config=config,
+        expected_item_revision=status.get("item_revision"),
+        expected_timer_revision=status.get("timer_revision"),
+        require_revisions=True,
     )
-    os.remove(state_file)
     state.reload()
-    return ("success", "Stopped timer for %s: +%s, total %s." % (
-        item_id, timer_module.format_elapsed(minutes), timer_module.format_elapsed(total)))
+    return ("success", "Stopped timer for %s: +%s, total %s (transaction %s)." % (
+        result["id"], result["elapsed_added"], result["elapsed_total"], result.get("transaction_id")))
 
 
 EXPORT_FORMATS = ("md", "csv", "json")
@@ -1495,16 +1499,15 @@ def run_command(state, text):
     return command.handler(state, argument.strip())
 
 
-def _mutate_rows(state, rows, label, apply_row, require_task=False):
-    """One write path for every row-editing TUI command.
-
-    Validates every target row before touching disk, snapshots the affected
-    files as a single undo entry, applies the change, then reloads. A bulk edit
-    therefore either applies to every row or to none of them, and one /undo
-    reverts the whole batch.
-    """
+def _mutate_rows(state, rows, label, change_for_row, require_task=False):
+    """Apply selected row changes through one revision-aware semantic commit."""
     if not rows:
         raise ValueError("No row selected.")
+    from . import mutation
+    from .write_operations import mutate_item_files, mutate_items
+
+    grouped = {}
+    before = {}
     for row in rows:
         if not row.get("source") or not row.get("id"):
             raise ValueError(
@@ -1513,41 +1516,82 @@ def _mutate_rows(state, rows, label, apply_row, require_task=False):
             )
         if require_task and row.get("type") not in DONE_KINDS:
             raise ValueError("%s is not a task-like record." % (row.get("title") or "Row"))
+        path = row["source"]
+        grouped.setdefault(path, []).append(change_for_row(row))
+    for path in sorted(grouped):
+        before[path] = mutation.read_text_snapshot(path)
 
-    _push_undo(state, sorted(set(row["source"] for row in rows)), label)
-    for row in rows:
-        apply_row(row)
+    id_key = state.options["id_key"]
+    after = {}
+    if len(grouped) == 1:
+        path = next(iter(grouped))
+        result = mutate_items(
+            path,
+            grouped[path],
+            id_key=id_key,
+            expected_revision=before[path].content_hash,
+            operation="tui.semantic",
+        )
+        after[path] = result.after_hash
+    else:
+        specs = {}
+        for path in grouped:
+            specs[path] = {
+                "changes": grouped[path],
+                "expected_revision": before[path].content_hash,
+            }
+        result = mutate_item_files(
+            specs, id_key=id_key, operation="tui.semantic.multi",
+            journal_dir=_tui_journal_dir(state),
+        )
+        for target in result.targets:
+            after[target.path] = target.after_hash
+    _remember_undo(state, before, after, label)
     state.marked = set()
     state.reload()
     return len(rows)
 
 
 def _set_row_details(state, rows, details, label):
-    from .timer import update_item_in_file
+    def change_for_row(row):
+        return {"id": row["id"], "set_details": details}
 
-    id_key = state.options["id_key"]
-
-    def apply_row(row):
-        update_item_in_file(row["source"], row["id"], id_key, set_details=details)
-
-    return _mutate_rows(state, rows, label, apply_row)
+    return _mutate_rows(state, rows, label, change_for_row)
 
 
-def _push_undo(state, paths, label):
-    """Snapshot every file an operation is about to touch as one undo entry."""
-    if isinstance(paths, str):
-        paths = [paths]
+def _remember_undo(state, before, after, label):
     snapshots = []
-    for path in paths:
-        try:
-            with open(path, "r", encoding="utf-8-sig") as handle:
-                snapshots.append((path, handle.read()))
-        except OSError:
-            continue
+    for path in sorted(before):
+        snap = before[path]
+        snapshots.append((path, snap.text, after[path]))
     if not snapshots:
         return
     state.undo_stack.append((snapshots, label))
     del state.undo_stack[:-20]
+
+
+def _push_undo(state, paths, label):
+    """Compatibility helper for commands not yet migrated to semantic changes."""
+    from . import mutation
+    if isinstance(paths, str):
+        paths = [paths]
+    before = {}
+    for path in paths:
+        try:
+            before[path] = mutation.read_text_snapshot(path)
+        except OSError:
+            continue
+    _remember_undo(
+        state, before, dict((path, snap.content_hash) for path, snap in before.items()), label
+    )
+
+
+def _tui_journal_dir(state):
+    config = getattr(state.args, "config_data", None) or {}
+    section = config.get("transactions") if isinstance(config, dict) else None
+    if isinstance(section, dict) and section.get("journal_dir"):
+        return section.get("journal_dir")
+    return None
 
 
 def _write_target(state):

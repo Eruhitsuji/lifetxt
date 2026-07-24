@@ -12,7 +12,8 @@ from collections import OrderedDict
 
 
 def _entry(type_, default, description, required=False, secret=False,
-           env=None, restart_required=False, allowed=None, since="0.1.0"):
+           env=None, restart_required=False, allowed=None, since="0.1.0",
+           deprecated=False, replacement=None):
     return OrderedDict(
         (
             ("type", type_),
@@ -24,6 +25,8 @@ def _entry(type_, default, description, required=False, secret=False,
             ("restart_required", restart_required),
             ("allowed_values", allowed),
             ("since", since),
+            ("deprecated", deprecated),
+            ("replacement", replacement),
         )
     )
 
@@ -79,6 +82,11 @@ CONFIG_REGISTRY = OrderedDict(
         ("ids.auto", _entry(
             "boolean", True,
             "Automatically assign stable IDs to new items.")),
+        ("generated_paths", _entry(
+            "array<string>", None,
+            "Top-level list of generated files. Superseded by per-source 'generated' "
+            "roles and sync_ics.generated_paths.",
+            deprecated=True, replacement="workspaces.*.sources[].role=generated")),
     )
 )
 

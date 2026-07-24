@@ -1,0 +1,18 @@
+{
+  "config_version": 1,
+  "default_workspace": "team",
+  "workspaces": {
+    "team": {
+      "sources": [
+        { "path": "team/board.life.txt", "role": "primary", "required": true },
+        { "path": "team/members/*.life.txt", "role": "reference", "writable": false },
+        { "path": "archive/team/**/*.life.txt", "role": "archive", "default_visible": false }
+      ],
+      "write_file": "team/board.life.txt"
+    }
+  },
+  "teams": {
+    "default": { "display_name": "Default Team", "members": ["self"] }
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

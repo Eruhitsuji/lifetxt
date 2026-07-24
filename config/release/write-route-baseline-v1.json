@@ -16,6 +16,11 @@
       "path": "lifetxt/transaction_journal.py",
       "call": "os.replace",
       "reason": "Durable transaction-journal primitive. The implementation fsyncs the temporary file, atomically replaces the journal/artifact path, and fsyncs the parent directory so interrupted multi-target operations remain recoverable. This reviewed low-level operational-state writer is intentionally separate from authoritative life.txt mutation routing."
+    },
+    {
+      "path": "lifetxt/config_writer.py",
+      "call": "os.replace",
+      "reason": "Bounded backup rotation in the dedicated atomic configuration writer. This is the reviewed home the write-route baseline previously called for: config writes validate against config-v1.schema.json, keep a bounded .bak rotation via os.replace, and commit atomically through atomic_write_text. It writes JSON configuration, not authoritative life.txt/state, so it is intentionally separate from mutation routing."
     }
   ]
 }

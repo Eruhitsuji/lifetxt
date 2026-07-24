@@ -28,6 +28,11 @@ WORKSPACE_MANIFEST_VERSION = 1
 KNOWN_ROLES = ("primary", "input", "generated", "archive", "readonly", "reference")
 _READONLY_ROLES = ("generated", "archive", "readonly", "reference")
 _HIDDEN_BY_DEFAULT_ROLES = ("generated", "archive")
+_NON_WRITE_TARGET_ROLES = ("generated", "archive")
+
+# Soft ceiling on source count; large workspaces still resolve but warn so a
+# runaway glob or accidental directory import is visible.
+MAX_SOURCES = 200
 
 
 def diagnostic(severity, code, message, hint="", source=None):
@@ -282,8 +287,15 @@ def resolve_workspace(config, name=None, base_dir=None):
         )
 
     diagnostics.extend(_duplicate_diagnostics(sources))
+    diagnostics.extend(_alias_diagnostics(sources))
     diagnostics.extend(_required_diagnostics(sources))
     diagnostics.extend(_outside_root_diagnostics(sources, base_dir))
+    if len(sources) > MAX_SOURCES:
+        diagnostics.append(
+            diagnostic("warning", "WS013",
+                       "Workspace %r has %d sources (soft limit %d)." % (name, len(sources), MAX_SOURCES),
+                       "Split the workspace or narrow globs to keep resolution fast.")
+        )
 
     input_paths = _ordered_input_paths(sources)
     default_visible = _ordered_input_paths(sources, visible_only=True)
@@ -395,6 +407,52 @@ def _duplicate_diagnostics(sources):
     return rows
 
 
+def _alias_diagnostics(sources):
+    """Detect distinct source paths that resolve to one physical file via links.
+
+    ``_duplicate_diagnostics`` already reports identical resolved paths. This
+    check catches symlink/junction aliases where the literal paths differ but
+    ``realpath`` collapses them to the same file, which is easy to miss.
+    """
+    rows = []
+    owners = OrderedDict()
+    for record in sources:
+        for path in record["files"]:
+            try:
+                real = os.path.normcase(os.path.realpath(path))
+            except OSError:
+                continue
+            owners.setdefault(real, [])
+            key = os.path.normcase(path)
+            if key not in [os.path.normcase(p) for p in owners[real]]:
+                owners[real].append(path)
+    for real, paths in owners.items():
+        if len(paths) > 1:
+            rows.append(
+                diagnostic("warning", "WS011",
+                           "Multiple sources resolve to the same physical file through links: %s."
+                           % ", ".join(sorted(paths)),
+                           "Point sources at one canonical path or remove the alias.", real)
+            )
+    return rows
+
+
+def source_reason(record):
+    """Human-readable reason a source contributes files, for --resolved output."""
+    parts = ["role=%s" % record["role"]]
+    if record["required"]:
+        parts.append("required")
+    if record.get("matched_glob"):
+        parts.append("glob/dir match")
+    else:
+        parts.append("literal path")
+    if record["exclude"]:
+        parts.append("exclude=%s" % ",".join(record["exclude"]))
+    if not record["default_visible"]:
+        parts.append("hidden by default")
+    return "; ".join(parts)
+
+
 def _required_diagnostics(sources):
     rows = []
     for record in sources:
@@ -430,6 +488,14 @@ def _resolve_write_target(write_file, base_dir, writable_candidates, sources, di
     candidate_keys = set(os.path.normcase(path) for path in writable_candidates)
     if write_file:
         resolved = _resolve_against(write_file, base_dir)
+        role = _role_owning_path(sources, resolved)
+        if role in _NON_WRITE_TARGET_ROLES:
+            diagnostics.append(
+                diagnostic("error", "WS012",
+                           "Write target points at a %s source: %s." % (role, write_file),
+                           "Never write to generated or archive files; choose a primary source.",
+                           resolved)
+            )
         if os.path.normcase(resolved) not in candidate_keys and not _is_writable_declared(sources, resolved):
             # A configured write target should be an input the workspace also
             # reads; warn but honor it so single-file setups keep working.
@@ -446,6 +512,17 @@ def _resolve_write_target(write_file, base_dir, writable_candidates, sources, di
         diagnostic("error", "WS007", "Workspace has no writable source.",
                    "Add a writable primary source or set write_file explicitly.")
     )
+    return None
+
+
+def _role_owning_path(sources, resolved):
+    key = os.path.normcase(resolved)
+    for record in sources:
+        if os.path.normcase(record["resolved_path"]) == key:
+            return record["role"]
+        for path in record["files"]:
+            if os.path.normcase(path) == key:
+                return record["role"]
     return None
 
 
@@ -483,3 +560,53 @@ def workspace_summaries(config):
             )
         )
     return summaries
+
+
+def workspace_doctor(config):
+    """Aggregate every workspace's resolution and diagnostics for reporting."""
+    definitions = iter_workspace_definitions(config)
+    default = default_workspace_name(config)
+    reports = []
+    all_rows = []
+    physical_owners = OrderedDict()
+    for name in definitions:
+        try:
+            resolution = resolve_workspace(config, name)
+        except ValueError as exc:
+            all_rows.append(
+                diagnostic("error", "WS008", "Cannot resolve workspace %r: %s" % (name, exc))
+            )
+            continue
+        reports.append(
+            OrderedDict(
+                (
+                    ("name", name),
+                    ("default", name == default),
+                    ("ok", resolution["ok"]),
+                    ("write_file", resolution["write_file"]),
+                    ("input_count", len(resolution["input_paths"])),
+                    ("diagnostics", resolution["diagnostics"]),
+                )
+            )
+        )
+        all_rows.extend(resolution["diagnostics"])
+        for path in resolution["input_paths"]:
+            physical_owners.setdefault(os.path.normcase(path), []).append(name)
+    # Cross-workspace duplicate physical files are informational, not an error:
+    # sharing a file between workspaces is legitimate, but worth surfacing.
+    shared = OrderedDict(
+        (key, names) for key, names in physical_owners.items() if len(set(names)) > 1
+    )
+    return OrderedDict(
+        (
+            ("ok", not any(row["severity"] == "error" for row in all_rows)),
+            ("workspace_count", len(reports)),
+            ("default_workspace", default),
+            ("workspaces", reports),
+            ("shared_files", [
+                OrderedDict((("path", key), ("workspaces", sorted(set(names)))))
+                for key, names in shared.items()
+            ]),
+            ("diagnostic_count", len(all_rows)),
+        )
+    )

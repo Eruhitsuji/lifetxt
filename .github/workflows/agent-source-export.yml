@@ -1,0 +1,23 @@
+name: Agent source export
+
+on:
+  push:
+    branches:
+      - agent/p0-format-contract-batch
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: |
+          tar --exclude=.git --exclude=.github/workflows/agent-source-export.yml -czf /tmp/lifetxt-main-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lifetxt-main-source
+          path: /tmp/lifetxt-main-source.tar.gz
+          if-no-files-found: error

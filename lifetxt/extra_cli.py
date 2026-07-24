@@ -48,7 +48,11 @@ def _build_parser(command):
         parser.add_argument("id")
         parser.add_argument("paths", nargs="*")
         parser.add_argument("--editor")
-        parser.add_argument("--dry-run", action="store_true")
+        parser.add_argument("--dry-run", action="store_true", help="Print the editor command without launching it.")
+        parser.add_argument("--review-only", action="store_true", help="Open a temporary copy and print the diff without applying it.")
+        parser.add_argument("--reconcile", action="store_true", help="Conservatively merge non-overlapping external changes made while the editor is open.")
+        parser.add_argument("--keep-temp", action="store_true", help="Keep the edited temporary copy for manual recovery.")
+        parser.add_argument("--show-diff", action="store_true", help="Print the applied diff after a successful edit.")
     elif command == "path":
         parser.add_argument("--format", choices=("text", "json"), default="text")
         parser.add_argument("--pretty", action="store_true")
@@ -136,18 +140,29 @@ def _build_parser(command):
         parser.add_argument("--dry-run", action="store_true")
     elif command == "attachment":
         subparsers = parser.add_subparsers(dest="attachment_action", required=True)
-        for action in ("put", "reference", "delete", "status"):
+        for action in ("put", "reference", "delete", "status", "directory-reference", "package", "reconcile", "open"):
             child = subparsers.add_parser(action)
             child.add_argument("path", help="life.txt file containing the item.")
-            if action != "status":
+            if action not in ("status", "open"):
                 child.add_argument("--id", required=True, help="Item ID receiving the attachment reference.")
             child.add_argument("--file", required=True, help="Stored attachment path relative to life.txt.")
             if action == "put":
-                child.add_argument("--source", required=True, help="Source file whose bytes are copied into the attachment target.")
+                child.add_argument("--source", required=True, help="Source file copied into the attachment target with a bounded reader.")
                 child.add_argument("--allow-executable", action="store_true")
+            if action == "package":
+                child.add_argument("--source", required=True, help="Source directory packaged as a deterministic ZIP attachment.")
+                child.add_argument("--include-hidden", action="store_true")
+            if action == "reconcile":
+                child.add_argument("--key", choices=("file", "dir"), default="file")
+                child.add_argument("--recorded-revision", help="Hash currently stored on the item; stale values are rejected.")
+            if action == "open":
+                child.add_argument("--metadata-revision", help="Expected open-metadata state revision.")
+                child.add_argument("--no-record", action="store_true", help="Do not update the local open-reference metadata state.")
+                child.add_argument("--execute", action="store_true", help="Run the platform opener after validation. Default only returns the command plan.")
             child.add_argument("--item-revision", help="Expected life.txt SHA-256 revision.")
             child.add_argument("--attachment-revision", help="Expected attachment SHA-256 revision or <missing>.")
-            child.add_argument("--require-revisions", action="store_true", help="Reject missing item/attachment revisions.")
+            child.add_argument("--transaction-id", help="Stable transaction id for retry/restart recovery.")
+            child.add_argument("--require-revisions", action="store_true", help="Reject missing required revisions.")
             child.add_argument("--allow-symlink", action="store_true")
             _add_output(child)
     elif command == "safety":
@@ -179,13 +194,25 @@ def _build_parser(command):
             "transaction_action",
             nargs="?",
             default="list",
-            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup", "policy", "archive", "verify-backup"),
+            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup", "policy", "policy-write", "policy-migrate", "preflight", "archive", "rotate-archives", "verify-backup", "audit", "drill"),
         )
         transactions.add_argument("--journal-dir")
         transactions.add_argument("--journal")
         transactions.add_argument("--backup-dir")
         transactions.add_argument("--archive-dir")
         transactions.add_argument("--older-than-days", type=float)
+        transactions.add_argument("--policy-file")
+        transactions.add_argument("--expected-revision")
+        transactions.add_argument("--operator")
+        transactions.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
+        transactions.add_argument("--max-archives", type=int)
+        transactions.add_argument("--max-archive-bytes", type=int)
+        transactions.add_argument("--audit-file")
+        transactions.add_argument("--event")
+        transactions.add_argument("--details-json")
+        transactions.add_argument("--point")
+        transactions.add_argument("--recovery", choices=("inspect", "resume", "compensate"), default="inspect")
+        transactions.add_argument("--keep-workspace", action="store_true")
         transactions.add_argument("--force", action="store_true")
         _add_output(transactions)
         routes = subparsers.add_parser("write-routes")

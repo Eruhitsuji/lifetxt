@@ -424,9 +424,16 @@ def open_editor(record, config=None):
     editor = resolve_editor(config)
     if not editor:
         raise ValueError(editor_help_message())
-    command = editor_command(editor, record["source"], record.get("line") or 1)
+    from .editor_safety import safe_edit
     try:
-        return subprocess.call(command)
+        result = safe_edit(
+            record["source"],
+            editor,
+            line=record.get("line") or 1,
+            expected_revision=record.get("revision") or None,
+            operation="fzf.edit",
+        )
+        return 0 if result else 1
     except OSError as exc:
         raise ValueError(
             "Could not run editor %r: %s\n%s" % (editor, exc, editor_help_message())

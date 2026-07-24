@@ -160,6 +160,12 @@ class SafetyFoundationTests(unittest.TestCase):
             "project-summary-v1.schema.json",
             "command-center-v1.schema.json",
             "area-summary-v1.schema.json",
+            "editor-session-v1.schema.json",
+            "directory-package-v1.schema.json",
+            "attachment-open-v1.schema.json",
+            "transaction-policy-admin-v1.schema.json",
+            "transaction-preflight-v1.schema.json",
+            "clock-skew-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

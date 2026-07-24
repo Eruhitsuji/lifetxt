@@ -1,0 +1,68 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-policy-admin-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "migrated_from": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_newer_read_only": {
+          "type": "boolean"
+        },
+        "evidence_include_paths": {
+          "type": "boolean"
+        },
+        "max_total_bytes": {
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_transaction_bytes": {
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_transactions": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "require_private_permissions": {
+          "type": "boolean"
+        },
+        "terminal_retention_days": {
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "terminal_retention_days",
+        "max_transactions",
+        "max_total_bytes",
+        "max_transaction_bytes",
+        "require_private_permissions",
+        "allow_newer_read_only",
+        "evidence_include_paths"
+      ],
+      "type": "object"
+    },
+    "policy_version": {
+      "const": 1
+    },
+    "updated_at_utc": {
+      "type": "string"
+    },
+    "updated_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_version",
+    "updated_at_utc",
+    "updated_by",
+    "policy"
+  ],
+  "title": "lifetxt transaction policy document v1",
+  "type": "object"
+}

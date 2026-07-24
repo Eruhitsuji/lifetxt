@@ -1,0 +1,61 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/clock-skew-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "absolute_skew_seconds": {
+      "minimum": 0,
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "client_time_utc": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reject_seconds": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "server_authoritative": {
+      "const": true
+    },
+    "server_time_utc": {
+      "type": "string"
+    },
+    "skew_seconds": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "state": {
+      "enum": [
+        "not_measured",
+        "ok",
+        "warning",
+        "reject"
+      ]
+    },
+    "warning_seconds": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "write_allowed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "server_time_utc",
+    "server_authoritative",
+    "warning_seconds",
+    "reject_seconds",
+    "state",
+    "write_allowed"
+  ],
+  "title": "lifetxt remote clock skew v1",
+  "type": "object"
+}

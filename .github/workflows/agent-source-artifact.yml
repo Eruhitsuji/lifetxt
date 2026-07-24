@@ -32,8 +32,6 @@ jobs:
               raise SystemExit(0)
           if current != expected_bad or len(data) != 1999:
               raise SystemExit(f'unexpected part-04a0 state: len={len(data)} sha256={current}')
-          if data[1488:1512] != 'oaZ8Lc2V+trjVkMdADw7PX1d':
-              raise SystemExit(f'unexpected context: {data[1488:1512]!r}')
           data = data[:1500] + '7' + data[1500:]
           corrected = sha256(data.encode()).hexdigest()
           if len(data) != 2000 or corrected != expected_good:

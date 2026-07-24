@@ -430,6 +430,40 @@ def item_id_values(item, key="id"):
     return [str(value) for value in item.details.get(key, []) if value]
 
 
+def backlink_records(items, target_id, key="id", reference_keys=None):
+    """Return items that reference ``target_id`` through any reference key.
+
+    This answers "what points at this item?" — the incoming half of the link
+    graph — grouped by the relation that made the connection. It reuses the same
+    reference keys as :func:`link_records` so navigation stays consistent.
+    """
+    reference_keys = tuple(reference_keys or REFERENCE_KEYS)
+    target_id = str(target_id)
+    records = []
+    for item in items:
+        source_ids = item_id_values(item, key)
+        source_id = source_ids[0] if source_ids else ""
+        for relation in reference_keys:
+            for value in item.details.get(relation, []):
+                if str(value) != target_id:
+                    continue
+                records.append(
+                    OrderedDict(
+                        (
+                            ("relation", relation),
+                            ("source_id", source_id),
+                            ("source_title", item.title),
+                            ("source_status", item.status),
+                            ("source_kind", item.kind),
+                            ("source", item.source),
+                            ("line", item.line),
+                            ("target_id", target_id),
+                        )
+                    )
+                )
+    return records
+
+
 def format_link_table(records):
     if not records:
         return "No links found.\n"

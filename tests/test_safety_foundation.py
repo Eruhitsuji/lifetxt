@@ -158,6 +158,8 @@ class SafetyFoundationTests(unittest.TestCase):
             "workspace-source-manifest-v1.schema.json",
             "project-registry-v1.schema.json",
             "project-summary-v1.schema.json",
+            "command-center-v1.schema.json",
+            "area-summary-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

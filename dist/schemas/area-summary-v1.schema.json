@@ -1,0 +1,52 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/area-summary-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "open_items": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "progress_percent": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "project_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "projects": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "task_done": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "task_open": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "task_total": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "task_total",
+    "task_done",
+    "project_count"
+  ],
+  "title": "lifetxt area summary v1",
+  "type": "object"
+}

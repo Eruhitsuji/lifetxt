@@ -858,6 +858,41 @@ def build_parser():
     portfolio_command.add_argument("--json", action="store_true", help="Emit JSON.")
     portfolio_command.set_defaults(func=command_portfolio)
 
+    today_command = subparsers.add_parser(
+        "today", help="Daily command center: overdue, due, blocked, messages, and project attention."
+    )
+    _add_input_paths(today_command)
+    today_command.add_argument(
+        "--mode", choices=["today", "morning", "evening"], default="today",
+        help="Brief mode label. Default today.",
+    )
+    today_command.add_argument("--horizon", type=int, default=3, help="Upcoming horizon in days. Default 3.")
+    today_command.add_argument("--person", help="Scope unacknowledged messages to a recipient.")
+    today_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    today_command.set_defaults(func=command_today)
+
+    area_command = subparsers.add_parser(
+        "area", help="Group tasks and projects by area:."
+    )
+    area_subparsers = area_command.add_subparsers(dest="area_command")
+    area_list = area_subparsers.add_parser("list", help="List areas with progress.")
+    _add_input_paths(area_list)
+    area_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    area_list.set_defaults(func=command_area_list)
+    area_show = area_subparsers.add_parser("show", help="Show one area's projects and open work.")
+    area_show.add_argument("name", help="Area name.")
+    _add_input_paths(area_show)
+    area_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    area_show.set_defaults(func=command_area_show)
+
+    backlinks_command = subparsers.add_parser(
+        "backlinks", help="Show items that reference a given ID (incoming links)."
+    )
+    backlinks_command.add_argument("id", help="Target item ID.")
+    _add_input_paths(backlinks_command)
+    backlinks_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    backlinks_command.set_defaults(func=command_backlinks)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -7979,6 +8014,117 @@ def command_portfolio(args):
         )
     write_text(None, "legend: progress=%s; health=%s\n"
                % (report["legend"]["progress"], report["legend"]["health"]))
+    return 0
+
+
+def command_today(args):
+    from .command_center import command_center
+
+    report = command_center(
+        _project_items(args), _config(args), _project_today(),
+        horizon_days=getattr(args, "horizon", 3),
+        person=getattr(args, "person", None),
+        mode=getattr(args, "mode", "today"),
+    )
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    counts = report["counts"]
+    header = "%s brief" % report["mode"].capitalize()
+    if report["reference_date"]:
+        header += " for %s" % report["reference_date"]
+    write_text(None, header + "\n")
+    if not report["safety"]["ok"]:
+        write_text(None, "  ! config has %d error(s)\n" % report["safety"]["config_errors"])
+    _today_section("Overdue", report["overdue"])
+    _today_section("Due today", report["due_today"])
+    _today_section("Upcoming (%dd)" % report["horizon_days"], report["upcoming"])
+    _today_section("Blocked", report["blocked"])
+    _today_section("Waiting", report["waiting"])
+    _today_section("Messages", report["messages"])
+    _today_section("Habits", report["habits"])
+    _today_section("Captures (untriaged)", report["captures"])
+    if report["project_attention"]:
+        write_text(None, "Projects needing attention (%d):\n" % len(report["project_attention"]))
+        for row in report["project_attention"]:
+            write_text(None, "  [%s] %s: %s\n"
+                       % (row["health"][0].upper(), row["name"], "; ".join(row["reasons"])))
+    if all(v == 0 for v in counts.values()):
+        write_text(None, "All clear.\n")
+    return 0
+
+
+def _today_section(label, rows, limit=10):
+    if not rows:
+        return
+    write_text(None, "%s (%d):\n" % (label, len(rows)))
+    for row in rows[:limit]:
+        due = " due:%s" % row["due"] if row.get("due") else ""
+        project = " @%s" % row["project"] if row.get("project") else ""
+        write_text(None, "  - %s %s%s%s\n" % (row["status"], row["title"], project, due))
+    if len(rows) > limit:
+        write_text(None, "  ... and %d more\n" % (len(rows) - limit))
+
+
+def command_area_list(args):
+    from .areas import area_list
+
+    rows = area_list(_project_items(args), _config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not rows:
+        write_text(None, "No areas found.\n")
+        return 0
+    for row in rows:
+        pct = "%.0f%%" % row["progress_percent"] if row["progress_percent"] is not None else "n/a"
+        write_text(None, "%-16s %d/%d done (%s)  open=%d projects=%d\n"
+                   % (row["name"], row["task_done"], row["task_total"], pct,
+                      row["task_open"], row["project_count"]))
+    return 0
+
+
+def command_area_show(args):
+    from .areas import area_show
+
+    try:
+        summary = area_show(_project_items(args), _config(args), args.name)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "%s\n" % summary["name"])
+    pct = "%.0f%%" % summary["progress_percent"] if summary["progress_percent"] is not None else "n/a"
+    write_text(None, "  tasks: %d/%d done (%s) open=%d\n"
+               % (summary["task_done"], summary["task_total"], pct, summary["task_open"]))
+    if summary["projects"]:
+        write_text(None, "  projects: %s\n" % ", ".join(summary["projects"]))
+    for row in summary["open_items"]:
+        write_text(None, "  - %s %s\n" % (row["status"], row["title"]))
+    return 0
+
+
+def command_backlinks(args):
+    from .links import backlink_records
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"],
+        _config(args),
+    )
+    key = id_key_from_config(_config(args))
+    records = backlink_records(items, args.id, key=key)
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not records:
+        write_text(None, "No items reference %s.\n" % args.id)
+        return 0
+    write_text(None, "Items referencing %s (%d):\n" % (args.id, len(records)))
+    for row in records:
+        write_text(None, "  %s <- %s (%s) %s\n"
+                   % (row["relation"], row["source_id"] or "(no id)", row["source_status"], row["source_title"]))
     return 0
 
 

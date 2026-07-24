@@ -1,0 +1,98 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/command-center-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "blocked": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "captures": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "counts": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "due_today": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "habits": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "horizon_days": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "messages": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "overdue": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "person": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "project_attention": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "reference_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "safety": {
+      "type": "object"
+    },
+    "upcoming": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "waiting": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "mode",
+    "overdue",
+    "due_today",
+    "counts"
+  ],
+  "title": "lifetxt daily command center v1",
+  "type": "object"
+}

@@ -182,6 +182,8 @@ READ_ONLY_TOOLS = frozenset(
         "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
         "get_status", "parse_shorthand", "timer_status", "check_files",
         "complete", "attachment_state",
+        "get_projects", "get_project", "get_portfolio", "get_command_center",
+        "get_areas", "get_backlinks",
     ]
 )
 
@@ -637,6 +639,49 @@ def _tool_schemas():
                 "item_revision": _string("Expected life.txt SHA-256 revision."),
                 "timer_revision": _string("Expected timer-state SHA-256 revision."),
             },
+        ),
+        _tool(
+            "get_projects",
+            "List projects built from project: records with progress and health.",
+            {"all": _bool("Include archived projects.")},
+            read_only=True,
+        ),
+        _tool(
+            "get_project",
+            "Aggregated hub for one project: tasks, milestones, risks, decisions, meetings.",
+            {"name": _string("Project name or alias.")},
+            required=["name"],
+            read_only=True,
+        ),
+        _tool(
+            "get_portfolio",
+            "Compare projects by state, progress, risk, and workload with transparent formulas.",
+            {"all": _bool("Include archived projects.")},
+            read_only=True,
+        ),
+        _tool(
+            "get_command_center",
+            "Daily command center: overdue, due, upcoming, blocked, waiting, messages, "
+            "habits, captures, and projects needing attention.",
+            {
+                "horizon": _integer("Upcoming horizon in days. Default 3."),
+                "person": _string("Scope unacknowledged messages to a recipient."),
+                "mode": _string("Brief mode label: today, morning, or evening."),
+            },
+            read_only=True,
+        ),
+        _tool(
+            "get_areas",
+            "Group tasks and projects by area: with progress per area.",
+            {},
+            read_only=True,
+        ),
+        _tool(
+            "get_backlinks",
+            "Items that reference a given ID through parent/ref/depends_on/blocks/related.",
+            {"id": _string("Target item ID.")},
+            required=["id"],
+            read_only=True,
         ),
     ]
 
@@ -2156,6 +2201,72 @@ def _tool_get_workload(args, context):
     return {"count": len(people), "people": list(people.values())}
 
 
+def _tool_get_projects(args, context):
+    """Project summaries with progress and health, from project: records."""
+    from .projects import project_list
+
+    items, _diagnostics = _read_items(context)
+    rows = project_list(items, context.config, timezone_today(),
+                        include_archived=_truthy(args.get("all")))
+    return {"count": len(rows), "projects": rows}
+
+
+def _tool_get_project(args, context):
+    """Aggregated hub for one project without duplicating records."""
+    from .projects import project_hub
+
+    items, _diagnostics = _read_items(context)
+    name = str(args.get("name") or "")
+    if not name:
+        raise ValueError("get_project requires 'name'.")
+    return project_hub(items, context.config, name, timezone_today())
+
+
+def _tool_get_portfolio(args, context):
+    """Compare projects by state, progress, risk, and workload."""
+    from .projects import portfolio
+
+    items, _diagnostics = _read_items(context)
+    return portfolio(items, context.config, timezone_today(),
+                     include_archived=_truthy(args.get("all")))
+
+
+def _tool_get_command_center(args, context):
+    """Daily command center: overdue, due, blocked, messages, project attention."""
+    from .command_center import command_center
+
+    items, _diagnostics = _read_items(context)
+    horizon = args.get("horizon")
+    try:
+        horizon = int(horizon) if horizon is not None else 3
+    except (TypeError, ValueError):
+        horizon = 3
+    return command_center(items, context.config, timezone_today(),
+                          horizon_days=horizon, person=args.get("person"),
+                          mode=str(args.get("mode") or "today"))
+
+
+def _tool_get_areas(args, context):
+    """Group tasks and projects by area:."""
+    from .areas import area_list
+
+    items, _diagnostics = _read_items(context)
+    rows = area_list(items, context.config)
+    return {"count": len(rows), "areas": rows}
+
+
+def _tool_get_backlinks(args, context):
+    """Items that reference a given ID (incoming links)."""
+    from .links import backlink_records
+
+    items, _diagnostics = _read_items(context)
+    target = str(args.get("id") or "")
+    if not target:
+        raise ValueError("get_backlinks requires 'id'.")
+    records = backlink_records(items, target, key=_id_key(context))
+    return {"target_id": target, "count": len(records), "backlinks": records}
+
+
 def _tool_get_file_state(_args, context):
     """Paths, write target, read-only flag, and content hashes.
 
@@ -2219,6 +2330,12 @@ TOOL_HANDLERS = OrderedDict(
         ("attachment_put", _tool_attachment_put),
         ("attachment_delete", _tool_attachment_delete),
         ("attachment_state", _tool_attachment_state),
+        ("get_projects", _tool_get_projects),
+        ("get_project", _tool_get_project),
+        ("get_portfolio", _tool_get_portfolio),
+        ("get_command_center", _tool_get_command_center),
+        ("get_areas", _tool_get_areas),
+        ("get_backlinks", _tool_get_backlinks),
     ]
 )
 

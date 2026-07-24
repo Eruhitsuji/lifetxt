@@ -1,0 +1,67 @@
+# Life Hub: Daily Command Center, Areas, and Backlinks
+
+The Life Hub commands turn a life.txt workspace into a single place to see what
+needs attention today, how work is organized by area, and how items connect.
+Every command reads from one shared aggregation so the CLI, MCP, and future Web
+surfaces agree on the same picture.
+
+## Daily command center
+
+`today` builds one deterministic aggregation of the day:
+
+```console
+$ lifetxt today
+$ lifetxt today --mode morning --horizon 5
+$ lifetxt today --person self --json
+```
+
+Buckets:
+
+- **overdue** — tasks/deadlines with a `due:` before today
+- **due today** — `due:` equal to today
+- **upcoming** — `due:` within the horizon (default 3 days)
+- **blocked** — a `depends_on:` target is not yet done
+- **waiting** — status `[?]`
+- **messages** — open `M` items (optionally scoped to `--person`)
+- **habits** — open `H` items
+- **captures** — open tasks with no `project:`, `due:`, or `assignee:` (the inbox)
+- **project attention** — non-green projects with their health reasons
+- **safety** — a quick configuration-validity signal
+
+The same aggregation is available to AI clients through the MCP tool
+`get_command_center`.
+
+## Areas
+
+`area:` is an optional organizing dimension above `project:`. An item's area
+comes from its own `area:` detail; a project's area comes from its record or the
+registry's `default_area`. Areas are whatever appears in the data — presets like
+`work`, `research`, `health`, `home`, `finance`, `family`, `learning` are
+examples, never a required taxonomy.
+
+```console
+$ lifetxt area list
+$ lifetxt area show work
+```
+
+MCP: `get_areas`.
+
+## Backlinks
+
+`backlinks` answers "what points at this item?" — the incoming half of the link
+graph, grouped by relation (`parent`, `ref`, `depends_on`, `blocks`, `related`):
+
+```console
+$ lifetxt backlinks T-1
+$ lifetxt backlinks T-1 --json
+```
+
+MCP: `get_backlinks`.
+
+## Projects over MCP
+
+The project and portfolio aggregations are exposed to AI clients as read-only
+tools: `get_projects`, `get_project`, `get_portfolio`. They reuse the same
+`lifetxt/projects.py` logic as the CLI `project`/`portfolio` commands, so a model
+sees exactly what a person sees, including the transparent progress and health
+formulas.

@@ -1,4 +1,4 @@
-name: Apply verified P0 x105 implementation
+name: Diagnose P0 x105 patch application
 
 on:
   pull_request:
@@ -6,10 +6,10 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
+  diagnose:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/p0-format-contract-batch' }}
     runs-on: ubuntu-latest
     steps:
@@ -17,39 +17,34 @@ jobs:
         with:
           ref: agent/p0-format-contract-batch
           fetch-depth: 0
-      - name: Verify and apply implementation patch
+      - name: Diagnose application stages
         shell: bash
         run: |
-          set -euo pipefail
-          cat > /tmp/parts.sha256 <<'EOF'
-          5ac4e66143b3b470b92a6eebf3be5bcfa20ea820de14c4f6830ea91523bd8caa  .github/agent-patch/part-00
-          c8b31683f0d503fdf426ea92c24a2330542a752e6814335bb6aa762d8e47b00f  .github/agent-patch/part-01
-          b77353d0f15ac2266f91eb22cf019e9be1d1e4bbcce31d4ee8e33e8cefcef0eb  .github/agent-patch/part-02
-          3df138f2e387bdee5be11f29bc03951e43cb905d8fd3423a08f084ad46130ba0  .github/agent-patch/part-03
-          2190bc9e9ce50b1620f87dd9b18bbf5e993a735384b0ccb8f8e4cdeb26d27744  .github/agent-patch/part-04
-          c8a7f19c1d78e080b468ef9f3939797ebcca16242c741931986449cd0d9adaea  .github/agent-patch/part-05
-          b404cc3408895c2b7112508253efb09d99806084d648383d5fc99dd4b69972b2  .github/agent-patch/part-06
-          EOF
-          sha256sum --check /tmp/parts.sha256
-          cat .github/agent-patch/part-* > /tmp/lifetxt-p0-x105.patch.gz.b64
-          echo 'dbd430ac2b17fd7e76f363c374b4977242d0d912969a09ad7f794e40309ca2d7  /tmp/lifetxt-p0-x105.patch.gz.b64' | sha256sum --check
-          base64 -d /tmp/lifetxt-p0-x105.patch.gz.b64 > /tmp/lifetxt-p0-x105.patch.gz
-          echo 'd7852e8f6d3adcf7f86d32470f3864c1dfafa3e34fe1b32d84c2251de89fcad1  /tmp/lifetxt-p0-x105.patch.gz' | sha256sum --check
-          gzip -t /tmp/lifetxt-p0-x105.patch.gz
-          gzip -dc /tmp/lifetxt-p0-x105.patch.gz > /tmp/lifetxt-p0-x105.patch
-          echo '0155900d527cd2a3eb24a73ad50b818b45f9bf8ac048ec67472c77e6b3277615  /tmp/lifetxt-p0-x105.patch' | sha256sum --check
-          git apply --check /tmp/lifetxt-p0-x105.patch
-          git apply --index /tmp/lifetxt-p0-x105.patch
-          rm -rf .github/agent-patch
-          rm -f .github/agent-probe.txt
-          rm -f .github/workflows/agent-source-export.yml
-          git add -A
-          git diff --cached --check
-      - name: Commit and push implementation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Add safe process boundaries and transaction administration'
-          git push origin HEAD:agent/p0-format-contract-batch
+          set +e
+          REPORT=/tmp/p0-apply-diagnostic.txt
+          : > "$REPORT"
+          run_stage() {
+            name="$1"; shift
+            echo "== $name ==" >> "$REPORT"
+            "$@" >> "$REPORT" 2>&1
+            code=$?
+            echo "exit=$code" >> "$REPORT"
+            return 0
+          }
+          run_stage part_hashes sha256sum .github/agent-patch/part-00 .github/agent-patch/part-01 .github/agent-patch/part-02 .github/agent-patch/part-03 .github/agent-patch/part-04 .github/agent-patch/part-05 .github/agent-patch/part-06
+          cat .github/agent-patch/part-* > /tmp/joined.b64
+          run_stage joined_hash sha256sum /tmp/joined.b64
+          run_stage decode base64 -d /tmp/joined.b64
+          base64 -d /tmp/joined.b64 > /tmp/patch.gz 2>> "$REPORT"
+          run_stage gzip_hash sha256sum /tmp/patch.gz
+          run_stage gzip_test gzip -t /tmp/patch.gz
+          gzip -dc /tmp/patch.gz > /tmp/patch 2>> "$REPORT"
+          run_stage patch_hash sha256sum /tmp/patch
+          run_stage apply_check git apply --check --verbose /tmp/patch
+          run_stage status git status --short
+          cat "$REPORT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p0-x105-apply-diagnostic
+          path: /tmp/p0-apply-diagnostic.txt
+          if-no-files-found: error

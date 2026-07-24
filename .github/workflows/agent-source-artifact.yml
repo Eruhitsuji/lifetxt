@@ -1,4 +1,4 @@
-name: Inspect final PR13 repair patch
+name: Export truncated PR13 repair part
 
 on:
   pull_request:
@@ -9,23 +9,15 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  export:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/repair-pr13-implementation' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/repair-pr13-implementation
-      - name: Record final repair patch metadata
-        run: |
-          {
-            echo 'sha256:'
-            sha256sum .github/repair-patch/part-*
-            echo 'bytes:'
-            wc -c .github/repair-patch/part-*
-          } > /tmp/final-repair-patch-metadata.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: final-repair-patch-metadata
-          path: /tmp/final-repair-patch-metadata.txt
+          name: repair-part-04a0
+          path: .github/repair-patch/part-04a0
           if-no-files-found: error

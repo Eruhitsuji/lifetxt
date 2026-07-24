@@ -1,0 +1,23 @@
+name: Agent source artifact
+
+on:
+  push:
+    branches:
+      - agent/p0-write-attachment-retention
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive repository source
+        run: |
+          tar --exclude=.git -czf /tmp/lifetxt-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lifetxt-source-p13
+          path: /tmp/lifetxt-source.tar.gz
+          if-no-files-found: error

@@ -122,8 +122,35 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     app.state.writable_path = writable_path or app.state.paths[0]
     app.state.config = config or {}
     app.state.read_only = read_only
+    transactions_config = app.state.config.get("transactions") if isinstance(app.state.config.get("transactions"), dict) else {}
+    if not read_only and transactions_config.get("preflight_on_startup"):
+        from .transaction_admin import preflight_report
+        from .transaction_journal import journal_directory
+        report = preflight_report(
+            journal_directory(config=app.state.config, writable_path=app.state.writable_path),
+            config=app.state.config,
+            create=True,
+        )
+        if not report["ok"]:
+            raise RuntimeError("Transaction startup preflight failed: %s" % "; ".join(report["errors"]))
+    app.state.transaction_preflight = None if read_only else (report if transactions_config.get("preflight_on_startup") else None)
 
     _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line", "/api/items/parse"})
+
+    @app.get("/api/time")
+    def get_time(client_time=None):
+        from .clock_skew import clock_skew_report
+        return clock_skew_report(client_time, config=app.state.config)
+
+    @app.get("/api/transactions/preflight")
+    def get_transaction_preflight(create=False):
+        from .transaction_admin import preflight_report
+        from .transaction_journal import journal_directory
+        return preflight_report(
+            journal_directory(config=app.state.config, writable_path=app.state.writable_path),
+            config=app.state.config,
+            create=bool(create and not app.state.read_only),
+        )
 
     if read_only:
         @app.middleware("http")

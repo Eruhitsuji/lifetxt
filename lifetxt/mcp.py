@@ -73,6 +73,18 @@ class McpContext:
         self.paths = normalize_server_paths(configured_paths)
         self.writable_path = writable_path or config_write_file(self.config) or self.paths[0]
         self.read_only = bool(read_only)
+        transactions_config = self.config.get("transactions") if isinstance(self.config.get("transactions"), dict) else {}
+        self.transaction_preflight = None
+        if not self.read_only and transactions_config.get("preflight_on_startup"):
+            from .transaction_admin import preflight_report
+            from .transaction_journal import journal_directory
+            self.transaction_preflight = preflight_report(
+                journal_directory(config=self.config, writable_path=self.writable_path),
+                config=self.config,
+                create=True,
+            )
+            if not self.transaction_preflight["ok"]:
+                raise RuntimeError("Transaction startup preflight failed: %s" % "; ".join(self.transaction_preflight["errors"]))
 
     @classmethod
     def from_args(cls, args):
@@ -183,7 +195,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_status", "parse_shorthand", "timer_status", "check_files",
         "complete", "attachment_state",
         "get_projects", "get_project", "get_portfolio", "get_command_center",
-        "get_areas", "get_backlinks",
+        "get_areas", "get_backlinks", "get_clock_status",
     ]
 )
 
@@ -681,6 +693,12 @@ def _tool_schemas():
             "Items that reference a given ID through parent/ref/depends_on/blocks/related.",
             {"id": _string("Target item ID.")},
             required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "get_clock_status",
+            "Report server-authoritative UTC time and optional client clock skew.",
+            {"client_time": _string("ISO-8601 timestamp with UTC offset.")},
             read_only=True,
         ),
     ]
@@ -2267,6 +2285,11 @@ def _tool_get_backlinks(args, context):
     return {"target_id": target, "count": len(records), "backlinks": records}
 
 
+def _tool_get_clock_status(args, context):
+    from .clock_skew import clock_skew_report
+    return clock_skew_report(args.get("client_time"), config=context.config)
+
+
 def _tool_get_file_state(_args, context):
     """Paths, write target, read-only flag, and content hashes.
 
@@ -2336,6 +2359,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_command_center", _tool_get_command_center),
         ("get_areas", _tool_get_areas),
         ("get_backlinks", _tool_get_backlinks),
+        ("get_clock_status", _tool_get_clock_status),
     ]
 )
 

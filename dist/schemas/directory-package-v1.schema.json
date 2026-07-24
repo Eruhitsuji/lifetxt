@@ -1,0 +1,59 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/directory-package-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "file_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "files": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "size",
+          "sha256"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "package_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "package_version": {
+      "const": 1
+    },
+    "source": {
+      "type": "string"
+    },
+    "total_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "package_version",
+    "file_count",
+    "total_bytes",
+    "files",
+    "package_sha256"
+  ],
+  "title": "lifetxt deterministic directory package v1",
+  "type": "object"
+}

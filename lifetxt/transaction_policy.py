@@ -41,6 +41,31 @@ def fault_point(point, **details):
 def policy_from_config(config=None):
     config = config or {}
     raw = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    policy_file = raw.get("policy_file")
+    if policy_file:
+        absolute = os.path.abspath(os.path.expanduser(str(policy_file)))
+        if os.path.isfile(absolute):
+            try:
+                with open(absolute, "r", encoding="utf-8") as handle:
+                    document = json.load(handle)
+                version = int(document.get("policy_version", 0)) if isinstance(document, dict) else 0
+                if version > 1:
+                    raise TransactionPolicyError(
+                        "Transaction policy version %d is newer than supported version 1." % version
+                    )
+                if version < 1:
+                    raise TransactionPolicyError(
+                        "Transaction policy file requires migration to version 1: %s" % absolute
+                    )
+                stored = document.get("policy")
+                if isinstance(stored, dict):
+                    merged = dict(raw)
+                    merged.update(stored)
+                    raw = merged
+            except (OSError, ValueError, TypeError) as exc:
+                raise TransactionPolicyError(
+                    "Cannot load transaction policy file %s: %s" % (absolute, exc)
+                )
     return OrderedDict(
         (
             ("terminal_retention_days", _number(raw.get("terminal_retention_days"), 30.0, minimum=0.0)),

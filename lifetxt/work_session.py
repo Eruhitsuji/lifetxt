@@ -139,7 +139,7 @@ def stop_work_transaction(
     timer_path = timer_state_file(config)
     timer_snapshot = mutation.read_text_snapshot(timer_path, allow_missing=True)
     if not timer_snapshot.exists:
-        raise ValueError("No running timer.")
+        raise ValueError("No running timer. Start one with `lifetxt start PATH ID`.")
     state = _state_from_snapshot(timer_snapshot)
     resolved_path = path or state.get("file")
     if not resolved_path:

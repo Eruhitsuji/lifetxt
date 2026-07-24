@@ -6,15 +6,6 @@ from .model import Diagnostic, Item
 from .parser import parse_line, parse_text
 from .serializer import item_to_line, items_to_json, items_to_jsonl
 
-# Keep the one remaining pre-atomic direct writer on the same shared mutation
-# contract as CLI, TUI, Web, MCP, timer, and notification writes.  This is a
-# compatibility bridge; command-focused modules can import mutation directly
-# when the planned CLI/TUI split happens.
-from .compat_writes import install_legacy_write_routes as _install_legacy_write_routes
-
-_install_legacy_write_routes()
-del _install_legacy_write_routes
-
 # Connect the shared CAS layer to public Web and MCP requests. Installation is
 # dependency-free: FastAPI is still imported only when create_app() is called.
 from .surface_runtime import install_runtime_contracts as _install_runtime_contracts
@@ -64,6 +55,9 @@ from .safety_compat_v2 import install_safety_compat_v2 as _install_safety_compat
 _install_runtime_safety_v2()
 _install_schema_validation_v2()
 _install_safety_compat_v2()
+from .schema_extensions_v4 import install_schema_extensions_v4 as _install_schema_extensions_v4
+_install_schema_extensions_v4()
+del _install_schema_extensions_v4
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

@@ -6,7 +6,7 @@ import importlib.util
 import os
 
 from .revision_telemetry import store_from_config
-from .transaction_journal import cleanup_terminal, inspect_journal, journal_directory, list_journals
+from .transaction_journal import cleanup_terminal, inspect_journal, journal_directory, journal_policy_report, list_journals
 from .safety_foundation import inspect_locks, read_text_exact, serve_target_diagnostic
 from .timezone_policy import policy_report
 from .workspace_diagnostics import workspace_diagnostics
@@ -55,6 +55,12 @@ def doctor_report(
     resolved_journal_dir = os.path.abspath(
         journal_dir or journal_directory(config, writable_path=write_path or None)
     )
+    transaction_section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    configured_backups = transaction_section.get("backup_dirs") or []
+    if isinstance(configured_backups, str):
+        configured_backups = [configured_backups]
+    transaction_backup_paths = [os.path.abspath(os.path.expanduser(str(value))) for value in configured_backups]
+    transaction_policy = journal_policy_report(resolved_journal_dir, config=config)
     transaction_rows = list_journals(resolved_journal_dir, include_terminal=True)
     transaction_details = []
     for row in transaction_rows:
@@ -71,6 +77,7 @@ def doctor_report(
         resolved_journal_dir,
         older_than_days=transaction_retention_days,
         force=bool(force and cleanup_transactions),
+        config=config,
     ) if cleanup_transactions else {
         "journal_dir": resolved_journal_dir,
         "requested": False,
@@ -94,6 +101,8 @@ def doctor_report(
         write_path=write_path,
         revision_metrics_path=store.path,
         journal_dir=resolved_journal_dir,
+        config=config,
+        transaction_backup_paths=transaction_backup_paths,
     )
     dependencies = optional_dependency_report()
     hard_failures = []
@@ -109,6 +118,8 @@ def doctor_report(
         hard_failures.append("transaction_cleanup")
     if any(row.get("recovery_required") or row.get("state") == "corrupt" for row in transaction_details):
         hard_failures.append("transaction_recovery")
+    if not transaction_policy.get("ok"):
+        hard_failures.append("transaction_policy")
     return {
         "ok": not hard_failures,
         "hard_failures": hard_failures,
@@ -136,6 +147,8 @@ def doctor_report(
             ),
             "records": transaction_details,
             "cleanup": transaction_cleanup,
+            "policy": transaction_policy,
+            "backup_paths": transaction_backup_paths,
         },
         "optional_dependencies": dependencies,
     }

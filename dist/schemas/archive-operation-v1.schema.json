@@ -1,0 +1,65 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/archive-operation-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "destination": {
+      "type": "string"
+    },
+    "item_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "mode": {
+      "enum": [
+        "copy",
+        "move"
+      ]
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "after_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "before_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "before_revision",
+          "after_revision",
+          "created",
+          "deleted"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "transaction_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode",
+    "item_count",
+    "destination",
+    "transaction_id",
+    "targets"
+  ],
+  "title": "lifetxt journal-backed archive operation v1",
+  "type": "object"
+}

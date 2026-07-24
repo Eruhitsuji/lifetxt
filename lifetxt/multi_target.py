@@ -94,6 +94,8 @@ def apply_multi_target(
     journal_dir=None,
     journal=True,
     transaction_id=None,
+    config=None,
+    transaction_policy=None,
 ):
     """Stage and commit all plans, compensating any partial commit on failure."""
     plans = list(plans or [])
@@ -128,13 +130,18 @@ def apply_multi_target(
                 staged,
                 resolved_journal_dir,
                 transaction_id_value=transaction_id,
+                config=config,
+                policy=transaction_policy,
             )
             journal_handle.set_state("committing")
         try:
             for index, row in enumerate(staged):
                 if failure_hook is not None:
                     failure_hook("before_commit", row["plan"], index)
+                from .transaction_policy import fault_point
+                fault_point("before_target_commit", path=row["plan"].path, index=index, operation=operation)
                 _commit_staged(row)
+                fault_point("after_target_commit", path=row["plan"].path, index=index, operation=operation)
                 committed.append(row)
                 if journal_handle is not None:
                     journal_handle.mark_target(index, commit_state="committed")
@@ -237,6 +244,7 @@ def timer_and_item_transaction(
     timer_delete=False,
     journal_dir=None,
     transaction_id=None,
+    config=None,
 ):
     """Commit timer JSON state and associated life.txt semantic change together."""
     timer_plan = (
@@ -264,6 +272,7 @@ def timer_and_item_transaction(
         operation=operation,
         journal_dir=journal_dir,
         transaction_id=transaction_id,
+        config=config,
     )
 
 
@@ -275,6 +284,7 @@ def attachment_and_item_transaction(
     operation="attachment_and_item",
     journal_dir=None,
     transaction_id=None,
+    config=None,
 ):
     """Commit an attachment create/update/delete and its life.txt reference together."""
     if not isinstance(attachment_plan, TargetPlan) or attachment_plan.kind != "bytes":
@@ -293,6 +303,7 @@ def attachment_and_item_transaction(
         operation=operation,
         journal_dir=journal_dir,
         transaction_id=transaction_id,
+        config=config,
     )
 
 

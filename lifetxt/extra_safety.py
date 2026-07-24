@@ -11,8 +11,8 @@ from .extra_common import _json_text, _load_config, _resolved_input_paths, _writ
 from .release_policy import release_gate
 from .revision_telemetry import RevisionMetricsStore, store_from_config
 from .transaction_journal import (
-    abandon_with_backup, cleanup_terminal, compensate, export_evidence,
-    inspect_journal, journal_directory, list_journals, resume,
+    abandon_with_backup, archive_terminal, cleanup_terminal, compensate, export_evidence,
+    inspect_journal, journal_directory, journal_policy_report, list_journals, resume, verify_backup,
 )
 from .safety_foundation import (
     CANON_VERSION,
@@ -122,11 +122,27 @@ def command_safety(args, config_data):
                 raise ValueError("transactions export requires --journal and --output.")
             report = export_evidence(journal, args.output)
             args.output = None
+        elif tx_action == "policy":
+            report = journal_policy_report(root, config=config_data)
+        elif tx_action == "archive":
+            if not getattr(args, "archive_dir", None):
+                raise ValueError("transactions archive requires --archive-dir.")
+            report = archive_terminal(
+                root, args.archive_dir,
+                older_than_days=getattr(args, "older_than_days", None)
+                if getattr(args, "older_than_days", None) is not None else 30.0,
+                force=bool(getattr(args, "force", False)),
+            )
+        elif tx_action == "verify-backup":
+            if not getattr(args, "backup_dir", None):
+                raise ValueError("transactions verify-backup requires --backup-dir.")
+            report = verify_backup(args.backup_dir)
         else:
             report = cleanup_terminal(
                 root,
-                older_than_days=getattr(args, "older_than_days", 30.0),
+                older_than_days=getattr(args, "older_than_days", None),
                 force=bool(getattr(args, "force", False)),
+                config=config_data,
             )
         failure = bool(report.get("recovery_required") or report.get("errors"))
         return _output(report, args, failure=failure)

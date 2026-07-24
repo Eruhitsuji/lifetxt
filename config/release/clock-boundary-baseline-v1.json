@@ -1,0 +1,69 @@
+{
+  "baseline_version": 1,
+  "description": "Reviewed direct host-clock boundaries. Workflow-facing date/time decisions must use lifetxt.timezone_policy; only operational, compatibility, animation, and timezone-foundation calls are allowed here.",
+  "allowed": [
+    {
+      "path": "lifetxt/mutation.py",
+      "call": "time.time",
+      "classification": "operational-lock",
+      "reason": "Lock token uniqueness and stale-lock age use wall-clock seconds; they do not select life.txt workflow dates.",
+      "removal_condition": "Replace with an injected operational clock only if lock testing needs cross-process deterministic time."
+    },
+    {
+      "path": "lifetxt/mutation.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-audit",
+      "reason": "Lock metadata records UTC creation evidence and is not a user-facing workflow timestamp.",
+      "removal_condition": "Move to a shared operational UTC clock when audit event infrastructure is introduced."
+    },
+    {
+      "path": "lifetxt/revision_telemetry.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-telemetry",
+      "reason": "Revision migration observation windows and evidence timestamps are UTC operational telemetry.",
+      "removal_condition": "Inject the operational UTC clock when telemetry persistence gains a pluggable backend."
+    },
+    {
+      "path": "lifetxt/safety_foundation.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-diagnostics",
+      "reason": "Lock-age inspection and host timezone discovery report environment state rather than choosing workflow dates.",
+      "removal_condition": "Split lock inspection and host-zone discovery into injectable platform adapters."
+    },
+    {
+      "path": "lifetxt/surface_runtime_compat.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-compatibility",
+      "reason": "Legacy revision fallback telemetry records a UTC last-used time during the compatibility window.",
+      "removal_condition": "Delete with the observe-mode compatibility fallback."
+    },
+    {
+      "path": "lifetxt/timeutil.py",
+      "call": "datetime.now",
+      "classification": "compatibility-parsing",
+      "reason": "Legacy time-only parsing anchors values for callers that have not supplied the shared timezone date context.",
+      "removal_condition": "Remove after every public caller supplies an explicit anchor date through timezone_policy."
+    },
+    {
+      "path": "lifetxt/timezone_policy.py",
+      "call": "datetime.datetime.now",
+      "classification": "timezone-foundation",
+      "reason": "This is the authoritative injectable boundary used by all workflow-facing clock helpers and host-zone fallback.",
+      "removal_condition": "None; this is the approved clock foundation."
+    },
+    {
+      "path": "lifetxt/transaction_journal.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-recovery",
+      "reason": "Journal creation, terminal retention, and evidence timestamps are UTC recovery metadata, with explicit now injection supported by policy actions.",
+      "removal_condition": "Route through a shared operational UTC clock when journal backends become pluggable."
+    },
+    {
+      "path": "lifetxt/tui_app.py",
+      "call": "datetime.datetime.now",
+      "classification": "animation",
+      "reason": "The timestamp drives transient TUI animation/toast expiry and never affects persisted records.",
+      "removal_condition": "Use time.monotonic when the TUI renderer is split from workspace state."
+    }
+  ]
+}

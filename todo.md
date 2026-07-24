@@ -1,13 +1,13 @@
 # lifetxt TODO / Roadmap
 
-Last updated: 2026-07-24 (updated x99)
+Last updated: 2026-07-24 (updated x100)
 
-This is the active roadmap after the 2026-07-24 semantic-write, attachment-transaction, compound-work-session, transaction-policy, clock-audit, diagnostics, and schema-contract batch. The batch moved quick capture, quick journal append, archive, undo/restore, tag merge, digest/template append, TUI item edits, and fzf/peco actions onto revision-aware semantic transforms; added journal-backed file attachment create/reference/delete/status operations and compound timer/task/presence work sessions across CLI, Web, and MCP; added configurable transaction retention and size policy, ownership and mode checks, read-only inspection of newer journal versions, evidence archives, backup integrity manifests, and deterministic fault-injection hooks; classified direct host-clock boundaries through a release-gated AST audit; added diagnostics F127-F134; expanded the published Draft 2020-12 schema bundle from 21 to 29 documents; and removed the legacy `compat_writes` module. Completed foundation items are removed. Remaining P0 work now focuses on the real observe-to-required deployment, external-editor and directory/open-reference attachment boundaries, real process and platform fault injection, policy operations and runbook hardening, remote clock-skew behavior, and real terminal/browser/SMTP verification. The previous detailed roadmap remains preserved in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md).
+This is the active roadmap after the 2026-07-24 semantic-write, attachment-transaction, compound-work-session, transaction-policy, clock-audit, diagnostics, and schema-contract batch, followed by the project-management, integration, and configuration roadmap review. The implementation batch moved quick capture, quick journal append, archive, undo/restore, tag merge, digest/template append, TUI item edits, and fzf/peco actions onto revision-aware semantic transforms; added journal-backed file attachment create/reference/delete/status operations and compound timer/task/presence work sessions across CLI, Web, and MCP; added configurable transaction retention and size policy, ownership and mode checks, read-only inspection of newer journal versions, evidence archives, backup integrity manifests, and deterministic fault-injection hooks; classified direct host-clock boundaries through a release-gated AST audit; added diagnostics F127-F134; expanded the published Draft 2020-12 schema bundle from 21 to 29 documents; and removed the legacy `compat_writes` module. The roadmap review adds versioned configuration and named-workspace foundations, stronger project and portfolio workflows, provider-neutral chat/email integration contracts, automatic source discovery through workspace manifests, and configuration documentation as an implementation acceptance criterion. Existing top-level `paths` / `write_file`, SMTP notification, digest delivery, and external-adapter groundwork are treated as foundations to extend rather than missing features to reimplement. Completed foundation items are removed. Remaining P0 work now focuses on the real observe-to-required deployment, external-editor and directory/open-reference attachment boundaries, real process and platform fault injection, policy operations and runbook hardening, remote clock-skew behavior, and real terminal/browser/SMTP verification. The previous detailed roadmap remains preserved in [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md).
 
 Priority guide:
 
 - `P0`: Release-blocking data safety, correctness, migration, and real-environment verification.
-- `P1`: Core format, shared behavior, remote access, messaging, timer/notification behavior, and daily workflow work.
+- `P1`: Core format, configuration/workspace behavior, project management, remote access, integrations, messaging, timer/notification behavior, and daily workflow work.
 - `P2`: Product customization, packaging, documentation, editor support, and maintainability.
 - `Deferred`: Ideas that should wait for a proven use case or a stable foundation.
 
@@ -17,7 +17,8 @@ Design principles:
 - Keep life.txt authoritative and use standard, inspectable interchange formats.
 - Route authoritative writes through validated, atomic, conflict-aware mutation contracts.
 - Treat compensated multi-target commits as an explicit recovery contract, not as portable filesystem-level atomicity.
-- Keep CLI, TUI, Web API, Web UI, MCP, editor support, schemas, and documentation semantically aligned.
+- Keep CLI, TUI, Web API, Web UI, MCP, editor support, schemas, configuration, and documentation semantically aligned.
+- Make effective configuration deterministic, explainable, schema-valid, and safe to migrate before allowing it to control remote access, integrations, or automatic writes.
 - Prefer lifetxt as an action and information hub over copying every external system's full data into life.txt.
 - Treat remote access, integrations, and automation as proposal-producing clients unless a validated write contract permits direct mutation.
 - Treat a successful release gate as evidence, not as permission to ignore known baseline debt.
@@ -30,11 +31,14 @@ Feature-track order after the current P0 foundation:
 3. Complete transaction-policy operations, migration, bounded archival, and the operator recovery runbook.
 4. Expand deterministic timezone fixtures across every public surface and define remote clock-skew handling.
 5. Stabilize Format 1.0, canonical serialization, multi-file semantics, diagnostics, and contract schemas.
-6. Add single-user Remote Safe Mode and read-only remote CLI/TUI access.
-7. Enable conflict-aware remote writes only for operations whose capability entries report complete revision and recovery enforcement.
-8. Add Unified Inbox, daily command-center views, saved views, and life-area navigation.
-9. Add managed groups, multi-recipient messaging, and per-recipient delivery state.
-10. Add Web UI configuration and external adapters only after proposal, audit, permission, and recovery boundaries are stable.
+6. Add versioned configuration, effective-config explanation, named workspaces, and source manifests while preserving top-level `paths` / `write_file` compatibility.
+7. Add project registry metadata, project/portfolio aggregations, milestones, risks, decisions, and shared Project Hub views.
+8. Add single-user Remote Safe Mode and read-only remote CLI/TUI access using the same workspace contract.
+9. Enable conflict-aware remote writes only for operations whose capability entries report complete revision and recovery enforcement.
+10. Add Unified Inbox, daily command-center views, saved views, and life-area navigation.
+11. Add managed groups, multi-recipient messaging, and per-recipient delivery state.
+12. Add the provider-neutral integration contract, then implement Slack and email proposal/output adapters before Teams and Discord.
+13. Add Web UI configuration and richer provider automation only after proposal, audit, permission, credential, and recovery boundaries are stable.
 
 ---
 
@@ -55,11 +59,11 @@ Feature-track order after the current P0 foundation:
 
 ## P1: Format 1.0 and Data Semantics
 
-- [ ] Complete Format 1.0 enforcement beyond the mutation guard. Add parser-level version metadata, explicit `format migrate` and downgrade inspection, consistent unsupported-version errors in CLI/TUI/Web/MCP, newly-created-workspace policy, and a compatibility matrix covering format, canonical, schema, capability, revision, release-policy, and transaction-journal versions.
+- [ ] Complete Format 1.0 enforcement beyond the mutation guard. Add parser-level version metadata, explicit `format migrate` and downgrade inspection, consistent unsupported-version errors in CLI/TUI/Web/MCP, newly-created-workspace policy, and a compatibility matrix covering format, canonical, schema, capability, revision, configuration, release-policy, and transaction-journal versions.
 - [ ] Complete `LIFETXT_CANON_V1`. Define quoting, escaping, detail ordering, repeated-key ordering, continuation representation, comments, directive placement, blank-line behavior, Unicode edge cases, and idempotent serializer output. Add golden input/output/diagnostic fixtures and prohibit intentional output changes without a migration note and corpus-version decision.
 - [ ] Enforce documented multi-file semantics. Make input/glob order deterministic and visible; enforce workspace-wide IDs during every write; define cross-file parent/link/archive/generated-file rules; preserve source metadata; require explicit write targets; and test partial-read, missing-file, permission, and path-alias cases.
-- [ ] Expand the schema bundle beyond the current 29 documents where real contracts exist. Semantic write results, archive operations, attachment transactions, compound work sessions, transaction policy, backup integrity, fault-injection reports, and clock-boundary audit documents are now published and validated. Next add JSONL record schemas, endpoint-specific Web request/response schemas, MCP tool/resource result schemas, query language, configuration, notification backend results, directory attachment packages, policy migration results, and import/export manifests. Generate schemas from authoritative registries where possible and validate real responses rather than hand-written examples alone.
-- [ ] Extend stable diagnostics after F101-F134. Attachment path escape, symlink and executable policy violations, transaction retention and permission problems, unsupported newer journal versions, and incomplete backup integrity are now detected in addition to transaction interruption and divergence. Next add generated-file ownership violations, archive destination policy conflicts, directory-package attachment hazards, MIME-policy mismatches, mixed-source configuration conflicts, schema/capability mismatch, unsupported client and policy versions, failed policy migration, stale evidence archives, remote clock skew, and parser-native precise end spans. Keep diagnostics deterministic and schema-valid.
+- [ ] Expand the schema bundle beyond the current 29 documents where real contracts exist. Semantic write results, archive operations, attachment transactions, compound work sessions, transaction policy, backup integrity, fault-injection reports, and clock-boundary audit documents are now published and validated. Next add JSONL record schemas, endpoint-specific Web request/response schemas, MCP tool/resource result schemas, query language, versioned configuration, workspace source manifests, project registry metadata, normalized integration events, provider operation results, notification backend results, directory attachment packages, policy migration results, and import/export manifests. Generate schemas from authoritative registries where possible and validate real responses rather than hand-written examples alone.
+- [ ] Extend stable diagnostics after F101-F134. Attachment path escape, symlink and executable policy violations, transaction retention and permission problems, unsupported newer journal versions, and incomplete backup integrity are now detected in addition to transaction interruption and divergence. Next add generated-file ownership violations, archive destination policy conflicts, directory-package attachment hazards, MIME-policy mismatches, mixed-source configuration conflicts, configuration/profile/include cycles, schema/capability mismatch, unsupported client and policy versions, failed policy migration, stale evidence archives, remote clock skew, and parser-native precise end spans. Keep diagnostics deterministic and schema-valid.
 - [ ] Route legacy `check --format json` to the stable diagnostic shape. Preserve `source`, `line`, `column`, `span`, `code`, `severity`, `message`, and `hint`; compare CLI/Web/MCP output using the same fixture table; publish compatibility guarantees; and provide a transition period for scripts that consumed the old shape.
 - [ ] Add conservative typo suggestions and `check --fix` only after canonical ordering/quoting is final. Every repair must be revision-checked, idempotent, reviewable as a diff, limited to unambiguous transformations, and disabled for unsupported format versions or interrupted transactions.
 - [ ] Extend the golden-corpus policy when a second released format/corpus version exists. Keep version-1 cases immutable, run all prior corpora against new parsers/serializers/diagnostics, add downgrade expectations, and require explicit migration/release notes before accepting intentional changes.
@@ -68,34 +72,64 @@ Feature-track order after the current P0 foundation:
 
 ## P1: Shared Surface Contracts
 
-- [ ] Expand the registry-backed operation layer into real surface-neutral implementations for query, add, update, delete, done, repeat completion, agenda, next selection, timezone conversion, links, messaging, proposals, saved views, remote access, timer actions, attachments, archive, and undo. Registry rows must identify required revisions, touched targets, validation schema, read-only availability, recovery behavior, and supported surfaces.
+- [ ] Expand the registry-backed operation layer into real surface-neutral implementations for query, add, update, delete, done, repeat completion, agenda, next selection, timezone conversion, links, messaging, proposals, saved views, workspaces, projects, portfolios, integrations, remote access, timer actions, attachments, archive, and undo. Registry rows must identify required revisions, touched targets, validation schema, read-only availability, recovery behavior, and supported surfaces.
 - [ ] Extend public-contract tests through CLI and TUI. Reuse the Web/MCP fixture semantics for create, stale/missing revisions, validation failure, lock timeout, read-only mode, unsupported format, missing capability, proposal staging, compound operations, multi-file partial failure, compensation, interrupted journals, and recovery failure.
 - [ ] Complete the registry-derived command/capability drift gate. Generate CLI/TUI/Web/MCP availability from one registry; validate actual `/api/capabilities`, `get_capabilities`, and `lifetxt://capabilities`; include package/server version and installed/configured optional features; and require a documented exception for every surface mismatch.
 - [ ] Continue reducing the direct-write baseline. Digest/template append operations and fzf item actions now use semantic CAS operations, and obsolete compatibility allowances are removed. Next move every remaining configuration output to the atomic config writer, classify editor handoff and attachment import boundaries explicitly, retain generated-schema output only as a generated artifact, and fail review when an allowance lacks a reason, owner, removal condition, and roadmap item.
 - [ ] Move all extension dispatcher commands into the unified parser registry during the CLI module split. Generated help, shell completion, Web command palette, docs, and capability responses must consume the same option definitions without entrypoint special cases.
 - [ ] Add structured proposal metadata and item-level diffs. Include source, provenance, assumptions, warnings, expected revisions for every target, side-effect plan, permission requirements, validation results, and compensation/recovery plan. Require an expected revision or explicit unsafe override before applying.
-- [ ] Define a shared query language and saved-view schema. Reuse the same grammar and typed diagnostics in CLI, TUI, Web, MCP, remote clients, dashboards, sharing, and automation; define escaping, grouping, date/timezone behavior, unknown fields, ordering, limits, and version migration.
-- [ ] Extend `doctor --workspace-safety` beyond automatic timer/journal discovery, transaction-state summary, attachment checks, transaction-policy checks, backup-integrity checks, terminal-journal cleanup, and redacted support-bundle export. Next discover directory/package attachment state, all configured schema and generated-file locations, remote profiles, policy migration requirements, and remote clock skew; add interactive confirmation for stale-lock and recovery cleanup while retaining explicit `--force` for non-interactive use; validate support bundles against named privacy profiles; and add a bounded, access-controlled archive option for complete recovery evidence.
+- [ ] Define a shared query language and saved-view schema. Reuse the same grammar and typed diagnostics in CLI, TUI, Web, MCP, remote clients, project/portfolio views, dashboards, sharing, and automation; define escaping, grouping, date/timezone behavior, unknown fields, ordering, limits, and version migration.
+- [ ] Extend `doctor --workspace-safety` beyond automatic timer/journal discovery, transaction-state summary, attachment checks, transaction-policy checks, backup-integrity checks, terminal-journal cleanup, and redacted support-bundle export. Next discover directory/package attachment state, every resolved workspace source and write target, duplicate physical paths, configured schema and generated-file locations, remote profiles, integration credentials by reference only, policy migration requirements, and remote clock skew; add interactive confirmation for stale-lock and recovery cleanup while retaining explicit `--force` for non-interactive use; validate support bundles against named privacy profiles; and add a bounded, access-controlled archive option for complete recovery evidence.
 - [ ] Decide which report commands need Web/MCP equivalents from demonstrated daily use. Avoid adding a surface only for symmetry; require a shared operation, schema, and permission model first.
+
+---
+
+## P1: Configuration and Workspace Foundation
+
+The existing top-level `paths` and `write_file` settings already provide basic default input and output selection. This track preserves that behavior as an implicit default workspace and extends it into a versioned, explainable, multi-workspace source manifest rather than introducing a second unrelated loading mechanism.
+
+- [ ] Publish `config-v1.schema.json` with an explicit `config_version`, stable defaults, typed sections, deprecation metadata, secret-reference annotations, restart-required annotations, and migration rules. Reject unsupported future versions for writes while allowing safe read-only inspection and diagnostics.
+- [ ] Define and test one precedence model: built-in defaults, optional user/global config, workspace config, selected profile, environment overrides, and CLI flags. Preserve the existing `--config`, `LIFETXT_CONFIG`, `.lifetxt.json`, and `lifetxt.config.json` discovery contract unless a migration explicitly changes it.
+- [ ] Add named profiles and named local workspaces with an explicit default. Keep legacy top-level `paths` / `write_file` equivalent to `workspaces.default` until the user runs an explicit migration; do not rewrite working configuration automatically.
+- [ ] Replace untyped workspace path arrays internally with a versioned source-manifest model supporting `path`, `role`, `required`, `writable`, `default_visible`, `format`, `priority`, `watch`, `privacy`, `generated_by`, and bounded include/exclude rules. Keep the simple string-array syntax as a compatibility shorthand.
+- [ ] Resolve relative paths against the configuration file directory, not the caller's current directory. Make glob expansion order deterministic and visible; detect duplicate physical files, path aliases, symlink loops, outside-root paths, generated/archive write targets, missing required sources, and excessive source counts or total size.
+- [ ] Add `lifetxt workspace list|show|files|validate|doctor` and `--workspace NAME` across applicable CLI/TUI commands. `workspace files --resolved` must show role, mode, originating config entry, resolved path, matched glob, and why a source is included or excluded.
+- [ ] Add `lifetxt config check|explain|effective|sources|migrate|get|set|unset`. `config effective` must show the final value and provenance for every overridden key without exposing secret values; `config explain PATH` must use the same registry/schema metadata as generated documentation.
+- [ ] Route `config set`, `config unset`, migrations, Web settings, and other configuration writes through a dedicated atomic revision-aware config writer. Validate before commit, preserve permissions where supported, retain a bounded backup/recovery record, and reject stale or unsupported-version updates.
+- [ ] Define a credential policy that allows environment-variable names or OS credential references but rejects committed plaintext tokens/passwords for supported secret fields. Redact effective config, logs, diagnostics, exports, and support bundles consistently.
+- [ ] Add schema-valid examples for personal, work, multi-file project, generated-calendar, team, remote, kiosk, and integration workspaces. Test precedence, migration, Windows/POSIX paths, Unicode, broken JSON, unknown/deprecated keys, cycles, missing files, glob order, and rollback after interrupted config updates.
+
+---
+
+## P1: Project and Portfolio Management
+
+- [ ] Define project metadata using existing Note/Journal records plus stable IDs and documented custom keys before adding a new item type. Specify `record:project`, project state, owner, area, start/due dates, links, privacy, and archive behavior while keeping normal `project:` task references compatible.
+- [ ] Add a schema-backed project registry for static metadata such as display name, aliases, default workspace/source, default assignee, default area, templates, and visibility. Keep changing progress, risks, decisions, and activity in life.txt records rather than configuration.
+- [ ] Add shared `project list|show|health|timeline|workload|risks|archive` operations and expose them consistently through CLI, TUI, Web, MCP, saved views, and remote read-only clients where capabilities permit.
+- [ ] Build one Project Hub aggregation for overview, milestones, open/overdue/blocked work, assignee workload, elapsed time, recent decisions, meetings, risks/issues, messages, attachments, links, and activity without duplicating source records.
+- [ ] Add a Portfolio view that compares projects by state, transparent progress calculation, overdue and blocked counts, milestone health, risk severity, owner, area, and workload. Every derived score must expose its formula and missing-data limitations.
+- [ ] Standardize milestone, risk, issue, decision, and meeting workflows using existing Deadline/Note/Journal records and stable links. Provide templates and validation for severity, owner, decision date, follow-up date, affected milestone, and resolution state.
+- [ ] Define project creation and archive workflows that can create or select a configured source file, apply a template, add project metadata, and update references through the workspace transaction/recovery contract. Never create a write target that is not permitted by the resolved source manifest.
+- [ ] Add project permissions and privacy behavior for remote workspaces, team views, integrations, exports, AI context, and notifications. Tests must cover aliases, duplicate project definitions, missing registries, cross-file tasks, archived projects, renamed projects, stale revisions, partial transactions, and mixed private/shared records.
 
 ---
 
 ## P1: Remote Safe Mode and Remote Workspace Access
 
-This track starts only after revision migration, authoritative write routing, stable schemas, and the public-deployment security review are complete. The first release is single-user and does not attempt offline synchronization or automatic merging.
+This track starts only after revision migration, authoritative write routing, stable schemas, versioned configuration/workspaces, and the public-deployment security review are complete. The first release is single-user and does not attempt offline synchronization or automatic merging.
 
 - [ ] Add single-user Remote Safe Mode with password login and/or trusted reverse-proxy authentication while retaining scoped token authentication for API clients.
 - [ ] Use secure server-side sessions, protected cookies, CSRF protection for browser writes, login throttling, session expiration/revocation, security headers, environment-backed secrets, and auditable authentication events.
-- [ ] Derive capability optional-feature availability from installed dependencies and configuration. Include package/server/policy/schema/transaction versions and publish older-client compatibility rules.
+- [ ] Derive capability optional-feature availability from installed dependencies and configuration. Include package/server/policy/schema/transaction/configuration versions and publish older-client compatibility rules.
 - [ ] Define a shared `WorkspaceBackend` interface with `LocalFileBackend` and `RemoteApiBackend` so CLI/TUI commands do not reimplement local-versus-remote behavior.
 - [ ] Add `lifetxt remote add|list|show|test|remove NAME`. Store non-secret profile values under the published remote-profile schema and reference credentials through environment variables or OS credential facilities.
-- [ ] Add read-only remote operations for list, show, filter, agenda, next, review, messages, status, links, graph, diagnostics, completion, and doctor compatibility inspection.
+- [ ] Add read-only remote operations for list, show, filter, agenda, next, review, messages, status, links, graph, diagnostics, completion, projects, portfolios, workspace source inspection, and doctor compatibility inspection.
 - [ ] Add `lifetxt tui --remote NAME` with read-only browsing first. Reuse normal TUI rendering, commands, timezone context, diagnostics, and capability negotiation.
-- [ ] Add conflict-aware remote create/update/delete/done/message/status/acknowledgement only after observe mode is retired. Defer timer, attachment, archive, and undo remote writes until capability entries report complete multi-target and recovery enforcement.
+- [ ] Add conflict-aware remote create/update/delete/done/message/status/acknowledgement only after observe mode is retired. Defer timer, attachment, archive, project creation/archive, workspace configuration, and undo remote writes until capability entries report complete multi-target and recovery enforcement.
 - [ ] Validate remote conflicts against `conflict-v1.schema.json` and show expected revision, current revision, current item, and attempted change. Never overwrite automatically or call a comparison a three-way merge without a retained base.
 - [ ] Start refresh with explicit reload and bounded polling. Add SSE/WebSocket only after reconnect, ordering, backpressure, and missed-event behavior are specified and polling is demonstrably inadequate.
 - [ ] Keep remote/local transfer explicit through export, copy, or proposal import. Do not add background bidirectional synchronization in this track.
-- [ ] Add diagnostics for TLS, authentication, clock skew, schema/capability mismatch, read-only mode, proxy configuration, ETag removal/rewrite, transaction-version mismatch, and server recovery state.
+- [ ] Add diagnostics for TLS, authentication, clock skew, schema/capability/configuration mismatch, read-only mode, proxy configuration, ETag removal/rewrite, transaction-version mismatch, and server recovery state.
 - [ ] Test remote CLI/TUI against stale revisions, expired sessions, interruption, retries, multi-file workspaces, older servers, required mode, proxies that alter ETags, and servers recovering an interrupted transaction.
 
 ---
@@ -116,20 +150,34 @@ This track starts only after revision migration, authoritative write routing, st
 
 ---
 
+## P1: Integration Adapter Foundation
+
+- [ ] Publish a normalized integration-event schema and a provider capability model for inbound messages/events, outbound messages/actions, thread/reply references, attachments, acknowledgement, health, and cursor state. Preserve provider IDs and provenance without treating provider-specific payloads as life.txt syntax.
+- [ ] Define one `IntegrationAdapter` contract for receive, normalize, preview, stage proposal, send, acknowledge, health, and capabilities. Inbound changes must default to reviewable Unified Inbox proposals unless an allow-listed operation has explicit direct-write permission and recovery semantics.
+- [ ] Add idempotency keys, provider cursors, duplicate suppression, bounded retry/backoff, rate-limit handling, partial-failure reporting, dead-letter inspection, restart-safe state, and redacted audit events. Provider outages must not block unrelated local lifetxt operations.
+- [ ] Keep credentials outside life.txt and plaintext configuration. Store only environment-variable or OS credential references, define token scopes and rotation checks, and ensure logs, effective config, diagnostics, exports, and support bundles never expose secrets.
+- [ ] Add schema-validated mapping rules for provider account/workspace/channel/user/group/thread to lifetxt workspace, project, area, recipient, tags, and proposal policy. Detect ambiguous identity mappings and require preview before broad rule activation.
+- [ ] Implement Slack and email first because existing digest/SMTP foundations can validate the outbound contract. For Slack, cover channel input, message output, thread replies, user/group mapping, and digest delivery. For email, cover SMTP output, IMAP or provider-API input, thread/message IDs, sender/subject rules, reply behavior, and safe attachment references.
+- [ ] Implement Discord and Teams only after the common contract and Slack/email operational evidence are stable. Cover webhook/bot or API capability differences, channel/team mapping, replies, rate limits, permission scopes, and provider-specific unsupported operations without faking symmetry.
+- [ ] Keep external attachments reference-first. Copy or transform content only through the attachment transaction, MIME, size, privacy, permission, and recovery policies; never silently mirror an entire mailbox or chat history.
+- [ ] Add `integration list|show|test|pull|preview|send|health` and expose configured/installed capability state through doctor, Web administration, and MCP without returning credentials. Add fixtures and provider sandboxes/mocks for duplicate delivery, cursor reset, rate limits, revoked credentials, partial send, malformed payloads, restart, and proposal approval conflicts.
+
+---
+
 ## P1: Life Hub and Information Unification
 
-- [ ] Add a Unified Inbox for quick capture, Web Share Target, MCP suggestions, remote changes, and external imports as reviewable proposals with source, provenance, assumptions, warnings, schemas, and item-level diffs.
+- [ ] Add a Unified Inbox for quick capture, Web Share Target, MCP suggestions, remote changes, and normalized external integration events as reviewable proposals with source, provenance, assumptions, warnings, schemas, and item-level diffs.
 - [ ] Add accept, edit, reject, defer, and atomic batch-apply actions. Accepted batches must pass permission, validation, expected-revision, multi-target, and recovery checks.
-- [ ] Add one daily command-center aggregation used by `today`, morning/evening briefs, TUI, Web Dashboard, and remote clients. Include agenda, overdue/due-today, timers, unacknowledged messages, habits, waiting work, recent captures, and safety warnings.
+- [ ] Add one daily command-center aggregation used by `today`, morning/evening briefs, TUI, Web Dashboard, and remote clients. Include agenda, overdue/due-today, timers, unacknowledged messages, habits, waiting work, project milestones/risks, recent captures, and safety warnings.
 - [ ] Define optional `area:` above `project:` with custom-key compatibility, filtering, completion, saved views, validation, and documentation before treating it as core.
 - [ ] Provide area presets only as examples (`work`, `research`, `health`, `home`, `finance`, `family`, `learning`), never as a mandatory taxonomy.
 - [ ] Add person/group overview views collecting assigned work, meetings, messages, presence, projects, waiting items, links, and memberships without duplicating records.
 - [ ] Add decision and meeting workflows using Note/Journal records and stable links before considering new item types. Provide templates for agenda, decisions, actions, unresolved questions, owners, and follow-up dates.
-- [ ] Add backlinks and related navigation across parent/ref/depends_on/blocks/related, messages, decisions, meetings, people, groups, attachments, and external URLs.
+- [ ] Add backlinks and related navigation across parent/ref/depends_on/blocks/related, messages, decisions, meetings, people, groups, attachments, projects, milestones, risks, and external URLs.
 - [ ] Expand global search across title, details, body, threads, attachment names, people, groups, projects, areas, decisions, URLs, and proposal metadata. Keep direct scanning until benchmarks justify an index.
-- [ ] Add declarative automation only after proposals, audit logs, permissions, conflict-aware writes, and transaction recovery are stable. Use allow-listed triggers/actions and never execute arbitrary code.
-- [ ] Add external adapters incrementally for email, calendar, GitHub, Slack, Teams, Discord, browser capture, and mobile sharing. Default changes to proposals and store references/summaries when another system remains authoritative.
-- [ ] Add privacy controls and redaction for personal, health, finance, family, and work data in shared views, remote responses, AI context, exports, support bundles, telemetry, and notifications.
+- [ ] Add declarative automation only after proposals, audit logs, permissions, conflict-aware writes, transaction recovery, integration idempotency, and credential boundaries are stable. Use allow-listed triggers/actions and never execute arbitrary code.
+- [ ] Consume provider integrations through the normalized adapter contract. Store references/summaries when email, calendar, GitHub, Slack, Teams, Discord, browser capture, or mobile sharing remains authoritative, and make every external side effect previewable and auditable.
+- [ ] Add privacy controls and redaction for personal, health, finance, family, and work data in shared views, remote responses, AI context, exports, support bundles, telemetry, integrations, and notifications.
 
 ---
 
@@ -139,14 +187,14 @@ This track starts only after revision migration, authoritative write routing, st
 - [ ] Define one timer state model for start, stop, pause, resume, cancel, crash recovery, stale detection, associated items, timezone behavior, and schema versioning.
 - [ ] Complete timer capability enforcement after the implemented journal-backed start, stop, pause, resume, and cancel paths. Migrate compound work-session operations, define stale-state and restart semantics for every action, validate actual CLI/Web/MCP responses against `timer-operation-v1.schema.json`, and set capability enforcement true only when every advertised timer route exposes revisions and recovery behavior.
 - [ ] Decide whether alarm, Pomodoro, and timer logging belong in core or remain delegated to OS tools based on real usage and notification-backend maturity.
-- [ ] Add a notification backend abstraction for terminal, Linux, macOS, Windows, email, and Web delivery with typed results and redacted diagnostics.
-- [ ] Add quiet hours, persisted acknowledgement, recurring-reminder acknowledgement, shared snooze presets, timezone-aware scheduling, retry policy, and restart-safe watcher state.
+- [ ] Add a notification backend abstraction for terminal, Linux, macOS, Windows, email, Web, Slack, Teams, and Discord delivery with typed results, provider capability checks, and redacted diagnostics.
+- [ ] Add quiet hours, persisted acknowledgement, recurring-reminder acknowledgement, shared snooze presets, timezone-aware scheduling, retry policy, restart-safe watcher state, and provider-specific rate-limit handling.
 
 ---
 
 ## P1: Workflow Follow-ups
 
-- [ ] Expand deterministic-clock coverage beyond the implemented clock context and timer/time-only cases. Add one shared table for `next`, standup, invoice, review selectors, workload, journal defaults, notification watchers, completion dates, recurrence, ICS conversion, Web dashboard ranges, MCP resources, and TUI commands across midnight, DST, non-hour offsets, and remote clock skew.
+- [ ] Expand deterministic-clock coverage beyond the implemented clock context and timer/time-only cases. Add one shared table for `next`, standup, invoice, review selectors, workload, journal defaults, notification watchers, completion dates, recurrence, ICS conversion, Web dashboard ranges, MCP resources, TUI commands, project/portfolio reports, and integration timestamps across midnight, DST, non-hour offsets, and remote clock skew.
 - [ ] Add `next --explain` showing selection reasons and exclusions caused by blockers, deferred state, someday classification, user/project/context filters, or missing capabilities.
 - [ ] Add invoice policy documentation and fixtures for rounding, rates, currencies, missing projects, malformed elapsed values, and timezone/date-boundary behavior.
 - [ ] Add standup team mode only after per-user output is stable; retain a script-friendly schema.
@@ -166,16 +214,16 @@ This track starts only after revision migration, authoritative write routing, st
 
 ## P2: Web UI Customization
 
-- [ ] Add a schema-validated Web settings UI for supported `web.*` values with defaults, reset, preview, and restart-required indicators.
+- [ ] Add a schema-validated Web settings UI backed by the shared configuration registry for supported `web.*` values with defaults, provenance, reset, preview, validation diagnostics, and restart-required indicators.
 - [ ] Make navigation configurable: visible views, order, default view, role/device presets, mobile navigation, and administrative-only surfaces.
 - [ ] Add allow-listed custom dashboard cards using the shared saved-view/query model with title, query, grouping, range, limit, width, and display mode.
 - [ ] Add drag/drop card ordering and add/remove controls while keeping text configuration authoritative and exportable.
 - [ ] Add configurable Items columns, order, density, sorting, grouping, and type-specific fields.
 - [ ] Add configurable quick-add defaults, date formats, week start, icons, semantic colors, and view-specific empty states.
 - [ ] Add desktop/mobile previews and versioned configuration import/export with migration diagnostics.
-- [ ] Add personal, work, team-board, kiosk, and mobile-capture presets composed from normal settings.
+- [ ] Add personal, work, project, portfolio, team-board, kiosk, and mobile-capture presets composed from normal settings.
 - [ ] Keep arbitrary CSS administrator-only and disabled by default; keep arbitrary JavaScript and third-party in-page plugins deferred.
-- [ ] Add browser tests for invalid settings, missing tokens, contrast, responsive layouts, preset migration, import/export, and broken-config recovery.
+- [ ] Add browser tests for invalid settings, missing tokens, contrast, responsive layouts, preset migration, import/export, provenance display, interrupted config updates, and broken-config recovery.
 
 ---
 
@@ -196,15 +244,27 @@ This track starts only after revision migration, authoritative write routing, st
 
 ---
 
+## P2: Configuration and Integration Documentation
+
+Configuration documentation is part of the acceptance criteria for every new setting. A setting is not complete when only the implementation or template changes; its schema metadata, CLI explanation, examples, migration behavior, and Japanese/English documentation must change together.
+
+- [ ] Add `docs/en/config.md` and `docs/ja/config.md` as task-oriented guides covering discovery order, minimum configuration, precedence, profiles, workspaces, source manifests, write targets, environment references, validation, effective values, and common personal/work/team examples.
+- [ ] Add complete `config-reference.md` documents in English and Japanese. For every key, publish type, default, required status, allowed values, environment override, restart requirement, secret status, version introduced/deprecated, example, and related command.
+- [ ] Add dedicated English/Japanese `workspaces.md`, `integrations.md`, and `config-migration.md` guides covering path resolution, roles, glob expansion, read-only/generated/archive sources, provider credentials, proposal mode, mapping, retry/privacy/audit, compatibility, backup, rollback, and troubleshooting.
+- [ ] Generate the mechanical reference tables and `config explain` registry data from the authoritative configuration schema/registry. CI must fail when a schema key lacks reference coverage, a deprecated key lacks migration guidance, a secret key lacks a security warning, or checked-in examples are not schema-valid.
+- [ ] Add runnable example configurations for one file, multiple project files, generated calendars, personal/work profiles, remote access, Slack/email integrations, Teams/Discord placeholders, notifications, Web customization, and project/portfolio views. Test examples on Windows-style and POSIX paths without committing credentials.
+
+---
+
 ## P2: Documentation, Editor, and LSP
 
-- [ ] Define authoritative documents for grammar, CLI behavior, Web/API behavior, schemas, recovery, and examples.
-- [ ] Add English/Japanese parity checks for headings, code blocks, command names, stable examples, revision/timezone/workspace-safety docs, and recovery docs.
+- [ ] Define authoritative documents for grammar, CLI behavior, Web/API behavior, schemas, configuration, integrations, recovery, and examples.
+- [ ] Add English/Japanese parity checks for headings, code blocks, command names, stable examples, configuration/workspace/integration docs, revision/timezone/workspace-safety docs, and recovery docs.
 - [ ] Extract the Web Japanese dictionary into shared data usable by CLI/TUI/MCP.
 - [ ] Define policy for languages beyond Japanese, fallback, partial dictionaries, and untranslated text.
-- [ ] Add worked examples and captures for TUI, Web, timer, statistics, review, graph, attachments, reports, import/export, diagnostics, Format migration, revision negotiation, timezone behavior, multi-target recovery, remote workspaces, messaging, and saved views.
-- [ ] Document file splitting, generated/archive/cache files, multiple writers, backups, undo, Git recovery, remote workspaces, authentication, proposals, release policy, schema compatibility, telemetry retention, transaction journals, and recovery.
-- [ ] Expand lock/CAS documentation for cloud sync and network filesystems, stale evidence, manual cleanup, expected-revision examples, conflicts, proxies, embedded versus public APIs, and multi-target limitations.
+- [ ] Add worked examples and captures for TUI, Web, timer, statistics, review, graph, attachments, reports, project/portfolio management, integration proposals/output, import/export, diagnostics, Format migration, configuration migration, revision negotiation, timezone behavior, multi-target recovery, remote workspaces, messaging, and saved views.
+- [ ] Document file splitting, generated/archive/cache files, configured source manifests, multiple writers, backups, undo, Git recovery, remote workspaces, authentication, proposals, release policy, schema/configuration compatibility, telemetry retention, transaction journals, and recovery.
+- [ ] Expand lock/CAS documentation for cloud sync and network filesystems, stale evidence, manual cleanup, expected-revision examples, conflicts, proxies, embedded versus public APIs, configuration writes, and multi-target limitations.
 - [ ] Package VS Code grammar/snippets as an installable extension and generate keys from model definitions.
 - [ ] Add directive/encrypted-value/folding/file-icon support and syntax-highlight snapshots.
 - [ ] Add a lossless parser/CST with spans before LSP edits.
@@ -216,11 +276,12 @@ This track starts only after revision migration, authoritative write routing, st
 ## Deferred Ideas
 
 - [ ] Consider named or parallel timers only if one active timer remains restrictive in real use.
-- [ ] Consider a local daemon only if notification watch, timer state, alarms, file reload, remote events, recovery, and automation genuinely require one process.
+- [ ] Consider a local daemon only if notification watch, timer state, alarms, file reload, remote events, integration polling, recovery, and automation genuinely require one process.
 - [ ] Consider PWA offline capture only after shared CAS, offline proposals, and explicit conflict review exist.
 - [ ] Consider general remote/local synchronization only after Format 1.0 and an ID-based retained-base merge model are stable.
 - [ ] Consider automatic Git pull/push/merge only after semantic history, remote proposals, credential delegation, recovery, and conflict review are stable.
 - [ ] Consider a plugin SDK only after schemas/mutation contracts are stable and an out-of-tree official adapter validates the design.
 - [ ] Consider a rebuildable search index only after large-file benchmarks show a practical bottleneck.
-- [ ] Do not add arbitrary Web JavaScript, direct life.txt rewrite plugins, or unrestricted automation before sandbox and permission models exist.
+- [ ] Consider an additional human-edited configuration format only after the JSON schema, migration, comment-preservation requirements, canonicalization, and tooling costs are proven; do not support multiple partially equivalent formats prematurely.
+- [ ] Do not add arbitrary Web JavaScript, direct life.txt rewrite plugins, unrestricted integration hooks, or unrestricted automation before sandbox and permission models exist.
 - [ ] Do not attempt to replace email, calendar, chat, or file storage wholesale; integrate through references, summaries, proposals, and explicit approved actions.

@@ -1085,12 +1085,12 @@ def _cmd_state(state, argument):
         outcome["unchanged"] = result.unchanged
         return result.text
 
-    write_result = mutation.mutate_text(
+    write_result = mutation.write_text(
         path,
-        transform,
         expected_hash=before.content_hash,
         operation="tui.state",
         create=not before.exists,
+        transform=transform,
         default_text="",
     )
     if outcome["unchanged"]:

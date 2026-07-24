@@ -43,12 +43,12 @@ def append_text(path, payload, expected_revision=None, operation="semantic.appen
         prefix = "" if not text or text.endswith(("\n", "\r")) else current.newline
         return text + prefix + value
 
-    return mutation.mutate_text(
+    return mutation.write_text(
         path,
-        transform,
         expected_hash=expected,
         operation=operation,
         create=create and expected == MISSING_HASH,
+        transform=transform,
         default_text="",
     )
 
@@ -68,12 +68,12 @@ def append_life_records(path, text, expected_revision=None, operation="semantic.
         prefix = "" if not existing or existing.endswith(("\n", "\r")) else current.newline
         return existing + prefix + payload
 
-    return mutation.mutate_text(
+    return mutation.write_text(
         path,
-        transform,
         expected_hash=expected,
         operation=operation,
         create=expected == MISSING_HASH,
+        transform=transform,
         default_text="",
         validate=validate,
     )
@@ -99,12 +99,12 @@ def mutate_items(
     def transform(text):
         return transform_items_text(text, normalized, id_key=id_key)
 
-    return mutation.mutate_text(
+    return mutation.write_text(
         path,
-        transform,
         expected_hash=expected,
         operation=operation,
         create=create and expected == MISSING_HASH,
+        transform=transform,
         default_text="",
         validate=lambda replacement: _parse_or_raise(replacement),
     )

@@ -1,0 +1,116 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/project-summary-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "archived": {
+      "type": "boolean"
+    },
+    "area": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "blocked_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "health": {
+      "enum": [
+        "green",
+        "yellow",
+        "red"
+      ]
+    },
+    "milestone_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "open_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "open_risk_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "overdue_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "progress": {
+      "additionalProperties": false,
+      "properties": {
+        "done": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "formula": {
+          "type": "string"
+        },
+        "percent": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "undefined_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "done",
+        "total",
+        "percent",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "progress_percent": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "state": {
+      "type": "string"
+    },
+    "task_done": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "task_total": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "state",
+    "task_total",
+    "task_done",
+    "health"
+  ],
+  "title": "lifetxt project summary v1",
+  "type": "object"
+}

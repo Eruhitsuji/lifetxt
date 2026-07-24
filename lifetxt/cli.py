@@ -779,6 +779,85 @@ def build_parser():
     ws_doctor.add_argument("--json", action="store_true", help="Emit JSON.")
     ws_doctor.set_defaults(func=command_workspace_doctor)
 
+    project_command = subparsers.add_parser(
+        "project",
+        help="List, inspect, and manage projects built from project: records.",
+    )
+    project_subparsers = project_command.add_subparsers(dest="project_command")
+
+    proj_list = project_subparsers.add_parser("list", help="List projects with progress and health.")
+    _add_input_paths(proj_list)
+    proj_list.add_argument("--all", action="store_true", help="Include archived projects.")
+    proj_list.add_argument("--area", help="Only projects in this area.")
+    proj_list.add_argument("--owner", help="Only projects with this owner.")
+    proj_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_list.set_defaults(func=command_project_list)
+
+    proj_show = project_subparsers.add_parser("show", help="Show one project's aggregated hub.")
+    proj_show.add_argument("name", help="Project name.")
+    _add_input_paths(proj_show)
+    proj_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_show.set_defaults(func=command_project_show)
+
+    proj_health = project_subparsers.add_parser("health", help="Show project health with formula.")
+    proj_health.add_argument("name", nargs="?", help="Project name; omit with --all.")
+    proj_health.add_argument("--all", action="store_true", help="Health for every project.")
+    _add_input_paths(proj_health)
+    proj_health.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_health.set_defaults(func=command_project_health)
+
+    proj_timeline = project_subparsers.add_parser("timeline", help="Show dated project items in order.")
+    proj_timeline.add_argument("name", help="Project name.")
+    _add_input_paths(proj_timeline)
+    proj_timeline.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_timeline.set_defaults(func=command_project_timeline)
+
+    proj_workload = project_subparsers.add_parser("workload", help="Show per-assignee workload.")
+    proj_workload.add_argument("name", help="Project name.")
+    _add_input_paths(proj_workload)
+    proj_workload.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_workload.set_defaults(func=command_project_workload)
+
+    proj_risks = project_subparsers.add_parser("risks", help="List project risks by severity.")
+    proj_risks.add_argument("name", help="Project name.")
+    _add_input_paths(proj_risks)
+    proj_risks.add_argument("--json", action="store_true", help="Emit JSON.")
+    proj_risks.set_defaults(func=command_project_risks)
+
+    proj_new = project_subparsers.add_parser("new", help="Append a project metadata record.")
+    proj_new.add_argument("name", help="Project name.")
+    proj_new.add_argument("--owner", help="Project owner.")
+    proj_new.add_argument("--area", help="Project area.")
+    proj_new.add_argument("--state", default="active", help="Project state. Default active.")
+    proj_new.add_argument("--due", help="Target/due date.")
+    proj_new.add_argument("--start", help="Start date.")
+    proj_new.add_argument("--visibility", help="Visibility classification.")
+    proj_new.add_argument("--to", help="File to append to. Defaults to the write target.")
+    proj_new.add_argument("--dry-run", action="store_true", help="Print the line without writing.")
+    proj_new.set_defaults(func=command_project_new)
+
+    proj_add = project_subparsers.add_parser("add", help="Append a milestone/risk/decision/meeting record.")
+    proj_add.add_argument("record_type", choices=["milestone", "risk", "decision", "meeting"])
+    proj_add.add_argument("project", help="Project name.")
+    proj_add.add_argument("title", help="Record title.")
+    proj_add.add_argument("--due", help="Due date (milestone).")
+    proj_add.add_argument("--severity", default="medium", help="Risk severity. Default medium.")
+    proj_add.add_argument("--state", default="open", help="Risk state. Default open.")
+    proj_add.add_argument("--owner", help="Owner/assignee.")
+    proj_add.add_argument("--on", help="Decision/meeting date.")
+    proj_add.add_argument("--at", help="Meeting time.")
+    proj_add.add_argument("--to", help="File to append to. Defaults to the write target.")
+    proj_add.add_argument("--dry-run", action="store_true", help="Print the line without writing.")
+    proj_add.set_defaults(func=command_project_add)
+
+    portfolio_command = subparsers.add_parser(
+        "portfolio", help="Compare projects by state, progress, risk, and workload."
+    )
+    _add_input_paths(portfolio_command)
+    portfolio_command.add_argument("--all", action="store_true", help="Include archived projects.")
+    portfolio_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    portfolio_command.set_defaults(func=command_portfolio)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -7661,6 +7740,246 @@ def command_workspace_doctor(args):
     for shared in report["shared_files"]:
         write_text(None, "shared: %s (%s)\n" % (shared["path"], ", ".join(shared["workspaces"])))
     return 0 if report["ok"] else 1
+
+
+def _project_items(args):
+    paths = _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, _config(args))
+    return items
+
+
+def _project_today():
+    try:
+        return timezone_today()
+    except Exception:
+        return None
+
+
+def command_project_list(args):
+    from .projects import project_list
+
+    rows = project_list(_project_items(args), _config(args), _project_today(),
+                        include_archived=getattr(args, "all", False))
+    if getattr(args, "area", None):
+        rows = [r for r in rows if r["area"] == args.area]
+    if getattr(args, "owner", None):
+        rows = [r for r in rows if r["owner"] == args.owner]
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not rows:
+        write_text(None, "No projects found.\n")
+        return 0
+    for row in rows:
+        pct = "%.0f%%" % row["progress_percent"] if row["progress_percent"] is not None else "n/a"
+        write_text(
+            None,
+            "[%s] %-20s %s  %d/%d done (%s)  open=%d overdue=%d blocked=%d risks=%d\n"
+            % (row["health"][0].upper(), row["name"], row["state"], row["task_done"],
+               row["task_total"], pct, row["open_count"], row["overdue_count"],
+               row["blocked_count"], row["open_risk_count"]),
+        )
+    return 0
+
+
+def command_project_show(args):
+    from .projects import project_hub
+
+    try:
+        hub = project_hub(_project_items(args), _config(args), args.name, _project_today())
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(hub, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "%s (%s)\n" % (hub["display_name"], hub["name"]))
+    write_text(None, "  state=%s owner=%s area=%s due=%s\n"
+               % (hub["state"], hub["owner"], hub["area"], hub["due"]))
+    prog = hub["progress"]
+    pct = "%.0f%%" % prog["percent"] if prog["percent"] is not None else "n/a"
+    write_text(None, "  progress: %d/%d (%s)  health=%s (%s)\n"
+               % (prog["done"], prog["total"], pct, hub["health"]["label"],
+                  "; ".join(hub["health"]["reasons"])))
+    _project_section("open tasks", hub["open_tasks"])
+    _project_section("overdue", hub["overdue_tasks"])
+    _project_section("blocked", hub["blocked_tasks"])
+    _project_section("milestones", hub["milestones"])
+    _project_section("risks", hub["risks"], risk=True)
+    _project_section("decisions", hub["decisions"])
+    _project_section("meetings", hub["meetings"])
+    for note in hub["health"]["limitations"]:
+        write_text(None, "  note: %s\n" % note)
+    return 0
+
+
+def _project_section(label, rows, risk=False):
+    if not rows:
+        return
+    write_text(None, "  %s (%d):\n" % (label, len(rows)))
+    for row in rows:
+        if risk:
+            write_text(None, "    - [%s/%s] %s\n" % (row["severity"], row["state"], row["title"]))
+        else:
+            extra = ""
+            if row.get("due"):
+                extra = " due:%s" % row["due"]
+            elif row.get("on"):
+                extra = " on:%s" % row["on"]
+            write_text(None, "    - %s%s\n" % (row["title"], extra))
+
+
+def command_project_health(args):
+    from .projects import alias_map, collect_projects, compute_health
+
+    config = _config(args)
+    projects = collect_projects(_project_items(args), config, _project_today())
+    if getattr(args, "all", False) or not getattr(args, "name", None):
+        names = list(projects.keys())
+    else:
+        canonical = alias_map(config).get(args.name, args.name)
+        if canonical not in projects:
+            sys.stderr.write("ERROR: Unknown project %r\n" % args.name)
+            return 1
+        names = [canonical]
+    reports = OrderedDict()
+    for name in names:
+        reports[name] = compute_health(projects[name], _project_today())
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(reports, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    for name, health in reports.items():
+        write_text(None, "%s: %s (%s)\n" % (name, health["label"], "; ".join(health["reasons"])))
+        write_text(None, "  formula: %s\n" % health["formula"])
+        for note in health["limitations"]:
+            write_text(None, "  note: %s\n" % note)
+    return 0
+
+
+def command_project_timeline(args):
+    from .projects import project_timeline
+
+    try:
+        rows = project_timeline(_project_items(args), _config(args), args.name, _project_today())
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    for row in rows:
+        item = row["item"]
+        write_text(None, "%s  %s %s\n" % (row["when"], item.get("kind", ""), item["title"]))
+    return 0
+
+
+def command_project_workload(args):
+    from .projects import project_workload
+
+    try:
+        rows = project_workload(_project_items(args), _config(args), args.name, _project_today())
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    for row in rows:
+        write_text(None, "%-20s open=%d done=%d overdue=%d\n"
+                   % (row["assignee"], row["open"], row["done"], row["overdue"]))
+    return 0
+
+
+def command_project_risks(args):
+    from .projects import project_risks
+
+    try:
+        rows = project_risks(_project_items(args), _config(args), args.name, _project_today())
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not rows:
+        write_text(None, "No risks recorded.\n")
+        return 0
+    for row in rows:
+        write_text(None, "[%s/%s] %s (owner=%s)\n"
+                   % (row["severity"], row["state"], row["title"], row["owner"]))
+    return 0
+
+
+def _project_write_target(args):
+    config = _config(args)
+    target = getattr(args, "to", None) or config_write_file(config)
+    if not target:
+        paths = config_paths(config)
+        if paths:
+            target = paths[0]
+    if not target:
+        target = "life.txt"
+    return target
+
+
+def command_project_new(args):
+    from .projects import build_project_record_line
+
+    line = build_project_record_line(
+        args.name, owner=args.owner, area=args.area, state=args.state,
+        due=args.due, start=args.start, visibility=args.visibility,
+    )
+    return _emit_project_line(args, line)
+
+
+def command_project_add(args):
+    from .projects import (
+        build_decision_line, build_meeting_line, build_milestone_line, build_risk_line,
+    )
+
+    if args.record_type == "milestone":
+        line = build_milestone_line(args.project, args.title, due=args.due, owner=args.owner)
+    elif args.record_type == "risk":
+        line = build_risk_line(args.project, args.title, severity=args.severity,
+                               owner=args.owner, state=args.state)
+    elif args.record_type == "decision":
+        line = build_decision_line(args.project, args.title, on=args.on, owner=args.owner)
+    else:
+        line = build_meeting_line(args.project, args.title, on=args.on, at=args.at)
+    return _emit_project_line(args, line)
+
+
+def _emit_project_line(args, line):
+    if getattr(args, "dry_run", False):
+        write_text(None, line + "\n")
+        return 0
+    target = _project_write_target(args)
+    _ensure_writable_path(target, _config(args), "project")
+    append_line(target, line)
+    write_text(None, "Appended to %s:\n  %s\n" % (target, line))
+    return 0
+
+
+def command_portfolio(args):
+    from .projects import portfolio
+
+    report = portfolio(_project_items(args), _config(args), _project_today(),
+                       include_archived=getattr(args, "all", False))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "Portfolio (%d project(s)):\n" % report["count"])
+    for row in report["projects"]:
+        pct = "%.0f%%" % row["progress_percent"] if row["progress_percent"] is not None else "n/a"
+        write_text(
+            None,
+            "[%s] %-20s %-8s progress=%s open=%d overdue=%d blocked=%d risk=%s\n"
+            % (row["health"][0].upper(), row["name"], row["state"], pct, row["open_count"],
+               row["overdue_count"], row["blocked_count"], row["top_risk_severity"] or "-"),
+        )
+    write_text(None, "legend: progress=%s; health=%s\n"
+               % (report["legend"]["progress"], report["legend"]["health"]))
+    return 0
 
 
 def command_config_explain(args):

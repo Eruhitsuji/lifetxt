@@ -61,6 +61,9 @@ del _install_schema_extensions_v4
 from .schema_extensions_v5 import install_schema_extensions_v5 as _install_schema_extensions_v5
 _install_schema_extensions_v5()
 del _install_schema_extensions_v5
+from .schema_extensions_v6 import install_schema_extensions_v6 as _install_schema_extensions_v6
+_install_schema_extensions_v6()
+del _install_schema_extensions_v6
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

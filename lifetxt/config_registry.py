@@ -82,6 +82,13 @@ CONFIG_REGISTRY = OrderedDict(
         ("ids.auto", _entry(
             "boolean", True,
             "Automatically assign stable IDs to new items.")),
+        ("projects", _entry(
+            "object", None,
+            "Static project registry: display name, aliases, default source/assignee/area, "
+            "templates, and visibility. Changing progress/risks/decisions stay in life.txt records.")),
+        ("projects.*.aliases", _entry(
+            "array<string>", None,
+            "Alternate names that resolve to this project in project/portfolio commands.")),
         ("generated_paths", _entry(
             "array<string>", None,
             "Top-level list of generated files. Superseded by per-source 'generated' "

@@ -1,0 +1,39 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/project-registry-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {
+    "additionalProperties": true,
+    "properties": {
+      "aliases": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "default_area": {
+        "type": "string"
+      },
+      "default_assignee": {
+        "type": "string"
+      },
+      "default_source": {
+        "type": "string"
+      },
+      "display_name": {
+        "type": "string"
+      },
+      "templates": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "visibility": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "title": "lifetxt project registry v1",
+  "type": "object"
+}

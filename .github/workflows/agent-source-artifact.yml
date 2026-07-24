@@ -17,21 +17,35 @@ jobs:
         with:
           ref: agent/repair-pr13-implementation
           fetch-depth: 0
-      - name: Reconstruct recovered patch
+      - name: Diagnose or apply recovered patch
         run: |
+          latest_message="$(git log -1 --format=%s)"
+          if [ "$latest_message" = "Record PR13 repair diagnostic" ] || [ "$latest_message" = "Apply recovered PR13 implementation" ]; then
+            exit 0
+          fi
           cat .github/agent-patch/part-* | base64 -d | gzip -d > /tmp/lifetxt.patch
-          test -s /tmp/lifetxt.patch
-          git apply --check /tmp/lifetxt.patch
-      - name: Apply recovered patch
-        run: git apply --index /tmp/lifetxt.patch
-      - name: Remove transfer artifacts
-        run: |
-          rm -rf .github/agent-patch
-          git add -A
-      - name: Commit recovered implementation
-        run: |
+          set +e
+          git apply --check /tmp/lifetxt.patch 2> /tmp/apply-error.txt
+          apply_status=$?
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$apply_status" -ne 0 ]; then
+            {
+              echo "patch_sha256=$(sha256sum /tmp/lifetxt.patch | awk '{print $1}')"
+              echo "patch_bytes=$(wc -c < /tmp/lifetxt.patch)"
+              echo "parts:"
+              sha256sum .github/agent-patch/part-*
+              echo "apply_error:"
+              cat /tmp/apply-error.txt
+            } > .github/pr13-repair-diagnostic.txt
+            git add .github/pr13-repair-diagnostic.txt
+            git commit -m "Record PR13 repair diagnostic"
+            git push origin HEAD:agent/repair-pr13-implementation
+            exit 0
+          fi
+          git apply --index /tmp/lifetxt.patch
+          rm -rf .github/agent-patch
+          git add -A
           git commit -m "Apply recovered PR13 implementation"
-      - name: Push repair commit
-        run: git push origin HEAD:agent/repair-pr13-implementation
+          git push origin HEAD:agent/repair-pr13-implementation

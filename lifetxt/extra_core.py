@@ -138,11 +138,32 @@ def _editor_command(editor, path, line):
 def command_edit(args, config_data):
     items = _load_items(args.paths, config_data, allow_stdin=False)
     item = _find_item(items, args.id)
-    command = _editor_command(_resolve_editor(args, config_data), item.source, item.line or 1)
+    editor = _resolve_editor(args, config_data)
+    command = _editor_command(editor, item.source, item.line or 1)
     if args.dry_run:
         sys.stdout.write(" ".join(shlex.quote(part) for part in command) + "\n")
         return 0
-    return subprocess.call(command)
+    from .editor_safety import safe_edit
+    result = safe_edit(
+        item.source,
+        editor,
+        line=item.line or 1,
+        review_only=bool(getattr(args, "review_only", False)),
+        reconcile=bool(getattr(args, "reconcile", False)),
+        keep_temp=bool(getattr(args, "keep_temp", False)),
+        operation="cli.edit",
+    )
+    if result.get("diff") and (getattr(args, "review_only", False) or getattr(args, "show_diff", False)):
+        sys.stdout.write(result["diff"])
+    if result.get("temporary_path"):
+        sys.stdout.write("Temporary edited copy: %s\n" % result["temporary_path"])
+    if result.get("review_only"):
+        sys.stdout.write("Review only; no changes were written.\n")
+    elif result.get("written"):
+        sys.stdout.write("Applied editor changes with revision %s.\n" % result["after_revision"])
+    else:
+        sys.stdout.write("Editor closed without changes.\n")
+    return 0
 
 
 def command_path(args, config_data, config_path):

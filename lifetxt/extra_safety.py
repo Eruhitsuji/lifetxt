@@ -122,8 +122,70 @@ def command_safety(args, config_data):
                 raise ValueError("transactions export requires --journal and --output.")
             report = export_evidence(journal, args.output)
             args.output = None
-        elif tx_action == "policy":
-            report = journal_policy_report(root, config=config_data)
+        elif tx_action in ("policy", "policy-write", "policy-migrate", "preflight", "rotate-archives", "audit"):
+            from .transaction_admin import (
+                append_admin_audit, audit_path, migrate_policy_file, policy_document,
+                policy_path, preflight_report, read_policy_document, rotate_archives,
+                write_policy_document,
+            )
+            policy_file = os.path.abspath(getattr(args, "policy_file", None) or policy_path(root, config=config_data))
+            audit_file = os.path.abspath(getattr(args, "audit_file", None) or audit_path(root, config=config_data))
+            operator = getattr(args, "operator", None)
+            if tx_action == "policy":
+                policy_config = dict(config_data or {})
+                tx_config = dict(policy_config.get("transactions") or {})
+                tx_config["policy_file"] = policy_file
+                policy_config["transactions"] = tx_config
+                report = journal_policy_report(root, config=policy_config)
+                report["policy_file"] = {"path": policy_file, "document": read_policy_document(policy_file, allow_missing=True, allow_older=True)}
+                report["preflight"] = preflight_report(root, config=config_data, create=False)
+            elif tx_action == "policy-write":
+                document = policy_document(config=config_data, operator=operator)
+                for assignment in getattr(args, "set", None) or []:
+                    if "=" not in assignment:
+                        raise ValueError("--set requires KEY=VALUE.")
+                    key, value = assignment.split("=", 1)
+                    key = key.strip()
+                    if key not in document["policy"]:
+                        raise ValueError("Unknown transaction policy key: %s" % key)
+                    try:
+                        value = json.loads(value)
+                    except ValueError:
+                        pass
+                    document["policy"][key] = value
+                document["policy"] = __import__("lifetxt.transaction_policy", fromlist=["policy_from_config"]).policy_from_config({"transactions": document["policy"]})
+                report = write_policy_document(policy_file, document, expected_revision=getattr(args, "expected_revision", None), operator=operator, audit_file=audit_file)
+            elif tx_action == "policy-migrate":
+                report = migrate_policy_file(policy_file, expected_revision=getattr(args, "expected_revision", None), operator=operator, audit_file=audit_file)
+            elif tx_action == "preflight":
+                report = preflight_report(root, config=config_data, create=bool(getattr(args, "force", False)))
+            elif tx_action == "rotate-archives":
+                if not getattr(args, "archive_dir", None):
+                    raise ValueError("transactions rotate-archives requires --archive-dir.")
+                report = rotate_archives(
+                    args.archive_dir,
+                    max_archives=getattr(args, "max_archives", None) if getattr(args, "max_archives", None) is not None else 100,
+                    max_total_bytes=getattr(args, "max_archive_bytes", None) if getattr(args, "max_archive_bytes", None) is not None else 1024 * 1024 * 1024,
+                    force=bool(getattr(args, "force", False)),
+                    operator=operator,
+                    audit_file=audit_file,
+                )
+            else:
+                details = {}
+                if getattr(args, "details_json", None):
+                    details = json.loads(args.details_json)
+                    if not isinstance(details, dict):
+                        raise ValueError("--details-json must decode to an object.")
+                report = append_admin_audit(audit_file, getattr(args, "event", None) or "manual", operator=operator, details=details)
+        elif tx_action == "drill":
+            from .fault_drill import SUPPORTED_POINTS, run_fault_drill
+            if not getattr(args, "point", None):
+                raise ValueError("transactions drill requires --point (%s)." % ", ".join(SUPPORTED_POINTS))
+            report = run_fault_drill(
+                args.point,
+                recovery=getattr(args, "recovery", "inspect"),
+                keep=bool(getattr(args, "keep_workspace", False)),
+            )
         elif tx_action == "archive":
             if not getattr(args, "archive_dir", None):
                 raise ValueError("transactions archive requires --archive-dir.")

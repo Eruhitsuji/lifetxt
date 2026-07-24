@@ -1024,6 +1024,7 @@ def _cmd_edit(state, argument):
         "label": row.get("label", ""),
         "body": "",
         "text": row.get("text", ""),
+        "revision": row.get("source_revision") or row.get("revision") or "",
     }
     config = getattr(state.args, "config_data", None) or {}
     # A terminal editor draws over the curses screen, so the TUI has to release

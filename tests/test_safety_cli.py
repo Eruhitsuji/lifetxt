@@ -84,8 +84,8 @@ class SafetyCliTests(unittest.TestCase):
         code, stdout, stderr = self.run_command(["format", "schemas", directory, "--pretty"])
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(29, len(report["files"]))
-        self.assertEqual(29, len(os.listdir(directory)))
+        self.assertEqual(41, len(report["files"]))
+        self.assertEqual(41, len(os.listdir(directory)))
         for name in (
             "release-manifest-v1.schema.json",
             "revision-metrics-v1.schema.json",

@@ -1,4 +1,4 @@
-name: Apply verified PR13 repair
+name: Inspect PR13 repair patch
 
 on:
   pull_request:
@@ -6,58 +6,26 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  inspect:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/repair-pr13-implementation' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/repair-pr13-implementation
-          fetch-depth: 0
-      - name: Verify every repair patch part
+      - name: Record uploaded repair patch metadata
         run: |
-          cat > /tmp/repair-parts.sha256 <<'EOF'
-          656a30bec3cdf71b160687a404a956a2bfd95597a9a16ce13a8b9899f1b3fa80  .github/repair-patch/part-00
-          c9ee73073d7604bd26cbee484d9a51a02fec4745afa6cfc363f5ab1acc003cc0  .github/repair-patch/part-01
-          38c0aab58eb6cf00362d2dbae174890c1e80dc97423efd635b934787fcdae001  .github/repair-patch/part-02
-          09b0fa12837387378cfd9327e3c1d3c216adaa3f172cc97032d591c7454bcd97  .github/repair-patch/part-03
-          5d533ccc5d243989e0f361361f32ea8461a41fb97d5703e6e49c7f73a1647cb6  .github/repair-patch/part-04
-          d9d23e1893e73ea00b467d7f05a6ff18517632f92fa95983b0a4a1bf8881738a  .github/repair-patch/part-05
-          0e66cb62312f69d1a4beee43840ad4506d4218c12b7ea0aeb251d07b04521b39  .github/repair-patch/part-06
-          e58b484d372cc58938b350ecbb21b228c42be228ac1c3e41c049973833dc0e50  .github/repair-patch/part-07
-          8b897b40055d0450a3c6619b8dbb5846b685ac50ed030c1c2abb67861a83a218  .github/repair-patch/part-08a
-          7c498636cafbcf0069fc0d2608662c7acd9dd9bc0e6ae64c5d89a041cb7a391c  .github/repair-patch/part-08b
-          a24fd10c4998f6b2946f062ae2b023fe90e908758493cfbcd562e50250f16813  .github/repair-patch/part-09
-          EOF
-          sha256sum --check /tmp/repair-parts.sha256
-      - name: Reconstruct and verify clean patch
-        run: |
-          cat \
-            .github/repair-patch/part-00 \
-            .github/repair-patch/part-01 \
-            .github/repair-patch/part-02 \
-            .github/repair-patch/part-03 \
-            .github/repair-patch/part-04 \
-            .github/repair-patch/part-05 \
-            .github/repair-patch/part-06 \
-            .github/repair-patch/part-07 \
-            .github/repair-patch/part-08a \
-            .github/repair-patch/part-08b \
-            .github/repair-patch/part-09 \
-            | base64 -d | gzip -d > /tmp/lifetxt-repair.patch
-          echo 'f4ed00865a2118f9d6a031bc7a6ac08f7255933266a9b3c0f5b5fba21c7fcbd2  /tmp/lifetxt-repair.patch' | sha256sum --check
-          git apply --check /tmp/lifetxt-repair.patch
-      - name: Apply recovered implementation and remove transfer artifacts
-        run: |
-          git apply --index /tmp/lifetxt-repair.patch
-          rm -rf .github/agent-patch .github/repair-patch
-          git add -A
-      - name: Commit and push repair
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Apply recovered PR13 implementation'
-          git push origin HEAD:agent/repair-pr13-implementation
+          {
+            echo 'sha256:'
+            sha256sum .github/repair-patch/part-*
+            echo 'bytes:'
+            wc -c .github/repair-patch/part-*
+          } > /tmp/repair-patch-metadata.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repair-patch-metadata
+          path: /tmp/repair-patch-metadata.txt
+          if-no-files-found: error

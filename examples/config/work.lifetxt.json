@@ -1,0 +1,30 @@
+{
+  "config_version": 1,
+  "default_workspace": "work",
+  "workspaces": {
+    "work": {
+      "sources": [
+        { "path": "work.life.txt", "role": "primary", "required": true },
+        { "path": "team/*.life.txt", "role": "reference", "writable": false },
+        { "path": "archive/work-archive.life.txt", "role": "archive" }
+      ],
+      "write_file": "work.life.txt"
+    },
+    "personal": {
+      "sources": ["personal.life.txt"],
+      "write_file": "personal.life.txt"
+    }
+  },
+  "profiles": {
+    "office": {
+      "defaults": { "timezone": "Asia/Tokyo" }
+    },
+    "remote": {
+      "defaults": { "timezone": "UTC" }
+    }
+  },
+  "defaults": {
+    "person": "self",
+    "timezone": "Asia/Tokyo"
+  }
+}

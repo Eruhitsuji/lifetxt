@@ -1,0 +1,19 @@
+{
+  "config_version": 1,
+  "default_workspace": "project",
+  "workspaces": {
+    "project": {
+      "sources": [
+        { "path": "projects/*.life.txt", "role": "primary" },
+        { "path": "inbox.life.txt", "role": "input", "priority": 10 },
+        { "path": ".generated/*.life.txt", "role": "generated" },
+        { "path": "archive/**/*.life.txt", "role": "archive", "default_visible": false }
+      ],
+      "write_file": "inbox.life.txt"
+    }
+  },
+  "defaults": {
+    "person": "self",
+    "timezone": "Asia/Tokyo"
+  }
+}

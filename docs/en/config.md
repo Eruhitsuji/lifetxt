@@ -1,0 +1,153 @@
+# Configuration and Workspaces
+
+lifetxt reads a JSON configuration file that selects which life.txt files it
+reads and writes, plus defaults such as timezone and identity. This guide is
+task-oriented; for per-key metadata run `lifetxt config explain <path>`.
+
+## Discovery order
+
+The configuration file is located in this order:
+
+1. `--config PATH` on the command line.
+2. `LIFETXT_CONFIG` environment variable.
+3. `.lifetxt.json` in the current directory.
+4. `lifetxt.config.json` in the current directory.
+
+If none are found, lifetxt falls back to reading `life.txt`.
+
+## Minimum configuration
+
+The smallest useful configuration keeps the historical top-level form:
+
+```json
+{
+  "paths": ["life.txt"],
+  "write_file": "life.txt",
+  "defaults": { "timezone": "Asia/Tokyo" }
+}
+```
+
+Top-level `paths` and `write_file` are treated as an implicit workspace named
+`default`. Nothing needs to change to keep this working.
+
+## Precedence
+
+Effective values are resolved from lowest to highest priority:
+
+1. built-in defaults
+2. the loaded configuration file
+3. the selected profile (`--profile NAME`)
+4. environment overrides (an explicit allowlist, e.g. `LIFETXT_TIMEZONE`)
+5. command-line flags
+
+Inspect the result and where each value came from:
+
+```console
+$ lifetxt config effective            # merged JSON, secrets redacted
+$ lifetxt config sources              # every key with its provenance
+$ lifetxt config get defaults.timezone
+$ lifetxt config explain web.port
+```
+
+## Named workspaces
+
+A workspace is a named set of source files plus a write target. Define them
+under `workspaces` and pick a default with `default_workspace`:
+
+```json
+{
+  "default_workspace": "personal",
+  "workspaces": {
+    "personal": {
+      "sources": [
+        "life.txt",
+        { "path": ".generated/calendar.life.txt", "role": "generated" }
+      ],
+      "write_file": "life.txt"
+    },
+    "work": {
+      "sources": [{ "path": "work.life.txt", "role": "primary", "required": true }]
+    }
+  }
+}
+```
+
+Select a workspace for any command with the global `--workspace` flag:
+
+```console
+$ lifetxt --workspace work agenda
+$ lifetxt workspace list
+$ lifetxt workspace show work
+$ lifetxt workspace files --resolved
+$ lifetxt workspace validate --all
+```
+
+## Source manifest fields
+
+Each entry in `sources` is a path string or an object. The object form supports:
+
+| Field            | Default          | Meaning                                            |
+| ---------------- | ---------------- | -------------------------------------------------- |
+| `path`           | (required)       | File, directory, or glob.                          |
+| `role`           | `primary`        | `primary`, `input`, `generated`, `archive`, `readonly`, `reference`. |
+| `required`       | `false`          | Missing required sources are an error.             |
+| `writable`       | role-dependent   | Read-only for generated/archive/readonly/reference. |
+| `default_visible`| role-dependent   | Hidden by default for generated/archive.           |
+| `format`         | `life`           | Source format hint.                                |
+| `priority`       | `100`            | Lower numbers sort first in the input order.       |
+| `watch`          | `true`           | Whether file watchers should observe it.           |
+| `privacy`        | `normal`         | Privacy classification for redaction.              |
+| `generated_by`   | `null`           | Tool that produces a generated source.             |
+| `exclude`        | `[]`             | Glob patterns removed from directory/glob results. |
+
+## Path resolution
+
+Relative source paths resolve against the **configuration file's directory**,
+not the current working directory, so a workspace behaves identically wherever
+you run lifetxt from. Globs expand deterministically (sorted). Resolution
+reports diagnostics for missing required sources (`WS001`), duplicate physical
+files (`WS002`), paths outside the config directory (`WS003`), unknown roles
+(`WS005`), and unusable write targets (`WS006`/`WS007`).
+
+## Profiles
+
+Profiles are named overlays merged above the base configuration:
+
+```json
+{
+  "profiles": {
+    "remote": { "defaults": { "timezone": "UTC" } }
+  }
+}
+```
+
+```console
+$ lifetxt config effective --profile remote
+```
+
+## Editing configuration safely
+
+Read and write individual keys without hand-editing JSON:
+
+```console
+$ lifetxt config set web.port 8080
+$ lifetxt config unset web.port
+```
+
+Values are parsed as JSON when possible (so `8080` is a number and `"text"` a
+string), otherwise stored as a string.
+
+## Credentials
+
+Never store passwords or tokens directly in configuration. Reference an
+environment variable name instead — for example SMTP credentials use
+`smtp_pass_env: "LIFETXT_SMTP_PASS"`. `config effective`, `config sources`,
+and support bundles redact any key that looks like a secret.
+
+## Examples
+
+Runnable examples live under `examples/config/`:
+
+- `personal.lifetxt.json`
+- `work.lifetxt.json`
+- `project-multi-file.lifetxt.json`

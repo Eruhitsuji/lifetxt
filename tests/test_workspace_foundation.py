@@ -293,6 +293,7 @@ class ExampleConfigTests(unittest.TestCase):
         "generated-calendar.lifetxt.json",
         "team.lifetxt.json",
         "kiosk.lifetxt.json",
+        "projects.lifetxt.json",
     )
 
     def test_examples_resolve_default_workspace(self):

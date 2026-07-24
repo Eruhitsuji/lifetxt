@@ -156,6 +156,8 @@ class SafetyFoundationTests(unittest.TestCase):
             "clock-boundary-audit-v1.schema.json",
             "config-v1.schema.json",
             "workspace-source-manifest-v1.schema.json",
+            "project-registry-v1.schema.json",
+            "project-summary-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

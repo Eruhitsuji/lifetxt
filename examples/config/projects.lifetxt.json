@@ -1,0 +1,21 @@
+{
+  "config_version": 1,
+  "default_workspace": "default",
+  "workspaces": {
+    "default": { "sources": ["life.txt"], "write_file": "life.txt" }
+  },
+  "projects": {
+    "web": {
+      "display_name": "Website Revamp",
+      "aliases": ["website", "site"],
+      "default_assignee": "alice",
+      "default_area": "work",
+      "visibility": "shared"
+    },
+    "mobile": {
+      "display_name": "Mobile App",
+      "default_area": "work"
+    }
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

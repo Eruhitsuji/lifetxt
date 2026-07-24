@@ -1,18 +1,21 @@
 name: Agent source export
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/p0-format-contract-batch
+      - main
 
 permissions:
   contents: read
 
 jobs:
   export:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/p0-format-contract-batch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: agent/p0-format-contract-batch
       - name: Create source archive
         run: |
           tar --exclude=.git --exclude=.github/workflows/agent-source-export.yml -czf /tmp/lifetxt-main-source.tar.gz .

@@ -71,6 +71,17 @@ def config_template():
             ("proposals_file", ".cache/lifetxt/proposals.json"),
         ]
     )
+    data["ticketing"] = OrderedDict(
+        [
+            ("id_prefix", "TK"),
+            ("trackers", ["bug", "feature", "task", "support"]),
+            ("priorities", ["low", "normal", "high", "urgent", "immediate"]),
+            ("severities", ["trivial", "minor", "major", "critical", "blocker"]),
+            ("components", []),
+            ("required_fields", []),
+            ("defaults", OrderedDict([("tracker", "task"), ("priority", "normal")])),
+        ]
+    )
     data["defaults"] = OrderedDict(
         [
             ("person", "self"),

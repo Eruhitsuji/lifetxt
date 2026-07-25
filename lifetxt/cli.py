@@ -1061,6 +1061,95 @@ def build_parser():
     find_command.add_argument("--json", action="store_true", help="Emit JSON.")
     find_command.set_defaults(func=command_find)
 
+    ticket_command = subparsers.add_parser(
+        "ticket", help="Development tickets (record:ticket): new, list, show, edit, transitions, links."
+    )
+    ticket_subparsers = ticket_command.add_subparsers(dest="ticket_command")
+
+    tk_new = ticket_subparsers.add_parser("new", help="Create a ticket.")
+    tk_new.add_argument("subject", help="Ticket subject.")
+    tk_new.add_argument("--tracker", help="Tracker (bug, feature, task, support).")
+    tk_new.add_argument("--priority", help="Priority.")
+    tk_new.add_argument("--severity", help="Severity.")
+    tk_new.add_argument("--assignee", help="Assignee.")
+    tk_new.add_argument("--reporter", help="Reporter.")
+    tk_new.add_argument("--component", help="Component.")
+    tk_new.add_argument("--version", help="Target version.")
+    tk_new.add_argument("--sprint", help="Sprint.")
+    tk_new.add_argument("--project", help="Project.")
+    tk_new.add_argument("--due", help="Due date.")
+    tk_new.add_argument("--est", help="Estimate.")
+    tk_new.add_argument("--status", default="new", help="Initial ticket_status. Default new.")
+    tk_new.add_argument("--watcher", action="append", help="Watcher (repeatable).")
+    tk_new.add_argument("--id", help="Explicit ticket id. Defaults to the next generated id.")
+    tk_new.add_argument("--to", help="Target file. Defaults to the write target.")
+    tk_new.add_argument("--dry-run", action="store_true", help="Print the line without writing.")
+    _add_input_paths(tk_new)
+    tk_new.set_defaults(func=command_ticket_new)
+
+    tk_list = ticket_subparsers.add_parser("list", help="List tickets.")
+    _add_input_paths(tk_list)
+    for flag in ("tracker", "status", "priority", "severity", "assignee", "component", "version", "sprint", "project"):
+        tk_list.add_argument("--%s" % flag, help="Filter by %s." % flag)
+    tk_list.add_argument("--open", dest="open_only", action="store_true", help="Only open tickets.")
+    tk_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    tk_list.set_defaults(func=command_ticket_list)
+
+    tk_show = ticket_subparsers.add_parser("show", help="Show one ticket with relations.")
+    tk_show.add_argument("id", help="Ticket id.")
+    _add_input_paths(tk_show)
+    tk_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    tk_show.set_defaults(func=command_ticket_show)
+
+    tk_edit = ticket_subparsers.add_parser("edit", help="Set or unset ticket fields.")
+    tk_edit.add_argument("id", help="Ticket id.")
+    tk_edit.add_argument("--set", dest="set_fields", action="append", metavar="KEY=VALUE",
+                         help="Set a field (repeatable).")
+    tk_edit.add_argument("--unset", action="append", metavar="KEY", help="Remove a field (repeatable).")
+    _add_input_paths(tk_edit)
+    tk_edit.add_argument("--dry-run", action="store_true", help="Preview without writing.")
+    tk_edit.set_defaults(func=command_ticket_edit)
+
+    tk_assign = ticket_subparsers.add_parser("assign", help="Assign a ticket.")
+    tk_assign.add_argument("id", help="Ticket id.")
+    tk_assign.add_argument("assignee", help="Assignee person.")
+    _add_input_paths(tk_assign)
+    tk_assign.set_defaults(func=command_ticket_assign)
+
+    tk_close = ticket_subparsers.add_parser("close", help="Close/resolve a ticket.")
+    tk_close.add_argument("id", help="Ticket id.")
+    tk_close.add_argument("--status", default="closed",
+                          help="Terminal status: closed, resolved, rejected, duplicate, wont_fix.")
+    tk_close.add_argument("--resolution", help="Resolution note.")
+    tk_close.add_argument("--by", help="Actor recorded as closed_by. Defaults to config user.")
+    _add_input_paths(tk_close)
+    tk_close.set_defaults(func=command_ticket_close)
+
+    tk_reopen = ticket_subparsers.add_parser("reopen", help="Reopen a ticket.")
+    tk_reopen.add_argument("id", help="Ticket id.")
+    tk_reopen.add_argument("--status", default="new", help="Reopen status. Default new.")
+    _add_input_paths(tk_reopen)
+    tk_reopen.set_defaults(func=command_ticket_reopen)
+
+    tk_link = ticket_subparsers.add_parser("link", help="Add a relation to a ticket.")
+    tk_link.add_argument("id", help="Ticket id.")
+    tk_link.add_argument("relation", choices=["parent", "depends_on", "blocks", "related", "duplicate_of", "replaced_by"])
+    tk_link.add_argument("target", help="Target id.")
+    _add_input_paths(tk_link)
+    tk_link.set_defaults(func=command_ticket_link)
+
+    tk_unlink = ticket_subparsers.add_parser("unlink", help="Remove a relation from a ticket.")
+    tk_unlink.add_argument("id", help="Ticket id.")
+    tk_unlink.add_argument("relation", choices=["parent", "depends_on", "blocks", "related", "duplicate_of", "replaced_by"])
+    tk_unlink.add_argument("target", help="Target id to remove.")
+    _add_input_paths(tk_unlink)
+    tk_unlink.set_defaults(func=command_ticket_unlink)
+
+    tk_validate = ticket_subparsers.add_parser("validate", help="Validate all tickets.")
+    _add_input_paths(tk_validate)
+    tk_validate.add_argument("--json", action="store_true", help="Emit JSON.")
+    tk_validate.set_defaults(func=command_ticket_validate)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8793,6 +8882,243 @@ def command_find(args):
                 location = " (%s:%s)" % (row["source"], row["line"])
             write_text(None, "  %-20s %s%s\n" % (row["name"], row["snippet"], location))
     return 0
+
+
+def _ticket_paths(args):
+    return _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"]
+
+
+def _ticket_write_file(args, ticket_id=None):
+    from .tickets import find_ticket_file
+
+    config = _config(args)
+    if ticket_id:
+        found = find_ticket_file(_ticket_paths(args), ticket_id, key=id_key_from_config(config))
+        if found:
+            return found
+    target = getattr(args, "to", None) or config_write_file(config)
+    if not target:
+        paths = config_paths(config)
+        target = paths[0] if paths else "life.txt"
+    return target
+
+
+def command_ticket_new(args):
+    from .tickets import build_ticket_line, next_ticket_id
+
+    config = _config(args)
+    key = id_key_from_config(config)
+    items, _diags = _parse_or_exit(_ticket_paths(args), config)
+    ticket_id = getattr(args, "id", None) or next_ticket_id(items, config)
+    line = build_ticket_line(
+        config, args.subject, tracker=args.tracker, priority=args.priority,
+        severity=args.severity, assignee=args.assignee, reporter=args.reporter,
+        component=args.component, version=args.version, sprint=args.sprint,
+        project=args.project, due=args.due, est=args.est,
+        ticket_status=getattr(args, "status", "new"), watchers=getattr(args, "watcher", None),
+        ticket_id=ticket_id,
+    )
+    if getattr(args, "dry_run", False):
+        write_text(None, line + "\n")
+        return 0
+    target = getattr(args, "to", None) or config_write_file(config)
+    if not target:
+        paths = config_paths(config)
+        target = paths[0] if paths else "life.txt"
+    _ensure_writable_path(target, config, "ticket new")
+    append_line(target, line)
+    write_text(None, "Created %s in %s:\n  %s\n" % (ticket_id, target, line))
+    return 0
+
+
+def command_ticket_list(args):
+    from .tickets import ticket_list
+
+    config = _config(args)
+    items, _diags = _parse_or_exit(_ticket_paths(args), config)
+    filters = {}
+    for field in ("tracker", "status", "priority", "severity", "assignee", "component", "version", "sprint", "project"):
+        value = getattr(args, field, None)
+        if value:
+            filters["ticket_status" if field == "status" else field] = value
+    if getattr(args, "open_only", False):
+        filters["open_only"] = True
+    rows = ticket_list(items, config, filters, key=id_key_from_config(config))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not rows:
+        write_text(None, "No tickets.\n")
+        return 0
+    for row in rows:
+        write_text(None, "%-10s %-8s %-10s %-8s %-10s %s\n"
+                   % (row["id"] or "-", row["tracker"] or "-", row["ticket_status"] or "-",
+                      row["priority"] or "-", row["assignee"] or "-", row["title"]))
+    return 0
+
+
+def command_ticket_show(args):
+    from .tickets import ticket_view
+
+    config = _config(args)
+    key = id_key_from_config(config)
+    items, _diags = _parse_or_exit(_ticket_paths(args), config)
+    from .tickets import is_ticket, ticket_id_of
+
+    target = None
+    for item in items:
+        if is_ticket(item) and str(ticket_id_of(item, key)) == args.id:
+            target = item
+            break
+    if target is None:
+        sys.stderr.write("ERROR: Ticket %r not found.\n" % args.id)
+        return 1
+    view = ticket_view(target, config, items, key=key)
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(view, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    s = view["summary"]
+    write_text(None, "%s  %s\n" % (s["id"], s["title"]))
+    write_text(None, "  tracker=%s status=%s (%s) priority=%s severity=%s\n"
+               % (s["tracker"], s["ticket_status"], s["status"], s["priority"], s["severity"]))
+    write_text(None, "  assignee=%s reporter=%s project=%s component=%s version=%s sprint=%s\n"
+               % (s["assignee"], s["reporter"], s["project"], s["component"], s["version"], s["sprint"]))
+    if s["watchers"]:
+        write_text(None, "  watchers: %s\n" % ", ".join(s["watchers"]))
+    if view["relations"]:
+        write_text(None, "  relations:\n")
+        for relation, targets in view["relations"].items():
+            write_text(None, "    %s: %s\n" % (relation, ", ".join(targets)))
+    if view["incoming_links"]:
+        write_text(None, "  referenced by:\n")
+        for row in view["incoming_links"]:
+            write_text(None, "    %s <- %s %s\n" % (row["relation"], row["source_id"] or "?", row["source_title"]))
+    return 0
+
+
+def _ticket_patch_and_report(args, ticket_id, detail_updates, status=None, verb="Updated"):
+    from .tickets import apply_ticket_patch
+
+    config = _config(args)
+    key = id_key_from_config(config)
+    target = _ticket_write_file(args, ticket_id)
+    _ensure_writable_path(target, config, "ticket edit")
+    try:
+        apply_ticket_patch(target, ticket_id, detail_updates, status=status, key=key)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    write_text(None, "%s %s in %s\n" % (verb, ticket_id, target))
+    return 0
+
+
+def command_ticket_edit(args):
+    updates = OrderedDict()
+    for pair in getattr(args, "set_fields", None) or []:
+        if "=" not in pair:
+            sys.stderr.write("ERROR: --set expects KEY=VALUE, got %r\n" % pair)
+            return 1
+        k, v = pair.split("=", 1)
+        updates[k.strip()] = v.strip()
+    for key in getattr(args, "unset", None) or []:
+        updates[key.strip()] = None
+    if not updates:
+        sys.stderr.write("ERROR: nothing to change; use --set or --unset.\n")
+        return 1
+    if getattr(args, "dry_run", False):
+        write_text(None, "Would update %s: %s\n" % (args.id, json.dumps(updates, ensure_ascii=False)))
+        return 0
+    return _ticket_patch_and_report(args, args.id, updates, verb="Edited")
+
+
+def command_ticket_assign(args):
+    return _ticket_patch_and_report(args, args.id, {"assignee": args.assignee}, verb="Assigned")
+
+
+def command_ticket_close(args):
+    from .tickets import TERMINAL_STATUSES, transition_updates
+
+    status = getattr(args, "status", "closed")
+    if status not in TERMINAL_STATUSES:
+        sys.stderr.write("ERROR: %r is not a terminal status (%s).\n"
+                         % (status, ", ".join(TERMINAL_STATUSES)))
+        return 1
+    actor = getattr(args, "by", None) or config_user_name(_config(args))
+    updates, life = transition_updates(_config(args), status, actor=actor)
+    if getattr(args, "resolution", None):
+        updates["resolution"] = args.resolution
+    return _ticket_patch_and_report(args, args.id, updates, status=life, verb="Closed")
+
+
+def command_ticket_reopen(args):
+    from .tickets import transition_updates
+
+    status = getattr(args, "status", "new")
+    updates, life = transition_updates(_config(args), status)
+    updates["closed_by"] = None
+    updates["resolution"] = None
+    return _ticket_patch_and_report(args, args.id, updates, status=life, verb="Reopened")
+
+
+def _ticket_relation_edit(args, add):
+    from .tickets import apply_ticket_patch, is_ticket, ticket_id_of
+
+    config = _config(args)
+    key = id_key_from_config(config)
+    items, _diags = _parse_or_exit(_ticket_paths(args), config)
+    current = None
+    for item in items:
+        if is_ticket(item) and str(ticket_id_of(item, key)) == args.id:
+            current = item
+            break
+    if current is None:
+        sys.stderr.write("ERROR: Ticket %r not found.\n" % args.id)
+        return 1
+    existing = [str(v) for v in current.details.get(args.relation, [])]
+    if add:
+        if args.target in existing:
+            write_text(None, "%s already has %s:%s\n" % (args.id, args.relation, args.target))
+            return 0
+        new_values = existing + [args.target]
+    else:
+        if args.target not in existing:
+            sys.stderr.write("ERROR: %s has no %s:%s\n" % (args.id, args.relation, args.target))
+            return 1
+        new_values = [v for v in existing if v != args.target]
+    target = _ticket_write_file(args, args.id)
+    _ensure_writable_path(target, config, "ticket link")
+    apply_ticket_patch(target, args.id, {args.relation: new_values or None}, key=key)
+    write_text(None, "%s %s %s:%s\n" % ("Linked" if add else "Unlinked", args.id, args.relation, args.target))
+    return 0
+
+
+def command_ticket_link(args):
+    return _ticket_relation_edit(args, add=True)
+
+
+def command_ticket_unlink(args):
+    return _ticket_relation_edit(args, add=False)
+
+
+def command_ticket_validate(args):
+    from .tickets import iter_tickets, validate_ticket
+
+    config = _config(args)
+    key = id_key_from_config(config)
+    items, _diags = _parse_or_exit(_ticket_paths(args), config)
+    rows = []
+    for item in iter_tickets(items):
+        rows.extend(validate_ticket(item, config, key=key))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0 if not any(r["severity"] == "error" for r in rows) else 1
+    if not rows:
+        write_text(None, "All tickets are valid.\n")
+        return 0
+    for row in rows:
+        loc = " (%s:%s)" % (row["source"], row["line"]) if row.get("source") else ""
+        write_text(None, "[%s] %s: %s%s\n" % (row["severity"].upper(), row["code"], row["message"], loc))
+    return 0 if not any(r["severity"] == "error" for r in rows) else 1
 
 
 def command_config_explain(args):

@@ -88,6 +88,9 @@ del _install_schema_extensions_v13
 from .schema_extensions_v14 import install_schema_extensions_v14 as _install_schema_extensions_v14
 _install_schema_extensions_v14()
 del _install_schema_extensions_v14
+from .schema_extensions_v15 import install_schema_extensions_v15 as _install_schema_extensions_v15
+_install_schema_extensions_v15()
+del _install_schema_extensions_v15
 from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6

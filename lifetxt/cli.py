@@ -980,6 +980,25 @@ def build_parser():
     msg_status.add_argument("--json", action="store_true", help="Emit JSON.")
     msg_status.set_defaults(func=command_message_status)
 
+    person_command = subparsers.add_parser(
+        "person", help="Overview of a person's work, messages, meetings, and memberships."
+    )
+    person_subparsers = person_command.add_subparsers(dest="person_command")
+    person_list = person_subparsers.add_parser("list", help="List people with counts.")
+    _add_input_paths(person_list)
+    person_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    person_list.set_defaults(func=command_person_list)
+    person_show = person_subparsers.add_parser("show", help="Show one person's overview.")
+    person_show.add_argument("name", help="Person name or alias.")
+    _add_input_paths(person_show)
+    person_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    person_show.set_defaults(func=command_person_show)
+    person_group = person_subparsers.add_parser("group", help="Overview of a group's members.")
+    person_group.add_argument("name", help="Group name.")
+    _add_input_paths(person_group)
+    person_group.add_argument("--json", action="store_true", help="Emit JSON.")
+    person_group.set_defaults(func=command_person_group)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8482,6 +8501,84 @@ def command_message_status(args):
                       ack["policy"], "COMPLETE" if ack["complete"] else "open"))
         for state in summary["states"]:
             write_text(None, "    %-16s %s\n" % (state["recipient"], state["state"]))
+    return 0
+
+
+def command_person_list(args):
+    from .people import people_list
+
+    rows = people_list(_project_items(args), _config(args), _project_today())
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not rows:
+        write_text(None, "No people found.\n")
+        return 0
+    for row in rows:
+        write_text(None, "%-20s open=%d messages=%d meetings=%d\n"
+                   % (row["person"], row["assigned_open"], row["messages"], row["meetings"]))
+    return 0
+
+
+def command_person_show(args):
+    from .people import person_overview
+
+    ov = person_overview(_project_items(args), _config(args), args.name, _project_today())
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(ov, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "%s%s\n" % (ov["person"], (" (%s)" % ", ".join(ov["aliases"])) if ov["aliases"] else ""))
+    if ov["presence"]:
+        write_text(None, "  presence: %s %s\n" % (ov["presence"].get("state") or "", ov["presence"].get("from") or ""))
+    counts = ov["counts"]
+    write_text(None, "  open=%d waiting=%d overdue=%d sent=%d received=%d meetings=%d\n"
+               % (counts["assigned_open"], counts["waiting"], counts["overdue"],
+                  counts["messages_sent"], counts["messages_received"], counts["meetings"]))
+    mem = ov["memberships"]
+    if mem["teams"] or mem["groups"]:
+        write_text(None, "  teams: %s  groups: %s\n"
+                   % (", ".join(mem["teams"]) or "-", ", ".join(mem["groups"]) or "-"))
+    _person_section("Assigned (open)", ov["assigned_open"])
+    _person_section("Overdue", ov["overdue"])
+    _person_section("Waiting", ov["waiting"])
+    _person_section("Meetings", ov["meetings"])
+    if ov["projects"]:
+        write_text(None, "  projects:\n")
+        for proj in ov["projects"]:
+            role = "owner" if proj["owner"] else "member"
+            write_text(None, "    - %s (%s, %d task(s))\n" % (proj["name"], role, proj["assigned_tasks"]))
+    return 0
+
+
+def _person_section(label, rows, limit=10):
+    if not rows:
+        return
+    write_text(None, "  %s (%d):\n" % (label, len(rows)))
+    for row in rows[:limit]:
+        due = " due:%s" % row["due"] if row.get("due") else ""
+        project = " @%s" % row["project"] if row.get("project") else ""
+        write_text(None, "    - %s %s%s%s\n" % (row["status"], row["title"], project, due))
+
+
+def command_person_group(args):
+    from .people import group_overview
+
+    try:
+        report = group_overview(_project_items(args), _config(args), args.name, _project_today())
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "%s (%d member(s)) open=%d overdue=%d\n"
+               % (report["group"], report["member_count"],
+                  report["total_assigned_open"], report["total_overdue"]))
+    for member in report["members"]:
+        write_text(None, "  %-20s open=%d overdue=%d received=%d\n"
+                   % (member["person"], member["assigned_open"], member["overdue"], member["messages_received"]))
+    for row in report["diagnostics"]:
+        write_text(None, "  [%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
     return 0
 
 

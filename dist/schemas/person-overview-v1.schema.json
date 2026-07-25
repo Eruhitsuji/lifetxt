@@ -1,0 +1,100 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/person-overview-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "aliases": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "assigned_open": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "counts": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "meetings": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "memberships": {
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "teams",
+        "groups"
+      ],
+      "type": "object"
+    },
+    "messages_received": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "messages_sent": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "overdue": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "person": {
+      "type": "string"
+    },
+    "presence": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "projects": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "waiting": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "person",
+    "counts",
+    "memberships"
+  ],
+  "title": "lifetxt person overview v1",
+  "type": "object"
+}

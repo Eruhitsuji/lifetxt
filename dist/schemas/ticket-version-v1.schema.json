@@ -25,6 +25,16 @@
         "null"
       ]
     },
+    "open_ticket_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "open_ticket_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "parent_version": {
       "type": [
         "string",
@@ -68,6 +78,12 @@
     },
     "title": {
       "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
@@ -76,7 +92,9 @@
     "project",
     "state",
     "ticket_ids",
-    "ticket_count"
+    "open_ticket_ids",
+    "ticket_count",
+    "open_ticket_count"
   ],
   "title": "lifetxt ticket version v1",
   "type": "object"

@@ -152,6 +152,10 @@ CONFIG_REGISTRY = OrderedDict(
         ("projects.*.aliases", _entry(
             "array<string>", None,
             "Alternate names that resolve to this project in project/portfolio commands.")),
+        ("saved_views", _entry(
+            "object", None,
+            "Named saved views (queries). Each value has a query string plus optional "
+            "sort, order, and limit. Executed via the shared query language.")),
         ("generated_paths", _entry(
             "array<string>", None,
             "Top-level list of generated files. Superseded by per-source 'generated' "

@@ -196,6 +196,7 @@ READ_ONLY_TOOLS = frozenset(
         "complete", "attachment_state",
         "get_projects", "get_project", "get_portfolio", "get_command_center",
         "get_areas", "get_backlinks", "get_clock_status",
+        "run_query", "list_saved_views", "run_saved_view",
     ]
 )
 
@@ -693,6 +694,32 @@ def _tool_schemas():
             "Items that reference a given ID through parent/ref/depends_on/blocks/related.",
             {"id": _string("Target item ID.")},
             required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "run_query",
+            "Filter items with the shared query language, e.g. "
+            "'open project:web tag:urgent due<2026-08-01'.",
+            {
+                "query": _string("Query string."),
+                "sort": _string("Sort key (line, due, status, title, ...)."),
+                "order": _string("asc or desc."),
+                "limit": _integer("Maximum items."),
+            },
+            required=["query"],
+            read_only=True,
+        ),
+        _tool(
+            "list_saved_views",
+            "List saved views (named queries) with validation diagnostics.",
+            {},
+            read_only=True,
+        ),
+        _tool(
+            "run_saved_view",
+            "Run a saved view by name.",
+            {"name": _string("Saved view name.")},
+            required=["name"],
             read_only=True,
         ),
         _tool(
@@ -2290,6 +2317,46 @@ def _tool_get_clock_status(args, context):
     return clock_skew_report(args.get("client_time"), config=context.config)
 
 
+def _tool_run_query(args, context):
+    """Filter items with the shared query language."""
+    from .query import run_query
+
+    items, diagnostics = _read_items(context)
+    query_text = str(args.get("query") or "")
+    filtered, query_diags = run_query(
+        items, query_text, config=context.config,
+        sort=args.get("sort"), order=args.get("order") or "asc",
+        limit=args.get("limit"),
+    )
+    response = items_response(filtered, diagnostics, context.writable_path, _id_key(context))
+    response["query_diagnostics"] = query_diags
+    return response
+
+
+def _tool_list_saved_views(_args, context):
+    """List saved views (named queries) from configuration."""
+    from .saved_views import list_saved_views, validate_saved_views
+
+    return {
+        "views": list_saved_views(context.config),
+        "diagnostics": validate_saved_views(context.config),
+    }
+
+
+def _tool_run_saved_view(args, context):
+    """Run a saved view by name."""
+    from .saved_views import run_saved_view
+
+    items, diagnostics = _read_items(context)
+    name = str(args.get("name") or "")
+    if not name:
+        raise ValueError("run_saved_view requires 'name'.")
+    filtered, query_diags = run_saved_view(items, context.config, name)
+    response = items_response(filtered, diagnostics, context.writable_path, _id_key(context))
+    response["query_diagnostics"] = query_diags
+    return response
+
+
 def _tool_get_file_state(_args, context):
     """Paths, write target, read-only flag, and content hashes.
 
@@ -2359,6 +2426,9 @@ TOOL_HANDLERS = OrderedDict(
         ("get_command_center", _tool_get_command_center),
         ("get_areas", _tool_get_areas),
         ("get_backlinks", _tool_get_backlinks),
+        ("run_query", _tool_run_query),
+        ("list_saved_views", _tool_list_saved_views),
+        ("run_saved_view", _tool_run_saved_view),
         ("get_clock_status", _tool_get_clock_status),
     ]
 )

@@ -70,6 +70,9 @@ del _install_schema_extensions_v7
 from .schema_extensions_v8 import install_schema_extensions_v8 as _install_schema_extensions_v8
 _install_schema_extensions_v8()
 del _install_schema_extensions_v8
+from .schema_extensions_v9 import install_schema_extensions_v9 as _install_schema_extensions_v9
+_install_schema_extensions_v9()
+del _install_schema_extensions_v9
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

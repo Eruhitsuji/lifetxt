@@ -22,7 +22,7 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
             with open(path, "r", encoding="utf-8") as handle:
-                self.assertEqual(generated, json.load(handle))
+                self.assertEqual(generated, json.load(handle), name)
 
     def test_release_schema_gate_resolves_local_references(self):
         optional = schema_validation_report(ROOT, require_validator=False)

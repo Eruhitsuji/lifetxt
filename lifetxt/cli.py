@@ -936,6 +936,50 @@ def build_parser():
     view_run.add_argument("-o", "--output", help="Write to a file instead of stdout.")
     view_run.set_defaults(func=command_view_run)
 
+    group_command = subparsers.add_parser(
+        "group", help="Inspect and validate messaging groups."
+    )
+    group_subparsers = group_command.add_subparsers(dest="group_command")
+    group_list = group_subparsers.add_parser("list", help="List groups with member counts.")
+    group_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    group_list.set_defaults(func=command_group_list)
+    group_show = group_subparsers.add_parser("show", help="Show one group's resolved members.")
+    group_show.add_argument("name", help="Group name.")
+    group_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    group_show.set_defaults(func=command_group_show)
+    group_validate = group_subparsers.add_parser("validate", help="Validate all groups.")
+    group_validate.add_argument("--json", action="store_true", help="Emit JSON.")
+    group_validate.set_defaults(func=command_group_validate)
+
+    message_command = subparsers.add_parser(
+        "message", help="Compose messages and inspect recipients and delivery state."
+    )
+    message_subparsers = message_command.add_subparsers(dest="message_command")
+
+    msg_recipients = message_subparsers.add_parser(
+        "recipients", help="Preview the resolved recipient set for references."
+    )
+    msg_recipients.add_argument("to", help="Comma-separated people/teams/groups.")
+    msg_recipients.add_argument("--json", action="store_true", help="Emit JSON.")
+    msg_recipients.set_defaults(func=command_message_recipients)
+
+    msg_send = message_subparsers.add_parser("send", help="Append a message item with resolved recipients.")
+    msg_send.add_argument("title", help="Message title.")
+    msg_send.add_argument("--sender", help="Sender person. Defaults to the config user.")
+    msg_send.add_argument("--to", required=True, help="Comma-separated people/teams/groups.")
+    msg_send.add_argument("--ack-policy", default="any", help="Acknowledgement policy: any, all, or a count.")
+    msg_send.add_argument("--body", help="Message body.")
+    msg_send.add_argument("--output", help="File to append to. Defaults to the write target.")
+    msg_send.add_argument("--dry-run", action="store_true", help="Print the line without writing.")
+    msg_send.set_defaults(func=command_message_send)
+
+    msg_status = message_subparsers.add_parser("status", help="Show per-recipient delivery state.")
+    msg_status.add_argument("--id", help="Restrict to one message ID.")
+    _add_input_paths(msg_status)
+    msg_status.add_argument("--policy", help="Override the acknowledgement policy.")
+    msg_status.add_argument("--json", action="store_true", help="Emit JSON.")
+    msg_status.set_defaults(func=command_message_status)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8270,6 +8314,174 @@ def command_view_run(args):
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
     _emit_query_items(args, filtered, query_diags)
+    return 0
+
+
+def command_group_list(args):
+    from .groups import group_summaries
+
+    summaries = group_summaries(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(summaries, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not summaries:
+        write_text(None, "No groups configured.\n")
+        return 0
+    for row in summaries:
+        flag = "" if row["ok"] else " [errors]"
+        write_text(None, "%-20s %d member(s), %d disabled%s\n"
+                   % (row["name"], row["resolved_members"], row["disabled"], flag))
+    return 0
+
+
+def command_group_show(args):
+    from .groups import expand_group, group_directory
+
+    config = _config(args)
+    directory = group_directory(config)
+    if args.name not in directory:
+        sys.stderr.write("ERROR: Unknown group %r\n" % args.name)
+        return 1
+    diagnostics = []
+    members = expand_group(config, args.name, diagnostics=diagnostics)
+    if getattr(args, "json", False):
+        payload = OrderedDict(
+            (("name", args.name), ("members", members),
+             ("definition", directory[args.name]), ("diagnostics", diagnostics))
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "%s (%d resolved member(s)):\n" % (args.name, len(members)))
+    for member in members:
+        write_text(None, "  - %s\n" % member)
+    for row in diagnostics:
+        write_text(None, "  [%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    return 0
+
+
+def command_group_validate(args):
+    from .groups import validate_groups
+
+    rows = validate_groups(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0 if not any(r["severity"] == "error" for r in rows) else 1
+    if not rows:
+        write_text(None, "All groups are valid.\n")
+        return 0
+    for row in rows:
+        write_text(None, "[%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    return 0 if not any(r["severity"] == "error" for r in rows) else 1
+
+
+def command_message_recipients(args):
+    from .groups import resolve_recipients
+
+    refs = [r.strip() for r in str(args.to).split(",") if r.strip()]
+    result = resolve_recipients(_config(args), refs)
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0 if not any(d["severity"] == "error" for d in result["diagnostics"]) else 1
+    write_text(None, "Resolved %d recipient(s) from %s:\n" % (result["count"], ", ".join(refs)))
+    for recipient in result["recipients"]:
+        write_text(None, "  - %s\n" % recipient)
+    for row in result["diagnostics"]:
+        write_text(None, "  [%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    return 0 if not any(d["severity"] == "error" for d in result["diagnostics"]) else 1
+
+
+def command_message_send(args):
+    from .groups import resolve_recipients
+
+    refs = [r.strip() for r in str(args.to).split(",") if r.strip()]
+    config = _config(args)
+    result = resolve_recipients(config, refs)
+    errors = [d for d in result["diagnostics"] if d["severity"] == "error"]
+    if errors:
+        for row in errors:
+            sys.stderr.write("ERROR: %s %s\n" % (row["code"], row["message"]))
+        return 1
+    if not result["recipients"]:
+        sys.stderr.write("ERROR: No recipients resolved.\n")
+        return 1
+    sender = args.sender or config_user_name(config)
+    line = _build_message_line(args.title, sender, result, refs,
+                               ack_policy=getattr(args, "ack_policy", "any"),
+                               body=getattr(args, "body", None))
+    if getattr(args, "dry_run", False):
+        write_text(None, line + "\n")
+        return 0
+    target = getattr(args, "output", None) or config_write_file(config)
+    if not target:
+        paths = config_paths(config)
+        target = paths[0] if paths else "life.txt"
+    _ensure_writable_path(target, config, "message send")
+    append_line(target, line)
+    write_text(None, "Appended message to %s (%d recipient(s)):\n  %s\n"
+               % (target, result["count"], line))
+    return 0
+
+
+def _build_message_line(title, sender, resolution, refs, ack_policy="any", body=None):
+    parts = ["[ ] M", "_".join(str(title).split()), "sender:%s" % sender]
+    for recipient in resolution["recipients"]:
+        parts.append("recipient:%s" % recipient)
+    # Preserve the original group/team references for audit without losing the
+    # readable resolved recipient list above. A reference is a group/team when
+    # its expansion is not simply the literal name itself.
+    expansion = resolution.get("expansion", {})
+    for ref in refs:
+        _prefix, bare = _split_group_ref(ref)
+        expanded = expansion.get(ref, [ref])
+        if expanded != [bare]:
+            parts.append("group:%s" % bare)
+    if ack_policy and ack_policy != "any":
+        parts.append("ack_policy:%s" % ack_policy)
+    if body:
+        parts.append("body:%s" % "_".join(str(body).split()))
+    return " ".join(parts)
+
+
+def _split_group_ref(ref):
+    text = str(ref)
+    for prefix in ("group:", "team:", "user:", "person:"):
+        if text.startswith(prefix):
+            return prefix[:-1], text[len(prefix):]
+    return None, text
+
+
+def command_message_status(args):
+    from .delivery import delivery_summary
+    from .groups import resolve_recipients
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"],
+        _config(args),
+    )
+    config = _config(args)
+    target_id = getattr(args, "id", None)
+    policy = getattr(args, "policy", None)
+    summaries = []
+    for item in items:
+        if item.kind != "M":
+            continue
+        if target_id and (item.details.get("id", [None])[0] != target_id):
+            continue
+        summaries.append(delivery_summary(item, config, resolve_recipients, policy))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(summaries, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not summaries:
+        write_text(None, "No messages found.\n")
+        return 0
+    for summary in summaries:
+        ack = summary["acknowledgement"]
+        write_text(None, "%s [%s] recipients=%d ack=%d/%d (%s) %s\n"
+                   % (summary["title"], summary["message_id"] or "no-id",
+                      summary["recipient_count"], ack["acknowledged"], ack["required"],
+                      ack["policy"], "COMPLETE" if ack["complete"] else "open"))
+        for state in summary["states"]:
+            write_text(None, "    %-16s %s\n" % (state["recipient"], state["state"]))
     return 0
 
 

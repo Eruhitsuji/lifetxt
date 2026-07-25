@@ -152,6 +152,11 @@ CONFIG_REGISTRY = OrderedDict(
         ("projects.*.aliases", _entry(
             "array<string>", None,
             "Alternate names that resolve to this project in project/portfolio commands.")),
+        ("groups", _entry(
+            "object", None,
+            "Messaging groups: name -> {members, disabled_members, visibility, aliases}. "
+            "Members may be people, teams (team:name), or other groups; expansion is "
+            "deterministic with cycle detection (group-v1.schema.json).")),
         ("saved_views", _entry(
             "object", None,
             "Named saved views (queries). Each value has a query string plus optional "

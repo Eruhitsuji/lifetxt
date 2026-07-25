@@ -893,6 +893,49 @@ def build_parser():
     backlinks_command.add_argument("--json", action="store_true", help="Emit JSON.")
     backlinks_command.set_defaults(func=command_backlinks)
 
+    query_command = subparsers.add_parser(
+        "query", help="Filter items with the shared query language."
+    )
+    query_command.add_argument("query", help="Query string, e.g. 'open project:web due<2026-08-01'.")
+    _add_input_paths(query_command)
+    query_command.add_argument("--sort", help="Sort key (line, due, status, title, ...).")
+    query_command.add_argument("--order", default="asc", choices=["asc", "desc"], help="Sort order.")
+    query_command.add_argument("--limit", type=int, help="Maximum items to return.")
+    query_command.add_argument(
+        "--format", default="life", choices=["life", "json", "jsonl", "table"], help="Output format."
+    )
+    query_command.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
+    query_command.add_argument("--canonical", action="store_true", help="Canonical life.txt output.")
+    query_command.add_argument("--width", type=int, default=0, help="Table width.")
+    query_command.add_argument("-o", "--output", help="Write to a file instead of stdout.")
+    query_command.set_defaults(func=command_query)
+
+    view_command = subparsers.add_parser(
+        "view", help="List, inspect, and run saved views (named queries)."
+    )
+    view_subparsers = view_command.add_subparsers(dest="view_command")
+    view_list = view_subparsers.add_parser("list", help="List saved views.")
+    view_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    view_list.set_defaults(func=command_view_list)
+    view_show = view_subparsers.add_parser("show", help="Show one saved view definition.")
+    view_show.add_argument("name", help="Saved view name.")
+    view_show.add_argument("--json", action="store_true", help="Emit JSON.")
+    view_show.set_defaults(func=command_view_show)
+    view_validate = view_subparsers.add_parser("validate", help="Validate saved view queries.")
+    view_validate.add_argument("--json", action="store_true", help="Emit JSON.")
+    view_validate.set_defaults(func=command_view_validate)
+    view_run = view_subparsers.add_parser("run", help="Run a saved view.")
+    view_run.add_argument("name", help="Saved view name.")
+    _add_input_paths(view_run)
+    view_run.add_argument(
+        "--format", default="life", choices=["life", "json", "jsonl", "table"], help="Output format."
+    )
+    view_run.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
+    view_run.add_argument("--canonical", action="store_true", help="Canonical life.txt output.")
+    view_run.add_argument("--width", type=int, default=0, help="Table width.")
+    view_run.add_argument("-o", "--output", help="Write to a file instead of stdout.")
+    view_run.set_defaults(func=command_view_run)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8125,6 +8168,108 @@ def command_backlinks(args):
     for row in records:
         write_text(None, "  %s <- %s (%s) %s\n"
                    % (row["relation"], row["source_id"] or "(no id)", row["source_status"], row["source_title"]))
+    return 0
+
+
+def _emit_query_items(args, items, diagnostics=None):
+    id_key = id_key_from_config(_config(args))
+    fmt = getattr(args, "format", "life")
+    if fmt == "json":
+        write_text(args.output, items_to_json(items, pretty=getattr(args, "pretty", False)) + "\n")
+    elif fmt == "jsonl":
+        output = items_to_jsonl(items)
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    elif fmt == "table":
+        write_text(args.output, _format_filter_table(items, width=getattr(args, "width", 0)))
+    else:
+        write_text(args.output, _items_to_life_text(items, canonical=getattr(args, "canonical", False), key=id_key))
+    for row in diagnostics or []:
+        if row.get("severity") == "error":
+            sys.stderr.write("ERROR: %s %s\n" % (row.get("code"), row.get("message")))
+        else:
+            sys.stderr.write("WARNING: %s %s\n" % (row.get("code"), row.get("message")))
+
+
+def command_query(args):
+    from .query import run_query
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"],
+        _config(args),
+    )
+    filtered, query_diags = run_query(
+        items, args.query, config=_config(args),
+        sort=getattr(args, "sort", None), order=getattr(args, "order", "asc"),
+        limit=getattr(args, "limit", None),
+    )
+    if any(d["severity"] == "error" for d in query_diags):
+        for d in query_diags:
+            if d["severity"] == "error":
+                sys.stderr.write("ERROR: %s %s\n" % (d["code"], d["message"]))
+        return 1
+    _emit_query_items(args, filtered, query_diags)
+    return 0
+
+
+def command_view_list(args):
+    from .saved_views import list_saved_views
+
+    views = list_saved_views(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(views, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not views:
+        write_text(None, "No saved views configured.\n")
+        return 0
+    for view in views:
+        sort = ",".join(view["sort"]) or "-"
+        write_text(None, "%-20s %s  (sort=%s limit=%s)\n"
+                   % (view["name"], view["query"], sort, view["limit"]))
+    return 0
+
+
+def command_view_show(args):
+    from .saved_views import get_saved_view
+
+    try:
+        view = get_saved_view(_config(args), args.name)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    write_text(None, json.dumps(view, ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
+def command_view_validate(args):
+    from .saved_views import validate_saved_views
+
+    rows = validate_saved_views(_config(args))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+        return 0 if not rows else 1
+    if not rows:
+        write_text(None, "All saved views are valid.\n")
+        return 0
+    for row in rows:
+        write_text(None, "[%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    return 1
+
+
+def command_view_run(args):
+    from .saved_views import run_saved_view
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"],
+        _config(args),
+    )
+    try:
+        filtered, query_diags = run_saved_view(items, _config(args), args.name)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    _emit_query_items(args, filtered, query_diags)
     return 0
 
 

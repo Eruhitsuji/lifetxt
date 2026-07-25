@@ -4,18 +4,25 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, List, Mapping, Optional, Tuple
 
+try:
+    from .tickets import DEFAULT_STATUS_MAP, TERMINAL_STATUSES
+except ImportError:  # pragma: no cover - isolated module tests
+    DEFAULT_STATUS_MAP = {
+        "new": "[ ]", "triaged": "[ ]", "assigned": "[ ]",
+        "in_progress": "[/]", "review": "[/]", "testing": "[/]",
+        "needs_info": "[?]", "blocked": "[?]", "deferred": "[>]",
+        "resolved": "[x]", "closed": "[x]", "rejected": "[-]",
+        "duplicate": "[-]", "wont_fix": "[-]",
+    }
+    TERMINAL_STATUSES = ("resolved", "closed", "rejected", "duplicate", "wont_fix")
+
 REPORT_SCHEMA = "ticket-project-report-v1"
 DEFAULT_STALE_DAYS = 14
-DEFAULT_HIGH_SEVERITIES = frozenset(("blocker", "critical", "high"))
-DEFAULT_TERMINAL_STATUSES = frozenset(
-    ("closed", "done", "resolved", "cancelled", "canceled", "duplicate", "rejected", "released")
-)
-STATUS_ORDER = (
-    "new", "open", "ready", "in_progress", "review", "testing", "blocked",
-    "resolved", "closed", "done", "cancelled", "duplicate", "unknown",
-)
+DEFAULT_HIGH_SEVERITIES = frozenset(("blocker", "critical"))
+DEFAULT_TERMINAL_STATUSES = frozenset(TERMINAL_STATUSES)
+STATUS_ORDER = ("new", "open") + tuple(key for key in DEFAULT_STATUS_MAP if key != "new") + ("done", "cancelled", "unknown")
 PRIORITY_ORDER = {
-    "urgent": 0, "highest": 0, "critical": 0, "high": 1,
+    "immediate": 0, "urgent": 0, "highest": 0, "critical": 0, "high": 1,
     "normal": 2, "medium": 2, "low": 3, "lowest": 4,
 }
 _DURATION_TOKEN = re.compile(r"(?P<number>\d+(?:\.\d+)?)\s*(?P<unit>w|d|h|m)", re.IGNORECASE)
@@ -56,7 +63,7 @@ def detail_first(item: Any, key: str, default: str = "") -> str:
 
 
 def item_type(item: Any) -> str:
-    return str(attr(item, "item_type", "type_code", "type", default="")).strip()
+    return str(attr(item, "kind", "item_type", "type_code", "type", default="")).strip()
 
 
 def item_status(item: Any) -> str:
@@ -97,6 +104,10 @@ def ticket_status(item: Any) -> str:
         return "in_progress"
     if coarse in ("[!]", "blocked"):
         return "blocked"
+    if coarse in ("[?]", "needs_info"):
+        return "needs_info"
+    if coarse in ("[>]", "deferred"):
+        return "deferred"
     if coarse in ("[ ]", "open", ""):
         return "open"
     return "unknown"
@@ -184,7 +195,7 @@ def due_time(item: Any) -> Optional[datetime]:
 
 
 def ticket_row(item: Any) -> Mapping[str, Any]:
-    estimate = parse_duration_hours(detail_first(item, "estimate"))
+    estimate = parse_duration_hours(detail_first(item, "est") or detail_first(item, "estimate"))
     elapsed = parse_duration_hours(detail_first(item, "elapsed"))
     return {
         "id": ticket_id(item), "title": item_title(item), "project": ticket_project(item),

@@ -84,8 +84,8 @@ class SafetyCliTests(unittest.TestCase):
         code, stdout, stderr = self.run_command(["format", "schemas", directory, "--pretty"])
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(56, len(report["files"]))
-        self.assertEqual(56, len(os.listdir(directory)))
+        self.assertEqual(57, len(report["files"]))
+        self.assertEqual(57, len(os.listdir(directory)))
         for name in (
             "release-manifest-v1.schema.json",
             "revision-metrics-v1.schema.json",
@@ -99,6 +99,7 @@ class SafetyCliTests(unittest.TestCase):
             "support-bundle-v1.schema.json",
             "revision-migration-evidence-v1.schema.json",
             "ticket-field-registry-v1.schema.json",
+            "ticket-custom-field-registry-v1.schema.json",
             "ticket-v1.schema.json",
             "ticket-project-report-v1.schema.json",
         ):

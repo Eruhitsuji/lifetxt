@@ -233,3 +233,155 @@ contracts, but it does not advertise remote ticket writes as enabled. Tickets
 follow `ticket-v1.schema.json`; the built-in field registry follows
 `ticket-field-registry-v1.schema.json`; custom definitions follow
 `ticket-custom-field-registry-v1.schema.json`.
+
+
+## Workflow, append-only history, and time
+
+The audit-safe workflow commands use `ticket-workflow-v1`. The built-in graph
+supports triage, assignment, work, review, testing, information/block states,
+terminal resolution states, and reopening. Override or replace transitions under
+`ticketing.workflow.transitions`; each transition can declare allowed source
+states, roles, required fields, a required comment or resolution, fixed
+set/unset side effects, and the event type to append.
+
+```json
+{
+  "ticketing": {
+    "activities": ["development", "review", "testing"],
+    "workflow": {
+      "local_role": "administrator",
+      "transitions": {
+        "review": {
+          "from": ["in_progress", "testing"],
+          "roles": ["developer", "manager"],
+          "required_fields": ["pr"],
+          "comment_required": true
+        },
+        "resolved": {
+          "from": ["review", "testing"],
+          "roles": ["manager"],
+          "resolution_required": true,
+          "event": "closed"
+        }
+      }
+    }
+  }
+}
+```
+
+Inspect the effective graph before changing a ticket:
+
+```console
+$ lifetxt ticket workflow --role manager --format json --pretty
+```
+
+Audit-safe writes always require the exact revision of the file that owns the
+ticket. They update the current ticket and append the required
+`record:ticket_event` Note in one sidecar lock and one atomic replacement:
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket transition BUG-1 in_progress \
+    --revision "$REV" --actor alice --comment "Started" \
+    --at 2026-07-25T10:00:00+09:00
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket comment BUG-1 "Root cause identified" \
+    --revision "$REV" --author alice
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket reassign BUG-1 bob --revision "$REV" --actor alice
+$ lifetxt ticket change BUG-1 --revision "$REV" --actor alice \
+    --set severity=critical --unset milestone
+$ lifetxt ticket watch BUG-1 carol --revision "$REV" --actor alice
+$ lifetxt ticket unwatch BUG-1 carol --revision "$REV" --actor alice
+```
+
+Use `--dry-run` to calculate the generated event and post-write revision without
+changing the file. `--transaction-id` supplies a stable retry/audit identifier;
+a duplicate transaction is rejected. Event IDs and sequences are allocated
+while the lock is held, so equal timestamps still have deterministic ordering.
+A stale revision leaves both the ticket and history unchanged.
+
+`record:ticket_event` records are append-only and include a stable ID, parent
+ticket, event type, author, offset-aware UTC timestamp, per-ticket sequence,
+transaction ID, source ticket revision, changed-field summaries, comment body,
+and optional provider/reference context. Validate them with:
+
+```console
+$ lifetxt ticket activity BUG-1
+$ lifetxt ticket validate-history --format json --pretty
+```
+
+The audit-safe commands are additive. Compatibility commands such as the older
+`ticket edit|assign|close|reopen|link|unlink` remain available and do not claim
+to append events. Workflows that require an audit trail should use
+`ticket transition`, `ticket reassign`, `ticket change`, and the new comment,
+watch, planning, and time commands.
+
+Time is stored as append-only `record:time_entry` Notes:
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket log-time BUG-1 90m \
+    --revision "$REV" --user alice --activity development \
+    --date 2026-07-25 --comment "Implemented validation"
+
+$ lifetxt ticket time BUG-1 --format json --pretty
+```
+
+A correction is another immutable entry with `--corrects TIME-ID`. The newest
+uncorrected entries are counted; referenced entries remain visible but are
+superseded in the authoritative total. Legacy ticket `elapsed:` is returned
+separately and is never double-counted. Timer/work-session conversion remains a
+future proposal/transaction integration and is not performed implicitly.
+
+## Versions, sprints, backlog, and roadmap
+
+Versions and sprints are ordinary Notes marked `record:version` and
+`record:sprint`. Their writes also require an exact file revision:
+
+```console
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt version new "v1.0" --project web --due 2026-08-15 \
+    --revision "$REV"
+
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt sprint new "Sprint 12" --project web \
+    --start 2026-07-20 --end 2026-08-02 \
+    --version VER-1 --capacity 30 --revision "$REV"
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket plan BUG-1 --sprint SPR-1 \
+    --revision "$REV" --actor alice
+
+$ lifetxt ticket backlog --project web
+$ lifetxt ticket roadmap --project web --format json --pretty
+```
+
+Version states are `open`, `locked`, `released`, and `closed`; sprint states are
+`planned`, `active`, and `closed`. Releasing/closing a version or closing a
+sprint refuses unresolved members unless `--force` is supplied after reviewing
+the scope/carry-over. Membership must stay within the ticket's project, sprint
+capacity warnings use optional story points, and a sprint-associated version is
+inferred during `ticket plan`.
+
+```console
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt version release VER-1 --revision "$REV"
+$ lifetxt sprint start SPR-1 --revision "$REV"
+$ lifetxt sprint close SPR-1 --revision "$REV"
+$ lifetxt ticket validate-planning
+```
+
+The current implementation is atomic for records in the same authoritative
+life.txt file. Split ticket/event/time/planning sources require revision sets
+and the existing multi-target journal/recovery contract and are therefore not
+advertised as writable yet. Remote ticket writes, authenticated role
+enforcement, watcher delivery, and timer side effects also remain disabled.
+
+Read-only MCP adds `get_ticket_workflow`, `get_ticket_activity`,
+`get_ticket_time`, `get_ticket_planning`, `validate_ticket_history`, and
+`validate_ticket_planning`. Capability discovery publishes the seven workflow,
+event, time, and planning schemas plus the exact-revision and same-file compound
+boundaries.

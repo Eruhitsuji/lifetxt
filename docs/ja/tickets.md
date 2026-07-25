@@ -221,3 +221,150 @@ capability discoveryはローカルのチケットrevision契約と型付きカ�
 公開しますが、リモートのチケット書き込みを有効とは通知しません。チケットは
 `ticket-v1.schema.json`、組み込みフィールドは `ticket-field-registry-v1.schema.json`、
 カスタム定義は `ticket-custom-field-registry-v1.schema.json` に従います。
+
+
+## ワークフロー・追記専用履歴・時間記録
+
+監査履歴付きの操作は `ticket-workflow-v1` を使用します。既定の遷移グラフは、
+トリアージ・担当・作業中・レビュー・テスト・情報待ち／ブロック・終端状態・
+再オープンを扱います。`ticketing.workflow.transitions` では、遷移元、許可role、
+必須フィールド、必須コメント／resolution、固定のset/unset副作用、追記する
+event種別を設定できます。
+
+```json
+{
+  "ticketing": {
+    "activities": ["development", "review", "testing"],
+    "workflow": {
+      "local_role": "administrator",
+      "transitions": {
+        "review": {
+          "from": ["in_progress", "testing"],
+          "roles": ["developer", "manager"],
+          "required_fields": ["pr"],
+          "comment_required": true
+        },
+        "resolved": {
+          "from": ["review", "testing"],
+          "roles": ["manager"],
+          "resolution_required": true,
+          "event": "closed"
+        }
+      }
+    }
+  }
+}
+```
+
+変更前に有効な遷移を確認できます。
+
+```console
+$ lifetxt ticket workflow --role manager --format json --pretty
+```
+
+監査履歴付きの書き込みでは、チケットを所有するファイルの正確なrevisionが常に
+必要です。現在のチケット更新と `record:ticket_event` Note の追記を、1回の
+sidecar lockと1回のatomic replaceで確定します。
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket transition BUG-1 in_progress \
+    --revision "$REV" --actor alice --comment "Started" \
+    --at 2026-07-25T10:00:00+09:00
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket comment BUG-1 "Root cause identified" \
+    --revision "$REV" --author alice
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket reassign BUG-1 bob --revision "$REV" --actor alice
+$ lifetxt ticket change BUG-1 --revision "$REV" --actor alice \
+    --set severity=critical --unset milestone
+$ lifetxt ticket watch BUG-1 carol --revision "$REV" --actor alice
+$ lifetxt ticket unwatch BUG-1 carol --revision "$REV" --actor alice
+```
+
+`--dry-run` はファイルを書き換えず、生成eventと変更後revisionを計算します。
+`--transaction-id` では再試行／監査用の安定IDを指定でき、重複transactionは拒否
+されます。event IDとsequenceはlock中に採番されるため、同一timestampでも順序は
+決定的です。古いrevisionではチケットと履歴の両方が変更されません。
+
+`record:ticket_event` は追記専用で、安定ID、親チケット、event種別、author、
+offset付きUTC timestamp、チケット単位のsequence、transaction ID、変更前の
+ticket revision、変更フィールド要約、コメント、任意のprovider／参照情報を
+保持します。
+
+```console
+$ lifetxt ticket activity BUG-1
+$ lifetxt ticket validate-history --format json --pretty
+```
+
+新しい監査履歴付きコマンドは追加機能です。互換性のため従来の
+`ticket edit|assign|close|reopen|link|unlink` も残りますが、event追記を保証する
+操作とは扱いません。履歴が必要な運用では `ticket transition`、`ticket reassign`、
+`ticket change`、および新しいcomment・watch・planning・time操作を使用します。
+
+時間は追記専用の `record:time_entry` Noteとして保存します。
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket log-time BUG-1 90m \
+    --revision "$REV" --user alice --activity development \
+    --date 2026-07-25 --comment "Implemented validation"
+
+$ lifetxt ticket time BUG-1 --format json --pretty
+```
+
+修正は既存entryを書き換えず、`--corrects TIME-ID` を付けた新しいentryとして
+記録します。参照されたentryは履歴に残りますが、権威ある合計では置き換えられます。
+従来のチケット `elapsed:` は別値として返され、二重計上されません。timer／
+work-sessionからの変換は後続のproposal／transaction統合であり、自動実行しません。
+
+## バージョン・スプリント・バックログ・ロードマップ
+
+バージョンとスプリントは、`record:version`／`record:sprint` を付けた通常のNoteです。
+書き込みには正確なファイルrevisionが必要です。
+
+```console
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt version new "v1.0" --project web --due 2026-08-15 \
+    --revision "$REV"
+
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt sprint new "Sprint 12" --project web \
+    --start 2026-07-20 --end 2026-08-02 \
+    --version VER-1 --capacity 30 --revision "$REV"
+
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket plan BUG-1 --sprint SPR-1 \
+    --revision "$REV" --actor alice
+
+$ lifetxt ticket backlog --project web
+$ lifetxt ticket roadmap --project web --format json --pretty
+```
+
+version stateは `open`・`locked`・`released`・`closed`、sprint stateは
+`planned`・`active`・`closed` です。未完了ticketがあるversionのrelease／close、
+またはsprintのcloseは拒否されます。範囲／carry-overを確認したうえでのみ
+`--force` を指定できます。membershipはticketと同じprojectに限定され、
+capacity警告は任意のstory pointsを使用します。sprintにversionが設定されている
+場合、`ticket plan` でversionも推論されます。
+
+```console
+$ REV=$(lifetxt ticket file-revision)
+$ lifetxt version release VER-1 --revision "$REV"
+$ lifetxt sprint start SPR-1 --revision "$REV"
+$ lifetxt sprint close SPR-1 --revision "$REV"
+$ lifetxt ticket validate-planning
+```
+
+現時点のatomic保証は、同じ権威life.txtファイル内のrecordが対象です。
+ticket/event/time/planningを別ファイルへ分割する場合はrevision setと既存の
+multi-target journal／recovery契約が必要なため、書き込み可能とは通知しません。
+リモートticket書き込み、認証済みrole強制、watcher配信、timer副作用も無効のままです。
+
+読み取り専用MCPには `get_ticket_workflow`・`get_ticket_activity`・
+`get_ticket_time`・`get_ticket_planning`・`validate_ticket_history`・
+`validate_ticket_planning` を追加します。capability discoveryは7つのworkflow／
+event／time／planning schemaと、exact-revision・同一ファイルcompound境界を
+公開します。

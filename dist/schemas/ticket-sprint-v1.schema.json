@@ -1,0 +1,104 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-sprint-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "capacity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "end": {
+      "format": "date",
+      "type": "string"
+    },
+    "goal": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "line": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "open_ticket_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "open_ticket_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "project": {
+      "type": "string"
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "start": {
+      "format": "date",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "planned",
+        "active",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "story_points": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "ticket_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ticket_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "title": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "project",
+    "state",
+    "start",
+    "end",
+    "ticket_ids",
+    "open_ticket_ids"
+  ],
+  "title": "lifetxt ticket sprint v1",
+  "type": "object"
+}

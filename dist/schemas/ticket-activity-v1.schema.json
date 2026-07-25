@@ -1,0 +1,95 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-activity-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "contract_version": {
+      "const": "1"
+    },
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-event-v1.schema.json"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "ticket-activity-v1.schema.json"
+    },
+    "ticket": {
+      "type": "object"
+    },
+    "time": {
+      "additionalProperties": true,
+      "properties": {
+        "authoritative_duration": {
+          "type": "string"
+        },
+        "authoritative_seconds": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "correction_seconds": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "effective_entry_ids": {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        },
+        "entry_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "legacy_elapsed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy": {
+          "type": "string"
+        },
+        "superseded_entry_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entry_count",
+        "authoritative_seconds",
+        "authoritative_duration",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "time_entries": {
+      "items": {
+        "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-time-entry-v1.schema.json"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "ticket",
+    "events",
+    "time_entries",
+    "time"
+  ],
+  "title": "lifetxt ticket activity v1",
+  "type": "object"
+}

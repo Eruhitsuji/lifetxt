@@ -4,6 +4,8 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, List, Mapping, Optional, Tuple
 
+from .timezone_policy import utcnow
+
 try:
     from .tickets import DEFAULT_STATUS_MAP, TERMINAL_STATUSES
 except ImportError:  # pragma: no cover - isolated module tests
@@ -171,7 +173,7 @@ def parse_duration_hours(value: str) -> Optional[float]:
 
 def reference_time(value: Optional[datetime]) -> datetime:
     if value is None:
-        return datetime.now(timezone.utc)
+        return utcnow().astimezone(timezone.utc)
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)

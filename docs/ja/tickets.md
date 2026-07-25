@@ -46,10 +46,15 @@ Redmine 風のチケット管理を追加します。チケットは `record:tic
     "priorities": ["low", "normal", "high", "urgent"],
     "severities": ["minor", "major", "critical", "blocker"],
     "required_fields": ["assignee"],
-    "defaults": { "tracker": "task", "priority": "normal" }
+    "defaults": { "tracker": "task", "priority": "normal" },
+    "write": { "require_revision": true }
   }
 }
 ```
+
+`ticketing.write.require_revision` を有効にすると、既存チケットを変更するすべての操作で
+正確なソースファイルrevisionが必須になります。ローカル利用との後方互換性のため既定では
+任意ですが、スクリプトや将来のリモートアダプターでは有効化を推奨します。
 
 ## コマンド
 
@@ -57,6 +62,7 @@ Redmine 風のチケット管理を追加します。チケットは `record:tic
 $ lifetxt ticket new "Login fails" --tracker bug --priority high --assignee alice --project web
 $ lifetxt ticket list --tracker bug --open
 $ lifetxt ticket show BUG-1
+$ lifetxt ticket revision BUG-1
 $ lifetxt ticket assign BUG-1 carol
 $ lifetxt ticket edit BUG-1 --set severity=critical --set component=auth --unset milestone
 $ lifetxt ticket link BUG-2 depends_on BUG-1
@@ -70,6 +76,42 @@ $ lifetxt ticket validate
 リレーション・被参照リンクを、何も変更せずに集約します。遷移は1回の書き換えで
 チケットを更新します。`close` は終端ステータス・`closed_by`・`--resolution` を設定し、
 `reopen` はそれらを解除します。
+
+## 正確なrevisionを使用した書き込み
+
+`ticket revision ID` は、対象チケットを含む権威ソースファイルの正確なバイト列から計算した
+小文字SHA-256を表示します。その値を `edit`・`assign`・`close`・`reopen`・`link`・
+`unlink` に渡します。
+
+```console
+$ lifetxt ticket revision BUG-1
+f28c83d4c0f17a3f...
+$ lifetxt ticket edit BUG-1 --revision f28c83d4c0f17a3f... --set priority=urgent
+Edited BUG-1 in life.txt
+  revision: f28c83d4c0f17a3f... -> 74108639317b8870...
+```
+
+`--expected-revision` は `--revision` の別名です。弱いETagや引用符付きETagも同じtokenへ
+正規化されます。tokenの取得後にファイルが変更されていた場合、コマンドは競合を報告し、
+新しいファイル内容を変更しません。revision確認・チケット再検索・意味的変換・検証・置換は、
+すべて共通のsidecar lock/CAS mutation契約の中で実行されます。
+
+1回の操作だけtokenを必須にする場合は `--require-revision`、6種類すべての変更操作で
+必須にする場合は `ticketing.write.require_revision` を使用します。`--dry-run` でも指定した
+revisionを検証し、ファイルを書き換えずに変更後の予測revisionを表示します。
+
+```console
+$ lifetxt ticket link BUG-2 depends_on BUG-1 \
+    --revision f28c83d4c0f17a3f... --dry-run
+```
+
+機械可読形式で取得する場合は次を使用します。
+
+```console
+$ lifetxt ticket revision BUG-1 --json --pretty
+```
+
+JSONにはチケットID、所有ファイル、ハッシュアルゴリズム、revisionが含まれます。
 
 ## 検証
 
@@ -85,5 +127,6 @@ $ lifetxt ticket validate
 
 読み取り専用ツール: `list_tickets`・`get_ticket`・`validate_tickets`。チケットの
 書き込みは CLI 経由です（ワークフロー強制のリモート書き込みは後続トラック）。
-チケットは `ticket-v1.schema.json`、フィールドレジストリは
-`ticket-field-registry-v1.schema.json` に従います。
+capability discoveryはローカルのチケットrevision契約を公開しますが、リモートの
+チケット書き込みを有効とは通知しません。チケットは `ticket-v1.schema.json`、
+フィールドレジストリは `ticket-field-registry-v1.schema.json` に従います。

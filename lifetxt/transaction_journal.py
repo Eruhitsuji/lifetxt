@@ -527,6 +527,87 @@ def archive_terminal(journal_dir, archive_dir, older_than_days=30, force=False, 
     return {"journal_dir": root, "archive_dir": destination_root, "archived": archived, "skipped": skipped, "errors": errors}
 
 
+
+def restore_backup(
+    backup_dir,
+    action="inspect",
+    working_dir=None,
+    operator=None,
+    config=None,
+    audit_file=None,
+):
+    """Verify immutable backup evidence and recover through a separate working copy."""
+    from .transaction_admin import append_admin_audit, authorize_operator
+    from .transaction_policy import write_integrity_manifest
+
+    authorization = authorize_operator(config, operator, action="transaction backup restore")
+    source = os.path.abspath(backup_dir)
+    verification = verify_integrity_manifest(source)
+    if not verification.get("ok"):
+        raise TransactionJournalError("Backup integrity verification failed: %s" % source)
+    source_journal = os.path.join(source, "journal.json")
+    record = load_record(source_journal, allow_newer_read_only=True)
+    if action == "inspect":
+        return OrderedDict((
+            ("ok", True),
+            ("action", "inspect"),
+            ("backup_dir", source),
+            ("verification", verification),
+            ("authorization", authorization),
+            ("journal", inspect_journal(source_journal)),
+            ("working_dir", None),
+            ("original_backup_unchanged", True),
+        ))
+    if action not in ("resume", "compensate"):
+        raise ValueError("restore action must be inspect, resume, or compensate.")
+    if working_dir is None:
+        working_dir = source + ".restore-" + uuid.uuid4().hex[:8]
+    destination = os.path.abspath(working_dir)
+    if os.path.exists(destination):
+        raise TransactionJournalError("Restore working directory already exists: %s" % destination)
+    shutil.copytree(source, destination)
+    manifest_path = os.path.join(destination, "integrity-manifest.json")
+    try:
+        os.unlink(manifest_path)
+    except FileNotFoundError:
+        pass
+    working_journal = os.path.join(destination, "journal.json")
+    try:
+        report = resume(working_journal) if action == "resume" else compensate(working_journal)
+    except Exception:
+        # Preserve the working copy exactly as failure evidence and publish a new
+        # manifest for operator handoff before propagating the recovery failure.
+        write_integrity_manifest(destination)
+        raise
+    new_manifest_path, new_manifest = write_integrity_manifest(destination)
+    _fsync_tree(destination)
+    if audit_file:
+        append_admin_audit(
+            audit_file,
+            "backup.restore.%s" % action,
+            operator=operator,
+            details={
+                "backup_dir": source,
+                "working_dir": destination,
+                "transaction_id": record.get("transaction_id"),
+                "result_state": report.get("state"),
+            },
+            config=config,
+        )
+    return OrderedDict((
+        ("ok", True),
+        ("action", action),
+        ("backup_dir", source),
+        ("working_dir", destination),
+        ("verification", verification),
+        ("authorization", authorization),
+        ("transaction_id", record.get("transaction_id")),
+        ("result", report),
+        ("working_manifest", new_manifest_path),
+        ("working_manifest_sha256", new_manifest.get("manifest_sha256")),
+        ("original_backup_unchanged", verify_integrity_manifest(source).get("ok", False)),
+    ))
+
 def current_hash(path):
     try:
         with open(path, "rb") as handle:

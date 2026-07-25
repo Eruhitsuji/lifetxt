@@ -1,0 +1,59 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-restore-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "action": {
+      "enum": [
+        "inspect",
+        "resume",
+        "compensate"
+      ]
+    },
+    "authorization": {
+      "type": "object"
+    },
+    "backup_dir": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "original_backup_unchanged": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "object"
+    },
+    "transaction_id": {
+      "type": "string"
+    },
+    "verification": {
+      "type": "object"
+    },
+    "working_dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "working_manifest": {
+      "type": "string"
+    },
+    "working_manifest_sha256": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "action",
+    "backup_dir",
+    "verification",
+    "authorization",
+    "working_dir",
+    "original_backup_unchanged"
+  ],
+  "title": "lifetxt transaction backup restore v1",
+  "type": "object"
+}

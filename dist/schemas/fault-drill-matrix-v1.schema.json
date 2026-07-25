@@ -1,0 +1,48 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/fault-drill-matrix-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "failed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "passed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "point_count": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "results": {
+      "items": {
+        "additionalProperties": true,
+        "required": [
+          "ok",
+          "point",
+          "exit_code",
+          "recovery"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "scope": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "point_count",
+    "passed",
+    "failed",
+    "results",
+    "scope"
+  ],
+  "title": "lifetxt subprocess fault drill matrix v1",
+  "type": "object"
+}

@@ -198,8 +198,9 @@ def migrate_policy_file(path, expected_revision=None, operator=None, audit_file=
     )
 
 
-def append_admin_audit(path, event, operator=None, details=None, max_events=DEFAULT_AUDIT_MAX_EVENTS, now=None):
+def append_admin_audit(path, event, operator=None, details=None, max_events=DEFAULT_AUDIT_MAX_EVENTS, now=None, config=None):
     absolute = os.path.abspath(path)
+    authorization = authorize_operator(config, operator, action="transaction audit append")
     ensure_private_tree(os.path.dirname(absolute) or ".", require_private=True)
     limit = max(1, int(max_events))
     entry = OrderedDict(
@@ -227,7 +228,7 @@ def append_admin_audit(path, event, operator=None, details=None, max_events=DEFA
         default={"audit_version": 1, "events": []},
     )
     _make_private(absolute, directory=False)
-    return OrderedDict((("path", absolute), ("revision", result.after_hash), ("event_count", len(json.loads(result.snapshot.text).get("events") or []))))
+    return OrderedDict((("path", absolute), ("revision", result.after_hash), ("event_count", len(json.loads(result.snapshot.text).get("events") or [])), ("authorization", authorization)))
 
 
 def preflight_report(journal_dir, config=None, create=False):
@@ -339,3 +340,24 @@ def _make_private(path, directory=False):
         os.chmod(path, 0o700 if directory else 0o600)
     except OSError:
         pass
+
+
+def authorize_operator(config, operator, action="transaction administration"):
+    """Enforce the optional transaction-administration operator allow-list."""
+    config = config or {}
+    section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    required = bool(section.get("require_operator_authorization"))
+    allowed = [str(value) for value in (section.get("authorized_operators") or [])]
+    identity = str(operator or "").strip()
+    report = OrderedDict((
+        ("required", required),
+        ("operator", identity or None),
+        ("authorized_operators", allowed),
+        ("action", str(action)),
+        ("authorized", (not required) or (bool(identity) and identity in allowed)),
+    ))
+    if not report["authorized"]:
+        raise TransactionPolicyError(
+            "Operator %r is not authorized for %s." % (identity or None, action)
+        )
+    return report

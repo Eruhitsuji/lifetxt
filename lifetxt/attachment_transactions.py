@@ -296,6 +296,7 @@ def reference_directory(
     item_id,
     stored_path,
     item_revision=None,
+    attachment_expected_revision=None,
     config=None,
     allow_symlink=False,
     require_revisions=False,
@@ -309,18 +310,29 @@ def reference_directory(
     if _file_type(target) != "directory":
         raise AttachmentTransactionError("Unsupported directory attachment type: %s" % _file_type(target))
     digest = directory_revision(target, config=config)
+    directory_expected = _resolve_revision(
+        attachment_expected_revision, digest, require_revisions, "attachment_revision"
+    )
+    if directory_expected != digest:
+        raise AttachmentTransactionError("Directory attachment revision changed before reference.")
     normalized = _stored_relative_path(life_path, target)
     value = join_value(normalized, digest[:HASH_LENGTH])
     snapshot = mutation.read_text_snapshot(life_path)
     expected = _resolve_revision(item_revision, snapshot.content_hash, require_revisions, "item_revision")
     id_key = id_key_from_config(config)
-    result = mutation.write_text(
-        life_path,
-        expected_hash=expected,
-        operation="attachment.directory_reference",
-        create=False,
-        transform=lambda text: _set_reference(text, item_id, id_key, DIR_KEY, value, normalized),
-    )
+    # A sidecar lock serializes lifetxt-aware directory writers while the tree
+    # revision is rechecked and the life.txt reference is committed.
+    with mutation.FileLock(target, operation="attachment.directory_reference"):
+        latest = directory_revision(target, config=config)
+        if latest != directory_expected:
+            raise AttachmentTransactionError("Directory attachment revision changed before commit.")
+        result = mutation.write_text(
+            life_path,
+            expected_hash=expected,
+            operation="attachment.directory_reference",
+            create=False,
+            transform=lambda text: _set_reference(text, item_id, id_key, DIR_KEY, value, normalized),
+        )
     return OrderedDict((
         ("action", "directory-reference"),
         ("id", item_id),
@@ -332,6 +344,19 @@ def reference_directory(
         ("byte_limit", _attachment_settings(config)["max_bytes"]),
     ))
 
+
+
+def resolve_package_source(life_path, source_directory, config=None, allow_symlink=False):
+    """Resolve a server-side package source under the configured remote source root."""
+    config = config or {}
+    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    root = section.get("remote_source_root") or _attachment_root(config, life_path)
+    target, root_abs = resolve_attachment_target(
+        life_path, source_directory, root=root, allow_symlink=allow_symlink
+    )
+    if not os.path.isdir(target):
+        raise AttachmentTransactionError("Package source is not a confined directory: %s" % target)
+    return target, root_abs
 
 def package_directory(
     life_path,
@@ -439,6 +464,7 @@ def reconcile_attachment(
     key=FILE_KEY,
     item_revision=None,
     recorded_revision=None,
+    attachment_expected_revision=None,
     config=None,
     require_revisions=False,
 ):
@@ -452,30 +478,53 @@ def reconcile_attachment(
         if not os.path.isfile(target):
             raise AttachmentTransactionError("File attachment does not exist: %s" % target)
         actual = attachment_revision(target)
+    attachment_expected = _resolve_revision(
+        attachment_expected_revision, actual, require_revisions, "attachment_revision"
+    )
+    if attachment_expected != actual:
+        raise AttachmentTransactionError("Attachment revision changed before reconcile.")
     normalized = _stored_relative_path(life_path, target)
     snapshot = mutation.read_text_snapshot(life_path)
     expected = _resolve_revision(item_revision, snapshot.content_hash, require_revisions, "item_revision")
     id_key = id_key_from_config(config)
     if recorded_revision:
         _assert_recorded_reference(snapshot.text, item_id, id_key, key, normalized, recorded_revision)
-    value = join_value(normalized, actual[:HASH_LENGTH])
-    result = mutation.write_text(
-        life_path,
-        expected_hash=expected,
-        operation="attachment.reconcile",
-        create=False,
-        transform=lambda text: _set_reference(text, item_id, id_key, key, value, normalized),
-    )
+
+    with mutation.FileLock(target, operation="attachment.reconcile.target"):
+        latest = directory_revision(target, config=config) if key == DIR_KEY else attachment_revision(target)
+        if latest != attachment_expected:
+            raise AttachmentTransactionError("Attachment revision changed before reconcile commit.")
+        value = join_value(normalized, latest[:HASH_LENGTH])
+        result = mutation.write_text(
+            life_path,
+            expected_hash=expected,
+            operation="attachment.reconcile",
+            create=False,
+            transform=lambda text: _set_reference(text, item_id, id_key, key, value, normalized),
+        )
+        final_revision = directory_revision(target, config=config) if key == DIR_KEY else attachment_revision(target)
+        if final_revision != latest:
+            try:
+                mutation.write_text(
+                    life_path, snapshot.text, expected_hash=result.after_hash,
+                    operation="attachment.reconcile.rollback", create=False,
+                )
+            except Exception as rollback_error:
+                raise AttachmentTransactionError(
+                    "Attachment changed during reconcile and the life.txt rollback failed: %s" % rollback_error
+                )
+            raise AttachmentTransactionError(
+                "Attachment changed during reconcile; the life.txt reference was restored."
+            )
     return OrderedDict((
         ("action", "reconcile"),
         ("id", item_id),
         ("key", key),
         ("path", target),
         ("value", value),
-        ("attachment_revision", actual),
+        ("attachment_revision", latest),
         ("item_revision", result.after_hash),
     ))
-
 
 def prepare_open_reference(
     life_path,
@@ -534,6 +583,140 @@ def prepare_open_reference(
         report["metadata_revision"] = meta_result.after_hash
     return report
 
+
+
+def read_attachment_chunk(
+    life_path,
+    stored_path,
+    offset=0,
+    limit=65536,
+    attachment_expected_revision=None,
+    config=None,
+):
+    """Return one bounded base64-ready attachment chunk with revision metadata."""
+    import base64
+
+    config = config or {}
+    target, _root = resolve_attachment_target(
+        life_path, stored_path, root=_attachment_root(config, life_path)
+    )
+    if not os.path.isfile(target):
+        raise AttachmentTransactionError("Attachment target is not a regular file: %s" % target)
+    revision = attachment_revision(target)
+    if attachment_expected_revision not in (None, "") and str(attachment_expected_revision) != revision:
+        raise AttachmentTransactionError("Attachment revision changed before chunk read.")
+    settings = _attachment_settings(config)
+    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    remote_max = max(1, min(int(section.get("remote_chunk_bytes") or 65536), 1024 * 1024))
+    bounded_limit = max(1, min(int(limit), settings["max_file_bytes"], remote_max, 1024 * 1024))
+    bounded_offset = max(0, int(offset))
+    size = os.path.getsize(target)
+    if size > settings["max_file_bytes"]:
+        raise AttachmentTransactionError("Attachment exceeds the configured file limit.")
+    if bounded_offset > size:
+        raise AttachmentTransactionError("Attachment chunk offset exceeds file size.")
+    with open(target, "rb") as handle:
+        handle.seek(bounded_offset)
+        data = handle.read(bounded_limit)
+    latest = attachment_revision(target)
+    if latest != revision:
+        raise AttachmentTransactionError("Attachment changed during chunk read.")
+    next_offset = bounded_offset + len(data)
+    return OrderedDict((
+        ("path", target),
+        ("stored_path", _stored_relative_path(life_path, target)),
+        ("attachment_revision", revision),
+        ("size", size),
+        ("offset", bounded_offset),
+        ("limit", bounded_limit),
+        ("bytes", len(data)),
+        ("content_base64", base64.b64encode(data).decode("ascii")),
+        ("next_offset", next_offset),
+        ("eof", next_offset >= size),
+    ))
+
+
+def inspect_directory_package(
+    life_path,
+    stored_path,
+    attachment_expected_revision=None,
+    config=None,
+):
+    """Validate a deterministic package and its embedded integrity manifest."""
+    config = config or {}
+    target, _root = resolve_attachment_target(
+        life_path, stored_path, root=_attachment_root(config, life_path)
+    )
+    if not os.path.isfile(target):
+        raise AttachmentTransactionError("Directory package does not exist: %s" % target)
+    revision = attachment_revision(target)
+    if attachment_expected_revision not in (None, "") and str(attachment_expected_revision) != revision:
+        raise AttachmentTransactionError("Directory package revision changed before inspection.")
+    settings = _attachment_settings(config)
+    if os.path.getsize(target) > settings["max_file_bytes"]:
+        raise AttachmentTransactionError("Directory package exceeds the configured file limit.")
+    try:
+        with zipfile.ZipFile(target, "r") as archive:
+            names = archive.namelist()
+            if "lifetxt-package-manifest.json" not in names:
+                raise AttachmentTransactionError("Directory package is missing lifetxt-package-manifest.json.")
+            raw = archive.read("lifetxt-package-manifest.json")
+            manifest = json.loads(raw.decode("utf-8"), object_pairs_hook=OrderedDict)
+            records = manifest.get("files") if isinstance(manifest, dict) else None
+            if not isinstance(records, list):
+                raise AttachmentTransactionError("Directory package manifest files must be an array.")
+            problems = []
+            if len(names) != len(set(names)):
+                problems.append("duplicate package entry")
+            if len(records) > settings["max_files"]:
+                problems.append("manifest exceeds configured file count")
+            seen = set()
+            total = 0
+            for row in records:
+                if not isinstance(row, dict):
+                    problems.append("manifest entry is not an object")
+                    continue
+                name = str(row.get("path") or "")
+                if not name or name.startswith("/") or ".." in name.split("/"):
+                    problems.append("unsafe manifest path: %s" % name)
+                    continue
+                if name in seen:
+                    problems.append("duplicate manifest path: %s" % name)
+                    continue
+                seen.add(name)
+                if name not in names:
+                    problems.append("missing package entry: %s" % name)
+                    continue
+                info = archive.getinfo(name)
+                if info.file_size > settings["max_file_bytes"]:
+                    problems.append("entry exceeds configured file limit: %s" % name)
+                    continue
+                data = archive.read(name)
+                total += len(data)
+                if total > settings["max_bytes"]:
+                    problems.append("package contents exceed configured total limit")
+                if int(row.get("size", -1)) != len(data):
+                    problems.append("size mismatch: %s" % name)
+                if str(row.get("sha256") or "") != hashlib.sha256(data).hexdigest():
+                    problems.append("sha256 mismatch: %s" % name)
+            package_entries = set(names) - {"lifetxt-package-manifest.json"}
+            extras = sorted(package_entries - seen)
+            for name in extras:
+                problems.append("unmanifested package entry: %s" % name)
+            if int(manifest.get("file_count", -1)) != len(records):
+                problems.append("file_count mismatch")
+            if int(manifest.get("total_bytes", -1)) != total:
+                problems.append("total_bytes mismatch")
+    except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
+        raise AttachmentTransactionError("Cannot inspect directory package: %s" % exc)
+    return OrderedDict((
+        ("ok", not problems),
+        ("path", target),
+        ("stored_path", _stored_relative_path(life_path, target)),
+        ("attachment_revision", revision),
+        ("manifest", manifest),
+        ("problems", problems),
+    ))
 
 def _assert_recorded_reference(text, item_id, id_key, key, normalized_path, recorded_revision):
     from .parser import parse_text

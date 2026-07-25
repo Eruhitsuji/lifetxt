@@ -1,0 +1,89 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/delegated-mutation-proposal-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "before_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "bom": {
+      "type": "boolean"
+    },
+    "changed": {
+      "type": "boolean"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "created_at_utc": {
+      "type": "string"
+    },
+    "diff": {
+      "type": "string"
+    },
+    "diff_sha256": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "edited_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "edited_text": {
+      "type": "string"
+    },
+    "encoding": {
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^D-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "operation": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "proposal_version": {
+      "const": 1
+    },
+    "result": {
+      "type": "object"
+    },
+    "state": {
+      "enum": [
+        "prepared",
+        "applied",
+        "rejected"
+      ]
+    },
+    "temporary_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "proposal_version",
+    "id",
+    "state",
+    "operation",
+    "path",
+    "command",
+    "before_revision",
+    "edited_revision",
+    "diff_sha256",
+    "changed",
+    "diff",
+    "edited_text"
+  ],
+  "title": "lifetxt delegated mutation proposal v1",
+  "type": "object"
+}

@@ -180,6 +180,18 @@ def _build_parser(command):
         _add_timezone_policy(timezone)
         timezone.add_argument("--sample")
         _add_output(timezone)
+        delegated = subparsers.add_parser("delegated")
+        delegated.add_argument("delegated_action", choices=("prepare", "inspect", "apply", "reject"))
+        delegated.add_argument("--path", help="Authoritative life.txt path for prepare.")
+        delegated.add_argument("--proposal", required=True, help="Persistent delegated proposal JSON path.")
+        delegated.add_argument("--command", help="Command for prepare; use {file} for the temporary copy.")
+        delegated.add_argument("--timeout", type=float, default=300.0)
+        delegated.add_argument("--keep-temp", action="store_true")
+        delegated.add_argument("--expected-revision")
+        delegated.add_argument("--expected-proposal-revision")
+        delegated.add_argument("--unsafe", action="store_true")
+        delegated.add_argument("--reason")
+        _add_output(delegated)
         revisions = subparsers.add_parser("revisions")
         revisions.add_argument("paths", nargs="*")
         revisions.add_argument("--metrics-path")
@@ -194,7 +206,7 @@ def _build_parser(command):
             "transaction_action",
             nargs="?",
             default="list",
-            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup", "policy", "policy-write", "policy-migrate", "preflight", "archive", "rotate-archives", "verify-backup", "audit", "drill"),
+            choices=("list", "inspect", "resume", "compensate", "abandon", "export", "cleanup", "policy", "policy-write", "policy-migrate", "preflight", "archive", "rotate-archives", "verify-backup", "restore-backup", "audit", "drill"),
         )
         transactions.add_argument("--journal-dir")
         transactions.add_argument("--journal")
@@ -211,7 +223,11 @@ def _build_parser(command):
         transactions.add_argument("--event")
         transactions.add_argument("--details-json")
         transactions.add_argument("--point")
-        transactions.add_argument("--recovery", choices=("inspect", "resume", "compensate"), default="inspect")
+        transactions.add_argument("--recovery", choices=("inspect", "resume", "compensate", "cleanup-orphan", "auto"), default="inspect")
+        transactions.add_argument("--matrix", action="store_true")
+        transactions.add_argument("--repeat-recovery", action="store_true")
+        transactions.add_argument("--restore-action", choices=("inspect", "resume", "compensate"), default="inspect")
+        transactions.add_argument("--working-dir")
         transactions.add_argument("--keep-workspace", action="store_true")
         transactions.add_argument("--force", action="store_true")
         _add_output(transactions)

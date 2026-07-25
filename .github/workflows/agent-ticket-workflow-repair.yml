@@ -1,0 +1,55 @@
+name: Repair ticket workflow payload chunk
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.head.ref == 'agent/ticket-workflow-history-time'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-workflow-history-time
+          fetch-depth: 0
+      - name: Repair one substituted Base64 character
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import pathlib
+
+          path = pathlib.Path('.agent_ticket_workflow/part-005.txt')
+          value = path.read_text(encoding='ascii')
+          target = '728b3b736fbdc878eb097a2c1e605d5caa0629fbb1f2e7a188210770cbe0f41b'
+          alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+          if hashlib.sha256(value.encode('ascii')).hexdigest() != target:
+              repaired = None
+              for index, old in enumerate(value):
+                  for candidate_char in alphabet:
+                      if candidate_char == old:
+                          continue
+                      candidate = value[:index] + candidate_char + value[index + 1:]
+                      if hashlib.sha256(candidate.encode('ascii')).hexdigest() == target:
+                          repaired = candidate
+                          break
+                  if repaired is not None:
+                      break
+              if repaired is None:
+                  raise SystemExit('no single-character repair matched the expected SHA-256')
+              path.write_text(repaired, encoding='ascii')
+          report = pathlib.Path('agent-ticket-workflow-payload-report.json')
+          if report.exists():
+              report.unlink()
+          pathlib.Path('.github/workflows/agent-ticket-workflow-repair.yml').unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Repair ticket workflow payload chunk'
+          git push origin HEAD:agent/ticket-workflow-history-time

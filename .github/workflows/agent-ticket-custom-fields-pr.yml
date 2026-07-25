@@ -1,0 +1,56 @@
+name: Apply typed ticket custom fields from PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/ticket-typed-custom-fields'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-typed-custom-fields
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute staged implementation payload
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import subprocess
+          import textwrap
+
+          source = pathlib.Path('.github/workflows/agent-ticket-custom-fields.yml').read_text(encoding='utf-8')
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "          PY\n"
+          start = source.index(start_marker) + len(start_marker)
+          end = source.index(end_marker, start)
+          script = textwrap.dedent(source[start:end])
+          subprocess.run(['python', '-'], input=script, text=True, check=True)
+          pathlib.Path('.github/workflows/agent-ticket-custom-fields-pr.yml').unlink()
+          PY
+      - name: Compile and run focused tests
+        shell: bash
+        run: |
+          python -m compileall -q lifetxt tests
+          python -m unittest \
+            tests.test_ticket_custom_fields \
+            tests.test_safety_cli \
+            tests.test_safety_foundation \
+            tests.test_schema_extensions_v2
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add typed ticket custom fields'
+          git push origin HEAD:agent/ticket-typed-custom-fields

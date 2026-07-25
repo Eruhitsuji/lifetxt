@@ -20,6 +20,10 @@ repeated `watcher`, `component`, `category`, `version`, `milestone`, `sprint`,
 `commit`/`pr`, `build`, plus the shared relation keys `parent`, `depends_on`,
 `blocks`, `related`, `duplicate_of`, `replaced_by`.
 
+Configured typed custom fields are stored as ordinary detail keys, so the
+life.txt line remains readable and tools that do not know the registry continue
+to preserve them.
+
 ## Status mapping
 
 `ticket_status` is the detailed state; it maps onto the coarse life.txt status
@@ -48,7 +52,35 @@ A contradictory pair (e.g. `ticket_status:closed` on a `[ ]` line) is reported a
     "severities": ["minor", "major", "critical", "blocker"],
     "required_fields": ["assignee"],
     "defaults": { "tracker": "task", "priority": "normal" },
-    "write": { "require_revision": true }
+    "write": { "require_revision": true },
+    "custom_fields": {
+      "risk_score": {
+        "type": "integer",
+        "required": true,
+        "default": 3,
+        "minimum": 0,
+        "maximum": 10,
+        "filterable": true,
+        "searchable": true,
+        "privacy": "internal",
+        "trackers": ["bug", "security"]
+      },
+      "customer_tier": {
+        "type": "enum",
+        "enum": ["free", "standard", "enterprise"],
+        "default": "standard",
+        "filterable": true,
+        "privacy": "private",
+        "editable_roles": ["manager"],
+        "visible_roles": ["manager", "viewer"]
+      },
+      "security_label": {
+        "type": "string",
+        "repeatable": true,
+        "pattern": "^[a-z0-9_-]+$",
+        "privacy": "secret"
+      }
+    }
   }
 }
 ```
@@ -57,6 +89,65 @@ A contradictory pair (e.g. `ticket_status:closed` on a `[ ]` line) is reported a
 for every existing ticket mutation. It is optional by default for backward-
 compatible local use, but enabling it is recommended for scripts and any future
 remote adapter.
+
+## Typed custom fields
+
+`ticketing.custom_fields` is a versioned, ticket-only registry. It does **not**
+make unknown life.txt keys invalid globally. An unconfigured detail key is still
+preserved and ignored by custom-field validation.
+
+Supported types are `string`, `integer`, `number`, `boolean`, `date`, `datetime`,
+`duration`, and `enum`. Definitions can also declare:
+
+- `required`, `default`, and `repeatable`
+- `enum`/`values`, numeric `minimum`/`maximum`, string `min_length`/`max_length`,
+  and a regular-expression `pattern`
+- tracker/project applicability through `trackers` and `projects`
+- `filterable` and `searchable` metadata
+- `privacy` as `public`, `internal`, `private`, or `secret`
+- future role policy through `editable_roles` and `visible_roles`
+
+Canonical, relation, and system ticket keys cannot be redefined as custom fields.
+Defaults are applied when `ticket new` creates an applicable ticket. Existing
+exact-revision mutations validate the resulting custom-field values while the
+shared lock is held, so an invalid edit is rejected before replacement.
+
+Inspect the effective registry and its diagnostics:
+
+```console
+$ lifetxt ticket fields
+$ lifetxt ticket fields --tracker bug --project web --role manager --format json --pretty
+```
+
+Set fields while creating a ticket. Repeat `--field` for a repeatable definition:
+
+```console
+$ lifetxt ticket new "Login fails" --tracker bug --project web \
+    --field risk_score=7 \
+    --field customer_tier=enterprise \
+    --field security_label=auth \
+    --field security_label=cve
+```
+
+Existing tickets use normal `--set`/`--unset` operations and therefore retain the
+same revision contract:
+
+```console
+$ lifetxt ticket edit BUG-1 --revision SHA256 --set risk_score=8
+```
+
+A custom field can be used by the dedicated list filter only when its definition
+has `filterable: true`:
+
+```console
+$ lifetxt ticket list --field risk_score=8 --has-field customer_tier
+```
+
+`searchable` is published for future shared-query, Web, TUI, saved-view, and
+remote adapters; it does not silently add a field to unrelated global-search
+results. Privacy and role metadata are also published through capability
+discovery, but remote ticket writes remain disabled until server-side permission,
+history, clock, and recovery enforcement is complete.
 
 ## Commands
 
@@ -75,9 +166,10 @@ $ lifetxt ticket validate
 ```
 
 `ticket new` generates the next id from `id_prefix`. `ticket show` aggregates the
-current record, its relations, and incoming links without modifying anything.
-Transitions patch the ticket in one rewrite: `close` sets the terminal status,
-`closed_by`, and any `--resolution`; `reopen` clears them.
+current record, its configured custom fields, relations, and incoming links
+without modifying anything. Transitions patch the ticket in one rewrite: `close`
+sets the terminal status, `closed_by`, and any `--resolution`; `reopen` clears
+them.
 
 ## Exact-revision writes
 
@@ -126,12 +218,18 @@ The JSON object includes the ticket id, owning path, hash algorithm, and revisio
 - `TK003` `ticket_status` contradicts the coarse life.txt status
 - `TK004` value not in a configured registry (tracker/priority/severity/component)
 - `TK005` a configured required field is missing
+- `TK006` invalid custom-field registry metadata
+- `TK007` a required applicable custom field is missing
+- `TK008` a non-repeatable custom field has repeated values
+- `TK009` a custom value violates its type or constraints
+- `TK010` a custom field is present outside its configured tracker/project scope
 
 ## MCP
 
 Read-only tools: `list_tickets`, `get_ticket`, `validate_tickets`. Ticket
 writes go through the CLI (workflow-enforced remote writes are a later track).
-Capability discovery publishes the local ticket revision contract, but it does
-not advertise remote ticket writes as enabled. Tickets follow
-`ticket-v1.schema.json`; the field registry follows
-`ticket-field-registry-v1.schema.json`.
+Capability discovery publishes the local ticket revision and typed custom-field
+contracts, but it does not advertise remote ticket writes as enabled. Tickets
+follow `ticket-v1.schema.json`; the built-in field registry follows
+`ticket-field-registry-v1.schema.json`; custom definitions follow
+`ticket-custom-field-registry-v1.schema.json`.

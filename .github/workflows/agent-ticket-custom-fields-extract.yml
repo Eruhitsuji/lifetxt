@@ -20,30 +20,92 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Extract and verify implementation
+      - name: Extract implementation payload
+        id: extract
+        shell: bash
         run: |
+          set +e
           python - <<'PY'
-          import base64, io, pathlib, shutil, tarfile
-          chunks = sorted(pathlib.Path('.agent_payload').glob('part-*.txt'))
-          if len(chunks) != 6:
-              raise SystemExit('expected six payload chunks, found %d' % len(chunks))
-          payload = ''.join(path.read_text(encoding='ascii') for path in chunks)
-          data = base64.b64decode(payload, validate=True)
-          with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
-              archive.extractall('.')
-          shutil.rmtree('.agent_payload')
-          for name in ('agent-ticket-custom-fields-error.log', 'agent-payload-report.json'):
-              path = pathlib.Path(name)
-              if path.exists():
-                  path.unlink()
-          pathlib.Path('.github/workflows/agent-ticket-custom-fields-extract.yml').unlink()
+          import base64
+          import hashlib
+          import io
+          import json
+          import pathlib
+          import shutil
+          import tarfile
+          import traceback
+
+          workflow = pathlib.Path('.github/workflows/agent-ticket-custom-fields-extract.yml')
+          try:
+              chunks = sorted(pathlib.Path('.agent_payload').glob('part-*.txt'))
+              metadata = []
+              for path in chunks:
+                  data = path.read_bytes()
+                  metadata.append({
+                      'name': path.name,
+                      'length': len(data),
+                      'sha256': hashlib.sha256(data).hexdigest(),
+                  })
+              if len(chunks) != 6:
+                  raise RuntimeError('expected six payload chunks, found %d' % len(chunks))
+              payload = ''.join(path.read_text(encoding='ascii') for path in chunks)
+              if len(payload) != 31760:
+                  raise RuntimeError('expected payload length 31760, found %d: %s' % (len(payload), metadata))
+              data = base64.b64decode(payload, validate=True)
+              with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+                  members = archive.getnames()
+                  archive.extractall('.')
+              pathlib.Path('agent-ticket-custom-fields-extract.json').write_text(
+                  json.dumps({'chunks': metadata, 'payload_length': len(payload), 'members': members}, indent=2) + '\n',
+                  encoding='utf-8',
+              )
+              shutil.rmtree('.agent_payload')
+              for name in ('agent-ticket-custom-fields-error.log', 'agent-payload-report.json'):
+                  path = pathlib.Path(name)
+                  if path.exists():
+                      path.unlink()
+          except Exception:
+              pathlib.Path('agent-ticket-custom-fields-error.log').write_text(
+                  traceback.format_exc(), encoding='utf-8'
+              )
+              raise
+          finally:
+              if workflow.exists():
+                  workflow.unlink()
           PY
-          python -m compileall -q lifetxt tests
-          python -m unittest tests.test_ticket_custom_fields
-      - name: Commit implementation
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Compile and run typed-field tests
+        id: tests
+        if: steps.extract.outputs.status == '0'
+        shell: bash
+        run: |
+          set +e
+          {
+            python -m compileall -q lifetxt tests
+            python -m unittest -v tests.test_ticket_custom_fields
+          } > agent-ticket-custom-fields-test.log 2>&1
+          status=$?
+          cat agent-ticket-custom-fields-test.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Prepare result
+        shell: bash
+        run: |
+          extract_status='${{ steps.extract.outputs.status }}'
+          test_status='${{ steps.tests.outputs.status }}'
+          if [ "$extract_status" = '0' ] && [ "$test_status" = '0' ]; then
+            rm -f agent-ticket-custom-fields-test.log agent-ticket-custom-fields-extract.json
+            printf 'success\n' > agent-ticket-custom-fields-result.txt
+          else
+            printf 'extract=%s test=%s\n' "$extract_status" "$test_status" > agent-ticket-custom-fields-result.txt
+          fi
+      - name: Commit staged result
+        shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Add typed ticket custom fields'
+          git commit -m 'Apply typed ticket custom fields payload'
           git push origin HEAD:agent/ticket-typed-custom-fields

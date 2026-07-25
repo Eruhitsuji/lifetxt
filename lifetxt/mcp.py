@@ -199,7 +199,7 @@ READ_ONLY_TOOLS = frozenset(
         "run_query", "list_saved_views", "run_saved_view",
         "list_groups", "resolve_recipients", "get_delivery_state",
         "list_people", "get_person", "get_group_overview",
-        "list_proposals",
+        "list_proposals", "global_search",
     ]
 )
 
@@ -765,6 +765,17 @@ def _tool_schemas():
             "A group's members with each member's open work and message counts.",
             {"name": _string("Group name.")},
             required=["name"],
+            read_only=True,
+        ),
+        _tool(
+            "global_search",
+            "Search across items, projects, people, groups, areas, and proposals.",
+            {
+                "term": _string("Case-insensitive search term."),
+                "types": _string("Comma-separated entity types to limit to."),
+                "limit": _integer("Maximum results per entity type."),
+            },
+            required=["term"],
             read_only=True,
         ),
         _tool(
@@ -2458,6 +2469,18 @@ def _tool_get_delivery_state(args, context):
     return {"count": len(summaries), "messages": summaries}
 
 
+def _tool_global_search(args, context):
+    """Search across items, projects, people, groups, areas, and proposals."""
+    from .global_search import global_search
+
+    items, _diagnostics = _read_items(context)
+    types = args.get("types")
+    if isinstance(types, str):
+        types = [t.strip() for t in types.split(",") if t.strip()]
+    return global_search(items, context.config, str(args.get("term") or ""),
+                         types=types, limit=args.get("limit"))
+
+
 def _tool_list_proposals(args, context):
     """List Unified Inbox proposals, optionally filtered by status."""
     from .inbox import inbox_summary, list_proposals
@@ -2596,6 +2619,7 @@ TOOL_HANDLERS = OrderedDict(
         ("list_people", _tool_list_people),
         ("get_person", _tool_get_person),
         ("get_group_overview", _tool_get_group_overview),
+        ("global_search", _tool_global_search),
         ("list_proposals", _tool_list_proposals),
         ("stage_proposal", _tool_stage_proposal),
         ("get_clock_status", _tool_get_clock_status),

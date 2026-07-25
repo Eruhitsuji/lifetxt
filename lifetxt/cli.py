@@ -1048,6 +1048,19 @@ def build_parser():
     prop_defer.add_argument("id", help="Proposal ID.")
     prop_defer.set_defaults(func=command_proposal_defer)
 
+    find_command = subparsers.add_parser(
+        "find", help="Global search across items, projects, people, groups, areas, and proposals."
+    )
+    find_command.add_argument("term", help="Case-insensitive search term.")
+    _add_input_paths(find_command)
+    find_command.add_argument(
+        "--type", dest="types", action="append",
+        help="Limit to an entity type (item, project, person, group, area, proposal). Repeatable.",
+    )
+    find_command.add_argument("--limit", type=int, help="Maximum results per entity type.")
+    find_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    find_command.set_defaults(func=command_find)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8752,6 +8765,33 @@ def command_proposal_defer(args):
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
     write_text(None, "Deferred %s\n" % args.id)
+    return 0
+
+
+def command_find(args):
+    from .global_search import global_search
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(getattr(args, "paths", None), _config(args), stdin_when_empty=False) or ["life.txt"],
+        _config(args),
+    )
+    types = _split_csv_args(getattr(args, "types", None)) or None
+    result = global_search(items, _config(args), args.term, types=types,
+                          limit=getattr(args, "limit", None))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not result["total"]:
+        write_text(None, "No matches for %r.\n" % args.term)
+        return 0
+    write_text(None, "%d match(es) for %r:\n" % (result["total"], args.term))
+    for entity, rows in result["groups"].items():
+        write_text(None, "%s (%d):\n" % (entity, len(rows)))
+        for row in rows:
+            location = ""
+            if row.get("source") and row.get("line"):
+                location = " (%s:%s)" % (row["source"], row["line"])
+            write_text(None, "  %-20s %s%s\n" % (row["name"], row["snippet"], location))
     return 0
 
 

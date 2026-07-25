@@ -1,0 +1,70 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/global-search-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "groups": {
+      "additionalProperties": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "line": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "snippet": {
+              "type": "string"
+            },
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "item",
+                "project",
+                "person",
+                "group",
+                "area",
+                "proposal"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "name",
+            "field",
+            "snippet"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "type": "object"
+    },
+    "term": {
+      "type": "string"
+    },
+    "total": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "term",
+    "total",
+    "groups"
+  ],
+  "title": "lifetxt global search result v1",
+  "type": "object"
+}

@@ -1,0 +1,93 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-time-entry-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "activity": {
+      "type": "string"
+    },
+    "comment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "corrects": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "date": {
+      "format": "date",
+      "type": "string"
+    },
+    "duration": {
+      "type": "string"
+    },
+    "event_id": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "line": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "project": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seconds": {
+      "minimum": 1,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ticket_id": {
+      "type": "string"
+    },
+    "timer_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "user": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "ticket_id",
+    "user",
+    "activity",
+    "date",
+    "duration",
+    "event_id",
+    "created_at",
+    "sequence"
+  ],
+  "title": "lifetxt append-only ticket time entry v1",
+  "type": "object"
+}

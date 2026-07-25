@@ -1,0 +1,59 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-planning-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "backlog": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "caveats": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "contract_version": {
+      "const": "1"
+    },
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "project": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema": {
+      "const": "ticket-planning-v1.schema.json"
+    },
+    "sprints": {
+      "items": {
+        "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-sprint-v1.schema.json"
+      },
+      "type": "array"
+    },
+    "versions": {
+      "items": {
+        "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-version-v1.schema.json"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "versions",
+    "sprints",
+    "backlog",
+    "diagnostics"
+  ],
+  "title": "lifetxt ticket planning v1",
+  "type": "object"
+}

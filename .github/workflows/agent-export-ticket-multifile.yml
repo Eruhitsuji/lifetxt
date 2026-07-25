@@ -1,0 +1,27 @@
+name: Export ticket multifile development source
+
+on:
+  push:
+    branches:
+      - agent/ticket-multifile-bulk-recovery
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Package source tree
+        shell: bash
+        run: |
+          tar --exclude=.git --exclude=.github/workflows/agent-export-ticket-multifile.yml -czf /tmp/lifetxt-ticket-multifile-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lifetxt-ticket-multifile-source
+          path: /tmp/lifetxt-ticket-multifile-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1

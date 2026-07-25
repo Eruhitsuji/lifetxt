@@ -1,0 +1,32 @@
+name: Update ticket report schema roadmap once
+
+on:
+  push:
+    branches:
+      - agent/ticket-project-management
+    paths:
+      - scripts/update_ticket_project_schema_todo_once.py
+      - .github/workflows/update-ticket-project-schema-todo-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-project-management
+      - name: Update roadmap and remove one-time files
+        run: |
+          python scripts/update_ticket_project_schema_todo_once.py
+          rm scripts/update_ticket_project_schema_todo_once.py
+          rm .github/workflows/update-ticket-project-schema-todo-once.yml
+      - name: Commit roadmap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add todo.md scripts/update_ticket_project_schema_todo_once.py .github/workflows/update-ticket-project-schema-todo-once.yml
+          git diff --cached --quiet || git commit -m "Update ticket report schema roadmap"
+          git push

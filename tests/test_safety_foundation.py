@@ -181,6 +181,13 @@ class SafetyFoundationTests(unittest.TestCase):
             "ticket-v1.schema.json",
             "ticket-field-registry-v1.schema.json",
             "ticket-custom-field-registry-v1.schema.json",
+            "ticket-workflow-v1.schema.json",
+            "ticket-event-v1.schema.json",
+            "ticket-time-entry-v1.schema.json",
+            "ticket-activity-v1.schema.json",
+            "ticket-version-v1.schema.json",
+            "ticket-sprint-v1.schema.json",
+            "ticket-planning-v1.schema.json",
             "ticket-project-report-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))

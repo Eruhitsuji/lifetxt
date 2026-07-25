@@ -1,0 +1,83 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-version-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "due": {
+      "format": "date",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "line": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "parent_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "project": {
+      "type": "string"
+    },
+    "release": {
+      "format": "date",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "state": {
+      "enum": [
+        "open",
+        "locked",
+        "released",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "ticket_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ticket_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "project",
+    "state",
+    "ticket_ids",
+    "ticket_count"
+  ],
+  "title": "lifetxt ticket version v1",
+  "type": "object"
+}

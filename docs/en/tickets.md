@@ -47,10 +47,16 @@ A contradictory pair (e.g. `ticket_status:closed` on a `[ ]` line) is reported a
     "priorities": ["low", "normal", "high", "urgent"],
     "severities": ["minor", "major", "critical", "blocker"],
     "required_fields": ["assignee"],
-    "defaults": { "tracker": "task", "priority": "normal" }
+    "defaults": { "tracker": "task", "priority": "normal" },
+    "write": { "require_revision": true }
   }
 }
 ```
+
+`ticketing.write.require_revision` makes the exact source-file revision mandatory
+for every existing ticket mutation. It is optional by default for backward-
+compatible local use, but enabling it is recommended for scripts and any future
+remote adapter.
 
 ## Commands
 
@@ -58,6 +64,7 @@ A contradictory pair (e.g. `ticket_status:closed` on a `[ ]` line) is reported a
 $ lifetxt ticket new "Login fails" --tracker bug --priority high --assignee alice --project web
 $ lifetxt ticket list --tracker bug --open
 $ lifetxt ticket show BUG-1
+$ lifetxt ticket revision BUG-1
 $ lifetxt ticket assign BUG-1 carol
 $ lifetxt ticket edit BUG-1 --set severity=critical --set component=auth --unset milestone
 $ lifetxt ticket link BUG-2 depends_on BUG-1
@@ -71,6 +78,44 @@ $ lifetxt ticket validate
 current record, its relations, and incoming links without modifying anything.
 Transitions patch the ticket in one rewrite: `close` sets the terminal status,
 `closed_by`, and any `--resolution`; `reopen` clears them.
+
+## Exact-revision writes
+
+`ticket revision ID` prints the lowercase SHA-256 of the exact authoritative
+source-file bytes containing the ticket. Pass that token to `edit`, `assign`,
+`close`, `reopen`, `link`, or `unlink`:
+
+```console
+$ lifetxt ticket revision BUG-1
+f28c83d4c0f17a3f...
+$ lifetxt ticket edit BUG-1 --revision f28c83d4c0f17a3f... --set priority=urgent
+Edited BUG-1 in life.txt
+  revision: f28c83d4c0f17a3f... -> 74108639317b8870...
+```
+
+`--expected-revision` is an alias for `--revision`. A weak or quoted HTTP ETag is
+also normalized to the same token. If the file changed after the token was read,
+the command reports a conflict and leaves the newer bytes untouched. The check,
+ticket lookup, semantic transform, validation, and replacement all use the
+shared sidecar-lock/CAS mutation contract.
+
+Use `--require-revision` to require a token for one command, or enable
+`ticketing.write.require_revision` for all six mutation commands. `--dry-run`
+still validates a supplied revision and prints the predicted post-write revision
+without changing the file:
+
+```console
+$ lifetxt ticket link BUG-2 depends_on BUG-1 \
+    --revision f28c83d4c0f17a3f... --dry-run
+```
+
+For machine-readable discovery, use:
+
+```console
+$ lifetxt ticket revision BUG-1 --json --pretty
+```
+
+The JSON object includes the ticket id, owning path, hash algorithm, and revision.
 
 ## Validation
 
@@ -86,5 +131,7 @@ Transitions patch the ticket in one rewrite: `close` sets the terminal status,
 
 Read-only tools: `list_tickets`, `get_ticket`, `validate_tickets`. Ticket
 writes go through the CLI (workflow-enforced remote writes are a later track).
-Tickets follow `ticket-v1.schema.json`; the field registry follows
+Capability discovery publishes the local ticket revision contract, but it does
+not advertise remote ticket writes as enabled. Tickets follow
+`ticket-v1.schema.json`; the field registry follows
 `ticket-field-registry-v1.schema.json`.

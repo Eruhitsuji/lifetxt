@@ -1,0 +1,210 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-custom-field-registry-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {
+    "oneOf": [
+      {
+        "enum": [
+          "string",
+          "integer",
+          "number",
+          "boolean",
+          "date",
+          "datetime",
+          "duration"
+        ],
+        "type": "string"
+      },
+      {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "enum"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": [
+                    "enum"
+                  ]
+                },
+                {
+                  "required": [
+                    "values"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "applicable_projects": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "applicable_trackers": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "default": {
+            "oneOf": [
+              {
+                "type": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean"
+                ]
+              },
+              {
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "integer",
+                    "boolean"
+                  ]
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "editable_roles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "enum": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "filterable": {
+            "default": false,
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          },
+          "max_length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "maximum": {
+            "type": "number"
+          },
+          "min_length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minimum": {
+            "type": "number"
+          },
+          "pattern": {
+            "format": "regex",
+            "type": "string"
+          },
+          "privacy": {
+            "default": "internal",
+            "enum": [
+              "public",
+              "internal",
+              "private",
+              "secret"
+            ],
+            "type": "string"
+          },
+          "projects": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "repeatable": {
+            "default": false,
+            "type": "boolean"
+          },
+          "required": {
+            "default": false,
+            "type": "boolean"
+          },
+          "searchable": {
+            "default": false,
+            "type": "boolean"
+          },
+          "trackers": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": {
+            "default": "string",
+            "enum": [
+              "string",
+              "integer",
+              "number",
+              "boolean",
+              "date",
+              "datetime",
+              "duration",
+              "enum"
+            ],
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "visible_roles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "type": "object"
+      }
+    ]
+  },
+  "propertyNames": {
+    "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+  },
+  "title": "lifetxt ticket custom field registry v1",
+  "type": "object"
+}

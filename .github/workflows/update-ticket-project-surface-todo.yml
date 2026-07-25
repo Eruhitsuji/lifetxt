@@ -1,0 +1,36 @@
+name: Update ticket project surface roadmap
+
+on:
+  push:
+    branches:
+      - agent/integrate-ticket-project-report
+    paths:
+      - tools/update_ticket_project_surface_todo.py
+      - .github/workflows/update-ticket-project-surface-todo.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-roadmap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/integrate-ticket-project-report
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Update todo.md
+        run: python tools/update_ticket_project_surface_todo.py
+      - name: Commit roadmap and remove one-shot updater
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add todo.md
+          git rm tools/update_ticket_project_surface_todo.py
+          git rm .github/workflows/update-ticket-project-surface-todo.yml
+          git commit -m "Update ticket project integration roadmap"
+          git push origin HEAD:agent/integrate-ticket-project-report

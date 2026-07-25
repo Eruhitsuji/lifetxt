@@ -82,6 +82,12 @@ del _install_schema_extensions_v11
 from .schema_extensions_v12 import install_schema_extensions_v12 as _install_schema_extensions_v12
 _install_schema_extensions_v12()
 del _install_schema_extensions_v12
+from .schema_extensions_v13 import install_schema_extensions_v13 as _install_schema_extensions_v13
+_install_schema_extensions_v13()
+del _install_schema_extensions_v13
+from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
+_install_remote_contracts_v6()
+del _install_remote_contracts_v6
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

@@ -273,7 +273,7 @@ def unsupported_format_payload(exc, operation):
     )
 
 
-def capability_document_for(surface, read_only=False, authentication="token", writable_targets=None):
+def capability_document_for(surface, read_only=False, authentication="token", writable_targets=None, config=None):
     original = _ORIGINALS.get("capability_document")
     if original is None:
         from .safety_foundation import capability_document as original
@@ -390,6 +390,7 @@ def _patch_webapp():
                 read_only=app.state.read_only,
                 authentication=("token" if (app.state.config or {}).get("api", {}).get("token") else "none"),
                 writable_targets=[] if app.state.read_only else [app.state.writable_path],
+                config=app.state.config,
             )
             data["revision"] = current_revision(app.state.writable_path)
             data["serve_target"] = app.state.serve_target_diagnostic
@@ -488,6 +489,7 @@ def _patch_mcp():
             read_only=context.read_only,
             authentication="stdio",
             writable_targets=[] if context.read_only else [context.writable_path],
+            config=context.config,
         )
         data["revision"] = current_revision(context.writable_path)
         return data

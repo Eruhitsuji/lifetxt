@@ -170,6 +170,13 @@ class SafetyFoundationTests(unittest.TestCase):
             "recipient-resolution-v1.schema.json",
             "person-overview-v1.schema.json",
             "inbox-proposal-v1.schema.json",
+            "delegated-mutation-proposal-v1.schema.json",
+            "attachment-remote-operation-v1.schema.json",
+            "attachment-chunk-v1.schema.json",
+            "directory-package-inspection-v1.schema.json",
+            "transaction-restore-v1.schema.json",
+            "fault-drill-matrix-v1.schema.json",
+            "remote-write-clock-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

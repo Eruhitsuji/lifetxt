@@ -3,6 +3,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "activity": {
+      "type": "object"
+    },
     "custom_fields": {
       "additionalProperties": {
         "oneOf": [
@@ -39,6 +42,9 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "planning": {
+      "type": "object"
     },
     "relations": {
       "additionalProperties": {

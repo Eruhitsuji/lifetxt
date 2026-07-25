@@ -1,6 +1,3 @@
 Traceback (most recent call last):
-  File "<stdin>", line 14, in <module>
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/base64.py", line 88, in b64decode
-    return binascii.a2b_base64(s, strict_mode=validate)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-binascii.Error: Invalid base64-encoded string: number of data characters (31757) cannot be 1 more than a multiple of 4
+  File "<stdin>", line 25, in <module>
+RuntimeError: expected payload length 31760, found 31759: [{'name': 'part-000.txt', 'length': 7000, 'sha256': '4e934e01a2bb73380e6d1c6b75eb9ad30bfb9f8482d37fdca20ea25d1263fa76'}, {'name': 'part-001a.txt', 'length': 3499, 'sha256': 'a6968201144788831e0ad653c0b1097b3944ffc2adaf2c4f5312e5ae2e1f9bdd'}, {'name': 'part-001b.txt', 'length': 3500, 'sha256': 'dc5f41d83dcb12543eecdfcc97ade11c207b04919e3f210c7cb7dcbefcafc850'}, {'name': 'part-002.txt', 'length': 7000, 'sha256': '457ae1103be4490a31a6b1fbdb4e43c39b4da360f095b5fd15631c34a994677b'}, {'name': 'part-003.txt', 'length': 7000, 'sha256': '1b74a1541c7055e91d359f11eec253e16b9cdaa5cc536c6570d61b0aca5a3bed'}, {'name': 'part-004.txt', 'length': 3760, 'sha256': '9b594afa3283c015501d82e9ff62d92eb28c0c83b7a6c363c6b85aa5097548c4'}]

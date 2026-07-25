@@ -158,6 +158,14 @@ class TicketProjectReportTests(unittest.TestCase):
         rendered = format_board(report)
         self.assertLess(rendered.index("## open"), rendered.index("## closed"))
 
+    def test_coarse_terminal_status_is_terminal_without_detailed_status(self):
+        item = FakeItem("[x]", "T", "Legacy closed ticket", {
+            "record": ["ticket"], "id": ["T-legacy"], "project": ["alpha"]
+        })
+        report = build_ticket_project_report([item], reference_time=self.now)
+        self.assertEqual(report["summary"]["terminal"], 1)
+        self.assertEqual(report["tickets"][0]["status"], "done")
+
     def test_defaults_follow_ticket_core_statuses_and_severities(self):
         report = build_ticket_project_report([
             ticket("Won't fix", "T-1", ticket_status="wont_fix", severity="critical"),

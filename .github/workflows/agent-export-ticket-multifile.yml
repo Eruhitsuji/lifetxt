@@ -1,19 +1,21 @@
 name: Export ticket multifile development source
 
 on:
-  push:
-    branches:
-      - agent/ticket-multifile-bulk-recovery
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
   export:
+    if: github.event.pull_request.head.ref == 'agent/ticket-multifile-bulk-recovery'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: agent/ticket-multifile-bulk-recovery
           fetch-depth: 0
       - name: Package source tree
         shell: bash

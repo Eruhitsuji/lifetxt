@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from collections import OrderedDict
+from pathlib import Path
 
 from lifetxt import entrypoint
 from lifetxt.model import Item
@@ -185,6 +186,7 @@ class TicketCustomFieldTests(unittest.TestCase):
         self.assertEqual(2, line.count("security_label:"))
 
     def test_cli_new_fields_show_and_filter(self):
+        self.write_life("")
         code, stdout, stderr = self.run_cli(
             [
                 "ticket", "new", "Login failure", "--tracker", "bug", "--project", "web",
@@ -193,7 +195,7 @@ class TicketCustomFieldTests(unittest.TestCase):
             ]
         )
         self.assertEqual(0, code, stderr)
-        self.assertIn("risk_score:7", open(self.life, encoding="utf-8").read())
+        self.assertIn("risk_score:7", Path(self.life).read_text(encoding="utf-8"))
 
         code, stdout, stderr = self.run_cli(
             ["ticket", "list", "--field", "risk_score=7", "--field", "customer_tier=enterprise", "--json"]
@@ -227,20 +229,20 @@ class TicketCustomFieldTests(unittest.TestCase):
             "[ ] T Bug record:ticket id:BUG-1 tracker:bug ticket_status:new priority:normal "
             "risk_score:3 customer_tier:standard\n"
         )
-        before = open(self.life, "rb").read()
+        before = Path(self.life).read_bytes()
         revision = ticket_file_revision(self.life)
         code, stdout, stderr = self.run_cli(
             ["ticket", "edit", "BUG-1", "--set", "risk_score=99", "--revision", revision]
         )
         self.assertEqual(1, code)
         self.assertIn("TK009", stderr)
-        self.assertEqual(before, open(self.life, "rb").read())
+        self.assertEqual(before, Path(self.life).read_bytes())
 
         code, stdout, stderr = self.run_cli(
             ["ticket", "edit", "BUG-1", "--set", "risk_score=8", "--revision", revision]
         )
         self.assertEqual(0, code, stderr)
-        self.assertIn("risk_score:8", open(self.life, encoding="utf-8").read())
+        self.assertIn("risk_score:8", Path(self.life).read_text(encoding="utf-8"))
 
     def test_direct_revision_write_accepts_config_and_preserves_conflicts(self):
         self.write_life(

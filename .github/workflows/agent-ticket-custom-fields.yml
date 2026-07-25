@@ -1,0 +1,98 @@
+name: Apply typed ticket custom fields
+
+on:
+  push:
+    branches:
+      - agent/ticket-typed-custom-fields
+    paths:
+      - .github/workflows/agent-ticket-custom-fields.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-typed-custom-fields
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply implementation payload
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import io
+          import os
+          import pathlib
+          import tarfile
+
+          payload = '''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[... ELLIPSIZATION ...]'''
+          data = base64.b64decode(payload)
+          with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+              archive.extractall('.')
+
+          safety = pathlib.Path('tests/test_safety_foundation.py')
+          text = safety.read_text(encoding='utf-8')
+          needle = '            "ticket-field-registry-v1.schema.json",\n            "ticket-project-report-v1.schema.json",'
+          replacement = '            "ticket-field-registry-v1.schema.json",\n            "ticket-custom-field-registry-v1.schema.json",\n            "ticket-project-report-v1.schema.json",'
+          if needle not in text:
+              raise SystemExit('safety schema insertion point not found')
+          safety.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+
+          todo = pathlib.Path('todo.md')
+          text = todo.read_text(encoding='utf-8')
+          text = text.replace('Last updated: 2026-07-25 (updated x117)', 'Last updated: 2026-07-25 (updated x118)', 1)
+          text = text.replace(
+              'capability discovery while keeping remote ticket writes disabled; and keep the generated Draft 2020-12 schema bundle at 56 documents.',
+              'capability discovery while keeping remote ticket writes disabled; add a typed `ticketing.custom_fields` registry with string/integer/number/boolean/date/datetime/duration/enum validation, defaults, required/repeatable rules, enum/bounds/pattern constraints, tracker/project applicability, filter/search/privacy/role metadata, local CLI discovery/create/filter/show integration, in-lock exact-revision validation, capability discovery, and `ticket-custom-field-registry-v1`; and keep the generated Draft 2020-12 schema bundle at 57 documents.',
+              1,
+          )
+          text = text.replace(
+              'configuration-backed custom fields, multi-target ticket/event/time-entry revision and recovery contracts',
+              'cross-surface custom-field search/privacy/role enforcement, multi-target ticket/event/time-entry revision and recovery contracts',
+              1,
+          )
+          text = text.replace(
+              'Harden the implemented Development Ticket Management Core: typed custom fields, relation rules, all-or-none bulk operations, multi-target revision/recovery contracts, registry-backed query/sort/completion, fixtures, and the remaining Web/TUI/saved-view/remote/command-center adoption of the shared ticket/project report.',
+              'Harden the implemented Development Ticket Management Core: cross-surface custom-field search/privacy/role enforcement, relation rules, all-or-none bulk operations, multi-target revision/recovery contracts, registry-backed query/sort/completion, fixtures, and the remaining Web/TUI/saved-view/remote/command-center adoption of the shared ticket/project report.',
+              1,
+          )
+          old_item = '- [ ] Add typed custom fields to the `ticketing` config (type, required/default, enum, bounds, pattern, filterability, searchability, privacy, applicable trackers/projects, editable/visible roles) without making unknown life.txt custom keys invalid globally. Trackers/statuses/priorities/severities/components/defaults/id_prefix/required_fields already exist.'
+          new_item = '- [ ] Finish cross-surface typed custom-field adoption. `ticketing.custom_fields` now supports string/integer/number/boolean/date/datetime/duration/enum definitions; required/default/repeatable behavior; enum, numeric-bound, length, and pattern validation; tracker/project applicability; filterable/searchable/privacy/editable-role/visible-role metadata; `ticket fields`; `ticket new --field`; filterable `ticket list --field|--has-field`; custom values in `ticket show`; TK006-TK010 diagnostics; exact-revision in-lock rejection; capability discovery; and `ticket-custom-field-registry-v1` while leaving unknown unconfigured life.txt keys valid. Next integrate searchable/filterable definitions with the shared query engine, completion, saved views, command center, TUI, Web, MCP, and remote read-only clients; enforce privacy and visible/editable roles server-side from authenticated project membership; redact secret/private values from reports, notifications, logs, exports, AI context, and capability documents where policy requires; add project/tracker alias resolution, schema migration/version refusal, index/cache invalidation, and older-client fixtures; and keep remote custom-field writes disabled until workflow/history/permission/clock/recovery contracts pass.'
+          if old_item not in text:
+              raise SystemExit('typed custom field todo item not found')
+          text = text.replace(old_item, new_item, 1)
+          core_sentence = 'The exact-revision adapter in `lifetxt/ticket_revision_writes.py` now publishes `ticket revision`, accepts normalized `--revision`/`--expected-revision` tokens, optionally requires them per command or through `ticketing.write.require_revision`, applies edit/assign/close/reopen and relation transforms under the shared sidecar lock, rejects stale source-file hashes without replacement, returns before/after revisions, validates dry runs without writing, and advertises the local contract while explicitly keeping remote ticket writes disabled.'
+          custom_sentence = core_sentence + ' The typed custom-field adapter in `lifetxt/ticket_custom_fields.py` now validates the versioned registry and ticket values, applies applicable defaults during creation, exposes local field discovery and filtering, includes configured values in ticket detail output, validates exact-revision mutations before replacement, publishes privacy/role/search/filter metadata through capabilities, and deliberately leaves unknown unconfigured life.txt keys valid.'
+          if core_sentence not in text:
+              raise SystemExit('ticket core summary insertion point not found')
+          text = text.replace(core_sentence, custom_sentence, 1)
+          text = text.replace('56-document generated schema bundle', '57-document generated schema bundle')
+          text = text.replace('56 documents', '57 documents')
+          todo.write_text(text, encoding='utf-8')
+
+          workflow = pathlib.Path('.github/workflows/agent-ticket-custom-fields.yml')
+          workflow.unlink()
+          PY
+      - name: Compile and run focused tests
+        shell: bash
+        run: |
+          python -m compileall -q lifetxt tests
+          python -m unittest \
+            tests.test_ticket_custom_fields \
+            tests.test_safety_cli \
+            tests.test_safety_foundation \
+            tests.test_schema_extensions_v2
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add typed ticket custom fields'
+          git push origin HEAD:agent/ticket-typed-custom-fields

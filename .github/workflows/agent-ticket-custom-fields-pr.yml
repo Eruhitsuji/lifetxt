@@ -23,20 +23,46 @@ jobs:
       - name: Execute staged implementation payload
         shell: bash
         run: |
+          set +e
           python - <<'PY'
           import pathlib
           import subprocess
           import textwrap
 
-          source = pathlib.Path('.github/workflows/agent-ticket-custom-fields.yml').read_text(encoding='utf-8')
+          primary = pathlib.Path('.github/workflows/agent-ticket-custom-fields.yml')
+          helper = pathlib.Path('.github/workflows/agent-ticket-custom-fields-pr.yml')
+          source = primary.read_text(encoding='utf-8')
           start_marker = "          python - <<'PY'\n"
           end_marker = "          PY\n"
           start = source.index(start_marker) + len(start_marker)
           end = source.index(end_marker, start)
           script = textwrap.dedent(source[start:end])
-          subprocess.run(['python', '-'], input=script, text=True, check=True)
-          pathlib.Path('.github/workflows/agent-ticket-custom-fields-pr.yml').unlink()
+          result = subprocess.run(
+              ['python', '-'], input=script, text=True,
+              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+          )
+          print(result.stdout)
+          if result.returncode:
+              pathlib.Path('agent-ticket-custom-fields-error.log').write_text(
+                  result.stdout or 'staging script failed without output\n', encoding='utf-8'
+              )
+              if primary.exists():
+                  primary.unlink()
+              if helper.exists():
+                  helper.unlink()
+              raise SystemExit(result.returncode)
+          if helper.exists():
+              helper.unlink()
           PY
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A
+            git commit -m 'Record typed field staging failure'
+            git push origin HEAD:agent/ticket-typed-custom-fields
+            exit "$status"
+          fi
       - name: Compile and run focused tests
         shell: bash
         run: |

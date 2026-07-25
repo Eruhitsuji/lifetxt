@@ -17,6 +17,7 @@ from . import mutation
 from .model import Item
 from .serializer import item_to_line
 from .surface_runtime import normalize_revision
+from .timezone_policy import today as timezone_today, utcnow
 
 EVENT_MARKER = "ticket_event"
 TIME_ENTRY_MARKER = "time_entry"
@@ -70,7 +71,7 @@ def iter_time_entries(items, ticket_id=None):
 
 def _utc_text(value=None):
     if value in (None, ""):
-        parsed = datetime.datetime.now(datetime.timezone.utc)
+        parsed = utcnow()
     elif isinstance(value, datetime.datetime):
         parsed = value
     else:
@@ -87,7 +88,7 @@ def _utc_text(value=None):
 
 def _date_text(value=None):
     if value in (None, ""):
-        return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+        return timezone_today("UTC").isoformat()
     if isinstance(value, datetime.datetime):
         return value.date().isoformat()
     if isinstance(value, datetime.date):

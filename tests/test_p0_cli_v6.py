@@ -50,6 +50,7 @@ class P0CliV6Tests(unittest.TestCase):
             "safety", "delegated", "inspect", "--proposal", proposal,
         ])
         self.assertEqual("prepared", inspected["state"])
+        self.assertEqual(prepared["proposal_revision"], inspected["proposal_revision"])
         applied = self.run_cli([
             "safety", "delegated", "apply", "--proposal", proposal,
             "--expected-proposal-revision", inspected["proposal_revision"],

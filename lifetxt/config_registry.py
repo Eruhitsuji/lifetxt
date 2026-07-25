@@ -109,6 +109,12 @@ CONFIG_REGISTRY = OrderedDict(
         ("attachments.open_state_file", _entry(
             "string", ".lifetxt-attachment-open.json",
             "Revision-checked metadata file recording validated attachment open operations.")),
+        ("attachments.remote_source_root", _entry(
+            "string", None,
+            "Server-side root confining directories that Web/MCP may package. Defaults to attachments.root.")),
+        ("attachments.remote_chunk_bytes", _entry(
+            "integer", 65536,
+            "Default bounded chunk size for Web/MCP attachment reads; hard-capped at 1 MiB.")),
         ("transactions.policy_file", _entry(
             "string", None,
             "Versioned transaction policy document loaded in addition to configuration.")),
@@ -145,6 +151,18 @@ CONFIG_REGISTRY = OrderedDict(
         ("clock.skew_reject_seconds", _entry(
             "number", 300.0,
             "Absolute client/server clock skew above which remote writes are refused.")),
+        ("clock.require_remote_write_time", _entry(
+            "boolean", False,
+            "Require an offset-aware client timestamp on every writable Web/MCP request.", restart_required=True)),
+        ("clock.client_time_header", _entry(
+            "string", "X-Lifetxt-Client-Time",
+            "HTTP header carrying the offset-aware client timestamp for remote write skew checks.", restart_required=True)),
+        ("transactions.require_operator_authorization", _entry(
+            "boolean", False,
+            "Require transaction administration operators to appear in transactions.authorized_operators.")),
+        ("transactions.authorized_operators", _entry(
+            "array<string>", [],
+            "Operators allowed to perform policy, archive, restore, and audit administration when authorization is required.")),
         ("projects", _entry(
             "object", None,
             "Static project registry: display name, aliases, default source/assignee/area, "

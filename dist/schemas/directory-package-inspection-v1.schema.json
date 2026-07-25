@@ -1,0 +1,39 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/directory-package-inspection-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attachment_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "manifest": {
+      "type": "object"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "path": {
+      "type": "string"
+    },
+    "problems": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "stored_path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "path",
+    "stored_path",
+    "attachment_revision",
+    "manifest",
+    "problems"
+  ],
+  "title": "lifetxt directory package inspection v1",
+  "type": "object"
+}

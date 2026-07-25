@@ -1,0 +1,59 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-chunk-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attachment_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "content_base64": {
+      "contentEncoding": "base64",
+      "type": "string"
+    },
+    "eof": {
+      "type": "boolean"
+    },
+    "limit": {
+      "maximum": 1048576,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "next_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "path": {
+      "type": "string"
+    },
+    "size": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "stored_path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "stored_path",
+    "attachment_revision",
+    "size",
+    "offset",
+    "limit",
+    "bytes",
+    "content_base64",
+    "next_offset",
+    "eof"
+  ],
+  "title": "lifetxt bounded attachment chunk v1",
+  "type": "object"
+}

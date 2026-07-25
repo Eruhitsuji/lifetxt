@@ -1,0 +1,24 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-write-clock-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "client_time_header": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "required_for_writes": {
+      "type": "boolean"
+    },
+    "schema": {
+      "const": "clock-skew-v1.schema.json"
+    }
+  },
+  "required": [
+    "required_for_writes",
+    "client_time_header",
+    "schema"
+  ],
+  "title": "lifetxt remote write clock contract v1",
+  "type": "object"
+}

@@ -1,0 +1,76 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-remote-operation-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "action": {
+      "enum": [
+        "directory-reference",
+        "package",
+        "reconcile",
+        "open-reference"
+      ]
+    },
+    "attachment_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "item_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "journal_path": {
+      "type": "string"
+    },
+    "metadata_revision": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "package": {
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "recovery_required": {
+      "type": "boolean"
+    },
+    "remote_execution_allowed": {
+      "type": "boolean"
+    },
+    "stored_path": {
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "transaction_id": {
+      "type": "string"
+    },
+    "value": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "action",
+    "path",
+    "attachment_revision"
+  ],
+  "title": "lifetxt remote attachment operation v1",
+  "type": "object"
+}

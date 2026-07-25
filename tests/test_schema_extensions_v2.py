@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class SchemaExtensionsV2Tests(unittest.TestCase):
     def test_bundle_contains_forty_one_generated_and_published_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(43, len(bundle))
+        self.assertEqual(44, len(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
@@ -30,8 +30,8 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
         if optional["validator_available"]:
             strict = schema_validation_report(ROOT, require_validator=True)
             self.assertTrue(strict["ok"], strict)
-            self.assertEqual(43, strict["schema_count"])
-            self.assertEqual(43, strict["sample_count"])
+            self.assertEqual(44, strict["schema_count"])
+            self.assertEqual(44, strict["sample_count"])
             self.assertEqual("network-free referencing.Registry over published bundle", strict["reference_resolution"])
 
     @unittest.skipUnless(importlib.util.find_spec("jsonschema") is not None, "jsonschema not installed")

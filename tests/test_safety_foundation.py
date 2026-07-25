@@ -168,6 +168,7 @@ class SafetyFoundationTests(unittest.TestCase):
             "clock-skew-v1.schema.json",
             "query-plan-v1.schema.json",
             "recipient-resolution-v1.schema.json",
+            "person-overview-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

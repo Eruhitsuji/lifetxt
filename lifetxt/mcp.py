@@ -198,6 +198,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_areas", "get_backlinks", "get_clock_status",
         "run_query", "list_saved_views", "run_saved_view",
         "list_groups", "resolve_recipients", "get_delivery_state",
+        "list_people", "get_person", "get_group_overview",
     ]
 )
 
@@ -743,6 +744,26 @@ def _tool_schemas():
                 "id": _string("Restrict to one message ID."),
                 "policy": _string("Override acknowledgement policy: any, all, or a count."),
             },
+            read_only=True,
+        ),
+        _tool(
+            "list_people",
+            "List people with open-work, message, and meeting counts.",
+            {},
+            read_only=True,
+        ),
+        _tool(
+            "get_person",
+            "Overview of one person: assigned work, messages, meetings, projects, memberships.",
+            {"name": _string("Person name or alias.")},
+            required=["name"],
+            read_only=True,
+        ),
+        _tool(
+            "get_group_overview",
+            "A group's members with each member's open work and message counts.",
+            {"name": _string("Group name.")},
+            required=["name"],
             read_only=True,
         ),
         _tool(
@@ -2418,6 +2439,36 @@ def _tool_get_delivery_state(args, context):
     return {"count": len(summaries), "messages": summaries}
 
 
+def _tool_list_people(_args, context):
+    """List people with open-work, message, and meeting counts."""
+    from .people import people_list
+
+    items, _diagnostics = _read_items(context)
+    return {"people": people_list(items, context.config, timezone_today())}
+
+
+def _tool_get_person(args, context):
+    """Overview of one person: work, messages, meetings, projects, memberships."""
+    from .people import person_overview
+
+    items, _diagnostics = _read_items(context)
+    name = str(args.get("name") or "")
+    if not name:
+        raise ValueError("get_person requires 'name'.")
+    return person_overview(items, context.config, name, timezone_today())
+
+
+def _tool_get_group_overview(args, context):
+    """A group's members with each member's open work and message counts."""
+    from .people import group_overview
+
+    items, _diagnostics = _read_items(context)
+    name = str(args.get("name") or "")
+    if not name:
+        raise ValueError("get_group_overview requires 'name'.")
+    return group_overview(items, context.config, name, timezone_today())
+
+
 def _tool_get_file_state(_args, context):
     """Paths, write target, read-only flag, and content hashes.
 
@@ -2493,6 +2544,9 @@ TOOL_HANDLERS = OrderedDict(
         ("list_groups", _tool_list_groups),
         ("resolve_recipients", _tool_resolve_recipients),
         ("get_delivery_state", _tool_get_delivery_state),
+        ("list_people", _tool_list_people),
+        ("get_person", _tool_get_person),
+        ("get_group_overview", _tool_get_group_overview),
         ("get_clock_status", _tool_get_clock_status),
     ]
 )

@@ -19,7 +19,7 @@ except ImportError:  # pragma: no cover - isolated module tests
 REPORT_SCHEMA = "ticket-project-report-v1"
 DEFAULT_STALE_DAYS = 14
 DEFAULT_HIGH_SEVERITIES = frozenset(("blocker", "critical"))
-DEFAULT_TERMINAL_STATUSES = frozenset(TERMINAL_STATUSES)
+DEFAULT_TERMINAL_STATUSES = frozenset(tuple(TERMINAL_STATUSES) + ("done", "cancelled", "canceled"))
 STATUS_ORDER = ("new", "open") + tuple(key for key in DEFAULT_STATUS_MAP if key != "new") + ("done", "cancelled", "unknown")
 PRIORITY_ORDER = {
     "immediate": 0, "urgent": 0, "highest": 0, "critical": 0, "high": 1,

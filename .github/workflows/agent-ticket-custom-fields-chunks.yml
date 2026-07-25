@@ -1,0 +1,103 @@
+name: Apply chunked typed ticket custom fields
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/ticket-typed-custom-fields'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-typed-custom-fields
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract implementation and update roadmap
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import io
+          import pathlib
+          import shutil
+          import tarfile
+
+          chunks = sorted(pathlib.Path('.agent_payload').glob('part-*.txt'))
+          if len(chunks) != 5:
+              raise SystemExit('expected five implementation chunks, found %d' % len(chunks))
+          payload = ''.join(path.read_text(encoding='ascii') for path in chunks)
+          data = base64.b64decode(payload, validate=True)
+          with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+              archive.extractall('.')
+
+          safety = pathlib.Path('tests/test_safety_foundation.py')
+          text = safety.read_text(encoding='utf-8')
+          needle = '            "ticket-field-registry-v1.schema.json",\n            "ticket-project-report-v1.schema.json",'
+          replacement = '            "ticket-field-registry-v1.schema.json",\n            "ticket-custom-field-registry-v1.schema.json",\n            "ticket-project-report-v1.schema.json",'
+          if needle not in text:
+              raise SystemExit('safety schema insertion point not found')
+          safety.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+
+          todo = pathlib.Path('todo.md')
+          text = todo.read_text(encoding='utf-8')
+          text = text.replace('Last updated: 2026-07-25 (updated x117)', 'Last updated: 2026-07-25 (updated x118)', 1)
+          text = text.replace(
+              'capability discovery while keeping remote ticket writes disabled; and keep the generated Draft 2020-12 schema bundle at 56 documents.',
+              'capability discovery while keeping remote ticket writes disabled; add a typed `ticketing.custom_fields` registry with string/integer/number/boolean/date/datetime/duration/enum validation, defaults, required/repeatable rules, enum/bounds/pattern constraints, tracker/project applicability, filter/search/privacy/role metadata, local CLI discovery/create/filter/show integration, in-lock exact-revision validation, capability discovery, and `ticket-custom-field-registry-v1`; and keep the generated Draft 2020-12 schema bundle at 57 documents.',
+              1,
+          )
+          text = text.replace(
+              'configuration-backed custom fields, multi-target ticket/event/time-entry revision and recovery contracts',
+              'cross-surface custom-field search/privacy/role enforcement, multi-target ticket/event/time-entry revision and recovery contracts',
+              1,
+          )
+          text = text.replace(
+              'Harden the implemented Development Ticket Management Core: typed custom fields, relation rules, all-or-none bulk operations, multi-target revision/recovery contracts, registry-backed query/sort/completion, fixtures, and the remaining Web/TUI/saved-view/remote/command-center adoption of the shared ticket/project report.',
+              'Harden the implemented Development Ticket Management Core: cross-surface custom-field search/privacy/role enforcement, relation rules, all-or-none bulk operations, multi-target revision/recovery contracts, registry-backed query/sort/completion, fixtures, and the remaining Web/TUI/saved-view/remote/command-center adoption of the shared ticket/project report.',
+              1,
+          )
+          old_item = '- [ ] Add typed custom fields to the `ticketing` config (type, required/default, enum, bounds, pattern, filterability, searchability, privacy, applicable trackers/projects, editable/visible roles) without making unknown life.txt custom keys invalid globally. Trackers/statuses/priorities/severities/components/defaults/id_prefix/required_fields already exist.'
+          new_item = '- [ ] Finish cross-surface typed custom-field adoption. `ticketing.custom_fields` now supports string/integer/number/boolean/date/datetime/duration/enum definitions; required/default/repeatable behavior; enum, numeric-bound, length, and pattern validation; tracker/project applicability; filterable/searchable/privacy/editable-role/visible-role metadata; `ticket fields`; `ticket new --field`; filterable `ticket list --field|--has-field`; custom values in `ticket show`; TK006-TK010 diagnostics; exact-revision in-lock rejection; capability discovery; and `ticket-custom-field-registry-v1` while leaving unknown unconfigured life.txt keys valid. Next integrate searchable/filterable definitions with the shared query engine, completion, saved views, command center, TUI, Web, MCP, and remote read-only clients; enforce privacy and visible/editable roles server-side from authenticated project membership; redact secret/private values from reports, notifications, logs, exports, AI context, and capability documents where policy requires; add project/tracker alias resolution, schema migration/version refusal, index/cache invalidation, and older-client fixtures; and keep remote custom-field writes disabled until workflow/history/permission/clock/recovery contracts pass.'
+          if old_item not in text:
+              raise SystemExit('typed custom field todo item not found')
+          text = text.replace(old_item, new_item, 1)
+          core = 'The exact-revision adapter in `lifetxt/ticket_revision_writes.py` now publishes `ticket revision`, accepts normalized `--revision`/`--expected-revision` tokens, optionally requires them per command or through `ticketing.write.require_revision`, applies edit/assign/close/reopen and relation transforms under the shared sidecar lock, rejects stale source-file hashes without replacement, returns before/after revisions, validates dry runs without writing, and advertises the local contract while explicitly keeping remote ticket writes disabled.'
+          addition = core + ' The typed custom-field adapter in `lifetxt/ticket_custom_fields.py` now validates the versioned registry and ticket values, applies applicable defaults during creation, exposes local field discovery and filtering, includes configured values in ticket detail output, validates exact-revision mutations before replacement, publishes privacy/role/search/filter metadata through capabilities, and deliberately leaves unknown unconfigured life.txt keys valid.'
+          if core not in text:
+              raise SystemExit('ticket core summary insertion point not found')
+          text = text.replace(core, addition, 1)
+          text = text.replace('56-document generated schema bundle', '57-document generated schema bundle')
+          text = text.replace('56 documents', '57 documents')
+          todo.write_text(text, encoding='utf-8')
+
+          shutil.rmtree('.agent_payload')
+          error = pathlib.Path('agent-ticket-custom-fields-error.log')
+          if error.exists():
+              error.unlink()
+          pathlib.Path('.github/workflows/agent-ticket-custom-fields-chunks.yml').unlink()
+          PY
+      - name: Compile and run focused tests
+        shell: bash
+        run: |
+          python -m compileall -q lifetxt tests
+          python -m unittest \
+            tests.test_ticket_custom_fields \
+            tests.test_safety_cli \
+            tests.test_safety_foundation \
+            tests.test_schema_extensions_v2
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add typed ticket custom fields'
+          git push origin HEAD:agent/ticket-typed-custom-fields

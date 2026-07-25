@@ -61,6 +61,43 @@ def command_safety(args, config_data):
             gap_policy=getattr(args, "gap_policy", "error"),
         )
         return _output(report, args, failure=not report.get("valid", False))
+    if action == "delegated":
+        from .delegated_mutation import (
+            apply_delegated_proposal_file,
+            prepare_delegated_mutation,
+            read_delegated_proposal,
+            reject_delegated_proposal_file,
+        )
+        delegated_action = args.delegated_action
+        if delegated_action == "prepare":
+            if not getattr(args, "path", None) or not getattr(args, "command", None):
+                raise ValueError("safety delegated prepare requires --path and --command.")
+            report = prepare_delegated_mutation(
+                args.path,
+                args.command,
+                proposal_path=args.proposal,
+                timeout=args.timeout,
+                keep_temporary=bool(args.keep_temp),
+            )
+        elif delegated_action == "inspect":
+            proposal, snapshot = read_delegated_proposal(args.proposal)
+            report = dict(proposal)
+            report["proposal_path"] = snapshot.path
+            report["proposal_revision"] = snapshot.content_hash
+        elif delegated_action == "apply":
+            report = apply_delegated_proposal_file(
+                args.proposal,
+                expected_proposal_revision=getattr(args, "expected_proposal_revision", None),
+                expected_revision=getattr(args, "expected_revision", None),
+                unsafe=bool(getattr(args, "unsafe", False)),
+            )
+        else:
+            report = reject_delegated_proposal_file(
+                args.proposal,
+                expected_proposal_revision=getattr(args, "expected_proposal_revision", None),
+                reason=getattr(args, "reason", None),
+            )
+        return _output(report, args)
     if action == "revisions":
         paths = _resolved_input_paths(args.paths, config_data)
         from .config import config_write_file
@@ -94,6 +131,9 @@ def command_safety(args, config_data):
             or journal_directory(config_data, writable_path=write_path)
         )
         tx_action = getattr(args, "transaction_action", "list")
+        if tx_action in ("policy-write", "policy-migrate", "rotate-archives", "audit", "archive", "cleanup", "abandon", "restore-backup"):
+            from .transaction_admin import authorize_operator
+            authorize_operator(config_data, getattr(args, "operator", None), action="transactions.%s" % tx_action)
         journal = getattr(args, "journal", None)
         if journal and not os.path.isabs(journal):
             candidate = os.path.join(root, journal)
@@ -176,16 +216,23 @@ def command_safety(args, config_data):
                     details = json.loads(args.details_json)
                     if not isinstance(details, dict):
                         raise ValueError("--details-json must decode to an object.")
-                report = append_admin_audit(audit_file, getattr(args, "event", None) or "manual", operator=operator, details=details)
+                report = append_admin_audit(audit_file, getattr(args, "event", None) or "manual", operator=operator, details=details, config=config_data)
         elif tx_action == "drill":
-            from .fault_drill import SUPPORTED_POINTS, run_fault_drill
-            if not getattr(args, "point", None):
-                raise ValueError("transactions drill requires --point (%s)." % ", ".join(SUPPORTED_POINTS))
-            report = run_fault_drill(
-                args.point,
-                recovery=getattr(args, "recovery", "inspect"),
-                keep=bool(getattr(args, "keep_workspace", False)),
-            )
+            from .fault_drill import SUPPORTED_POINTS, run_fault_drill, run_fault_matrix
+            if getattr(args, "matrix", False):
+                report = run_fault_matrix(
+                    recovery=getattr(args, "recovery", "auto"),
+                    keep=bool(getattr(args, "keep_workspace", False)),
+                )
+            else:
+                if not getattr(args, "point", None):
+                    raise ValueError("transactions drill requires --point (%s), or --matrix." % ", ".join(SUPPORTED_POINTS))
+                report = run_fault_drill(
+                    args.point,
+                    recovery=getattr(args, "recovery", "inspect"),
+                    keep=bool(getattr(args, "keep_workspace", False)),
+                    repeat_recovery=bool(getattr(args, "repeat_recovery", False)),
+                )
         elif tx_action == "archive":
             if not getattr(args, "archive_dir", None):
                 raise ValueError("transactions archive requires --archive-dir.")
@@ -194,6 +241,19 @@ def command_safety(args, config_data):
                 older_than_days=getattr(args, "older_than_days", None)
                 if getattr(args, "older_than_days", None) is not None else 30.0,
                 force=bool(getattr(args, "force", False)),
+            )
+        elif tx_action == "restore-backup":
+            if not getattr(args, "backup_dir", None):
+                raise ValueError("transactions restore-backup requires --backup-dir.")
+            from .transaction_journal import restore_backup
+            from .transaction_admin import audit_path
+            report = restore_backup(
+                args.backup_dir,
+                action=getattr(args, "restore_action", "inspect"),
+                working_dir=getattr(args, "working_dir", None),
+                operator=getattr(args, "operator", None),
+                config=config_data,
+                audit_file=getattr(args, "audit_file", None) or audit_path(root, config=config_data),
             )
         elif tx_action == "verify-backup":
             if not getattr(args, "backup_dir", None):

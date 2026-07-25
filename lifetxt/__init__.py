@@ -91,6 +91,9 @@ del _install_schema_extensions_v14
 from .schema_extensions_v15 import install_schema_extensions_v15 as _install_schema_extensions_v15
 _install_schema_extensions_v15()
 del _install_schema_extensions_v15
+from .schema_extensions_v16 import install_schema_extensions_v16 as _install_schema_extensions_v16
+_install_schema_extensions_v16()
+del _install_schema_extensions_v16
 from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6

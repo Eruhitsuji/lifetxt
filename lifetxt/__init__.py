@@ -97,6 +97,9 @@ del _install_schema_extensions_v16
 from .schema_extensions_v17 import install_schema_extensions_v17 as _install_schema_extensions_v17
 _install_schema_extensions_v17()
 del _install_schema_extensions_v17
+from .schema_extensions_v18 import install_schema_extensions_v18 as _install_schema_extensions_v18
+_install_schema_extensions_v18()
+del _install_schema_extensions_v18
 from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6
@@ -109,6 +112,15 @@ del _install_ticket_revision_writes
 from .ticket_custom_fields import install_ticket_custom_fields as _install_ticket_custom_fields
 _install_ticket_custom_fields()
 del _install_ticket_custom_fields
+from .ticket_workflow_cli import install_ticket_workflow_cli as _install_ticket_workflow_cli
+_install_ticket_workflow_cli()
+del _install_ticket_workflow_cli
+from .ticket_planning_cli import install_ticket_planning_cli as _install_ticket_planning_cli
+_install_ticket_planning_cli()
+del _install_ticket_planning_cli
+from .ticket_workflow_surfaces import install_ticket_workflow_surfaces as _install_ticket_workflow_surfaces
+_install_ticket_workflow_surfaces()
+del _install_ticket_workflow_surfaces
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

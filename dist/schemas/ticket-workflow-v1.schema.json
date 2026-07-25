@@ -1,0 +1,133 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-workflow-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "activities": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "contract_version": {
+      "const": "1"
+    },
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "exact_revision_required": {
+      "type": "boolean"
+    },
+    "initial_status": {
+      "type": "string"
+    },
+    "local_role": {
+      "type": "string"
+    },
+    "remote_write_enforcement": {
+      "type": "boolean"
+    },
+    "replace_defaults": {
+      "type": "boolean"
+    },
+    "role": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "ticket-workflow-v1.schema.json"
+    },
+    "source": {
+      "type": "string"
+    },
+    "statuses": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "transitions": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "properties": {
+          "allowed_for_role": {
+            "type": "boolean"
+          },
+          "comment_required": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "from": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "label": {
+            "type": "string"
+          },
+          "required_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "resolution_required": {
+            "type": "boolean"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "set": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "to": {
+            "type": "string"
+          },
+          "unset": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "to",
+          "from",
+          "event"
+        ],
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "valid": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "valid",
+    "statuses",
+    "transitions"
+  ],
+  "title": "lifetxt ticket workflow v1",
+  "type": "object"
+}

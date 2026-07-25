@@ -1,0 +1,105 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-event-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "body": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "changes": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "event": {
+      "type": "string"
+    },
+    "from_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "line": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "project": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "provider": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "references": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ticket_id": {
+      "type": "string"
+    },
+    "ticket_revision": {
+      "type": "string"
+    },
+    "to_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tracker": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "transaction_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "ticket_id",
+    "event",
+    "author",
+    "at",
+    "sequence",
+    "transaction_id",
+    "ticket_revision"
+  ],
+  "title": "lifetxt append-only ticket event v1",
+  "type": "object"
+}

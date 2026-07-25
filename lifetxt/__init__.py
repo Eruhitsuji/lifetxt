@@ -97,6 +97,9 @@ del _install_schema_extensions_v16
 from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6
+from .ticket_project_surfaces import install_ticket_project_surfaces as _install_ticket_project_surfaces
+_install_ticket_project_surfaces()
+del _install_ticket_project_surfaces
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_bundle_contains_sixty_four_generated_and_published_documents (tests.test_schema_extensions_v2.SchemaExtensionsV2Tests.test_bundle_contains_sixty_four_generated_and_published_documents)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/work/lifetxt/lifetxt/tests/test_schema_extensions_v2.py", line 25, in test_bundle_contains_sixty_four_generated_and_published_documents
+    self.assertEqual(generated, json.load(handle), name)
+AssertionError: {'$schema': 'https://json-schema.org/draft/2[1078 chars]True} != {'$id': 'https://github.com/Eruhitsuji/lifet[855 chars]ect'}
+Diff is 1756 characters long. Set self.maxDiff to None to see it. : ticket-version-v1.schema.json
+
+----------------------------------------------------------------------
+Ran 1 test in 0.008s
+
+FAILED (failures=1)

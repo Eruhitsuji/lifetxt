@@ -100,6 +100,9 @@ del _install_remote_contracts_v6
 from .ticket_project_surfaces import install_ticket_project_surfaces as _install_ticket_project_surfaces
 _install_ticket_project_surfaces()
 del _install_ticket_project_surfaces
+from .ticket_revision_writes import install_ticket_revision_writes as _install_ticket_revision_writes
+_install_ticket_revision_writes()
+del _install_ticket_revision_writes
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

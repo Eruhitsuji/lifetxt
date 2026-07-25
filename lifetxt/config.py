@@ -66,6 +66,11 @@ def config_template():
             )
         ]
     )
+    data["inbox"] = OrderedDict(
+        [
+            ("proposals_file", ".cache/lifetxt/proposals.json"),
+        ]
+    )
     data["defaults"] = OrderedDict(
         [
             ("person", "self"),

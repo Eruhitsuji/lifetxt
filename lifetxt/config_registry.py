@@ -152,6 +152,10 @@ CONFIG_REGISTRY = OrderedDict(
         ("projects.*.aliases", _entry(
             "array<string>", None,
             "Alternate names that resolve to this project in project/portfolio commands.")),
+        ("inbox.proposals_file", _entry(
+            "string", ".cache/lifetxt/proposals.json",
+            "Operational store for Unified Inbox proposals staged before acceptance. "
+            "Not authoritative life.txt content.")),
         ("groups", _entry(
             "object", None,
             "Messaging groups: name -> {members, disabled_members, visibility, aliases}. "

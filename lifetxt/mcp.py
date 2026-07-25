@@ -199,6 +199,7 @@ READ_ONLY_TOOLS = frozenset(
         "run_query", "list_saved_views", "run_saved_view",
         "list_groups", "resolve_recipients", "get_delivery_state",
         "list_people", "get_person", "get_group_overview",
+        "list_proposals",
     ]
 )
 
@@ -765,6 +766,24 @@ def _tool_schemas():
             {"name": _string("Group name.")},
             required=["name"],
             read_only=True,
+        ),
+        _tool(
+            "list_proposals",
+            "List Unified Inbox proposals staged for human review.",
+            {"status": _string("Filter: pending, accepted, rejected, or deferred.")},
+            read_only=True,
+        ),
+        _tool(
+            "stage_proposal",
+            "Stage a create proposal into the Unified Inbox for review. Writes only "
+            "to the proposal store, never to life.txt; a person accepts it later.",
+            {
+                "title": _string("Item title."),
+                "kind": _string("Item type. Default T."),
+                "details": _object("Detail keys such as project, due, assignee."),
+                "source": _string("Proposal source label. Default mcp."),
+            },
+            required=["title"],
         ),
         _tool(
             "get_clock_status",
@@ -2439,6 +2458,36 @@ def _tool_get_delivery_state(args, context):
     return {"count": len(summaries), "messages": summaries}
 
 
+def _tool_list_proposals(args, context):
+    """List Unified Inbox proposals, optionally filtered by status."""
+    from .inbox import inbox_summary, list_proposals
+
+    proposals = list_proposals(context.config, status=args.get("status"))
+    summary = inbox_summary(context.config)
+    return {"proposals": proposals, "counts": summary["counts"], "total": summary["total"]}
+
+
+def _tool_stage_proposal(args, context):
+    """Stage a create proposal into the Unified Inbox for human review.
+
+    This writes only to the operational proposal store, never to life.txt. A
+    person accepts it later, which is the single point where it becomes a record.
+    """
+    from .inbox import stage_create
+
+    title = str(args.get("title") or "")
+    if not title:
+        raise ValueError("stage_proposal requires 'title'.")
+    details = args.get("details")
+    if not isinstance(details, dict):
+        details = {}
+    proposal = stage_create(
+        context.config, title, kind=str(args.get("kind") or "T"),
+        details=details, source=str(args.get("source") or "mcp"),
+    )
+    return {"staged": True, "proposal": proposal}
+
+
 def _tool_list_people(_args, context):
     """List people with open-work, message, and meeting counts."""
     from .people import people_list
@@ -2547,6 +2596,8 @@ TOOL_HANDLERS = OrderedDict(
         ("list_people", _tool_list_people),
         ("get_person", _tool_get_person),
         ("get_group_overview", _tool_get_group_overview),
+        ("list_proposals", _tool_list_proposals),
+        ("stage_proposal", _tool_stage_proposal),
         ("get_clock_status", _tool_get_clock_status),
     ]
 )

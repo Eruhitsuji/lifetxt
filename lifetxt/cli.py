@@ -999,6 +999,55 @@ def build_parser():
     person_group.add_argument("--json", action="store_true", help="Emit JSON.")
     person_group.set_defaults(func=command_person_group)
 
+    proposal_command = subparsers.add_parser(
+        "proposal", help="Unified Inbox: review, edit, accept, or reject staged proposals."
+    )
+    proposal_subparsers = proposal_command.add_subparsers(dest="proposal_command")
+
+    prop_list = proposal_subparsers.add_parser("list", help="List staged proposals.")
+    prop_list.add_argument("--status", choices=["pending", "accepted", "rejected", "deferred"],
+                           help="Filter by status.")
+    prop_list.add_argument("--json", action="store_true", help="Emit JSON.")
+    prop_list.set_defaults(func=command_proposal_list)
+
+    prop_add = proposal_subparsers.add_parser("add", help="Stage a create proposal.")
+    prop_add.add_argument("title", help="Item title.")
+    prop_add.add_argument("--kind", default="T", help="Item type. Default T.")
+    prop_add.add_argument("--project", help="project: value.")
+    prop_add.add_argument("--due", help="due: value.")
+    prop_add.add_argument("--assignee", help="assignee: value.")
+    prop_add.add_argument("--priority", help="priority: value.")
+    prop_add.add_argument("--tag", action="append", help="tag: value (repeatable).")
+    prop_add.add_argument("--source", default="manual", help="Proposal source. Default manual.")
+    prop_add.set_defaults(func=command_proposal_add)
+
+    prop_show = proposal_subparsers.add_parser("show", help="Show one proposal.")
+    prop_show.add_argument("id", help="Proposal ID.")
+    prop_show.set_defaults(func=command_proposal_show)
+
+    prop_edit = proposal_subparsers.add_parser("edit", help="Edit a pending proposal.")
+    prop_edit.add_argument("id", help="Proposal ID.")
+    prop_edit.add_argument("--title", help="New title.")
+    prop_edit.add_argument("--kind", help="New type.")
+    prop_edit.add_argument("--project", help="project: value.")
+    prop_edit.add_argument("--due", help="due: value.")
+    prop_edit.add_argument("--assignee", help="assignee: value.")
+    prop_edit.add_argument("--priority", help="priority: value.")
+    prop_edit.set_defaults(func=command_proposal_edit)
+
+    prop_accept = proposal_subparsers.add_parser("accept", help="Accept and append a proposal.")
+    prop_accept.add_argument("ids", nargs="+", help="Proposal ID(s).")
+    prop_accept.add_argument("--to", help="Target file. Defaults to the write target.")
+    prop_accept.set_defaults(func=command_proposal_accept)
+
+    prop_reject = proposal_subparsers.add_parser("reject", help="Reject a proposal.")
+    prop_reject.add_argument("id", help="Proposal ID.")
+    prop_reject.set_defaults(func=command_proposal_reject)
+
+    prop_defer = proposal_subparsers.add_parser("defer", help="Defer a proposal.")
+    prop_defer.add_argument("id", help="Proposal ID.")
+    prop_defer.set_defaults(func=command_proposal_defer)
+
     tui = subparsers.add_parser(
         "tui",
         help="Run a terminal dashboard for tasks, agenda, and status.",
@@ -8579,6 +8628,130 @@ def command_person_group(args):
                    % (member["person"], member["assigned_open"], member["overdue"], member["messages_received"]))
     for row in report["diagnostics"]:
         write_text(None, "  [%s] %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+    return 0
+
+
+def _proposal_target(args):
+    config = _config(args)
+    target = getattr(args, "to", None) or config_write_file(config)
+    if not target:
+        paths = config_paths(config)
+        target = paths[0] if paths else "life.txt"
+    return target
+
+
+def command_proposal_list(args):
+    from .inbox import inbox_summary, list_proposals, proposal_to_line
+
+    config = _config(args)
+    proposals = list_proposals(config, status=getattr(args, "status", None))
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(proposals, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if not proposals:
+        write_text(None, "No proposals.\n")
+        return 0
+    for proposal in proposals:
+        try:
+            preview = proposal_to_line(proposal)
+        except ValueError:
+            preview = proposal.get("operation", "?")
+        write_text(None, "%-12s [%-8s] %-8s %s\n"
+                   % (proposal["id"], proposal.get("status", "pending"),
+                      proposal.get("source", ""), preview))
+    summary = inbox_summary(config)
+    write_text(None, "(%d total: %s)\n"
+               % (summary["total"], ", ".join("%s=%d" % (k, v) for k, v in summary["counts"].items() if v)))
+    return 0
+
+
+def _proposal_details_from_args(args):
+    details = OrderedDict()
+    for key in ("project", "due", "assignee", "priority"):
+        value = getattr(args, key, None)
+        if value:
+            details[key] = value
+    tags = getattr(args, "tag", None)
+    if tags:
+        details["tag"] = tags
+    return details
+
+
+def command_proposal_add(args):
+    from .inbox import stage_create
+
+    proposal = stage_create(
+        _config(args), args.title, kind=getattr(args, "kind", "T"),
+        details=_proposal_details_from_args(args), source=getattr(args, "source", "manual"),
+    )
+    write_text(None, "Staged proposal %s\n" % proposal["id"])
+    return 0
+
+
+def command_proposal_show(args):
+    from .inbox import get_proposal
+
+    proposal = get_proposal(_config(args), args.id)
+    if proposal is None:
+        sys.stderr.write("ERROR: Unknown proposal %r\n" % args.id)
+        return 1
+    write_text(None, json.dumps(proposal, ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
+def command_proposal_edit(args):
+    from .inbox import edit_proposal
+
+    try:
+        edit_proposal(
+            _config(args), args.id,
+            title=getattr(args, "title", None), kind=getattr(args, "kind", None),
+            details=_proposal_details_from_args(args),
+        )
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    write_text(None, "Edited proposal %s\n" % args.id)
+    return 0
+
+
+def command_proposal_accept(args):
+    from .inbox import batch_apply
+
+    config = _config(args)
+    target = _proposal_target(args)
+    _ensure_writable_path(target, config, "proposal accept")
+    report = batch_apply(config, args.ids, target)
+    for result in report["results"]:
+        if result.get("applied"):
+            write_text(None, "Accepted %s -> %s\n  %s\n" % (result["id"], target, result["line"]))
+        else:
+            sys.stderr.write("ERROR: %s: %s\n" % (result["id"], result.get("error")))
+    write_text(None, "Applied %d/%d.\n" % (report["applied"], report["total"]))
+    return 0 if report["applied"] == report["total"] else 1
+
+
+def command_proposal_reject(args):
+    from .inbox import reject
+
+    try:
+        reject(_config(args), args.id)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    write_text(None, "Rejected %s\n" % args.id)
+    return 0
+
+
+def command_proposal_defer(args):
+    from .inbox import defer
+
+    try:
+        defer(_config(args), args.id)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    write_text(None, "Deferred %s\n" % args.id)
     return 0
 
 

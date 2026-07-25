@@ -1,0 +1,22 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-field-registry-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {
+    "additionalProperties": true,
+    "properties": {
+      "registry": {
+        "type": "boolean"
+      },
+      "repeatable": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "repeatable",
+      "registry"
+    ],
+    "type": "object"
+  },
+  "title": "lifetxt ticket field registry v1",
+  "type": "object"
+}

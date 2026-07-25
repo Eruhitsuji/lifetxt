@@ -178,6 +178,8 @@ class SafetyFoundationTests(unittest.TestCase):
             "fault-drill-matrix-v1.schema.json",
             "remote-write-clock-v1.schema.json",
             "global-search-v1.schema.json",
+            "ticket-v1.schema.json",
+            "ticket-field-registry-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

@@ -170,6 +170,17 @@ CONFIG_REGISTRY = OrderedDict(
         ("projects.*.aliases", _entry(
             "array<string>", None,
             "Alternate names that resolve to this project in project/portfolio commands.")),
+        ("ticketing", _entry(
+            "object", None,
+            "Development ticket configuration: trackers, statuses, priorities, severities, "
+            "components, defaults, id_prefix, required_fields, and typed custom fields "
+            "(ticket-v1.schema.json).")),
+        ("ticketing.id_prefix", _entry(
+            "string", "TK",
+            "Prefix for generated ticket ids, e.g. TK-1. Keep distinct from task id prefixes.")),
+        ("ticketing.required_fields", _entry(
+            "array<string>", [],
+            "Ticket fields that must be present; missing ones are reported as TK005 errors.")),
         ("inbox.proposals_file", _entry(
             "string", ".cache/lifetxt/proposals.json",
             "Operational store for Unified Inbox proposals staged before acceptance. "

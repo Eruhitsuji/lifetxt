@@ -200,6 +200,7 @@ READ_ONLY_TOOLS = frozenset(
         "list_groups", "resolve_recipients", "get_delivery_state",
         "list_people", "get_person", "get_group_overview",
         "list_proposals", "global_search",
+        "list_tickets", "get_ticket", "validate_tickets",
     ]
 )
 
@@ -765,6 +766,35 @@ def _tool_schemas():
             "A group's members with each member's open work and message counts.",
             {"name": _string("Group name.")},
             required=["name"],
+            read_only=True,
+        ),
+        _tool(
+            "list_tickets",
+            "List development tickets (record:ticket) with optional field filters.",
+            {
+                "tracker": _string("Tracker filter."),
+                "status": _string("Detailed ticket_status filter."),
+                "priority": _string("Priority filter."),
+                "assignee": _string("Assignee filter."),
+                "project": _string("Project filter."),
+                "component": _string("Component filter."),
+                "version": _string("Version filter."),
+                "sprint": _string("Sprint filter."),
+                "open_only": _bool("Only open tickets."),
+            },
+            read_only=True,
+        ),
+        _tool(
+            "get_ticket",
+            "Aggregate one ticket's fields, relations, and incoming links.",
+            {"id": _string("Ticket id.")},
+            required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "validate_tickets",
+            "Validate every ticket and return typed diagnostics (status/registry/required).",
+            {},
             read_only=True,
         ),
         _tool(
@@ -2469,6 +2499,51 @@ def _tool_get_delivery_state(args, context):
     return {"count": len(summaries), "messages": summaries}
 
 
+def _tool_list_tickets(args, context):
+    """List development tickets (record:ticket) with optional field filters."""
+    from .tickets import ticket_list
+
+    items, _diagnostics = _read_items(context)
+    filters = {}
+    for field in ("tracker", "ticket_status", "priority", "severity", "assignee",
+                  "component", "version", "sprint", "project"):
+        value = args.get(field) or (args.get("status") if field == "ticket_status" else None)
+        if value:
+            filters[field] = value
+    if _truthy(args.get("open_only")):
+        filters["open_only"] = True
+    rows = ticket_list(items, context.config, filters, key=_id_key(context))
+    return {"count": len(rows), "tickets": rows}
+
+
+def _tool_get_ticket(args, context):
+    """Aggregate one ticket's fields, relations, and incoming links."""
+    from .tickets import is_ticket, ticket_id_of, ticket_view
+
+    items, _diagnostics = _read_items(context)
+    key = _id_key(context)
+    ticket_id = str(args.get("id") or "")
+    if not ticket_id:
+        raise ValueError("get_ticket requires 'id'.")
+    for item in items:
+        if is_ticket(item) and str(ticket_id_of(item, key)) == ticket_id:
+            return ticket_view(item, context.config, items, key=key)
+    raise ValueError("Ticket %r not found." % ticket_id)
+
+
+def _tool_validate_tickets(_args, context):
+    """Validate every ticket and return typed diagnostics."""
+    from .tickets import iter_tickets, validate_ticket
+
+    items, _diagnostics = _read_items(context)
+    key = _id_key(context)
+    rows = []
+    for item in iter_tickets(items):
+        rows.extend(validate_ticket(item, context.config, key=key))
+    return {"ok": not any(r["severity"] == "error" for r in rows),
+            "diagnostic_count": len(rows), "diagnostics": rows}
+
+
 def _tool_global_search(args, context):
     """Search across items, projects, people, groups, areas, and proposals."""
     from .global_search import global_search
@@ -2619,6 +2694,9 @@ TOOL_HANDLERS = OrderedDict(
         ("list_people", _tool_list_people),
         ("get_person", _tool_get_person),
         ("get_group_overview", _tool_get_group_overview),
+        ("list_tickets", _tool_list_tickets),
+        ("get_ticket", _tool_get_ticket),
+        ("validate_tickets", _tool_validate_tickets),
         ("global_search", _tool_global_search),
         ("list_proposals", _tool_list_proposals),
         ("stage_proposal", _tool_stage_proposal),

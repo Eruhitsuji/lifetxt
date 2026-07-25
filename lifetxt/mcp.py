@@ -197,6 +197,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_projects", "get_project", "get_portfolio", "get_command_center",
         "get_areas", "get_backlinks", "get_clock_status",
         "run_query", "list_saved_views", "run_saved_view",
+        "list_groups", "resolve_recipients", "get_delivery_state",
     ]
 )
 
@@ -720,6 +721,28 @@ def _tool_schemas():
             "Run a saved view by name.",
             {"name": _string("Saved view name.")},
             required=["name"],
+            read_only=True,
+        ),
+        _tool(
+            "list_groups",
+            "List messaging groups with resolved member counts and validation.",
+            {},
+            read_only=True,
+        ),
+        _tool(
+            "resolve_recipients",
+            "Expand people/teams/groups into a deterministic recipient set.",
+            {"to": _string("Comma-separated people, teams, or groups.")},
+            required=["to"],
+            read_only=True,
+        ),
+        _tool(
+            "get_delivery_state",
+            "Per-recipient delivery state and acknowledgement status for messages.",
+            {
+                "id": _string("Restrict to one message ID."),
+                "policy": _string("Override acknowledgement policy: any, all, or a count."),
+            },
             read_only=True,
         ),
         _tool(
@@ -2357,6 +2380,44 @@ def _tool_run_saved_view(args, context):
     return response
 
 
+def _tool_list_groups(_args, context):
+    """List messaging groups with resolved member counts and validation."""
+    from .groups import group_summaries, validate_groups
+
+    return {
+        "groups": group_summaries(context.config),
+        "diagnostics": validate_groups(context.config),
+    }
+
+
+def _tool_resolve_recipients(args, context):
+    """Expand people/teams/groups into a deterministic recipient set."""
+    from .groups import resolve_recipients
+
+    refs = args.get("to") or args.get("references") or []
+    if isinstance(refs, str):
+        refs = [r.strip() for r in refs.split(",") if r.strip()]
+    return resolve_recipients(context.config, refs)
+
+
+def _tool_get_delivery_state(args, context):
+    """Per-recipient delivery state and acknowledgement status for messages."""
+    from .delivery import delivery_summary
+    from .groups import resolve_recipients
+
+    items, _diagnostics = _read_items(context)
+    target_id = args.get("id")
+    policy = args.get("policy")
+    summaries = []
+    for item in items:
+        if item.kind != "M":
+            continue
+        if target_id and (item.details.get("id", [None])[0] != str(target_id)):
+            continue
+        summaries.append(delivery_summary(item, context.config, resolve_recipients, policy))
+    return {"count": len(summaries), "messages": summaries}
+
+
 def _tool_get_file_state(_args, context):
     """Paths, write target, read-only flag, and content hashes.
 
@@ -2429,6 +2490,9 @@ TOOL_HANDLERS = OrderedDict(
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),
         ("run_saved_view", _tool_run_saved_view),
+        ("list_groups", _tool_list_groups),
+        ("resolve_recipients", _tool_resolve_recipients),
+        ("get_delivery_state", _tool_get_delivery_state),
         ("get_clock_status", _tool_get_clock_status),
     ]
 )

@@ -52,6 +52,20 @@ def config_template():
             ("groups", OrderedDict()),
         ]
     )
+    data["groups"] = OrderedDict(
+        [
+            (
+                "oncall",
+                OrderedDict(
+                    [
+                        ("members", ["self"]),
+                        ("disabled_members", []),
+                        ("visibility", "shared"),
+                    ]
+                ),
+            )
+        ]
+    )
     data["defaults"] = OrderedDict(
         [
             ("person", "self"),

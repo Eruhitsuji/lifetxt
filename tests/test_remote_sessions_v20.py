@@ -105,6 +105,7 @@ class RemoteBrowserSessionTests(unittest.TestCase):
             require_csrf(session, {"X-CSRF-Token": "csrf-1"}, "POST", "https://evil.example", "https://life.example", config)
         self.assertEqual("ORIGIN_FORBIDDEN", caught.exception.code)
 
+
     def test_invalid_cookie_header_and_origin_configuration_fail_closed(self):
         with self.assertRaises(RemoteAccessError) as caught:
             cookie_name(self.config(session_cookie_name="bad cookie"))

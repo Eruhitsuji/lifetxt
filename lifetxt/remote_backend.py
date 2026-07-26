@@ -97,6 +97,9 @@ def _item_rows(items, config):
     for item in items:
         row = api_item(item, writable_path=None, id_key=key)
         row["editable"] = False
+        # Raw source/text/markdown fields can embed absolute local attachment
+        # paths. The structured title/details representation is authoritative
+        # for this read-only remote contract.
         row.pop("source", None)
         row.pop("text", None)
         row.pop("markdown", None)

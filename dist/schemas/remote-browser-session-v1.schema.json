@@ -1,0 +1,43 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-browser-session-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authentication": {
+      "type": "string"
+    },
+    "csrf_token": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "expires_in_seconds": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "idle_expires_in_seconds": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "principal": {
+      "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-principal-v1.schema.json"
+    },
+    "restart_invalidates_session": {
+      "const": true
+    },
+    "schema": {
+      "const": "remote-browser-session-v1.schema.json"
+    }
+  },
+  "required": [
+    "schema",
+    "principal",
+    "authentication",
+    "expires_in_seconds",
+    "idle_expires_in_seconds",
+    "restart_invalidates_session"
+  ],
+  "title": "Remote browser session",
+  "type": "object"
+}

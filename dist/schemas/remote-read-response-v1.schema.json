@@ -1,0 +1,38 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-read-response-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "data": {},
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "resource": {
+      "type": "string"
+    },
+    "revision": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "remote-read-response-v1.schema.json"
+    }
+  },
+  "required": [
+    "schema",
+    "resource",
+    "revision",
+    "generated_at",
+    "data",
+    "diagnostics"
+  ],
+  "title": "Remote shared read-backend response",
+  "type": "object"
+}

@@ -1,0 +1,234 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-capability-v2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authentication": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "browser_session": {
+      "type": "object"
+    },
+    "capability_revision": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "compatibility": {
+      "additionalProperties": false,
+      "properties": {
+        "current_client_protocol": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "downgrade": {
+          "const": "client-selects-supported-protocol"
+        },
+        "future_protocols": {
+          "const": "reject"
+        },
+        "minimum_client_protocol": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "missing_optional_features": {
+          "const": "disable"
+        },
+        "removed_features": {
+          "const": "explicit-unsupported"
+        },
+        "supported_protocols": {
+          "items": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "unknown_fields": {
+          "const": "ignore"
+        }
+      },
+      "required": [
+        "minimum_client_protocol",
+        "current_client_protocol",
+        "supported_protocols",
+        "unknown_fields",
+        "missing_optional_features",
+        "removed_features",
+        "future_protocols",
+        "downgrade"
+      ],
+      "type": "object"
+    },
+    "contract_version": {
+      "const": "2"
+    },
+    "contracts": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "current": {
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "minimum": {
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "schemas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "minimum",
+          "current",
+          "schemas"
+        ],
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "features": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "https_required": {
+      "type": "boolean"
+    },
+    "local_paths_redacted": {
+      "type": "boolean"
+    },
+    "mutation_policy": {
+      "type": "object"
+    },
+    "optional_dependencies": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "modules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "modules"
+        ],
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "protocol": {
+      "properties": {
+        "current": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "default_without_header": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "minimum": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "request_header": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "minimum",
+        "current",
+        "request_header"
+      ],
+      "type": "object"
+    },
+    "resources": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "roles": {
+      "type": "object"
+    },
+    "schema": {
+      "const": "remote-capability-v2.schema.json"
+    },
+    "schema_bundle": {
+      "additionalProperties": false,
+      "properties": {
+        "document_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "revision": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_count",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "server": {
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "const": "lifetxt"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "package",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "enabled",
+    "protocol",
+    "features",
+    "resources",
+    "capability_revision",
+    "server",
+    "schema_bundle",
+    "contracts",
+    "optional_dependencies",
+    "compatibility"
+  ],
+  "title": "Remote Safe Mode capability negotiation",
+  "type": "object"
+}

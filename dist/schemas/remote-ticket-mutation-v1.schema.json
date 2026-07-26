@@ -1,0 +1,52 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-ticket-mutation-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "contract_version": {
+      "const": "1"
+    },
+    "operation": {
+      "enum": [
+        "create",
+        "edit",
+        "transition",
+        "comment",
+        "log_time"
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "object"
+    },
+    "revision_after": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "revision_before": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "remote-ticket-mutation-v1.schema.json"
+    },
+    "transaction_id": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "operation",
+    "transaction_id",
+    "replayed",
+    "revision_before",
+    "revision_after",
+    "result"
+  ],
+  "title": "Authenticated Remote ticket mutation response",
+  "type": "object"
+}

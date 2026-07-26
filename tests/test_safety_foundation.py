@@ -200,6 +200,7 @@ class SafetyFoundationTests(unittest.TestCase):
             "remote-diagnostics-v1.schema.json",
             "remote-profile-v3.schema.json",
             "remote-read-response-v1.schema.json",
+            "remote-ticket-mutation-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

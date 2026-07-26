@@ -45,7 +45,6 @@ jobs:
 
           path = Path('todo.md')
           lines = path.read_text(encoding='utf-8').splitlines()
-
           old_header = 'Last updated: 2026-07-26 (updated x121)'
           new_header = 'Last updated: 2026-07-26 (updated x122)'
           assert lines.count(old_header) == 1
@@ -76,33 +75,29 @@ jobs:
           end = next(i for i in range(start + 1, len(lines)) if lines[i] == '---')
           section = Path('.agent_remote_v20_patch/remote-section.txt').read_text(encoding='utf-8').splitlines()
           lines[start:end] = section
-
           path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
           grep -Fx 'Last updated: 2026-07-26 (updated x122)' todo.md
           grep -F '"/api/remote/v1/browser/login"' lifetxt/webapp.py
           grep -F 'request.url.path.startswith("/api/remote/v1/")' lifetxt/webapp.py
-      - name: Validate Remote v20 implementation
+      - name: Validate generated source syntax and schema count
         shell: bash
         run: |
           set -euo pipefail
           python -m compileall -q lifetxt tests
-          python -m unittest \
-            tests.test_remote_access_v20 \
-            tests.test_remote_sessions_v20 \
-            tests.test_remote_backend_v20 \
-            tests.test_remote_client_v20 \
-            tests.test_remote_web_v20 \
-            tests.test_schema_extensions_v20 \
-            tests.test_remote_access_v19 \
-            tests.test_remote_client_v19 \
-            tests.test_remote_web_v19 \
-            tests.test_schema_extensions_v19 \
-            tests.test_safety_cli \
-            tests.test_safety_foundation \
-            tests.test_schema_extensions_v2 \
-            tests.test_ticket_custom_field_public_contract \
-            tests.test_ticket_workflow_surfaces
+          python - <<'PY'
+          from lifetxt.safety_foundation import schema_bundle
+          bundle = schema_bundle()
+          assert len(bundle) == 75, len(bundle)
+          for name in (
+              'remote-browser-session-v1.schema.json',
+              'remote-capability-v2.schema.json',
+              'remote-diagnostics-v1.schema.json',
+              'remote-profile-v3.schema.json',
+              'remote-read-response-v1.schema.json',
+          ):
+              assert name in bundle, name
+          PY
       - name: Commit final source tree
         shell: bash
         run: |

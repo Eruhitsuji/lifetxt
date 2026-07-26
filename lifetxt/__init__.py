@@ -6,8 +6,6 @@ from .model import Diagnostic, Item
 from .parser import parse_line, parse_text
 from .serializer import item_to_line, items_to_json, items_to_jsonl
 
-# Connect the shared CAS layer to public Web and MCP requests. Installation is
-# dependency-free: FastAPI is still imported only when create_app() is called.
 from .surface_runtime import install_runtime_contracts as _install_runtime_contracts
 from .surface_runtime_compat import (
     install_runtime_compatibility as _install_runtime_compatibility,
@@ -18,10 +16,6 @@ _install_runtime_compatibility()
 del _install_runtime_contracts
 del _install_runtime_compatibility
 
-# Release checks must behave identically on compact/generated markup and on
-# Python 3.10, where tomllib is not part of the standard library. Keep these
-# compatibility adapters dependency-free; the strict release job still installs
-# jsonschema/build/twine for publication-only validation.
 from .release_translation import (
     install_release_translation_parser as _install_release_translation_parser,
 )
@@ -44,10 +38,6 @@ del _install_release_manifest_schema
 del _install_release_policy_compatibility
 del _install_release_manifest_validation
 
-# Apply the next P0/P1 safety layer after the compatibility and release-policy
-# adapters exist. This keeps the package dependency-free while adding persistent
-# revision telemetry, explicit timezone contexts, workspace diagnostics,
-# compensated multi-target operations, and the expanded schema bundle.
 from .runtime_safety_v2 import install_runtime_safety_v2 as _install_runtime_safety_v2
 from .schema_validation_v2 import install_schema_validation_v2 as _install_schema_validation_v2
 from .safety_compat_v2 import install_safety_compat_v2 as _install_safety_compat_v2
@@ -106,6 +96,9 @@ del _install_remote_contracts_v6
 from .schema_extensions_v19 import install_schema_extensions_v19 as _install_schema_extensions_v19
 _install_schema_extensions_v19()
 del _install_schema_extensions_v19
+from .schema_extensions_v20 import install_schema_extensions_v20 as _install_schema_extensions_v20
+_install_schema_extensions_v20()
+del _install_schema_extensions_v20
 from .remote_web import install_remote_web as _install_remote_web
 _install_remote_web()
 del _install_remote_web

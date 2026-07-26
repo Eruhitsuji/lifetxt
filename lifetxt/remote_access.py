@@ -326,6 +326,8 @@ def audit_event(principal, action, outcome, request_id_value, client_host=None, 
     ))
 
 
+
+
 def validate_remote_storage(config, paths=None, writable_path=None):
     """Fail startup when the audit sink aliases an authoritative input."""
     audit_path = _section(config).get("audit_log")
@@ -343,7 +345,6 @@ def validate_remote_storage(config, paths=None, writable_path=None):
             500,
         )
     return True
-
 
 def append_audit(config, event):
     remote = _section(config)

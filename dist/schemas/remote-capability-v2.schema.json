@@ -1,0 +1,89 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-capability-v2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authentication": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "browser_session": {
+      "type": "object"
+    },
+    "capability_revision": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "2"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "features": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "https_required": {
+      "type": "boolean"
+    },
+    "local_paths_redacted": {
+      "type": "boolean"
+    },
+    "mutation_policy": {
+      "type": "object"
+    },
+    "protocol": {
+      "properties": {
+        "current": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "default_without_header": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "minimum": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "request_header": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "minimum",
+        "current",
+        "request_header"
+      ],
+      "type": "object"
+    },
+    "resources": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "roles": {
+      "type": "object"
+    },
+    "schema": {
+      "const": "remote-capability-v2.schema.json"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "enabled",
+    "protocol",
+    "features",
+    "resources",
+    "capability_revision"
+  ],
+  "title": "Remote Safe Mode capability negotiation",
+  "type": "object"
+}

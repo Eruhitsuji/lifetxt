@@ -184,6 +184,30 @@ CONFIG_REGISTRY = OrderedDict(
         ("remote.audit_log", _entry(
             "string", None,
             "Bounded JSONL audit log path for authenticated remote requests.")),
+        ("remote.audit_max_bytes", _entry(
+            "integer", 5242880,
+            "Maximum bytes retained in the bounded Remote JSONL audit log.")),
+        ("remote.allowed_origins", _entry(
+            "array<string>", [],
+            "Additional exact browser origins allowed for Remote session CSRF checks.")),
+        ("remote.browser_session_ttl_seconds", _entry(
+            "integer", 28800,
+            "Absolute lifetime of an opaque Remote browser session.")),
+        ("remote.browser_session_idle_seconds", _entry(
+            "integer", 1800,
+            "Idle lifetime of an opaque Remote browser session.")),
+        ("remote.browser_session_max", _entry(
+            "integer", 256,
+            "Maximum process-local Remote browser sessions before oldest-session eviction.")),
+        ("remote.browser_login_rate_limit_per_minute", _entry(
+            "integer", 10,
+            "Per-client login-attempt limit for the Remote browser session endpoint.")),
+        ("remote.session_cookie_name", _entry(
+            "string", "lifetxt_remote_session",
+            "Opaque HttpOnly Remote browser session cookie name.")),
+        ("remote.csrf_header", _entry(
+            "string", "X-CSRF-Token",
+            "Header carrying the Remote browser-session CSRF token.")),
         ("transactions.require_operator_authorization", _entry(
             "boolean", False,
             "Require transaction administration operators to appear in transactions.authorized_operators.")),

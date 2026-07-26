@@ -135,7 +135,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise RuntimeError("Transaction startup preflight failed: %s" % "; ".join(report["errors"]))
     app.state.transaction_preflight = None if read_only else (report if transactions_config.get("preflight_on_startup") else None)
 
-    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line", "/api/items/parse"})
+    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line", "/api/items/parse", "/api/remote/v1/browser/login", "/api/remote/v1/browser/logout", "/api/remote/v1/write-check"})
 
     @app.get("/api/time")
     def get_time(client_time=None):
@@ -170,7 +170,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     if _api_token:
         @app.middleware("http")
         async def _bearer_auth(request: Request, call_next):
-            if request.url.path in ("/", "/api/health"):
+            if request.url.path in ("/", "/api/health", "/remote") or request.url.path.startswith("/api/remote/v1/"):
                 return await call_next(request)
             auth = request.headers.get("authorization", "")
             if auth != "Bearer " + _api_token:

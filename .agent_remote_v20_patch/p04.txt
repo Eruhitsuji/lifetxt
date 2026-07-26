@@ -1,4 +1,0 @@
-se counter-machine execution through Remote CLI/TUI/Web. A future remote runtime requires independent CPU/time/memory/output quotas, cancellation, isolation, authentication, audit, and denial-of-service design.
- 
- ---
- 

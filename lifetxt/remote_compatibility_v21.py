@@ -6,6 +6,7 @@ import importlib.util
 import json
 import re
 import sys
+import threading
 from collections import OrderedDict
 
 
@@ -24,6 +25,10 @@ _CONTRACT_PATTERNS = OrderedDict((
     ("remote_resource", ("remote-capability", "remote-read-response", "remote-diagnostics")),
 ))
 _VERSION_RE = re.compile(r"-v([0-9]+)(?:[.-]|$)")
+_SCHEMA_INVENTORY = None
+_SCHEMA_INVENTORY_LOCK = threading.Lock()
+_OPTIONAL_DEPENDENCIES = None
+_OPTIONAL_DEPENDENCIES_LOCK = threading.Lock()
 
 
 def _package_version():
@@ -40,30 +45,44 @@ def _module_available(name):
 
 
 def optional_dependencies():
-    groups = OrderedDict((
-        ("web", ("fastapi", "uvicorn")),
-        ("tui", ("textual", "watchdog")),
-    ))
+    global _OPTIONAL_DEPENDENCIES
+    if _OPTIONAL_DEPENDENCIES is None:
+        with _OPTIONAL_DEPENDENCIES_LOCK:
+            if _OPTIONAL_DEPENDENCIES is None:
+                groups = OrderedDict((
+                    ("web", ("fastapi", "uvicorn")),
+                    ("tui", ("textual", "watchdog")),
+                ))
+                _OPTIONAL_DEPENDENCIES = OrderedDict(
+                    (
+                        name,
+                        OrderedDict((
+                            ("available", all(_module_available(module) for module in modules)),
+                            ("modules", list(modules)),
+                        )),
+                    )
+                    for name, modules in groups.items()
+                )
     return OrderedDict(
-        (
-            name,
-            OrderedDict((
-                ("available", all(_module_available(module) for module in modules)),
-                ("modules", list(modules)),
-            )),
-        )
-        for name, modules in groups.items()
+        (name, OrderedDict((("available", row["available"]), ("modules", list(row["modules"])))))
+        for name, row in _OPTIONAL_DEPENDENCIES.items()
     )
 
 
 def _schema_inventory():
-    from . import safety_foundation
+    global _SCHEMA_INVENTORY
+    if _SCHEMA_INVENTORY is None:
+        with _SCHEMA_INVENTORY_LOCK:
+            if _SCHEMA_INVENTORY is None:
+                from . import safety_foundation
 
-    bundle = OrderedDict(safety_foundation.schema_bundle())
-    names = sorted(str(name) for name in bundle)
-    canonical = json.dumps(bundle, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-    revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-    return bundle, names, revision
+                bundle = OrderedDict(safety_foundation.schema_bundle())
+                names = tuple(sorted(str(name) for name in bundle))
+                canonical = json.dumps(bundle, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+                revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                _SCHEMA_INVENTORY = (names, revision)
+    names, revision = _SCHEMA_INVENTORY
+    return list(names), revision
 
 
 def _matches(name, patterns):
@@ -82,7 +101,7 @@ def _schema_versions(names):
 
 def contract_versions(schema_names=None):
     if schema_names is None:
-        _bundle, schema_names, _revision = _schema_inventory()
+        schema_names, _revision = _schema_inventory()
     result = OrderedDict()
     for contract, patterns in _CONTRACT_PATTERNS.items():
         names = [name for name in schema_names if _matches(name, patterns)]
@@ -112,7 +131,7 @@ def compatibility_policy():
 
 
 def compatibility_manifest():
-    _bundle, schema_names, bundle_revision = _schema_inventory()
+    schema_names, bundle_revision = _schema_inventory()
     return OrderedDict((
         ("server", OrderedDict((
             ("package", "lifetxt"),
@@ -161,7 +180,7 @@ def evaluate_compatibility(capabilities, requested_protocol=None):
         ("client", {"minimum": client_min, "current": client_current}),
         ("server", {"minimum": server_min, "current": server_current}),
         ("overlap", overlap),
-        ("selected_protocol", requested if requested_supported else (overlap[-1] if overlap else None)),
+        ("selected_protocol", requested if requested_supported else None),
         ("manifest_present", manifest_present),
         ("warnings", warnings),
     ))

@@ -1,0 +1,41 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-diagnostics-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "checks": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "protocol": {
+      "type": "object"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "remote-diagnostics-v1.schema.json"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "ok",
+    "protocol",
+    "checks",
+    "warnings",
+    "request_id"
+  ],
+  "title": "Remote Safe Mode diagnostics",
+  "type": "object"
+}

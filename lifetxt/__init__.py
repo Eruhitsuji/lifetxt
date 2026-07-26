@@ -115,6 +115,9 @@ del _install_remote_compatibility_v21
 from .schema_extensions_v21 import install_schema_extensions_v21 as _install_schema_extensions_v21
 _install_schema_extensions_v21()
 del _install_schema_extensions_v21
+from .schema_extensions_v22 import install_schema_extensions_v22 as _install_schema_extensions_v22
+_install_schema_extensions_v22()
+del _install_schema_extensions_v22
 from .remote_web import install_remote_web as _install_remote_web
 _install_remote_web()
 del _install_remote_web
@@ -144,6 +147,9 @@ del _install_ticket_planning_cli
 from .ticket_workflow_surfaces import install_ticket_workflow_surfaces as _install_ticket_workflow_surfaces
 _install_ticket_workflow_surfaces()
 del _install_ticket_workflow_surfaces
+from .remote_ticket_writes import install_remote_ticket_writes as _install_remote_ticket_writes
+_install_remote_ticket_writes()
+del _install_remote_ticket_writes
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

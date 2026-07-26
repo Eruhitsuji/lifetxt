@@ -1,0 +1,61 @@
+name: Update Remote ticket mutation roadmap
+
+on:
+  push:
+    branches:
+      - agent/remote-ticket-mutations-v22
+    paths:
+      - .github/workflows/agent-update-remote-ticket-todo.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remote-ticket-mutations-v22
+          fetch-depth: 0
+      - name: Update todo.md
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("todo.md")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = {
+              "Last updated: 2026-07-26 (updated x122)":
+                  "Last updated: 2026-07-26 (updated x123)",
+              "and five additional schemas, raising the generated/public Draft 2020-12 bundle to 75 documents.":
+                  "and five additional schemas; and add the first authoritative Remote ticket mutation contract for protocol v2 with explicit opt-in, authenticated write scope, project/visibility filtering, exact aggregate revision admission, per-file CAS, stable transaction IDs, replay-safe request hashing, append-only created/field-change/transition/comment/time events, Remote clock/CSRF enforcement, conservative field allow-listing, and one additional response schema, raising the generated/public Draft 2020-12 bundle to 76 documents.",
+              "Remaining Remote work focuses on real browser/TLS/proxy and multi-worker evidence, durable session/audit policy, complete read-surface adoption through a shared local/remote backend, compatibility/performance contracts, and permission/history/privacy/clock/idempotency/recovery-complete mutation routing.":
+                  "Remaining Remote work focuses on real browser/TLS/proxy and multi-worker evidence, durable session/audit policy, complete read-surface adoption through a shared local/remote backend, compatibility/performance contracts, and expanding the implemented single-writable-source ticket create/edit/transition/comment/time adapter to privacy-aware custom fields, planning, relations, watchers, attachments, bulk operations, and journal-backed multi-file mutation routing.",
+              "11. Enable conflict-aware remote writes only for operations whose capability entries report complete exact revision, authenticated permission, privacy/redaction, event-history, clock, idempotency, multi-target recovery, and provider-side-effect enforcement.":
+                  "11. Harden and expand the implemented single-source Remote ticket write adapter: prove real-client one-winner/replay behavior, enforce private custom-field visibility/edit roles, then add version/sprint planning, relation/watcher/attachment side effects, all-or-none bulk operations, and journal-backed multi-file writes only where capability entries report complete exact revision, authenticated permission, privacy/redaction, event-history, clock, idempotency, recovery, and provider-side-effect enforcement.",
+              "- [ ] Replace the write-check validation route with direct remote ticket transition/comment/change/assign/plan adapters only after each adapter proves authenticated actor binding, append-only event creation, multi-file revision-set validation, journal recovery, clock checks, and one-winner/one-conflict behavior through real clients.":
+                  "- [x] Add an explicitly enabled protocol-v2 Remote ticket mutation adapter for `create`, conservative `edit`, workflow-aware `transition`, `comment`, and `log_time`. Bind every authored event/time entry to the authenticated principal; require `write` scope, project/visibility access, exact aggregate `If-Match`, per-file SHA-256 CAS, a caller-stable transaction ID, append-only history, server clock-skew enforcement, and browser Origin/CSRF checks; reject tickets outside the configured writable source; store the normalized request hash in the event; return an idempotent replay for an identical committed retry; refuse transaction-ID reuse for a different request; publish the effective operation and limitation set through protocol-v2 capability discovery; keep the adapter disabled unless `remote.ticket_writes_enabled: true`; and publish/validate `remote-ticket-mutation-v1.schema.json` plus English/Japanese usage documentation.",
+              "- [ ] Add session expiration, token rotation and revocation, hashed credential stores or external identity providers, CSRF protection for a future browser UI, proxy-chain verification, forwarded-host policy, replay windows, and security-header/browser tests.":
+                  "- [ ] Harden browser and deployment identity beyond the implemented process-local absolute/idle expiry, rotation, logout, principal revalidation, restart invalidation, Origin/CSRF checks, secure cookie policy, and login throttling. Add a documented multi-worker session backend or explicit single-worker enforcement, durable token rotation/revocation, hashed credential stores or external identity providers, proxy-chain and forwarded-host verification, replay-window policy, security-header/browser tests, session-key rotation, and incident-safe session invalidation across workers.",
+          }
+          for before, after in replacements.items():
+              if before not in text:
+                  raise SystemExit("Required todo.md text was not found: " + before[:120])
+              text = text.replace(before, after, 1)
+
+          anchor = "- [ ] Add remote saved views, pagination, bounded streaming exports, attachment authorization, private custom-field filtering, ticket history privacy, per-project audit filtering, retention administration, encrypted audit storage, and Web/TUI recovery views."
+          additions = """- [ ] Extend the implemented Remote ticket mutation adapter to configuration-backed custom fields only after `visible_roles`, `editable_roles`, privacy levels, tracker/project applicability, normalization, redacted error details, audit output, exports, AI context, and older-client behavior share one tested contract. Keep project, visibility, owner, reporter, raw status, relation, watcher, and attachment keys outside generic `edit` payloads.\n- [ ] Add Remote version/sprint and `ticket plan` operations through authenticated role/project checks, exact revision sets, append-only membership events, unresolved-member release/close guards, stable transaction IDs, dry-run previews, and recovery-aware capability metadata. Do not route planning writes through the single-file adapter when version, sprint, ticket, or history records resolve to different sources.\n- [ ] Expose the implemented local multi-file revision-set/journal and all-or-none bulk foundations through Remote only after real disconnect/retry, duplicate transaction, partial prepare/commit, resume/compensate/abandon, stale-target, permission-change, restored-backup, and privacy tests prove no partial writes. Publish bounded transaction inspection without local paths and require explicit per-target access decisions before prepare.\n- [ ] Add Remote relation, watcher, attachment, timer/work-session, and provider-side-effect mutations as separate typed operations rather than widening generic ticket edit. Require reciprocal relation/event rules, watcher delivery state, attachment source/content authorization, timer idempotency, external proposal/compensation plans, and per-operation audit schemas before capability discovery marks them writable.\n""" + anchor
+          if anchor not in text:
+              raise SystemExit("Remote follow-up anchor was not found")
+          text = text.replace(anchor, additions, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add todo.md
+          git commit -m "Update Remote ticket mutation roadmap"
+          git push origin HEAD:agent/remote-ticket-mutations-v22

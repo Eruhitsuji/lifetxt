@@ -85,7 +85,7 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
         self.assertEqual(76, len(report["files"]))
-        self.assertEqual(75, len(os.listdir(directory)))
+        self.assertEqual(76, len(os.listdir(directory)))
         for name in (
             "release-manifest-v1.schema.json",
             "revision-metrics-v1.schema.json",

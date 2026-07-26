@@ -1,0 +1,36 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-snapshot-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "projects": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "read_only": {
+      "type": "boolean"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "remote-snapshot-v1.schema.json"
+    },
+    "tickets": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "revision",
+    "tickets",
+    "projects"
+  ],
+  "title": "Remote snapshot",
+  "type": "object"
+}

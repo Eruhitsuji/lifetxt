@@ -1,0 +1,52 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-audit-event-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "action": {
+      "type": "string"
+    },
+    "at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "client": {
+      "type": "string"
+    },
+    "detail": {
+      "type": "object"
+    },
+    "outcome": {},
+    "principal": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema": {
+      "const": "remote-audit-event-v1.schema.json"
+    },
+    "version": {
+      "const": "1"
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "at",
+    "request_id",
+    "action",
+    "outcome"
+  ],
+  "title": "Remote audit event",
+  "type": "object"
+}

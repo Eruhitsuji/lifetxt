@@ -1,0 +1,54 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-access-policy-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authentication": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "browser_ui": {
+      "type": "boolean"
+    },
+    "contract_version": {
+      "const": "1"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "exact_revision_required": {
+      "type": "boolean"
+    },
+    "https_required": {
+      "type": "boolean"
+    },
+    "read_operations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "roles": {
+      "type": "object"
+    },
+    "schema": {
+      "const": "remote-access-policy-v1.schema.json"
+    },
+    "write_operations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "contract_version",
+    "enabled",
+    "exact_revision_required"
+  ],
+  "title": "Remote access policy",
+  "type": "object"
+}

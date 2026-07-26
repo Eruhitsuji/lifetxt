@@ -1,0 +1,67 @@
+name: Update schema bundle baselines v22
+
+on:
+  push:
+    branches:
+      - agent/remote-ticket-mutations-v22
+    paths:
+      - .github/workflows/agent-update-schema-baselines-v22.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remote-ticket-mutations-v22
+          fetch-depth: 0
+      - name: Update fixed schema expectations
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "tests/test_safety_cli.py": [
+                  ('self.assertEqual(75, len(report["files"]))', 'self.assertEqual(76, len(report["files"]))'),
+              ],
+              "tests/test_schema_extensions_v2.py": [
+                  ("test_bundle_contains_seventy_five_generated_and_published_documents", "test_bundle_contains_seventy_six_generated_and_published_documents"),
+                  ("self.assertEqual(75, len(bundle))", "self.assertEqual(76, len(bundle))"),
+                  ('self.assertEqual(75, strict["schema_count"])', 'self.assertEqual(76, strict["schema_count"])'),
+                  ('self.assertEqual(75, strict["sample_count"])', 'self.assertEqual(76, strict["sample_count"])'),
+              ],
+              "tests/test_ticket_custom_field_public_contract.py": [
+                  ("self.assertEqual(75, len(bundle))", "self.assertEqual(76, len(bundle))"),
+              ],
+              "tests/test_ticket_workflow_surfaces.py": [
+                  ("test_schema_bundle_contains_seventy_five_documents_and_new_contracts", "test_schema_bundle_contains_seventy_six_documents_and_new_contracts"),
+                  ("self.assertEqual(75, len(bundle))", "self.assertEqual(76, len(bundle))"),
+              ],
+          }
+          for filename, rows in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              for before, after in rows:
+                  if before not in text:
+                      raise SystemExit(f"Missing expected text in {filename}: {before}")
+                  text = text.replace(before, after, 1)
+              path.write_text(text, encoding="utf-8")
+
+          foundation = Path("tests/test_safety_foundation.py")
+          text = foundation.read_text(encoding="utf-8")
+          anchor = '            "remote-read-response-v1.schema.json",\n'
+          addition = anchor + '            "remote-ticket-mutation-v1.schema.json",\n'
+          if anchor not in text:
+              raise SystemExit("Missing Remote schema set anchor")
+          text = text.replace(anchor, addition, 1)
+          foundation.write_text(text, encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/test_safety_cli.py tests/test_safety_foundation.py tests/test_schema_extensions_v2.py tests/test_ticket_custom_field_public_contract.py tests/test_ticket_workflow_surfaces.py
+          git commit -m "Update schema bundle baselines to 76"
+          git push origin HEAD:agent/remote-ticket-mutations-v22

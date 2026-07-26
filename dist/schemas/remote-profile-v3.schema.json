@@ -1,0 +1,46 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-profile-v3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "profiles": {
+      "additionalProperties": {
+        "properties": {
+          "protocol_version": {
+            "maximum": 2,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "token_env": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "verify_tls": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "url",
+          "verify_tls",
+          "protocol_version"
+        ],
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "version": {
+      "const": 3
+    }
+  },
+  "required": [
+    "version",
+    "profiles"
+  ],
+  "title": "Remote profile store with protocol negotiation",
+  "type": "object"
+}

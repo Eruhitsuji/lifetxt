@@ -1,0 +1,40 @@
+name: Inspect ticket payload comment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+jobs:
+  inspect:
+    if: github.event.pull_request.head.ref == 'agent/ticket-multifile-bulk-recovery'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ticket-multifile-bulk-recovery
+          fetch-depth: 0
+      - name: Inspect comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, urllib.request
+          url='https://api.github.com/repos/Eruhitsuji/lifetxt/issues/comments/3291672133'
+          req=urllib.request.Request(url, headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'], 'Accept':'application/vnd.github+json'})
+          with urllib.request.urlopen(req) as r: value=json.load(r)
+          body=value.get('body','')
+          marker, sep, payload=body.partition('\n')
+          report={'comment_id':3291672133,'body_length':len(body),'marker':marker,'has_separator':bool(sep),'payload_length':len(payload),'payload_sha256':hashlib.sha256(payload.encode()).hexdigest(),'payload_start':payload[:24],'payload_end':payload[-24:]}
+          pathlib.Path('agent-ticket-payload-comment.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add agent-ticket-payload-comment.json
+          git commit -m 'Record ticket payload comment metadata'
+          git push origin HEAD:agent/ticket-multifile-bulk-recovery

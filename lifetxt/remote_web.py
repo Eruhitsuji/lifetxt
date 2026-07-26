@@ -71,6 +71,8 @@ def _audit_safely(config, event):
     try:
         append_audit(config, event)
     except Exception:
+        # Audit storage hardening remains a separate roadmap item. Read access
+        # must not leak a local storage failure or crash the server response.
         return False
     return True
 
@@ -86,6 +88,8 @@ def _require_v2(request):
 
 
 def _remote_page(nonce):
+    # The token exists only in the password input until the login request is
+    # complete. It is never placed in localStorage/sessionStorage/cookies.
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>lifetxt Remote Safe Mode</title>

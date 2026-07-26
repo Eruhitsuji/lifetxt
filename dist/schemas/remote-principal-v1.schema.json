@@ -1,0 +1,52 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-principal-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "disabled": {
+      "type": "boolean"
+    },
+    "groups": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "projects": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "role": {
+      "enum": [
+        "owner",
+        "editor",
+        "reader",
+        "auditor"
+      ]
+    },
+    "scopes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "visibilities": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "role",
+    "scopes"
+  ],
+  "title": "Remote principal",
+  "type": "object"
+}

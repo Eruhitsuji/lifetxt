@@ -157,6 +157,33 @@ CONFIG_REGISTRY = OrderedDict(
         ("clock.client_time_header", _entry(
             "string", "X-Lifetxt-Client-Time",
             "HTTP header carrying the offset-aware client timestamp for remote write skew checks.", restart_required=True)),
+        ("remote", _entry(
+            "object", None,
+            "Authenticated deny-by-default Remote Safe Mode configuration.")),
+        ("remote.enabled", _entry(
+            "boolean", False,
+            "Enable authenticated Remote Safe Mode routes.", restart_required=True)),
+        ("remote.browser_ui", _entry(
+            "boolean", False,
+            "Expose a remote browser UI. Disabled by default.")),
+        ("remote.principals", _entry(
+            "array<object>", [],
+            "Remote principal registry with roles, scopes, projects, groups, visibility grants, and token_env references.")),
+        ("remote.trusted_proxies", _entry(
+            "array<string>", [],
+            "Direct-peer IP/CIDR ranges allowed to assert configured principal IDs.")),
+        ("remote.proxy_principal_header", _entry(
+            "string", "X-Lifetxt-Principal",
+            "Header accepted only from a trusted direct proxy.")),
+        ("remote.allow_loopback_http", _entry(
+            "boolean", True,
+            "Allow plain HTTP only for loopback development clients.")),
+        ("remote.rate_limit_per_minute", _entry(
+            "integer", 120,
+            "Per-principal Remote Safe Mode request limit.")),
+        ("remote.audit_log", _entry(
+            "string", None,
+            "Bounded JSONL audit log path for authenticated remote requests.")),
         ("transactions.require_operator_authorization", _entry(
             "boolean", False,
             "Require transaction administration operators to appear in transactions.authorized_operators.")),

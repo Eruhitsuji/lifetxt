@@ -56,6 +56,7 @@ class RemoteAccessV20Tests(unittest.TestCase):
         self.assertEqual("<redacted>", redacted["nested"]["body"])
         self.assertEqual("<redacted>", redacted["token"])
 
+
     def test_audit_log_cannot_alias_authoritative_source(self):
         config = {"remote": {"enabled": True, "audit_log": "/tmp/life.txt"}}
         with self.assertRaises(RemoteAccessError) as caught:

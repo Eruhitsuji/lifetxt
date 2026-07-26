@@ -103,6 +103,15 @@ del _install_schema_extensions_v18
 from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6
+from .schema_extensions_v19 import install_schema_extensions_v19 as _install_schema_extensions_v19
+_install_schema_extensions_v19()
+del _install_schema_extensions_v19
+from .remote_web import install_remote_web as _install_remote_web
+_install_remote_web()
+del _install_remote_web
+from .remote_client import install_remote_client_cli as _install_remote_client_cli
+_install_remote_client_cli()
+del _install_remote_client_cli
 from .ticket_project_surfaces import install_ticket_project_surfaces as _install_ticket_project_surfaces
 _install_ticket_project_surfaces()
 del _install_ticket_project_surfaces

@@ -1,0 +1,27 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-session-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authentication": {
+      "type": "string"
+    },
+    "principal": {
+      "$ref": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-principal-v1.schema.json"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "remote-session-v1.schema.json"
+    }
+  },
+  "required": [
+    "schema",
+    "principal",
+    "authentication",
+    "request_id"
+  ],
+  "title": "Remote session",
+  "type": "object"
+}

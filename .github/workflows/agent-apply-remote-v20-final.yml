@@ -1,0 +1,76 @@
+name: Apply verified Remote v20 final patch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: remote-v20-final-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/remote-browser-session-negotiation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remote-browser-session-negotiation
+          fetch-depth: 0
+      - name: Verify and apply exact patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/chunks.sha256 <<'EOF'
+          d4e27949bd678ecdbd49a54790934ae1c0a63a619d9d48f620e9604acc431d8e  .agent_remote_v20_patch/p00.txt
+          627dc513dcebda1dd5484e18e097cde093974903efa792e7b5d711529cea5357  .agent_remote_v20_patch/p01.txt
+          16e208b8c485332c726ab029184dbdbd8bc25c627e21b4d506d052caa0dd960a  .agent_remote_v20_patch/p02.txt
+          aabc75deb9e3d6c929a65eaa88ebccf5fd4428569df2f5de05ac27182ee84304  .agent_remote_v20_patch/p03.txt
+          db70f867a617b709d23c65210088c2453aa8db9fbf209cf1512670bb1bfb9fc9  .agent_remote_v20_patch/p04.txt
+          EOF
+          sha256sum -c /tmp/chunks.sha256
+          cat .agent_remote_v20_patch/p0{0,1,2,3,4}.txt > /tmp/remote-v20.patch
+          test "$(wc -c < /tmp/remote-v20.patch)" = "32220"
+          echo 'ad71be1c0a6d750b5b437300c135993200b41d7ed4ce7c3b7b233dc0bf3a9ce4  /tmp/remote-v20.patch' | sha256sum -c -
+          git apply --check --exclude=lifetxt/__init__.py /tmp/remote-v20.patch
+          git apply --exclude=lifetxt/__init__.py /tmp/remote-v20.patch
+          grep -Fx 'Last updated: 2026-07-26 (updated x122)' todo.md
+          grep -F '"/api/remote/v1/browser/login"' lifetxt/webapp.py
+          grep -F 'request.url.path.startswith("/api/remote/v1/")' lifetxt/webapp.py
+      - name: Validate Remote v20 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q lifetxt tests
+          python -m unittest \
+            tests.test_remote_access_v20 \
+            tests.test_remote_sessions_v20 \
+            tests.test_remote_backend_v20 \
+            tests.test_remote_client_v20 \
+            tests.test_remote_web_v20 \
+            tests.test_schema_extensions_v20 \
+            tests.test_remote_access_v19 \
+            tests.test_remote_client_v19 \
+            tests.test_remote_web_v19 \
+            tests.test_schema_extensions_v19 \
+            tests.test_safety_cli \
+            tests.test_safety_foundation \
+            tests.test_schema_extensions_v2 \
+            tests.test_ticket_custom_field_public_contract \
+            tests.test_ticket_workflow_surfaces
+      - name: Commit final source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .agent_remote_v20_patch
+          rm -f .github/workflows/agent-apply-remote-v20-final.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Finalize Remote browser sessions and protocol negotiation'
+          git push origin HEAD:agent/remote-browser-session-negotiation

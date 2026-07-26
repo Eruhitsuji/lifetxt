@@ -118,7 +118,7 @@ def delete_profile(name, path=None):
 def _ssl_context(profile):
     if bool(profile.get("verify_tls", True)):
         return None
-    return ssl._create_unverified_context()
+    return ssl._create_unverified_context()  # explicit profile opt-in only
 
 
 def _response_protocol(headers, requested):

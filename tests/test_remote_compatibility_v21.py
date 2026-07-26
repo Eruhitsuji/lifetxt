@@ -1,5 +1,7 @@
 import unittest
+from unittest import mock
 
+from lifetxt import remote_compatibility_v21
 from lifetxt.remote_access import capability
 from lifetxt.remote_compatibility_v21 import evaluate_compatibility
 from lifetxt.safety_foundation import schema_bundle
@@ -37,6 +39,20 @@ class RemoteCompatibilityV21Tests(unittest.TestCase):
         self.assertFalse(incompatible["ok"])
         self.assertEqual([], incompatible["overlap"])
         self.assertIsNone(incompatible["selected_protocol"])
+
+    def test_schema_inventory_is_cached_process_locally(self):
+        original = remote_compatibility_v21._SCHEMA_INVENTORY
+        remote_compatibility_v21._SCHEMA_INVENTORY = None
+        try:
+            with mock.patch(
+                "lifetxt.safety_foundation.schema_bundle",
+                wraps=schema_bundle,
+            ) as bundled:
+                remote_compatibility_v21.compatibility_manifest()
+                remote_compatibility_v21.compatibility_manifest()
+            self.assertEqual(1, bundled.call_count)
+        finally:
+            remote_compatibility_v21._SCHEMA_INVENTORY = original
 
     def test_remote_capability_schema_requires_manifest(self):
         schema = schema_bundle()["remote-capability-v2.schema.json"]

@@ -106,12 +106,26 @@ del _install_remote_contracts_v6
 from .schema_extensions_v19 import install_schema_extensions_v19 as _install_schema_extensions_v19
 _install_schema_extensions_v19()
 del _install_schema_extensions_v19
+from .schema_extensions_v20 import install_schema_extensions_v20 as _install_schema_extensions_v20
+_install_schema_extensions_v20()
+del _install_schema_extensions_v20
+from .remote_compatibility_v21 import install_remote_compatibility_v21 as _install_remote_compatibility_v21
+_install_remote_compatibility_v21()
+del _install_remote_compatibility_v21
+from .schema_extensions_v21 import install_schema_extensions_v21 as _install_schema_extensions_v21
+_install_schema_extensions_v21()
+del _install_schema_extensions_v21
 from .remote_web import install_remote_web as _install_remote_web
 _install_remote_web()
 del _install_remote_web
 from .remote_client import install_remote_client_cli as _install_remote_client_cli
 _install_remote_client_cli()
 del _install_remote_client_cli
+from .remote_compatibility_v21 import (
+    install_remote_client_compatibility_v21 as _install_remote_client_compatibility_v21,
+)
+_install_remote_client_compatibility_v21()
+del _install_remote_client_compatibility_v21
 from .ticket_project_surfaces import install_ticket_project_surfaces as _install_ticket_project_surfaces
 _install_ticket_project_surfaces()
 del _install_ticket_project_surfaces

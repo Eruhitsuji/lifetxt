@@ -8,7 +8,7 @@ Remote protocol version 2では、server上のvisible dataをCLIから参照し�
 lifetxt remote permissions home
 ```
 
-このコマンドは、認証中principalのID、role、scope、ticket mutationの可否、serverが許可しているoperationを表示します。
+このコマンドは、認証中principalのID、role、scope、project／group／visibility grant、serverのread-only状態、ticket mutation可否、拒否理由、negotiated protocol、capability revision、serverが許可しているoperationを表示します。
 
 標準roleの想定は次のとおりです。
 
@@ -17,7 +17,7 @@ lifetxt remote permissions home
 - `auditor`: audit surfaceを参照できますが、write scopeがなければ編集できません。
 - `owner`: read、write、admin、auditを持ちます。
 
-最終的な許可はroleだけでなく、principalのscope、project、group、visibility制約、`remote.ticket_writes_enabled`、serverのread-only設定によって決まります。
+最終的な許可はroleだけでなく、principalのscope、project、group、visibility制約、`remote.ticket_writes_enabled`、serverのread-only設定によって決まります。書き込みできない場合は、`principal_missing_write_scope`、`ticket_mutations_disabled`、`no_ticket_operations_advertised`などの機械可読な理由を返します。
 
 ## CLIから参照する
 
@@ -25,12 +25,15 @@ lifetxt remote permissions home
 lifetxt remote snapshot home
 lifetxt remote resources home
 lifetxt remote get home tickets --param project=web --param status=review
+lifetxt remote ticket-show home WEB-42
 lifetxt remote diagnose home
 ```
 
+`ticket-show`はRemote更新時と同じ権限フィルター済みsnapshotからticketを検索し、aggregate revisionとvisible ticketを返します。project、group、visibility、principal制約で除外されたticketを表示することはありません。
+
 ## CLIからticketを編集する
 
-すべての更新は、更新直前に取得したRemote aggregate revisionを`If-Match`へ設定し、stableな`transaction_id`を送信します。競合時にclientが自動上書きすることはありません。同じ操作を安全に再試行したい場合は、同じ`--transaction-id`を再利用してください。
+すべての更新は、更新直前に取得したRemote aggregate revisionを`If-Match`へ設定し、stableな`transaction_id`を送信します。競合時にclientが自動上書きすることはありません。response lostが疑われる同一requestを再試行するときだけ、同じ`--transaction-id`を再利用してください。
 
 ```console
 lifetxt remote ticket-create home WEB-42 "Fix remote login" \
@@ -58,21 +61,35 @@ lifetxt remote ticket-log-time home WEB-42 90m \
 
 各更新コマンドは`--dry-run`を受け付けます。dry runでもserver側の認証、権限、入力、revision preconditionを通過する必要がありますが、authoritative dataは変更しません。
 
+### Revision競合
+
+serverが`REVISION_CONFLICT`、`STALE_REVISION`、`PRECONDITION_FAILED`、`REVISION_REQUIRED`を返した場合、clientは次の処理を行います。
+
+1. mutationを自動再試行しません。
+2. 権限フィルター済みsnapshotを再取得します。
+3. request時と現在のaggregate revisionを表示します。
+4. request fieldと現在visibleなticketとのbounded comparisonを表示します。
+5. 次の操作として`refresh`、`abandon`、`submit_new_transaction`を提示します。
+
+non-interactive CLIは構造化された競合情報をstandard errorへ出力し、exit code `3`を返します。内容を変更して再送する場合は新しいtransaction IDを使用してください。古いtransaction IDを再利用できるのは、responseが失われた可能性がある完全に同一のrequestだけです。
+
 ## TUIから参照・編集する
 
-従来のread-only表示はそのまま使用できます。
+従来のread-only snapshot表示はそのまま使用できます。
 
 ```console
 lifetxt remote tui home
 ```
 
-対話的な更新を行う場合は次を使用します。
+継続的な対話操作を行う場合は次を使用します。
 
 ```console
 lifetxt remote tui home --interactive
 ```
 
-interactive TUIは最初にprincipal、role、scope、ticket write可否を表示します。write権限がない場合はread-onlyで終了します。write権限がある場合も、server capabilityに含まれるoperationだけを選択でき、authoritative mutationの直前に明示確認を要求します。
+interactive TUIでは、すべての認証済みprincipalが`show`、`refresh`、`quit`を使用できます。`show`はvisible ticketとsnapshot revisionを表示し、`refresh`はdataを変更せずに権限フィルター済みsnapshotを再取得します。
+
+write権限がないprincipalもread-onlyのまま`show`と`refresh`を利用できます。write権限がある場合は、server capabilityに含まれるoperationだけを選択できます。更新前にoperationとpayload全体を表示し、authoritative mutation直前に明示確認を要求します。成功後はsnapshotを再取得します。revision競合時は構造化された競合内容を表示してvisible dataをrefreshし、自動再送せずoperation loopへ戻ります。
 
 ## Server設定例
 

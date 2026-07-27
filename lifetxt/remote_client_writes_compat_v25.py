@@ -1,6 +1,9 @@
 """Compatibility normalization for permission-aware Remote client writes."""
 from __future__ import unicode_literals
 
+import json
+import sys
+
 
 def install_remote_client_writes_compat_v25():
     from . import remote_client_writes as target
@@ -115,6 +118,106 @@ def install_remote_client_writes_compat_v25():
         )
         return next((str(value).upper() for value in candidates if value), "")
 
+    def interactive_tui(profile, input_fn=input, output=None):
+        output = output or sys.stdout
+        permissions = remote_permissions(profile)
+        output.write("lifetxt remote\n")
+        output.write(target.render_permissions(permissions))
+        data = target.snapshot(profile)
+        target._list_tickets(data, output)
+        writes = (
+            list(permissions.get("ticket_operations") or [])
+            if permissions.get("can_write") else []
+        )
+        allowed = ["show", "refresh", "quit"] + writes
+        last_result = None
+        while True:
+            try:
+                operation = input_fn(
+                    "operation [%s]: " % "/".join(allowed)
+                ).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                output.write("\nRemote TUI cancelled.\n")
+                return {"cancelled": True, "reason": "interrupted"}
+            if operation in ("", "quit", "q"):
+                if not permissions.get("can_write") and last_result is None:
+                    return {"mode": "read-only", "permissions": permissions}
+                return last_result or {"cancelled": True}
+            if operation == "refresh":
+                data = target.snapshot(profile)
+                target._list_tickets(data, output)
+                last_result = {"refreshed": True, "revision": data.get("revision")}
+                continue
+            if operation == "show":
+                try:
+                    wanted = input_fn("ticket id: ").strip()
+                    value = target.ticket_detail(profile, wanted, data)
+                except (EOFError, KeyboardInterrupt):
+                    output.write("\nTicket detail cancelled.\n")
+                    last_result = {"cancelled": True, "reason": "interrupted"}
+                    continue
+                except KeyError as exc:
+                    last_result = {
+                        "error": "REMOTE_TICKET_NOT_VISIBLE",
+                        "message": str(exc),
+                    }
+                    output.write(json.dumps(
+                        last_result,
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                    ) + "\n")
+                    continue
+                output.write(target.render_ticket_detail(value))
+                last_result = value
+                continue
+            if operation not in writes:
+                output.write("Operation is not allowed by the server: %s\n" % operation)
+                continue
+            try:
+                payload = target._operation_payload(operation, input_fn)
+            except (EOFError, KeyboardInterrupt):
+                output.write("\nMutation entry cancelled.\n")
+                last_result = {"cancelled": True, "operation": operation}
+                continue
+            output.write("proposed mutation:\n")
+            output.write(json.dumps(
+                {"operation": operation, "payload": payload},
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            ) + "\n")
+            try:
+                confirmed = input_fn(
+                    "apply authoritative mutation? [y/N]: "
+                ).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                output.write("\nMutation confirmation cancelled.\n")
+                last_result = {"cancelled": True, "operation": operation}
+                continue
+            if confirmed not in ("y", "yes"):
+                last_result = {"cancelled": True, "operation": operation}
+                continue
+            try:
+                last_result = target.mutate_ticket(profile, operation, payload)
+                output.write(json.dumps(
+                    last_result,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                ) + "\n")
+                data = target.snapshot(profile)
+            except target.RemoteMutationConflict as exc:
+                last_result = exc.as_dict()
+                output.write(json.dumps(
+                    last_result,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                ) + "\n")
+                data = target.snapshot(profile)
+
     target.remote_permissions = remote_permissions
     target._error_code = error_code
+    target.interactive_tui = interactive_tui
     target._REMOTE_CLIENT_WRITES_COMPAT_V25 = True

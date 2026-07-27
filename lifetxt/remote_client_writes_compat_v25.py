@@ -4,9 +4,12 @@ from __future__ import unicode_literals
 
 def install_remote_client_writes_compat_v25():
     from . import remote_client_writes as target
+    from .remote_ticket_capability_v26 import install_remote_ticket_capability_v26
 
     if getattr(target, "_REMOTE_CLIENT_WRITES_COMPAT_V25", False):
         return
+
+    install_remote_ticket_capability_v26()
 
     def remote_permissions(profile):
         session, session_headers = target.request(
@@ -70,6 +73,12 @@ def install_remote_client_writes_compat_v25():
             "can_audit": "audit" in scopes,
             "ticket_mutations_enabled": enabled,
             "ticket_operations": operations,
+            "editable_fields": list(policy.get("editable_fields") or []),
+            "create_fields": list(policy.get("create_fields") or []),
+            "field_contract_version": policy.get("field_contract_version"),
+            "raw_source_replacement_enabled": bool(
+                policy.get("raw_source_replacement_enabled", False)
+            ),
             "limitations": limitations,
             "denial_reasons": denial_reasons,
             "protocol": {

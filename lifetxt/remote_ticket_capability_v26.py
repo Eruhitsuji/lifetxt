@@ -11,9 +11,16 @@ def install_remote_ticket_capability_v26():
 
     original = surface.enrich_capability
 
-    def enrich_capability(config, protocol_version=None):
-        payload = original(config, protocol_version)
-        if int(protocol_version or 1) < 2:
+    def enrich_capability(original_or_config, config=None, protocol_version=None):
+        if callable(original_or_config):
+            actual_protocol = protocol_version
+            payload = original(original_or_config, config, actual_protocol)
+        else:
+            from . import remote_access
+
+            actual_protocol = protocol_version if protocol_version is not None else config
+            payload = original(remote_access.capability, original_or_config, actual_protocol)
+        if int(actual_protocol or 1) < 2:
             return payload
         policy = dict(payload.get("mutation_policy") or {})
         policy["editable_fields"] = sorted(core.EDIT_FIELDS)

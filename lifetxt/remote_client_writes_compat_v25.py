@@ -120,7 +120,7 @@ def install_remote_client_writes_compat_v25():
 
     def interactive_tui(profile, input_fn=input, output=None):
         output = output or sys.stdout
-        permissions = remote_permissions(profile)
+        permissions = target.remote_permissions(profile)
         output.write("lifetxt remote\n")
         output.write(target.render_permissions(permissions))
         data = target.snapshot(profile)

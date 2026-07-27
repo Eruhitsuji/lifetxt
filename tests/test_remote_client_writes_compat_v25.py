@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from lifetxt.remote_client_writes import remote_permissions
+from lifetxt.remote_client_writes import _error_code, remote_permissions
 
 
 class RemoteClientWritesCompatibilityTests(unittest.TestCase):
@@ -61,6 +61,16 @@ class RemoteClientWritesCompatibilityTests(unittest.TestCase):
         self.assertFalse(value["can_write"])
         self.assertIn("remote_write_admission_only", value["denial_reasons"])
         self.assertIn("ticket_mutations_disabled", value["denial_reasons"])
+
+    def test_fastapi_nested_error_envelope_is_recognized(self):
+        self.assertEqual(
+            _error_code({"detail": {"error": "REVISION_CONFLICT"}}),
+            "REVISION_CONFLICT",
+        )
+        self.assertEqual(
+            _error_code({"detail": {"detail": {"code": "STALE_REVISION"}}}),
+            "STALE_REVISION",
+        )
 
 
 if __name__ == "__main__":

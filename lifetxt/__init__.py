@@ -127,6 +127,11 @@ del _install_remote_client_cli
 from .remote_client_writes import install_remote_client_writes_cli as _install_remote_client_writes_cli
 _install_remote_client_writes_cli()
 del _install_remote_client_writes_cli
+from .remote_client_writes_compat_v25 import (
+    install_remote_client_writes_compat_v25 as _install_remote_client_writes_compat_v25,
+)
+_install_remote_client_writes_compat_v25()
+del _install_remote_client_writes_compat_v25
 from .remote_compatibility_v21 import (
     install_remote_client_compatibility_v21 as _install_remote_client_compatibility_v21,
 )

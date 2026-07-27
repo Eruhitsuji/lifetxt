@@ -92,5 +92,20 @@ def install_remote_client_writes_compat_v25():
             "mutation_policy": policy,
         }
 
+    def error_code(detail):
+        nested = detail.get("detail") if isinstance(detail, dict) else None
+        nested = nested if isinstance(nested, dict) else {}
+        deeper = nested.get("detail") if isinstance(nested.get("detail"), dict) else {}
+        candidates = (
+            detail.get("code") if isinstance(detail, dict) else None,
+            detail.get("error") if isinstance(detail, dict) else None,
+            nested.get("code"),
+            nested.get("error"),
+            deeper.get("code"),
+            deeper.get("error"),
+        )
+        return next((str(value).upper() for value in candidates if value), "")
+
     target.remote_permissions = remote_permissions
+    target._error_code = error_code
     target._REMOTE_CLIENT_WRITES_COMPAT_V25 = True

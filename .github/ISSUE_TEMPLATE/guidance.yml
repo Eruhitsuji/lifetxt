@@ -1,0 +1,52 @@
+name: Guidance / Next Action
+description: Ask what should happen next when project state or process is unclear.
+title: "[Guidance]: "
+labels:
+  - type:guidance
+  - status:inbox
+body:
+  - type: textarea
+    id: situation
+    attributes:
+      label: Situation
+      description: Describe what you know so far. It is acceptable to write "unknown".
+    validations:
+      required: true
+  - type: dropdown
+    id: project-state
+    attributes:
+      label: Current state
+      options:
+        - Unknown
+        - New project initialization
+        - Existing project adoption
+        - Foundation setup
+        - Backlog grooming
+        - Active implementation
+        - Review
+        - Integration
+        - Release preparation
+        - Standard update
+        - Blocked
+    validations:
+      required: true
+  - type: textarea
+    id: desired-help
+    attributes:
+      label: What help is needed?
+      value: |
+        - [ ] Decide next action
+        - [ ] Choose development method
+        - [ ] Split work into issues
+        - [ ] Identify blockers
+        - [ ] Prepare implementation plan
+        - [ ] Prepare review or test plan
+    validations:
+      required: true
+  - type: textarea
+    id: known-links
+    attributes:
+      label: Related links or files
+      description: Add related issues, PRs, docs, logs, screenshots, or notes.
+    validations:
+      required: false

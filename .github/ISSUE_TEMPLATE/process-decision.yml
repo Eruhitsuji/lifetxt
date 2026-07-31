@@ -1,0 +1,59 @@
+name: Process Decision
+description: Select or change the development method for a project, epic, or major task.
+title: "[Process]: "
+labels:
+  - type:process
+  - status:inbox
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain the project, epic, or task that needs a process decision.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      value: |
+        Scope stability:
+        Team size:
+        AI tools:
+        Release cadence:
+        Risk:
+    validations:
+      required: true
+  - type: dropdown
+    id: candidate-method
+    attributes:
+      label: Candidate method
+      options:
+        - Adaptive default
+        - Kanban
+        - Scrum
+        - Scrumban
+        - Waterfall
+        - V-model
+        - W-model
+        - XP
+        - Lean
+        - Dual-track agile
+        - Shape Up
+        - Spiral
+        - Prototype or PoC
+        - Trunk-based development
+        - Release train
+        - Maintenance flow
+        - Regulated or audit-heavy flow
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence required before decision
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true

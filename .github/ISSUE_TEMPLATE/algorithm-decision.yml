@@ -1,0 +1,55 @@
+name: Algorithm Decision
+description: Choose or change an algorithm, data structure, or performance-sensitive approach.
+title: "[Algorithm]: "
+labels:
+  - type:algorithm
+  - status:inbox
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: scale
+    attributes:
+      label: Data scale and performance requirement
+      value: |
+        Expected input size:
+        Latency or throughput target:
+        Memory constraints:
+        Growth assumptions:
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      value: |
+        Option A:
+        Option B:
+        Simpler baseline:
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Proposed decision and measurement method
+      value: |
+        Proposed algorithm:
+        Expected complexity:
+        Measurement command:
+        Regression evidence:
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - Standard
+        - High
+        - Regulated
+    validations:
+      required: true

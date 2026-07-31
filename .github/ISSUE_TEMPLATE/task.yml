@@ -1,0 +1,237 @@
+name: Development Task
+description: Implementation, testing, documentation, or maintenance work.
+title: "[Task]: "
+labels:
+  - type:task
+  - status:inbox
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Purpose
+      description: What is the single purpose of this task?
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: Current problem, related specification, or context.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included in this task?
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What must not be changed in this task?
+      value: |
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owner type
+      options:
+        - Human
+        - Team
+        - AI supervised by human
+    validations:
+      required: true
+
+  - type: dropdown
+    id: executor-type
+    attributes:
+      label: Executor type
+      options:
+        - Human
+        - AI
+        - Human + AI
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ai-tool
+    attributes:
+      label: AI tool
+      options:
+        - None
+        - Codex
+        - Claude Code
+        - Kiro
+        - Multiple
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Executor role
+      options:
+        - Implementer
+        - Tester
+        - Reviewer
+        - Architect
+        - Orchestrator
+        - Integrator
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer
+      placeholder: "@user or @team"
+    validations:
+      required: true
+
+  - type: input
+    id: integration-owner
+    attributes:
+      label: Integration owner
+      placeholder: "@user, @team, or Integrator"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope-contract
+    attributes:
+      label: Scope contract
+      value: |
+        Write scope:
+        -
+
+        Forbidden scope:
+        -
+
+        Shared files:
+        -
+
+        Integration order:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and parallel work
+      value: |
+        Blocked by:
+        Blocks:
+        Parallel with:
+        Conflict risk: Low / Medium / High
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Task size
+      description: L and XL cannot become Ready; split first.
+      options:
+        - XS
+        - S
+        - M
+        - L
+        - XL
+    validations:
+      required: true
+
+  - type: textarea
+    id: complexity
+    attributes:
+      label: Complexity score and split decision
+      value: |
+        Score:
+        Split decision:
+        If M, why not split further:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - Quick
+        - Standard
+        - High
+        - Regulated
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceability
+    attributes:
+      label: Traceability
+      value: |
+        Requirement ID:
+        Capability ID:
+        Epic:
+        Expected PR:
+        Tests/Evidence:
+        Release:
+    validations:
+      required: true
+
+  - type: textarea
+    id: reuse-duplicate-check
+    attributes:
+      label: Reuse and duplicate check
+      value: |
+        Existing capabilities checked:
+        Related issues checked:
+        Related PRs checked:
+        Existing APIs/modules checked:
+        Decision: reuse / extend / create new / replace / deprecate / investigate
+    validations:
+      required: true
+
+  - type: textarea
+    id: algorithm
+    attributes:
+      label: Algorithm or performance impact
+      value: |
+        Data scale:
+        Expected complexity:
+        Simpler alternatives considered:
+        Performance requirement:
+        Measurement method:
+    validations:
+      required: false
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      value: |
+        - [ ] Format
+        - [ ] Lint
+        - [ ] Unit test
+        - [ ] Integration test
+        - [ ] Manual verification
+        - [ ] Evidence recorded
+    validations:
+      required: true

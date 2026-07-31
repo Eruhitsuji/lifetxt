@@ -1,0 +1,13 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-example
+    capability_id: cap-example
+    epic: null
+    task_issue: null
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+gaps: []

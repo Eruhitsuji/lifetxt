@@ -1,0 +1,23 @@
+schema_version: 1
+
+change:
+  id: change-example
+  title: Example change
+  status: draft
+  change_type: Feature
+  assurance_level: Standard
+  owner: TODO
+  accountable_owner: TODO
+  related_issue: null
+  related_pull_request: null
+  base_commit: null
+  target_release: null
+
+scope:
+  in_scope: []
+  out_of_scope: []
+  write_scope: []
+  forbidden_scope: []
+  shared_files: []
+
+human_approvals_required: []

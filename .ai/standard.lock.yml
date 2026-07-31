@@ -1,0 +1,17 @@
+schema_version: 1
+
+standard:
+  repository: Eruhitsuji/ai-development-standard
+  version: 0.1.0
+  commit: a4702ee3a27339e06db5a8e3250a07d288c45204
+
+profiles:
+  - core
+  - python
+
+adapter_versions:
+  codex: 0.1.0
+  claude_code: 0.1.0
+  kiro: 0.1.0
+
+installed_at: 2026-07-31T22:57:35.865873+00:00

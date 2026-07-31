@@ -1,0 +1,128 @@
+schema_version: 1
+
+phases:
+  - id: discovery
+    name: Discovery
+    gate: Clarification Gate
+    owner: Product Owner
+    evidence:
+      - problem_statement
+      - initial_issue
+
+  - id: product-requirements
+    name: Product Requirements
+    gate: Requirements Checklist Gate
+    owner: Product Owner
+    evidence:
+      - feature_spec_or_ready_issue
+
+  - id: system-software-requirements
+    name: System / Software Requirements
+    gate: Requirements Checklist Gate
+    owner: Requirements Owner
+    evidence:
+      - requirements_record
+      - interface_or_data_constraints
+
+  - id: architecture-design
+    name: Architecture and Design
+    gate: Cross-Artifact Analysis Gate
+    owner: Architect
+    evidence:
+      - design_note
+      - adr_or_change_package_when_needed
+
+  - id: task-decomposition
+    name: Task Decomposition
+    gate: Task Readiness Gate
+    owner: Task Decomposer
+    evidence:
+      - sub_issues
+      - task_contracts
+
+  - id: implementation
+    name: Implementation
+    gate: Implementation Gate
+    owner: Implementer
+    evidence:
+      - commits
+      - changed_files
+
+  - id: developer-verification
+    name: Developer Verification
+    gate: Verification Gate
+    owner: Implementer
+    evidence:
+      - command_results
+
+  - id: independent-review
+    name: Independent Review
+    gate: Review Gate
+    owner: Reviewer
+    evidence:
+      - review_ledger
+
+  - id: integration-verification
+    name: Integration Verification
+    gate: Integration Gate
+    owner: Integrator
+    evidence:
+      - ci_results
+      - conflict_notes
+
+  - id: release-approval
+    name: Release Approval
+    gate: Release Gate
+    owner: Release Authority
+    evidence:
+      - release_notes
+      - migration_notes
+
+  - id: deployment
+    name: Deployment
+    gate: Deployment Gate
+    owner: Operations Owner
+    evidence:
+      - deployment_record
+      - rollback_readiness
+
+  - id: operations-monitoring
+    name: Operations and Monitoring
+    gate: Operations Gate
+    owner: Operations Owner
+    evidence:
+      - dashboards
+      - alerts
+      - runbooks
+
+  - id: incident-maintenance
+    name: Incident and Maintenance
+    gate: Incident Gate
+    owner: Incident Commander
+    evidence:
+      - incident_timeline
+      - mitigation_or_fix
+
+  - id: evaluation-improvement
+    name: Evaluation and Improvement
+    gate: Improvement Gate
+    owner: Accountable Owner
+    evidence:
+      - retrospective
+      - follow_up_issues
+
+  - id: deprecation
+    name: Deprecation
+    gate: Deprecation Gate
+    owner: Product Owner
+    evidence:
+      - deprecation_plan
+      - migration_impact
+
+  - id: retirement
+    name: Retirement
+    gate: Retirement Gate
+    owner: Release Authority
+    evidence:
+      - removal_record
+      - data_retention_or_recovery_record

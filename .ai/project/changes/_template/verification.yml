@@ -1,0 +1,23 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: unit
+      command: TODO
+      requirement_ids: []
+      status: planned
+
+  executed: []
+
+review_ledger:
+  - reviewer: TODO
+    review_type: requirements
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: null
+  rollback_plan: null
+  operations_evidence: []

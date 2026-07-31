@@ -1,0 +1,12 @@
+schema_version: 1
+
+requirements:
+  - id: req-example
+    kind: ADDED
+    statement: Replace with a testable requirement.
+    acceptance_criteria:
+      - Replace with observable acceptance criteria.
+    constraints: []
+    owner: TODO
+
+open_questions: []

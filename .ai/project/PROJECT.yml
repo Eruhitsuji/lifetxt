@@ -1,0 +1,47 @@
+schema_version: 1
+
+project:
+  id: lifetxt
+  name: lifetxt
+  type: application
+  lifecycle: implementation
+
+process:
+  primary_method: adaptive-default
+  quality_gate_model: w-model
+
+repository:
+  owner: Eruhitsuji
+  name: lifetxt
+  default_branch: main
+
+technology:
+  languages:
+    - python
+  runtimes:
+    python: ">=3.6"
+  package_manager:
+    type: pip
+
+ai:
+  enabled_tools:
+    - codex
+    - claude-code
+    - kiro
+
+  default_roles:
+    planner: human
+    implementer: codex
+    reviewer: human
+    integrator: human
+
+guidance:
+  beginner_support: true
+  next_action_support: true
+
+governance:
+  task_source_of_truth: github-issues
+  traceability_required: true
+  capability_registry: .ai/project/CAPABILITIES.yml
+  context_index: .ai/project/CONTEXT_INDEX.yml
+  default_assurance_level: Standard

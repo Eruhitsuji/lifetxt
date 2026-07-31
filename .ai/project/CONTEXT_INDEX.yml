@@ -1,0 +1,135 @@
+schema_version: 1
+
+context_loading:
+  default_mode: progressive
+  max_initial_documents: 8
+  entry_points:
+    - AGENTS.md
+    - CLAUDE.md
+    - .kiro/steering/development-standard.md
+
+rules:
+  - id: CTX-NEXT-001
+    title: Next action guidance
+    documents:
+      - .ai/managed/core/NEXT_ACTION.md
+      - .ai/project/GUIDANCE.yml
+    load_when:
+      - user_asks_next_action
+      - unclear_task
+      - missing_issue
+    applies_to:
+      - Information
+      - Recommendation
+    severity: required
+    required_action: classify_state_and_recommend_one_to_three_actions
+    human_interaction_type: Recommendation
+    overridable: false
+
+  - id: CTX-TASK-001
+    title: Task readiness and decomposition
+    documents:
+      - .ai/managed/core/TASK_MANAGEMENT.md
+      - .ai/managed/core/TASK_DECOMPOSITION.md
+      - .ai/managed/core/DEFINITION_OF_READY.md
+      - .ai/project/TRACEABILITY.yml
+    load_when:
+      - issue_refinement
+      - before_implementation
+      - task_size_m_or_larger
+    applies_to:
+      - Task
+      - Feature
+      - Bug
+    severity: required
+    required_action: verify_scope_size_dependencies_and_readiness
+    human_interaction_type: Recommendation
+    overridable: false
+
+  - id: CTX-TRACE-001
+    title: Traceability and capability reuse
+    documents:
+      - .ai/managed/core/TRACEABILITY.md
+      - .ai/managed/core/CAPABILITY_MANAGEMENT.md
+      - .ai/project/CAPABILITIES.yml
+      - .ai/project/TRACEABILITY.yml
+    load_when:
+      - feature_request
+      - possible_duplicate_feature
+      - public_behavior_change
+      - before_pr
+    applies_to:
+      - Requirement
+      - Capability
+      - Task
+      - PR
+    severity: required
+    required_action: record_requirement_capability_task_pr_evidence_chain
+    human_interaction_type: Recommendation
+    overridable: false
+
+  - id: CTX-ASSURE-001
+    title: Assurance level
+    documents:
+      - .ai/managed/core/ASSURANCE_LEVELS.md
+      - .ai/project/ASSURANCE.yml
+    load_when:
+      - before_implementation
+      - security_impact
+      - data_impact
+      - public_api_change
+      - operations_change
+      - release_or_deployment
+    applies_to:
+      - Feature
+      - Bug
+      - Security
+      - Operations
+      - Release
+    severity: required
+    required_action: select_change_type_and_assurance_level
+    human_interaction_type: Decision Request
+    overridable: false
+
+  - id: CTX-MERGE-001
+    title: Merge governance
+    documents:
+      - .ai/managed/core/MERGE_GOVERNANCE.md
+      - .ai/managed/core/REVIEW.md
+      - .ai/project/MERGE_POLICY.yml
+    load_when:
+      - before_merge
+      - stale_review
+      - shared_file_conflict
+      - latest_push_after_review
+    applies_to:
+      - PR
+      - Merge
+    severity: required
+    required_action: confirm_latest_review_ci_dod_authority_and_rollback
+    human_interaction_type: Decision Request
+    overridable: false
+
+  - id: CTX-HUMAN-001
+    title: Human approval boundary
+    documents:
+      - .ai/managed/core/AI_HUMAN_INTERACTION.md
+      - .ai/managed/core/AI_PERMISSIONS.md
+      - .ai/project/PERMISSIONS.yml
+    load_when:
+      - destructive_operation
+      - requirements_change
+      - scope_change
+      - security_exception
+      - data_migration_or_deletion
+      - deployment
+      - rollback
+      - retirement
+    applies_to:
+      - Decision
+      - Approval
+      - Operation
+    severity: required
+    required_action: request_explicit_human_approval
+    human_interaction_type: Decision Request
+    overridable: false

@@ -1,0 +1,85 @@
+schema_version: 1
+
+roles:
+  Accountable Owner:
+    assignable_to:
+      - human
+      - team
+    human_only: true
+    responsibility: Owns final outcome, priority, and major risk acceptance.
+
+  Product Owner:
+    assignable_to:
+      - human
+      - team
+    human_only: false
+    responsibility: Owns product value, users, scope, and release intent.
+
+  Requirements Owner:
+    assignable_to:
+      - human
+      - team
+      - ai_assisted
+    human_only: false
+    responsibility: Owns requirements clarity and acceptance criteria.
+
+  Orchestrator:
+    assignable_to:
+      - human
+      - ai
+    human_only: false
+    responsibility: Coordinates task flow, dependencies, status, and write scopes.
+
+  Implementer:
+    assignable_to:
+      - human
+      - ai
+    human_only: false
+    responsibility: Changes files within the approved task scope.
+
+  Reviewer:
+    assignable_to:
+      - human
+      - ai
+    human_only: false
+    responsibility: Reviews requirements, design, code, tests, and risks.
+
+  Integrator:
+    assignable_to:
+      - human
+      - ai_assisted
+    human_only: false
+    responsibility: Coordinates shared files, conflicts, and integration order.
+
+  Merge Authority:
+    assignable_to:
+      - human
+      - team
+    human_only: true
+    responsibility: Approves merge readiness for protected branches.
+
+  Release Authority:
+    assignable_to:
+      - human
+      - team
+    human_only: true
+    responsibility: Approves release, deployment, rollback, retirement.
+
+  Incident Commander:
+    assignable_to:
+      - human
+      - team
+    human_only: true
+    responsibility: Owns active incident coordination and final incident decisions.
+
+human_only_decisions:
+  - final_requirements_judgment
+  - merge
+  - release
+  - deployment
+  - rollback
+  - data_deletion
+  - security_exception
+  - major_risk_acceptance
+  - deprecation
+  - retirement

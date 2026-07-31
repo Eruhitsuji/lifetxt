@@ -1,0 +1,74 @@
+name: Feature
+description: Request a user-visible feature.
+title: "[Feature]: "
+labels:
+  - type:feature
+  - status:inbox
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Purpose
+      description: Why is this feature needed?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included?
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What is intentionally excluded?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: parallel-contract
+    attributes:
+      label: Parallel development contract
+      value: |
+        Executor:
+        Role:
+        Write scope:
+        Forbidden scope:
+        Dependencies:
+        Integration owner:
+    validations:
+      required: true
+  - type: textarea
+    id: traceability
+    attributes:
+      label: Capability and traceability
+      value: |
+        Requirement ID:
+        Capability ID:
+        Existing capability or duplicate check:
+        Reuse decision:
+        Expected evidence:
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - Quick
+        - Standard
+        - High
+        - Regulated
+    validations:
+      required: true

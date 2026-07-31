@@ -1,0 +1,58 @@
+name: Deprecation or Retirement
+description: Remove, replace, deprecate, or retire behavior, data, API, or system.
+title: "[Deprecation]: "
+labels:
+  - type:deprecation
+  - status:inbox
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: Target
+      description: Capability, API, data, feature, dependency, or system to deprecate.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact analysis
+      value: |
+        Users:
+        Integrations:
+        Data:
+        Operations:
+        Security:
+        Migration path:
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Deprecation or retirement plan
+      value: |
+        Notice:
+        Compatibility window:
+        Migration tasks:
+        Rollback or recovery:
+        Final removal condition:
+    validations:
+      required: true
+  - type: textarea
+    id: approvals
+    attributes:
+      label: Required human approvals
+      value: |
+        Product Owner:
+        Release Authority:
+        Operations Owner:
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - High
+        - Regulated
+    validations:
+      required: true

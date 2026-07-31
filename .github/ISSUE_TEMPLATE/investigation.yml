@@ -1,0 +1,52 @@
+name: Investigation
+description: Research feasibility, clarify requirements, or compare approaches.
+title: "[Investigation]: "
+labels:
+  - type:investigation
+  - status:inbox
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What must be learned before implementation?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and constraints
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Investigation scope
+      value: |
+        In scope:
+        Out of scope:
+        Timebox:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Expected evidence
+      value: |
+        - options compared
+        - risks
+        - recommendation
+        - follow-up tasks
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - Quick
+        - Standard
+        - High
+        - Regulated
+    validations:
+      required: true

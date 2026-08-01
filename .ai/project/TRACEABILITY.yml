@@ -128,6 +128,22 @@ traceability:
         - 'category-3 roadmap items remain in todo.md and are not edited'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/51
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/57
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/61
+      changed_files_or_scope:
+        - Remove implementation-status narrative from todo.md
+        - Restructure todo.md as roadmap plus Deferred Ideas parking lot
+        - todo.md
+      tests_or_evidence:
+        - 'per-block coverage table to be recorded in the pull request body'
+        - 'todo.md before/after counts: 101403 -> 79773 characters; 189 -> 190 checkbox items'
+        - 'four Decide bullets remain explicitly marked by the header as pending decision prompts'
+        - 'configuration documentation completion rule filed as follow-up issue #62 because .ai/project/RULES.md is out of scope for #57'
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-config-concurrent-write-safety
       capability_id: cap-config-safe-writes
       epic: null

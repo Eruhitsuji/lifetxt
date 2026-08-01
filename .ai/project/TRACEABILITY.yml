@@ -97,6 +97,21 @@ traceability:
         - 'issues #47-#50 brought to Definition of Ready and marked status:ready'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/51
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/54
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/55
+      changed_files_or_scope:
+        - Move the general design principles and product boundaries from todo.md into RULES.md
+        - .ai/project/RULES.md
+        - todo.md
+      tests_or_evidence:
+        - 'one-to-one mapping table in the pull request body'
+        - 'RULES.md gained 14 principle bullets (13 general + 1 parsing guarantee) and 7 product boundaries'
+        - 'todo.md 450 -> 437 lines, 244 -> 237 checkbox items; migrated phrases absent from todo.md and present exactly once in RULES.md'
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

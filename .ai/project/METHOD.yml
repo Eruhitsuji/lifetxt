@@ -2,8 +2,8 @@ schema_version: 1
 
 primary_method: adaptive-default
 quality_gate_model: w-model
-planning_cadence: TODO
-release_cadence: TODO
+planning_cadence: continuous-kanban
+release_cadence: on-demand
 
 allowed_methods:
   - adaptive-default
@@ -28,4 +28,3 @@ issue_override:
   allowed: true
   requires_reason: true
   requires_owner_approval: true
-

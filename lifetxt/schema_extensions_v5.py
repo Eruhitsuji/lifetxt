@@ -88,6 +88,13 @@ def schema_bundle_v5():
                             "type": "object",
                             "additionalProperties": workspace,
                         },
+                        "workspace": {
+                            "type": "object",
+                            "properties": {
+                                "max_total_source_bytes": {"type": "integer", "minimum": 1},
+                            },
+                            "additionalProperties": True,
+                        },
                         "profiles": {
                             "type": "object",
                             "additionalProperties": {"type": "object"},
@@ -142,6 +149,7 @@ def schema_samples_v5():
                             "write_file": "life.txt",
                         }
                     },
+                    "workspace": {"max_total_source_bytes": 67108864},
                     "defaults": {"person": "self", "timezone": "Asia/Tokyo"},
                 },
             ),

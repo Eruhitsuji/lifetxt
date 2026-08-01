@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 import unittest
 from collections import OrderedDict
@@ -26,8 +27,19 @@ class WorkspaceResolutionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = self.temp.name
+        self.cleanup_paths = []
 
     def tearDown(self):
+        for path in reversed(self.cleanup_paths):
+            try:
+                if os.path.islink(path):
+                    os.unlink(path)
+                elif os.path.isdir(path):
+                    os.rmdir(path)
+                elif os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
         self.temp.cleanup()
 
     def write(self, name, text="[ ] T Task\n"):
@@ -41,6 +53,37 @@ class WorkspaceResolutionTests(unittest.TestCase):
         data = OrderedDict(extra)
         data["_path"] = os.path.join(self.root, ".lifetxt.json")
         return data
+
+    def symlink(self, target, link, target_is_directory=False):
+        try:
+            os.symlink(target, link, target_is_directory=target_is_directory)
+        except TypeError:
+            try:
+                os.symlink(target, link)
+            except (OSError, NotImplementedError, AttributeError) as exc:
+                self.skipTest("symlink fixture unavailable: %s" % exc)
+        except (OSError, NotImplementedError, AttributeError) as exc:
+            self.skipTest("symlink fixture unavailable: %s" % exc)
+        self.cleanup_paths.append(link)
+        return link
+
+    def junction(self, target, link):
+        if os.name != "nt":
+            self.skipTest("Windows junction fixture unavailable on this platform")
+        completed = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", link, target],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        if completed.returncode != 0:
+            reason = (completed.stderr or completed.stdout or "mklink failed").strip()
+            self.skipTest("Windows junction fixture unavailable: %s" % reason)
+        self.cleanup_paths.append(link)
+        return link
+
+    def codes(self, resolution):
+        return {row["code"] for row in resolution["diagnostics"]}
 
     def test_legacy_paths_become_default_workspace(self):
         self.write("life.txt")
@@ -192,14 +235,90 @@ class WorkspaceResolutionTests(unittest.TestCase):
     def test_symlink_alias_detected(self):
         target = self.write("life.txt")
         link = os.path.join(self.root, "alias.txt")
-        try:
-            os.symlink(target, link)
-        except (OSError, NotImplementedError, AttributeError):
-            self.skipTest("symlinks not permitted in this environment")
+        self.symlink(target, link)
         config = self.config({"workspaces": {"w": {"sources": ["life.txt", "alias.txt"]}}})
         resolution = resolve_workspace(config, "w")
         codes = {row["code"] for row in resolution["diagnostics"]}
         self.assertIn("WS011", codes)
+
+    def test_self_referential_symlink_cycle_is_error(self):
+        link = os.path.join(self.root, "loop")
+        self.symlink(".", link, target_is_directory=True)
+        config = self.config({"workspaces": {"w": {"sources": ["loop/**/*.txt"]}}})
+        resolution = resolve_workspace(config, "w")
+        rows = [row for row in resolution["diagnostics"] if row["code"] == "WS014"]
+        self.assertEqual(1, len(rows))
+        self.assertEqual(os.path.normcase(link), os.path.normcase(rows[0]["source"]))
+        self.assertFalse(resolution["ok"])
+
+    def test_sibling_symlink_is_not_reported_as_cycle(self):
+        self.write("real/life.txt")
+        link = os.path.join(self.root, "alias")
+        self.symlink(os.path.join(self.root, "real"), link, target_is_directory=True)
+        config = self.config({"workspaces": {"w": {"sources": ["alias"]}}})
+        resolution = resolve_workspace(config, "w")
+        self.assertNotIn("WS014", self.codes(resolution))
+        self.assertEqual(1, len(resolution["input_paths"]))
+
+    def test_windows_junction_cycle_is_error(self):
+        link = os.path.join(self.root, "junction")
+        self.junction(self.root, link)
+        config = self.config({"workspaces": {"w": {"sources": ["junction/**/*.txt"]}}})
+        resolution = resolve_workspace(config, "w")
+        rows = [row for row in resolution["diagnostics"] if row["code"] == "WS014"]
+        self.assertEqual(1, len(rows))
+        self.assertEqual(os.path.normcase(link), os.path.normcase(rows[0]["source"]))
+
+    def test_broken_symlink_is_not_reported_as_cycle(self):
+        link = os.path.join(self.root, "broken.txt")
+        self.symlink("missing.txt", link)
+        config = self.config({"workspaces": {"w": {"sources": ["broken.txt"]}}})
+        resolution = resolve_workspace(config, "w")
+        self.assertNotIn("WS014", self.codes(resolution))
+
+    def test_total_source_size_just_under_limit_is_ok(self):
+        self.write("a.txt", "a" * 5)
+        self.write("b.txt", "b" * 5)
+        config = self.config(
+            {
+                "workspace": {"max_total_source_bytes": 10},
+                "workspaces": {"w": {"sources": ["a.txt", "b.txt"]}},
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        self.assertNotIn("WS015", self.codes(resolution))
+        self.assertTrue(resolution["ok"])
+
+    def test_total_source_size_over_limit_identifies_largest_contributors(self):
+        large = self.write("large.txt", "l" * 8)
+        small = self.write("small.txt", "s" * 3)
+        config = self.config(
+            {
+                "workspace": {"max_total_source_bytes": 10},
+                "workspaces": {"w": {"sources": ["large.txt", "small.txt"]}},
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        rows = [row for row in resolution["diagnostics"] if row["code"] == "WS015"]
+        self.assertEqual(1, len(rows))
+        self.assertEqual(large, rows[0]["source"])
+        self.assertIn("large.txt", rows[0]["hint"])
+        self.assertIn("small.txt", rows[0]["hint"])
+        self.assertFalse(resolution["ok"])
+
+    def test_invalid_total_source_size_limit_is_error(self):
+        self.write("life.txt")
+        config = self.config(
+            {
+                "workspace": {"max_total_source_bytes": 0},
+                "workspaces": {"w": {"sources": ["life.txt"]}},
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        rows = [row for row in resolution["diagnostics"] if row["code"] == "WS016"]
+        self.assertEqual(1, len(rows))
+        self.assertEqual("workspace.max_total_source_bytes", rows[0]["source"])
+        self.assertFalse(resolution["ok"])
 
     def test_source_reason_describes_source(self):
         record = normalize_source({"path": "notes/*.txt", "role": "reference", "required": True}, self.root)
@@ -251,6 +370,8 @@ class ConfigLayerTests(unittest.TestCase):
         merged, prov = effective_config({})
         self.assertEqual("builtin-default", prov.get("defaults.timezone"))
         self.assertIn("web", merged)
+        self.assertEqual(67108864, merged["workspace"]["max_total_source_bytes"])
+        self.assertEqual("builtin-default", prov.get("workspace.max_total_source_bytes"))
 
     def test_dotted_get_set_unset(self):
         config = OrderedDict()
@@ -270,6 +391,10 @@ class ConfigLayerTests(unittest.TestCase):
     def test_explain_known_and_wildcard(self):
         self.assertIsNotNone(explain_key("defaults.timezone"))
         self.assertIsNotNone(explain_key("workspaces.personal.sources"))
+        self.assertEqual(
+            67108864,
+            explain_key("workspace.max_total_source_bytes")["default"],
+        )
         self.assertIsNone(explain_key("totally.unknown.key"))
 
 
@@ -325,6 +450,21 @@ class ExampleConfigTests(unittest.TestCase):
             config.pop("_path", None)
             errors = sorted(validator.iter_errors(config), key=lambda e: list(e.path))
             self.assertEqual([], [e.message for e in errors], name)
+
+    def test_config_schema_declares_workspace_source_size_limit(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("Draft 2020-12 jsonschema validation not available")
+        from lifetxt.safety_foundation import schema_bundle
+
+        schema = schema_bundle()["config-v1.schema.json"]
+        validator = Draft202012Validator(schema)
+        valid = {"workspace": {"max_total_source_bytes": 1}}
+        self.assertEqual([], [e.message for e in validator.iter_errors(valid)])
+        invalid = {"workspace": {"max_total_source_bytes": 0}}
+        messages = [e.message for e in validator.iter_errors(invalid)]
+        self.assertTrue(messages)
 
 
 if __name__ == "__main__":

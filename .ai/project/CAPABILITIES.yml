@@ -106,3 +106,41 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-workspace-resolution-safety
+    name: Workspace resolution safety
+    summary: >-
+      Detect self-referential symlink/junction cycles before workspace source expansion
+      and refuse resolved source sets whose unique source files exceed the configured
+      total byte limit.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-workspace-source-integrity
+    implementation_locations:
+      - lifetxt/config.py
+      - lifetxt/config_registry.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - lifetxt/workspace.py
+      - docs/en/config.md
+      - docs/ja/config.md
+      - tests/test_workspace_foundation.py
+    public_interfaces:
+      - workspace.max_total_source_bytes
+      - lifetxt config explain workspace.max_total_source_bytes
+      - lifetxt.workspace.resolve_workspace
+      - lifetxt workspace validate
+    tests_or_evidence:
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests cycle and source-size cases
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      - python -m lifetxt check examples/minimal_life.txt
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/48
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/63
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

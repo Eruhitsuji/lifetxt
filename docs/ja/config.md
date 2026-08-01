@@ -101,13 +101,32 @@ $ lifetxt workspace validate --all
 | `generated_by`   | `null`           | 生成ソースを作るツール名                             |
 | `exclude`        | `[]`             | ディレクトリ/グロブ結果から除外するパターン          |
 
+## ワークスペースの安全上限
+
+ワークスペース解決では、unique な解決済みソースファイル全体に
+`workspace.max_total_source_bytes` を適用します。既定値は `67108864` bytes
+（64 MiB）です。広い glob を絞る、または生成ディレクトリを除外したうえで必要な場合だけ
+引き上げます。
+
+```json
+{
+  "workspace": { "max_total_source_bytes": 67108864 }
+}
+```
+
+link-cycle 検出は glob 展開前に source path の prefix を確認し、recursive glob では
+静的な glob root 配下の directory link も確認します。合計サイズ上限は、決定的な展開後に
+unique な物理ソースファイルを `stat` して確認します。
+
 ## パス解決
 
 相対パスは、カレントディレクトリではなく**設定ファイルのあるディレクトリ**を基準に
 解決されます。そのため、どこから実行しても同じ結果になります。グロブは決定的に
 （ソートして）展開されます。解決時には、必須ソース欠落（`WS001`）、物理ファイルの
 重複（`WS002`）、設定ディレクトリ外のパス（`WS003`）、未知のロール（`WS005`）、
-不正な書き込み先（`WS006`/`WS007`）を診断として報告します。
+不正な書き込み先（`WS006`/`WS007`）、自己参照する symlink/junction cycle
+（`WS014`）、`workspace.max_total_source_bytes` を超える合計ソース bytes（`WS015`）、
+不正なサイズ上限設定（`WS016`）を診断として報告します。
 
 ## プロファイル
 

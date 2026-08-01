@@ -34,8 +34,9 @@ The taxonomy has two axes:
 - `type:*` — one per issue template: `algorithm`, `deprecation`, `feature`,
   `guidance`, `incident`, `investigation`, `operations`, `process`, `standards`,
   `task`. They share the colour `#1d76db` so the axis reads as one group.
-- `status:*` — triage state. `status:inbox` (`#ededed`) is applied by every
-  template and means "filed, not yet refined to Ready".
+- `status:*` — workflow state, one label per issue. `status:inbox` (`#ededed`)
+  is applied by every template; the remaining values are described under
+  **Issue Status** below.
 
 The `type:*` axis intentionally does not cover every change type in
 `.ai/managed/core/ASSURANCE_LEVELS.md`. Bug, Refactoring, Security, Performance,
@@ -45,6 +46,57 @@ the issue body and pull request rather than by label. GitHub's default labels
 
 Issues closed before this taxonomy existed were deliberately not relabelled, so
 older issues carry whatever label was available at the time.
+
+## Issue Status
+
+Issue status is expressed with a `status:*` label. Exactly one is set at a time.
+The eight values come from `.ai/managed/core/TASK_MANAGEMENT.md`:
+
+| Label | Meaning |
+| --- | --- |
+| `status:inbox` | Filed, not yet refined. Applied by every issue template. |
+| `status:ready` | Meets `DEFINITION_OF_READY.md`; implementation may start. |
+| `status:planned` | Accepted and scheduled, not yet started. |
+| `status:in-progress` | Implementation underway on a dedicated branch or worktree. |
+| `status:in-review` | Pull request open, awaiting independent review. |
+| `status:blocked` | Waiting on a decision, dependency, or access. |
+| `status:done` | Merged and Definition of Done satisfied. |
+| `status:cancelled` | Closed without implementation. |
+
+Implementation must not start while an issue is `status:inbox` or
+`status:blocked` (`TASK_MANAGEMENT.md:69`). Moving an issue to `status:ready`
+means asserting that every condition in `DEFINITION_OF_READY.md` is met — it is a
+gate, not a formality.
+
+### Specialization: labels instead of GitHub Projects
+
+`.ai/managed/core/TASK_MANAGEMENT.md` assigns status to GitHub Projects:
+
+> GitHub Projects are used for planning, prioritization, status, ownership, and
+> cross-project visibility.
+
+This project uses labels instead. Reasons:
+
+- One maintainer and no cross-project portfolio, so the planning and
+  cross-project-visibility benefits of Projects do not currently apply.
+- Both humans and AI executors work this repository from the terminal. Labels are
+  returned by the same `gh issue list` that enumerates the backlog, whereas
+  Projects requires an additional `read:project` token scope that the current
+  tooling does not hold — status would be invisible at the point of use.
+- Every issue template already declares `status:inbox`, so labels were half
+  implemented. Running both mechanisms would reintroduce the dual-source-of-truth
+  problem that #51 decided against for `todo.md`.
+
+This specializes an overridable standard. It does not weaken any item in the
+non-overridable baseline in `.ai/managed/core/INDEX.md`: the task source of truth
+remains GitHub Issues, and the `Inbox`/`Blocked` gate is preserved above.
+
+Revisit when any of these becomes true:
+
+- more than one person or agent plans the backlog concurrently
+- cross-project or portfolio visibility is needed
+- status automation (boards, workflows) would carry its own weight
+- the `read:project` scope is granted and Projects becomes usable from the CLI
 
 ## Tracked Exceptions
 

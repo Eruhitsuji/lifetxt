@@ -55,6 +55,9 @@ CONFIG_REGISTRY = OrderedDict(
         ("workspaces.*.write_file", _entry(
             "string", None,
             "Default write target for the workspace. Must be a writable source.")),
+        ("workspace.max_total_source_bytes", _entry(
+            "integer", 67108864,
+            "Maximum aggregate bytes accepted across unique resolved workspace source files.")),
         ("profiles", _entry(
             "object", None,
             "Named configuration overlays applied above the base config via --profile.")),

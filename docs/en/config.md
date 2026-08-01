@@ -100,6 +100,23 @@ Each entry in `sources` is a path string or an object. The object form supports:
 | `generated_by`   | `null`           | Tool that produces a generated source.             |
 | `exclude`        | `[]`             | Glob patterns removed from directory/glob results. |
 
+## Workspace safety limits
+
+Workspace resolution enforces `workspace.max_total_source_bytes` across unique
+resolved source files. The default is `67108864` bytes (64 MiB). Raise it only
+after narrowing broad globs or excluding generated directories:
+
+```json
+{
+  "workspace": { "max_total_source_bytes": 67108864 }
+}
+```
+
+Link-cycle detection runs before glob expansion on source path prefixes and, for
+recursive globs, on directory links under the static glob root. The total-size
+limit is checked after deterministic expansion by stat'ing each unique physical
+source file.
+
 ## Path resolution
 
 Relative source paths resolve against the **configuration file's directory**,
@@ -107,7 +124,10 @@ not the current working directory, so a workspace behaves identically wherever
 you run lifetxt from. Globs expand deterministically (sorted). Resolution
 reports diagnostics for missing required sources (`WS001`), duplicate physical
 files (`WS002`), paths outside the config directory (`WS003`), unknown roles
-(`WS005`), and unusable write targets (`WS006`/`WS007`).
+(`WS005`), unusable write targets (`WS006`/`WS007`), self-referential
+symlink/junction cycles (`WS014`), total source bytes above
+`workspace.max_total_source_bytes` (`WS015`), and an invalid size limit setting
+(`WS016`).
 
 ## Profiles
 

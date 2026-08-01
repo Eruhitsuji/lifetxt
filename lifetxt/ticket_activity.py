@@ -17,6 +17,7 @@ from . import mutation
 from .model import Item
 from .serializer import item_to_line
 from .surface_runtime import normalize_revision
+from .timeutil import parse_iso_date, parse_iso_datetime
 from .timezone_policy import today as timezone_today, utcnow
 
 EVENT_MARKER = "ticket_event"
@@ -76,9 +77,8 @@ def _utc_text(value=None):
         parsed = value
     else:
         text = str(value).strip()
-        try:
-            parsed = datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
+        parsed = parse_iso_datetime(text)
+        if parsed is None:
             raise ValueError("Event timestamp must be an ISO date-time with an offset.")
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError("Event timestamp must include a UTC offset.")
@@ -93,10 +93,10 @@ def _date_text(value=None):
         return value.date().isoformat()
     if isinstance(value, datetime.date):
         return value.isoformat()
-    try:
-        return datetime.date.fromisoformat(str(value).strip()).isoformat()
-    except ValueError:
+    parsed = parse_iso_date(str(value).strip())
+    if parsed is None:
         raise ValueError("Time-entry date must be YYYY-MM-DD.")
+    return parsed.isoformat()
 
 
 def _safe_id(value):
@@ -609,5 +609,4 @@ def ticket_activity_report(items, ticket_id, config=None, key="id", event_types=
             ("diagnostics", diagnostics),
         )
     )
-
 

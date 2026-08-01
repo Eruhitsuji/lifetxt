@@ -18,7 +18,6 @@ classifiers = [
   "Topic :: Office/Business :: Scheduling",
   "Topic :: Text Processing"
 ]
-
 [project.scripts]
 lifetxt = "lifetxt.entrypoint:main"
 

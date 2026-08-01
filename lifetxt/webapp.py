@@ -670,8 +670,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         result = subprocess.run(
             cmd,
             cwd=cwd or os.path.dirname(os.path.abspath(app.state.writable_path)),
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
         )
         return {
             "stdout": result.stdout,
@@ -702,7 +703,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         writable = app.state.writable_path
         import subprocess
         cwd = os.path.dirname(os.path.abspath(writable))
-        add_result = subprocess.run(["git", "add", os.path.abspath(writable)], cwd=cwd, capture_output=True, text=True)
+        add_result = subprocess.run(
+            ["git", "add", os.path.abspath(writable)],
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
         if add_result.returncode != 0:
             return {"stdout": add_result.stdout, "stderr": add_result.stderr, "exit_code": add_result.returncode, "ok": False}
         return _run_git(["git", "commit", "-m", message], cwd=cwd)

@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 import datetime
 from collections import OrderedDict
 
+from .timeutil import parse_iso_datetime
+
 
 class ClockSkewError(ValueError):
     pass
@@ -19,10 +21,9 @@ def parse_timestamp(value):
             raise ClockSkewError("A client timestamp is required.")
         if text.endswith("Z"):
             text = text[:-1] + "+00:00"
-        try:
-            parsed = datetime.datetime.fromisoformat(text)
-        except ValueError as exc:
-            raise ClockSkewError("Invalid client timestamp: %s" % exc)
+        parsed = parse_iso_datetime(text)
+        if parsed is None:
+            raise ClockSkewError("Invalid client timestamp.")
     if parsed.tzinfo is None:
         raise ClockSkewError("Client timestamps must include a UTC offset.")
     return parsed.astimezone(datetime.timezone.utc)

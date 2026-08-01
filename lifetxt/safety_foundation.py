@@ -151,19 +151,55 @@ def resolve_timezone_policy(config=None, text="", cli_timezone=None):
         if value:
             name = str(value).strip()
             valid, error = validate_timezone(name)
+            if source == "host" and (not valid or not _is_ascii_header_value(name)):
+                continue
             return OrderedDict((("timezone", name), ("source", source), ("valid", valid), ("error", error), ("precedence", ["cli", "file", "config", "host"])))
     return OrderedDict((("timezone", "local"), ("source", "host"), ("valid", True), ("error", ""), ("precedence", ["cli", "file", "config", "host"])))
 
 
 def validate_timezone(name):
-    if name.lower() in ("local", "host"):
+    if name.lower() in ("local", "host") or name.upper() == "UTC":
         return True, ""
     try:
-        from zoneinfo import ZoneInfo
-        ZoneInfo(name)
+        _timezone_for_name(name)
         return True, ""
     except Exception as exc:
         return False, str(exc)
+
+
+def _is_ascii_header_value(value):
+    try:
+        text = str(value)
+        text.encode("ascii")
+    except UnicodeError:
+        return False
+    return not any(ord(char) < 32 or ord(char) == 127 for char in text)
+
+
+def _timezone_for_name(name):
+    errors = []
+    try:
+        from zoneinfo import ZoneInfo
+
+        return ZoneInfo(name)
+    except Exception as exc:
+        errors.append(str(exc))
+    try:
+        from dateutil import tz
+
+        zone = tz.gettz(name)
+        if zone is not None:
+            return zone
+        errors.append("dateutil could not find timezone")
+    except Exception as exc:
+        errors.append(str(exc))
+    try:
+        import pytz
+
+        return pytz.timezone(name)
+    except Exception as exc:
+        errors.append(str(exc))
+    raise ValueError("; ".join(error for error in errors if error))
 
 
 def serve_target_diagnostic(read_paths, write_path):
@@ -223,8 +259,10 @@ def audit_python_writes(root):
             label = _call_label(node.func)
             if label in ("os.replace", "atomic_write_bytes"):
                 findings.append({"path": path, "line": node.lineno, "call": label})
-            if label == "open" and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
-                mode = str(node.args[1].value)
+            if label == "open" and len(node.args) >= 2:
+                mode = _ast_string_value(node.args[1])
+                if mode is None:
+                    continue
                 if any(flag in mode for flag in ("w", "a", "x")):
                     findings.append({"path": path, "line": node.lineno, "call": "open(%s)" % mode})
     return findings
@@ -298,6 +336,15 @@ def _call_label(func):
         prefix = _call_label(func.value)
         return (prefix + "." if prefix else "") + func.attr
     return ""
+
+
+def _ast_string_value(node):
+    if isinstance(node, ast.Str):
+        return str(node.s)
+    constant = getattr(ast, "Constant", None)
+    if constant is not None and isinstance(node, constant) and isinstance(node.value, str):
+        return str(node.value)
+    return None
 
 
 def _host_timezone_name():

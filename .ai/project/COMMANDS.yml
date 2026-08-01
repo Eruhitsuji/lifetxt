@@ -17,6 +17,11 @@ commands:
     values:
       - MPLBACKEND=Agg python -m unittest discover
 
+  unit_test_windows_powershell:
+    status: configured
+    values:
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+
   integration_test:
     status: configured
     values:
@@ -26,4 +31,10 @@ commands:
     status: configured
     values:
       - MPLBACKEND=Agg python -m unittest discover
+      - python -m lifetxt check examples/minimal_life.txt
+
+  full_check_windows_powershell:
+    status: configured
+    values:
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
       - python -m lifetxt check examples/minimal_life.txt

@@ -43,8 +43,10 @@ def utc_now_text(now=None):
 def normalize_command(command, temporary_path):
     if isinstance(command, str):
         argv = shlex.split(command, posix=os.name != "nt")
+        command_was_string = True
     elif isinstance(command, (list, tuple)):
         argv = [str(value) for value in command]
+        command_was_string = False
     else:
         raise DelegatedMutationError("Delegated command must be a string or argument list.")
     if not argv:
@@ -52,6 +54,8 @@ def normalize_command(command, temporary_path):
     replaced = False
     normalized = []
     for value in argv:
+        if command_was_string and os.name == "nt":
+            value = _unquote_windows_argument(value)
         if "{file}" in value:
             value = value.replace("{file}", temporary_path)
             replaced = True
@@ -59,6 +63,12 @@ def normalize_command(command, temporary_path):
     if not replaced:
         normalized.append(temporary_path)
     return normalized
+
+
+def _unquote_windows_argument(value):
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    return value
 
 
 def validate_lifetxt_text(text):
@@ -112,7 +122,7 @@ def prepare_delegated_mutation(
                 argv,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
+                universal_newlines=True,
                 timeout=float(timeout),
                 env=env,
                 shell=False,

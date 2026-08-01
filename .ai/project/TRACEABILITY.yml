@@ -112,6 +112,23 @@ traceability:
         - 'todo.md 450 -> 437 lines, 244 -> 237 checkbox items; migrated phrases absent from todo.md and present exactly once in RULES.md'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-config-concurrent-write-safety
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/47
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/58
+      changed_files_or_scope:
+        - Make configuration writes revision-aware (compare-and-set) inside the shared lock
+        - lifetxt/config_writer.py
+        - lifetxt/cli.py
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1747 tests, OK (skipped=14); 1729 before, 18 new'
+        - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+        - 'CI on ubuntu-latest 3.10/3.11/3.12 plus the no-Web job -> all 10 checks green on c37a831 (first Linux run of the locked compare-and-set)'
+        - 'AI first-pass review found a check-then-write race, an unmanaged retained-candidate lifecycle, and a dead parameter; all three fixed before review of the head commit'
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

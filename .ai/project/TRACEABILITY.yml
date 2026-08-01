@@ -68,7 +68,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/44
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/46
       changed_files_or_scope:
         - Repoint the format/lint tracked exceptions at an open issue and record the rule that keeps them tracked
         - .ai/project/COMMANDS.yml

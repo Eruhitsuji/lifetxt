@@ -66,3 +66,43 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-config-safe-writes
+    name: Safe configuration writes
+    summary: >-
+      Refuse a configuration write that would clobber a concurrent change, and keep the
+      refused edit recoverable. The precondition is compared inside the shared sidecar
+      lock so no writer can commit between the check and the write.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-config-concurrent-write-safety
+    implementation_locations:
+      - lifetxt/config_writer.py
+      - lifetxt/cli.py
+    public_interfaces:
+      - lifetxt.config_writer.write_config
+      - lifetxt.config_writer.config_revision
+      - lifetxt.config_writer.rejected_candidates
+      - lifetxt config revision
+      - lifetxt config set|unset|migrate --expected-revision
+    tests_or_evidence:
+      - tests/test_config_validation.py ConfigRevisionTests
+      - 'the precondition must reach lifetxt.mutation.write_text so the comparison happens inside the lock; a check performed before the write is not sufficient'
+      - 'a refused write must leave the file byte-identical, retain the candidate, and not consume a backup generation'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/47
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/58
+      - https://github.com/Eruhitsuji/lifetxt/pull/59
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Configuration-driven enforcement (a ticketing.write.require_revision equivalent) is
+      deliberately deferred: it needs a new configuration schema key. The write_config
+      require_revision parameter already exists for callers that must not fall back to
+      last-write-wins.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

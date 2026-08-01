@@ -144,3 +144,45 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-stable-diagnostics
+    name: Stable diagnostics
+    summary: >-
+      Publish a stable parser/validator diagnostic JSON object shape for
+      `lifetxt check --format json` and keep raw-line Web and MCP validation
+      diagnostics aligned with the same shared contract.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-diagnostic-contract-stability
+    implementation_locations:
+      - lifetxt/model.py
+      - lifetxt/diagnostic_contract.py
+      - lifetxt/cli.py
+      - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - tests/diagnostic_contract_fixtures.py
+      - tests/test_diagnostic_contract.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt check --format json
+      - POST /api/check-line
+      - MCP check_line
+      - lifetxt.diagnostic_contract.diagnostic_to_output_dict
+    tests_or_evidence:
+      - tests/test_diagnostic_contract.py
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
+      - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/49
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `span` remains deferred until parser-native end spans are implemented.
+      Consumers must tolerate unknown added fields, while stable fields are not
+      removed or renamed without a documented transition period.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

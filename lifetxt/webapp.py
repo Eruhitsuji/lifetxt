@@ -23,6 +23,7 @@ from .config import (
     config_user_aliases,
     config_user_name,
 )
+from .diagnostic_contract import diagnostics_to_output
 from .ids import (
     auto_ids_enabled,
     collect_item_ids,
@@ -208,7 +209,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if _has_error(diagnostics):
             raise HTTPException(
                 status_code=400,
-                detail=[diagnostic.to_dict() for diagnostic in diagnostics],
+                detail=diagnostics_to_output(diagnostics),
             )
 
     @app.get("/", response_class=HTMLResponse)
@@ -385,7 +386,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {
             "ok": not has_error,
             "item_count": len(parsed_items),
-            "diagnostics": [d.to_dict() for d in diagnostics],
+            "diagnostics": diagnostics_to_output(diagnostics),
         }
 
     @app.post("/api/items/parse")
@@ -413,7 +414,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "ok": not has_error,
             "item_count": len(parsed_items),
             "items": response_items,
-            "diagnostics": [d.to_dict() for d in diagnostics],
+            "diagnostics": diagnostics_to_output(diagnostics),
         }
 
     @app.get("/api/graph")
@@ -1605,7 +1606,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if has_error or not parsed_items:
             raise HTTPException(
                 status_code=422,
-                detail={"error": "VALIDATION_ERROR", "message": diagnostics[0].message if diagnostics else "Could not parse line.", "detail": [d.to_dict() for d in diagnostics]},
+                detail={"error": "VALIDATION_ERROR", "message": diagnostics[0].message if diagnostics else "Could not parse line.", "detail": diagnostics_to_output(diagnostics)},
             )
         writable = app.state.writable_path
         if not writable:
@@ -1868,7 +1869,7 @@ def items_response(items, diagnostics, writable_path, id_key="id"):
     return {
         "count": len(items),
         "items": [api_item(item, writable_path, id_key) for item in items],
-        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -1876,7 +1877,7 @@ def links_response(records, diagnostics):
     return {
         "count": len(records),
         "records": records,
-        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -2230,7 +2231,7 @@ def item_from_payload(payload):
     item = item_from_dict(payload)
     diagnostics = validate_item(item)
     if _has_error(diagnostics):
-        raise ValueError([diagnostic.to_dict() for diagnostic in diagnostics])
+        raise ValueError(diagnostics_to_output(diagnostics))
     return item
 
 
@@ -2409,7 +2410,7 @@ def update_item_in_file(path, line_no, payload):
     if parsed is None:
         diagnostics.append(Diagnostic("error", "E301", "Updated item did not parse."))
     if _has_error(diagnostics):
-        raise ValueError([diagnostic.to_dict() for diagnostic in diagnostics])
+        raise ValueError(diagnostics_to_output(diagnostics))
     start = original_item.line - 1
     end = getattr(original_item, "end_line", original_item.line) or original_item.line
     _body, ending = split_line_ending(raw_lines[end - 1])

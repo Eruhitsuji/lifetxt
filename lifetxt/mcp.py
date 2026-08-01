@@ -23,6 +23,7 @@ from .config import (
     config_user_aliases,
     config_write_file,
 )
+from .diagnostic_contract import diagnostics_to_output
 from .ids import (
     collect_item_ids,
     ensure_item_id,
@@ -1266,7 +1267,7 @@ def _tool_get_item(args, context):
         raise ValueError("Item id:%s was not found." % args.get("id"))
     return {
         "item": api_item(item, context.writable_path, _id_key(context)),
-        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -1279,7 +1280,7 @@ def _tool_check_line(args, _context):
     return {
         "ok": not has_error,
         "item_count": len(parsed_items),
-        "diagnostics": [d.to_dict() for d in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -1298,7 +1299,7 @@ def _tool_parse_item(args, context):
         "ok": not has_error,
         "item_count": len(parsed_items),
         "items": [api_item(item, None, _id_key(context)) for item in parsed_items],
-        "diagnostics": [d.to_dict() for d in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -1510,7 +1511,7 @@ def _tool_get_agenda(args, context):
         "count": len(records),
         "range": {"from": range_start.isoformat(), "to": range_end.isoformat()},
         "records": records,
-        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 
@@ -1531,7 +1532,7 @@ def _tool_get_review(args, context):
         project=args.get("project"),
         id_key=_id_key(context),
     )
-    result["diagnostics"] = [diagnostic.to_dict() for diagnostic in diagnostics]
+    result["diagnostics"] = diagnostics_to_output(diagnostics)
     return result
 
 
@@ -1569,7 +1570,7 @@ def _tool_list_status(args, context):
         person=args.get("person"),
         active_only=_truthy(args.get("active")),
     )
-    return {"count": len(records), "records": records, "diagnostics": [d.to_dict() for d in diagnostics]}
+    return {"count": len(records), "records": records, "diagnostics": diagnostics_to_output(diagnostics)}
 
 
 def _tool_list_notifications(args, context):
@@ -1582,7 +1583,7 @@ def _tool_list_notifications(args, context):
         grace=args.get("grace") or notification_config.get("grace") or "2m",
     )
     records = limit_items(records, args.get("limit"))
-    return {"count": len(records), "records": records, "diagnostics": [d.to_dict() for d in diagnostics]}
+    return {"count": len(records), "records": records, "diagnostics": diagnostics_to_output(diagnostics)}
 
 
 def _tool_list_messages(args, context):
@@ -1614,7 +1615,7 @@ def _tool_reply_message(args, context):
     return {
         "line": line_no,
         "item": api_item(item, context.writable_path, _id_key(context)),
-        "diagnostics": [diagnostic.to_dict() for diagnostic in diagnostics],
+        "diagnostics": diagnostics_to_output(diagnostics),
     }
 
 

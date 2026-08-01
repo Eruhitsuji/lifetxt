@@ -495,8 +495,31 @@ Category:
 | `id` | duplicate ID と unsafe ID-like value |
 | `reference` | missing/self/cyclic/ambiguous reference |
 | `recurrence` | `repeat:`、`RRULE:`、`interval:`、`count:` recommendation |
+| `duration` | `est:` や `elapsed:` などの duration field |
 | `workflow` | status/detail workflow と dependency-state recommendation |
+| `files` | attachment target、type、content-hash、portability diagnostic |
 | `semantic` | 上記に含まれない semantic diagnostic |
+
+JSON diagnostics:
+
+`check --format json` は diagnostic object の配列を返します。安定 field は
+`severity`、`code`、`category`、`message`、`source`、`line`、`column`、
+`hint` です。`category` は公開 contract の一部で、`--category` が受け付ける
+category と一致します。`hint` は常に string として存在し、補足がない diagnostic
+では `""` を使います。
+
+`source`、`line`、`column` は、その location component が分からない場合は
+省略されます。consumer は未知 field を無視してください。これにより、将来の
+release で field を追加しても script を壊さず拡張できます。今回の transition は
+additive です。以前の CLI JSON output を読む script は、既存 field をそのまま
+読み続けられますが、exact-key validation は `hint` と将来の未知 field を許容する
+ように緩めてください。既存の安定 field を削除または rename する場合は、先に
+transition period を文書化します。その期間は古い field 名も利用可能で、削除は
+後続 release でだけ行います。`span` は parser-native end span が実装されるまで
+意図的に deferred です。`line` と `column` から安定した `span` を推測しないでください。
+
+raw-line validation surface である `POST /api/check-line` と MCP `check_line`
+も同じ diagnostic object shape を使います。
 
 例:
 

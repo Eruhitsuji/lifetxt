@@ -186,6 +186,32 @@ traceability:
         - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-diagnostic-contract-stability
+      capability_id: cap-stable-diagnostics
+      epic: P1 Configuration and Workspace Foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/49
+      pull_request: null
+      changed_files_or_scope:
+        - Add `hint` to parser/validator diagnostic dictionaries with `""` as the absent representation
+        - Publish `category` as a stable diagnostic contract field
+        - Share the diagnostic JSON builder across CLI, Web, and MCP raw-line validation surfaces
+        - lifetxt/model.py
+        - lifetxt/diagnostic_contract.py
+        - lifetxt/cli.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - tests/diagnostic_contract_fixtures.py
+        - tests/test_diagnostic_contract.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'tests/test_diagnostic_contract.py asserts CLI stdin, Web /api/check-line, and MCP check_line against one shared fixture table'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
+        - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

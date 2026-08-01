@@ -43,20 +43,92 @@ def _semantic_items(items, include_indent=True):
     return records
 
 
+#: Resolved once so the usability probe below and the fixture that follows
+#: exercise the same binary instead of each re-reading PATH.
+BASH_EXECUTABLE = shutil.which("bash")
+
+#: Shell fragment mirroring what BashCompletionExecutionTests needs: sourcing a
+#: script by the host path Python wrote it to, and running a stub found through
+#: an os.pathsep-joined PATH.
+_BASH_PROBE = 'source "$1"\n_lifetxt_probe_function\nlifetxt-probe\n'
+
+
+def _write_bash_stub(path, body):
+    """Write an executable `#!/usr/bin/env bash` stub the way the fixture needs.
+
+    Shared with the usability probe so the probe keeps exercising the mechanism
+    the fixture actually relies on rather than drifting from a private copy.
+    """
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write("#!/usr/bin/env bash\n" + body)
+    os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+
+
+def _run_bash_probe(probe_dir):
+    script_path = os.path.join(probe_dir, "probe.bash")
+    with open(script_path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write("_lifetxt_probe_function() { printf ok; }\n")
+    _write_bash_stub(os.path.join(probe_dir, "lifetxt-probe"), "printf stub\n")
+
+    environment = dict(os.environ)
+    environment["PATH"] = probe_dir + os.pathsep + environment.get("PATH", "")
+    return subprocess.run(
+        [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", _BASH_PROBE, "bash", script_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=15.0,
+        env=environment,
+    )
+
+
 def _usable_bash():
-    executable = shutil.which("bash")
-    if not executable:
+    """A bash that can run the completion fixture, not merely one that starts.
+
+    On Windows `shutil.which("bash")` commonly finds `C:\\Windows\\System32\\
+    bash.exe`, the WSL launcher. It starts and prints just fine, so a
+    "does bash run?" check passes, but the Linux bash it starts cannot see the
+    Windows temp path this fixture sources or the PATH stub it calls: every
+    completion then returns an empty COMPREPLY and the assertions fail for a
+    reason that has nothing to do with the completion script. Probe the two
+    mechanisms the tests actually depend on instead.
+    """
+    if not BASH_EXECUTABLE:
         return False
     try:
-        result = subprocess.run(
-            [executable, "--noprofile", "--norc", "-c", "printf ok"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=5.0,
-        )
+        # mkdtemp rather than TemporaryDirectory: the latter's cleanup can raise
+        # PermissionError on Windows, which the except below would turn into a
+        # false "unusable bash" verdict and silently drop real coverage.
+        probe_dir = tempfile.mkdtemp()
+        try:
+            result = _run_bash_probe(probe_dir)
+        finally:
+            shutil.rmtree(probe_dir, ignore_errors=True)
     except (OSError, subprocess.SubprocessError):
         return False
-    return result.returncode == 0 and result.stdout == b"ok"
+    return result.returncode == 0 and result.stdout == b"okstub"
+
+
+def _bash_skip_reason():
+    """Why the completion fixture cannot run here, or None when it can.
+
+    Stated concretely because the WSL case is invisible otherwise: the tests
+    just disappear, and the next person has to rediscover that `bash` resolved
+    to a launcher that cannot reach the paths the fixture uses.
+    """
+    if not BASH_EXECUTABLE:
+        return "bash was not found on PATH"
+    if not _usable_bash():
+        return (
+            "%s starts but cannot source a script at its host path or run a stub "
+            "found through PATH, so every completion would return no candidates. "
+            "The WSL launcher at C:\\Windows\\System32\\bash.exe behaves this way; "
+            "put Git Bash ahead of it on PATH, or run these tests on Linux/macOS."
+            % BASH_EXECUTABLE
+        )
+    return None
+
+
+_BASH_SKIP_REASON = _bash_skip_reason()
 
 
 def _error_codes(diagnostics):
@@ -167,7 +239,7 @@ class GoldenRoundTripTests(unittest.TestCase):
         self.assertEqual("[N] N Note\n| first\n|\n| third", item_to_line(item))
 
 
-@unittest.skipUnless(_usable_bash(), "usable bash is required for executable completion tests")
+@unittest.skipIf(_BASH_SKIP_REASON is not None, _BASH_SKIP_REASON or "")
 class BashCompletionExecutionTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -176,17 +248,15 @@ class BashCompletionExecutionTests(unittest.TestCase):
             handle.write(bash_completion())
 
         self.stub_path = os.path.join(self.temp_dir.name, "lifetxt")
-        with open(self.stub_path, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(
-                "#!/usr/bin/env bash\n"
-                "if [[ $1 == completion && $2 == values && $3 == --kind ]]; then\n"
-                "  case $4 in\n"
-                "    project) printf 'research\\nhome\\n' ;;\n"
-                "    state) printf 'busy\\naway\\n' ;;\n"
-                "  esac\n"
-                "fi\n"
-            )
-        os.chmod(self.stub_path, os.stat(self.stub_path).st_mode | stat.S_IXUSR)
+        _write_bash_stub(
+            self.stub_path,
+            "if [[ $1 == completion && $2 == values && $3 == --kind ]]; then\n"
+            "  case $4 in\n"
+            "    project) printf 'research\\nhome\\n' ;;\n"
+            "    state) printf 'busy\\naway\\n' ;;\n"
+            "  esac\n"
+            "fi\n",
+        )
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -203,7 +273,7 @@ class BashCompletionExecutionTests(unittest.TestCase):
         environment = dict(os.environ)
         environment["PATH"] = self.temp_dir.name + os.pathsep + environment.get("PATH", "")
         result = subprocess.run(
-            [shutil.which("bash"), "--noprofile", "--norc", "-c", command, "bash", self.script_path],
+            [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", command, "bash", self.script_path],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

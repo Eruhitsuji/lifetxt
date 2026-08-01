@@ -39,7 +39,7 @@ capabilities:
 
   - id: cap-local-test-compatibility
     name: Local test compatibility
-    summary: Keep the local unittest suite runnable on the declared Python >=3.6 runtime, including Windows/PowerShell environments.
+    summary: Keep the local unittest suite runnable on the declared Python >=3.6 runtime, including Windows/PowerShell environments, without reducing the coverage that Linux CI executes.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -54,10 +54,13 @@ capabilities:
     tests_or_evidence:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
       - python -m lifetxt check examples/minimal_life.txt
+      - 'environment-dependent suites must skip with a diagnostic reason rather than fail; verify both guard branches (working bash runs them, unusable bash skips them)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/36
+      - https://github.com/Eruhitsuji/lifetxt/issues/41
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/38
+      - https://github.com/Eruhitsuji/lifetxt/pull/42
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement:
       replaces: []

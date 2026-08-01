@@ -34,6 +34,22 @@ traceability:
         - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-local-unittest-compatibility
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/41
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/42
+      changed_files_or_scope:
+        - Skip bash completion execution tests when the resolved bash cannot run the fixture
+        - tests/test_roundtrip_golden.py
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1729 tests, OK (skipped=14)'
+        - 'same suite with Git Bash ahead of the WSL launcher on PATH -> BashCompletionExecutionTests Ran 4 tests, OK'
+        - python -m lifetxt check examples/minimal_life.txt
+        - python -m compileall tests/test_roundtrip_golden.py
+        - git diff --check
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

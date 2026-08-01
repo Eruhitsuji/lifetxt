@@ -15,22 +15,16 @@ Priority guide:
 
 Design principles:
 
-- Fail loudly when behavior is ambiguous or data may be lost.
-- Keep life.txt authoritative and use standard, inspectable interchange formats.
-- Route authoritative writes through validated, atomic, conflict-aware mutation contracts.
-- Treat compensated multi-target commits as an explicit recovery contract, not as portable filesystem-level atomicity.
-- Keep CLI, TUI, Web API, Web UI, MCP, editor support, schemas, configuration, and documentation semantically aligned.
-- Make effective configuration deterministic, explainable, schema-valid, and safe to migrate before allowing it to control remote access, integrations, or automatic writes.
-- Prefer lifetxt as an action and information hub over copying every external system's full data into life.txt.
-- Represent development tickets with normal Task records plus documented `record:ticket` metadata until evidence justifies a new item type; preserve generic project `record:issue` records for non-ticket project issues and risks.
-- Keep the current ticket state readable on the ticket record while storing comments and audit-relevant changes as append-only `record:ticket_event` records committed through the same transaction as the state change.
-- Treat Git, GitHub, GitLab, CI/CD, chat, and email as external authorities when appropriate; store stable references, normalized summaries, proposals, and audited actions instead of silently mirroring complete histories.
+Moved to [`.ai/project/RULES.md`](.ai/project/RULES.md) by #54, together with the
+project's product boundaries. That file is authoritative for principles and
+boundaries; this file is the roadmap. Do not re-add them here.
+
+The counter-machine principles stay below until #51 Part 2 moves them with the
+rest of the counter-machine specification:
+
 - Represent optional counter-machine data with normal Note records plus `machine:` details. Do not reuse Status (`S`) or Reminder (`R`) types for counters or instructions because those types already participate in presence and notification behavior.
 - Keep the minimal computation runtime deterministic and side-effect free: no clock, randomness, network, subprocesses, parallel execution, implicit file discovery, or mutation of the input program.
 - Treat unlimited execution as an explicit local CLI opt-in. Never make it the default or expose it automatically through Web, MCP, TUI, remote, integration, or automation surfaces.
-- Treat remote access, integrations, development-tool automation, and general automation as proposal-producing clients unless a validated write contract permits direct mutation.
-- Treat a successful release gate as evidence, not as permission to ignore known baseline debt.
-- Preserve old public CLI behavior when introducing richer reports; use explicit modes or unambiguous new flags.
 
 Feature-track order after the current P0 foundation:
 
@@ -188,7 +182,6 @@ The deny-by-default Remote foundation, protocol version 2, and the first opt-in 
 - [ ] Add richer diagnostics without leaking local state. Cover TLS/proxy trust, authentication method, session-store mode/capacity, authorization scope, clock skew, capability/schema/configuration/ticket-workflow mismatch, source availability/count, server read-only and write-adapter state, audit-store state, token rotation/profile migration state, rate limits, recovery-required transactions, ETag/header rewriting, and older-client compatibility using aggregate or redacted data only.
 - [ ] Route authoritative remote mutations only after each individual operation passes a published gate for exact revision, authenticated role/project/field permission, privacy/redaction, clock/replay policy, append-only history generation, idempotency, all touched multi-target revisions, journal recovery, provider side effects/compensation, conflict response schemas, retry behavior, and real-client interruption tests. Keep timer, attachment, archive, project/configuration, ticket workflow/time/bulk, undo, and integration actions disabled until their complete gates pass.
 - [ ] Validate remote conflicts against `conflict-v1.schema.json` and show expected revision, current revision, current visible item, attempted change, generated events, affected side records, and available recovery actions without leaking fields the principal cannot read. Never overwrite automatically or call a comparison a three-way merge without a retained base.
-- [ ] Keep remote/local transfer explicit through export, copy, or proposal import. Do not add background bidirectional synchronization, automatic Git synchronization, or silent local caching of authoritative data in this track.
 - [ ] Do not expose counter-machine execution through Remote CLI/TUI/Web. A future remote runtime requires independent CPU/time/memory/output quotas, cancellation, isolation, authentication, audit, and denial-of-service design.
 
 ---
@@ -213,11 +206,9 @@ The local group directory, recipient resolution, message composition, and derive
 - [ ] Publish a normalized integration-event schema and a provider capability model for inbound messages/events, outbound messages/actions, thread/reply references, attachments, acknowledgement, ticket/issue/pull-request/build references, health, and cursor state. Preserve provider IDs and provenance without treating provider-specific payloads as life.txt syntax.
 - [ ] Define one `IntegrationAdapter` contract for receive, normalize, preview, stage proposal, send, acknowledge, health, and capabilities. Inbound changes must default to reviewable Unified Inbox proposals unless an allow-listed operation has explicit direct-write permission and recovery semantics.
 - [ ] Add idempotency keys, provider cursors, duplicate suppression, bounded retry/backoff, rate-limit handling, partial-failure reporting, dead-letter inspection, restart-safe state, and redacted audit events. Provider outages must not block unrelated local lifetxt operations.
-- [ ] Keep credentials outside life.txt and plaintext configuration. Store only environment-variable or OS credential references, define token scopes and rotation checks, and ensure logs, effective config, diagnostics, exports, and support bundles never expose secrets.
 - [ ] Add schema-validated mapping rules for provider account/workspace/channel/user/group/thread/project/issue repository to lifetxt workspace, project, ticket, component, version, area, recipient, tags, and proposal policy. Detect ambiguous identity and ticket mappings and require preview before broad rule activation.
 - [ ] Implement Slack and email first because existing digest/SMTP foundations can validate the outbound contract. For Slack, cover channel input, message output, thread replies, user/group mapping, ticket reference previews, watcher notification delivery, and digest delivery. For email, cover SMTP output, IMAP or provider-API input, thread/message IDs, sender/subject rules, reply behavior, ticket creation/comment proposals, and safe attachment references.
 - [ ] Implement Discord and Teams only after the common contract and Slack/email operational evidence are stable. Cover webhook/bot or API capability differences, channel/team mapping, replies, rate limits, permission scopes, ticket references, and provider-specific unsupported operations without faking symmetry.
-- [ ] Keep external attachments reference-first. Copy or transform content only through the attachment transaction, MIME, size, privacy, permission, and recovery policies; never silently mirror an entire mailbox, chat history, issue tracker, repository, or CI log.
 - [ ] Add `integration list|show|test|pull|preview|send|health` and expose configured/installed capability state through doctor, Web administration, and MCP without returning credentials. Add fixtures and provider sandboxes/mocks for duplicate delivery, cursor reset, rate limits, revoked credentials, partial send, malformed payloads, restart, proposal approval conflicts, duplicate ticket references, and deleted external objects.
 - [ ] Do not permit inbound messages, provider events, attachments, or automation mappings to execute counter-machine programs. `machine:` records remain inert until a local user explicitly invokes the CLI.
 
@@ -328,7 +319,7 @@ This optional track adds a universal but deliberately tiny computation model wit
 - [ ] Require exactly one scalar value for `id`, `machine`, `value`, `op`, `target`, `next`, `zero`, and `nonzero` wherever applicable. Reject repeated values instead of applying first-value or last-value semantics.
 - [ ] Reject operation-inapplicable details in strict machine validation, such as `target` on `halt`, `zero` on `inc`, or `next` on `decjz`, so typographical mistakes cannot be silently ignored.
 - [ ] Report every deterministic pre-execution validation error that can safely be collected, ordered by source line, code, and item ID. Do not execute partially valid programs and do not auto-correct references.
-- [ ] Keep normal life.txt parsing permissive. Unknown custom keys remain valid and machine-specific errors appear only when the user explicitly invokes machine validation/execution.
+- [ ] Keep machine-specific errors appearing only when the user explicitly invokes machine validation/execution. (The general guarantee that normal parsing stays permissive and unknown custom keys remain valid moved to `.ai/project/RULES.md` in #54.)
 
 ### Runtime semantics
 
@@ -376,7 +367,6 @@ This optional track adds a universal but deliberately tiny computation model wit
 - [ ] Add configurable quick-add defaults, ticket tracker/default project, date formats, week start, icons, semantic colors, and view-specific empty states.
 - [ ] Add desktop/mobile previews and versioned configuration import/export with migration diagnostics.
 - [ ] Add personal, work, project, portfolio, software-development, team-board, kiosk, and mobile-capture presets composed from normal settings.
-- [ ] Keep arbitrary CSS administrator-only and disabled by default; keep arbitrary JavaScript and third-party in-page plugins deferred.
 - [ ] Add browser tests for invalid settings, missing tokens, contrast, responsive layouts, ticket-view presets, preset migration, import/export, provenance display, interrupted config updates, and broken-config recovery.
 - [ ] Do not add a browser counter-machine runner as part of Web customization.
 
@@ -445,6 +435,3 @@ Configuration documentation is part of the acceptance criteria for every new set
 - [ ] Consider wiki, forum, repository browser, document hosting, help desk/SLA, and full Redmine replacement features only when a concrete lifetxt-native use case cannot be met by references, attachments, notes, messages, and external integrations.
 - [ ] Consider counter-machine tracing, checkpoints, resumption, alternate instructions, macros, compilation, visualization, Web/TUI/MCP/remote execution, or automation integration only after the CLI-only three-instruction runtime is implemented, benchmarked, security-reviewed, and demonstrably useful.
 - [ ] A future non-local computation surface must define hard CPU/time/memory/output limits, cancellation, concurrency isolation, authentication, rate limiting, audit, and denial-of-service controls; never reuse `--max-steps 0` outside explicit local CLI execution.
-- [ ] Do not automatically close tickets from commit keywords, merge events, CI success, or deployment success until proposal review, permission, idempotency, stale-evidence handling, and compound event-history writes are proven.
-- [ ] Do not add arbitrary Web JavaScript, direct life.txt rewrite plugins, unrestricted integration/development-tool hooks, unrestricted automation, or provider-triggered computation before sandbox and permission models exist.
-- [ ] Do not attempt to replace email, calendar, chat, Git hosting, CI/CD, issue trackers, or file storage wholesale; integrate through references, summaries, proposals, and explicit approved actions.

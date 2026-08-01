@@ -118,3 +118,90 @@ Rules:
 This rule exists because the `format` and `lint` exceptions were tracked by #39,
 a general post-adoption foundation issue. #39 was legitimately completed by #40
 while both exceptions remained, and nothing surfaced them again until #44.
+
+## Where Decisions Live
+
+Per #51:
+
+- **Actionable work** — GitHub Issues are authoritative. When `todo.md` and an
+  Issue disagree about what should be built, the Issue wins.
+- **Principles and product boundaries** — this file is authoritative. When
+  `todo.md` and this file disagree about what the project will or will not do,
+  this file wins.
+- `todo.md` remains the roadmap and the parking lot for ideas that are not yet
+  actionable. It is not a task list and not a rules document.
+
+## Design Principles
+
+Moved from `todo.md` by #54. These constrain what is acceptable, not what is
+scheduled; a change that violates one needs an explicit decision, not a
+workaround.
+
+- Fail loudly when behavior is ambiguous or data may be lost.
+- Keep life.txt authoritative and use standard, inspectable interchange formats.
+- Route authoritative writes through validated, atomic, conflict-aware mutation
+  contracts.
+- Treat compensated multi-target commits as an explicit recovery contract, not as
+  portable filesystem-level atomicity.
+- Keep CLI, TUI, Web API, Web UI, MCP, editor support, schemas, configuration,
+  and documentation semantically aligned.
+- Make effective configuration deterministic, explainable, schema-valid, and safe
+  to migrate before allowing it to control remote access, integrations, or
+  automatic writes.
+- Prefer lifetxt as an action and information hub over copying every external
+  system's full data into life.txt.
+- Represent development tickets with normal Task records plus documented
+  `record:ticket` metadata until evidence justifies a new item type; preserve
+  generic project `record:issue` records for non-ticket project issues and risks.
+- Keep the current ticket state readable on the ticket record while storing
+  comments and audit-relevant changes as append-only `record:ticket_event`
+  records committed through the same transaction as the state change.
+- Treat Git, GitHub, GitLab, CI/CD, chat, and email as external authorities when
+  appropriate; store stable references, normalized summaries, proposals, and
+  audited actions instead of silently mirroring complete histories.
+- Treat remote access, integrations, development-tool automation, and general
+  automation as proposal-producing clients unless a validated write contract
+  permits direct mutation.
+- Treat a successful release gate as evidence, not as permission to ignore known
+  baseline debt.
+- Preserve old public CLI behavior when introducing richer reports; use explicit
+  modes or unambiguous new flags.
+
+Parsing has one further guarantee, moved from the counter-machine section of
+`todo.md` because it holds regardless of that feature:
+
+- Keep normal life.txt parsing permissive. Unknown custom keys remain valid.
+
+The three counter-machine design principles stay with the counter-machine
+specification and move in #51 Part 2.
+
+## Product Boundaries
+
+Things this project has decided **not** to do, and the conditions under which
+each could be revisited. Moved from `todo.md` by #54.
+
+- **Keep credentials outside life.txt and plaintext configuration.** Store only
+  environment-variable or OS credential references, define token scopes and
+  rotation checks, and ensure logs, effective config, diagnostics, exports, and
+  support bundles never expose secrets.
+- **Keep remote/local transfer explicit** through export, copy, or proposal
+  import. Do not add background bidirectional synchronization, automatic Git
+  synchronization, or silent local caching of authoritative data.
+- **Keep external attachments reference-first.** Copy or transform content only
+  through the attachment transaction, MIME, size, privacy, permission, and
+  recovery policies; never silently mirror an entire mailbox, chat history, issue
+  tracker, repository, or CI log.
+- **Do not automatically close tickets** from commit keywords, merge events, CI
+  success, or deployment success until proposal review, permission, idempotency,
+  stale-evidence handling, and compound event-history writes are proven.
+- **Do not add arbitrary Web JavaScript**, direct life.txt rewrite plugins,
+  unrestricted integration or development-tool hooks, unrestricted automation, or
+  provider-triggered computation before sandbox and permission models exist.
+- **Keep arbitrary CSS administrator-only and disabled by default**; keep
+  arbitrary JavaScript and third-party in-page plugins deferred.
+- **Do not attempt to replace** email, calendar, chat, Git hosting, CI/CD, issue
+  trackers, or file storage wholesale; integrate through references, summaries,
+  proposals, and explicit approved actions.
+
+Counter-machine boundaries stay with the counter-machine specification and move
+in #51 Part 2.

@@ -43,6 +43,22 @@ def _semantic_items(items, include_indent=True):
     return records
 
 
+def _usable_bash():
+    executable = shutil.which("bash")
+    if not executable:
+        return False
+    try:
+        result = subprocess.run(
+            [executable, "--noprofile", "--norc", "-c", "printf ok"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5.0,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and result.stdout == b"ok"
+
+
 def _error_codes(diagnostics):
     return [diagnostic.code for diagnostic in diagnostics if diagnostic.severity == "error"]
 
@@ -151,7 +167,7 @@ class GoldenRoundTripTests(unittest.TestCase):
         self.assertEqual("[N] N Note\n| first\n|\n| third", item_to_line(item))
 
 
-@unittest.skipUnless(shutil.which("bash"), "bash is required for executable completion tests")
+@unittest.skipUnless(_usable_bash(), "usable bash is required for executable completion tests")
 class BashCompletionExecutionTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -191,7 +207,9 @@ class BashCompletionExecutionTests(unittest.TestCase):
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            universal_newlines=True,
+            encoding="utf-8",
+            errors="replace",
             env=environment,
         )
         return [line for line in result.stdout.splitlines() if line]

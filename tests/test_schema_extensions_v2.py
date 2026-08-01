@@ -14,6 +14,15 @@ from lifetxt.safety_foundation import schema_bundle
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def has_draft_2020_validator():
+    try:
+        from jsonschema import Draft202012Validator  # noqa: F401
+        from referencing import Registry, Resource  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 class SchemaExtensionsV2Tests(unittest.TestCase):
     def test_bundle_contains_seventy_six_generated_and_published_documents(self):
         bundle = schema_bundle()
@@ -34,7 +43,7 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
             self.assertEqual(76, strict["sample_count"])
             self.assertEqual("network-free referencing.Registry over published bundle", strict["reference_resolution"])
 
-    @unittest.skipUnless(importlib.util.find_spec("jsonschema") is not None, "jsonschema not installed")
+    @unittest.skipUnless(has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available")
     def test_real_doctor_report_validates_with_references(self):
         from jsonschema import Draft202012Validator
         from referencing import Registry, Resource
@@ -64,7 +73,7 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") is not None
     and importlib.util.find_spec("httpx") is not None
-    and importlib.util.find_spec("jsonschema") is not None,
+    and has_draft_2020_validator(),
     "Web/schema dependencies are not installed.",
 )
 class RealCapabilitySchemaTests(unittest.TestCase):

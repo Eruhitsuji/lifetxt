@@ -90,6 +90,13 @@ def parse_date(value):
         return None
 
 
+def parse_iso_date(value):
+    """Parse the ISO date subset supported by life.txt on Python 3.6+."""
+    if not isinstance(value, str):
+        return None
+    return parse_date(value.strip())
+
+
 def parse_datetime(value):
     """Parse a life.txt datetime without discarding an explicit UTC offset."""
     if not isinstance(value, str) or not DATETIME_RE.match(value):
@@ -108,6 +115,24 @@ def parse_datetime(value):
             return LifeDateTime.strptime(text, fmt)
         except ValueError:
             continue
+    return None
+
+
+def parse_iso_datetime(value):
+    """Parse the ISO datetime subset supported by life.txt on Python 3.6+."""
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    parsed = parse_datetime(text)
+    if parsed is None and " " in text and "T" not in text:
+        parsed = parse_datetime(text.replace(" ", "T", 1))
+    if parsed is not None:
+        return parsed
+    parsed_date = parse_iso_date(text)
+    if parsed_date is not None:
+        return datetime.combine(parsed_date, time(0, 0, 0))
     return None
 
 

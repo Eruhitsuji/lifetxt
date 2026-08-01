@@ -253,7 +253,10 @@ def install_remote_client_cli():
         if "remote" in subs.choices:
             return parser
         remote = subs.add_parser("remote", help="Use authenticated Remote Safe Mode.")
-        remote_subs = remote.add_subparsers(dest="remote_command", required=True)
+        kwargs = {"dest": "remote_command"}
+        if sys.version_info[:2] >= (3, 7):
+            kwargs["required"] = True
+        remote_subs = remote.add_subparsers(**kwargs)
         command = remote_subs.add_parser("profile-set")
         command.add_argument("name")
         command.add_argument("url")

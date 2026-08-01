@@ -76,7 +76,7 @@ class RemoteClientWritesTests(unittest.TestCase):
     @mock.patch("lifetxt.remote_client_writes.mutate_ticket")
     def test_edit_parses_fields(self, mutate):
         edit_ticket({"url": "https://example.test"}, "WEB-2", {"priority": "high"}, ["milestone"])
-        payload = mutate.call_args.args[2]
+        payload = mutate.call_args[0][2]
         self.assertEqual(payload["set"], {"priority": "high"})
         self.assertEqual(payload["unset"], ["milestone"])
 

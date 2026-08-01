@@ -88,13 +88,19 @@ class SafetyFoundationTests(unittest.TestCase):
         self.assertTrue(valid)
         self.assertEqual("", error)
 
-        valid, error = validate_timezone("Asia/Tokyo")
-        self.assertTrue(valid)
-        self.assertEqual("", error)
-
         valid, error = validate_timezone("Not/A_Real_Zone")
         self.assertFalse(valid)
         self.assertTrue(error)
+
+    def test_iana_timezone_validates_when_provider_is_available(self):
+        try:
+            safety_foundation_module._timezone_for_name("Asia/Tokyo")
+        except Exception as exc:
+            self.skipTest("IANA timezone provider unavailable: %s" % exc)
+
+        valid, error = validate_timezone("Asia/Tokyo")
+        self.assertTrue(valid)
+        self.assertEqual("", error)
 
     def test_unrecognized_host_timezone_falls_back_to_local(self):
         original = safety_foundation_module._host_timezone_name

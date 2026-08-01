@@ -165,7 +165,7 @@ traceability:
       capability_id: cap-workspace-resolution-safety
       epic: P1 Configuration and Workspace Foundation
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/48
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/63
       changed_files_or_scope:
         - Detect self-referential symlink/junction cycles before dangerous workspace source expansion
         - Enforce workspace.max_total_source_bytes across unique resolved source files
@@ -185,7 +185,7 @@ traceability:
         - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
         - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null
-      status: in_progress
+      status: implemented
 
 required_chain:
   - Requirement

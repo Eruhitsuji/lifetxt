@@ -38,7 +38,7 @@ traceability:
       capability_id: cap-local-test-compatibility
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/41
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/42
       changed_files_or_scope:
         - Skip bash completion execution tests when the resolved bash cannot run the fixture
         - tests/test_roundtrip_golden.py

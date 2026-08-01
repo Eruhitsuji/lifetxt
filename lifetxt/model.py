@@ -241,13 +241,14 @@ STATUS_STATE_VALUES = (
 class Diagnostic(object):
     """A parser or validator message."""
 
-    def __init__(self, severity, code, message, line=None, column=None, source=None):
+    def __init__(self, severity, code, message, line=None, column=None, source=None, hint=""):
         self.severity = severity
         self.code = code
         self.message = message
         self.line = line
         self.column = column
         self.source = source
+        self.hint = hint or ""
 
     def to_dict(self):
         data = OrderedDict()
@@ -260,6 +261,7 @@ class Diagnostic(object):
             data["line"] = self.line
         if self.column is not None:
             data["column"] = self.column
+        data["hint"] = self.hint
         return data
 
     def format(self):

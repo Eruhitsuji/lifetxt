@@ -15,7 +15,7 @@ traceability:
       capability_id: cap-local-test-compatibility
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/36
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/38
       changed_files_or_scope:
         - Python 3.6 and Windows local unittest compatibility
         - pyproject.toml

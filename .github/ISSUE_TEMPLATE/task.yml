@@ -50,6 +50,58 @@ body:
       required: true
 
   - type: dropdown
+    id: lifecycle-phase
+    attributes:
+      label: Lifecycle phase
+      description: >-
+        From .ai/managed/core/PROCESS.md. Required by Definition of Ready.
+      options:
+        - Discovery
+        - Product Requirements
+        - System / Software Requirements
+        - Architecture and Design
+        - Task Decomposition
+        - Implementation
+        - Developer Verification
+        - Independent Review
+        - Integration Verification
+        - Release Approval
+        - Deployment
+        - Operations and Monitoring
+        - Incident and Maintenance
+        - Evaluation and Improvement
+        - Deprecation
+        - Retirement
+    validations:
+      required: true
+
+  - type: textarea
+    id: review-viewpoints
+    attributes:
+      label: Review viewpoints
+      description: >-
+        Which reviews this change needs, from .ai/managed/core/REVIEW.md:
+        requirements, design, code, test, security, integration, release,
+        operations, audit. Say so explicitly when only code review applies.
+      value: |
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-viewpoints
+    attributes:
+      label: Test viewpoints
+      description: >-
+        How high-risk behavior in this change will be verified. State
+        "none - no high-risk behavior" when that is true, rather than leaving it
+        blank.
+      value: |
+        -
+    validations:
+      required: true
+
+  - type: dropdown
     id: owner
     attributes:
       label: Owner type

@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
+from lifetxt.diagnostic_contract import diagnostics_to_output
 from lifetxt.parser import parse_text
 from lifetxt.csvio import items_from_csv_text, items_to_csv
 from lifetxt.links import link_records
@@ -7764,7 +7765,7 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         return {
             "ok": not has_error,
             "item_count": len(items),
-            "diagnostics": [d.to_dict() for d in diagnostics],
+            "diagnostics": diagnostics_to_output(diagnostics),
         }
 
     def test_valid_line_returns_ok_true(self):

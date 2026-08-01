@@ -112,6 +112,22 @@ traceability:
         - 'todo.md 450 -> 437 lines, 244 -> 237 checkbox items; migrated phrases absent from todo.md and present exactly once in RULES.md'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/51
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/56
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/60
+      changed_files_or_scope:
+        - Move the counter-machine internal specification and pure machine rules from todo.md into docs/design/counter-machine.md
+        - docs/design/counter-machine.md
+        - todo.md
+      tests_or_evidence:
+        - 'one-to-one mapping table in the pull request body'
+        - 'todo.md dedicated counter-machine section replaced by a pointer'
+        - '36 dedicated-section items, 12 scattered machine rules, and 3 counter-machine principles appear in docs/design/counter-machine.md'
+        - 'category-3 roadmap items remain in todo.md and are not edited'
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-config-concurrent-write-safety
       capability_id: cap-config-safe-writes
       epic: null

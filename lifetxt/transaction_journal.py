@@ -25,6 +25,7 @@ from .transaction_policy import (
     permission_report, policy_from_config, version_compatibility,
     verify_integrity_manifest, write_integrity_manifest,
 )
+from .timeutil import parse_iso_datetime
 
 
 SCHEMA_VERSION = 1
@@ -786,9 +787,8 @@ def _parse_utc(value):
     text = str(value)
     if text.endswith("Z"):
         text = text[:-1] + "+00:00"
-    try:
-        parsed = datetime.datetime.fromisoformat(text)
-    except ValueError:
+    parsed = parse_iso_datetime(text)
+    if parsed is None:
         return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=datetime.timezone.utc)

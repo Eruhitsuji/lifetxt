@@ -6,6 +6,7 @@ import tempfile
 import time
 import unittest
 
+import lifetxt.safety_foundation as safety_foundation_module
 from lifetxt.safety_foundation import (
     CANON_VERSION,
     FORMAT_VERSION,
@@ -83,9 +84,44 @@ class SafetyFoundationTests(unittest.TestCase):
         self.assertEqual(["cli", "file", "config", "host"], resolve_timezone_policy(config, text)["precedence"])
 
     def test_invalid_timezone_is_visible(self):
+        valid, error = validate_timezone("UTC")
+        self.assertTrue(valid)
+        self.assertEqual("", error)
+
+        valid, error = validate_timezone("Asia/Tokyo")
+        self.assertTrue(valid)
+        self.assertEqual("", error)
+
         valid, error = validate_timezone("Not/A_Real_Zone")
         self.assertFalse(valid)
         self.assertTrue(error)
+
+    def test_unrecognized_host_timezone_falls_back_to_local(self):
+        original = safety_foundation_module._host_timezone_name
+        try:
+            safety_foundation_module._host_timezone_name = lambda: "Unmapped Local Standard Time"
+            report = safety_foundation_module.resolve_timezone_policy({}, "")
+        finally:
+            safety_foundation_module._host_timezone_name = original
+
+        self.assertEqual("host", report["source"])
+        self.assertEqual("local", report["timezone"])
+        self.assertTrue(report["valid"])
+
+    def test_non_ascii_host_timezone_falls_back_to_local(self):
+        original_host = safety_foundation_module._host_timezone_name
+        original_validate = safety_foundation_module.validate_timezone
+        try:
+            safety_foundation_module._host_timezone_name = lambda: "\x93\x8c\x8b\x9e"
+            safety_foundation_module.validate_timezone = lambda _name: (True, "")
+            report = safety_foundation_module.resolve_timezone_policy({}, "")
+        finally:
+            safety_foundation_module._host_timezone_name = original_host
+            safety_foundation_module.validate_timezone = original_validate
+
+        self.assertEqual("host", report["source"])
+        self.assertEqual("local", report["timezone"])
+        self.assertTrue(report["valid"])
 
     def test_serve_target_reports_mismatch_and_drive_relative_path(self):
         report = serve_target_diagnostic([self.path("read.txt")], self.path("write.txt"))

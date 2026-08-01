@@ -59,8 +59,8 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
         self.assertIsInstance(result, MutationResult)
         self.assertEqual("one\n", read_text_snapshot(path).text)
         routed.assert_called_once()
-        self.assertEqual("atomic_write_text", routed.call_args.kwargs["operation"])
-        self.assertTrue(routed.call_args.kwargs["create"])
+        self.assertEqual("atomic_write_text", routed.call_args[1]["operation"])
+        self.assertTrue(routed.call_args[1]["create"])
 
     def test_atomic_json_compatibility_api_calls_shared_writer(self):
         path = self.path("state.json")
@@ -83,7 +83,7 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
             fzf_write_text(path, "[x] T Task id:T-1\n")
         self.assertEqual("[x]", self.items(path)[0].status)
         routed.assert_called_once()
-        self.assertEqual("fzf_helper.write_text", routed.call_args.kwargs["operation"])
+        self.assertEqual("fzf_helper.write_text", routed.call_args[1]["operation"])
 
     def test_tui_mutate_rows_routes_status_write_through_shared_layer(self):
         path = self.path()

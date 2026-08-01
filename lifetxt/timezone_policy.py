@@ -13,7 +13,7 @@ import contextvars
 import datetime
 import re
 
-from .safety_foundation import resolve_timezone_policy
+from .safety_foundation import _timezone_for_name, resolve_timezone_policy
 from .timeutil import parse_date, parse_datetime
 
 
@@ -68,10 +68,10 @@ def timezone_info(name=None):
     value = str(name or current_timezone_name()).strip()
     if value.lower() in ("local", "host"):
         return datetime.datetime.now().astimezone().tzinfo
+    if value.upper() == "UTC":
+        return UTC
     try:
-        from zoneinfo import ZoneInfo
-
-        return ZoneInfo(value)
+        return _timezone_for_name(value)
     except Exception as exc:
         raise TimezonePolicyError("Invalid timezone %r: %s" % (value, exc))
 

@@ -145,7 +145,7 @@ def permission_report(path, require_private=True):
         report["owner_matches"] = st.st_uid == os.geteuid()
         if not report["owner_matches"]:
             report["problems"].append("journal is not owned by the current user")
-    if require_private:
+    if require_private and os.name != "nt":
         unsafe = stat.S_IMODE(st.st_mode) & 0o077
         if unsafe:
             report["private"] = False

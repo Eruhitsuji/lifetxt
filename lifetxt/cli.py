@@ -6079,8 +6079,9 @@ def _run_inbox_selector(inbox_items):
     proc = subprocess.run(
         [selector],
         input="\n".join(rows) + "\n",
-        text=True,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
     )
     if proc.returncode != 0:
         return proc.returncode

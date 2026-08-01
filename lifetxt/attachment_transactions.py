@@ -9,6 +9,7 @@ import mimetypes
 import os
 import platform
 import stat
+import sys
 import zipfile
 from collections import OrderedDict
 
@@ -22,6 +23,13 @@ from .write_operations import transform_items_text
 
 class AttachmentTransactionError(ValueError):
     pass
+
+
+def _open_deterministic_zip(buffer):
+    kwargs = {"compression": zipfile.ZIP_DEFLATED}
+    if sys.version_info[:2] >= (3, 7):
+        kwargs["compresslevel"] = 9
+    return zipfile.ZipFile(buffer, "w", **kwargs)
 
 
 def resolve_attachment_target(life_path, stored_path, root=None, allow_symlink=False):
@@ -425,7 +433,7 @@ def build_directory_package(source_directory, config=None, include_hidden=False,
                 raise AttachmentTransactionError("Directory package exceeds %d bytes." % settings["max_bytes"])
     manifest_files = []
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with _open_deterministic_zip(buffer) as archive:
         for relative, full, size in records:
             data = read_bounded_file(full, max_bytes=settings["max_file_bytes"])
             info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))

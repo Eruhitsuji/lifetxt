@@ -11,6 +11,20 @@ traceability:
       tests_or_evidence: []
       release_or_deployment: null
       status: proposed
+    - requirement_id: req-local-unittest-compatibility
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/36
+      pull_request: null
+      changed_files_or_scope:
+        - Python 3.6 and Windows local unittest compatibility
+        - pyproject.toml
+        - .ai/project/COMMANDS.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

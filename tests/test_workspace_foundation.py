@@ -312,11 +312,10 @@ class ExampleConfigTests(unittest.TestCase):
             self.assertEqual([], errors, name)
 
     def test_examples_validate_against_config_schema(self):
-        import importlib.util
-
-        if importlib.util.find_spec("jsonschema") is None:
-            self.skipTest("jsonschema not installed")
-        from jsonschema import Draft202012Validator
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("Draft 2020-12 jsonschema validation not available")
         from lifetxt.safety_foundation import schema_bundle
 
         schema = schema_bundle()["config-v1.schema.json"]

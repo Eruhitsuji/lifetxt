@@ -46,6 +46,16 @@ class DoctorCliV2Tests(unittest.TestCase):
         )
         self.assertEqual("2026-07-23T12:00", timezone.sample)
 
+    def test_extended_commands_require_subcommands_without_traceback(self):
+        for command in ("attachment", "safety", "format"):
+            stderr = io.StringIO()
+            with self.subTest(command=command):
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(SystemExit) as raised:
+                        entrypoint.main([command])
+                self.assertEqual(2, raised.exception.code)
+                self.assertIn("%s requires a subcommand" % command, stderr.getvalue())
+
     def test_doctor_returns_integrated_json_report(self):
         code, stdout, stderr = self.run_command(
             [

@@ -161,6 +161,31 @@ traceability:
         - 'AI first-pass review found a check-then-write race, an unmanaged retained-candidate lifecycle, and a dead parameter; all three fixed before review of the head commit'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-workspace-source-integrity
+      capability_id: cap-workspace-resolution-safety
+      epic: P1 Configuration and Workspace Foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/48
+      pull_request: null
+      changed_files_or_scope:
+        - Detect self-referential symlink/junction cycles before dangerous workspace source expansion
+        - Enforce workspace.max_total_source_bytes across unique resolved source files
+        - Register workspace.max_total_source_bytes in config defaults, metadata, and schema
+        - lifetxt/config.py
+        - lifetxt/config_registry.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - lifetxt/workspace.py
+        - tests/test_workspace_foundation.py
+        - docs/en/config.md
+        - docs/ja/config.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'tests/test_workspace_foundation.py WorkspaceResolutionTests: symlink cycle, sibling symlink, Windows junction, broken symlink, and source-size boundary cases'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      status: in_progress
 
 required_chain:
   - Requirement

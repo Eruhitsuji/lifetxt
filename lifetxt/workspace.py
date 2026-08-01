@@ -17,6 +17,7 @@ from __future__ import unicode_literals
 import fnmatch
 import glob
 import os
+import stat
 from collections import OrderedDict
 
 
@@ -33,6 +34,12 @@ _NON_WRITE_TARGET_ROLES = ("generated", "archive")
 # Soft ceiling on source count; large workspaces still resolve but warn so a
 # runaway glob or accidental directory import is visible.
 MAX_SOURCES = 200
+
+# Hard ceiling on bytes read from resolved source files. The value follows the
+# existing 64 MiB bounded-file-read default used by attachment safety checks.
+DEFAULT_MAX_TOTAL_SOURCE_BYTES = 64 * 1024 * 1024
+_MAX_SIZE_CONTRIBUTORS = 5
+_SOURCE_SIZE_LIMIT_KEY = "workspace.max_total_source_bytes"
 
 
 def diagnostic(severity, code, message, hint="", source=None):
@@ -191,6 +198,189 @@ def _has_glob(path):
     return any(char in path for char in ("*", "?", "["))
 
 
+def _uses_recursive_glob(path):
+    return "**" in str(path)
+
+
+def _norm_abs(path):
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _path_is_link_like(path):
+    try:
+        if os.path.islink(path):
+            return True
+        isjunction = getattr(os.path, "isjunction", None)
+        if isjunction and isjunction(path):
+            return True
+        reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+        if reparse_flag:
+            return bool(getattr(os.lstat(path), "st_file_attributes", 0) & reparse_flag)
+        return False
+    except OSError:
+        return False
+
+
+def _strip_windows_reparse_prefix(path):
+    text = str(path)
+    if text.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + text[8:]
+    if text.startswith("\\\\?\\"):
+        return text[4:]
+    return text
+
+
+def _read_link_target(path):
+    try:
+        target = os.readlink(path)
+    except (AttributeError, OSError, ValueError):
+        try:
+            real = os.path.realpath(path)
+        except OSError:
+            return None
+        if _norm_abs(real) == _norm_abs(path):
+            return None
+        return real
+    target = _strip_windows_reparse_prefix(target)
+    if not os.path.isabs(target):
+        target = os.path.join(os.path.dirname(path), target)
+    return os.path.abspath(target)
+
+
+def _is_ancestor_or_same(parent, child):
+    try:
+        return os.path.commonpath([_norm_abs(parent), _norm_abs(child)]) == _norm_abs(parent)
+    except ValueError:
+        return False
+
+
+def _paths_refer_to_own_chain(path, target):
+    return _is_ancestor_or_same(target, path) or _is_ancestor_or_same(path, target)
+
+
+def _same_file_identity(left, right):
+    return (left.st_dev, left.st_ino) == (right.st_dev, right.st_ino)
+
+
+def _link_points_to_ancestor_by_identity(path):
+    if not _path_is_link_like(path):
+        return None
+    try:
+        target_stat = os.stat(path)
+    except OSError:
+        return None
+    for ancestor in _path_prefixes(os.path.dirname(path)):
+        try:
+            ancestor_stat = os.stat(ancestor)
+        except OSError:
+            continue
+        if _same_file_identity(target_stat, ancestor_stat):
+            return os.path.abspath(path)
+    return None
+
+
+def _path_prefixes(path):
+    prefixes = []
+    current = os.path.abspath(path)
+    while True:
+        head, tail = os.path.split(current)
+        if tail:
+            prefixes.append(current)
+            current = head
+            continue
+        break
+    prefixes.reverse()
+    return prefixes
+
+
+def _glob_static_prefix(path):
+    current = os.path.abspath(path)
+    while _has_glob(current):
+        head, _tail = os.path.split(current)
+        if not head or head == current:
+            return current
+        current = head
+    return current
+
+
+def _link_cycle_path(path):
+    if not _path_is_link_like(path):
+        return None
+    identity_cycle = _link_points_to_ancestor_by_identity(path)
+    if identity_cycle:
+        return identity_cycle
+    current = os.path.abspath(path)
+    seen = set()
+    for _depth in range(64):
+        key = _norm_abs(current)
+        if key in seen:
+            return os.path.abspath(path)
+        seen.add(key)
+        if not _path_is_link_like(current):
+            return None
+        target = _read_link_target(current)
+        if not target:
+            return None
+        if _paths_refer_to_own_chain(current, target):
+            return os.path.abspath(path)
+        current = target
+    return os.path.abspath(path)
+
+
+def _cycle_diagnostic(path):
+    return diagnostic(
+        "error",
+        "WS014",
+        "Workspace source contains a self-referential link cycle: %s." % path,
+        "Remove the symlink/junction cycle or narrow the source glob before resolving this workspace.",
+        path,
+    )
+
+
+def _append_cycle_row(rows, seen, path):
+    key = _norm_abs(path)
+    if key in seen:
+        return
+    seen.add(key)
+    rows.append(_cycle_diagnostic(path))
+
+
+def _source_cycle_diagnostics(record):
+    rows = []
+    seen = set()
+    resolved = record["resolved_path"]
+    root = _glob_static_prefix(resolved) if _has_glob(record["path"]) else resolved
+
+    for prefix in _path_prefixes(root):
+        cycle = _link_cycle_path(prefix)
+        if cycle:
+            _append_cycle_row(rows, seen, cycle)
+
+    if rows or not (_has_glob(record["path"]) and _uses_recursive_glob(record["path"])):
+        return rows
+    if not os.path.isdir(root):
+        return rows
+
+    for dirpath, dirnames, _filenames in os.walk(root, topdown=True, followlinks=False):
+        kept = []
+        for dirname in dirnames:
+            candidate = os.path.join(dirpath, dirname)
+            cycle = _link_cycle_path(candidate)
+            if cycle:
+                _append_cycle_row(rows, seen, cycle)
+                continue
+            if not _path_is_link_like(candidate):
+                kept.append(dirname)
+        dirnames[:] = kept
+    return rows
+
+
+def _mark_source_unexpanded(record):
+    record["matched_glob"] = _has_glob(record["path"]) or os.path.isdir(record["resolved_path"])
+    record["files"] = []
+    record["exists"] = False
+
+
 def _directory_life_files(directory):
     patterns = ("life.txt", "*.life.txt", "*_life.txt", "*.txt")
     matches = []
@@ -236,6 +426,76 @@ def _expand_source_files(record):
     return files
 
 
+def _configured_max_total_source_bytes(config, diagnostics):
+    raw = None
+    workspace = config.get("workspace") if isinstance(config, dict) else None
+    if isinstance(workspace, dict):
+        raw = workspace.get("max_total_source_bytes")
+    if raw is None:
+        return DEFAULT_MAX_TOTAL_SOURCE_BYTES
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        diagnostics.append(
+            diagnostic(
+                "error",
+                "WS016",
+                "%s must be a positive integer byte count." % _SOURCE_SIZE_LIMIT_KEY,
+                "Set it to a positive integer or remove the key to use the default %d."
+                % DEFAULT_MAX_TOTAL_SOURCE_BYTES,
+                _SOURCE_SIZE_LIMIT_KEY,
+            )
+        )
+        return DEFAULT_MAX_TOTAL_SOURCE_BYTES
+    if value < 1:
+        diagnostics.append(
+            diagnostic(
+                "error",
+                "WS016",
+                "%s must be at least 1 byte." % _SOURCE_SIZE_LIMIT_KEY,
+                "Set it to a positive integer or remove the key to use the default %d."
+                % DEFAULT_MAX_TOTAL_SOURCE_BYTES,
+                _SOURCE_SIZE_LIMIT_KEY,
+            )
+        )
+        return DEFAULT_MAX_TOTAL_SOURCE_BYTES
+    return value
+
+
+def _source_size_diagnostics(sources, limit):
+    contributors = []
+    total = 0
+    seen = set()
+    for record in sources:
+        for path in record["files"]:
+            try:
+                if not os.path.isfile(path):
+                    continue
+                key = os.path.normcase(os.path.realpath(path))
+                if key in seen:
+                    continue
+                seen.add(key)
+                size = os.path.getsize(path)
+            except OSError:
+                continue
+            total += size
+            contributors.append((size, path))
+    if total <= limit:
+        return []
+    largest = sorted(contributors, key=lambda entry: (-entry[0], entry[1]))[:_MAX_SIZE_CONTRIBUTORS]
+    details = ", ".join("%s (%d bytes)" % (path, size) for size, path in largest)
+    return [
+        diagnostic(
+            "error",
+            "WS015",
+            "Workspace sources total %d bytes, above limit %d bytes." % (total, limit),
+            "Narrow sources, exclude generated files, or raise %s. Largest contributors: %s."
+            % (_SOURCE_SIZE_LIMIT_KEY, details or "(none)"),
+            largest[0][1] if largest else None,
+        )
+    ]
+
+
 def resolve_workspace(config, name=None, base_dir=None):
     """Resolve a workspace into a deterministic, inspectable result.
 
@@ -277,7 +537,12 @@ def resolve_workspace(config, name=None, base_dir=None):
                            "Unknown source role %r for %s." % (record["role"], record["path"]),
                            "Use one of: %s." % ", ".join(KNOWN_ROLES), record["path"])
             )
-        _expand_source_files(record)
+        cycle_rows = _source_cycle_diagnostics(record)
+        if cycle_rows:
+            diagnostics.extend(cycle_rows)
+            _mark_source_unexpanded(record)
+        else:
+            _expand_source_files(record)
         sources.append(record)
 
     if not sources:
@@ -290,6 +555,11 @@ def resolve_workspace(config, name=None, base_dir=None):
     diagnostics.extend(_alias_diagnostics(sources))
     diagnostics.extend(_required_diagnostics(sources))
     diagnostics.extend(_outside_root_diagnostics(sources, base_dir))
+    diagnostics.extend(
+        _source_size_diagnostics(
+            sources, _configured_max_total_source_bytes(config, diagnostics)
+        )
+    )
     if len(sources) > MAX_SOURCES:
         diagnostics.append(
             diagnostic("warning", "WS013",

@@ -509,8 +509,32 @@ Categories:
 | `id` | Duplicate IDs and unsafe ID-like values |
 | `reference` | Missing, self, cyclic, or ambiguous references |
 | `recurrence` | `repeat:`, `RRULE:`, `interval:`, and `count:` recommendations |
+| `duration` | Duration fields such as `est:` and `elapsed:` |
 | `workflow` | Status/detail workflow and dependency-state recommendations |
+| `files` | Attachment target, type, content-hash, and portability diagnostics |
 | `semantic` | Fallback category for semantic diagnostics not covered above |
+
+JSON diagnostics:
+
+`check --format json` returns an array of diagnostic objects. The stable fields
+are `severity`, `code`, `category`, `message`, `source`, `line`, `column`, and
+`hint`. `category` is part of the published contract and matches the categories
+accepted by `--category`. `hint` is always present as a string; diagnostics with
+no extra guidance use `""`.
+
+`source`, `line`, and `column` are omitted when that location component is not
+known. Consumers must ignore unknown fields so future releases can add fields
+without breaking scripts. The current transition is additive: scripts written
+against the previous CLI JSON output should keep reading their existing fields
+and relax exact-key validation to tolerate `hint` and future unknown fields.
+Existing stable fields are not removed or renamed without first documenting a
+transition period; the old spelling remains available during that period and is
+removed only in a later release. `span` is intentionally deferred until
+parser-native end spans are implemented; do not infer a stable `span` from
+`line` and `column`.
+
+The same diagnostic object shape is used by the raw-line validation surfaces
+`POST /api/check-line` and MCP `check_line`.
 
 Examples:
 

@@ -5,12 +5,18 @@ commands:
       - python -m pip install -e .
 
   format:
-    status: TODO
+    status: tracked_exception
     values: []
+    exception:
+      reason: No dedicated formatter is configured for this project yet.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/39
 
   lint:
-    status: TODO
+    status: tracked_exception
     values: []
+    exception:
+      reason: No dedicated lint command is configured for this project yet.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/39
 
   unit_test:
     status: configured

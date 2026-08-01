@@ -1,0 +1,88 @@
+schema_version: 1
+
+default_assurance_level: Standard
+
+change_types:
+  - Feature
+  - Bug
+  - Investigation
+  - Refactoring
+  - Security
+  - Performance
+  - Migration
+  - Operations
+  - Incident
+  - Deprecation
+  - Standard Update
+
+levels:
+  Quick:
+    artifacts:
+      - issue_or_pr_summary
+    reviews:
+      minimum: 0
+      required_when_code_changes: true
+    human_approval:
+      required: false
+    verification:
+      - targeted_check_or_documented_reason
+    merge_conditions:
+      - no_blocking_findings
+
+  Standard:
+    artifacts:
+      - task_contract
+      - pr_template
+      - verification_results
+    reviews:
+      minimum: 1
+    human_approval:
+      required_for_protected_branch: true
+    verification:
+      - project_commands
+      - targeted_tests
+    merge_conditions:
+      - definition_of_done_satisfied
+      - ci_passed
+
+  High:
+    artifacts:
+      - change_package
+      - traceability_record
+      - test_plan
+      - review_ledger
+    reviews:
+      minimum: 2
+      required_types:
+        - implementation
+        - integration
+    human_approval:
+      required: true
+    verification:
+      - unit_tests
+      - integration_tests
+      - compatibility_or_migration_checks
+    merge_conditions:
+      - merge_authority_approval
+      - rollback_plan_confirmed
+
+  Regulated:
+    artifacts:
+      - change_package
+      - approval_record
+      - retained_test_evidence
+      - release_or_operations_record
+    reviews:
+      minimum: 2
+      required_types:
+        - audit
+        - authority
+    human_approval:
+      required: true
+    verification:
+      - verification_matrix
+      - retained_evidence
+    merge_conditions:
+      - explicit_authority_approval
+      - no_stale_review
+      - rollback_or_recovery_confirmed

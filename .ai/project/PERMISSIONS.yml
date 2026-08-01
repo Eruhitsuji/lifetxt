@@ -1,0 +1,31 @@
+schema_version: 1
+
+ai_permissions:
+  allowed_by_default:
+    - read_repository_files
+    - inspect_git_status_and_diffs
+    - create_local_branches_or_worktrees_for_assigned_tasks
+    - edit_files_within_write_scope
+    - run_declared_project_commands
+    - draft_issues_pull_requests_plans_tests_reviews
+
+  requires_human_approval:
+    - destructive_filesystem_or_git_operation
+    - dependency_wide_migration
+    - force_push_or_history_rewrite
+    - repository_permission_or_ruleset_change
+    - secret_or_credential_change
+    - external_paid_service_access
+    - deployment
+    - release
+    - rollback
+    - retirement
+    - security_exception
+    - major_risk_acceptance
+
+  prohibited:
+    - bypass_branch_protection_or_rulesets
+    - sole_final_approval_of_own_work
+    - store_secrets_in_repository_prompts_issues_prs_logs_or_artifacts
+    - semantic_conflict_resolution_without_recorded_decision
+    - false_claim_that_unrun_command_passed

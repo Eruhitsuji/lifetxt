@@ -1,0 +1,25 @@
+schema_version: 1
+
+traceability:
+  chains:
+    - requirement_id: req-example
+      capability_id: cap-example
+      epic: null
+      task_issue: null
+      pull_request: null
+      changed_files_or_scope: []
+      tests_or_evidence: []
+      release_or_deployment: null
+      status: proposed
+
+required_chain:
+  - Requirement
+  - Capability
+  - Epic
+  - Task
+  - Pull Request
+  - Test/Evidence
+  - Release
+
+gap_policy:
+  missing_link_action: create_follow_up_issue_or_approved_exception

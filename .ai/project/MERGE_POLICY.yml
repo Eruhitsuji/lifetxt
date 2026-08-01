@@ -1,0 +1,37 @@
+schema_version: 1
+
+default_branch: main
+
+required_controls:
+  - direct_push_prohibited
+  - force_push_prohibited
+  - pull_request_required
+  - related_issue_required
+  - required_ci_must_pass
+  - unresolved_review_comments_block_merge
+  - definition_of_done_required
+  - latest_push_requires_review
+  - stale_approvals_invalid
+  - implementer_and_merge_authority_separated
+  - latest_pusher_not_sole_final_approver
+  - ai_ruleset_bypass_prohibited
+  - shared_file_conflicts_owned_by_integrator_or_owner
+  - rollback_or_revert_plan_required
+
+review_freshness:
+  stale_when: reviewed_commit != current_head_commit
+  required_action: repeat_or_reconfirm_review_before_merge
+
+merge_queue:
+  preferred_when_available: true
+  required_for_high_parallel_volume: true
+
+shared_files:
+  examples:
+    - package lock files
+    - dependency manifests
+    - routing registries
+    - public API contracts
+    - database migrations
+    - generated files
+  default_owner: Integrator

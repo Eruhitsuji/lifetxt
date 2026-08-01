@@ -1,0 +1,20 @@
+schema_version: 1
+
+capabilities:
+  - id: cap-example
+    name: Example capability
+    summary: Replace this starter record with the first real capability.
+    status: proposed
+    owner: TODO
+    source_requirements:
+      - req-example
+    implementation_locations: []
+    public_interfaces: []
+    tests_or_evidence: []
+    related_issues: []
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

@@ -7,6 +7,11 @@ implemented yet. User-facing English and Japanese documentation stays on the
 roadmap until the feature exists; this file is the internal specification that
 implementation and review must use.
 
+The optional runtime must not change the life.txt grammar or ordinary item
+behavior. The first implementation is local, dependency-free, CLI-only,
+read-only with respect to its input, deterministic, and limited to `inc`,
+`decjz`, and `halt`.
+
 Moved from `todo.md` by #56, as #51 Part 2.
 
 ## Destination Decision

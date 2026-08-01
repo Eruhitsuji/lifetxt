@@ -101,7 +101,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/51
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/54
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/55
       changed_files_or_scope:
         - Move the general design principles and product boundaries from todo.md into RULES.md
         - .ai/project/RULES.md

@@ -54,7 +54,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/43
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/45
       changed_files_or_scope:
         - Create the eleven labels declared by the issue templates
         - repository label settings (GitHub, not a file)

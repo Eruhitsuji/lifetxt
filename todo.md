@@ -19,12 +19,10 @@ Moved to [`.ai/project/RULES.md`](.ai/project/RULES.md) by #54, together with th
 project's product boundaries. That file is authoritative for principles and
 boundaries; this file is the roadmap. Do not re-add them here.
 
-The counter-machine principles stay below until #51 Part 2 moves them with the
-rest of the counter-machine specification:
-
-- Represent optional counter-machine data with normal Note records plus `machine:` details. Do not reuse Status (`S`) or Reminder (`R`) types for counters or instructions because those types already participate in presence and notification behavior.
-- Keep the minimal computation runtime deterministic and side-effect free: no clock, randomness, network, subprocesses, parallel execution, implicit file discovery, or mutation of the input program.
-- Treat unlimited execution as an explicit local CLI opt-in. Never make it the default or expose it automatically through Web, MCP, TUI, remote, integration, or automation surfaces.
+The counter-machine principles and internal specification moved to
+[`docs/design/counter-machine.md`](docs/design/counter-machine.md) by #56. This
+file keeps roadmap items and surface-specific follow-ups only; do not re-add the
+full specification here.
 
 Feature-track order after the current P0 foundation:
 
@@ -113,7 +111,6 @@ The foundation now exists across [`lifetxt/workspace.py`](lifetxt/workspace.py),
 - [ ] Extend workspace resolution to detect true symlink loops (self-referential cycles) and excessive total source byte size, in addition to the existing alias, generated-target, and source-count checks. Define source roles for ticket events, time entries, generated development-tool summaries, and archives without requiring users to split files.
 - [ ] Thread `--workspace` into the TUI and add per-workspace timezone/notification context so remote and Web surfaces select the same resolved manifest, not just CLI read/write paths.
 - [ ] Add schema-valid examples for remote, integration, and software-development ticket workspaces beyond the current personal/work/project/generated-calendar/team/kiosk set. Test Windows/POSIX paths, Unicode, broken JSON, unknown keys, cycles, missing files, glob order, ticket custom fields, workflow registries, and rollback after interrupted config updates.
-- [ ] Keep `lifetxt run FILE` independent from automatic workspace loading in its first release. The positional program file is the only input, `paths`/profiles/globs are ignored, and `-o` is the only result destination. Add a configurable default step limit only after demonstrated use; the initial CLI contract remains `100000`, with explicit `0` for unlimited local execution.
 
 ---
 
@@ -125,7 +122,6 @@ The read side now exists in [`lifetxt/projects.py`](lifetxt/projects.py): projec
 - [ ] Finish exposing the existing `project`/`portfolio` operations through TUI, Web, saved views, and remote read-only clients where capabilities permit. The main CLI, Project Hub, Portfolio, read-only MCP tools, project-alias normalization, shared reference/stale/terminal/severity settings, and capability discovery are implemented through `lifetxt/ticket_project_surfaces.py`; remaining adapters must consume the same complete `ticket-project-report-v1` object, preserve formulas/caveats/dependency-unknown counts, publish source revisions and privacy scope, and refuse unsupported schema versions instead of recalculating metrics locally.
 - [ ] Add validation for milestone/risk/issue/decision/meeting records (severity enum, resolution state, decision/follow-up dates, affected milestone links) and surface violations as stable diagnostics. Templates and record builders already exist. Keep generic `record:issue` available for project-level issues that do not need the development-ticket workflow; document optional conversion to `record:ticket` as an explicit previewed migration.
 - [ ] Add project permissions and privacy behavior for remote workspaces, team views, integrations, exports, AI context, notifications, tickets, ticket events, and time entries. Tests must cover duplicate project definitions, missing registries, cross-file tasks, archived/renamed projects, stale revisions, partial transactions, private tickets with shared events, and mixed private/shared records. Alias resolution and registry-only projects are already covered.
-- [ ] Exclude `machine:counter` and `machine:instruction` Notes from project progress, health, workload, invoice, ticket, and command-center metrics unless a user explicitly queries those custom records.
 
 ---
 
@@ -147,7 +143,6 @@ The core now exists in [`lifetxt/tickets.py`](lifetxt/tickets.py): a canonical f
 - [ ] Add source-manifest, exact input-revision, generated-at, privacy/redaction, and cache-validity metadata to `ticket-project-report-v1` or a versioned result envelope before Web, saved-view, remote, notification, or AI-context consumers persist reports. Define how partial/unreadable/private sources affect `dependency_unknown` reasons and project totals, ensure capability discovery declares the metadata version, and add stale-report rejection tests without exposing unrelated ticket bodies.
 - [ ] Add cross-version schema/capability compatibility fixtures and integrate the now-authoritative `record:version`/`record:sprint` contracts into `ticket-project-report-v1` attention and project/portfolio views. The local planning report, backlog, roadmap, capacity/unresolved-member warnings, seven schemas, read-only MCP tools, and capability boundary are implemented; next define envelope/version negotiation, report revision/privacy metadata, older-client refusal/fallback, and deterministic release/sprint attention formulas.
 - [ ] Add local CLI fixtures and English/Japanese documentation for bug, feature, task, support, and security trackers; parent/subtask, duplicate, dependency, private/custom-field, cross-file, archive, and malformed-ticket cases; and migration from an existing Task or generic `record:issue` through an explicit diff/proposal. Main report-command, project-alias, Project Hub, Portfolio, MCP, and capability integration fixtures now exist; keep expanding corpus coverage rather than duplicating adapter-specific metric tests.
-- [ ] Keep counter-machine Note records outside ticket discovery and ticket field registries even when they use common detail names such as `id`, `target`, or `next`.
 
 ---
 
@@ -162,7 +157,6 @@ The local same-file foundation is implemented. [`lifetxt/ticket_workflow.py`](li
 - [ ] Integrate the existing timer and compound work-session contracts through explicit proposals or revision-set transactions that can create time entries without double-counting legacy `elapsed:`. Add start/stop/resume/cancel/recovery mapping, timer/work-session references, correction approval, project/user/activity timesheets, estimate/remaining/variance reports, billing/export policy, and migration guidance.
 - [ ] Extend version/sprint planning with previewed carry-over, release-note inputs, parent-version validation across archives, WIP policy, active-sprint policy, commitment/completion, backlog age, cycle/lead time, throughput, estimate variance, velocity, and burndown. Publish formulas, source coverage, timezone boundaries, missing-data caveats, and never present forecasts as commitments.
 - [ ] Extend the focused local fixtures with cross-file interrupted commits, resume/compensation, same-time concurrent writers, duplicate/cyclic corrections, provider provenance, administrative redaction, private history, watcher expansion, timer recovery, version release/carry-over, capacity/WIP boundaries, older schemas, Windows/CRLF/BOM, and real Web/TUI/remote clients.
-- [ ] Keep machine execution separate from ticket transitions, comments, audit history, time entries, timers, planning, and watcher notifications.
 
 ---
 
@@ -182,7 +176,6 @@ The deny-by-default Remote foundation, protocol version 2, and the first opt-in 
 - [ ] Add richer diagnostics without leaking local state. Cover TLS/proxy trust, authentication method, session-store mode/capacity, authorization scope, clock skew, capability/schema/configuration/ticket-workflow mismatch, source availability/count, server read-only and write-adapter state, audit-store state, token rotation/profile migration state, rate limits, recovery-required transactions, ETag/header rewriting, and older-client compatibility using aggregate or redacted data only.
 - [ ] Route authoritative remote mutations only after each individual operation passes a published gate for exact revision, authenticated role/project/field permission, privacy/redaction, clock/replay policy, append-only history generation, idempotency, all touched multi-target revisions, journal recovery, provider side effects/compensation, conflict response schemas, retry behavior, and real-client interruption tests. Keep timer, attachment, archive, project/configuration, ticket workflow/time/bulk, undo, and integration actions disabled until their complete gates pass.
 - [ ] Validate remote conflicts against `conflict-v1.schema.json` and show expected revision, current revision, current visible item, attempted change, generated events, affected side records, and available recovery actions without leaking fields the principal cannot read. Never overwrite automatically or call a comparison a three-way merge without a retained base.
-- [ ] Do not expose counter-machine execution through Remote CLI/TUI/Web. A future remote runtime requires independent CPU/time/memory/output quotas, cancellation, isolation, authentication, audit, and denial-of-service design.
 
 ---
 
@@ -197,7 +190,6 @@ The local group directory, recipient resolution, message composition, and derive
 - [ ] Add permission checks for group visibility, recipient discovery, messaging, delivery-state visibility, ticket watcher expansion, private-ticket notification content, and administrative changes.
 - [ ] Route terminal, desktop, email, Web, Slack, Teams, Discord, and future provider delivery through one backend contract that records outcomes without storing credentials in life.txt. Ticket notifications must reference stable ticket/event IDs and avoid leaking private fields.
 - [ ] Add tests for repeated recipients, direct-plus-group duplicates, nesting, cycles, empty groups, disabled members, partial delivery, acknowledgement completion, resend, membership changes, watcher additions/removals, and private ticket redaction.
-- [ ] Keep machine execution unable to send messages or notifications; runtime warnings and diagnostics stay on the invoking CLI stdout/stderr or selected result file.
 
 ---
 
@@ -210,7 +202,6 @@ The local group directory, recipient resolution, message composition, and derive
 - [ ] Implement Slack and email first because existing digest/SMTP foundations can validate the outbound contract. For Slack, cover channel input, message output, thread replies, user/group mapping, ticket reference previews, watcher notification delivery, and digest delivery. For email, cover SMTP output, IMAP or provider-API input, thread/message IDs, sender/subject rules, reply behavior, ticket creation/comment proposals, and safe attachment references.
 - [ ] Implement Discord and Teams only after the common contract and Slack/email operational evidence are stable. Cover webhook/bot or API capability differences, channel/team mapping, replies, rate limits, permission scopes, ticket references, and provider-specific unsupported operations without faking symmetry.
 - [ ] Add `integration list|show|test|pull|preview|send|health` and expose configured/installed capability state through doctor, Web administration, and MCP without returning credentials. Add fixtures and provider sandboxes/mocks for duplicate delivery, cursor reset, rate limits, revoked credentials, partial send, malformed payloads, restart, proposal approval conflicts, duplicate ticket references, and deleted external objects.
-- [ ] Do not permit inbound messages, provider events, attachments, or automation mappings to execute counter-machine programs. `machine:` records remain inert until a local user explicitly invokes the CLI.
 
 ---
 
@@ -226,7 +217,6 @@ This track uses the provider-neutral proposal, credential, permission, and audit
 - [ ] Add ticket-driven release planning outputs: unresolved-by-version, merged-but-open, fixed-without-release, release notes, changelog candidates, security/private exclusions, and deployment verification. Generated text must cite the ticket/event/reference inputs and remain reviewable before publication.
 - [ ] Add development-tool operations to CLI, TUI/Web administration, MCP, and doctor only through shared capability rows. Show credential scopes, cursor health, stale references, orphaned external objects, rate limits, last synchronization/proposal time, and whether an operation is read-only, proposal-only, or writable.
 - [ ] Add fixtures and sandbox tests for rewritten Git history, force-pushed branches, duplicate commit references, rebased/squashed pull requests, renamed repositories, transferred issues, deleted builds, flaky/retried CI runs, provider outages, stale review state, partial external writes, rate limits, revoked credentials, approval conflicts, and recovery after a local ticket update succeeds but the external action fails.
-- [ ] Keep counter-machine examples and result files outside automatic ticket closure, CI action execution, and development-tool hooks unless a future explicit use case is separately designed and reviewed.
 
 ---
 
@@ -244,7 +234,6 @@ The daily command center, area organization, and backlinks now exist. [`lifetxt/
 - [ ] Add declarative automation only after proposals, audit logs, permissions, conflict-aware writes, transaction recovery, ticket workflow/history, integration idempotency, and credential boundaries are stable. Use allow-listed triggers/actions and never execute arbitrary code.
 - [ ] Consume provider and development-tool integrations through normalized adapter contracts. Store references/summaries when email, calendar, GitHub, GitLab, CI/CD, Slack, Teams, Discord, browser capture, or mobile sharing remains authoritative, and make every external side effect previewable and auditable.
 - [ ] Add privacy controls and redaction for personal, health, finance, family, work, security tickets, private comments, time entries, and customer data in shared views, remote responses, AI context, exports, support bundles, telemetry, integrations, and notifications.
-- [ ] Keep `machine:counter` and `machine:instruction` Notes out of default agenda, command-center attention, person/group work, project metrics, and automation triggers; allow explicit custom-detail queries and normal raw display.
 
 ---
 
@@ -256,7 +245,6 @@ The daily command center, area organization, and backlinks now exist. [`lifetxt/
 - [ ] Decide whether alarm, Pomodoro, and timer logging belong in core or remain delegated to OS tools based on real usage and notification-backend maturity.
 - [ ] Add a notification backend abstraction for terminal, Linux, macOS, Windows, email, Web, Slack, Teams, and Discord delivery with typed results, provider capability checks, ticket/event references, privacy filters, and redacted diagnostics.
 - [ ] Add quiet hours, persisted acknowledgement, recurring-reminder acknowledgement, shared snooze presets, timezone-aware scheduling, retry policy, restart-safe watcher state, ticket-watcher event selection, and provider-specific rate-limit handling.
-- [ ] Keep runtime step counting in memory and independent from timers, work sessions, `elapsed:`, clock context, and notification watchers.
 
 ---
 
@@ -277,7 +265,6 @@ The daily command center, area organization, and backlinks now exist. [`lifetxt/
 - [ ] Add `RDATE` support alongside `EXDATE`.
 - [ ] Add rolling-window re-expansion so previously expanded files do not silently become stale.
 - [ ] Define how archive/undo and transaction recovery handle attachments whose paths move after the original operation, including attachment references held by archived tickets and events.
-- [ ] Prove that counter-machine output is independent from host clock, timezone, locale, and hash-randomization seed; repeated runs with the same bytes, entry, step limit, and format must be byte-identical.
 
 ---
 
@@ -299,61 +286,12 @@ This track begins only after shared ticket schemas, queries, workflow transition
 
 ## P2: Deterministic Minimal Computation Runtime
 
-This optional track adds a universal but deliberately tiny computation model without changing the life.txt grammar or ordinary item behavior. It is lower priority than core safety, format, project, ticket, remote, integration, and daily-workflow work. The first implementation is local, dependency-free, CLI-only, read-only with respect to its input, deterministic, and limited to `inc`, `decjz`, and `halt`.
-
-### Record model
-
-- [ ] Represent every counter and instruction as a normal Note item using `[N] N`, not Status (`S`) or Reminder (`R`), so presence, reminder, agenda, notification, and command-center behavior is not triggered accidentally.
-- [ ] Define counters as `[N] N TITLE id:ID machine:counter value:INTEGER`. Require exactly one `id`, `machine`, and `value`; require ASCII decimal digits only; reject signs, decimal/exponent/hex/underscore forms; require a non-negative value; and use arbitrary-precision integers with no language-level upper bound.
-- [ ] Define instructions as `[N] N TITLE id:ID machine:instruction op:OPERATION ...`. Treat instruction IDs as jump labels and require exactly one scalar value for every operation field.
-- [ ] Define `inc` as `op:inc target:COUNTER_ID next:NEXT_ID`; increment the target by one and move the program counter to `next` within the same in-memory step.
-- [ ] Define `decjz` as `op:decjz target:COUNTER_ID zero:ZERO_ID nonzero:NONZERO_ID`; when the counter is zero, preserve its value and jump to `zero`; otherwise decrement once and jump to `nonzero` within the same in-memory step.
-- [ ] Define `halt` as `op:halt` with no target/jump details. Count execution of `halt` as one step, set `last_instruction` to the halt ID, set `next_instruction` to `null`, and return `halted: true`.
-- [ ] Use one input-wide ID namespace for counters, instructions, and other items visible to machine references. Reject duplicate IDs, including a counter and instruction sharing the same ID. Do not infer or create missing labels, counters, or jump targets.
-- [ ] Preserve input definition order for counters in life and JSON output. Internal maps may optimize lookup but must not change deterministic serialization order.
-
-### Validation and diagnostics
-
-- [ ] Implement `lifetxt/counter_machine_validator.py` to collect machine records and validate the complete program before executing any instruction.
-- [ ] Define `C001` missing entry instruction, `C002` invalid counter value, `C003` unknown operation, `C004` missing required detail, `C005` missing target counter, `C006` missing target instruction, `C007` maximum step count exceeded, `C008` duplicate ID, `C009` repeated scalar detail, `C010` output resolves to the input file, `C011` invalid `machine:` record composition, and `C012` negative step limit.
-- [ ] Require exactly one scalar value for `id`, `machine`, `value`, `op`, `target`, `next`, `zero`, and `nonzero` wherever applicable. Reject repeated values instead of applying first-value or last-value semantics.
-- [ ] Reject operation-inapplicable details in strict machine validation, such as `target` on `halt`, `zero` on `inc`, or `next` on `decjz`, so typographical mistakes cannot be silently ignored.
-- [ ] Report every deterministic pre-execution validation error that can safely be collected, ordered by source line, code, and item ID. Do not execute partially valid programs and do not auto-correct references.
-- [ ] Keep machine-specific errors appearing only when the user explicitly invokes machine validation/execution. (The general guarantee that normal parsing stays permissive and unknown custom keys remain valid moved to `.ai/project/RULES.md` in #54.)
-
-### Runtime semantics
-
-- [ ] Implement `lifetxt/counter_machine.py` with immutable program definitions, mutable in-memory counter state, a current instruction ID, step count, and structured result. Keep parsing/validation separate from execution.
-- [ ] Define the step-limit boundary precisely: before each instruction, if `max_steps > 0` and `steps >= max_steps`, do not execute the pending instruction; return `C007`, `halted: false`, the current counters, the last executed instruction or `null`, and the pending `next_instruction`. After a permitted instruction executes, increment `steps` once.
-- [ ] Set the CLI default to `--max-steps 100000`. Interpret `--max-steps 0` as an explicit unlimited local mode, emit one fixed stderr warning, and document that a non-halting program may never return. Reject negative values as `C012`.
-- [ ] Guarantee the same result for the same input bytes, entry ID, step limit, and output format. Prohibit time access, randomness, network access, subprocesses, environment-dependent branching, implicit file reads, writes during execution, and parallel instruction execution.
-- [ ] Treat counter mutation and program-counter movement as indivisible within the single-threaded interpreter loop. Runtime failures must never expose a half-applied instruction state.
-- [ ] Keep resource claims accurate: counters and step counts have no fixed language-level bound, but real execution remains limited by memory, process lifetime, and the optional step limit.
-
-### CLI and output
-
-- [ ] Add `lifetxt run FILE --entry ID --max-steps N --format life|json -o FILE` through the unified CLI parser registry. Limit the initial command to these options plus normal global help/version behavior; do not add expressions, functions, tracing, includes, stdin programs, or mutation switches.
-- [ ] Read exactly one explicit UTF-8 life.txt file through the normal parser. Do not load configured `paths`, workspace manifests, neighboring files, links, attachments, or generated sources.
-- [ ] Default output to stdout. For `-o`, resolve input and output paths including aliases/symlinks and return `C010` if they identify the same file. Write a distinct output atomically; never modify the source program.
-- [ ] Define JSON output as a stable object containing `halted`, nullable `code`, `steps`, `entry`, nullable `last_instruction`, nullable `next_instruction`, and ordered `counters`. Include the complete intermediate state on `C007`.
-- [ ] Define life output as canonical `[N] N ... machine:counter value:...` records in original counter order. Require JSON for complete structured failure/interruption metadata; stderr may contain a fixed human-readable diagnostic.
-- [ ] Use process exit code `0` only for normal halt, `1` for machine validation/runtime failure including `C007`, and `2` for CLI argument parsing failure. Keep process exit codes separate from `C001`-`C012`.
-- [ ] Document that the initial release cannot resume automatically from an output state and never performs in-place counter updates. Checkpoints, resumption, traces, and mutation remain out of scope.
-
-### Tests, schemas, and documentation
-
-- [ ] Add the two-counter transfer sample and assert `a=0`, `b=3`, `halted=true`, and `steps=8` when `halt` counts as an instruction. Include zero-input and entry-at-halt cases.
-- [ ] Test arbitrary-precision values, self-loops, finite-limit non-halting programs, unlimited-mode argument handling without an endless CI run, off-by-one step limits, missing and duplicate references, repeated scalar details, unknown operations, invalid decimal forms, and input/output path aliases.
-- [ ] Test byte-identical output across repeated runs, supported Python versions, LF/CRLF input, unrelated ordinary Notes, input record order, different host clocks/timezones/locales, and hash-randomization seeds.
-- [ ] Publish `counter-machine-result-v1.schema.json` plus representative success, validation-error, and `C007` instances. Validate real CLI JSON in tests and include schema/sample integrity in the release manifest.
-- [ ] Add English/Japanese `counter-machine.md` documentation covering exact record forms, all three operations, diagnostics, step counting, output, safety boundaries, Turing-completeness assumptions, limitations, and complete examples.
-- [ ] Add dependency-free tests for `counter_machine.py`, `counter_machine_validator.py`, and the CLI. Do not add Web, TUI, MCP, remote, integration, or automation execution tests because those surfaces are intentionally unsupported.
-
-### Explicit non-goals
-
-- [ ] Do not add arithmetic expressions, arbitrary comparisons, strings, general `if`, loop syntax, functions, subroutines, stacks, arrays, standard input/output instructions, file access, external commands, GUI/TUI execution, MCP execution, remote execution, or in-place source updates.
-- [ ] Do not add debugger, trace, optimizer, compiler, macro, include, or alternate machine instructions until the three-operation runtime is implemented, documented, benchmarked, and proven useful.
-- [ ] Do not describe Turing completeness as operational safety or practical performance. State that universality assumes at least two unbounded non-negative counters and unbounded execution steps, while real runs remain finite-resource processes.
+The internal specification moved to
+[`docs/design/counter-machine.md`](docs/design/counter-machine.md) by #56. The
+runtime remains planned, CLI-only, deterministic, dependency-free, and lower
+priority than the P0/P1 foundations above. Keep this roadmap section as a
+pointer; do not re-add the detailed record model, validation, runtime, CLI,
+output, test, schema, documentation, or non-goal specification here.
 
 ---
 
@@ -368,7 +306,6 @@ This optional track adds a universal but deliberately tiny computation model wit
 - [ ] Add desktop/mobile previews and versioned configuration import/export with migration diagnostics.
 - [ ] Add personal, work, project, portfolio, software-development, team-board, kiosk, and mobile-capture presets composed from normal settings.
 - [ ] Add browser tests for invalid settings, missing tokens, contrast, responsive layouts, ticket-view presets, preset migration, import/export, provenance display, interrupted config updates, and broken-config recovery.
-- [ ] Do not add a browser counter-machine runner as part of Web customization.
 
 ---
 

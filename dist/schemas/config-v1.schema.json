@@ -34,6 +34,16 @@
       },
       "type": "object"
     },
+    "workspace": {
+      "additionalProperties": true,
+      "properties": {
+        "max_total_source_bytes": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "workspaces": {
       "additionalProperties": {
         "additionalProperties": true,

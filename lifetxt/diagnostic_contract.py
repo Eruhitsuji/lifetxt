@@ -58,8 +58,6 @@ def diagnostic_to_output_dict(diagnostic):
         output[key] = value
         if key == "code":
             output["category"] = diagnostic_category(diagnostic)
-    if "hint" not in output:
-        output["hint"] = ""
     return output
 
 

@@ -208,9 +208,13 @@ traceability:
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
         - 'tests/test_diagnostic_contract.py asserts CLI stdin, Web /api/check-line, and MCP check_line against one shared fixture table'
+        - 'tests/test_diagnostic_contract.py asserts file-based CLI/Web/MCP diagnostics include and preserve source in the same shared shape'
         - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
         - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
       release_or_deployment: null
+      notes: >-
+        #64 completes the stable field contract. Parser/validator diagnostics
+        still use `hint: ""` until actionable hint text is authored in #65.
       status: implemented
 
 required_chain:

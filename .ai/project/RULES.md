@@ -45,3 +45,24 @@ the issue body and pull request rather than by label. GitHub's default labels
 
 Issues closed before this taxonomy existed were deliberately not relabelled, so
 older issues carry whatever label was available at the time.
+
+## Tracked Exceptions
+
+`.ai/project/COMMANDS.yml` may record a command as `tracked_exception` when no
+command can be configured yet. The `tracked_by` issue is what keeps the exception
+from becoming permanent, so it has to be an issue that cannot outlive it.
+
+Rules:
+
+- `tracked_by` must reference an issue whose **closure condition is the removal of
+  that exception**. A broad cleanup or milestone issue is not acceptable: it can
+  be completed while the exception survives, which silently leaves the exception
+  untracked.
+- Every exception must state a `reason` and a `removal_condition`.
+- Closing an issue that appears as a `tracked_by` value requires either removing
+  the exception in the same change, or repointing `tracked_by` at a new issue that
+  satisfies the rule above.
+
+This rule exists because the `format` and `lint` exceptions were tracked by #39,
+a general post-adoption foundation issue. #39 was legitimately completed by #40
+while both exceptions remained, and nothing surfaced them again until #44.

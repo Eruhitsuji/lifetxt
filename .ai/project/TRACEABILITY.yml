@@ -64,6 +64,21 @@ traceability:
         - 'issues #43 and #44 relabelled to type:task + status:inbox and rendered correctly'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: standard adoption / foundation setup
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/44
+      pull_request: null
+      changed_files_or_scope:
+        - Repoint the format/lint tracked exceptions at an open issue and record the rule that keeps them tracked
+        - .ai/project/COMMANDS.yml
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'no tracked_by in .ai/project/COMMANDS.yml references a closed issue'
+        - 'pip download ruff --no-deps on Python 3.6.5 -> no compatible wheel; black resolves only to 22.8.0'
+        - 'git ls-files "*.py" -> 237 files, ~86,900 lines, the scale a formatter adoption would rewrite'
+      release_or_deployment: null
+      status: implemented
 
 required_chain:
   - Requirement

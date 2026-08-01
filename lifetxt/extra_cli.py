@@ -35,10 +35,7 @@ def _add_timezone_policy(parser):
 
 
 def _add_required_subparsers(parser, dest):
-    kwargs = {"dest": dest}
-    if sys.version_info[:2] >= (3, 7):
-        kwargs["required"] = True
-    return parser.add_subparsers(**kwargs)
+    return parser.add_subparsers(dest=dest)
 
 
 def _require_subcommand(command, parser, args):

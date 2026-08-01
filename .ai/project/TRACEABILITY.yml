@@ -2,13 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
-    - requirement_id: req-example
-      capability_id: cap-example
-      epic: null
-      task_issue: null
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: standard adoption / foundation setup
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/39
       pull_request: null
-      changed_files_or_scope: []
-      tests_or_evidence: []
+      changed_files_or_scope:
+        - .ai/project/METHOD.yml
+        - .ai/project/COMMANDS.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/adoption/REPORT.md
+      tests_or_evidence:
+        - YAML project records parse successfully
+        - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null
       status: proposed
     - requirement_id: req-local-unittest-compatibility

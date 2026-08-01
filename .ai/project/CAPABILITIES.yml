@@ -1,18 +1,35 @@
 schema_version: 1
 
 capabilities:
-  - id: cap-example
-    name: Example capability
-    summary: Replace this starter record with the first real capability.
-    status: proposed
-    owner: TODO
+  - id: cap-ai-standard-guided-activation
+    name: AI standard guided activation
+    summary: Keep the AI Development Standard v0.1.0 Guided trial active with explicit project commands, cadence, ownership, traceability, and adoption evidence.
+    status: active
+    owner: Eruhitsuji
     source_requirements:
-      - req-example
-    implementation_locations: []
-    public_interfaces: []
-    tests_or_evidence: []
-    related_issues: []
-    related_pull_requests: []
+      - req-ai-standard-guided-activation
+    implementation_locations:
+      - .ai/standard.lock.yml
+      - .ai/project/
+      - .ai/adoption/REPORT.md
+      - AGENTS.md
+      - CLAUDE.md
+      - .kiro/steering/development-standard.md
+      - .github/
+    public_interfaces:
+      - AGENTS.md
+      - CLAUDE.md
+      - .kiro/steering/development-standard.md
+      - .github/ISSUE_TEMPLATE/
+      - .github/PULL_REQUEST_TEMPLATE.md
+    tests_or_evidence:
+      - python -m lifetxt check examples/minimal_life.txt
+      - latest main CI after PR #38 succeeded
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/35
+      - https://github.com/Eruhitsuji/lifetxt/issues/39
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/37
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement:
       replaces: []
@@ -23,7 +40,7 @@ capabilities:
     name: Local test compatibility
     summary: Keep the local unittest suite runnable on the declared Python >=3.6 runtime, including Windows/PowerShell environments.
     status: active
-    owner: TODO
+    owner: Eruhitsuji
     source_requirements:
       - req-local-unittest-compatibility
     implementation_locations:

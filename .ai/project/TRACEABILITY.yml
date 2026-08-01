@@ -83,7 +83,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/52
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/53
       changed_files_or_scope:
         - Create the seven missing status labels and record labels as the status mechanism
         - Add the three Definition of Ready fields missing from the task template

@@ -176,13 +176,17 @@ capabilities:
       - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/49
+      - https://github.com/Eruhitsuji/lifetxt/issues/65
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/64
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
-      `span` remains deferred until parser-native end spans are implemented.
-      Consumers must tolerate unknown added fields, while stable fields are not
-      removed or renamed without a documented transition period.
+      `span` remains deferred until parser-native end spans are implemented. At
+      #64 merge time parser/validator diagnostics publish the stable `hint`
+      field but rely on the absent representation (`""`); authoring actionable
+      non-empty hint text is tracked separately by #65. Consumers must tolerate
+      unknown added fields, while stable fields are not removed or renamed
+      without a documented transition period.
     replacement:
       replaces: []
       replaced_by: null

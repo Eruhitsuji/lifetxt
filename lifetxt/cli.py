@@ -701,6 +701,11 @@ def build_parser():
     config_set.add_argument(
         "-o", "--output", help="Config file to write. Defaults to the loaded file."
     )
+    config_set.add_argument(
+        "--expected-revision",
+        help="Refuse the write unless the file still has this revision "
+             "(see: lifetxt config revision).",
+    )
     config_set.set_defaults(func=command_config_set)
 
     config_unset = config_subparsers.add_parser(
@@ -710,7 +715,21 @@ def build_parser():
     config_unset.add_argument(
         "-o", "--output", help="Config file to write. Defaults to the loaded file."
     )
+    config_unset.add_argument(
+        "--expected-revision",
+        help="Refuse the write unless the file still has this revision "
+             "(see: lifetxt config revision).",
+    )
     config_unset.set_defaults(func=command_config_unset)
+
+    config_revision_cmd = config_subparsers.add_parser(
+        "revision",
+        help="Print the exact revision of the configuration file.",
+    )
+    config_revision_cmd.add_argument(
+        "-o", "--output", help="Config file to inspect. Defaults to the loaded file."
+    )
+    config_revision_cmd.set_defaults(func=command_config_revision)
 
     config_explain = config_subparsers.add_parser(
         "explain", help="Explain a config key using the authoritative registry."
@@ -732,6 +751,11 @@ def build_parser():
     )
     config_migrate.add_argument(
         "-o", "--output", help="Config file to write. Defaults to the loaded file."
+    )
+    config_migrate.add_argument(
+        "--expected-revision",
+        help="Refuse the write unless the file still has this revision "
+             "(see: lifetxt config revision).",
     )
     config_migrate.set_defaults(func=command_config_migrate)
 
@@ -7951,7 +7975,9 @@ def command_config_set(args):
     except (ValueError, TypeError):
         value = args.value
     set_dotted(data, args.path, value)
-    report = _write_config_file(target, data)
+    report, code = _commit_config(args, config, target, data)
+    if code:
+        return code
     write_text(None, "Set %s in %s\n" % (args.path, target))
     _print_config_write_notes(report)
     return 0
@@ -7968,7 +7994,9 @@ def command_config_unset(args):
     if not unset_dotted(data, args.path):
         sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
         return 1
-    report = _write_config_file(target, data)
+    report, code = _commit_config(args, config, target, data)
+    if code:
+        return code
     write_text(None, "Removed %s from %s\n" % (args.path, target))
     _print_config_write_notes(report)
     return 0
@@ -7976,14 +8004,26 @@ def command_config_unset(args):
 
 def command_config_check(args):
     from .config_validation import validation_report
+    from .config_writer import rejected_candidates
 
-    report = validation_report(_config(args))
+    config = _config(args)
+    report = validation_report(config)
+    # Retained candidates are never removed automatically, so report them here
+    # rather than let them sit unnoticed beside the configuration.
+    retained = rejected_candidates(config.get("_path"))
     if getattr(args, "json", False):
+        report = OrderedDict(report)
+        report["rejected_candidates"] = retained
         write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         return 0 if report["ok"] else 1
     status = "OK" if report["ok"] else "ERRORS"
     write_text(None, "config check: %s (config_version=%s, writable=%s)\n"
                % (status, report["config_version"], report["writable"]))
+    for candidate in retained:
+        write_text(
+            None,
+            "  [NOTE] refused write retained at %s (review, then delete)\n" % candidate,
+        )
     for row in report["diagnostics"]:
         location = (" @ %s" % row["path"]) if row.get("path") else ""
         write_text(None, "  [%s] %s: %s%s\n"
@@ -8008,7 +8048,9 @@ def command_config_migrate(args):
     target = args.output or config.get("_path")
     if not target:
         raise ValueError("No config file to write. Run config init first or pass --output.")
-    report = _write_config_file(target, migrated)
+    report, code = _commit_config(args, config, target, migrated)
+    if code:
+        return code
     write_text(None, "Wrote migrated config to %s\n" % target)
     _print_config_write_notes(report)
     return 0
@@ -9122,6 +9164,23 @@ def command_ticket_validate(args):
     return 0 if not any(r["severity"] == "error" for r in rows) else 1
 
 
+def command_config_revision(args):
+    """Print the exact revision of the configuration file.
+
+    This is what ``--expected-revision`` compares against, so a script can read
+    it, build its change, and write back without racing another writer.
+    """
+    from .config_writer import config_revision
+
+    config = _config(args)
+    target = getattr(args, "output", None) or config.get("_path")
+    if not target:
+        sys.stderr.write("ERROR: No configuration file to inspect.\n")
+        return 1
+    write_text(None, "%s\n" % config_revision(target))
+    return 0
+
+
 def command_config_explain(args):
     from .config_registry import explain_key
 
@@ -9147,15 +9206,57 @@ def _config_without_runtime(config):
     return data
 
 
-def _write_config_file(path, data):
+def _write_config_file(path, data, expected_revision=None, dry_run=False):
     from .config_writer import write_config
 
-    return write_config(path, data)
+    return write_config(
+        path, data, expected_revision=expected_revision, dry_run=dry_run
+    )
+
+
+def _config_write_revision(args, config, target):
+    """Expected revision for a config write, or None when CAS cannot apply.
+
+    An explicit ``--expected-revision`` always wins. Otherwise the revision of
+    the file that was actually loaded is used, so a concurrent writer between
+    load and write is caught rather than silently overwritten. When ``--output``
+    names a different file we never read it, so there is nothing to compare
+    against and the write proceeds without a precondition.
+    """
+    explicit = getattr(args, "expected_revision", None)
+    if explicit:
+        return explicit
+    source = (config or {}).get("_path")
+    if not source or not target:
+        return None
+    if os.path.abspath(source) != os.path.abspath(target):
+        return None
+    from .config_writer import config_revision
+
+    return config_revision(target)
+
+
+def _commit_config(args, config, target, data):
+    """Write configuration under compare-and-set. Returns ``(report, code)``."""
+    from .config_writer import StaleConfigRevision
+
+    try:
+        report = _write_config_file(
+            target, data, _config_write_revision(args, config, target)
+        )
+    except StaleConfigRevision as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        if exc.retained:
+            sys.stderr.write("Your unwritten change was kept at %s\n" % exc.retained)
+        return None, 1
+    return report, 0
 
 
 def _print_config_write_notes(report):
     if not report:
         return
+    if report.get("revision"):
+        write_text(None, "  revision: %s\n" % report["revision"])
     if report.get("backup"):
         write_text(None, "  backup: %s\n" % report["backup"])
     for row in report.get("warnings") or []:

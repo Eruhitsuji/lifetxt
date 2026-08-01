@@ -1,0 +1,56 @@
+name: Operations Change
+description: Monitoring, logging, deployment, backup, rollback, runbook, or SLO work.
+title: "[Ops]: "
+labels:
+  - type:operations
+  - status:inbox
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Operations impact
+      value: |
+        Monitoring:
+        Logging:
+        Metrics:
+        SLI/SLO:
+        Alerts:
+        Runbook:
+        Backup/Restore:
+        Rollback:
+        Capacity/Performance:
+        Data retention:
+    validations:
+      required: true
+  - type: textarea
+    id: approvals
+    attributes:
+      label: Required approvals
+      value: |
+        Operations Owner:
+        Release Authority:
+        Security Reviewer:
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification and evidence
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - Standard
+        - High
+        - Regulated
+    validations:
+      required: true

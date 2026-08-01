@@ -1,0 +1,95 @@
+name: Standard Adoption
+description: Adopt the AI development standard in an existing repository.
+title: "[Standard Adoption]: "
+labels:
+  - type:standards
+  - status:inbox
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      value: |
+        Adopt the common AI development standard in an existing project.
+    validations:
+      required: true
+  - type: textarea
+    id: target-repository
+    attributes:
+      label: Target repository
+      value: |
+        Repository:
+        Default branch:
+        Current lifecycle:
+        Production impact:
+    validations:
+      required: true
+  - type: textarea
+    id: adoption-baseline
+    attributes:
+      label: Adoption baseline
+      value: |
+        Standard version:
+        Standard commit:
+        Profiles:
+        Adoption level: Passive / Guided / Enforced
+    validations:
+      required: true
+  - type: textarea
+    id: existing-inventory
+    attributes:
+      label: Existing project inventory
+      value: |
+        Languages:
+        Package managers:
+        Existing CI:
+        Existing AGENTS.md / CLAUDE.md / .kiro:
+        Existing issue or PR templates:
+        CODEOWNERS:
+        Open pull requests:
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Adoption scope
+      value: |
+        Add:
+        Preserve:
+        Defer:
+    validations:
+      required: true
+  - type: textarea
+    id: conflicts
+    attributes:
+      label: Known conflicts and risks
+      value: |
+        Existing files to preserve:
+        Manual merge needed:
+        Branch/ruleset risk:
+        CI risk:
+    validations:
+      required: true
+  - type: textarea
+    id: activation-gate
+    attributes:
+      label: Activation gate
+      value: |
+        - [ ] Adoption PR merged
+        - [ ] .ai/standard.lock.yml installed
+        - [ ] .ai/project/COMMANDS.yml filled or TODO exceptions tracked
+        - [ ] AI entry files reference .ai/managed and .ai/project
+        - [ ] Validation passes
+        - [ ] Remaining gaps have follow-up issues
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      value: |
+        - [ ] python scripts/validate-standard.py
+        - [ ] Existing project checks:
+        - [ ] Manual review:
+    validations:
+      required: true

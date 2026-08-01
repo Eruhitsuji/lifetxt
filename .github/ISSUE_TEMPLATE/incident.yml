@@ -1,0 +1,57 @@
+name: Incident
+description: Track an incident, mitigation, root cause, and corrective actions.
+title: "[Incident]: "
+labels:
+  - type:incident
+  - status:inbox
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Incident summary
+    validations:
+      required: true
+  - type: input
+    id: commander
+    attributes:
+      label: Incident Commander
+      placeholder: Human owner only
+    validations:
+      required: true
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      value: |
+        Detected:
+        Mitigated:
+        Resolved:
+    validations:
+      required: true
+  - type: textarea
+    id: work
+    attributes:
+      label: Work separation
+      value: |
+        Immediate mitigation:
+        Root-cause investigation:
+        Corrective implementation:
+        Regression tests:
+        Post-incident review:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and follow-up
+    validations:
+      required: true
+  - type: dropdown
+    id: assurance-level
+    attributes:
+      label: Assurance level
+      options:
+        - High
+        - Regulated
+    validations:
+      required: true

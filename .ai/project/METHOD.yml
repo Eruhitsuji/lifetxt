@@ -1,0 +1,31 @@
+schema_version: 1
+
+primary_method: adaptive-default
+quality_gate_model: w-model
+planning_cadence: TODO
+release_cadence: TODO
+
+allowed_methods:
+  - adaptive-default
+  - kanban
+  - scrum
+  - scrumban
+  - waterfall
+  - v-model
+  - w-model
+  - xp
+  - lean
+  - dual-track-agile
+  - shape-up
+  - spiral
+  - prototype-or-poc
+  - trunk-based-development
+  - release-train
+  - maintenance-flow
+  - regulated-or-audit-heavy-flow
+
+issue_override:
+  allowed: true
+  requires_reason: true
+  requires_owner_approval: true
+

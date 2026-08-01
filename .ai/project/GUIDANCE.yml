@@ -1,0 +1,38 @@
+schema_version: 1
+
+next_action:
+  default_response_style: concise
+  max_recommended_actions: 3
+  inspect_sources:
+    - git_state
+    - standard_lock
+    - project_config
+    - method_config
+    - commands
+    - active_issue
+    - active_pull_request
+    - ci_status
+    - foundation_todos
+
+  prefer:
+    - finish_active_review_before_new_work
+    - make_unclear_issues_ready_before_implementation
+    - create_investigation_issue_for_unknowns
+    - use_project_commands_before_guessed_commands
+    - preserve_existing_project_files_during_adoption
+
+  output_fields:
+    - current_state
+    - evidence
+    - recommended_next_action
+    - why
+    - alternatives
+    - risks_or_blockers
+    - suggested_issue_or_pr_update
+
+beginner_support:
+  ask_minimum_questions: true
+  explain_terms_when_first_used: true
+  recommend_one_default_path: true
+  avoid_tool_specific_detail_unless_needed: true
+

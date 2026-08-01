@@ -1,0 +1,29 @@
+commands:
+  setup:
+    status: configured
+    values:
+      - python -m pip install -e .
+
+  format:
+    status: TODO
+    values: []
+
+  lint:
+    status: TODO
+    values: []
+
+  unit_test:
+    status: configured
+    values:
+      - MPLBACKEND=Agg python -m unittest discover
+
+  integration_test:
+    status: configured
+    values:
+      - python -m lifetxt check examples/minimal_life.txt
+
+  full_check:
+    status: configured
+    values:
+      - MPLBACKEND=Agg python -m unittest discover
+      - python -m lifetxt check examples/minimal_life.txt

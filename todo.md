@@ -309,9 +309,6 @@ Feature-track order after the current P0 foundation:
 
 ## P2: Configuration, Ticketing, Integration, and Runtime Documentation
 
-- [ ] Keep every new setting's schema metadata, CLI explanation, examples,
-  migration behavior, and Japanese/English documentation in sync when completing
-  configuration work.
 - [ ] Complete `docs/en/config.md` and `docs/ja/config.md` as task-oriented guides covering discovery order, minimum configuration, precedence, profiles, workspaces, source manifests, write targets, environment references, validation, effective values, and common personal/work/team/software-project examples.
 - [ ] Complete `config-reference.md` documents in English and Japanese. For every key, publish type, default, required status, allowed values, environment override, restart requirement, secret status, version introduced/deprecated, example, and related command. Include every ticketing, workflow, custom-field, watcher, version/sprint, Git keyword, development-integration, and future runtime setting.
 - [ ] Add dedicated English/Japanese `workspaces.md`, `integrations.md`, and `config-migration.md` guides covering path resolution, roles, glob expansion, read-only/generated/archive sources, provider credentials, proposal mode, mapping, retry/privacy/audit, compatibility, backup, rollback, and troubleshooting.

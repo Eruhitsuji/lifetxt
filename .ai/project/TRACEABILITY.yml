@@ -139,8 +139,9 @@ traceability:
         - todo.md
       tests_or_evidence:
         - 'per-block coverage table to be recorded in the pull request body'
-        - 'todo.md before/after counts: 101403 -> 79951 characters; 189 -> 191 checkbox items'
+        - 'todo.md before/after counts: 101403 -> 79773 characters; 189 -> 190 checkbox items'
         - 'four Decide bullets remain explicitly marked by the header as pending decision prompts'
+        - 'configuration documentation completion rule filed as follow-up issue #62 because .ai/project/RULES.md is out of scope for #57'
       release_or_deployment: null
       status: implemented
     - requirement_id: req-config-concurrent-write-safety

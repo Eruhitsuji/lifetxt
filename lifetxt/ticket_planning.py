@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 import copy
-import datetime
 import re
 from collections import OrderedDict, defaultdict
 
@@ -12,6 +11,7 @@ from .serializer import item_to_line
 from .surface_runtime import normalize_revision
 from .ticket_activity import _first
 from .ticket_activity_mutation import apply_ticket_activity
+from .timeutil import parse_iso_date
 
 VERSION_MARKER = "version"
 SPRINT_MARKER = "sprint"
@@ -57,10 +57,10 @@ def _date(value, key, required=False):
         if required:
             raise ValueError("%s is required." % key)
         return None
-    try:
-        return datetime.date.fromisoformat(str(value)).isoformat()
-    except ValueError:
+    parsed = parse_iso_date(str(value))
+    if parsed is None:
         raise ValueError("%s must be YYYY-MM-DD." % key)
+    return parsed.isoformat()
 
 
 def _positive_number(value, key):
@@ -348,5 +348,3 @@ def planning_report(items, project=None, config=None, key="id"):
             ),
         )
     )
-
-

@@ -139,7 +139,10 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         outside = os.path.join(self.root, "outside.txt")
         with open(outside, "w", encoding="utf-8") as handle:
             handle.write("outside")
-        os.symlink(outside, os.path.join(directory, "link.txt"))
+        try:
+            os.symlink(outside, os.path.join(directory, "link.txt"))
+        except OSError as exc:
+            self.skipTest("symlink unavailable: %s" % exc)
         with self.assertRaises(AttachmentTransactionError):
             build_directory_package(directory, config=self.config)
 

@@ -8,12 +8,13 @@ from __future__ import unicode_literals
 
 import argparse
 import copy
-import datetime
 import json
 import re
 from collections import OrderedDict
 from contextvars import ContextVar
 from decimal import Decimal, InvalidOperation
+
+from .timeutil import parse_iso_date, parse_iso_datetime
 
 
 SUPPORTED_TYPES = (
@@ -399,17 +400,15 @@ def _normalize_custom_value(value, definition):
     elif field_type == "date":
         if "T" in text or " " in text:
             raise ValueError("must be an ISO date without a time")
-        try:
-            parsed = datetime.date.fromisoformat(text)
-        except ValueError:
+        parsed = parse_iso_date(text)
+        if parsed is None:
             raise ValueError("must be an ISO date (YYYY-MM-DD)")
         normalized = parsed.isoformat()
     elif field_type == "datetime":
         if "T" not in text and " " not in text:
             raise ValueError("must include a date and time")
-        try:
-            parsed = datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
+        parsed = parse_iso_datetime(text)
+        if parsed is None:
             raise ValueError("must be an ISO date-time")
         normalized = parsed.isoformat()
     elif field_type == "duration":

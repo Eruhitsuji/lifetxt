@@ -85,7 +85,7 @@ def run_fault_drill(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=float(timeout),
-        text=True,
+        universal_newlines=True,
     )
     journal_root = os.path.join(root, "journals")
     tx_dir = os.path.join(journal_root, "drill-%s" % point.replace("_", "-"))

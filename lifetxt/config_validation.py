@@ -188,12 +188,9 @@ def _workspace_diagnostics(config):
 
 def _jsonschema_diagnostics(config):
     try:
-        import importlib
-
-        importlib.import_module("jsonschema")
+        from jsonschema import Draft202012Validator
     except Exception:
         return []
-    from jsonschema import Draft202012Validator
 
     from .safety_foundation import schema_bundle
 

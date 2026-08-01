@@ -45,7 +45,7 @@ class RemoteClientV20Tests(unittest.TestCase):
         opener.return_value = FakeResponse({"ok": True})
         value, headers = request({"url": "https://example.test", "protocol_version": 2}, "GET", "/api/remote/v1/diagnostics")
         self.assertTrue(value["ok"])
-        sent = opener.call_args.args[0]
+        sent = opener.call_args[0][0]
         self.assertEqual("2", sent.headers["X-lifetxt-remote-version"])
         self.assertEqual(2, headers["lifetxt_negotiated_protocol"])
 

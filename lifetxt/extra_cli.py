@@ -15,6 +15,13 @@ from .safety_foundation import read_text_exact
 from .timezone_policy import resolve_timezone_name, timezone_context
 
 
+_REQUIRED_SUBPARSERS = {
+    "attachment": "attachment_action",
+    "safety": "safety_action",
+    "format": "format_action",
+}
+
+
 def _add_output(parser, choices=("text", "json"), default="json"):
     parser.add_argument("--format", choices=choices, default=default)
     parser.add_argument("--pretty", action="store_true")
@@ -25,6 +32,16 @@ def _add_timezone_policy(parser):
     parser.add_argument("--timezone")
     parser.add_argument("--fold-policy", choices=("error", "earlier", "later"), default="error")
     parser.add_argument("--gap-policy", choices=("error", "next", "previous"), default="error")
+
+
+def _add_required_subparsers(parser, dest):
+    return parser.add_subparsers(dest=dest)
+
+
+def _require_subcommand(command, parser, args):
+    dest = _REQUIRED_SUBPARSERS.get(command)
+    if dest and getattr(args, dest, None) is None:
+        parser.error("%s requires a subcommand" % command)
 
 
 def _build_parser(command):
@@ -139,7 +156,7 @@ def _build_parser(command):
         parser.add_argument("--revision", help="Expected SHA-256 revision of the journal target.")
         parser.add_argument("--dry-run", action="store_true")
     elif command == "attachment":
-        subparsers = parser.add_subparsers(dest="attachment_action", required=True)
+        subparsers = _add_required_subparsers(parser, "attachment_action")
         for action in ("put", "reference", "delete", "status", "directory-reference", "package", "reconcile", "open"):
             child = subparsers.add_parser(action)
             child.add_argument("path", help="life.txt file containing the item.")
@@ -166,7 +183,7 @@ def _build_parser(command):
             child.add_argument("--allow-symlink", action="store_true")
             _add_output(child)
     elif command == "safety":
-        subparsers = parser.add_subparsers(dest="safety_action", required=True)
+        subparsers = _add_required_subparsers(parser, "safety_action")
         locks = subparsers.add_parser("locks")
         locks.add_argument("paths", nargs="*")
         locks.add_argument("--stale-after", type=float, default=300.0)
@@ -240,7 +257,7 @@ def _build_parser(command):
         gate.add_argument("--root")
         _add_output(gate)
     elif command == "format":
-        subparsers = parser.add_subparsers(dest="format_action", required=True)
+        subparsers = _add_required_subparsers(parser, "format_action")
         info = subparsers.add_parser("info")
         info.add_argument("path")
         _add_output(info)
@@ -309,6 +326,7 @@ def main(argv=None, config_path=None):
     command = argv[0]
     parser = _build_parser(command)
     args = parser.parse_args(argv[1:])
+    _require_subcommand(command, parser, args)
     config_data = _load_config(config_path)
     timezone_name = _timezone_for_args(args, config_data)
     with timezone_context(timezone_name):

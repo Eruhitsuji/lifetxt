@@ -18,3 +18,30 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-local-test-compatibility
+    name: Local test compatibility
+    summary: Keep the local unittest suite runnable on the declared Python >=3.6 runtime, including Windows/PowerShell environments.
+    status: active
+    owner: TODO
+    source_requirements:
+      - req-local-unittest-compatibility
+    implementation_locations:
+      - pyproject.toml
+      - lifetxt/
+      - tests/
+      - .ai/project/COMMANDS.yml
+    public_interfaces:
+      - .ai/project/COMMANDS.yml
+    tests_or_evidence:
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      - python -m lifetxt check examples/minimal_life.txt
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/36
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/38
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

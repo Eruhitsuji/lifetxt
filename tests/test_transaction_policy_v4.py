@@ -1,11 +1,13 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lifetxt.transaction_policy import (
     TransactionPolicyError,
     build_integrity_manifest,
     enforce_capacity,
+    ensure_private_tree,
     fault_injection,
     fault_point,
     journal_usage,
@@ -33,6 +35,13 @@ class TransactionPolicyV4Tests(unittest.TestCase):
         self.assertEqual(7.0, policy["terminal_retention_days"])
         self.assertEqual(3, policy["max_transactions"])
         self.assertFalse(policy["require_private_permissions"])
+
+    def test_windows_private_tree_ignores_posix_mode_bits(self):
+        root = os.path.join(self.temp.name, "transactions")
+        with mock.patch("lifetxt.transaction_policy.os.name", "nt"):
+            report = ensure_private_tree(root, require_private=True)
+        self.assertEqual([], report["problems"])
+        self.assertTrue(report["private"])
 
     def test_capacity_rejects_count_total_and_single_transaction_limits(self):
         root = os.path.join(self.temp.name, "transactions")

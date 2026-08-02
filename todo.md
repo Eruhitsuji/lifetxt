@@ -296,6 +296,7 @@ Feature-track order after the current P0 foundation:
 - [ ] Complete command arguments in the Web command palette, including ticket IDs and registry-backed values. Do not expose counter-machine execution in the palette.
 - [ ] Add completion to `assist --interactive`.
 - [ ] Split `cli.py` into command-focused modules with a thin registry dispatcher; keep ticket commands in dedicated modules backed by shared operations rather than a monolithic command file. Keep the interpreter loop in `counter_machine.py`, not in CLI dispatch code.
+- [ ] Split `webapp.py` according to `docs/design/module-structure.md`: extract the embedded HTML/CSS/JS asset first, then move route groups behind explicit route/operation registries while preserving public API behavior.
 - [ ] Split `tui_app.py` into state, command, layout, rendering, and mutation/recovery presentation modules before adding the full ticket workspace.
 - [ ] Raise the supported Python baseline only after clean environment, wheel, dependency, and downstream compatibility verification.
 - [ ] Expand required CI to Ubuntu, Windows, and macOS with coverage and the dependency-free job. Keep the local ticket core and counter-machine runtime dependency-free; provider adapters and rich UI extras must remain optional.

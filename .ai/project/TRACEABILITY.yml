@@ -383,6 +383,24 @@ traceability:
       release_or_deployment: 'behaviour change for release notes: an environment resolving timezones only through an incidentally installed dateutil or pytz will now fail'
       status: implemented
 
+    - requirement_id: req-supported-runtime-verification
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/78
+      pull_request: null
+      changed_files_or_scope:
+        - Retain complete suite output so an intermittent failure can be diagnosed instead of lost
+        - .ai/project/COMMANDS.yml
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'POSIX form, failing run -> exit=1, 16 lines retained including the traceback'
+        - 'POSIX form, passing run -> exit=0, 5 lines retained'
+        - 'PowerShell form, failing run -> exit=1, 19 lines retained; passing run -> exit=0, 10 lines'
+        - '.test-output.log is already ignored: git check-ignore reports .gitignore:1:.*'
+        - 'the failure this responds to was observed during #76 and never identified; its error text was lost to a truncating pipe'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

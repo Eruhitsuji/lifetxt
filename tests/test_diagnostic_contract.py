@@ -10,6 +10,8 @@ import unittest
 from lifetxt.diagnostic_contract import diagnostic_to_output_dict
 from lifetxt.mcp import McpContext, call_tool
 from lifetxt.model import Diagnostic
+from lifetxt.parser import PARSER_DIAGNOSTIC_HINTS
+from lifetxt.validator import VALIDATOR_DIAGNOSTIC_HINTS
 from tests.diagnostic_contract_fixtures import DIAGNOSTIC_CONTRACT_FIXTURES
 
 try:
@@ -109,7 +111,7 @@ class DiagnosticContractTests(unittest.TestCase):
                     "source": second_path,
                     "line": 1,
                     "column": 1,
-                    "hint": "",
+                    "hint": "Use one of [ ], [/], [x], [-], [>], [?], or [N] as the status marker.",
                 },
             ]
             cli_diagnostics, cli_stderr, cli_code = self._cli_check_paths(
@@ -132,6 +134,14 @@ class DiagnosticContractTests(unittest.TestCase):
         row = Diagnostic("warning", "W999", "No hint.").to_dict()
         self.assertIn("hint", row)
         self.assertEqual("", row["hint"])
+
+    def test_parser_and_validator_hint_registries_are_non_empty(self):
+        for name, hints in (
+            ("parser", PARSER_DIAGNOSTIC_HINTS),
+            ("validator", VALIDATOR_DIAGNOSTIC_HINTS),
+        ):
+            empty_codes = sorted(code for code, hint in hints.items() if not hint)
+            self.assertEqual([], empty_codes, name)
 
     def test_contract_builder_publishes_category_and_hint(self):
         diagnostic = Diagnostic("warning", "W226", "Bad duration.", line=7)

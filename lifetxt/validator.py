@@ -42,13 +42,59 @@ _POSITIONAL_BYDAY_FREQS = set(("MONTHLY", "YEARLY"))
 _RRULE_WEEKDAYS = set(("MO", "TU", "WE", "TH", "FR", "SA", "SU"))
 _DURATION_VALUE_RE = re.compile(r"^\d+(?:h(?:\d+m)?|m)$|^\d+$")
 
+VALIDATOR_DIAGNOSTIC_HINTS = {
+    "E101": "Use a valid status marker such as [ ], [/], [x], [-], [>], [?], or [N].",
+    "E102": "Use a valid item type such as T for a task or N for a note.",
+    "E201": "Add from:YYYY-MM-DDTHH:MM to the status item.",
+    "E202": "Rewrite from: as YYYY-MM-DDTHH:MM, optionally adding seconds, fractional seconds, or timezone.",
+    "E203": "Add state:VALUE to the status item.",
+    "E204": "Rewrite to: as YYYY-MM-DDTHH:MM, optionally adding seconds, fractional seconds, or timezone.",
+    "E205": "Add sender:PERSON to the message item.",
+    "E206": "Add recipient:PERSON; repeat recipient: for multiple recipients.",
+    "W101": "Use type N or J with [N], or choose a workflow status for this item type.",
+    "W102": "Change the status to [N], or use a task or event type if the item is actionable.",
+    "W103": "Add done:YYYY-MM-DD when the completion date is known.",
+    "W104": "Remove done: or change the status to [x] if the item is completed.",
+    "W105": "Rename the key to lowercase_snake_case if it is intended to be portable.",
+    "W106": "Keep the custom key if intentional, or rename it to a documented key for this item type.",
+    "W201": "Rewrite the value as YYYY-MM-DD.",
+    "W202": "Rewrite the value as YYYY-MM-DDTHH:MM, optionally adding seconds, fractional seconds, or timezone.",
+    "W203": "Rewrite the value as YYYY-MM-DD or YYYY-MM-DDTHH:MM.",
+    "W204": "Rewrite the value as HH:MM, HH:MM:SS, or a full datetime.",
+    "W205": "Use daily, weekly, monthly, yearly, weekdays, or an RRULE: value.",
+    "W206": "Move to: after from:, or correct the event endpoints.",
+    "W207": "Use a known state such as available, busy, away, offline, dnd, focus, sleeping, commuting, working, studying, meeting, or custom.",
+    "W208": "Change the status to [x] when to: closes the status interval.",
+    "W209": "Change the status to [/] for the current open status.",
+    "W210": "Add the missing notify_from: or notify_to:, or remove the unmatched notification boundary.",
+    "W211": "Move notify_to: after notify_from:, or correct the notification endpoints.",
+    "W212": "Use a workflow status such as [ ], [/], [x], [-], [>], or [?] for messages.",
+    "W214": "Use a compact ASCII token without spaces or quotes.",
+    "W219": "Use a positive integer such as 1.",
+    "W222": "Replace the value with the compact duration shown in the message.",
+    "W223": "Use only RRULE parts supported by lifetxt recurrence expansion.",
+    "W226": "Use a duration such as 25m, 1h30m, or 90.",
+}
+
+
+def _diagnostic(severity, code, message, line=None, column=None, source=None):
+    return Diagnostic(
+        severity,
+        code,
+        message,
+        line=line,
+        column=column,
+        source=source,
+        hint=VALIDATOR_DIAGNOSTIC_HINTS[code],
+    )
+
 
 def validate_item(item):
     diagnostics = []
 
     if item.status not in VALID_STATUSES:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E101",
                 "Invalid status %r." % item.status,
@@ -59,7 +105,7 @@ def validate_item(item):
 
     if item.kind not in VALID_TYPES:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E102",
                 "Invalid type %r." % item.kind,
@@ -69,7 +115,7 @@ def validate_item(item):
 
     if item.status == "[N]" and item.kind not in ("N", "J"):
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W101",
                 "The [N] status is recommended only with note type N or journal type J.",
@@ -79,7 +125,7 @@ def validate_item(item):
 
     if item.kind in ("N", "J") and item.status != "[N]":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W102",
                 "Note type N and journal type J are recommended to use status [N].",
@@ -89,7 +135,7 @@ def validate_item(item):
 
     if item.status == "[x]" and "done" not in item.details and item.kind != "S":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W103",
                 "Completed items should usually include done:DATE.",
@@ -99,7 +145,7 @@ def validate_item(item):
 
     if item.status != "[x]" and "done" in item.details:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W104",
                 "done: is usually used with completed status [x].",
@@ -116,7 +162,7 @@ def validate_item(item):
     for key, values in item.details.items():
         if not _KEY_STYLE_RE.match(key):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W105",
                     "Detail key %r does not follow lowercase_snake_case style." % key,
@@ -130,7 +176,7 @@ def validate_item(item):
             and key not in known_keys
         ):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W106",
                     "Detail key %r is custom for type %s; it will be preserved."
@@ -153,7 +199,7 @@ def _validate_value(item, key, value):
     if key in DATE_KEYS:
         if not is_date(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W201",
                     "%s: should use YYYY-MM-DD." % key,
@@ -163,7 +209,7 @@ def _validate_value(item, key, value):
     elif key in DATETIME_KEYS:
         if not is_datetime(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W202",
                     "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
@@ -173,7 +219,7 @@ def _validate_value(item, key, value):
     elif key in DATE_OR_DATETIME_KEYS:
         if not (is_date(value) or is_datetime(value)):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W203",
                     "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
@@ -183,7 +229,7 @@ def _validate_value(item, key, value):
     elif key in TIME_OR_DATETIME_KEYS:
         if not (is_time(value) or is_datetime(value)):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W204",
                     "%s: should use HH:MM, HH:MM:SS, fractional seconds, optional timezone, or YYYY-MM-DDTHH:MM." % key,
@@ -193,7 +239,7 @@ def _validate_value(item, key, value):
     elif key == "id" or key in REFERENCE_KEYS:
         if not id_value_is_safe(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W214",
                     "%s: should be a compact ASCII token without spaces or quotes." % key,
@@ -203,7 +249,7 @@ def _validate_value(item, key, value):
     elif key == "repeat":
         if value not in SIMPLE_REPEAT_VALUES and not value.startswith("RRULE:"):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W205",
                     "repeat: should usually be daily, weekly, monthly, yearly, weekdays, or RRULE:...",
@@ -215,7 +261,7 @@ def _validate_value(item, key, value):
     elif key in ("interval", "count"):
         if not _is_positive_integer(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W219",
                     "%s: should be a positive integer." % key,
@@ -226,7 +272,7 @@ def _validate_value(item, key, value):
         normalized = normalize_duration(value)
         if str(normalized) == str(value) and not _duration_like(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W226",
                     "%s: duration %r is not recognized; use forms like 25m, 1h30m, or 90." % (key, value),
@@ -236,7 +282,7 @@ def _validate_value(item, key, value):
             return diagnostics
         if str(normalized) != str(value):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W222",
                     "%s: duration %r should be in compact form; use %r." % (key, value, normalized),
@@ -246,7 +292,7 @@ def _validate_value(item, key, value):
     elif key == "state":
         if value not in STATUS_STATE_VALUES:
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W207",
                     "state: should usually be one of: %s."
@@ -366,7 +412,7 @@ def _split_byday_entry(code):
 
 
 def _rrule_warning(item, message):
-    return Diagnostic(
+    return _diagnostic(
         "warning",
         "W223",
         message,
@@ -385,7 +431,7 @@ def _validate_event_range(item):
         return []
     if parse_datetime(end) < parse_datetime(start):
         return [
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W206",
                 "Event to: datetime is earlier than from: datetime.",
@@ -405,7 +451,7 @@ def _validate_status_item(item):
 
     if not has_from:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E201",
                 "Status items require from:YYYY-MM-DDTHH:MM.",
@@ -416,7 +462,7 @@ def _validate_status_item(item):
         for value in item.details["from"]:
             if not is_datetime(value):
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E202",
                         "Status item from: must use YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.",
@@ -426,7 +472,7 @@ def _validate_status_item(item):
 
     if "state" not in item.details:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E203",
                 "Status items require state:VALUE.",
@@ -438,7 +484,7 @@ def _validate_status_item(item):
         for value in item.details["to"]:
             if not is_datetime(value):
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E204",
                         "Status item to: must use YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.",
@@ -448,7 +494,7 @@ def _validate_status_item(item):
 
     if has_to and item.status != "[x]":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W208",
                 "Status items with to: are recommended to use completed status [x].",
@@ -458,7 +504,7 @@ def _validate_status_item(item):
 
     if not has_to and item.status != "[/]":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W209",
                 "Current status items without to: are recommended to use in-progress status [/].",
@@ -487,7 +533,7 @@ def _validate_message_item(item):
     diagnostics = []
     if "sender" not in item.details:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E205",
                 "Message items require sender:PERSON.",
@@ -497,7 +543,7 @@ def _validate_message_item(item):
 
     if "recipient" not in item.details:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E206",
                 "Message items require recipient:PERSON. Repeat recipient: for multiple recipients.",
@@ -509,7 +555,7 @@ def _validate_message_item(item):
     has_notify_to = "notify_to" in item.details
     if has_notify_from != has_notify_to:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W210",
                 "Notification periods should usually include both notify_from: and notify_to:.",
@@ -524,7 +570,7 @@ def _validate_message_item(item):
         parsed_end = parse_date_or_datetime(end, is_end=True)
         if parsed_start is not None and parsed_end is not None and parsed_end < parsed_start:
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W211",
                     "Message notify_to: is earlier than notify_from:.",
@@ -534,7 +580,7 @@ def _validate_message_item(item):
 
     if item.status == "[N]":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W212",
                 "Message type M is recommended to use workflow statuses, not [N].",

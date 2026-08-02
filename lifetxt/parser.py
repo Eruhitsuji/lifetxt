@@ -10,6 +10,50 @@ from .validator import validate_item
 _DIRECTIVE_RE = re.compile(r"^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$")
 _KNOWN_DIRECTIVE_KEYS = frozenset(("self", "timezone", "project"))
 
+PARSER_DIAGNOSTIC_HINTS = {
+    "E001": "Replace tab characters with single spaces between fields.",
+    "E002": "Start item lines with a valid status marker such as [ ], followed by type and title.",
+    "E003": "Use one of [ ], [/], [x], [-], [>], [?], or [N] as the status marker.",
+    "E004": "Add a valid item type after the status, such as T for a task or N for a note.",
+    "E005": "Use one of T, E, D, R, H, N, S, M, or J as the item type.",
+    "E006": "Separate the next detail from the title or previous detail with one space.",
+    "E007": "Add the required space and following field.",
+    "E008": "Insert exactly one space at this position.",
+    "E009": "Add a detail key before the colon, for example due:2026-08-02.",
+    "E010": "Write details as key:value with no space around the colon.",
+    "E011": "Use an unquoted detail key made from normal key characters.",
+    "E012": "Add a value after the detail colon or remove the empty detail.",
+    "E013": "Add the missing title or detail value.",
+    "E014": "Provide a non-empty bare value, or quote a value that needs spaces.",
+    "E015": "Quote the entire value when it contains a double quote.",
+    "E016": "Add a space after the closing quote before the next detail.",
+    "E017": "Escape only double quotes or backslashes, or remove the trailing backslash.",
+    "E018": "Add the closing double quote for this value.",
+    "E019": "Move the continuation below an item line, or convert it to a normal item.",
+    "E020": "Add the continued line after the trailing backslash, or remove the backslash.",
+    "E021": "Continue into a normal item line instead of a body continuation line.",
+    "E022": "Use repeated one-line body: details, or keep a single multiline continuation block.",
+    "W001": "Remove the tab character from the blank line.",
+    "W002": "Move the comment marker to column 1.",
+    "W003": "Remove the trailing spaces after the final detail.",
+    "W004": "Collapse the repeated spaces to one space.",
+    "W005": "Use only double-quote and backslash escapes inside quoted strings.",
+    "W220": "Move the item to column 1 or add an explicit parent: detail.",
+    "W221": "Add an id: detail to the parent item, or add parent: explicitly here.",
+}
+
+
+def _diagnostic(severity, code, message, line=None, column=None, source=None):
+    return Diagnostic(
+        severity,
+        code,
+        message,
+        line=line,
+        column=column,
+        source=source,
+        hint=PARSER_DIAGNOSTIC_HINTS[code],
+    )
+
 
 def parse_directives(text):
     """Extract #! KEY: VALUE directives from the top of a life.txt file.
@@ -69,7 +113,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
         if stripped_line.startswith("|"):
             if current_item is None:
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E019",
                         "Continuation lines must follow a life.txt item.",
@@ -81,7 +125,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
             body_values = current_item.details.get("body") or []
             if len(body_values) > 1 and not current_body_continuation:
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E022",
                         "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
@@ -140,7 +184,7 @@ def _logical_lines(text):
                 parts.append(stripped_trailing[:-1])
                 if index + 1 >= len(physical_lines):
                     diagnostics.append(
-                        Diagnostic(
+                        _diagnostic(
                             "error",
                             "E020",
                             "Line continuation backslash must be followed by another line.",
@@ -155,7 +199,7 @@ def _logical_lines(text):
                 current = physical_lines[index].lstrip(" ")
                 if current.startswith("|"):
                     diagnostics.append(
-                        Diagnostic(
+                        _diagnostic(
                             "error",
                             "E021",
                             "Line continuation cannot continue into a body continuation line.",
@@ -188,7 +232,7 @@ def parse_line(line, line_no=1):
     if text.strip(" \t") == "":
         if "\t" in text:
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W001",
                     "Blank lines should contain spaces only, not tabs.",
@@ -203,7 +247,7 @@ def parse_line(line, line_no=1):
 
     if item_text.startswith("#"):
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W002",
                 "Comment lines should start with # in column 1.",
@@ -215,7 +259,7 @@ def parse_line(line, line_no=1):
 
     if "\t" in text:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E001",
                 "Tabs are not valid separators; use single spaces.",
@@ -226,7 +270,7 @@ def parse_line(line, line_no=1):
 
     if len(item_text) < 3 or item_text[0] != "[":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E002",
                 "Expected a status such as [ ], [/], [x], [-], [>], [?], or [N].",
@@ -241,7 +285,7 @@ def parse_line(line, line_no=1):
     status = text[:3]
     if status not in VALID_STATUSES:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E003",
                 "Invalid status %r." % status,
@@ -264,14 +308,14 @@ def parse_line(line, line_no=1):
 
     if pos >= len(text):
         diagnostics.append(
-            Diagnostic("error", "E004", "Expected an item type.", line_no, indent + pos + 1)
+            _diagnostic("error", "E004", "Expected an item type.", line_no, indent + pos + 1)
         )
         return None, diagnostics
 
     kind = text[pos]
     if kind not in VALID_TYPES:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E005",
                 "Invalid type %r. Use T, E, D, R, H, N, S, M, or J." % kind,
@@ -300,7 +344,7 @@ def parse_line(line, line_no=1):
     while pos < len(text):
         if text[pos] != " ":
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "error",
                     "E006",
                     "Expected a space before the next detail.",
@@ -319,7 +363,7 @@ def parse_line(line, line_no=1):
         )
         if pos is None or pos >= len(text):
             diagnostics.append(
-                Diagnostic(
+                _diagnostic(
                     "warning",
                     "W003",
                     "Trailing spaces are not part of the life.txt grammar.",
@@ -360,7 +404,7 @@ def _apply_hierarchy(item, hierarchy_stack, diagnostics, id_key):
 
     if not hierarchy_stack:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W220",
                 "Indented item has no less-indented parent item; add parent: explicitly or move it to column 1.",
@@ -374,7 +418,7 @@ def _apply_hierarchy(item, hierarchy_stack, diagnostics, id_key):
     parent_ids = parent.details.get(id_key, [])
     if not parent_ids:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W221",
                 "Indented item could not infer parent:%s because the parent item has no %s: detail."
@@ -397,7 +441,7 @@ def _push_hierarchy_item(item, hierarchy_stack):
 def _consume_required_space(text, pos, line_no, diagnostics, context, column_offset=0):
     if pos >= len(text):
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E007",
                 "Expected a space %s." % context,
@@ -408,7 +452,7 @@ def _consume_required_space(text, pos, line_no, diagnostics, context, column_off
         return None
     if text[pos] != " ":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E008",
                 "Expected a space %s." % context,
@@ -422,7 +466,7 @@ def _consume_required_space(text, pos, line_no, diagnostics, context, column_off
         pos += 1
     if pos - start > 1:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "warning",
                 "W004",
                 "Multiple spaces found %s; the grammar uses one space." % context,
@@ -440,14 +484,14 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
 
     if pos == key_start:
         diagnostics.append(
-            Diagnostic("error", "E009", "Expected a detail key.", line_no, column_offset + pos + 1)
+            _diagnostic("error", "E009", "Expected a detail key.", line_no, column_offset + pos + 1)
         )
         return None, None, _skip_token(text, pos)
 
     if pos >= len(text) or text[pos] != ":":
         token_end = _skip_token(text, key_start)
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E010",
                 "Expected detail in key:value form.",
@@ -460,7 +504,7 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
     key = text[key_start:pos]
     if '"' in key:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E011",
                 "Detail keys must not contain double quotes.",
@@ -472,7 +516,7 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
     pos += 1
     if pos >= len(text):
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E012",
                 "Detail value must not be empty.",
@@ -496,7 +540,7 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
 def _parse_string(text, pos, line_no, diagnostics, role, column_offset=0):
     if pos >= len(text):
         diagnostics.append(
-            Diagnostic("error", "E013", "Expected %s." % role, line_no, column_offset + pos + 1)
+            _diagnostic("error", "E013", "Expected %s." % role, line_no, column_offset + pos + 1)
         )
         return None, pos
 
@@ -520,7 +564,7 @@ def _parse_string(text, pos, line_no, diagnostics, role, column_offset=0):
     value = text[start:pos]
     if value == "":
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E014",
                 "Bare %s must not be empty." % role,
@@ -530,7 +574,7 @@ def _parse_string(text, pos, line_no, diagnostics, role, column_offset=0):
         )
     if saw_quote:
         diagnostics.append(
-            Diagnostic(
+            _diagnostic(
                 "error",
                 "E015",
                 "Bare %s must not contain double quotes; quote the entire string."
@@ -552,7 +596,7 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
             pos += 1
             if pos < len(text) and text[pos] not in (" ",):
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E016",
                         "Quoted %s must be followed by a space or end of line." % role,
@@ -565,7 +609,7 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
         if ch == "\\":
             if pos + 1 >= len(text):
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "error",
                         "E017",
                         "Backslash at end of quoted %s is not a valid escape." % role,
@@ -578,7 +622,7 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
             next_ch = text[pos + 1]
             if next_ch not in ('"', "\\"):
                 diagnostics.append(
-                    Diagnostic(
+                    _diagnostic(
                         "warning",
                         "W005",
                         "Only \\\" and \\\\ escapes are defined by the specification.",
@@ -593,7 +637,7 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
         pos += 1
 
     diagnostics.append(
-        Diagnostic(
+        _diagnostic(
             "error",
             "E018",
             "Unclosed quoted %s." % role,

@@ -459,6 +459,23 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-module-structure-decomposition
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/67
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/84
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/87
+      changed_files_or_scope:
+        - Cover the second guard refusal reason and the enabled Git path, which #85 did not
+        - tests/test_web_routes_git.py
+      tests_or_evidence:
+        - 'the enabled-path 403 reported during #84 review was a misreading: _git_guard has two refusal reasons and TestClient default host testclient hits the loopback one, not the enable_api one'
+        - 'success path runs against a real repository created with git init plus one commit; git unavailable skips with a reason rather than failing'
+        - 'python -m unittest tests.test_web_routes_git -> Ran 11 tests, OK (6 before)'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1783 tests, OK (skipped=14)'
+        - 'an earlier run of the same tree failed with one error unrelated to this change; captured, diagnosed, and filed as #86'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -225,7 +225,8 @@ capabilities:
       - python -m unittest tests.test_web_commands tests.test_remote_attachment_contracts_v6 tests.test_ticket_project_surfaces tests.test_ticket_revision_writes tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/50
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/66
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Current drift exceptions are intentionally empty. Any future exception must

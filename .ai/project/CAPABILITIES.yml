@@ -191,3 +191,48 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-surface-capability-consistency
+    name: Surface capability consistency
+    summary: >-
+      Keep live CLI, Web, and MCP capability documents aligned with the shared
+      operation registry, and keep the live Web command catalog aligned with the
+      TUI command registry. Undocumented drift fails tests with the affected
+      surface and operation named.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cross-surface-consistency
+    implementation_locations:
+      - lifetxt/safety_foundation.py
+      - lifetxt/surface_runtime.py
+      - lifetxt/extra_safety.py
+      - lifetxt/remote_contracts_v6.py
+      - tests/test_surface_runtime.py
+      - .ai/project/CAPABILITY_DRIFT_EXCEPTIONS.json
+    public_interfaces:
+      - lifetxt capabilities
+      - GET /api/capabilities
+      - GET /api/commands
+      - MCP get_capabilities
+      - MCP resource lifetxt://capabilities
+      - .ai/project/CAPABILITY_DRIFT_EXCEPTIONS.json
+    tests_or_evidence:
+      - tests/test_surface_runtime.py SurfaceRuntimeTests.test_cli_mcp_and_resource_capabilities_match_registry_gate
+      - tests/test_surface_runtime.py WebSurfaceRuntimeTests.test_web_capabilities_match_registry_gate
+      - tests/test_surface_runtime.py WebSurfaceRuntimeTests.test_live_web_command_catalog_matches_tui_registry_gate
+      - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation tests.test_remote_compatibility_v21
+      - python -m unittest tests.test_web_commands tests.test_remote_attachment_contracts_v6 tests.test_ticket_project_surfaces tests.test_ticket_revision_writes tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/50
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/66
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Current drift exceptions are intentionally empty. Any future exception must
+      include reason, owner, removal_condition, and tracked_by in
+      .ai/project/CAPABILITY_DRIFT_EXCEPTIONS.json.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

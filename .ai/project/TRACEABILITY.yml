@@ -216,6 +216,33 @@ traceability:
         #64 completes the stable field contract. Parser/validator diagnostics
         still use `hint: ""` until actionable hint text is authored in #65.
       status: implemented
+    - requirement_id: req-cross-surface-consistency
+      capability_id: cap-surface-capability-consistency
+      epic: P1 Shared Surface Contracts
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/50
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/66
+      changed_files_or_scope:
+        - Add package/server version and optional_feature_state to capability documents
+        - Make lifetxt capabilities use the surface-aware capability builder
+        - Add a documented capability-drift exception record
+        - Add live CLI, Web, MCP tool, MCP resource, and Web command-catalog drift gates
+        - lifetxt/safety_foundation.py
+        - lifetxt/surface_runtime.py
+        - lifetxt/extra_safety.py
+        - lifetxt/remote_contracts_v6.py
+        - tests/test_surface_runtime.py
+        - .ai/project/CAPABILITY_DRIFT_EXCEPTIONS.json
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation tests.test_remote_compatibility_v21
+        - python -m unittest tests.test_web_commands tests.test_remote_attachment_contracts_v6 tests.test_ticket_project_surfaces tests.test_ticket_revision_writes tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces
+      release_or_deployment: null
+      notes: >-
+        Capability drift exceptions are currently empty. Future exceptions must
+        be tracked by an issue whose closure condition is removal of that
+        exception.
+      status: implemented
 
 required_chain:
   - Requirement

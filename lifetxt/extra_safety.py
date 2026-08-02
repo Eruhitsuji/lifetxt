@@ -20,7 +20,6 @@ from .safety_foundation import (
     audit_python_writes,
     canonical_issues,
     canonicalize_text,
-    capability_document,
     file_directives,
     format_version_report,
     inspect_locks,
@@ -372,13 +371,16 @@ def command_format(args, _config_data):
 def command_capabilities(args, config_data):
     targets = []
     from .config import config_write_file
+    from .surface_runtime import capability_document_for
     write_target = config_write_file(config_data)
     if write_target:
         targets.append(os.path.abspath(write_target))
-    report = capability_document(
+    report = capability_document_for(
+        "cli",
         read_only=args.read_only,
         authentication=args.authentication,
         writable_targets=targets,
+        config=config_data,
     )
     return _output(report, args)
 

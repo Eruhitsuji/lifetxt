@@ -480,7 +480,7 @@ traceability:
       capability_id: cap-durable-transaction-recovery
       epic: P0 durable recovery / todo.md:59
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/86
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/94
       changed_files_or_scope:
         - Add a Windows-scoped bounded retry for transient PermissionError at the durable replace boundary
         - Preserve loud failure and cleanup when the retry budget is exhausted

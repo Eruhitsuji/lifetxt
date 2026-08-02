@@ -363,7 +363,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/76
       - https://github.com/Eruhitsuji/lifetxt/issues/78
       - https://github.com/Eruhitsuji/lifetxt/issues/86
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/94
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       `_write_bytes_durable` retries `PermissionError` only when `os.name` is

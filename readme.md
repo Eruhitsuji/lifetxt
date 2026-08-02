@@ -384,10 +384,33 @@ CSV conversion uses `status`, `type`, and `title` columns plus detail-key
 columns. Repeated detail values are stored as JSON arrays inside cells, and
 multiline `body:` values are stored as quoted CSV cells.
 
+### Development environment
+
+Every command below assumes `python` resolves to an interpreter that meets
+`requires-python` in `pyproject.toml` (currently 3.10 or newer). A system
+`python` older than that is common, and the failure is quiet rather than
+obvious: the suite still runs, but test modules that use newer syntax fail to
+import, so the run covers fewer tests than it appears to and its result is not
+evidence. `tests/test_supported_runtime.py` fails with an explicit message in
+that case instead of letting the run look successful.
+
+If your default `python` is too old, work from a virtual environment created by
+a supported one:
+
+```sh
+py -3.12 -m venv .venv            # Windows; use python3.12 -m venv .venv elsewhere
+.venv/Scripts/python -m pip install -e ".[web,dev]" httpx
+```
+
+The `web` extra and `httpx` are what the Web API tests need; without them those
+tests skip, which again means a green run proves less than it looks like it
+does.
+
 Run tests with:
 
 ```sh
 python -m unittest discover
+python -m unittest tests.test_supported_runtime   # confirms the interpreter first
 ```
 
 Install developer tooling and run the configured commands with:

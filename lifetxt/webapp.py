@@ -64,6 +64,7 @@ from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
 from .web_assets import HTML_PAGE
+from .web_routes_git import register_git_routes
 
 
 #: Commands the browser implements. Everything else in the shared catalog is
@@ -759,119 +760,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "range": {"from": s.isoformat(), "to": e.isoformat()},
         }
 
-    def _git_guard(request):
-        git_config = (app.state.config or {}).get("git", {})
-        if not git_config.get("enable_api"):
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "FORBIDDEN",
-                    "message": "Git API is not enabled. Set git.enable_api: true in config.",
-                    "detail": None,
-                },
-            )
-        host = request.client.host if request.client else None
-        if host not in ("127.0.0.1", "::1", "localhost"):
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "FORBIDDEN",
-                    "message": "Git API is restricted to loopback access.",
-                    "detail": None,
-                },
-            )
-
-    def _run_git(cmd, cwd=None):
-        import subprocess
-
-        result = subprocess.run(
-            cmd,
-            cwd=cwd or os.path.dirname(os.path.abspath(app.state.writable_path)),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-        return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exit_code": result.returncode,
-            "ok": result.returncode == 0,
-        }
-
-    @app.get("/api/git/status")
-    def git_status(request: Request):
-        _git_guard(request)
-        return _run_git(["git", "status", "--short"])
-
-    @app.post("/api/git/pull")
-    def git_pull(request: Request):
-        _git_guard(request)
-        return _run_git(["git", "pull"])
-
-    @app.post("/api/git/commit")
-    def git_commit(request: Request, payload=Body(...)):
-        _git_guard(request)
-        message = payload.get("message", "") if isinstance(payload, dict) else ""
-        if not message:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "ERROR",
-                    "message": "commit message is required.",
-                    "detail": None,
-                },
-            )
-        writable = app.state.writable_path
-        import subprocess
-
-        cwd = os.path.dirname(os.path.abspath(writable))
-        add_result = subprocess.run(
-            ["git", "add", os.path.abspath(writable)],
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-        if add_result.returncode != 0:
-            return {
-                "stdout": add_result.stdout,
-                "stderr": add_result.stderr,
-                "exit_code": add_result.returncode,
-                "ok": False,
-            }
-        return _run_git(["git", "commit", "-m", message], cwd=cwd)
-
-    @app.post("/api/git/push")
-    def git_push(request: Request):
-        _git_guard(request)
-        return _run_git(["git", "push"])
-
-    @app.get("/api/git/log")
-    def git_log(request: Request, n: int = 5, count: bool = False):
-        _git_guard(request)
-        n = min(max(1, n), 50)
-        result = _run_git(["git", "log", "--pretty=format:%H\t%s\t%ai", "-%d" % n])
-        commits = []
-        if result.get("ok") and result.get("stdout"):
-            for line in result["stdout"].strip().splitlines():
-                parts = line.split("\t", 2)
-                if len(parts) >= 2:
-                    commits.append(
-                        {
-                            "hash": parts[0][:8],
-                            "message": parts[1],
-                            "date": parts[2] if len(parts) > 2 else "",
-                        }
-                    )
-        total = None
-        if count:
-            count_result = _run_git(["git", "rev-list", "--count", "HEAD"])
-            if count_result.get("ok") and count_result.get("stdout"):
-                try:
-                    total = int(count_result["stdout"].strip())
-                except ValueError:
-                    pass
-        return {"commits": commits, "ok": result.get("ok", False), "total": total}
+    register_git_routes(app)
 
     @app.get("/api/stats/summary")
     def stats_summary(

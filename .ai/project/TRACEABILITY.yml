@@ -220,7 +220,7 @@ traceability:
       capability_id: cap-surface-capability-consistency
       epic: P1 Shared Surface Contracts
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/50
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/66
       changed_files_or_scope:
         - Add package/server version and optional_feature_state to capability documents
         - Make lifetxt capabilities use the surface-aware capability builder

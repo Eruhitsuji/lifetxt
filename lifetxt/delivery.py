@@ -106,7 +106,14 @@ def acknowledgement_status(item, config=None, resolver=None, policy=None):
             ("skipped", skipped),
             ("required", required),
             ("complete", complete),
-            ("pending", [row["recipient"] for row in states if row["state"] in ("pending", "read")]),
+            (
+                "pending",
+                [
+                    row["recipient"]
+                    for row in states
+                    if row["state"] in ("pending", "read")
+                ],
+            ),
         )
     )
 

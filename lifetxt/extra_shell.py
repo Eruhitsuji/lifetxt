@@ -21,7 +21,13 @@ from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .config import (
+    config_paths,
+    config_section,
+    config_user_name,
+    config_write_file,
+    load_config,
+)
 from .model import Item
 from .parser import parse_text
 from .paths import expand_paths
@@ -54,12 +60,14 @@ def _powershell_completion_script():
         for name in commands
     )
     option_map = "\n".join(
-        "    '%s' = @(%s)" % (name, ", ".join("'%s'" % opt for opt in _command_options(name)))
+        "    '%s' = @(%s)"
+        % (name, ", ".join("'%s'" % opt for opt in _command_options(name)))
         for name in commands
         if _command_options(name)
     )
     value_map = "\n".join(
-        "    '%s' = @(%s)" % (option, ", ".join("'%s'" % word for word in values.split()))
+        "    '%s' = @(%s)"
+        % (option, ", ".join("'%s'" % word for word in values.split()))
         for option, values in sorted(OPTION_VALUES.items())
     )
     subcommand_map = "\n".join(
@@ -173,7 +181,9 @@ def command_completion(args):
         return _emit(text, args.output)
     shell = args.shell
     if shell != "powershell":
-        raise ValueError("This extension handles only PowerShell completion installation.")
+        raise ValueError(
+            "This extension handles only PowerShell completion installation."
+        )
     text = "Generate and source the completion script in your PowerShell profile:\n\n  lifetxt completion powershell -o $HOME\\Documents\\PowerShell\\lifetxt-completion.ps1\n  . $HOME\\Documents\\PowerShell\\lifetxt-completion.ps1\n"
     return _emit(text, args.output)
 
@@ -185,12 +195,16 @@ def command_quick_journal(args, config_data):
             body = handle.read().strip()
     else:
         editor = _resolve_editor(args, config_data)
-        handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".md", delete=False)
+        handle = tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", suffix=".md", delete=False
+        )
         temp_path = handle.name
         try:
             handle.write("# %s\n\n" % (args.title or "Journal %s" % day.isoformat()))
             handle.close()
-            return_code = subprocess.call(shlex.split(editor, posix=os.name != "nt") + [temp_path])
+            return_code = subprocess.call(
+                shlex.split(editor, posix=os.name != "nt") + [temp_path]
+            )
             if return_code:
                 return return_code
             with open(temp_path, "r", encoding="utf-8-sig") as reader:
@@ -203,7 +217,21 @@ def command_quick_journal(args, config_data):
     if not body:
         raise ValueError("Journal body is empty; nothing was written.")
     output = args.append or config_write_file(config_data) or "life.txt"
-    legacy_args = ["quick", args.title or "Journal %s" % day.isoformat(), "--append", output, "--type", "J", "--status", "[N]", "--on", day.isoformat(), "--body", body, "--no-shorthand"]
+    legacy_args = [
+        "quick",
+        args.title or "Journal %s" % day.isoformat(),
+        "--append",
+        output,
+        "--type",
+        "J",
+        "--status",
+        "[N]",
+        "--on",
+        day.isoformat(),
+        "--body",
+        body,
+        "--no-shorthand",
+    ]
     if args.mood:
         legacy_args.extend(("--mood", args.mood))
     if args.project:
@@ -220,7 +248,12 @@ def command_quick_journal(args, config_data):
             details["project"] = [args.project]
         if args.tags:
             details["tag"] = list(args.tags)
-        sys.stdout.write(item_to_line(Item("[N]", "J", args.title or "Journal %s" % day.isoformat(), details)) + "\n")
+        sys.stdout.write(
+            item_to_line(
+                Item("[N]", "J", args.title or "Journal %s" % day.isoformat(), details)
+            )
+            + "\n"
+        )
         return 0
     from .cli import main as legacy_main
 

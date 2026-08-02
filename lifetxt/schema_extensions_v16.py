@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import json
 from collections import OrderedDict
 
-_SCHEMA_JSON = r'''{
+_SCHEMA_JSON = r"""{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Eruhitsuji/lifetxt/schemas/ticket-project-report-v1.schema.json",
   "title": "lifetxt Ticket Project Report v1",
@@ -136,7 +136,7 @@ _SCHEMA_JSON = r'''{
     }
   },
   "additionalProperties": false
-}'''
+}"""
 
 
 def ticket_project_report_schema():
@@ -161,24 +161,35 @@ def schema_samples_v16():
                     "scope": {"project": None},
                     "configuration": {
                         "terminal_statuses": ["closed", "done"],
-                        "high_severities": ["blocker", "critical"]
+                        "high_severities": ["blocker", "critical"],
                     },
                     "summary": {
-                        "total": 0, "open": 0, "terminal": 0,
-                        "progress_percent": None, "project_count": 0,
-                        "blocked": 0, "dependency_unknown": 0, "overdue": 0,
-                        "unassigned": 0, "high_severity": 0, "stale": 0
+                        "total": 0,
+                        "open": 0,
+                        "terminal": 0,
+                        "progress_percent": None,
+                        "project_count": 0,
+                        "blocked": 0,
+                        "dependency_unknown": 0,
+                        "overdue": 0,
+                        "unassigned": 0,
+                        "high_severity": 0,
+                        "stale": 0,
                     },
                     "projects": [],
                     "board": {},
                     "attention": {
-                        "blocked": [], "dependency_unknown": [], "overdue": [],
-                        "unassigned": [], "high_severity": [], "stale": []
+                        "blocked": [],
+                        "dependency_unknown": [],
+                        "overdue": [],
+                        "unassigned": [],
+                        "high_severity": [],
+                        "stale": [],
                     },
                     "tickets": [],
                     "formulas": {"open": "ticket status is not terminal"},
-                    "caveats": []
-                }
+                    "caveats": [],
+                },
             ),
         )
     )

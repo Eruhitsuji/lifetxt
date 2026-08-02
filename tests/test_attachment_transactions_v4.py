@@ -20,7 +20,9 @@ class AttachmentTransactionV4Tests(unittest.TestCase):
         self.target = os.path.join(self.temp.name, "attachments", "note.txt")
         self.config = {
             "attachments": {"root": self.temp.name},
-            "transactions": {"journal_dir": os.path.join(self.temp.name, "transactions")},
+            "transactions": {
+                "journal_dir": os.path.join(self.temp.name, "transactions")
+            },
         }
         with open(self.life, "w", encoding="utf-8") as handle:
             handle.write("[ ] T Task id:t1\n")

@@ -17,7 +17,9 @@ class RemoteWebV20Tests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp.name, "life.txt")
         with open(self.path, "w", encoding="utf-8") as handle:
-            handle.write("[ ] T Fix_remote record:ticket id:T-1 project:web visibility:shared ticket_status:new\n")
+            handle.write(
+                "[ ] T Fix_remote record:ticket id:T-1 project:web visibility:shared ticket_status:new\n"
+            )
         self.config = {
             "api": {"token": "legacy-api-token"},
             "remote": {
@@ -37,7 +39,14 @@ class RemoteWebV20Tests(unittest.TestCase):
                 "browser_session_idle_seconds": 300,
             },
         }
-        self.client = TestClient(create_app(paths=[self.path], writable_path=self.path, config=self.config, read_only=True))
+        self.client = TestClient(
+            create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=self.config,
+                read_only=True,
+            )
+        )
         self.v2 = {"X-Lifetxt-Remote-Version": "2"}
         self.bearer = dict(self.v2, Authorization="Bearer secret-v20")
         self.origin = "http://testserver"
@@ -47,7 +56,10 @@ class RemoteWebV20Tests(unittest.TestCase):
         os.environ.pop("REMOTE_ALICE_V20", None)
 
     def test_protocol_negotiation_and_legacy_v1(self):
-        legacy = self.client.get("/api/remote/v1/capabilities", headers={"Authorization": "Bearer secret-v20"})
+        legacy = self.client.get(
+            "/api/remote/v1/capabilities",
+            headers={"Authorization": "Bearer secret-v20"},
+        )
         self.assertEqual(200, legacy.status_code)
         self.assertEqual("remote-access-policy-v1.schema.json", legacy.json()["schema"])
         current = self.client.get("/api/remote/v1/capabilities", headers=self.bearer)
@@ -56,7 +68,10 @@ class RemoteWebV20Tests(unittest.TestCase):
         self.assertEqual("2", current.headers["X-Lifetxt-Remote-Version"])
         future = self.client.get(
             "/api/remote/v1/capabilities",
-            headers={"Authorization": "Bearer secret-v20", "X-Lifetxt-Remote-Version": "99"},
+            headers={
+                "Authorization": "Bearer secret-v20",
+                "X-Lifetxt-Remote-Version": "99",
+            },
         )
         self.assertEqual(426, future.status_code)
         self.assertEqual("REMOTE_VERSION_UNSUPPORTED", future.json()["error"])
@@ -97,9 +112,13 @@ class RemoteWebV20Tests(unittest.TestCase):
 
         accepted_headers = dict(
             self.v2,
-            **{"If-Match": revision, "Origin": self.origin, "X-CSRF-Token": csrf}
+            **{"If-Match": revision, "Origin": self.origin, "X-CSRF-Token": csrf},
         )
-        accepted = self.client.post("/api/remote/v1/write-check", headers=accepted_headers, json={"operation": "test"})
+        accepted = self.client.post(
+            "/api/remote/v1/write-check",
+            headers=accepted_headers,
+            json={"operation": "test"},
+        )
         self.assertEqual(200, accepted.status_code, accepted.text)
         self.assertFalse(accepted.json()["authoritative_mutation"])
 
@@ -108,24 +127,43 @@ class RemoteWebV20Tests(unittest.TestCase):
             headers=dict(self.v2, **{"Origin": self.origin, "X-CSRF-Token": csrf}),
         )
         self.assertEqual(200, logout.status_code)
-        self.assertEqual(401, self.client.get("/api/remote/v1/browser/session", headers=self.v2).status_code)
+        self.assertEqual(
+            401,
+            self.client.get(
+                "/api/remote/v1/browser/session", headers=self.v2
+            ).status_code,
+        )
 
     def test_relogin_rotates_and_revokes_the_previous_cookie(self):
         login_headers = dict(self.v2, Origin=self.origin)
-        first = self.client.post("/api/remote/v1/browser/login", headers=login_headers, json={"token": "secret-v20"})
+        first = self.client.post(
+            "/api/remote/v1/browser/login",
+            headers=login_headers,
+            json={"token": "secret-v20"},
+        )
         self.assertEqual(200, first.status_code)
         old_cookie = self.client.cookies.get("lifetxt_remote_session")
-        second = self.client.post("/api/remote/v1/browser/login", headers=login_headers, json={"token": "secret-v20"})
+        second = self.client.post(
+            "/api/remote/v1/browser/login",
+            headers=login_headers,
+            json={"token": "secret-v20"},
+        )
         self.assertEqual(200, second.status_code)
-        self.assertNotEqual(old_cookie, self.client.cookies.get("lifetxt_remote_session"))
+        self.assertNotEqual(
+            old_cookie, self.client.cookies.get("lifetxt_remote_session")
+        )
         old_client = TestClient(self.client.app)
-        old_client.cookies.set("lifetxt_remote_session", old_cookie, path="/api/remote/")
+        old_client.cookies.set(
+            "lifetxt_remote_session", old_cookie, path="/api/remote/"
+        )
         expired = old_client.get("/api/remote/v1/browser/session", headers=self.v2)
         self.assertEqual(401, expired.status_code)
 
     def test_login_origin_and_browser_flag_are_enforced(self):
         missing_origin = self.client.post(
-            "/api/remote/v1/browser/login", headers=self.v2, json={"token": "secret-v20"}
+            "/api/remote/v1/browser/login",
+            headers=self.v2,
+            json={"token": "secret-v20"},
         )
         self.assertEqual(403, missing_origin.status_code)
         self.assertEqual("ORIGIN_REQUIRED", missing_origin.json()["error"])
@@ -137,7 +175,9 @@ class RemoteWebV20Tests(unittest.TestCase):
         items = self.client.get("/api/remote/v1/resources/items", headers=self.bearer)
         self.assertEqual(1, items.json()["data"]["count"])
         diagnostics = self.client.get("/api/remote/v1/diagnostics", headers=self.bearer)
-        self.assertEqual("remote-diagnostics-v1.schema.json", diagnostics.json()["schema"])
+        self.assertEqual(
+            "remote-diagnostics-v1.schema.json", diagnostics.json()["schema"]
+        )
         page = self.client.get("/remote")
         self.assertEqual(200, page.status_code)
         self.assertIn("Content-Security-Policy", page.headers)

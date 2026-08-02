@@ -77,7 +77,12 @@ class WriterTests(unittest.TestCase):
         with open(self.path, "w", encoding="utf-8") as handle:
             handle.write('{"config_version": 1}\n')
         data = OrderedDict(
-            [("config_version", 1), ("web", {"port": 9000}), ("_path", self.path), ("_active_workspace", "default")]
+            [
+                ("config_version", 1),
+                ("web", {"port": 9000}),
+                ("_path", self.path),
+                ("_active_workspace", "default"),
+            ]
         )
         report = write_config(self.path, data)
         self.assertTrue(os.path.exists(report["backup"]))
@@ -100,7 +105,11 @@ class WriterTests(unittest.TestCase):
         with open(self.path, "w", encoding="utf-8") as handle:
             handle.write('{"config_version": 1}\n')
         for index in range(5):
-            write_config(self.path, {"config_version": 1, "web": {"port": 8000 + index}}, max_backups=2)
+            write_config(
+                self.path,
+                {"config_version": 1, "web": {"port": 8000 + index}},
+                max_backups=2,
+            )
         backups = [n for n in os.listdir(self.temp.name) if ".bak" in n]
         self.assertLessEqual(len(backups), 2)
 
@@ -334,8 +343,12 @@ class ConfigRevisionTests(unittest.TestCase):
     def test_non_ascii_round_trips(self):
         """The write bypasses atomic_write_text, so encoding is worth pinning."""
         report = write_config(
-            self.path, {"config_version": 1, "defaults": {"timezone": "Asia/Tokyo"},
-                        "web": {"title": "生活記録"}}
+            self.path,
+            {
+                "config_version": 1,
+                "defaults": {"timezone": "Asia/Tokyo"},
+                "web": {"title": "生活記録"},
+            },
         )
         with open(self.path, "r", encoding="utf-8") as handle:
             self.assertEqual("生活記録", json.load(handle)["web"]["title"])
@@ -356,14 +369,19 @@ class ConfigRevisionTests(unittest.TestCase):
 
 class MigrationTests(unittest.TestCase):
     def test_legacy_to_workspaces_default(self):
-        config = {"paths": ["life.txt", ".generated/cal.txt"], "write_file": "life.txt",
-                  "generated_paths": [".generated/cal.txt"]}
+        config = {
+            "paths": ["life.txt", ".generated/cal.txt"],
+            "write_file": "life.txt",
+            "generated_paths": [".generated/cal.txt"],
+        }
         migrated, changes = migrate_config(config)
         self.assertTrue(changes)
         self.assertEqual(CONFIG_SCHEMA_VERSION, migrated["config_version"])
         default = migrated["workspaces"]["default"]
         self.assertEqual("life.txt", default["write_file"])
-        roles = [s.get("role") if isinstance(s, dict) else None for s in default["sources"]]
+        roles = [
+            s.get("role") if isinstance(s, dict) else None for s in default["sources"]
+        ]
         self.assertIn("generated", roles)
 
     def test_migration_is_idempotent(self):

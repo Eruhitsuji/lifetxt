@@ -38,7 +38,8 @@ def migrate_config(config):
     configuration is already current and nothing needs to be written.
     """
     source = OrderedDict(
-        (key, value) for key, value in (config or {}).items()
+        (key, value)
+        for key, value in (config or {}).items()
         if key not in ("_path", "_active_workspace")
     )
     migrated = copy.deepcopy(source)
@@ -51,7 +52,9 @@ def migrate_config(config):
             "Set config_version to %d (was %r)." % (CONFIG_SCHEMA_VERSION, old)
         )
 
-    has_workspaces = isinstance(migrated.get("workspaces"), dict) and migrated["workspaces"]
+    has_workspaces = (
+        isinstance(migrated.get("workspaces"), dict) and migrated["workspaces"]
+    )
     legacy_paths = migrated.get("paths")
     legacy_write = migrated.get("write_file")
 

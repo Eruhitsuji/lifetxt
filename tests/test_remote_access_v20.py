@@ -26,10 +26,23 @@ class RemoteAccessV20Tests(unittest.TestCase):
         self.assertEqual(426, caught.exception.status)
 
     def test_untrusted_forwarded_proto_cannot_bypass_https(self):
-        config = {"remote": {"enabled": True, "trusted_proxies": ["10.0.0.0/8"], "allow_loopback_http": False}}
+        config = {
+            "remote": {
+                "enabled": True,
+                "trusted_proxies": ["10.0.0.0/8"],
+                "allow_loopback_http": False,
+            }
+        }
         with self.assertRaises(RemoteAccessError):
-            require_https({"X-Forwarded-Proto": "https"}, "198.51.100.10", config, request_scheme="http")
-        require_https({"X-Forwarded-Proto": "https"}, "10.1.2.3", config, request_scheme="http")
+            require_https(
+                {"X-Forwarded-Proto": "https"},
+                "198.51.100.10",
+                config,
+                request_scheme="http",
+            )
+        require_https(
+            {"X-Forwarded-Proto": "https"}, "10.1.2.3", config, request_scheme="http"
+        )
         require_https({}, "198.51.100.10", config, request_scheme="https")
 
     def test_duplicate_bearer_secret_fails_closed(self):
@@ -52,10 +65,11 @@ class RemoteAccessV20Tests(unittest.TestCase):
         value = capability({"remote": {"enabled": True, "browser_ui": True}}, 2)
         self.assertEqual("remote-capability-v2.schema.json", value["schema"])
         self.assertEqual(64, len(value["capability_revision"]))
-        redacted = redact_remote_value({"nested": {"body": "see attachment:/tmp/private.txt"}, "token": "secret"})
+        redacted = redact_remote_value(
+            {"nested": {"body": "see attachment:/tmp/private.txt"}, "token": "secret"}
+        )
         self.assertEqual("<redacted>", redacted["nested"]["body"])
         self.assertEqual("<redacted>", redacted["token"])
-
 
     def test_audit_log_cannot_alias_authoritative_source(self):
         config = {"remote": {"enabled": True, "audit_log": "/tmp/life.txt"}}

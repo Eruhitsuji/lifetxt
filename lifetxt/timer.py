@@ -6,7 +6,12 @@ from collections import OrderedDict
 from .atomic import atomic_write_json, atomic_write_text
 from . import mutation
 from .mutation import MISSING_HASH
-from .multi_target import apply_multi_target, delete_plan, json_plan, timer_and_item_transaction
+from .multi_target import (
+    apply_multi_target,
+    delete_plan,
+    json_plan,
+    timer_and_item_transaction,
+)
 from .transaction_journal import journal_directory
 from .timezone_policy import now as timezone_now
 from .config import config_section
@@ -35,7 +40,9 @@ def cmd_timer(args):
         return summary_timer(args)
     if command == "cancel":
         return cancel_timer(args)
-    raise ValueError("timer requires start, pause, resume, stop, status, summary, or cancel.")
+    raise ValueError(
+        "timer requires start, pause, resume, stop, status, summary, or cancel."
+    )
 
 
 def start_timer(args):
@@ -84,8 +91,7 @@ def pause_timer(args):
         require_revision=bool(getattr(args, "require_revisions", False)),
     )
     sys.stdout.write(
-        "Paused timer for %s: elapsed %s\n"
-        % (result["id"], result["elapsed"])
+        "Paused timer for %s: elapsed %s\n" % (result["id"], result["elapsed"])
     )
     return 0
 
@@ -144,7 +150,9 @@ def start_timer_transaction(
         raise ValueError(
             "A timer is already running. Use `lifetxt timer status` or `lifetxt timer stop` first."
         )
-    item = find_item_in_text(item_snapshot.text, item_id, id_key_from_config(config), path)
+    item = find_item_in_text(
+        item_snapshot.text, item_id, id_key_from_config(config), path
+    )
     current_now = _now()
     state = OrderedDict(
         [
@@ -160,7 +168,9 @@ def start_timer_transaction(
     def item_transform(text):
         found = find_item_in_text(text, item_id, id_key_from_config(config), path)
         if found.status == "[ ]":
-            return updated_item_text(text, item_id, id_key_from_config(config), status="[/]")[0]
+            return updated_item_text(
+                text, item_id, id_key_from_config(config), status="[/]"
+            )[0]
         return text
 
     result = timer_and_item_transaction(
@@ -202,7 +212,9 @@ def stop_timer_transaction(
     state = _state_from_snapshot(timer_snapshot)
     resolved_id = item_id or state.get("id")
     if item_id and item_id != state.get("id"):
-        raise ValueError("Running timer is for %s, not %s." % (state.get("id"), item_id))
+        raise ValueError(
+            "Running timer is for %s, not %s." % (state.get("id"), item_id)
+        )
     resolved_path = path or state.get("file")
     if not resolved_path:
         raise ValueError("Timer state does not identify its life.txt file.")
@@ -262,7 +274,9 @@ def stop_timer_transaction(
     )
 
 
-def pause_timer_transaction(config=None, expected_timer_revision=None, require_revision=False):
+def pause_timer_transaction(
+    config=None, expected_timer_revision=None, require_revision=False
+):
     config = config or {}
     state_file = timer_state_file(config)
     snapshot = mutation.read_text_snapshot(state_file, allow_missing=True)
@@ -272,7 +286,10 @@ def pause_timer_transaction(config=None, expected_timer_revision=None, require_r
     if state.get("paused_at"):
         raise ValueError("Timer is already paused.")
     expected = _resolve_revision(
-        expected_timer_revision, snapshot.content_hash, require_revision, "timer_revision"
+        expected_timer_revision,
+        snapshot.content_hash,
+        require_revision,
+        "timer_revision",
     )
     current_now = _now()
     minutes = state_elapsed_minutes(state, current_now)
@@ -301,7 +318,9 @@ def pause_timer_transaction(config=None, expected_timer_revision=None, require_r
     )
 
 
-def resume_timer_transaction(config=None, expected_timer_revision=None, require_revision=False):
+def resume_timer_transaction(
+    config=None, expected_timer_revision=None, require_revision=False
+):
     config = config or {}
     state_file = timer_state_file(config)
     snapshot = mutation.read_text_snapshot(state_file, allow_missing=True)
@@ -311,7 +330,10 @@ def resume_timer_transaction(config=None, expected_timer_revision=None, require_
     if not state.get("paused_at"):
         raise ValueError("Timer is not paused.")
     expected = _resolve_revision(
-        expected_timer_revision, snapshot.content_hash, require_revision, "timer_revision"
+        expected_timer_revision,
+        snapshot.content_hash,
+        require_revision,
+        "timer_revision",
     )
     current_now = _now()
 
@@ -337,7 +359,9 @@ def resume_timer_transaction(config=None, expected_timer_revision=None, require_
     )
 
 
-def cancel_timer_transaction(config=None, expected_timer_revision=None, require_revision=False):
+def cancel_timer_transaction(
+    config=None, expected_timer_revision=None, require_revision=False
+):
     config = config or {}
     state_file = timer_state_file(config)
     snapshot = mutation.read_text_snapshot(state_file, allow_missing=True)
@@ -351,7 +375,10 @@ def cancel_timer_transaction(config=None, expected_timer_revision=None, require_
         }
     state = _state_from_snapshot(snapshot)
     expected = _resolve_revision(
-        expected_timer_revision, snapshot.content_hash, require_revision, "timer_revision"
+        expected_timer_revision,
+        snapshot.content_hash,
+        require_revision,
+        "timer_revision",
     )
     result = apply_multi_target(
         [delete_plan(state_file, expected, kind="json")],
@@ -428,6 +455,7 @@ def _timer_result(result, values):
             payload["item_revision"] = target.after_hash
     return payload
 
+
 def status_timer(args):
     data = timer_status_data(
         config=getattr(args, "config_data", None),
@@ -448,6 +476,7 @@ def status_timer(args):
         )
     return 0
 
+
 def summary_timer(args):
     items = load_items(args.paths)
     start = _parse_date_boundary(args.start, is_end=False)
@@ -464,7 +493,9 @@ def summary_timer(args):
         if minutes <= 0:
             continue
         total += minutes
-        project = item.details.get("project", [""])[0] if item.details.get("project") else ""
+        project = (
+            item.details.get("project", [""])[0] if item.details.get("project") else ""
+        )
         by_project[project] = by_project.get(project, 0) + minutes
         rows.append(
             OrderedDict(
@@ -483,7 +514,13 @@ def summary_timer(args):
                 ("total_minutes", total),
                 ("total", format_elapsed(total)),
                 ("items", rows),
-                ("by_project", OrderedDict((key, {"minutes": value, "elapsed": format_elapsed(value)}) for key, value in by_project.items())),
+                (
+                    "by_project",
+                    OrderedDict(
+                        (key, {"minutes": value, "elapsed": format_elapsed(value)})
+                        for key, value in by_project.items()
+                    ),
+                ),
             ]
         )
         sys.stdout.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
@@ -541,7 +578,10 @@ def format_summary(rows, total, by_project, start, end):
                 )
             )
         lines.append("-" * 50)
-        lines.append("%s  %s" % ("Total".ljust(width_id + width_title + 2), format_elapsed(total)))
+        lines.append(
+            "%s  %s"
+            % ("Total".ljust(width_id + width_title + 2), format_elapsed(total))
+        )
     if by_project:
         lines.append("")
         lines.append("By project:")
@@ -571,7 +611,9 @@ def find_item_in_text(text, item_id, key, source="<text>"):
     if not matches:
         raise ValueError("No item found with %s:%s in %s." % (key, item_id, source))
     if len(matches) > 1:
-        raise ValueError("Multiple items found with %s:%s in %s." % (key, item_id, source))
+        raise ValueError(
+            "Multiple items found with %s:%s in %s." % (key, item_id, source)
+        )
     return matches[0]
 
 
@@ -591,8 +633,11 @@ def updated_item_text(text, item_id, key, status=None, set_details=None):
     return "".join(lines), updated
 
 
-def update_item_in_file(path, item_id, key, status=None, set_details=None, expected_revision=None):
+def update_item_in_file(
+    path, item_id, key, status=None, set_details=None, expected_revision=None
+):
     from .write_operations import mutate_items
+
     result = mutate_items(
         path,
         [{"id": item_id, "status": status, "set_details": set_details or {}}],
@@ -689,7 +734,9 @@ def _line_ending(line):
 
 
 def _raise_on_errors(diagnostics):
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+    errors = [
+        diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+    ]
     if errors:
         raise ValueError(errors[0].format())
 

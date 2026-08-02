@@ -70,13 +70,17 @@ def _status_by_id(items):
 def _is_blocked(item, status_by_id):
     for target in item.details.get("depends_on") or []:
         blocker = status_by_id.get(str(target))
-        if blocker is not None and blocker.status not in (DONE_STATUS, CANCELLED_STATUS):
+        if blocker is not None and blocker.status not in (
+            DONE_STATUS,
+            CANCELLED_STATUS,
+        ):
             return True
     return False
 
 
-def command_center(items, config=None, today=None, horizon_days=3,
-                   person=None, mode="today"):
+def command_center(
+    items, config=None, today=None, horizon_days=3, person=None, mode="today"
+):
     """Build the daily command-center aggregation.
 
     ``mode`` is advisory metadata for briefs (``today``/``morning``/``evening``);
@@ -120,8 +124,12 @@ def command_center(items, config=None, today=None, horizon_days=3,
                 due_today.append(_ref(item))
             elif due <= _add_days(today, horizon_days):
                 upcoming.append(_ref(item))
-        if (status in OPEN_STATUSES and not item.details.get("project")
-                and not item.details.get("due") and not item.details.get("assignee")):
+        if (
+            status in OPEN_STATUSES
+            and not item.details.get("project")
+            and not item.details.get("due")
+            and not item.details.get("assignee")
+        ):
             captures.append(_ref(item))
 
     project_attention = _project_attention(items, config, today)

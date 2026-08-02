@@ -70,8 +70,13 @@ class TicketPlanningTests(unittest.TestCase):
             "v1.0", "web", "VER-1", due="2026-08-10", description="First release"
         )
         sprint = build_sprint(
-            "Sprint 1", "web", "SPR-1", "2026-07-20", "2026-08-02",
-            capacity=10, version="VER-1"
+            "Sprint 1",
+            "web",
+            "SPR-1",
+            "2026-07-20",
+            "2026-08-02",
+            capacity=10,
+            version="VER-1",
         )
         rows = validate_planning(self.read_items() + [version, sprint])
         self.assertEqual([], rows)
@@ -168,8 +173,7 @@ class TicketPlanningTests(unittest.TestCase):
         items = self.read_items()
         version = build_version("v1", "web", "VER-1")
         sprint = build_sprint(
-            "Sprint", "web", "SPR-1", "2026-07-20", "2026-08-02",
-            version="VER-2"
+            "Sprint", "web", "SPR-1", "2026-07-20", "2026-08-02", version="VER-2"
         )
         items[0].details["version"] = ["VER-1"]
         items[0].details["sprint"] = ["SPR-1"]
@@ -201,7 +205,11 @@ class TicketPlanningTests(unittest.TestCase):
         with open(self.life, encoding="utf-8") as handle:
             text = handle.read()
         self.assertEqual(2, text.count("record:ticket_event"))
-        ticket = next(item for item in self.read_items() if "ticket" in item.details.get("record", []))
+        ticket = next(
+            item
+            for item in self.read_items()
+            if "ticket" in item.details.get("record", [])
+        )
         self.assertNotIn("version", ticket.details)
 
     def test_version_release_guard_and_project_membership_scope(self):
@@ -260,8 +268,16 @@ class TicketPlanningTests(unittest.TestCase):
         revision = ticket_file_revision(self.life)
         code, stdout, stderr = self.run_cli(
             [
-                "version", "new", "v1.0", "--project", "web",
-                "--due", "2026-08-10", "--revision", revision, "--json",
+                "version",
+                "new",
+                "v1.0",
+                "--project",
+                "web",
+                "--due",
+                "2026-08-10",
+                "--revision",
+                revision,
+                "--json",
             ]
         )
         self.assertEqual(0, code, stderr)
@@ -270,10 +286,22 @@ class TicketPlanningTests(unittest.TestCase):
 
         code, stdout, stderr = self.run_cli(
             [
-                "sprint", "new", "Sprint 1", "--project", "web",
-                "--start", "2026-07-20", "--end", "2026-08-02",
-                "--version", "VER-1", "--capacity", "10",
-                "--revision", version["revision_after"], "--json",
+                "sprint",
+                "new",
+                "Sprint 1",
+                "--project",
+                "web",
+                "--start",
+                "2026-07-20",
+                "--end",
+                "2026-08-02",
+                "--version",
+                "VER-1",
+                "--capacity",
+                "10",
+                "--revision",
+                version["revision_after"],
+                "--json",
             ]
         )
         self.assertEqual(0, code, stderr)
@@ -281,9 +309,16 @@ class TicketPlanningTests(unittest.TestCase):
 
         code, stdout, stderr = self.run_cli(
             [
-                "ticket", "plan", "BUG-1", "--sprint", "SPR-1",
-                "--revision", sprint["revision_after"],
-                "--at", "2026-07-25T00:00:00Z", "--json",
+                "ticket",
+                "plan",
+                "BUG-1",
+                "--sprint",
+                "SPR-1",
+                "--revision",
+                sprint["revision_after"],
+                "--at",
+                "2026-07-25T00:00:00Z",
+                "--json",
             ]
         )
         self.assertEqual(0, code, stderr)
@@ -301,7 +336,9 @@ class TicketPlanningTests(unittest.TestCase):
             ["ticket", "backlog", "--project", "web", "--format", "json"]
         )
         self.assertEqual(0, code, stderr)
-        self.assertEqual(["FEAT-1"], [row["id"] for row in json.loads(stdout)["backlog"]])
+        self.assertEqual(
+            ["FEAT-1"], [row["id"] for row in json.loads(stdout)["backlog"]]
+        )
 
 
 if __name__ == "__main__":

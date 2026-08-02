@@ -9,12 +9,14 @@ class RemoteClientWritesCompatibilityTests(unittest.TestCase):
     def test_real_server_operations_key_admits_editor(self, request):
         request.side_effect = [
             (
-                {"principal": {
-                    "id": "alice",
-                    "role": "editor",
-                    "scopes": ["read", "write"],
-                    "projects": ["web"],
-                }},
+                {
+                    "principal": {
+                        "id": "alice",
+                        "role": "editor",
+                        "scopes": ["read", "write"],
+                        "projects": ["web"],
+                    }
+                },
                 {"lifetxt_negotiated_protocol": 2},
             ),
             (
@@ -25,7 +27,11 @@ class RemoteClientWritesCompatibilityTests(unittest.TestCase):
                         "authoritative_remote_writes_enabled": True,
                         "ticket_mutations_enabled": True,
                         "operations": [
-                            "create", "edit", "transition", "comment", "log_time"
+                            "create",
+                            "edit",
+                            "transition",
+                            "comment",
+                            "log_time",
                         ],
                         "single_writable_source_only": True,
                         "exact_revision_required": True,
@@ -51,11 +57,16 @@ class RemoteClientWritesCompatibilityTests(unittest.TestCase):
     def test_admission_only_refuses_mutations(self, request):
         request.side_effect = [
             ({"principal": {"id": "alice", "scopes": ["read", "write"]}}, {}),
-            ({"mutation_policy": {
-                "admission_only": True,
-                "authoritative_remote_writes_enabled": False,
-                "operations": ["create"],
-            }}, {}),
+            (
+                {
+                    "mutation_policy": {
+                        "admission_only": True,
+                        "authoritative_remote_writes_enabled": False,
+                        "operations": ["create"],
+                    }
+                },
+                {},
+            ),
         ]
         value = remote_permissions({"url": "https://example.test"})
         self.assertFalse(value["can_write"])

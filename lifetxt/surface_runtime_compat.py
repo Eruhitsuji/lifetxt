@@ -202,18 +202,17 @@ def _patch_web_path_shape_and_reads():
                 unsafe
                 and path.startswith("/api/")
                 and not path.startswith("/api/git/")
-                and path not in (
+                and path
+                not in (
                     "/api/check-line",
                     "/api/items/parse",
                     "/api/shorthand/parse",
                     "/api/timer",
                 )
             )
-            strict = (
-                request.cookies.get(_REVISION_COOKIE) == "1"
-                or str(request.headers.get("x-lifetxt-require-revision") or "").lower()
-                in ("1", "true", "yes", "on")
-            )
+            strict = request.cookies.get(_REVISION_COOKIE) == "1" or str(
+                request.headers.get("x-lifetxt-require-revision") or ""
+            ).lower() in ("1", "true", "yes", "on")
             supplied = (
                 "if-match" in request.headers
                 or "x-lifetxt-expected-revision" in request.headers
@@ -222,7 +221,9 @@ def _patch_web_path_shape_and_reads():
             if life_api_write and not strict and not supplied:
                 compatibility_revision = current_revision(app.state.writable_path)
                 headers = list(request.scope.get("headers") or [])
-                headers.append((b"if-match", etag_value(compatibility_revision).encode("ascii")))
+                headers.append(
+                    (b"if-match", etag_value(compatibility_revision).encode("ascii"))
+                )
                 request.scope["headers"] = headers
                 metrics = app.state.revision_contract_metrics
                 metrics["legacy_fallback_total"] += 1
@@ -257,7 +258,10 @@ def _patch_web_path_shape_and_reads():
                 )
                 response.headers["Deprecation"] = "true"
                 response.headers["X-Lifetxt-Legacy-Revision-Fallback"] = "used"
-            if path in ("/api/revision", "/api/capabilities") and response.status_code < 400:
+            if (
+                path in ("/api/revision", "/api/capabilities")
+                and response.status_code < 400
+            ):
                 response.set_cookie(
                     _REVISION_COOKIE,
                     "1",

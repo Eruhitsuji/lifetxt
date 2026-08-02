@@ -235,7 +235,9 @@ class TicketWorkflowHistoryTests(unittest.TestCase):
         report = ticket_activity_report(self.read_items(), "BUG-1", self.config)
         self.assertEqual("new", report["ticket"]["summary"]["ticket_status"])
         self.assertIsNone(report["ticket"]["resolution"])
-        self.assertEqual(["transition", "closed", "reopened"], [r["event"] for r in report["events"]])
+        self.assertEqual(
+            ["transition", "closed", "reopened"], [r["event"] for r in report["events"]]
+        )
 
     def test_comment_watch_and_unwatch_have_deterministic_sequences(self):
         revision = ticket_file_revision(self.life)
@@ -329,7 +331,9 @@ class TicketWorkflowHistoryTests(unittest.TestCase):
             )
         self.assertEqual(before, ticket_file_revision(self.life))
 
-    def test_history_validation_detects_id_sequence_transaction_and_correction_problems(self):
+    def test_history_validation_detects_id_sequence_transaction_and_correction_problems(
+        self,
+    ):
         ticket = Item(
             "[ ]",
             "T",
@@ -342,18 +346,37 @@ class TicketWorkflowHistoryTests(unittest.TestCase):
             },
         )
         event1 = build_ticket_event(
-            "BUG-1", "comment", "alice", "2026-07-25T00:00:00Z",
-            1, "TX-1", "a" * 64, body="one"
+            "BUG-1",
+            "comment",
+            "alice",
+            "2026-07-25T00:00:00Z",
+            1,
+            "TX-1",
+            "a" * 64,
+            body="one",
         )
         event3 = build_ticket_event(
-            "BUG-1", "comment", "alice", "2026-07-25T00:00:01Z",
-            3, "TX-1", "a" * 64, body="three"
+            "BUG-1",
+            "comment",
+            "alice",
+            "2026-07-25T00:00:01Z",
+            3,
+            "TX-1",
+            "a" * 64,
+            body="three",
         )
         # Deliberately violate the canonical id independently of the sequence gap.
         event3.details["id"] = ["EV-WRONG"]
         time_entry = build_time_entry(
-            "BUG-1", "web", "alice", "development", "2026-07-25",
-            "1h", 1, "EV-MISSING", "2026-07-25T00:00:02Z",
+            "BUG-1",
+            "web",
+            "alice",
+            "development",
+            "2026-07-25",
+            "1h",
+            1,
+            "EV-MISSING",
+            "2026-07-25T00:00:02Z",
             corrects="TIME-MISSING",
         )
         codes = {
@@ -405,9 +428,14 @@ class TicketWorkflowHistoryTests(unittest.TestCase):
         revision = ticket_file_revision(self.life)
         code, stdout, stderr = self.run_cli(
             [
-                "ticket", "transition", "BUG-1", "in_progress",
-                "--revision", revision,
-                "--at", "2026-07-25T00:00:00Z",
+                "ticket",
+                "transition",
+                "BUG-1",
+                "in_progress",
+                "--revision",
+                revision,
+                "--at",
+                "2026-07-25T00:00:00Z",
                 "--json",
             ]
         )
@@ -417,9 +445,14 @@ class TicketWorkflowHistoryTests(unittest.TestCase):
 
         code, stdout, stderr = self.run_cli(
             [
-                "ticket", "comment", "BUG-1", "stale",
-                "--revision", revision,
-                "--at", "2026-07-25T00:01:00Z",
+                "ticket",
+                "comment",
+                "BUG-1",
+                "stale",
+                "--revision",
+                revision,
+                "--at",
+                "2026-07-25T00:01:00Z",
             ]
         )
         self.assertEqual(1, code)

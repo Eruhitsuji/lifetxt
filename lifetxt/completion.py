@@ -148,8 +148,21 @@ COMMAND_SUBCOMMANDS = {
 }
 
 #: Kinds that `completion values` can read out of a life.txt file.
-VALUE_KINDS = ("state", "project", "tag", "person", "id", "type", "status",
-               "context", "priority", "key", "team", "service", "channel")
+VALUE_KINDS = (
+    "state",
+    "project",
+    "tag",
+    "person",
+    "id",
+    "type",
+    "status",
+    "context",
+    "priority",
+    "key",
+    "team",
+    "service",
+    "channel",
+)
 
 #: Detail keys whose values feed each kind. One place to look when adding a
 #: kind, and the reason `person` spans every people-shaped key at once.
@@ -163,7 +176,15 @@ _KIND_DETAIL_KEYS = {
     "team": ("team",),
     "service": ("service",),
     "channel": ("channel",),
-    "person": ("person", "owner", "assignee", "attendee", "sender", "recipient", "user"),
+    "person": (
+        "person",
+        "owner",
+        "assignee",
+        "attendee",
+        "sender",
+        "recipient",
+        "user",
+    ),
 }
 
 #: Values worth offering before a file contains any, so a new file still
@@ -183,8 +204,10 @@ def candidates(kind, prefix="", items=None, paths=None, limit=None):
     offers `busy` before `debug`.
     """
     if kind not in VALUE_KINDS:
-        raise ValueError("Unknown completion kind %r. Use one of: %s"
-                         % (kind, ", ".join(VALUE_KINDS)))
+        raise ValueError(
+            "Unknown completion kind %r. Use one of: %s"
+            % (kind, ", ".join(VALUE_KINDS))
+        )
 
     if kind == "type":
         pool = _TYPE_ALIAS_WORDS + list(VALID_TYPES)
@@ -193,7 +216,11 @@ def candidates(kind, prefix="", items=None, paths=None, limit=None):
     elif kind == "key":
         pool = sorted(KNOWN_KEYS)
     else:
-        found = _values_from_items(items, kind) if items is not None else _values_from_files(kind, paths)
+        found = (
+            _values_from_items(items, kind)
+            if items is not None
+            else _values_from_files(kind, paths)
+        )
         pool = _unique_ordered(list(_KIND_BUILTINS.get(kind, ())) + list(found))
 
     ranked = _rank(pool, prefix)
@@ -236,7 +263,9 @@ def cmd_completion(args):
     elif command == "fish":
         output = fish_completion()
     elif command == "values":
-        output = dynamic_values(getattr(args, "kind", None), getattr(args, "path", None))
+        output = dynamic_values(
+            getattr(args, "kind", None), getattr(args, "path", None)
+        )
     else:
         raise ValueError("completion requires bash, zsh, fish, values, or install.")
 
@@ -255,7 +284,9 @@ def dynamic_values(kind, paths=None):
     error that would corrupt the completion display.
     """
     if kind not in VALUE_KINDS:
-        raise ValueError("completion values --kind must be one of: %s" % ", ".join(VALUE_KINDS))
+        raise ValueError(
+            "completion values --kind must be one of: %s" % ", ".join(VALUE_KINDS)
+        )
 
     if kind == "type":
         return "\n".join(_TYPE_ALIAS_WORDS + list(VALID_TYPES)) + "\n"
@@ -278,7 +309,9 @@ def _values_from_files(kind, paths):
         return []
 
     try:
-        candidates = list(paths) if paths else list(config_paths(load_config(None)) or [])
+        candidates = (
+            list(paths) if paths else list(config_paths(load_config(None)) or [])
+        )
         if not candidates:
             candidates = ["life.txt"]
         resolved = expand_paths(candidates)
@@ -326,7 +359,8 @@ def bash_completion():
     options = " ".join(sorted(set(COMMON_OPTIONS + _all_options())))
 
     value_cases = "\n".join(
-        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;' % (option, values)
+        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;'
+        % (option, values)
         for option, values in _value_case_entries()
     )
 
@@ -339,7 +373,8 @@ def bash_completion():
     )
 
     subcommand_cases = "\n".join(
-        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;' % (name, " ".join(words))
+        '    %s) COMPREPLY=( $(compgen -W "%s" -- "$cur") ); return 0 ;;'
+        % (name, " ".join(words))
         for name, words in sorted(COMMAND_SUBCOMMANDS.items())
     )
 
@@ -431,7 +466,8 @@ def zsh_completion():
         for option, values in _value_case_entries()
     )
     command_cases = "\n".join(
-        "      %s) _values 'option' %s; return ;;" % (name, " ".join(_command_options(name)))
+        "      %s) _values 'option' %s; return ;;"
+        % (name, " ".join(_command_options(name)))
         for name in _command_names()
         if _command_options(name)
     )
@@ -440,7 +476,8 @@ def zsh_completion():
         for name, words in sorted(COMMAND_SUBCOMMANDS.items())
     )
     positional_cases = "\n".join(
-        "      %s) _values 'state' ${(f)\"$(lifetxt completion values --kind state 2>/dev/null)\"}; return ;;" % name
+        "      %s) _values 'state' ${(f)\"$(lifetxt completion values --kind state 2>/dev/null)\"}; return ;;"
+        % name
         for name in sorted(COMMAND_POSITIONAL_VALUES)
         if COMMAND_POSITIONAL_VALUES[name]
     )
@@ -537,7 +574,10 @@ def fish_completion():
         ("project", ("project",)),
         ("tag", ("tag", "tag-all", "exclude-tag")),
         ("id", ("id", "match-id")),
-        ("person", ("person", "owner", "assignee", "attendee", "sender", "recipient", "user")),
+        (
+            "person",
+            ("person", "owner", "assignee", "attendee", "sender", "recipient", "user"),
+        ),
     ):
         for option_name in option_names:
             lines.append(
@@ -673,7 +713,11 @@ def _all_options():
         detail_options.append("--%s" % key)
         if "_" in key:
             detail_options.append("--%s" % key.replace("_", "-"))
-    return tuple(_unique_ordered(list(_STRUCTURAL_OPTIONS) + list(_parser_long_options()) + detail_options))
+    return tuple(
+        _unique_ordered(
+            list(_STRUCTURAL_OPTIONS) + list(_parser_long_options()) + detail_options
+        )
+    )
 
 
 def _extra_command_names():

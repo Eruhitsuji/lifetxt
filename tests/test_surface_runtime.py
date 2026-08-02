@@ -366,7 +366,9 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.write(path, self.initial_text())
         snapshot = read_text_snapshot(path)
 
-        with transaction_scope(path, snapshot.content_hash, "test.update") as transaction:
+        with transaction_scope(
+            path, snapshot.content_hash, "test.update"
+        ) as transaction:
             webapp.write_text(path, transaction.text + "[ ] T Added id:T-2\n")
             self.assertEqual(self.read(path), self.initial_text())
             revision = transaction.commit()
@@ -394,7 +396,9 @@ class SurfaceRuntimeTests(unittest.TestCase):
         path = self.path()
         self.write(path, self.initial_text())
         snapshot = read_text_snapshot(path)
-        operation = MutationOperation("test.positional", lambda current: current + "# ok\n")
+        operation = MutationOperation(
+            "test.positional", lambda current: current + "# ok\n"
+        )
         result = mutation.apply_text_mutation(path, operation, snapshot.content_hash)
         self.assertTrue(result.changed)
         self.assertTrue(self.read(path).endswith("# ok\n"))
@@ -496,8 +500,12 @@ class SurfaceRuntimeTests(unittest.TestCase):
             "set_status",
             "capture_item",
         ):
-            self.assertIn("expected_file_hash", schemas[name]["inputSchema"]["properties"])
-            self.assertIn("expected_file_hash", schemas[name]["inputSchema"]["required"])
+            self.assertIn(
+                "expected_file_hash", schemas[name]["inputSchema"]["properties"]
+            )
+            self.assertIn(
+                "expected_file_hash", schemas[name]["inputSchema"]["required"]
+            )
         self.assertTrue(schemas["get_capabilities"]["annotations"]["readOnlyHint"])
         self.assertIn("range", schemas["get_review"]["inputSchema"]["properties"])
 
@@ -587,13 +595,17 @@ class SurfaceRuntimeTests(unittest.TestCase):
         context = McpContext(paths=[path], writable_path=path)
         capabilities = mcp.call_tool("get_capabilities", {}, context)
         self.assertEqual(capabilities["surface"], "mcp")
-        self.assertEqual(capabilities["revision"], read_text_snapshot(path).content_hash)
+        self.assertEqual(
+            capabilities["revision"], read_text_snapshot(path).content_hash
+        )
 
         resources = {row["uri"]: row for row in mcp.resource_list(context)}
         self.assertIn("lifetxt://capabilities", resources)
         content = mcp.resource_read(context, "lifetxt://capabilities")
         parsed = json.loads(content["contents"][0]["text"])
-        self.assertEqual(parsed["capability_version"], capabilities["capability_version"])
+        self.assertEqual(
+            parsed["capability_version"], capabilities["capability_version"]
+        )
 
         review = mcp.call_tool("get_review", {"range": "year", "year": 2026}, context)
         self.assertEqual(review["from"], "2026-01-01")

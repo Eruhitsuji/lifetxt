@@ -47,12 +47,18 @@ class SafetyFoundationTests(unittest.TestCase):
         return path
 
     def test_format_version_current_unversioned_and_unsupported(self):
-        self.assertEqual("current", format_version_report("#! format_version: 1\n")["state"])
+        self.assertEqual(
+            "current", format_version_report("#! format_version: 1\n")["state"]
+        )
         self.assertEqual("unversioned", format_version_report("[ ] T Task\n")["state"])
-        self.assertEqual("unsupported", format_version_report("#! format-version: 9\n")["state"])
+        self.assertEqual(
+            "unsupported", format_version_report("#! format-version: 9\n")["state"]
+        )
 
     def test_directives_normalize_names_and_report_duplicates(self):
-        values, duplicates = file_directives("#! format-version: 1\n#! timezone: UTC\n#! timezone: Asia/Tokyo\n")
+        values, duplicates = file_directives(
+            "#! format-version: 1\n#! timezone: UTC\n#! timezone: Asia/Tokyo\n"
+        )
         self.assertEqual("1", values["format_version"])
         self.assertEqual("Asia/Tokyo", values["timezone"])
         self.assertEqual([("timezone", 3)], duplicates)
@@ -63,7 +69,12 @@ class SafetyFoundationTests(unittest.TestCase):
 
     def test_canonical_issues_cover_bom_crlf_nfc_case_and_final_newline(self):
         text = "#! format_version: 1\r\n[ ] T Cafe\u0301 Project:Work"
-        codes = {row["code"] for row in canonical_issues(text, raw_bytes=codecs.BOM_UTF8 + text.encode("utf-8"), bom=True)}
+        codes = {
+            row["code"]
+            for row in canonical_issues(
+                text, raw_bytes=codecs.BOM_UTF8 + text.encode("utf-8"), bom=True
+            )
+        }
         self.assertTrue({"F101", "F102", "F104", "F106", "F107"}.issubset(codes))
 
     def test_stable_diagnostics_has_source_span_and_hint(self):
@@ -78,10 +89,15 @@ class SafetyFoundationTests(unittest.TestCase):
     def test_timezone_precedence_cli_file_config_host(self):
         config = {"defaults": {"timezone": "UTC"}}
         text = "#! timezone: Asia/Tokyo\n"
-        self.assertEqual("cli", resolve_timezone_policy(config, text, "Europe/London")["source"])
+        self.assertEqual(
+            "cli", resolve_timezone_policy(config, text, "Europe/London")["source"]
+        )
         self.assertEqual("file", resolve_timezone_policy(config, text)["source"])
         self.assertEqual("config", resolve_timezone_policy(config, "")["source"])
-        self.assertEqual(["cli", "file", "config", "host"], resolve_timezone_policy(config, text)["precedence"])
+        self.assertEqual(
+            ["cli", "file", "config", "host"],
+            resolve_timezone_policy(config, text)["precedence"],
+        )
 
     def test_invalid_timezone_is_visible(self):
         valid, error = validate_timezone("UTC")
@@ -105,7 +121,9 @@ class SafetyFoundationTests(unittest.TestCase):
     def test_unrecognized_host_timezone_falls_back_to_local(self):
         original = safety_foundation_module._host_timezone_name
         try:
-            safety_foundation_module._host_timezone_name = lambda: "Unmapped Local Standard Time"
+            safety_foundation_module._host_timezone_name = lambda: (
+                "Unmapped Local Standard Time"
+            )
             report = safety_foundation_module.resolve_timezone_policy({}, "")
         finally:
             safety_foundation_module._host_timezone_name = original
@@ -130,7 +148,9 @@ class SafetyFoundationTests(unittest.TestCase):
         self.assertTrue(report["valid"])
 
     def test_serve_target_reports_mismatch_and_drive_relative_path(self):
-        report = serve_target_diagnostic([self.path("read.txt")], self.path("write.txt"))
+        report = serve_target_diagnostic(
+            [self.path("read.txt")], self.path("write.txt")
+        )
         self.assertTrue(report["mismatch"])
         self.assertEqual("warning", report["severity"])
         drive = serve_target_diagnostic([], "C:relative\\life.txt")
@@ -140,7 +160,10 @@ class SafetyFoundationTests(unittest.TestCase):
         target = self.path("life.txt")
         lock = target + ".lifetxt.lock"
         with open(lock, "w", encoding="utf-8") as handle:
-            json.dump({"pid": 99999999, "host": socket.gethostname(), "operation": "test"}, handle)
+            json.dump(
+                {"pid": 99999999, "host": socket.gethostname(), "operation": "test"},
+                handle,
+            )
         old = time.time() - 600
         os.utime(lock, (old, old))
         records = inspect_locks([target], stale_after=300, now=time.time())
@@ -151,14 +174,19 @@ class SafetyFoundationTests(unittest.TestCase):
     def test_write_route_audit_detects_direct_commit_boundaries(self):
         package = self.path("repo/lifetxt")
         os.makedirs(package)
-        self.write("repo/lifetxt/bad.py", "import os\ndef f():\n    os.replace('a', 'b')\n    atomic_write_bytes('x', b'y')\n")
+        self.write(
+            "repo/lifetxt/bad.py",
+            "import os\ndef f():\n    os.replace('a', 'b')\n    atomic_write_bytes('x', b'y')\n",
+        )
         findings = audit_python_writes(self.path("repo"))
         calls = {row["call"] for row in findings}
         self.assertIn("os.replace", calls)
         self.assertIn("atomic_write_bytes", calls)
 
     def test_capability_document_is_versioned_and_revision_aware(self):
-        value = capability_document(read_only=True, authentication="session", writable_targets=[])
+        value = capability_document(
+            read_only=True, authentication="session", writable_targets=[]
+        )
         self.assertEqual("1", value["capability_version"])
         self.assertTrue(value["read_only"])
         self.assertTrue(value["revision_preconditions"]["supported"])
@@ -247,7 +275,9 @@ class SafetyFoundationTests(unittest.TestCase):
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():
             self.assertTrue(schema["$id"].startswith("https://"))
-            self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])
+            self.assertEqual(
+                "https://json-schema.org/draft/2020-12/schema", schema["$schema"]
+            )
         directory = self.path("schemas")
         names = write_schema_bundle(directory)
         self.assertEqual(sorted(bundle), names)

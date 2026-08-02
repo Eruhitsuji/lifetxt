@@ -90,7 +90,9 @@ def effective_high_severities(config=None):
         marked = []
         for name, metadata in configured.items():
             if isinstance(metadata, dict) and (
-                metadata.get("high") or metadata.get("attention") or metadata.get("critical")
+                metadata.get("high")
+                or metadata.get("attention")
+                or metadata.get("critical")
             ):
                 marked.append(str(name).lower())
         if marked:
@@ -300,8 +302,12 @@ def _subparsers_action(parser):
 def _add_common_cli_options(parser, cli_module, include_project=False):
     cli_module._add_input_paths(parser)
     if include_project:
-        parser.add_argument("--project", help="Restrict the report to one project or alias.")
-    parser.add_argument("--at", help="ISO reference date/datetime; defaults to the shared UTC clock.")
+        parser.add_argument(
+            "--project", help="Restrict the report to one project or alias."
+        )
+    parser.add_argument(
+        "--at", help="ISO reference date/datetime; defaults to the shared UTC clock."
+    )
     parser.add_argument(
         "--stale-after",
         type=int,
@@ -322,7 +328,9 @@ def _add_common_cli_options(parser, cli_module, include_project=False):
         help="Override high severities; repeat or use comma-separated values.",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON output."
+    )
 
 
 def _install_cli_commands(parser, cli_module):
@@ -432,9 +440,7 @@ def _patch_projects():
             terminal_statuses=terminal_statuses,
             high_severities=high_severities,
         )
-        by_project = dict(
-            (row["project"], row) for row in report.get("projects", [])
-        )
+        by_project = dict((row["project"], row) for row in report.get("projects", []))
         rows = []
         for original_row in result.get("projects", []):
             row = OrderedDict(original_row)
@@ -455,8 +461,14 @@ def _mcp_tool(name, description):
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project": {"type": "string", "description": "Optional project name or alias."},
-                "at": {"type": "string", "description": "Optional ISO reference date/datetime."},
+                "project": {
+                    "type": "string",
+                    "description": "Optional project name or alias.",
+                },
+                "at": {
+                    "type": "string",
+                    "description": "Optional ISO reference date/datetime.",
+                },
                 "stale_after": {"type": "integer", "minimum": 0},
                 "terminal_statuses": {
                     "type": "array",
@@ -507,9 +519,7 @@ def _patch_mcp():
     mcp.TOOL_HANDLERS.update(
         OrderedDict((name, _mcp_report) for name in _MCP_TOOL_NAMES)
     )
-    mcp.READ_ONLY_TOOLS = frozenset(
-        set(mcp.READ_ONLY_TOOLS) | set(_MCP_TOOL_NAMES)
-    )
+    mcp.READ_ONLY_TOOLS = frozenset(set(mcp.READ_ONLY_TOOLS) | set(_MCP_TOOL_NAMES))
 
     def tool_schemas():
         schemas = list(original_schemas())

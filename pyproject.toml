@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "lifetxt"
 version = "0.1.0"
 description = "Parser, validator, converter, CLI, and optional web UI for life.txt."
 readme = "readme.md"
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
   { name = "lifetxt contributors" }
@@ -15,6 +15,9 @@ authors = [
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Office/Business :: Scheduling",
   "Topic :: Text Processing"
 ]
@@ -30,6 +33,22 @@ tui = [
   "textual>=0.1.0",
   "watchdog>=2.0.0"
 ]
+dev = [
+  "ruff>=0.16.1"
+]
 
 [tool.setuptools]
 packages = ["lifetxt"]
+
+[tool.ruff]
+required-version = ">=0.16.1"
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+  "E9",
+  "F63",
+  "F7",
+  "F82"
+]

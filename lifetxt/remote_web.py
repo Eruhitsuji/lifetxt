@@ -1,4 +1,5 @@
 """FastAPI surface for authenticated Remote Safe Mode."""
+
 from __future__ import unicode_literals
 
 import html
@@ -125,7 +126,9 @@ def install_remote_web():
         from fastapi import Body, Query, Request
         from fastapi.responses import HTMLResponse, JSONResponse
 
-        app = original(paths=paths, writable_path=writable_path, config=config, read_only=read_only)
+        app = original(
+            paths=paths, writable_path=writable_path, config=config, read_only=read_only
+        )
         app.state.remote_enabled = bool(_remote(app.state.config).get("enabled"))
         if app.state.remote_enabled:
             validate_session_configuration(app.state.config)
@@ -149,10 +152,16 @@ def install_remote_web():
             auth_method = None
             session = None
             try:
-                require_https(request.headers, host, app.state.config, request.url.scheme)
+                require_https(
+                    request.headers, host, app.state.config, request.url.scheme
+                )
                 if is_page:
                     if not browser_enabled(app.state.config):
-                        raise RemoteAccessError("REMOTE_BROWSER_DISABLED", "Remote browser UI is disabled.", 404)
+                        raise RemoteAccessError(
+                            "REMOTE_BROWSER_DISABLED",
+                            "Remote browser UI is disabled.",
+                            404,
+                        )
                     response = await call_next(request)
                     response.headers["Cache-Control"] = "no-store"
                     response.headers["X-Frame-Options"] = "DENY"
@@ -164,22 +173,53 @@ def install_remote_web():
 
                 if path == _LOGIN_PATH:
                     if not browser_enabled(app.state.config):
-                        raise RemoteAccessError("REMOTE_BROWSER_DISABLED", "Remote browser UI is disabled.", 404)
-                    login_limiter.check("login:%s" % host, int(_remote(app.state.config).get("browser_login_rate_limit_per_minute") or 10))
-                    require_origin(request.headers.get("origin"), _expected_origin(request, app.state.config), app.state.config)
+                        raise RemoteAccessError(
+                            "REMOTE_BROWSER_DISABLED",
+                            "Remote browser UI is disabled.",
+                            404,
+                        )
+                    login_limiter.check(
+                        "login:%s" % host,
+                        int(
+                            _remote(app.state.config).get(
+                                "browser_login_rate_limit_per_minute"
+                            )
+                            or 10
+                        ),
+                    )
+                    require_origin(
+                        request.headers.get("origin"),
+                        _expected_origin(request, app.state.config),
+                        app.state.config,
+                    )
                 else:
                     remote = _remote(app.state.config)
-                    proxy_header = str(remote.get("proxy_principal_header") or "X-Lifetxt-Principal")
-                    has_explicit_auth = bool(request.headers.get("authorization") or request.headers.get(proxy_header))
+                    proxy_header = str(
+                        remote.get("proxy_principal_header") or "X-Lifetxt-Principal"
+                    )
+                    has_explicit_auth = bool(
+                        request.headers.get("authorization")
+                        or request.headers.get(proxy_header)
+                    )
                     session_id = request.cookies.get(cookie_name(app.state.config))
                     if has_explicit_auth:
-                        principal, auth_method = authenticate(request.headers, host, app.state.config)
+                        principal, auth_method = authenticate(
+                            request.headers, host, app.state.config
+                        )
                     elif session_id:
-                        session = app.state.remote_session_store.resolve(session_id, app.state.config)
-                        current = principal_registry(app.state.config).get(session.get("principal", {}).get("id"))
+                        session = app.state.remote_session_store.resolve(
+                            session_id, app.state.config
+                        )
+                        current = principal_registry(app.state.config).get(
+                            session.get("principal", {}).get("id")
+                        )
                         if not current or current.get("disabled"):
                             app.state.remote_session_store.revoke(session_id)
-                            raise RemoteAccessError("SESSION_REVOKED", "The browser session principal no longer exists or is disabled.", 401)
+                            raise RemoteAccessError(
+                                "SESSION_REVOKED",
+                                "The browser session principal no longer exists or is disabled.",
+                                401,
+                            )
                         principal = current
                         auth_method = "browser-session"
                         session["principal"] = dict(current)
@@ -192,33 +232,64 @@ def install_remote_web():
                             app.state.config,
                         )
                     else:
-                        principal, auth_method = authenticate(request.headers, host, app.state.config)
+                        principal, auth_method = authenticate(
+                            request.headers, host, app.state.config
+                        )
 
-                    principal_limiter.check(principal["id"], int(remote.get("rate_limit_per_minute") or 120))
+                    principal_limiter.check(
+                        principal["id"], int(remote.get("rate_limit_per_minute") or 120)
+                    )
                     request.state.remote_principal = principal
                     request.state.remote_auth_method = auth_method
                     request.state.remote_session = session
 
                 response = await call_next(request)
-                for key, value in protocol_response_headers(app.state.config, negotiated).items():
+                for key, value in protocol_response_headers(
+                    app.state.config, negotiated
+                ).items():
                     response.headers[key] = value
                 response.headers["X-Request-ID"] = rid
                 audit_principal = getattr(request.state, "remote_principal", principal)
                 _audit_safely(
                     app.state.config,
-                    audit_event(audit_principal, request.method + " " + path, response.status_code, rid, host, {"authentication": auth_method, "protocol": negotiated}),
+                    audit_event(
+                        audit_principal,
+                        request.method + " " + path,
+                        response.status_code,
+                        rid,
+                        host,
+                        {"authentication": auth_method, "protocol": negotiated},
+                    ),
                 )
                 return response
             except RemoteAccessError as exc:
-                _audit_safely(app.state.config, audit_event(principal, request.method + " " + path, exc.code, rid, host, {"protocol": negotiated}))
+                _audit_safely(
+                    app.state.config,
+                    audit_event(
+                        principal,
+                        request.method + " " + path,
+                        exc.code,
+                        rid,
+                        host,
+                        {"protocol": negotiated},
+                    ),
+                )
                 headers = {"X-Request-ID": rid}
-                error_version = exc.detail.get("current", negotiated) if exc.detail else negotiated
+                error_version = (
+                    exc.detail.get("current", negotiated) if exc.detail else negotiated
+                )
                 if error_version not in (1, REMOTE_PROTOCOL_CURRENT):
                     error_version = REMOTE_PROTOCOL_CURRENT
-                headers.update(protocol_response_headers(app.state.config, error_version))
+                headers.update(
+                    protocol_response_headers(app.state.config, error_version)
+                )
                 if exc.status == 401:
                     headers["WWW-Authenticate"] = "Bearer"
-                return JSONResponse(status_code=exc.status, content=error_payload(exc, rid), headers=headers)
+                return JSONResponse(
+                    status_code=exc.status,
+                    content=error_payload(exc, rid),
+                    headers=headers,
+                )
 
         def principal(request):
             return request.state.remote_principal
@@ -243,15 +314,19 @@ def install_remote_web():
         def remote_session(request: Request):
             current = principal(request)
             require_scope(current, "read")
-            result = OrderedDict((
-                ("schema", "remote-session-v1.schema.json"),
-                ("principal", public_principal(current)),
-                ("authentication", request.state.remote_auth_method),
-                ("request_id", request.state.remote_request_id),
-                ("protocol_version", request.state.remote_protocol),
-            ))
+            result = OrderedDict(
+                (
+                    ("schema", "remote-session-v1.schema.json"),
+                    ("principal", public_principal(current)),
+                    ("authentication", request.state.remote_auth_method),
+                    ("request_id", request.state.remote_request_id),
+                    ("protocol_version", request.state.remote_protocol),
+                )
+            )
             if request.state.remote_session:
-                result["browser_session"] = session_payload(request.state.remote_session, include_csrf=False)
+                result["browser_session"] = session_payload(
+                    request.state.remote_session, include_csrf=False
+                )
             return result
 
         @app.get("/api/remote/v1/snapshot")
@@ -266,29 +341,58 @@ def install_remote_web():
         def remote_tickets(request: Request):
             current = principal(request)
             require_scope(current, "read")
-            value = read_resource("tickets", app.state.paths, app.state.config, current, request.query_params)
-            return {"revision": value["revision"], "tickets": value["data"].get("tickets", []), "diagnostics": value["diagnostics"]}
+            value = read_resource(
+                "tickets",
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+            return {
+                "revision": value["revision"],
+                "tickets": value["data"].get("tickets", []),
+                "diagnostics": value["diagnostics"],
+            }
 
         @app.get("/api/remote/v1/projects")
         def remote_projects(request: Request):
             current = principal(request)
             require_scope(current, "read")
-            value = read_resource("projects", app.state.paths, app.state.config, current, request.query_params)
-            return {"revision": value["revision"], "projects": value["data"].get("projects", []), "summary": value["data"].get("summary", {})}
+            value = read_resource(
+                "projects",
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+            return {
+                "revision": value["revision"],
+                "projects": value["data"].get("projects", []),
+                "summary": value["data"].get("summary", {}),
+            }
 
         @app.get("/api/remote/v1/resources")
         def remote_resources(request: Request):
             _require_v2(request)
             current = principal(request)
             require_scope(current, "read")
-            return {"resources": resource_catalog(), "revision": source_revision(app.state.paths)}
+            return {
+                "resources": resource_catalog(),
+                "revision": source_revision(app.state.paths),
+            }
 
         @app.get("/api/remote/v1/resources/{resource_name}")
         def remote_resource(resource_name: str, request: Request):
             _require_v2(request)
             current = principal(request)
             require_scope(current, "read")
-            return read_resource(resource_name, app.state.paths, app.state.config, current, request.query_params)
+            return read_resource(
+                resource_name,
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
 
         @app.get("/api/remote/v1/diagnostics")
         def remote_diagnostics(request: Request):
@@ -299,20 +403,45 @@ def install_remote_web():
             checks = [
                 {"name": "remote-enabled", "ok": bool(remote.get("enabled"))},
                 {"name": "https-policy", "ok": True},
-                {"name": "principal-registry", "ok": bool(principal_registry(app.state.config))},
-                {"name": "source-count", "ok": bool(app.state.paths), "value": len(app.state.paths)},
-                {"name": "browser-session", "ok": True, "enabled": browser_enabled(app.state.config), "active": app.state.remote_session_store.count()},
-                {"name": "authoritative-remote-writes", "ok": False, "admission_only": True},
+                {
+                    "name": "principal-registry",
+                    "ok": bool(principal_registry(app.state.config)),
+                },
+                {
+                    "name": "source-count",
+                    "ok": bool(app.state.paths),
+                    "value": len(app.state.paths),
+                },
+                {
+                    "name": "browser-session",
+                    "ok": True,
+                    "enabled": browser_enabled(app.state.config),
+                    "active": app.state.remote_session_store.count(),
+                },
+                {
+                    "name": "authoritative-remote-writes",
+                    "ok": False,
+                    "admission_only": True,
+                },
             ]
             warnings = []
             if remote.get("browser_ui") and not remote.get("allowed_origins"):
-                warnings.append("Browser sessions accept only the computed same origin; configure allowed_origins for additional origins.")
+                warnings.append(
+                    "Browser sessions accept only the computed same origin; configure allowed_origins for additional origins."
+                )
             if not remote.get("audit_log"):
                 warnings.append("Remote audit_log is not configured.")
             return {
                 "schema": "remote-diagnostics-v1.schema.json",
-                "ok": all(row["ok"] for row in checks if row["name"] != "authoritative-remote-writes"),
-                "protocol": {"negotiated": request.state.remote_protocol, "current": REMOTE_PROTOCOL_CURRENT},
+                "ok": all(
+                    row["ok"]
+                    for row in checks
+                    if row["name"] != "authoritative-remote-writes"
+                ),
+                "protocol": {
+                    "negotiated": request.state.remote_protocol,
+                    "current": REMOTE_PROTOCOL_CURRENT,
+                },
                 "checks": checks,
                 "warnings": warnings,
                 "request_id": request.state.remote_request_id,
@@ -347,9 +476,15 @@ def install_remote_web():
         def browser_session(request: Request):
             _require_v2(request)
             if not request.state.remote_session:
-                raise RemoteAccessError("BROWSER_SESSION_REQUIRED", "This endpoint requires browser-session authentication.", 401)
+                raise RemoteAccessError(
+                    "BROWSER_SESSION_REQUIRED",
+                    "This endpoint requires browser-session authentication.",
+                    401,
+                )
             require_scope(principal(request), "read")
-            response = JSONResponse(session_payload(request.state.remote_session, include_csrf=True))
+            response = JSONResponse(
+                session_payload(request.state.remote_session, include_csrf=True)
+            )
             response.headers["Cache-Control"] = "no-store"
             return response
 

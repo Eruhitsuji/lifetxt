@@ -24,7 +24,10 @@ def schema_bundle_v10():
                         "recipients": {"type": "array", "items": {"type": "string"}},
                         "expansion": {
                             "type": "object",
-                            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "count": {"type": "integer", "minimum": 0},
                         "diagnostics": {"type": "array", "items": {"type": "object"}},
@@ -44,7 +47,10 @@ def schema_samples_v10():
                 {
                     "references": ["group:eng", "erin"],
                     "recipients": ["alice", "carol", "dave", "erin"],
-                    "expansion": {"group:eng": ["alice", "carol", "dave"], "erin": ["erin"]},
+                    "expansion": {
+                        "group:eng": ["alice", "carol", "dave"],
+                        "erin": ["erin"],
+                    },
                     "count": 4,
                     "diagnostics": [],
                 },

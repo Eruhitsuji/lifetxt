@@ -154,7 +154,9 @@ def prompt_item(args):
     title_default = args.title or ""
     title = session.read("title", title_default, help_topic="title", allow_empty=False)
     while not title:
-        title = session.read("title", title_default, help_topic="title", allow_empty=False)
+        title = session.read(
+            "title", title_default, help_topic="title", allow_empty=False
+        )
 
     details = OrderedDict()
     _add_detail_entries(details, getattr(args, "detail", None) or [])
@@ -219,7 +221,9 @@ def update_text(text, args):
     start = line_no - 1
     end = getattr(item, "end_line", line_no) or line_no
     _body, original_ending = _split_line_ending(raw_lines[end - 1])
-    raw_lines[start:end] = _with_line_ending(updated_line, original_ending).splitlines(True)
+    raw_lines[start:end] = _with_line_ending(updated_line, original_ending).splitlines(
+        True
+    )
     return "".join(raw_lines), updated_line, diagnostics
 
 

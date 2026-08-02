@@ -125,7 +125,9 @@ def render_block_markdown(text):
 
     def close_code():
         if code_lines:
-            output.append("<pre><code>%s</code></pre>" % html.escape("\n".join(code_lines)))
+            output.append(
+                "<pre><code>%s</code></pre>" % html.escape("\n".join(code_lines))
+            )
             code_lines[:] = []
         else:
             output.append("<pre><code></code></pre>")
@@ -308,7 +310,9 @@ def _render_table(table_lines):
         for row_line in body_rows:
             parts.append("<tr>")
             for i, cell in enumerate(_parse_table_cells(row_line)):
-                parts.append("<td%s>%s</td>" % (cell_style(i), render_inline_markdown(cell)))
+                parts.append(
+                    "<td%s>%s</td>" % (cell_style(i), render_inline_markdown(cell))
+                )
             parts.append("</tr>")
         parts.append("</tbody>")
 

@@ -51,7 +51,9 @@ def resolve_tool(preferred=None):
         path = shutil.which(name)
         if path:
             return path
-    raise ValueError("fzf or peco was not found in PATH. Install fzf or peco, or pass --tool.")
+    raise ValueError(
+        "fzf or peco was not found in PATH. Install fzf or peco, or pass --tool."
+    )
 
 
 def load_filtered_items(args):
@@ -62,7 +64,9 @@ def load_filtered_items(args):
 
         source_snapshot = read_text_snapshot(path)
         path_items, diagnostics = parse_text(source_snapshot.text, id_key=_id_key(args))
-        errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+        errors = [
+            diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+        ]
         if errors:
             raise ValueError(errors[0].format())
         for item in path_items:
@@ -290,7 +294,9 @@ def require_id(record):
         raise ValueError("Selected item has no id:. Run `lifetxt ids --assign` first.")
 
 
-def _apply_record_changes(records, args, status=None, delete=False, operation="fzf.mutate"):
+def _apply_record_changes(
+    records, args, status=None, delete=False, operation="fzf.mutate"
+):
     file_changes = OrderedDict()
     for record in records:
         require_id(record)
@@ -302,10 +308,11 @@ def _apply_record_changes(records, args, status=None, delete=False, operation="f
             path, {"expected_revision": revision, "changes": []}
         )
         if spec["expected_revision"] != revision:
-            raise ValueError("Selected rows from %s have inconsistent revisions. Reload and retry." % path)
-        spec["changes"].append(
-            {"id": record["id"], "status": status, "delete": delete}
-        )
+            raise ValueError(
+                "Selected rows from %s have inconsistent revisions. Reload and retry."
+                % path
+            )
+        spec["changes"].append({"id": record["id"], "status": status, "delete": delete})
     return mutate_item_files(
         file_changes,
         id_key=_id_key(args),
@@ -313,7 +320,9 @@ def _apply_record_changes(records, args, status=None, delete=False, operation="f
     )
 
 
-def update_item(path, item_id, key, status=None, expected_revision=None, set_details=None):
+def update_item(
+    path, item_id, key, status=None, expected_revision=None, set_details=None
+):
     return mutate_items(
         path,
         [{"id": item_id, "status": status, "set_details": set_details or {}}],
@@ -425,6 +434,7 @@ def open_editor(record, config=None):
     if not editor:
         raise ValueError(editor_help_message())
     from .editor_safety import safe_edit
+
     try:
         result = safe_edit(
             record["source"],

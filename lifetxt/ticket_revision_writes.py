@@ -108,7 +108,13 @@ def _replace_ticket_text(text, ticket_id, key, update_item):
     errors = _diagnostic_errors(diagnostics)
     if not parsed or errors:
         if not errors:
-            errors = [{"severity": "error", "code": "E301", "message": "Updated ticket did not parse."}]
+            errors = [
+                {
+                    "severity": "error",
+                    "code": "E301",
+                    "message": "Updated ticket did not parse.",
+                }
+            ]
         raise ValueError(errors)
 
     raw_lines = text.splitlines(True)
@@ -267,9 +273,7 @@ def apply_ticket_relation(
                 item.details[relation] = existing + [target_id]
         else:
             if target_id not in existing:
-                raise ValueError(
-                    "%s has no %s:%s" % (ticket_id, relation, target_id)
-                )
+                raise ValueError("%s has no %s:%s" % (ticket_id, relation, target_id))
             remaining = [value for value in existing if value != target_id]
             if remaining:
                 item.details[relation] = remaining

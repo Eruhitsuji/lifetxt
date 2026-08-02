@@ -13,7 +13,9 @@ def schema_bundle_v14():
         "type": "object",
         "required": ["type", "name", "field", "snippet"],
         "properties": {
-            "type": {"enum": ["item", "project", "person", "group", "area", "proposal"]},
+            "type": {
+                "enum": ["item", "project", "person", "group", "area", "proposal"]
+            },
             "name": {"type": "string"},
             "field": {"type": "string"},
             "snippet": {"type": "string"},
@@ -37,7 +39,10 @@ def schema_bundle_v14():
                         "total": {"type": "integer", "minimum": 0},
                         "groups": {
                             "type": "object",
-                            "additionalProperties": {"type": "array", "items": result_row},
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": result_row,
+                            },
                         },
                     },
                     "additionalProperties": True,
@@ -57,12 +62,24 @@ def schema_samples_v14():
                     "total": 2,
                     "groups": {
                         "item": [
-                            {"type": "item", "name": "T1", "field": "title",
-                             "snippet": "Design website", "source": "life.txt", "line": 3}
+                            {
+                                "type": "item",
+                                "name": "T1",
+                                "field": "title",
+                                "snippet": "Design website",
+                                "source": "life.txt",
+                                "line": 3,
+                            }
                         ],
                         "project": [
-                            {"type": "project", "name": "web", "field": "name",
-                             "snippet": "name:web", "source": None, "line": None}
+                            {
+                                "type": "project",
+                                "name": "web",
+                                "field": "name",
+                                "snippet": "name:web",
+                                "source": None,
+                                "line": None,
+                            }
                         ],
                     },
                 },

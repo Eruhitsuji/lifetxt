@@ -121,7 +121,9 @@ class DiagnosticContractTests(unittest.TestCase):
                 create_app(paths=[first_path, second_path], writable_path=first_path)
             )
             web_diagnostics = client.get("/api/items").json()["diagnostics"]
-            context = McpContext(paths=[first_path, second_path], writable_path=first_path)
+            context = McpContext(
+                paths=[first_path, second_path], writable_path=first_path
+            )
             mcp_diagnostics = call_tool("list_items", {}, context)["diagnostics"]
 
             self.assertEqual("", cli_stderr)

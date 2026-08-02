@@ -28,7 +28,8 @@ def cmd_stats(args):
         if project:
             projects = project if isinstance(project, (list, tuple, set)) else [project]
             items = [
-                item for item in items
+                item
+                for item in items
                 if any(value in item.details.get("project", []) for value in projects)
             ]
     buckets = make_buckets(start, end, args.group)
@@ -59,14 +60,24 @@ def stats_range(start_text=None, end_text=None, today=None):
 def build_stats(items, start, end, group, buckets=None):
     if buckets is None:
         buckets = make_buckets(start, end, group)
-    tasks = [item for item in items if item.kind == "T" and item_in_date_range(item, start, end)]
+    tasks = [
+        item
+        for item in items
+        if item.kind == "T" and item_in_date_range(item, start, end)
+    ]
     done_tasks = [item for item in tasks if item.status == "[x]"]
-    overdue = [item for item in tasks if item.status != "[x]" and _is_overdue(item, end)]
+    overdue = [
+        item for item in tasks if item.status != "[x]" and _is_overdue(item, end)
+    ]
     by_project = project_stats(tasks)
-    habits = habit_stats([item for item in items if item.kind == "H"], start, end, buckets)
+    habits = habit_stats(
+        [item for item in items if item.kind == "H"], start, end, buckets
+    )
     mood = mood_stats([item for item in items if item.kind == "J"], buckets)
     data = OrderedDict()
-    data["range"] = OrderedDict([("from", start.isoformat()), ("to", end.isoformat()), ("group", group)])
+    data["range"] = OrderedDict(
+        [("from", start.isoformat()), ("to", end.isoformat()), ("group", group)]
+    )
     data["tasks"] = OrderedDict(
         [
             ("done", len(done_tasks)),
@@ -79,7 +90,13 @@ def build_stats(items, start, end, group, buckets=None):
     data["habits"] = habits
     data["mood"] = mood
     data["by_project"] = by_project
-    data["journal_entries"] = len([item for item in items if item.kind == "J" and item_in_date_range(item, start, end)])
+    data["journal_entries"] = len(
+        [
+            item
+            for item in items
+            if item.kind == "J" and item_in_date_range(item, start, end)
+        ]
+    )
     return data
 
 
@@ -88,7 +105,9 @@ def format_stats(data, width=None):
         return format_stats_compact(data, width)
 
     lines = []
-    lines.append("lifetxt stats  %s - %s" % (data["range"]["from"], data["range"]["to"]))
+    lines.append(
+        "lifetxt stats  %s - %s" % (data["range"]["from"], data["range"]["to"])
+    )
     lines.append("=" * 39)
     tasks = data["tasks"]
     lines.append("")
@@ -114,14 +133,19 @@ def format_stats(data, width=None):
     lines.append("Habits")
     if data["habits"]:
         for habit in data["habits"]:
-            lines.append("  %-20s streak %3sd  %s" % (habit["title"], habit["streak"], habit["sparkline"]))
+            lines.append(
+                "  %-20s streak %3sd  %s"
+                % (habit["title"], habit["streak"], habit["sparkline"])
+            )
     else:
         lines.append("  No habit data.")
     lines.append("")
     lines.append("Mood")
     mood = data["mood"]
     if mood["counts"]:
-        counts = "  " + "  ".join("%s %sd" % (key, value) for key, value in mood["counts"].items())
+        counts = "  " + "  ".join(
+            "%s %sd" % (key, value) for key, value in mood["counts"].items()
+        )
         lines.append(counts)
         lines.append("  %s" % mood["sparkline"])
     else:
@@ -153,13 +177,20 @@ def format_stats_compact(data, width):
         )
     )
     if data["habits"]:
-        habits = ", ".join("%s:%sd" % (habit["title"], habit["streak"]) for habit in data["habits"][:4])
+        habits = ", ".join(
+            "%s:%sd" % (habit["title"], habit["streak"]) for habit in data["habits"][:4]
+        )
         lines.append(_clip("habits " + habits, width))
     else:
         lines.append("habits none")
     mood_counts = data["mood"]["counts"]
     if mood_counts:
-        lines.append(_clip("mood " + " ".join("%s:%s" % pair for pair in mood_counts.items()), width))
+        lines.append(
+            _clip(
+                "mood " + " ".join("%s:%s" % pair for pair in mood_counts.items()),
+                width,
+            )
+        )
     else:
         lines.append("mood none")
     if data["by_project"]:
@@ -235,7 +266,13 @@ def task_bucket_stats(tasks, buckets):
             if bucket_start <= item_date <= bucket_end:
                 bucket_tasks.append(item)
         done = len([item for item in bucket_tasks if item.status == "[x]"])
-        overdue = len([item for item in bucket_tasks if item.status != "[x]" and _is_overdue(item, bucket_end)])
+        overdue = len(
+            [
+                item
+                for item in bucket_tasks
+                if item.status != "[x]" and _is_overdue(item, bucket_end)
+            ]
+        )
         result.append(
             OrderedDict(
                 [
@@ -288,7 +325,11 @@ def mood_stats(items, buckets):
             item_date = item_date_value(item)
             if item_date is None or item_date < bucket_start or item_date > bucket_end:
                 continue
-            mood = item.details.get("mood", [""])[0].lower() if item.details.get("mood") else ""
+            mood = (
+                item.details.get("mood", [""])[0].lower()
+                if item.details.get("mood")
+                else ""
+            )
             if mood:
                 counts[mood] = counts.get(mood, 0) + 1
             if mood in MOOD_VALUES:
@@ -305,7 +346,9 @@ def project_stats(tasks):
     for item in tasks:
         projects = item.details.get("project") or [""]
         for project in projects:
-            entry = result.setdefault(project, OrderedDict([("done", 0), ("total", 0), ("rate", 0)]))
+            entry = result.setdefault(
+                project, OrderedDict([("done", 0), ("total", 0), ("rate", 0)])
+            )
             entry["total"] += 1
             if item.status == "[x]":
                 entry["done"] += 1
@@ -386,7 +429,9 @@ def load_items(paths):
             with open(path, "r", encoding="utf-8-sig") as handle:
                 text = handle.read()
         path_items, diagnostics = parse_text(text)
-        errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+        errors = [
+            diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+        ]
         if errors:
             raise ValueError(errors[0].format())
         items.extend(path_items)

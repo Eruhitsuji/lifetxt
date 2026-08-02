@@ -155,7 +155,7 @@ def status_transition_file(
     operation="presence.status_transition",
     lock_timeout=5.0,
     stale_lock_after=300.0,
-    **transition_kwargs
+    **transition_kwargs,
 ):
     """Apply :func:`status_transition` through the shared mutation contract.
 
@@ -203,9 +203,7 @@ def _build_status_item(
     for key, values in (details or {}).items():
         if key in ("from", "to", "state", "person"):
             continue
-        ordered[key] = (
-            list(values) if isinstance(values, (list, tuple)) else [values]
-        )
+        ordered[key] = list(values) if isinstance(values, (list, tuple)) else [values]
 
     item = Item(STATUS_ACTIVE, "S", resolved_title, ordered, 0)
     if item_id:

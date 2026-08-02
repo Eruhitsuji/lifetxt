@@ -143,9 +143,7 @@ class TicketRevisionWriteTests(unittest.TestCase):
         self.assertEqual(linked.revision_after, ticket_file_revision(self.path))
 
     def test_duplicate_relation_add_is_a_noop(self):
-        tickets.apply_ticket_patch(
-            self.path, "BUG-1", {"depends_on": ["BUG-2"]}
-        )
+        tickets.apply_ticket_patch(self.path, "BUG-1", {"depends_on": ["BUG-2"]})
         revision = ticket_file_revision(self.path)
         item = apply_ticket_relation(
             self.path,
@@ -164,9 +162,13 @@ class TicketRevisionWriteTests(unittest.TestCase):
         revision = json.loads(stdout)["revision"]
         code, stdout, stderr = self._cli(
             [
-                "ticket", "edit", "BUG-1",
-                "--set", "priority=urgent",
-                "--revision", revision,
+                "ticket",
+                "edit",
+                "BUG-1",
+                "--set",
+                "priority=urgent",
+                "--revision",
+                revision,
             ]
         )
         self.assertEqual(0, code, stderr)
@@ -174,8 +176,12 @@ class TicketRevisionWriteTests(unittest.TestCase):
         current_text = self._text()
         code, _stdout, stderr = self._cli(
             [
-                "ticket", "assign", "BUG-1", "bob",
-                "--revision", revision,
+                "ticket",
+                "assign",
+                "BUG-1",
+                "bob",
+                "--revision",
+                revision,
             ]
         )
         self.assertEqual(1, code)
@@ -215,7 +221,8 @@ class TicketRevisionWriteTests(unittest.TestCase):
         }
         for command, tail in cases.items():
             args = parser.parse_args(
-                ["ticket", command] + tail
+                ["ticket", command]
+                + tail
                 + ["--revision", "abc", "--require-revision", "--dry-run"]
             )
             self.assertEqual("abc", args.expected_revision, command)

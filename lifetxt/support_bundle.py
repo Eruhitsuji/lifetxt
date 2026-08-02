@@ -51,7 +51,10 @@ def write_support_bundle(report, output_path, extra=None):
         (
             ("schema_version", 1),
             ("created_at_utc", utc_now_text()),
-            ("redaction", "absolute paths are pseudonymized; authored content and credentials are excluded"),
+            (
+                "redaction",
+                "absolute paths are pseudonymized; authored content and credentials are excluded",
+            ),
             ("report", redact(report)),
             ("extra", redact(extra or {})),
         )
@@ -70,18 +73,28 @@ def write_support_bundle(report, output_path, extra=None):
 
 def redact(value, key=None):
     normalized = str(key or "").lower()
-    if normalized in SENSITIVE_KEYS or any(word in normalized for word in ("password", "secret", "token")):
+    if normalized in SENSITIVE_KEYS or any(
+        word in normalized for word in ("password", "secret", "token")
+    ):
         return "<redacted>"
     if isinstance(value, dict):
         result = OrderedDict()
         for child_key, child in value.items():
-            output_key = _redacted_path(child_key) if isinstance(child_key, str) and os.path.isabs(child_key) else str(child_key)
+            output_key = (
+                _redacted_path(child_key)
+                if isinstance(child_key, str) and os.path.isabs(child_key)
+                else str(child_key)
+            )
             result[output_key] = redact(child, key=child_key)
         return result
     if isinstance(value, (list, tuple)):
         return [redact(child, key=key) for child in value]
     if isinstance(value, str):
-        if normalized in PATH_KEYS or normalized.endswith("_path") or normalized.endswith("_paths"):
+        if (
+            normalized in PATH_KEYS
+            or normalized.endswith("_path")
+            or normalized.endswith("_paths")
+        ):
             return _redacted_path(value)
         if os.path.isabs(value):
             return _redacted_path(value)

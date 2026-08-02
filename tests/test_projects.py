@@ -47,7 +47,9 @@ class ProjectAggregationTests(unittest.TestCase):
         self.assertIn("non_cancelled_tasks", progress["formula"])
 
     def test_progress_undefined_when_no_tasks(self):
-        items, _ = parse_text("#! timezone: UTC\n[N] N Empty record:project project:x\n")
+        items, _ = parse_text(
+            "#! timezone: UTC\n[N] N Empty record:project project:x\n"
+        )
         progress = projects.compute_progress(
             projects.collect_projects(items, {}, TODAY)["x"]
         )
@@ -63,7 +65,9 @@ class ProjectAggregationTests(unittest.TestCase):
         self.assertEqual(["Design_home"], [t["title"] for t in hub["overdue_tasks"]])
         # Without a date, overdue is not evaluated and health notes the limitation.
         health = projects.compute_health(self.project("web"), today=None)
-        self.assertTrue(any("overdue not evaluated" in n for n in health["limitations"]))
+        self.assertTrue(
+            any("overdue not evaluated" in n for n in health["limitations"])
+        )
 
     def test_risks_sorted_open_then_severity(self):
         risks = projects.project_risks(self.items, {}, "web", TODAY)
@@ -71,7 +75,10 @@ class ProjectAggregationTests(unittest.TestCase):
         self.assertFalse(risks[-1]["open"])  # closed last
 
     def test_workload_by_assignee(self):
-        rows = {r["assignee"]: r for r in projects.project_workload(self.items, {}, "web", TODAY)}
+        rows = {
+            r["assignee"]: r
+            for r in projects.project_workload(self.items, {}, "web", TODAY)
+        }
         self.assertEqual(2, rows["alice"]["open"])
         self.assertEqual(1, rows["alice"]["overdue"])
         self.assertEqual(1, rows["bob"]["done"])
@@ -82,7 +89,11 @@ class ProjectAggregationTests(unittest.TestCase):
         self.assertEqual("web", hub["name"])
 
     def test_registry_metadata_merges(self):
-        config = {"projects": {"web": {"display_name": "Website Revamp", "default_area": "work"}}}
+        config = {
+            "projects": {
+                "web": {"display_name": "Website Revamp", "default_area": "work"}
+            }
+        }
         rows = {r["name"]: r for r in projects.project_list(self.items, config, TODAY)}
         self.assertEqual("Website Revamp", rows["web"]["display_name"])
 
@@ -116,22 +127,32 @@ class RecordBuilderTests(unittest.TestCase):
         return items[0]
 
     def test_project_record_line_roundtrips(self):
-        line = projects.build_project_record_line("web", owner="alice", area="work", due="2026-09-01")
+        line = projects.build_project_record_line(
+            "web", owner="alice", area="work", due="2026-09-01"
+        )
         item = self._roundtrip(line)
         self.assertEqual(["project"], item.details.get("record"))
         self.assertEqual(["web"], item.details.get("project"))
         self.assertEqual(["alice"], item.details.get("owner"))
 
     def test_milestone_and_risk_lines(self):
-        item = self._roundtrip(projects.build_milestone_line("web", "Launch", due="2026-08-15"))
+        item = self._roundtrip(
+            projects.build_milestone_line("web", "Launch", due="2026-08-15")
+        )
         self.assertEqual(["milestone"], item.details.get("record"))
-        item = self._roundtrip(projects.build_risk_line("web", "Latency", severity="critical"))
+        item = self._roundtrip(
+            projects.build_risk_line("web", "Latency", severity="critical")
+        )
         self.assertEqual(["critical"], item.details.get("severity"))
 
     def test_decision_and_meeting_lines(self):
-        item = self._roundtrip(projects.build_decision_line("web", "Use PG", on="2026-06-20"))
+        item = self._roundtrip(
+            projects.build_decision_line("web", "Use PG", on="2026-06-20")
+        )
         self.assertEqual(["decision"], item.details.get("record"))
-        item = self._roundtrip(projects.build_meeting_line("web", "Kickoff", on="2026-06-01"))
+        item = self._roundtrip(
+            projects.build_meeting_line("web", "Kickoff", on="2026-06-01")
+        )
         self.assertEqual(["meeting"], item.details.get("record"))
 
 

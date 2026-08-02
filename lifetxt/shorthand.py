@@ -78,16 +78,26 @@ def resolve_date_token(value, today=None, strict=False):
     if text == "yesterday":
         return (today - datetime.timedelta(days=1)).isoformat()
     if text == "next_week":
-        return (today + datetime.timedelta(days=(7 - today.weekday()) % 7 or 7)).isoformat()
+        return (
+            today + datetime.timedelta(days=(7 - today.weekday()) % 7 or 7)
+        ).isoformat()
 
     if text in WEEKDAYS:
-        return (today + datetime.timedelta(days=_days_ahead(today, WEEKDAYS[text]))).isoformat()
+        return (
+            today + datetime.timedelta(days=_days_ahead(today, WEEKDAYS[text]))
+        ).isoformat()
     if text.startswith("next_") and text[5:] in WEEKDAYS:
-        return (today + datetime.timedelta(days=_days_ahead(today, WEEKDAYS[text[5:]]) + 7)).isoformat()
+        return (
+            today + datetime.timedelta(days=_days_ahead(today, WEEKDAYS[text[5:]]) + 7)
+        ).isoformat()
 
     match = _OFFSET.match(text)
     if match:
-        sign, amount, unit = match.group(1), int(match.group(2)), (match.group(3) or "d").lower()
+        sign, amount, unit = (
+            match.group(1),
+            int(match.group(2)),
+            (match.group(3) or "d").lower(),
+        )
         if sign == "-":
             amount = -amount
         return _shift(today, amount, unit).isoformat()

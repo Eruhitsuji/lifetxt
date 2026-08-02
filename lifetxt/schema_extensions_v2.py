@@ -25,8 +25,13 @@ def _recovery_schema_bundle():
     target = {
         "type": "object",
         "required": [
-            "index", "path", "kind", "before_hash", "after_hash",
-            "commit_state", "compensation_state",
+            "index",
+            "path",
+            "kind",
+            "before_hash",
+            "after_hash",
+            "commit_state",
+            "compensation_state",
         ],
         "properties": {
             "index": {"type": "integer", "minimum": 0},
@@ -53,8 +58,13 @@ def _recovery_schema_bundle():
                     "transaction-journal-v1.schema.json",
                     "lifetxt durable transaction journal v1",
                     [
-                        "schema_version", "transaction_id", "operation", "state",
-                        "created_at_utc", "updated_at_utc", "targets",
+                        "schema_version",
+                        "transaction_id",
+                        "operation",
+                        "state",
+                        "created_at_utc",
+                        "updated_at_utc",
+                        "targets",
                     ],
                     {
                         "schema_version": {"const": 1},
@@ -62,9 +72,15 @@ def _recovery_schema_bundle():
                         "operation": {"type": "string", "minLength": 1},
                         "state": {
                             "enum": [
-                                "prepared", "committing", "committed", "compensating",
-                                "compensated", "recovery_required", "resume_failed",
-                                "compensation_failed", "abandoned",
+                                "prepared",
+                                "committing",
+                                "committed",
+                                "compensating",
+                                "compensated",
+                                "recovery_required",
+                                "resume_failed",
+                                "compensation_failed",
+                                "abandoned",
                             ]
                         },
                         "created_at_utc": {"type": "string"},
@@ -82,8 +98,13 @@ def _recovery_schema_bundle():
                     "transaction-recovery-v1.schema.json",
                     "lifetxt transaction recovery report v1",
                     [
-                        "transaction_id", "operation", "state", "journal_path",
-                        "recovery_required", "observed_targets", "available_actions",
+                        "transaction_id",
+                        "operation",
+                        "state",
+                        "journal_path",
+                        "recovery_required",
+                        "observed_targets",
+                        "available_actions",
                     ],
                     {
                         "transaction_id": {"type": "string"},
@@ -91,8 +112,14 @@ def _recovery_schema_bundle():
                         "state": {"type": "string"},
                         "journal_path": {"type": "string"},
                         "recovery_required": {"type": "boolean"},
-                        "observed_targets": {"type": "array", "items": {"type": "object"}},
-                        "available_actions": {"type": "array", "items": {"type": "string"}},
+                        "observed_targets": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        },
+                        "available_actions": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
                     },
                     additional=True,
                 ),
@@ -103,8 +130,12 @@ def _recovery_schema_bundle():
                     "timer-operation-v1.schema.json",
                     "lifetxt timer operation result v1",
                     [
-                        "running", "operation", "timer_revision", "transaction_id",
-                        "journal_path", "recovery_required",
+                        "running",
+                        "operation",
+                        "timer_revision",
+                        "transaction_id",
+                        "journal_path",
+                        "recovery_required",
                     ],
                     {
                         "running": {"type": "boolean"},
@@ -142,9 +173,14 @@ def _recovery_schema_bundle():
                     "revision-migration-evidence-v1.schema.json",
                     "lifetxt revision migration evidence v1",
                     [
-                        "schema_version", "exported_at_utc", "metrics_revision",
-                        "server_instance_id", "revision_mode", "observation_started_at",
-                        "legacy_fallback_total", "legacy_fallback_by_path",
+                        "schema_version",
+                        "exported_at_utc",
+                        "metrics_revision",
+                        "server_instance_id",
+                        "revision_mode",
+                        "observation_started_at",
+                        "legacy_fallback_total",
+                        "legacy_fallback_by_path",
                         "ready_to_require_revisions",
                     ],
                     {
@@ -271,7 +307,16 @@ def extended_schema_bundle():
     }
     diagnostic = {
         "type": "object",
-        "required": ["severity", "code", "message", "source", "line", "column", "span", "hint"],
+        "required": [
+            "severity",
+            "code",
+            "message",
+            "source",
+            "line",
+            "column",
+            "span",
+            "hint",
+        ],
         "properties": {
             "severity": {"enum": ["info", "warning", "error"]},
             "code": {"type": "string"},
@@ -308,8 +353,11 @@ def extended_schema_bundle():
                     "revision-metrics-v1.schema.json",
                     "lifetxt revision migration metrics v1",
                     [
-                        "schema_version", "revision_mode", "migration_window_days",
-                        "legacy_fallback_total", "legacy_fallback_by_path",
+                        "schema_version",
+                        "revision_mode",
+                        "migration_window_days",
+                        "legacy_fallback_total",
+                        "legacy_fallback_by_path",
                         "ready_to_require_revisions",
                     ],
                     {
@@ -343,7 +391,14 @@ def extended_schema_bundle():
                 _object(
                     "timezone-policy-v1.schema.json",
                     "lifetxt timezone policy v1",
-                    ["timezone", "source", "valid", "precedence", "fold_policy", "gap_policy"],
+                    [
+                        "timezone",
+                        "source",
+                        "valid",
+                        "precedence",
+                        "fold_policy",
+                        "gap_policy",
+                    ],
                     {
                         "timezone": {"type": "string"},
                         "source": {"enum": ["cli", "file", "config", "host"]},
@@ -365,7 +420,14 @@ def extended_schema_bundle():
                 _object(
                     "workspace-diagnostics-v1.schema.json",
                     "lifetxt workspace diagnostics v1",
-                    ["ok", "paths", "item_count", "diagnostic_count", "severity_counts", "diagnostics"],
+                    [
+                        "ok",
+                        "paths",
+                        "item_count",
+                        "diagnostic_count",
+                        "severity_counts",
+                        "diagnostics",
+                    ],
                     {
                         "ok": {"type": "boolean"},
                         "paths": {"type": "array", "items": {"type": "string"}},
@@ -384,18 +446,34 @@ def extended_schema_bundle():
                 _object(
                     "doctor-v1.schema.json",
                     "lifetxt doctor report v1",
-                    ["ok", "hard_failures", "workspace", "timezone", "write_target", "revision_migration", "locks", "diagnostics", "transactions", "optional_dependencies"],
+                    [
+                        "ok",
+                        "hard_failures",
+                        "workspace",
+                        "timezone",
+                        "write_target",
+                        "revision_migration",
+                        "locks",
+                        "diagnostics",
+                        "transactions",
+                        "optional_dependencies",
+                    ],
                     {
                         "ok": {"type": "boolean"},
                         "hard_failures": {"type": "array", "items": {"type": "string"}},
                         "workspace": {"type": "object"},
                         "timezone": {"$ref": "timezone-policy-v1.schema.json"},
                         "write_target": {"type": "object"},
-                        "revision_migration": {"$ref": "revision-metrics-v1.schema.json"},
+                        "revision_migration": {
+                            "$ref": "revision-metrics-v1.schema.json"
+                        },
                         "locks": {"type": "object"},
                         "diagnostics": {"$ref": "workspace-diagnostics-v1.schema.json"},
                         "transactions": {"type": "object"},
-                        "optional_dependencies": {"type": "object", "additionalProperties": {"type": "boolean"}},
+                        "optional_dependencies": {
+                            "type": "object",
+                            "additionalProperties": {"type": "boolean"},
+                        },
                     },
                     additional=False,
                 ),
@@ -412,7 +490,15 @@ def extended_schema_bundle():
                             "type": "array",
                             "items": {
                                 "type": "object",
-                                "required": ["path", "kind", "before_hash", "after_hash", "changed", "created", "deleted"],
+                                "required": [
+                                    "path",
+                                    "kind",
+                                    "before_hash",
+                                    "after_hash",
+                                    "changed",
+                                    "created",
+                                    "deleted",
+                                ],
                                 "properties": {
                                     "path": {"type": "string"},
                                     "kind": {"enum": ["text", "json", "bytes"]},
@@ -448,7 +534,15 @@ def extended_schema_bundle():
                 _object(
                     "proposal-v1.schema.json",
                     "lifetxt proposal v1",
-                    ["proposal_version", "id", "operation", "source", "expected_revision", "changes", "warnings"],
+                    [
+                        "proposal_version",
+                        "id",
+                        "operation",
+                        "source",
+                        "expected_revision",
+                        "changes",
+                        "warnings",
+                    ],
                     {
                         "proposal_version": {"const": "1"},
                         "id": {"type": "string"},
@@ -503,8 +597,16 @@ def extended_schema_bundle():
                     {
                         "group_version": {"const": "1"},
                         "name": {"type": "string", "minLength": 1},
-                        "members": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
-                        "disabled_members": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
+                        "members": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "uniqueItems": True,
+                        },
+                        "disabled_members": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "uniqueItems": True,
+                        },
                     },
                     additional=False,
                 ),
@@ -514,12 +616,27 @@ def extended_schema_bundle():
                 _object(
                     "delivery-state-v1.schema.json",
                     "lifetxt per-recipient delivery state v1",
-                    ["delivery_version", "message_id", "recipient", "state", "updated_at"],
+                    [
+                        "delivery_version",
+                        "message_id",
+                        "recipient",
+                        "state",
+                        "updated_at",
+                    ],
                     {
                         "delivery_version": {"const": "1"},
                         "message_id": {"type": "string"},
                         "recipient": {"type": "string"},
-                        "state": {"enum": ["pending", "delivered", "failed", "read", "acknowledged", "skipped"]},
+                        "state": {
+                            "enum": [
+                                "pending",
+                                "delivered",
+                                "failed",
+                                "read",
+                                "acknowledged",
+                                "skipped",
+                            ]
+                        },
                         "updated_at": {"type": "string"},
                         "error": {"type": ["string", "null"]},
                     },
@@ -577,13 +694,26 @@ def extended_schema_samples():
                     "revision_migration": metrics,
                     "locks": {},
                     "diagnostics": empty_diag,
-                    "transactions": {"journal_dir": "/tmp/transactions", "count": 0, "recovery_required": False, "records": [], "cleanup": {}},
+                    "transactions": {
+                        "journal_dir": "/tmp/transactions",
+                        "count": 0,
+                        "recovery_required": False,
+                        "records": [],
+                        "cleanup": {},
+                    },
                     "optional_dependencies": {},
                 },
             ),
             (
                 "multi-target-result-v1.schema.json",
-                {"operation": "sample", "targets": [], "compensated": False, "transaction_id": None, "journal_path": None, "recovery_required": False},
+                {
+                    "operation": "sample",
+                    "targets": [],
+                    "compensated": False,
+                    "transaction_id": None,
+                    "journal_path": None,
+                    "recovery_required": False,
+                },
             ),
             (
                 "json-export-v1.schema.json",
@@ -592,9 +722,13 @@ def extended_schema_samples():
             (
                 "proposal-v1.schema.json",
                 {
-                    "proposal_version": "1", "id": "P-1", "operation": "create",
-                    "source": "mcp", "expected_revision": "0" * 64,
-                    "changes": [], "warnings": [],
+                    "proposal_version": "1",
+                    "id": "P-1",
+                    "operation": "create",
+                    "source": "mcp",
+                    "expected_revision": "0" * 64,
+                    "changes": [],
+                    "warnings": [],
                 },
             ),
             (
@@ -603,7 +737,12 @@ def extended_schema_samples():
             ),
             (
                 "remote-profile-v1.schema.json",
-                {"profile_version": "1", "name": "home", "url": "https://example.invalid", "read_only": True},
+                {
+                    "profile_version": "1",
+                    "name": "home",
+                    "url": "https://example.invalid",
+                    "read_only": True,
+                },
             ),
             (
                 "group-v1.schema.json",
@@ -612,8 +751,11 @@ def extended_schema_samples():
             (
                 "delivery-state-v1.schema.json",
                 {
-                    "delivery_version": "1", "message_id": "M-1", "recipient": "alice",
-                    "state": "pending", "updated_at": "2026-07-23T00:00:00Z",
+                    "delivery_version": "1",
+                    "message_id": "M-1",
+                    "recipient": "alice",
+                    "state": "pending",
+                    "updated_at": "2026-07-23T00:00:00Z",
                 },
             ),
         )

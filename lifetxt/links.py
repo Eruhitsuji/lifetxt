@@ -20,7 +20,9 @@ def link_records(
     reference_keys = tuple(reference_keys or REFERENCE_KEYS)
     if relations:
         wanted = set(str(relation) for relation in relations)
-        reference_keys = tuple(relation for relation in reference_keys if relation in wanted)
+        reference_keys = tuple(
+            relation for relation in reference_keys if relation in wanted
+        )
     direction = _normalize_direction(direction)
     index = build_id_index(items, key)
     records = []
@@ -40,7 +42,9 @@ def link_records(
                         continue
                     if direction == "both" and not (outgoing or incoming):
                         continue
-                records.append(_link_record(item, source_id, relation, target_id, index, key))
+                records.append(
+                    _link_record(item, source_id, relation, target_id, index, key)
+                )
     return records
 
 
@@ -163,7 +167,9 @@ def dependency_blockers_by_item(items, key="id"):
     return blockers
 
 
-def dependency_chain_records(items, key="id", root_id=None, blocked_only=False, max_depth=None):
+def dependency_chain_records(
+    items, key="id", root_id=None, blocked_only=False, max_depth=None
+):
     """Return dependency chains rooted at blocked items.
 
     The chain treats ``depends_on:ID`` and inverse ``blocks:ID`` as the same
@@ -173,9 +179,7 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False, 
     """
     index = build_id_index(items, key)
     unique = OrderedDict(
-        (value, matches[0])
-        for value, matches in index.items()
-        if len(matches) == 1
+        (value, matches[0]) for value, matches in index.items() if len(matches) == 1
     )
     incoming_blocks = _incoming_blocks(items)
 
@@ -237,7 +241,14 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False, 
             target_id = str(target_id)
             matches = index.get(target_id, [])
             if target_id in unique and unique[target_id] is not item:
-                deps.append(build_node(unique[target_id], relation="depends_on", path=next_path, depth=depth + 1))
+                deps.append(
+                    build_node(
+                        unique[target_id],
+                        relation="depends_on",
+                        path=next_path,
+                        depth=depth + 1,
+                    )
+                )
             elif len(matches) > 1:
                 deps.append(placeholder(target_id, "depends_on", "ambiguous"))
             else:
@@ -247,7 +258,11 @@ def dependency_chain_records(items, key="id", root_id=None, blocked_only=False, 
             for blocker in incoming_blocks.get(current_value, []):
                 if blocker is item:
                     continue
-                deps.append(build_node(blocker, relation="blocks", path=next_path, depth=depth + 1))
+                deps.append(
+                    build_node(
+                        blocker, relation="blocks", path=next_path, depth=depth + 1
+                    )
+                )
 
         node["deps"] = deps
         return node
@@ -340,7 +355,11 @@ def dependency_chains_to_mermaid(records):
     for source, target, relation in edges:
         lines.append(
             "    %s -- %s --> %s"
-            % (_mermaid_node_id(source), relation or "depends", _mermaid_node_id(target))
+            % (
+                _mermaid_node_id(source),
+                relation or "depends",
+                _mermaid_node_id(target),
+            )
         )
 
     if any(node.get("status") in _DONE_STATUSES for node in nodes.values()):
@@ -369,7 +388,11 @@ def dependency_chains_to_dot(records):
     for source, target, relation in edges:
         lines.append(
             "    %s -> %s [label=%s];"
-            % (_dot_quote(source), _dot_quote(target), _dot_quote(relation or "depends"))
+            % (
+                _dot_quote(source),
+                _dot_quote(target),
+                _dot_quote(relation or "depends"),
+            )
         )
 
     lines.append("}")
@@ -713,9 +736,7 @@ def _first_item_id(item, key):
 
 def _parent_cycle_diagnostics(items, index, key):
     owners = {
-        value: matches[0]
-        for value, matches in index.items()
-        if len(matches) == 1
+        value: matches[0] for value, matches in index.items() if len(matches) == 1
     }
     edges = {}
     for value, item in owners.items():
@@ -795,7 +816,9 @@ def _format_table(rows, columns):
     lines.append(_format_table_row(columns, widths))
     lines.append(_format_table_row(["-" * width for width in widths], widths))
     for row in rows:
-        lines.append(_format_table_row([row.get(column, "") for column in columns], widths))
+        lines.append(
+            _format_table_row([row.get(column, "") for column in columns], widths)
+        )
     return lines
 
 

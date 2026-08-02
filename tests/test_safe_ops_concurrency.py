@@ -46,7 +46,10 @@ class SafeOperationConcurrencyTests(unittest.TestCase):
             except Exception as exc:  # pragma: no cover - reported with useful detail
                 failures.append(exc)
 
-        threads = [threading.Thread(target=runner, args=(first,)), threading.Thread(target=runner, args=(second,))]
+        threads = [
+            threading.Thread(target=runner, args=(first,)),
+            threading.Thread(target=runner, args=(second,)),
+        ]
         for thread in threads:
             thread.start()
         barrier.wait()
@@ -88,8 +91,16 @@ class SafeOperationConcurrencyTests(unittest.TestCase):
         self.write(path, '{"count": 0}\n')
         expected = read_text_snapshot(path).content_hash
         self.race(
-            lambda: timer_state(path, lambda value: {"count": value["count"] + 1, "writer": "a"}, expected),
-            lambda: timer_state(path, lambda value: {"count": value["count"] + 1, "writer": "b"}, expected),
+            lambda: timer_state(
+                path,
+                lambda value: {"count": value["count"] + 1, "writer": "a"},
+                expected,
+            ),
+            lambda: timer_state(
+                path,
+                lambda value: {"count": value["count"] + 1, "writer": "b"},
+                expected,
+            ),
         )
         with open(path, encoding="utf-8") as handle:
             value = json.load(handle)

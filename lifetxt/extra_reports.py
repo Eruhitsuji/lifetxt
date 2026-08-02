@@ -21,7 +21,13 @@ from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .config import (
+    config_paths,
+    config_section,
+    config_user_name,
+    config_write_file,
+    load_config,
+)
 from .model import Item
 from .parser import parse_text
 from .paths import expand_paths
@@ -64,7 +70,9 @@ def command_invoice(args, config_data):
     if args.end:
         end = _parse_date(args.end, "to date")
     else:
-        end = datetime.date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+        end = datetime.date(
+            today.year, today.month, calendar.monthrange(today.year, today.month)[1]
+        )
     if end < start:
         raise ValueError("Invoice end date must not be earlier than start date.")
     rates, default_rate = _parse_rates(args.rates, args.default_rate)
@@ -79,7 +87,9 @@ def command_invoice(args, config_data):
         minutes = sum((parse_elapsed(value) or 0) for value in _values(item, "elapsed"))
         if not minutes:
             continue
-        minutes_by_project[project] = minutes_by_project.get(project, 0) + _round_minutes(minutes, args.round_minutes)
+        minutes_by_project[project] = minutes_by_project.get(
+            project, 0
+        ) + _round_minutes(minutes, args.round_minutes)
     rows = []
     total = Decimal("0")
     for project in sorted(minutes_by_project):
@@ -93,13 +103,24 @@ def command_invoice(args, config_data):
                 (
                     ("project", project),
                     ("minutes", minutes),
-                    ("hours", str(hours.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))),
+                    (
+                        "hours",
+                        str(hours.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+                    ),
                     ("rate", str(rate)),
                     ("amount", str(amount)),
                 )
             )
         )
-    data = OrderedDict((("from", start.isoformat()), ("to", end.isoformat()), ("currency", args.currency), ("rows", rows), ("total", str(total.quantize(Decimal("0.01"))))))
+    data = OrderedDict(
+        (
+            ("from", start.isoformat()),
+            ("to", end.isoformat()),
+            ("currency", args.currency),
+            ("rows", rows),
+            ("total", str(total.quantize(Decimal("0.01")))),
+        )
+    )
     if args.format == "json":
         text = _json_text(data, args.pretty)
     elif args.format == "csv":
@@ -107,17 +128,51 @@ def command_invoice(args, config_data):
         writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(("project", "minutes", "hours", "rate", "amount", "currency"))
         for row in rows:
-            writer.writerow((row["project"], row["minutes"], row["hours"], row["rate"], row["amount"], args.currency))
+            writer.writerow(
+                (
+                    row["project"],
+                    row["minutes"],
+                    row["hours"],
+                    row["rate"],
+                    row["amount"],
+                    args.currency,
+                )
+            )
         writer.writerow(("TOTAL", "", "", "", data["total"], args.currency))
         text = stream.getvalue()
     elif args.format == "markdown":
-        lines = ["# Invoice", "", "Period: %s to %s" % (start, end), "", "| Project | Hours | Rate | Amount |", "|---|---:|---:|---:|"]
-        lines.extend("| %s | %s | %s %s | %s %s |" % (row["project"], row["hours"], row["rate"], args.currency, row["amount"], args.currency) for row in rows)
+        lines = [
+            "# Invoice",
+            "",
+            "Period: %s to %s" % (start, end),
+            "",
+            "| Project | Hours | Rate | Amount |",
+            "|---|---:|---:|---:|",
+        ]
+        lines.extend(
+            "| %s | %s | %s %s | %s %s |"
+            % (
+                row["project"],
+                row["hours"],
+                row["rate"],
+                args.currency,
+                row["amount"],
+                args.currency,
+            )
+            for row in rows
+        )
         lines.extend(("", "**Total: %s %s**" % (data["total"], args.currency), ""))
         text = "\n".join(lines)
     else:
-        table_rows = [(row["project"], row["minutes"], row["hours"], row["rate"], row["amount"]) for row in rows]
-        text = "Invoice %s to %s (%s)\n" % (start, end, args.currency) + _table(("PROJECT", "MIN", "HOURS", "RATE", "AMOUNT"), table_rows) + "TOTAL: %s %s\n" % (data["total"], args.currency)
+        table_rows = [
+            (row["project"], row["minutes"], row["hours"], row["rate"], row["amount"])
+            for row in rows
+        ]
+        text = (
+            "Invoice %s to %s (%s)\n" % (start, end, args.currency)
+            + _table(("PROJECT", "MIN", "HOURS", "RATE", "AMOUNT"), table_rows)
+            + "TOTAL: %s %s\n" % (data["total"], args.currency)
+        )
     return _emit(text, args.output)
 
 
@@ -144,7 +199,11 @@ def command_standup(args, config_data):
         if item.status == "[x]" and yesterday in done_dates:
             done.append(item)
         if item.status in OPEN_STATUSES:
-            due_or_do = [_date_value(value) for key in ("do", "due") for value in _values(item, key)]
+            due_or_do = [
+                _date_value(value)
+                for key in ("do", "due")
+                for value in _values(item, key)
+            ]
             if item.status == "[/]" or day in due_or_do:
                 planned.append(item)
             if _blocked(item, id_map):
@@ -161,13 +220,49 @@ def command_standup(args, config_data):
     if args.format == "json":
         text = _json_text(data, args.pretty)
     else:
+
         def lines_for(values):
-            return ["- %s%s" % (item.title, " (`%s`)" % _item_id(item) if _item_id(item) else "") for item in values] or ["- None"]
+            return [
+                "- %s%s"
+                % (item.title, " (`%s`)" % _item_id(item) if _item_id(item) else "")
+                for item in values
+            ] or ["- None"]
+
         if args.format == "slack":
-            sections = ["*Standup — %s — %s*" % (day, user), "*Done yesterday*", *lines_for(done), "*Planned today*", *lines_for(planned), "*Blocked*", *lines_for(blocked)]
+            sections = [
+                "*Standup — %s — %s*" % (day, user),
+                "*Done yesterday*",
+                *lines_for(done),
+                "*Planned today*",
+                *lines_for(planned),
+                "*Blocked*",
+                *lines_for(blocked),
+            ]
         elif args.format == "markdown":
-            sections = ["# Standup — %s — %s" % (day, user), "", "## Done yesterday", *lines_for(done), "", "## Planned today", *lines_for(planned), "", "## Blocked", *lines_for(blocked)]
+            sections = [
+                "# Standup — %s — %s" % (day, user),
+                "",
+                "## Done yesterday",
+                *lines_for(done),
+                "",
+                "## Planned today",
+                *lines_for(planned),
+                "",
+                "## Blocked",
+                *lines_for(blocked),
+            ]
         else:
-            sections = ["Standup — %s — %s" % (day, user), "", "Done yesterday:", *lines_for(done), "", "Planned today:", *lines_for(planned), "", "Blocked:", *lines_for(blocked)]
+            sections = [
+                "Standup — %s — %s" % (day, user),
+                "",
+                "Done yesterday:",
+                *lines_for(done),
+                "",
+                "Planned today:",
+                *lines_for(planned),
+                "",
+                "Blocked:",
+                *lines_for(blocked),
+            ]
         text = "\n".join(sections) + "\n"
     return _emit(text, args.output)

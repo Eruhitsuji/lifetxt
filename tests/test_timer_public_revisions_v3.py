@@ -16,14 +16,18 @@ class TimerTransactionRevisionV3Tests(unittest.TestCase):
         self.state = os.path.join(self.temp.name, "timer.json")
         self.config = {
             "timer": {"state_file": self.state},
-            "transactions": {"journal_dir": os.path.join(self.temp.name, "transactions")},
+            "transactions": {
+                "journal_dir": os.path.join(self.temp.name, "transactions")
+            },
         }
         with open(self.life, "w", encoding="utf-8") as handle:
             handle.write("[ ] T Task id:t1\n")
 
     def test_start_requires_both_revisions_in_strict_call(self):
         with self.assertRaises(ValueError):
-            start_timer_transaction(self.life, "t1", config=self.config, require_revisions=True)
+            start_timer_transaction(
+                self.life, "t1", config=self.config, require_revisions=True
+            )
         result = start_timer_transaction(
             self.life,
             "t1",
@@ -79,7 +83,9 @@ class TimerMcpRevisionV3Tests(unittest.TestCase):
             config={
                 "web": {"revision_mode": "required"},
                 "timer": {"state_file": self.state},
-                "transactions": {"journal_dir": os.path.join(self.temp.name, "transactions")},
+                "transactions": {
+                    "journal_dir": os.path.join(self.temp.name, "transactions")
+                },
             },
         )
 
@@ -130,9 +136,13 @@ class TimerWebRevisionV3Tests(unittest.TestCase):
                 "revision_metrics_path": os.path.join(self.temp.name, "metrics.json"),
             },
             "timer": {"state_file": self.state},
-            "transactions": {"journal_dir": os.path.join(self.temp.name, "transactions")},
+            "transactions": {
+                "journal_dir": os.path.join(self.temp.name, "transactions")
+            },
         }
-        self.client = TestClient(create_app([self.life], writable_path=self.life, config=config))
+        self.client = TestClient(
+            create_app([self.life], writable_path=self.life, config=config)
+        )
 
     def test_required_web_timer_returns_428_then_chains_revisions(self):
         missing = self.client.post("/api/timer", json={"action": "start", "id": "t1"})
@@ -169,12 +179,23 @@ class TimerWebRevisionV3Tests(unittest.TestCase):
         metrics = os.path.join(self.temp.name, "observe-metrics.json")
         with open(other, "w", encoding="utf-8") as handle:
             handle.write("[ ] T Task id:t1\n")
-        client = TestClient(create_app(
-            [other], writable_path=other,
-            config={"web": {"revision_mode": "observe", "revision_metrics_path": metrics}, "timer": {"state_file": state}},
-        ))
+        client = TestClient(
+            create_app(
+                [other],
+                writable_path=other,
+                config={
+                    "web": {
+                        "revision_mode": "observe",
+                        "revision_metrics_path": metrics,
+                    },
+                    "timer": {"state_file": state},
+                },
+            )
+        )
         response = client.post("/api/timer", json={"action": "start", "id": "t1"})
-        self.assertEqual("used", response.headers.get("X-Lifetxt-Legacy-Revision-Fallback"))
+        self.assertEqual(
+            "used", response.headers.get("X-Lifetxt-Legacy-Revision-Fallback")
+        )
         report = client.get("/api/revision-metrics").json()
         self.assertEqual(1, report["legacy_fallback_by_path"]["/api/timer"])
 

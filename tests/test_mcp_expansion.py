@@ -61,7 +61,9 @@ class ToolRegistryTests(McpTestCase):
             name = schema["name"]
             annotations = schema["annotations"]
             self.assertEqual(name in READ_ONLY_TOOLS, annotations["readOnlyHint"], name)
-            self.assertEqual(name in DESTRUCTIVE_TOOLS, annotations["destructiveHint"], name)
+            self.assertEqual(
+                name in DESTRUCTIVE_TOOLS, annotations["destructiveHint"], name
+            )
 
     def test_read_only_tools_are_classified_consistently(self):
         # A tool cannot be both read-only and destructive.
@@ -112,7 +114,9 @@ class WriteSafetyTests(McpTestCase):
         before = self._read(path)
 
         with self.assertRaises(ValueError) as caught:
-            call_tool("capture_item", {"text": "Second", "expected_file_hash": stale}, context)
+            call_tool(
+                "capture_item", {"text": "Second", "expected_file_hash": stale}, context
+            )
 
         self.assertIn("conflict", str(caught.exception).lower())
         self.assertEqual(before, self._read(path))
@@ -199,7 +203,9 @@ class ProposalModeTests(McpTestCase):
         context, path = self._context()
         before = self._read(path)
 
-        result = call_tool("capture_item", {"text": "Proposed @work", "dry_run": True}, context)
+        result = call_tool(
+            "capture_item", {"text": "Proposed @work", "dry_run": True}, context
+        )
 
         self.assertFalse(result["applied"])
         self.assertTrue(result["proposal"])
@@ -256,7 +262,9 @@ class PresenceToolTests(McpTestCase):
         context, path = self._context()
 
         first = call_tool("set_status", {"state": "busy"}, context)
-        second = call_tool("set_status", {"state": "focus", "title": "Deep Work"}, context)
+        second = call_tool(
+            "set_status", {"state": "focus", "title": "Deep Work"}, context
+        )
 
         self.assertEqual([], first["closed"])
         self.assertEqual(1, len(second["closed"]))
@@ -351,7 +359,9 @@ class CaptureToolTests(McpTestCase):
         context, path = self._context()
         before = self._read(path)
 
-        result = call_tool("parse_shorthand", {"text": "Buy milk @home ^tomorrow"}, context)
+        result = call_tool(
+            "parse_shorthand", {"text": "Buy milk @home ^tomorrow"}, context
+        )
 
         self.assertEqual("Buy milk", result["title"])
         self.assertEqual(["home"], result["details"]["project"])
@@ -411,7 +421,10 @@ class AnalysisToolTests(McpTestCase):
     def test_next_actions_excludes_blocked_someday_and_parked(self):
         context, _path = self._context()
 
-        titles = [item["title"] for item in call_tool("get_next_actions", {}, context)["items"]]
+        titles = [
+            item["title"]
+            for item in call_tool("get_next_actions", {}, context)["items"]
+        ]
 
         self.assertIn("Write_Report", titles)
         self.assertNotIn("Blocked_Task", titles)
@@ -423,7 +436,9 @@ class AnalysisToolTests(McpTestCase):
 
         titles = [
             item["title"]
-            for item in call_tool("get_next_actions", {"project": "work"}, context)["items"]
+            for item in call_tool("get_next_actions", {"project": "work"}, context)[
+                "items"
+            ]
         ]
 
         self.assertEqual(["Write_Report"], titles)
@@ -439,7 +454,8 @@ class AnalysisToolTests(McpTestCase):
         context, _path = self._context()
 
         titles = [
-            item["title"] for item in call_tool("search_items", {"query": "repo"}, context)["items"]
+            item["title"]
+            for item in call_tool("search_items", {"query": "repo"}, context)["items"]
         ]
 
         self.assertEqual("Write_Report", titles[0])
@@ -612,8 +628,12 @@ class PromptTests(McpTestCase):
         for name, spec in PROMPT_DEFINITIONS.items():
             for word in spec["template"].split():
                 candidate = word.strip("().,:").rstrip(".")
-                if candidate.startswith(("get_", "list_", "start_", "stop_", "update_", "capture_")):
-                    self.assertIn(candidate, TOOL_HANDLERS, "%s in prompt %s" % (candidate, name))
+                if candidate.startswith(
+                    ("get_", "list_", "start_", "stop_", "update_", "capture_")
+                ):
+                    self.assertIn(
+                        candidate, TOOL_HANDLERS, "%s in prompt %s" % (candidate, name)
+                    )
 
 
 class JsonRpcTests(McpTestCase):

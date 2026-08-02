@@ -94,7 +94,9 @@ class ReleasePolicyTests(unittest.TestCase):
             os.makedirs(policy)
             path = os.path.join(package, "writer.py")
             with open(path, "w", encoding="utf-8") as handle:
-                handle.write('def save(path):\n    with open(path, "w") as stream:\n        stream.write("x")\n')
+                handle.write(
+                    'def save(path):\n    with open(path, "w") as stream:\n        stream.write("x")\n'
+                )
             baseline_path = os.path.join(policy, "write-route-baseline-v1.json")
             with open(baseline_path, "w", encoding="utf-8") as handle:
                 json.dump({"baseline_version": 1, "allowed": []}, handle)

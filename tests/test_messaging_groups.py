@@ -122,7 +122,9 @@ class DeliveryStateTests(unittest.TestCase):
         item = self.message("[ ] M X sender:a recipient:group_placeholder id:M-7")
         # With a resolver, recipient values could expand; here we pass the
         # groups resolver with a config that maps the literal to itself.
-        summary = delivery.delivery_summary(item, config=CONFIG, resolver=groups.resolve_recipients)
+        summary = delivery.delivery_summary(
+            item, config=CONFIG, resolver=groups.resolve_recipients
+        )
         self.assertEqual(1, summary["recipient_count"])
 
 

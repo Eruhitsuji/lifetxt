@@ -92,8 +92,11 @@ def memberships(config, canonical, alias_set):
     """Teams and groups that include this person."""
     from .groups import expand_group, group_directory
 
-    teams = [name for name, members in config_team_members(config).items()
-             if _matches(members, alias_set)]
+    teams = [
+        name
+        for name, members in config_team_members(config).items()
+        if _matches(members, alias_set)
+    ]
     directory = group_directory(config)
     group_names = []
     for name in directory:
@@ -189,8 +192,9 @@ def _person_projects(items, config, alias_set, today):
     for proj in collect_projects(items, config, today).values():
         owner = proj["owner"]
         is_owner = owner is not None and owner in alias_set
-        assigned_here = [t for t in proj["tasks"]
-                         if t.get("assignee") and t["assignee"] in alias_set]
+        assigned_here = [
+            t for t in proj["tasks"] if t.get("assignee") and t["assignee"] in alias_set
+        ]
         if is_owner or assigned_here:
             rows.append(
                 OrderedDict(
@@ -214,7 +218,14 @@ def people_list(items, config=None, today=None):
         canonical = reverse.get(name, name)
         return seen.setdefault(
             canonical,
-            OrderedDict((("person", canonical), ("assigned_open", 0), ("messages", 0), ("meetings", 0))),
+            OrderedDict(
+                (
+                    ("person", canonical),
+                    ("assigned_open", 0),
+                    ("messages", 0),
+                    ("meetings", 0),
+                )
+            ),
         )
 
     for item in items:
@@ -244,8 +255,10 @@ def group_overview(items, config=None, name=None, today=None):
     config = config or {}
     directory = group_directory(config)
     if name not in directory and name not in _alias_names(directory):
-        raise ValueError("Unknown group %r. Known: %s"
-                         % (name, ", ".join(directory.keys()) or "(none)"))
+        raise ValueError(
+            "Unknown group %r. Known: %s"
+            % (name, ", ".join(directory.keys()) or "(none)")
+        )
     diagnostics = []
     members = expand_group(config, name, diagnostics=diagnostics)
     member_rows = []

@@ -72,28 +72,43 @@ class McpContext:
         self.config = config or {}
         configured_paths = paths or config_paths(self.config) or ["life.txt"]
         self.paths = normalize_server_paths(configured_paths)
-        self.writable_path = writable_path or config_write_file(self.config) or self.paths[0]
+        self.writable_path = (
+            writable_path or config_write_file(self.config) or self.paths[0]
+        )
         self.read_only = bool(read_only)
-        transactions_config = self.config.get("transactions") if isinstance(self.config.get("transactions"), dict) else {}
+        transactions_config = (
+            self.config.get("transactions")
+            if isinstance(self.config.get("transactions"), dict)
+            else {}
+        )
         self.transaction_preflight = None
         if not self.read_only and transactions_config.get("preflight_on_startup"):
             from .transaction_admin import preflight_report
             from .transaction_journal import journal_directory
+
             self.transaction_preflight = preflight_report(
                 journal_directory(config=self.config, writable_path=self.writable_path),
                 config=self.config,
                 create=True,
             )
             if not self.transaction_preflight["ok"]:
-                raise RuntimeError("Transaction startup preflight failed: %s" % "; ".join(self.transaction_preflight["errors"]))
+                raise RuntimeError(
+                    "Transaction startup preflight failed: %s"
+                    % "; ".join(self.transaction_preflight["errors"])
+                )
 
     @classmethod
     def from_args(cls, args):
         config = getattr(args, "config_data", None) or {}
-        paths = list(getattr(args, "paths", None) or []) or config_paths(config) or ["life.txt"]
+        paths = (
+            list(getattr(args, "paths", None) or [])
+            or config_paths(config)
+            or ["life.txt"]
+        )
         return cls(
             paths=paths,
-            writable_path=getattr(args, "write_file", None) or config_write_file(config),
+            writable_path=getattr(args, "write_file", None)
+            or config_write_file(config),
             config=config,
             read_only=getattr(args, "read_only", False),
         )
@@ -101,7 +116,9 @@ class McpContext:
 
 def cmd_mcp(args, input_stream=None, output_stream=None):
     context = McpContext.from_args(args)
-    return run_stdio_server(context, input_stream=input_stream, output_stream=output_stream)
+    return run_stdio_server(
+        context, input_stream=input_stream, output_stream=output_stream
+    )
 
 
 def run_stdio_server(context, input_stream=None, output_stream=None):
@@ -118,7 +135,9 @@ def run_stdio_server(context, input_stream=None, output_stream=None):
             response = _jsonrpc_error(None, -32603, str(exc))
         if response is None:
             continue
-        output_stream.write(json.dumps(response, ensure_ascii=False, separators=(",", ":")) + "\n")
+        output_stream.write(
+            json.dumps(response, ensure_ascii=False, separators=(",", ":")) + "\n"
+        )
         output_stream.flush()
     return 0
 
@@ -189,25 +208,64 @@ def call_tool(name, arguments, context):
 #: Tools that never write. Clients use readOnlyHint to skip confirmation.
 READ_ONLY_TOOLS = frozenset(
     [
-        "list_items", "get_item", "check_line", "parse_item", "get_agenda",
-        "get_review", "get_graph", "get_blockers", "list_links", "list_status",
-        "list_notifications", "list_messages", "get_file_state", "search_items",
-        "get_next_actions", "get_stats", "get_habit_streaks", "get_workload",
-        "get_status", "parse_shorthand", "timer_status", "check_files",
-        "complete", "attachment_state",
-        "get_projects", "get_project", "get_portfolio", "get_command_center",
-        "get_areas", "get_backlinks", "get_clock_status",
-        "run_query", "list_saved_views", "run_saved_view",
-        "list_groups", "resolve_recipients", "get_delivery_state",
-        "list_people", "get_person", "get_group_overview",
-        "list_proposals", "global_search",
-        "list_tickets", "get_ticket", "validate_tickets",
+        "list_items",
+        "get_item",
+        "check_line",
+        "parse_item",
+        "get_agenda",
+        "get_review",
+        "get_graph",
+        "get_blockers",
+        "list_links",
+        "list_status",
+        "list_notifications",
+        "list_messages",
+        "get_file_state",
+        "search_items",
+        "get_next_actions",
+        "get_stats",
+        "get_habit_streaks",
+        "get_workload",
+        "get_status",
+        "parse_shorthand",
+        "timer_status",
+        "check_files",
+        "complete",
+        "attachment_state",
+        "get_projects",
+        "get_project",
+        "get_portfolio",
+        "get_command_center",
+        "get_areas",
+        "get_backlinks",
+        "get_clock_status",
+        "run_query",
+        "list_saved_views",
+        "run_saved_view",
+        "list_groups",
+        "resolve_recipients",
+        "get_delivery_state",
+        "list_people",
+        "get_person",
+        "get_group_overview",
+        "list_proposals",
+        "global_search",
+        "list_tickets",
+        "get_ticket",
+        "validate_tickets",
     ]
 )
 
 #: Tools that can remove or overwrite existing content.
 DESTRUCTIVE_TOOLS = frozenset(
-    ["delete_item", "set_status", "timer_cancel", "update_item", "stop_work", "attachment_delete"]
+    [
+        "delete_item",
+        "set_status",
+        "timer_cancel",
+        "update_item",
+        "stop_work",
+        "attachment_delete",
+    ]
 )
 
 
@@ -262,9 +320,24 @@ def _tool_schemas():
                 "limit": _integer("Maximum number of items."),
             },
         ),
-        _tool("get_item", "Get one item by ID.", {"id": _string("Item ID.")}, required=["id"]),
-        _tool("check_line", "Validate a raw life.txt line.", {"line": _string("Raw line.")}, required=["line"]),
-        _tool("parse_item", "Parse a raw life.txt item and return preview items.", {"line": _string("Raw line or body block.")}, required=["line"]),
+        _tool(
+            "get_item",
+            "Get one item by ID.",
+            {"id": _string("Item ID.")},
+            required=["id"],
+        ),
+        _tool(
+            "check_line",
+            "Validate a raw life.txt line.",
+            {"line": _string("Raw line.")},
+            required=["line"],
+        ),
+        _tool(
+            "parse_item",
+            "Parse a raw life.txt item and return preview items.",
+            {"line": _string("Raw line or body block.")},
+            required=["line"],
+        ),
         _tool(
             "create_item",
             "Append a new item to the writable life.txt file.",
@@ -293,7 +366,10 @@ def _tool_schemas():
         _tool(
             "mark_done",
             "Mark an item done by ID and add done: when missing.",
-            {"id": _string("Item ID."), "done": _string("done: value. Defaults to now.")},
+            {
+                "id": _string("Item ID."),
+                "done": _string("done: value. Defaults to now."),
+            },
             required=["id"],
         ),
         _tool(
@@ -307,7 +383,12 @@ def _tool_schemas():
             },
             required=["id"],
         ),
-        _tool("delete_item", "Delete an item by ID.", {"id": _string("Item ID.")}, required=["id"]),
+        _tool(
+            "delete_item",
+            "Delete an item by ID.",
+            {"id": _string("Item ID.")},
+            required=["id"],
+        ),
         _tool(
             "get_agenda",
             "Return agenda records for a time range.",
@@ -333,7 +414,9 @@ def _tool_schemas():
             {
                 "week": _bool("Review the current week (Monday to Sunday)."),
                 "month": _string("Review a calendar month, formatted YYYY-MM."),
-                "from": _string("Range start date, YYYY-MM-DD. Defaults to the current week start."),
+                "from": _string(
+                    "Range start date, YYYY-MM-DD. Defaults to the current week start."
+                ),
                 "to": _string("Range end date, YYYY-MM-DD. Defaults to today."),
                 "project": _string("Restrict the review to one project."),
             },
@@ -341,12 +424,18 @@ def _tool_schemas():
         _tool(
             "get_graph",
             "Return ID reference graph nodes and edges.",
-            {"root": _string("Optional root ID."), "depth": _integer("Optional traversal depth.")},
+            {
+                "root": _string("Optional root ID."),
+                "depth": _integer("Optional traversal depth."),
+            },
         ),
         _tool(
             "get_blockers",
             "Return transitive open blockers for an item ID.",
-            {"id": _string("Item ID."), "depth": _integer("Traversal depth, clamped to 1..10.")},
+            {
+                "id": _string("Item ID."),
+                "depth": _integer("Traversal depth, clamped to 1..10."),
+            },
             required=["id"],
         ),
         _tool(
@@ -362,7 +451,10 @@ def _tool_schemas():
         _tool(
             "list_status",
             "Return latest presence status records.",
-            {"person": _string("Person filter."), "active": _bool("Only active statuses.")},
+            {
+                "person": _string("Person filter."),
+                "active": _bool("Only active statuses."),
+            },
         ),
         _tool(
             "list_notifications",
@@ -410,14 +502,28 @@ def _tool_schemas():
         _tool(
             "reply_message",
             "Reply to a message ID and link it with parent:ID.",
-            {"id": _string("Original message ID."), "title": _string("Reply title."), "body": _string("Reply body."), "details": _object("Extra details.")},
+            {
+                "id": _string("Original message ID."),
+                "title": _string("Reply title."),
+                "body": _string("Reply body."),
+                "details": _object("Extra details."),
+            },
             required=["id", "title"],
         ),
-        _tool("ack_message", "Acknowledge a message notification.", {"id": _string("Message ID."), "ack": _string("Ack timestamp.")}, required=["id"]),
+        _tool(
+            "ack_message",
+            "Acknowledge a message notification.",
+            {"id": _string("Message ID."), "ack": _string("Ack timestamp.")},
+            required=["id"],
+        ),
         _tool(
             "snooze_message",
             "Snooze a message notification.",
-            {"id": _string("Message ID."), "duration": _string("Duration such as 10m."), "until": _string("Explicit snooze_until value.")},
+            {
+                "id": _string("Message ID."),
+                "duration": _string("Duration such as 10m."),
+                "until": _string("Explicit snooze_until value."),
+            },
             required=["id"],
         ),
         _tool(
@@ -438,11 +544,15 @@ def _tool_schemas():
             {
                 "id": _string("Item id to attach to."),
                 "path": _string("Path to the file or directory."),
-                "key": _string("Force file or dir; otherwise chosen from what is on disk."),
+                "key": _string(
+                    "Force file or dir; otherwise chosen from what is on disk."
+                ),
                 "no_hash": _bool("Record the path without a content hash."),
                 "dry_run": _bool("Return a diff instead of writing."),
                 "expected_file_hash": _string("Reject the write if the file changed."),
-                "attachment_revision": _string("Expected attachment SHA-256 revision for file references."),
+                "attachment_revision": _string(
+                    "Expected attachment SHA-256 revision for file references."
+                ),
             },
             required=["id", "path"],
         ),
@@ -453,10 +563,16 @@ def _tool_schemas():
                 "id": _string("Item ID."),
                 "path": _string("Attachment destination relative to life.txt."),
                 "content_base64": _string("Attachment bytes encoded as base64."),
-                "content_text": _string("UTF-8 text content; mutually exclusive with content_base64."),
+                "content_text": _string(
+                    "UTF-8 text content; mutually exclusive with content_base64."
+                ),
                 "item_revision": _string("Expected life.txt SHA-256 revision."),
-                "attachment_revision": _string("Expected attachment revision or <missing>."),
-                "allow_executable": _bool("Allow executable/script attachment content."),
+                "attachment_revision": _string(
+                    "Expected attachment revision or <missing>."
+                ),
+                "allow_executable": _bool(
+                    "Allow executable/script attachment content."
+                ),
             },
             required=["id", "path"],
         ),
@@ -610,7 +726,9 @@ def _tool_schemas():
                 "note": _string("Optional note stored with the timer state."),
                 "dry_run": _bool("Describe the change instead of applying it."),
                 "item_revision": _string("Expected life.txt SHA-256 revision."),
-                "timer_revision": _string("Expected timer-state revision; use <missing> when idle."),
+                "timer_revision": _string(
+                    "Expected timer-state revision; use <missing> when idle."
+                ),
             },
             required=["id"],
         ),
@@ -642,7 +760,9 @@ def _tool_schemas():
                 "no_presence": _bool("Skip recording presence."),
                 "dry_run": _bool("Describe the change instead of applying it."),
                 "item_revision": _string("Expected life.txt SHA-256 revision."),
-                "timer_revision": _string("Expected timer-state revision; use <missing> when idle."),
+                "timer_revision": _string(
+                    "Expected timer-state revision; use <missing> when idle."
+                ),
             },
             required=["id"],
         ),
@@ -745,7 +865,9 @@ def _tool_schemas():
             "Per-recipient delivery state and acknowledgement status for messages.",
             {
                 "id": _string("Restrict to one message ID."),
-                "policy": _string("Override acknowledgement policy: any, all, or a count."),
+                "policy": _string(
+                    "Override acknowledgement policy: any, all, or a count."
+                ),
             },
             read_only=True,
         ),
@@ -884,7 +1006,11 @@ PROMPT_DEFINITIONS = OrderedDict(
             {
                 "description": "Standup summary: done yesterday, today, blocked.",
                 "arguments": [
-                    {"name": "person", "description": "Person to report for.", "required": False}
+                    {
+                        "name": "person",
+                        "description": "Person to report for.",
+                        "required": False,
+                    }
                 ],
                 "template": (
                     "Write my standup update.\n\n"
@@ -916,7 +1042,11 @@ PROMPT_DEFINITIONS = OrderedDict(
             {
                 "description": "Pick the next action and start a focused work session.",
                 "arguments": [
-                    {"name": "project", "description": "Limit to one project.", "required": False}
+                    {
+                        "name": "project",
+                        "description": "Limit to one project.",
+                        "required": False,
+                    }
                 ],
                 "template": (
                     "Start a focus session.\n\n"
@@ -954,9 +1084,7 @@ def prompt_get(name, arguments=None):
             text += "\n\nContext: %s = %s" % (key, value)
     return {
         "description": spec["description"],
-        "messages": [
-            {"role": "user", "content": {"type": "text", "text": text}}
-        ],
+        "messages": [{"role": "user", "content": {"type": "text", "text": text}}],
     }
 
 
@@ -979,7 +1107,7 @@ def resource_read(context, uri):
     if not str(uri).startswith(prefix):
         raise ValueError("Unsupported resource URI: %s" % uri)
     try:
-        index = int(str(uri)[len(prefix):])
+        index = int(str(uri)[len(prefix) :])
     except ValueError:
         raise ValueError("Invalid resource index in URI: %s" % uri)
     if index < 0 or index >= len(context.paths):
@@ -996,7 +1124,9 @@ def resource_read(context, uri):
     }
 
 
-def _tool(name, description, properties, required=None, read_only=False, destructive=False):
+def _tool(
+    name, description, properties, required=None, read_only=False, destructive=False
+):
     """Build a tool schema, including MCP annotations.
 
     Annotations are hints a client uses to decide what needs confirmation:
@@ -1175,7 +1305,9 @@ def _ensure_server_id(item, context):
     hand-written capture rather than API writes.
     """
     key = _id_key(context)
-    assign_auto_id_from_paths(item, context.config, auto_id_paths(context.paths, context.writable_path))
+    assign_auto_id_from_paths(
+        item, context.config, auto_id_paths(context.paths, context.writable_path)
+    )
     if item.details.get(key):
         return item
     from .ids import generate_item_id
@@ -1219,7 +1351,9 @@ def _id_key(context):
 
 def _tool_list_items(args, context):
     items, diagnostics = _read_items(context)
-    range_start, range_end = parse_optional_time_range(args.get("after"), args.get("before"))
+    range_start, range_end = parse_optional_time_range(
+        args.get("after"), args.get("before")
+    )
     filtered = filter_items(
         items,
         open_only=_truthy(args.get("open_only")) or _truthy(args.get("blocked")),
@@ -1248,16 +1382,27 @@ def _tool_list_items(args, context):
     if _truthy(args.get("blocked")):
         key = _id_key(context)
         blocker_records = dependency_blocker_records(items, key=key)
-        blocked_item_ids = {r["blocked_id"] for r in blocker_records if r.get("blocked_id")}
-        blocked_lines = {r["blocked_line"] for r in blocker_records if r.get("blocked_line") is not None}
+        blocked_item_ids = {
+            r["blocked_id"] for r in blocker_records if r.get("blocked_id")
+        }
+        blocked_lines = {
+            r["blocked_line"]
+            for r in blocker_records
+            if r.get("blocked_line") is not None
+        }
         filtered = [
-            item for item in filtered
+            item
+            for item in filtered
             if (item.details.get(key) and str(item.details[key][0]) in blocked_item_ids)
             or (item.line is not None and item.line in blocked_lines)
         ]
-    filtered = sort_items(filtered, args.get("sort") or "line", args.get("order") or "asc")
+    filtered = sort_items(
+        filtered, args.get("sort") or "line", args.get("order") or "asc"
+    )
     filtered = limit_items(filtered, args.get("limit"))
-    return items_response(filtered, diagnostics, context.writable_path, _id_key(context))
+    return items_response(
+        filtered, diagnostics, context.writable_path, _id_key(context)
+    )
 
 
 def _tool_get_item(args, context):
@@ -1359,10 +1504,15 @@ def _tool_update_item(args, context):
             ),
             "Update %s" % item_id,
         )
-    item = update_item_by_id_in_file(context.writable_path, item_id, payload, key=_id_key(context))
+    item = update_item_by_id_in_file(
+        context.writable_path, item_id, payload, key=_id_key(context)
+    )
     return _applied(
         context,
-        {"id": item_id, "item": api_item(item, context.writable_path, _id_key(context))},
+        {
+            "id": item_id,
+            "item": api_item(item, context.writable_path, _id_key(context)),
+        },
         "Update %s" % item_id,
     )
 
@@ -1378,7 +1528,12 @@ def _tool_mark_done(args, context):
     details = _copy_details(item.details)
     if not details.get("done"):
         details["done"] = [_completion_value(context, args)]
-    payload = {"status": "[x]", "type": item.kind, "title": item.title, "details": details}
+    payload = {
+        "status": "[x]",
+        "type": item.kind,
+        "title": item.title,
+        "details": details,
+    }
     if _dry_run(args):
         return _preview_write(
             context,
@@ -1392,7 +1547,10 @@ def _tool_mark_done(args, context):
     )
     return _applied(
         context,
-        {"id": item_id, "item": api_item(updated, context.writable_path, _id_key(context))},
+        {
+            "id": item_id,
+            "item": api_item(updated, context.writable_path, _id_key(context)),
+        },
         "Mark %s done" % item_id,
     )
 
@@ -1415,7 +1573,11 @@ def _tool_complete_item(args, context):
     if item is None:
         raise ValueError("Item id:%s was not found." % item_id)
     if item.status == "[x]":
-        return {"id": item_id, "item": api_item(item, context.writable_path, id_key), "next": None}
+        return {
+            "id": item_id,
+            "item": api_item(item, context.writable_path, id_key),
+            "next": None,
+        }
 
     date_value = args.get("date")
     if date_value:
@@ -1431,7 +1593,9 @@ def _tool_complete_item(args, context):
     next_item = None
     if repeat_value:
         repeat_base = _resolve_repeat_base(item, context.config)
-        anchor_key, next_dt, _rule = next_repeat_occurrence(item, repeat_base, completion_date)
+        anchor_key, next_dt, _rule = next_repeat_occurrence(
+            item, repeat_base, completion_date
+        )
         if next_dt is not None:
             new_details = OrderedDict()
             for key, values in item.details.items():
@@ -1462,7 +1626,11 @@ def _tool_complete_item(args, context):
         key=id_key,
     )
 
-    result = {"id": item_id, "item": api_item(updated, context.writable_path, id_key), "next": None}
+    result = {
+        "id": item_id,
+        "item": api_item(updated, context.writable_path, id_key),
+        "next": None,
+    }
     if next_item is not None:
         append_item_to_file(context.writable_path, next_item)
         result["next"] = api_item(next_item, context.writable_path, id_key)
@@ -1473,7 +1641,9 @@ def _tool_delete_item(args, context):
     _require_writable(context)
     _check_expected_hash(context, args)
     item_id = str(args.get("id"))
-    deleted = delete_item_by_id_from_file(context.writable_path, item_id, key=_id_key(context))
+    deleted = delete_item_by_id_from_file(
+        context.writable_path, item_id, key=_id_key(context)
+    )
     return {"id": item_id, "deleted": deleted}
 
 
@@ -1541,13 +1711,20 @@ def _tool_get_graph(args, context):
     nodes, edges = _graph_nodes_edges(items, _id_key(context))
     root = args.get("root")
     if root:
-        nodes, edges = _subgraph(nodes, edges, str(root), _safe_depth(args.get("depth"), default=None))
+        nodes, edges = _subgraph(
+            nodes, edges, str(root), _safe_depth(args.get("depth"), default=None)
+        )
     return {"nodes": nodes, "edges": edges}
 
 
 def _tool_get_blockers(args, context):
     items, _diagnostics = _read_items(context)
-    return _blockers_response(items, str(args.get("id")), _safe_depth(args.get("depth"), default=5), _id_key(context))
+    return _blockers_response(
+        items,
+        str(args.get("id")),
+        _safe_depth(args.get("depth"), default=5),
+        _id_key(context),
+    )
 
 
 def _tool_list_links(args, context):
@@ -1570,7 +1747,11 @@ def _tool_list_status(args, context):
         person=args.get("person"),
         active_only=_truthy(args.get("active")),
     )
-    return {"count": len(records), "records": records, "diagnostics": diagnostics_to_output(diagnostics)}
+    return {
+        "count": len(records),
+        "records": records,
+        "diagnostics": diagnostics_to_output(diagnostics),
+    }
 
 
 def _tool_list_notifications(args, context):
@@ -1578,12 +1759,17 @@ def _tool_list_notifications(args, context):
     notification_config = config_section(context.config, "notifications")
     records = notification_records(
         items,
-        recipient=args.get("recipient") or config_notification_recipient(context.config),
+        recipient=args.get("recipient")
+        or config_notification_recipient(context.config),
         lookahead=args.get("lookahead") or notification_config.get("lookahead") or "0m",
         grace=args.get("grace") or notification_config.get("grace") or "2m",
     )
     records = limit_items(records, args.get("limit"))
-    return {"count": len(records), "records": records, "diagnostics": diagnostics_to_output(diagnostics)}
+    return {
+        "count": len(records),
+        "records": records,
+        "diagnostics": diagnostics_to_output(diagnostics),
+    }
 
 
 def _tool_list_messages(args, context):
@@ -1595,9 +1781,15 @@ def _tool_list_messages(args, context):
 def _tool_create_message(args, context):
     _require_writable(context)
     item = message_item_from_payload(args, context.config)
-    assign_auto_id_from_paths(item, context.config, auto_id_paths(context.paths, context.writable_path))
+    assign_auto_id_from_paths(
+        item, context.config, auto_id_paths(context.paths, context.writable_path)
+    )
     line_no = append_item_to_file(context.writable_path, item)
-    return {"line": line_no, "item": api_item(item, context.writable_path, _id_key(context)), "text": item_to_line(item)}
+    return {
+        "line": line_no,
+        "item": api_item(item, context.writable_path, _id_key(context)),
+        "text": item_to_line(item),
+    }
 
 
 def _tool_reply_message(args, context):
@@ -1610,7 +1802,9 @@ def _tool_reply_message(args, context):
     payload = dict(args)
     payload.pop("id", None)
     item = message_reply_from_payload(original, message_id, payload, context.config)
-    assign_auto_id_from_paths(item, context.config, auto_id_paths(context.paths, context.writable_path))
+    assign_auto_id_from_paths(
+        item, context.config, auto_id_paths(context.paths, context.writable_path)
+    )
     line_no = append_item_to_file(context.writable_path, item)
     return {
         "line": line_no,
@@ -1622,15 +1816,25 @@ def _tool_reply_message(args, context):
 def _tool_ack_message(args, context):
     _require_writable(context)
     message_id = str(args.get("id"))
-    item = ack_message_in_file(context.writable_path, message_id, args, key=_id_key(context))
-    return {"id": message_id, "item": api_item(item, context.writable_path, _id_key(context))}
+    item = ack_message_in_file(
+        context.writable_path, message_id, args, key=_id_key(context)
+    )
+    return {
+        "id": message_id,
+        "item": api_item(item, context.writable_path, _id_key(context)),
+    }
 
 
 def _tool_snooze_message(args, context):
     _require_writable(context)
     message_id = str(args.get("id"))
-    item = snooze_message_in_file(context.writable_path, message_id, args, context.config, key=_id_key(context))
-    return {"id": message_id, "item": api_item(item, context.writable_path, _id_key(context))}
+    item = snooze_message_in_file(
+        context.writable_path, message_id, args, context.config, key=_id_key(context)
+    )
+    return {
+        "id": message_id,
+        "item": api_item(item, context.writable_path, _id_key(context)),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1672,7 +1876,10 @@ def _tool_check_files(args, context):
             verify=verify,
         ):
             broken = record["status"] in (
-                STATUS_MISSING, STATUS_CHANGED, STATUS_WRONG_TYPE, STATUS_ERROR
+                STATUS_MISSING,
+                STATUS_CHANGED,
+                STATUS_WRONG_TYPE,
+                STATUS_ERROR,
             )
             if broken:
                 problems += 1
@@ -1733,11 +1940,13 @@ def _tool_attach_file(args, context):
     key = DIR_KEY if is_dir else FILE_KEY
     if args.get("key") in (FILE_KEY, DIR_KEY) and args["key"] != key:
         raise ValueError(
-            "%s is a %s; use key=%s." % (path_value, "directory" if is_dir else "file", key)
+            "%s is a %s; use key=%s."
+            % (path_value, "directory" if is_dir else "file", key)
         )
 
     if not is_dir and not _dry_run(args):
         from .attachment_transactions import reference_attachment
+
         report = reference_attachment(
             context.writable_path,
             item_id,
@@ -1778,7 +1987,12 @@ def _tool_attach_file(args, context):
             kept.append(old)
     details[key] = kept + [value]
 
-    payload = {"status": item.status, "type": item.kind, "title": item.title, "details": details}
+    payload = {
+        "status": item.status,
+        "type": item.kind,
+        "title": item.title,
+        "details": details,
+    }
     if _dry_run(args):
         return _preview_write(
             context,
@@ -1825,7 +2039,10 @@ def _tool_attachment_put(args, context):
     else:
         raise ValueError("attachment_put requires content_base64 or content_text.")
     return put_attachment(
-        context.writable_path, item_id, path_value, payload,
+        context.writable_path,
+        item_id,
+        path_value,
+        payload,
         item_revision=args.get("item_revision") or args.get("expected_file_hash"),
         attachment_expected_revision=args.get("attachment_revision"),
         config=context.config,
@@ -1843,7 +2060,9 @@ def _tool_attachment_delete(args, context):
     if not item_id or not path_value:
         raise ValueError("attachment_delete requires id and path.")
     return delete_attachment(
-        context.writable_path, item_id, path_value,
+        context.writable_path,
+        item_id,
+        path_value,
         item_revision=args.get("item_revision") or args.get("expected_file_hash"),
         attachment_expected_revision=args.get("attachment_revision"),
         config=context.config,
@@ -1870,7 +2089,9 @@ def _tool_set_status(args, context):
     close_only = _truthy(args.get("end"))
     state_value = args.get("state")
     if not close_only and not state_value:
-        raise ValueError("set_status requires state, or end=true to close the current status.")
+        raise ValueError(
+            "set_status requires state, or end=true to close the current status."
+        )
 
     details = OrderedDict()
     for key in ("note", "project", "service", "visibility"):
@@ -1922,7 +2143,9 @@ def _tool_get_status(args, context):
 
     items, _diagnostics = _read_items(context)
     person = args.get("person")
-    records = latest_status_records(items, person=person, active_only=_truthy(args.get("active")))
+    records = latest_status_records(
+        items, person=person, active_only=_truthy(args.get("active"))
+    )
     open_items = active_status_items(items, person=person)
     return {
         "count": len(records),
@@ -2030,8 +2253,14 @@ def _tool_parse_shorthand(args, _context):
 
     text = str(args.get("text") or "")
     result = {
-        "sigils": [{"token": token, "expands_to": target} for token, target in describe_sigils()],
-        "date_tokens": [{"token": token, "meaning": meaning} for token, meaning in describe_date_tokens()],
+        "sigils": [
+            {"token": token, "expands_to": target}
+            for token, target in describe_sigils()
+        ],
+        "date_tokens": [
+            {"token": token, "meaning": meaning}
+            for token, meaning in describe_date_tokens()
+        ],
     }
     if text:
         try:
@@ -2054,7 +2283,9 @@ def _completion_value(context, args):
     explicit = args.get("done") or args.get("date")
     if explicit:
         return str(explicit)
-    precision = str(config_section(context.config, "done").get("precision") or "date").lower()
+    precision = str(
+        config_section(context.config, "done").get("precision") or "date"
+    ).lower()
     if _truthy(args.get("now")):
         precision = "datetime"
     if precision not in ("date", "datetime"):
@@ -2155,7 +2386,8 @@ def _tool_timer_cancel(args, context):
         return {
             "applied": False,
             "proposal": True,
-            "summary": "Discard the timer for %s without writing elapsed:" % status.get("id"),
+            "summary": "Discard the timer for %s without writing elapsed:"
+            % status.get("id"),
             "required_revisions": ["timer_revision"],
         }
     result = timer_module.cancel_timer_transaction(
@@ -2182,12 +2414,16 @@ def _tool_start_work(args, context):
     state_value = args.get("state") or "busy"
     if _dry_run(args):
         return {
-            "applied": False, "proposal": True,
-            "summary": "Start %s, timer, and presence %s as one transaction" % (item_id, state_value),
+            "applied": False,
+            "proposal": True,
+            "summary": "Start %s, timer, and presence %s as one transaction"
+            % (item_id, state_value),
             "required_revisions": ["item_revision", "timer_revision"],
         }
     result = start_work_transaction(
-        context.writable_path, item_id, state=state_value,
+        context.writable_path,
+        item_id,
+        state=state_value,
         use_timer=not _truthy(args.get("no_timer")),
         use_presence=not _truthy(args.get("no_presence")),
         config=context.config,
@@ -2209,7 +2445,8 @@ def _tool_stop_work(args, context):
         raise ValueError("No running timer.")
     if _dry_run(args):
         return {
-            "applied": False, "proposal": True,
+            "applied": False,
+            "proposal": True,
             "summary": "Stop %s and close the compound work session" % status.get("id"),
             "required_revisions": ["item_revision", "timer_revision"],
         }
@@ -2249,7 +2486,9 @@ def _tool_get_next_actions(args, context):
         project=args.get("project"),
         assignee=args.get("assignee"),
     )
-    return items_response(selected, diagnostics, context.writable_path, _id_key(context))
+    return items_response(
+        selected, diagnostics, context.writable_path, _id_key(context)
+    )
 
 
 def _tool_search_items(args, context):
@@ -2293,7 +2532,9 @@ def _tool_search_items(args, context):
         cutoff = best * 0.25
         scored = [entry for entry in scored if -entry[0] >= cutoff]
     selected = [entry[2] for entry in scored[: max(1, int(limit))]]
-    return items_response(selected, diagnostics, context.writable_path, _id_key(context))
+    return items_response(
+        selected, diagnostics, context.writable_path, _id_key(context)
+    )
 
 
 def _tool_get_stats(args, context):
@@ -2334,11 +2575,20 @@ def _tool_get_workload(args, context):
             continue
         if item.status not in ("[ ]", "[/]"):
             continue
-        owners = [str(v) for v in item.details.get("assignee") or []] or ["(unassigned)"]
+        owners = [str(v) for v in item.details.get("assignee") or []] or [
+            "(unassigned)"
+        ]
         due = (item.details.get("due") or [""])[0]
         for owner in owners:
             row = people.setdefault(
-                owner, {"person": owner, "open": 0, "due_soon": 0, "overdue": 0, "actionable": 0}
+                owner,
+                {
+                    "person": owner,
+                    "open": 0,
+                    "due_soon": 0,
+                    "overdue": 0,
+                    "actionable": 0,
+                },
             )
             row["open"] += 1
             if is_actionable(item.status, item.details, kind=item.kind):
@@ -2356,8 +2606,12 @@ def _tool_get_projects(args, context):
     from .projects import project_list
 
     items, _diagnostics = _read_items(context)
-    rows = project_list(items, context.config, timezone_today(),
-                        include_archived=_truthy(args.get("all")))
+    rows = project_list(
+        items,
+        context.config,
+        timezone_today(),
+        include_archived=_truthy(args.get("all")),
+    )
     return {"count": len(rows), "projects": rows}
 
 
@@ -2377,8 +2631,12 @@ def _tool_get_portfolio(args, context):
     from .projects import portfolio
 
     items, _diagnostics = _read_items(context)
-    return portfolio(items, context.config, timezone_today(),
-                     include_archived=_truthy(args.get("all")))
+    return portfolio(
+        items,
+        context.config,
+        timezone_today(),
+        include_archived=_truthy(args.get("all")),
+    )
 
 
 def _tool_get_command_center(args, context):
@@ -2391,9 +2649,14 @@ def _tool_get_command_center(args, context):
         horizon = int(horizon) if horizon is not None else 3
     except (TypeError, ValueError):
         horizon = 3
-    return command_center(items, context.config, timezone_today(),
-                          horizon_days=horizon, person=args.get("person"),
-                          mode=str(args.get("mode") or "today"))
+    return command_center(
+        items,
+        context.config,
+        timezone_today(),
+        horizon_days=horizon,
+        person=args.get("person"),
+        mode=str(args.get("mode") or "today"),
+    )
 
 
 def _tool_get_areas(args, context):
@@ -2419,6 +2682,7 @@ def _tool_get_backlinks(args, context):
 
 def _tool_get_clock_status(args, context):
     from .clock_skew import clock_skew_report
+
     return clock_skew_report(args.get("client_time"), config=context.config)
 
 
@@ -2429,11 +2693,16 @@ def _tool_run_query(args, context):
     items, diagnostics = _read_items(context)
     query_text = str(args.get("query") or "")
     filtered, query_diags = run_query(
-        items, query_text, config=context.config,
-        sort=args.get("sort"), order=args.get("order") or "asc",
+        items,
+        query_text,
+        config=context.config,
+        sort=args.get("sort"),
+        order=args.get("order") or "asc",
         limit=args.get("limit"),
     )
-    response = items_response(filtered, diagnostics, context.writable_path, _id_key(context))
+    response = items_response(
+        filtered, diagnostics, context.writable_path, _id_key(context)
+    )
     response["query_diagnostics"] = query_diags
     return response
 
@@ -2457,7 +2726,9 @@ def _tool_run_saved_view(args, context):
     if not name:
         raise ValueError("run_saved_view requires 'name'.")
     filtered, query_diags = run_saved_view(items, context.config, name)
-    response = items_response(filtered, diagnostics, context.writable_path, _id_key(context))
+    response = items_response(
+        filtered, diagnostics, context.writable_path, _id_key(context)
+    )
     response["query_diagnostics"] = query_diags
     return response
 
@@ -2496,7 +2767,9 @@ def _tool_get_delivery_state(args, context):
             continue
         if target_id and (item.details.get("id", [None])[0] != str(target_id)):
             continue
-        summaries.append(delivery_summary(item, context.config, resolve_recipients, policy))
+        summaries.append(
+            delivery_summary(item, context.config, resolve_recipients, policy)
+        )
     return {"count": len(summaries), "messages": summaries}
 
 
@@ -2506,9 +2779,20 @@ def _tool_list_tickets(args, context):
 
     items, _diagnostics = _read_items(context)
     filters = {}
-    for field in ("tracker", "ticket_status", "priority", "severity", "assignee",
-                  "component", "version", "sprint", "project"):
-        value = args.get(field) or (args.get("status") if field == "ticket_status" else None)
+    for field in (
+        "tracker",
+        "ticket_status",
+        "priority",
+        "severity",
+        "assignee",
+        "component",
+        "version",
+        "sprint",
+        "project",
+    ):
+        value = args.get(field) or (
+            args.get("status") if field == "ticket_status" else None
+        )
         if value:
             filters[field] = value
     if _truthy(args.get("open_only")):
@@ -2541,8 +2825,11 @@ def _tool_validate_tickets(_args, context):
     rows = []
     for item in iter_tickets(items):
         rows.extend(validate_ticket(item, context.config, key=key))
-    return {"ok": not any(r["severity"] == "error" for r in rows),
-            "diagnostic_count": len(rows), "diagnostics": rows}
+    return {
+        "ok": not any(r["severity"] == "error" for r in rows),
+        "diagnostic_count": len(rows),
+        "diagnostics": rows,
+    }
 
 
 def _tool_global_search(args, context):
@@ -2553,8 +2840,13 @@ def _tool_global_search(args, context):
     types = args.get("types")
     if isinstance(types, str):
         types = [t.strip() for t in types.split(",") if t.strip()]
-    return global_search(items, context.config, str(args.get("term") or ""),
-                         types=types, limit=args.get("limit"))
+    return global_search(
+        items,
+        context.config,
+        str(args.get("term") or ""),
+        types=types,
+        limit=args.get("limit"),
+    )
 
 
 def _tool_list_proposals(args, context):
@@ -2563,7 +2855,11 @@ def _tool_list_proposals(args, context):
 
     proposals = list_proposals(context.config, status=args.get("status"))
     summary = inbox_summary(context.config)
-    return {"proposals": proposals, "counts": summary["counts"], "total": summary["total"]}
+    return {
+        "proposals": proposals,
+        "counts": summary["counts"],
+        "total": summary["total"],
+    }
 
 
 def _tool_stage_proposal(args, context):
@@ -2581,8 +2877,11 @@ def _tool_stage_proposal(args, context):
     if not isinstance(details, dict):
         details = {}
     proposal = stage_create(
-        context.config, title, kind=str(args.get("kind") or "T"),
-        details=details, source=str(args.get("source") or "mcp"),
+        context.config,
+        title,
+        kind=str(args.get("kind") or "T"),
+        details=details,
+        source=str(args.get("source") or "mcp"),
     )
     return {"staged": True, "proposal": proposal}
 
@@ -2751,7 +3050,9 @@ def _blockers_response(items, item_id, max_depth, key):
         next_frontier = []
         for item_key in frontier:
             for rec in by_blocked_key.get(item_key, []):
-                entry = OrderedDict((k, v) for k, v in rec.items() if not k.startswith("_"))
+                entry = OrderedDict(
+                    (k, v) for k, v in rec.items() if not k.startswith("_")
+                )
                 entry["level"] = level
                 chain.append(entry)
                 blocker_key = rec["_blocker_item_key"]
@@ -2761,7 +3062,12 @@ def _blockers_response(items, item_id, max_depth, key):
         if not next_frontier:
             break
         frontier = next_frontier
-    return {"id": item_id, "blocked": any(entry["level"] == 1 for entry in chain), "count": len(chain), "chain": chain}
+    return {
+        "id": item_id,
+        "blocked": any(entry["level"] == 1 for entry in chain),
+        "count": len(chain),
+        "chain": chain,
+    }
 
 
 def _safe_depth(value, default=5):
@@ -2825,7 +3131,9 @@ def _require_writable(context):
 
 
 def _now_text():
-    return local_now_naive().replace(second=0, microsecond=0).isoformat(timespec="minutes")
+    return (
+        local_now_naive().replace(second=0, microsecond=0).isoformat(timespec="minutes")
+    )
 
 
 def _tool_result(result):

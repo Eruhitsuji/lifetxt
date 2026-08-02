@@ -37,7 +37,12 @@ def utc_now_text(now=None):
     value = now or utcnow()
     if value.tzinfo is None:
         value = value.replace(tzinfo=datetime.timezone.utc)
-    return value.astimezone(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        value.astimezone(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def normalize_command(command, temporary_path):
@@ -48,7 +53,9 @@ def normalize_command(command, temporary_path):
         argv = [str(value) for value in command]
         command_was_string = False
     else:
-        raise DelegatedMutationError("Delegated command must be a string or argument list.")
+        raise DelegatedMutationError(
+            "Delegated command must be a string or argument list."
+        )
     if not argv:
         raise DelegatedMutationError("Delegated command must not be empty.")
     replaced = False
@@ -75,10 +82,13 @@ def validate_lifetxt_text(text):
     version = format_version_report(text)
     if version.get("state") == "unsupported":
         raise DelegatedMutationError(
-            "Delegated output declares unsupported format version %s." % version.get("declared")
+            "Delegated output declares unsupported format version %s."
+            % version.get("declared")
         )
     _items, diagnostics = parse_text(text)
-    errors = [item for item in diagnostics if getattr(item, "severity", None) == "error"]
+    errors = [
+        item for item in diagnostics if getattr(item, "severity", None) == "error"
+    ]
     if errors:
         first = errors[0]
         raise DelegatedMutationError(
@@ -100,7 +110,9 @@ def prepare_delegated_mutation(
 ):
     source = mutation.read_text_snapshot(path)
     temp_root = tempfile.mkdtemp(prefix="lifetxt-delegated-")
-    temporary_path = os.path.join(temp_root, os.path.basename(source.path) or "life.txt")
+    temporary_path = os.path.join(
+        temp_root, os.path.basename(source.path) or "life.txt"
+    )
     try:
         # The handoff copy is non-authoritative. Copy exact bytes, then verify
         # them against the captured snapshot so a concurrent source change can
@@ -109,14 +121,18 @@ def prepare_delegated_mutation(
         copied = mutation.read_text_snapshot(temporary_path)
         if copied.content_hash != source.content_hash:
             raise mutation.MutationConflict(
-                source.path, source.content_hash, copied.content_hash,
+                source.path,
+                source.content_hash,
+                copied.content_hash,
                 operation="delegated.prepare.copy",
             )
         argv = normalize_command(command, temporary_path)
         env = None
         if environment is not None:
             env = os.environ.copy()
-            env.update({str(key): str(value) for key, value in dict(environment).items()})
+            env.update(
+                {str(key): str(value) for key, value in dict(environment).items()}
+            )
         try:
             completed = subprocess.run(
                 argv,
@@ -128,11 +144,16 @@ def prepare_delegated_mutation(
                 shell=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise DelegatedMutationError("Delegated command timed out after %.3fs." % float(timeout)) from exc
+            raise DelegatedMutationError(
+                "Delegated command timed out after %.3fs." % float(timeout)
+            ) from exc
         if completed.returncode != 0:
             raise DelegatedMutationError(
                 "Delegated command exited with %d: %s"
-                % (completed.returncode, (completed.stderr or completed.stdout or "").strip())
+                % (
+                    completed.returncode,
+                    (completed.stderr or completed.stdout or "").strip(),
+                )
             )
         edited = mutation.read_text_snapshot(temporary_path)
         validate_lifetxt_text(edited.text)
@@ -156,7 +177,12 @@ def prepare_delegated_mutation(
                 ("command", argv),
                 ("created_at_utc", utc_now_text(now)),
                 ("before_revision", source.content_hash),
-                ("edited_revision", mutation.hash_text(edited.text, encoding=source.encoding, bom=source.bom)),
+                (
+                    "edited_revision",
+                    mutation.hash_text(
+                        edited.text, encoding=source.encoding, bom=source.bom
+                    ),
+                ),
                 ("diff_sha256", hashlib.sha256(diff.encode("utf-8")).hexdigest()),
                 ("changed", edited.text != source.text),
                 ("diff", diff),
@@ -193,20 +219,39 @@ def validate_delegated_proposal(proposal):
             % (version, PROPOSAL_VERSION)
         )
     if proposal.get("state") not in PROPOSAL_STATES:
-        raise DelegatedMutationError("Invalid delegated proposal state: %r" % proposal.get("state"))
-    for key in ("id", "operation", "path", "before_revision", "edited_revision", "diff_sha256", "edited_text", "diff"):
-        if not isinstance(proposal.get(key), str) or (key not in ("edited_text", "diff") and not proposal.get(key)):
-            raise DelegatedMutationError("Delegated proposal requires string field %s." % key)
+        raise DelegatedMutationError(
+            "Invalid delegated proposal state: %r" % proposal.get("state")
+        )
+    for key in (
+        "id",
+        "operation",
+        "path",
+        "before_revision",
+        "edited_revision",
+        "diff_sha256",
+        "edited_text",
+        "diff",
+    ):
+        if not isinstance(proposal.get(key), str) or (
+            key not in ("edited_text", "diff") and not proposal.get(key)
+        ):
+            raise DelegatedMutationError(
+                "Delegated proposal requires string field %s." % key
+            )
     expected_edited = mutation.hash_text(
         proposal["edited_text"],
         encoding=str(proposal.get("encoding") or "utf-8"),
         bom=bool(proposal.get("bom")),
     )
     if expected_edited != proposal["edited_revision"]:
-        raise DelegatedMutationError("Delegated proposal edited_text hash does not match edited_revision.")
+        raise DelegatedMutationError(
+            "Delegated proposal edited_text hash does not match edited_revision."
+        )
     expected_diff = hashlib.sha256(proposal["diff"].encode("utf-8")).hexdigest()
     if expected_diff != proposal["diff_sha256"]:
-        raise DelegatedMutationError("Delegated proposal diff hash does not match diff_sha256.")
+        raise DelegatedMutationError(
+            "Delegated proposal diff hash does not match diff_sha256."
+        )
     validate_lifetxt_text(proposal["edited_text"])
     return proposal
 
@@ -227,7 +272,13 @@ def write_delegated_proposal(path, proposal, expected_revision=None):
         os.chmod(absolute, 0o600)
     except OSError:
         pass
-    return OrderedDict((("path", absolute), ("revision", result.after_hash), ("changed", result.changed)))
+    return OrderedDict(
+        (
+            ("path", absolute),
+            ("revision", result.after_hash),
+            ("changed", result.changed),
+        )
+    )
 
 
 def read_delegated_proposal(path):
@@ -235,7 +286,9 @@ def read_delegated_proposal(path):
     try:
         proposal = json.loads(snapshot.text, object_pairs_hook=OrderedDict)
     except ValueError as exc:
-        raise DelegatedMutationError("Cannot parse delegated proposal %s: %s" % (snapshot.path, exc))
+        raise DelegatedMutationError(
+            "Cannot parse delegated proposal %s: %s" % (snapshot.path, exc)
+        )
     validate_delegated_proposal(proposal)
     return proposal, snapshot
 
@@ -243,7 +296,9 @@ def read_delegated_proposal(path):
 def apply_delegated_proposal(proposal, expected_revision=None, unsafe=False):
     validate_delegated_proposal(proposal)
     if proposal.get("state") != "prepared":
-        raise DelegatedMutationError("Only prepared delegated proposals may be applied.")
+        raise DelegatedMutationError(
+            "Only prepared delegated proposals may be applied."
+        )
     expected = expected_revision
     if expected is None and not unsafe:
         expected = proposal["before_revision"]
@@ -269,29 +324,47 @@ def apply_delegated_proposal(proposal, expected_revision=None, unsafe=False):
     )
 
 
-def apply_delegated_proposal_file(path, expected_proposal_revision=None, expected_revision=None, unsafe=False, now=None):
+def apply_delegated_proposal_file(
+    path,
+    expected_proposal_revision=None,
+    expected_revision=None,
+    unsafe=False,
+    now=None,
+):
     proposal, snapshot = read_delegated_proposal(path)
-    if expected_proposal_revision is not None and snapshot.content_hash != expected_proposal_revision:
+    if (
+        expected_proposal_revision is not None
+        and snapshot.content_hash != expected_proposal_revision
+    ):
         raise mutation.MutationConflict(
             snapshot.path,
             expected_proposal_revision,
             snapshot.content_hash,
             operation="delegated.proposal.apply",
         )
-    applied = apply_delegated_proposal(proposal, expected_revision=expected_revision, unsafe=unsafe)
+    applied = apply_delegated_proposal(
+        proposal, expected_revision=expected_revision, unsafe=unsafe
+    )
     updated = OrderedDict(proposal)
     updated["state"] = "applied"
     updated["applied_at_utc"] = utc_now_text(now)
     updated["result"] = applied
-    saved = write_delegated_proposal(snapshot.path, updated, expected_revision=snapshot.content_hash)
+    saved = write_delegated_proposal(
+        snapshot.path, updated, expected_revision=snapshot.content_hash
+    )
     applied["proposal_path"] = saved["path"]
     applied["proposal_revision"] = saved["revision"]
     return applied
 
 
-def reject_delegated_proposal_file(path, expected_proposal_revision=None, reason=None, now=None):
+def reject_delegated_proposal_file(
+    path, expected_proposal_revision=None, reason=None, now=None
+):
     proposal, snapshot = read_delegated_proposal(path)
-    if expected_proposal_revision is not None and snapshot.content_hash != expected_proposal_revision:
+    if (
+        expected_proposal_revision is not None
+        and snapshot.content_hash != expected_proposal_revision
+    ):
         raise mutation.MutationConflict(
             snapshot.path,
             expected_proposal_revision,
@@ -299,12 +372,16 @@ def reject_delegated_proposal_file(path, expected_proposal_revision=None, reason
             operation="delegated.proposal.reject",
         )
     if proposal.get("state") != "prepared":
-        raise DelegatedMutationError("Only prepared delegated proposals may be rejected.")
+        raise DelegatedMutationError(
+            "Only prepared delegated proposals may be rejected."
+        )
     updated = OrderedDict(proposal)
     updated["state"] = "rejected"
     updated["rejected_at_utc"] = utc_now_text(now)
     updated["rejection_reason"] = None if reason is None else str(reason)
-    saved = write_delegated_proposal(snapshot.path, updated, expected_revision=snapshot.content_hash)
+    saved = write_delegated_proposal(
+        snapshot.path, updated, expected_revision=snapshot.content_hash
+    )
     return OrderedDict(
         (
             ("rejected", True),

@@ -5,7 +5,10 @@ from collections import OrderedDict
 from datetime import datetime, time
 
 from .atomic import atomic_write_text
-from .completion import VALUE_KINDS as _COMPLETION_KINDS, candidates as completion_candidates
+from .completion import (
+    VALUE_KINDS as _COMPLETION_KINDS,
+    candidates as completion_candidates,
+)
 from .agenda import (
     agenda_records,
     filter_items,
@@ -66,10 +69,32 @@ from .validator import validate_item
 #: terminal-only and the palette says so instead of failing silently.
 WEB_COMMANDS = frozenset(
     [
-        "help", "view", "next", "search", "project", "context", "tag", "sort",
-        "clear", "goto", "mark", "done", "status", "set", "due", "assign",
-        "add", "delete", "state", "now", "timer", "export", "stats", "detail",
-        "reload", "theme",
+        "help",
+        "view",
+        "next",
+        "search",
+        "project",
+        "context",
+        "tag",
+        "sort",
+        "clear",
+        "goto",
+        "mark",
+        "done",
+        "status",
+        "set",
+        "due",
+        "assign",
+        "add",
+        "delete",
+        "state",
+        "now",
+        "timer",
+        "export",
+        "stats",
+        "detail",
+        "reload",
+        "theme",
     ]
 )
 
@@ -123,37 +148,63 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     app.state.writable_path = writable_path or app.state.paths[0]
     app.state.config = config or {}
     app.state.read_only = read_only
-    transactions_config = app.state.config.get("transactions") if isinstance(app.state.config.get("transactions"), dict) else {}
+    transactions_config = (
+        app.state.config.get("transactions")
+        if isinstance(app.state.config.get("transactions"), dict)
+        else {}
+    )
     if not read_only and transactions_config.get("preflight_on_startup"):
         from .transaction_admin import preflight_report
         from .transaction_journal import journal_directory
+
         report = preflight_report(
-            journal_directory(config=app.state.config, writable_path=app.state.writable_path),
+            journal_directory(
+                config=app.state.config, writable_path=app.state.writable_path
+            ),
             config=app.state.config,
             create=True,
         )
         if not report["ok"]:
-            raise RuntimeError("Transaction startup preflight failed: %s" % "; ".join(report["errors"]))
-    app.state.transaction_preflight = None if read_only else (report if transactions_config.get("preflight_on_startup") else None)
+            raise RuntimeError(
+                "Transaction startup preflight failed: %s" % "; ".join(report["errors"])
+            )
+    app.state.transaction_preflight = (
+        None
+        if read_only
+        else (report if transactions_config.get("preflight_on_startup") else None)
+    )
 
-    _READ_ONLY_ALLOWED_PATHS = frozenset({"/api/check-line", "/api/items/parse", "/api/remote/v1/browser/login", "/api/remote/v1/browser/logout", "/api/remote/v1/write-check"})
+    _READ_ONLY_ALLOWED_PATHS = frozenset(
+        {
+            "/api/check-line",
+            "/api/items/parse",
+            "/api/remote/v1/browser/login",
+            "/api/remote/v1/browser/logout",
+            "/api/remote/v1/write-check",
+        }
+    )
 
     @app.get("/api/time")
     def get_time(client_time=None):
         from .clock_skew import clock_skew_report
+
         return clock_skew_report(client_time, config=app.state.config)
 
     @app.get("/api/transactions/preflight")
     def get_transaction_preflight(create=False):
         from .transaction_admin import preflight_report
         from .transaction_journal import journal_directory
+
         return preflight_report(
-            journal_directory(config=app.state.config, writable_path=app.state.writable_path),
+            journal_directory(
+                config=app.state.config, writable_path=app.state.writable_path
+            ),
             config=app.state.config,
             create=bool(create and not app.state.read_only),
         )
 
     if read_only:
+
         @app.middleware("http")
         async def _read_only_guard(request: Request, call_next):
             if request.method not in ("GET", "HEAD", "OPTIONS"):
@@ -169,9 +220,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     _api_token = (config or {}).get("api", {}).get("token") if config else None
     if _api_token:
+
         @app.middleware("http")
         async def _bearer_auth(request: Request, call_next):
-            if request.url.path in ("/", "/api/health", "/remote") or request.url.path.startswith("/api/remote/v1/"):
+            if request.url.path in (
+                "/",
+                "/api/health",
+                "/remote",
+            ) or request.url.path.startswith("/api/remote/v1/"):
                 return await call_next(request)
             auth = request.headers.get("authorization", "")
             if auth != "Bearer " + _api_token:
@@ -306,11 +362,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 r["blocked_id"] for r in blocker_records if r.get("blocked_id")
             )
             blocked_lines = set(
-                r["blocked_line"] for r in blocker_records if r.get("blocked_line") is not None
+                r["blocked_line"]
+                for r in blocker_records
+                if r.get("blocked_line") is not None
             )
             filtered = [
-                item for item in filtered
-                if (item.details.get(key) and str(item.details[key][0]) in blocked_item_ids)
+                item
+                for item in filtered
+                if (
+                    item.details.get(key)
+                    and str(item.details[key][0]) in blocked_item_ids
+                )
                 or (item.line is not None and item.line in blocked_lines)
             ]
         filtered = sort_items(filtered, sort, order)
@@ -372,12 +434,16 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {
             "kind": kind,
             "prefix": prefix or "",
-            "candidates": completion_candidates(kind, prefix or "", items=items, limit=requested),
+            "candidates": completion_candidates(
+                kind, prefix or "", items=items, limit=requested
+            ),
         }
 
     @app.post("/api/check-line")
     def check_line(payload=Body(...)):
-        line = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        line = (
+            payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        )
         if not str(line).strip():
             return {"ok": True, "item_count": 0, "diagnostics": []}
         text = str(line).rstrip("\n") + "\n"
@@ -391,7 +457,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.post("/api/items/parse")
     def parse_item_line(payload=Body(...)):
-        line = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        line = (
+            payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        )
         if not str(line).strip():
             return {"ok": True, "item_count": 0, "diagnostics": [], "items": []}
         text = str(line).rstrip("\n") + "\n"
@@ -448,7 +516,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                     "type": rec.get("target_type", ""),
                     "missing": rec.get("status") == "missing",
                 }
-            edges.append({"source": src_id, "target": tgt_id, "relation": rec["relation"]})
+            edges.append(
+                {"source": src_id, "target": tgt_id, "relation": rec["relation"]}
+            )
         nodes = list(nodes_map.values())
         if root:
             nodes, edges = _subgraph(nodes, edges, root, depth)
@@ -462,7 +532,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         key = id_key_from_config(app.state.config)
         if not item_id:
-            raise HTTPException(status_code=422, detail="Query parameter 'id' is required.")
+            raise HTTPException(
+                status_code=422, detail="Query parameter 'id' is required."
+            )
         focus = find_item_by_id(items, item_id, key=key)
         if focus is None:
             raise HTTPException(status_code=404, detail=f"No item with id {item_id!r}.")
@@ -481,9 +553,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             next_frontier = []
             for item_key in frontier:
                 for rec in by_blocked_key.get(item_key, []):
-                    entry = {
-                        k: v for k, v in rec.items() if not k.startswith("_")
-                    }
+                    entry = {k: v for k, v in rec.items() if not k.startswith("_")}
                     entry["level"] = level
                     chain.append(entry)
                     blocker_key = rec["_blocker_item_key"]
@@ -511,10 +581,15 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         s, e = stats_range(start, end)
         tasks = [item for item in items if item.kind == "T"]
         if project:
-            tasks = [item for item in tasks if project in item.details.get("project", [])]
+            tasks = [
+                item for item in tasks if project in item.details.get("project", [])
+            ]
         buckets = make_buckets(s, e, group)
         bucket_stats = task_bucket_stats(tasks, buckets)
-        labels = [b["from"] if b["from"] == b["to"] else "%s/%s" % (b["from"], b["to"]) for b in bucket_stats]
+        labels = [
+            b["from"] if b["from"] == b["to"] else "%s/%s" % (b["from"], b["to"])
+            for b in bucket_stats
+        ]
         return {
             "labels": labels,
             "datasets": [
@@ -532,11 +607,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         group="daily",
     ):
         from .stats import item_completion_dates, streak_days as _streak
+
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
         habit_items = [item for item in items if item.kind == "H"]
         buckets = make_buckets(s, e, group)
-        labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
+        labels = [
+            b[0].isoformat()
+            if b[0] == b[1]
+            else "%s/%s" % (b[0].isoformat(), b[1].isoformat())
+            for b in buckets
+        ]
         datasets = []
         for habit in habit_items:
             dates = item_completion_dates(habit)
@@ -547,15 +628,19 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 while d <= bucket_end:
                     if d in dates:
                         count += 1
-                    d = d + __import__('datetime').timedelta(days=1)
+                    d = d + __import__("datetime").timedelta(days=1)
                 data.append(count)
-            bucket_size = max(1, ((buckets[0][1] - buckets[0][0]).days + 1)) if buckets else 1
-            datasets.append({
-                "label": habit.title,
-                "streak": _streak(dates, e),
-                "data": data,
-                "bucket_size": bucket_size,
-            })
+            bucket_size = (
+                max(1, ((buckets[0][1] - buckets[0][0]).days + 1)) if buckets else 1
+            )
+            datasets.append(
+                {
+                    "label": habit.title,
+                    "streak": _streak(dates, e),
+                    "data": data,
+                    "bucket_size": bucket_size,
+                }
+            )
         datasets.sort(key=lambda d: (-d["streak"], d["label"]))
         return {
             "labels": labels,
@@ -570,25 +655,43 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         group="daily",
     ):
         from datetime import date as _date
+
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
         journal_items = [item for item in items if item.kind == "J"]
         buckets = make_buckets(s, e, group)
-        labels = [b[0].isoformat() if b[0] == b[1] else "%s/%s" % (b[0].isoformat(), b[1].isoformat()) for b in buckets]
+        labels = [
+            b[0].isoformat()
+            if b[0] == b[1]
+            else "%s/%s" % (b[0].isoformat(), b[1].isoformat())
+            for b in buckets
+        ]
         counts = {}
         data = []
         for bucket_start, bucket_end in buckets:
             bucket_values = []
             for item in journal_items:
                 item_date = item_date_value(item)
-                if item_date is None or item_date < bucket_start or item_date > bucket_end:
+                if (
+                    item_date is None
+                    or item_date < bucket_start
+                    or item_date > bucket_end
+                ):
                     continue
-                mood_val = item.details.get("mood", [""])[0].lower() if item.details.get("mood") else ""
+                mood_val = (
+                    item.details.get("mood", [""])[0].lower()
+                    if item.details.get("mood")
+                    else ""
+                )
                 if mood_val:
                     counts[mood_val] = counts.get(mood_val, 0) + 1
                 if mood_val in MOOD_VALUES:
                     bucket_values.append(MOOD_VALUES[mood_val])
-            data.append(round(sum(bucket_values) / len(bucket_values), 2) if bucket_values else None)
+            data.append(
+                round(sum(bucket_values) / len(bucket_values), 2)
+                if bucket_values
+                else None
+            )
         return {
             "labels": labels,
             "datasets": [{"label": "mood", "data": data}],
@@ -634,6 +737,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         end=Query(None, alias="to"),
     ):
         from .stats import item_completion_dates, streak_days
+
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
         habit_items = [item for item in items if item.kind == "H"]
@@ -641,11 +745,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         for item in habit_items:
             dates = item_completion_dates(item)
             date_map = {d.isoformat(): 1 for d in dates if s <= d <= e}
-            result.append({
-                "title": item.title,
-                "dates": date_map,
-                "streak": streak_days(dates, e),
-            })
+            result.append(
+                {
+                    "title": item.title,
+                    "dates": date_map,
+                    "streak": streak_days(dates, e),
+                }
+            )
         result.sort(key=lambda r: (-r["streak"], r["title"]))
         return {
             "habits": result,
@@ -657,17 +763,26 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not git_config.get("enable_api"):
             raise HTTPException(
                 status_code=403,
-                detail={"error": "FORBIDDEN", "message": "Git API is not enabled. Set git.enable_api: true in config.", "detail": None},
+                detail={
+                    "error": "FORBIDDEN",
+                    "message": "Git API is not enabled. Set git.enable_api: true in config.",
+                    "detail": None,
+                },
             )
         host = request.client.host if request.client else None
         if host not in ("127.0.0.1", "::1", "localhost"):
             raise HTTPException(
                 status_code=403,
-                detail={"error": "FORBIDDEN", "message": "Git API is restricted to loopback access.", "detail": None},
+                detail={
+                    "error": "FORBIDDEN",
+                    "message": "Git API is restricted to loopback access.",
+                    "detail": None,
+                },
             )
 
     def _run_git(cmd, cwd=None):
         import subprocess
+
         result = subprocess.run(
             cmd,
             cwd=cwd or os.path.dirname(os.path.abspath(app.state.writable_path)),
@@ -699,10 +814,15 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not message:
             raise HTTPException(
                 status_code=400,
-                detail={"error": "ERROR", "message": "commit message is required.", "detail": None},
+                detail={
+                    "error": "ERROR",
+                    "message": "commit message is required.",
+                    "detail": None,
+                },
             )
         writable = app.state.writable_path
         import subprocess
+
         cwd = os.path.dirname(os.path.abspath(writable))
         add_result = subprocess.run(
             ["git", "add", os.path.abspath(writable)],
@@ -712,7 +832,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             universal_newlines=True,
         )
         if add_result.returncode != 0:
-            return {"stdout": add_result.stdout, "stderr": add_result.stderr, "exit_code": add_result.returncode, "ok": False}
+            return {
+                "stdout": add_result.stdout,
+                "stderr": add_result.stderr,
+                "exit_code": add_result.returncode,
+                "ok": False,
+            }
         return _run_git(["git", "commit", "-m", message], cwd=cwd)
 
     @app.post("/api/git/push")
@@ -730,7 +855,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             for line in result["stdout"].strip().splitlines():
                 parts = line.split("\t", 2)
                 if len(parts) >= 2:
-                    commits.append({"hash": parts[0][:8], "message": parts[1], "date": parts[2] if len(parts) > 2 else ""})
+                    commits.append(
+                        {
+                            "hash": parts[0][:8],
+                            "message": parts[1],
+                            "date": parts[2] if len(parts) > 2 else "",
+                        }
+                    )
         total = None
         if count:
             count_result = _run_git(["git", "rev-list", "--count", "HEAD"])
@@ -748,11 +879,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         project=None,
     ):
         from .stats import project_stats, stats_range as _sr
+
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = _sr(start, end)
         tasks = [item for item in items if item.kind == "T"]
         if project:
-            tasks = [item for item in tasks if project in item.details.get("project", [])]
+            tasks = [
+                item for item in tasks if project in item.details.get("project", [])
+            ]
         by_project = project_stats(tasks)
         by_type = {}
         by_status = {}
@@ -764,7 +898,15 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "total": len(items),
             "by_type": by_type,
             "by_status": by_status,
-            "by_project": [{"project": k or "(none)", "done": v["done"], "total": v["total"], "rate": v["rate"]} for k, v in top_projects],
+            "by_project": [
+                {
+                    "project": k or "(none)",
+                    "done": v["done"],
+                    "total": v["total"],
+                    "rate": v["rate"],
+                }
+                for k, v in top_projects
+            ],
             "range": {"from": s.isoformat(), "to": e.isoformat()},
         }
 
@@ -988,7 +1130,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
-            raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
+            raise HTTPException(
+                status_code=404, detail="Message id:%s was not found." % message_id
+            )
         return {
             "item": api_item(
                 item,
@@ -1081,7 +1225,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             if item.kind != "M":
                 continue
             item_id_key = id_key_from_config(app.state.config)
-            if thread_id in item.details.get(item_id_key, []) or thread_id in item.details.get("parent", []):
+            if thread_id in item.details.get(
+                item_id_key, []
+            ) or thread_id in item.details.get("parent", []):
                 thread.append(item)
         thread = sort_items(thread, "time", "asc")
         thread = limit_items(thread, limit)
@@ -1106,9 +1252,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if original is None:
-            raise HTTPException(status_code=404, detail="Message id:%s was not found." % message_id)
+            raise HTTPException(
+                status_code=404, detail="Message id:%s was not found." % message_id
+            )
         try:
-            item = message_reply_from_payload(original, message_id, payload, app.state.config)
+            item = message_reply_from_payload(
+                original, message_id, payload, app.state.config
+            )
             assign_auto_id_from_paths(
                 item,
                 app.state.config,
@@ -1177,7 +1327,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_timer():
         from . import timer as timer_module
 
-        return timer_module.timer_status_data(config=app.state.config, paths=app.state.paths)
+        return timer_module.timer_status_data(
+            config=app.state.config, paths=app.state.paths
+        )
 
     @app.post("/api/timer")
     def post_timer(response: Response, payload=Body(...)):
@@ -1219,7 +1371,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             if action == "start":
                 item_id = str(payload.get("id") or "").strip()
                 if not item_id:
-                    raise HTTPException(status_code=400, detail="id is required to start a timer.")
+                    raise HTTPException(
+                        status_code=400, detail="id is required to start a timer."
+                    )
                 result = timer_module.start_timer_transaction(
                     app.state.writable_path,
                     item_id,
@@ -1274,13 +1428,20 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             )
         except ValueError as exc:
             message = error_detail(exc)
-            status = 409 if "already running" in message or "No running timer" in message else 400
+            status = (
+                409
+                if "already running" in message or "No running timer" in message
+                else 400
+            )
             raise HTTPException(status_code=status, detail=message)
 
     @app.get("/api/work-session")
     def get_work_session():
         from . import timer as timer_module
-        return timer_module.timer_status_data(config=app.state.config, paths=app.state.paths)
+
+        return timer_module.timer_status_data(
+            config=app.state.config, paths=app.state.paths
+        )
 
     @app.post("/api/work-session")
     def mutate_work_session(response: Response, payload=Body(...)):
@@ -1296,7 +1457,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         item_revision = payload.get("item_revision")
         timer_revision = payload.get("timer_revision")
         missing = [
-            name for name, value in (("item_revision", item_revision), ("timer_revision", timer_revision))
+            name
+            for name, value in (
+                ("item_revision", item_revision),
+                ("timer_revision", timer_revision),
+            )
             if value in (None, "")
         ]
         if required and missing:
@@ -1317,7 +1482,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 if not item_id:
                     raise ValueError("id is required to start work.")
                 return start_work_transaction(
-                    app.state.writable_path, item_id,
+                    app.state.writable_path,
+                    item_id,
                     state=payload.get("state") or "busy",
                     use_timer=not bool(payload.get("no_timer")),
                     use_presence=not bool(payload.get("no_presence")),
@@ -1352,6 +1518,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.get("/api/attachments/state")
     def get_attachment_state(path: str = Query(...)):
         from .attachment_transactions import attachment_state
+
         try:
             return attachment_state(
                 app.state.writable_path, path, config=app.state.config
@@ -1363,7 +1530,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def mutate_attachment(response: Response, payload=Body(...)):
         import base64
         from .attachment_transactions import (
-            delete_attachment, put_attachment, reference_attachment,
+            delete_attachment,
+            put_attachment,
+            reference_attachment,
         )
         from .mutation import MutationConflict
 
@@ -1371,7 +1540,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
         action = str(payload.get("action") or "").strip().lower()
         if action not in ("put", "reference", "delete"):
-            raise HTTPException(status_code=400, detail="action must be put, reference, or delete.")
+            raise HTTPException(
+                status_code=400, detail="action must be put, reference, or delete."
+            )
         item_id = str(payload.get("id") or "").strip()
         stored_path = str(payload.get("path") or "").strip()
         if not item_id or not stored_path:
@@ -1425,9 +1596,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             else:
                 raise ValueError("put requires content_base64 or content_text.")
             return put_attachment(
-                app.state.writable_path, item_id, stored_path, data,
+                app.state.writable_path,
+                item_id,
+                stored_path,
+                data,
                 allow_executable=bool(payload.get("allow_executable")),
-                **common
+                **common,
             )
         except MutationConflict as exc:
             raise HTTPException(
@@ -1459,7 +1633,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not close_only and not state_value:
             raise HTTPException(
                 status_code=400,
-                detail="state is required, or pass {\"end\": true} to close the current status.",
+                detail='state is required, or pass {"end": true} to close the current status.',
             )
 
         details = {}
@@ -1490,7 +1664,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
 
         if result.unchanged:
-            return {"closed": [], "opened": "", "unchanged": result.unchanged, "path": path}
+            return {
+                "closed": [],
+                "opened": "",
+                "unchanged": result.unchanged,
+                "path": path,
+            }
 
         write_text(path, result.text)
         return {
@@ -1525,9 +1704,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         result = {
             "title": title,
             "details": details,
-            "sigils": [{"token": token, "expands_to": target} for token, target in describe_sigils()],
+            "sigils": [
+                {"token": token, "expands_to": target}
+                for token, target in describe_sigils()
+            ],
             "date_tokens": [
-                {"token": token, "meaning": meaning} for token, meaning in describe_date_tokens()
+                {"token": token, "meaning": meaning}
+                for token, meaning in describe_date_tokens()
             ],
         }
         # Resolving a single token is what the /due command needs; the browser
@@ -1570,7 +1753,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         append_item_to_file(app.state.writable_path, item)
         return {
             "line": item_to_line(item),
-            "item": api_item(item, app.state.writable_path, id_key_from_config(app.state.config)),
+            "item": api_item(
+                item, app.state.writable_path, id_key_from_config(app.state.config)
+            ),
         }
 
     @app.post("/api/items", status_code=201)
@@ -1596,21 +1781,43 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.post("/api/items/raw", status_code=201)
     def create_item_raw(payload=Body(...)):
-        raw = payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        raw = (
+            payload.get("line", "") if isinstance(payload, dict) else str(payload or "")
+        )
         raw = str(raw).strip()
         if not raw:
-            raise HTTPException(status_code=400, detail={"error": "ERROR", "message": "line is required.", "detail": None})
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ERROR",
+                    "message": "line is required.",
+                    "detail": None,
+                },
+            )
         text = raw.rstrip("\n") + "\n"
         parsed_items, diagnostics = parse_text(text)
         has_error = any(d.severity == "error" for d in diagnostics)
         if has_error or not parsed_items:
             raise HTTPException(
                 status_code=422,
-                detail={"error": "VALIDATION_ERROR", "message": diagnostics[0].message if diagnostics else "Could not parse line.", "detail": diagnostics_to_output(diagnostics)},
+                detail={
+                    "error": "VALIDATION_ERROR",
+                    "message": diagnostics[0].message
+                    if diagnostics
+                    else "Could not parse line.",
+                    "detail": diagnostics_to_output(diagnostics),
+                },
             )
         writable = app.state.writable_path
         if not writable:
-            raise HTTPException(status_code=403, detail={"error": "READONLY", "message": "No writable file configured.", "detail": None})
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "READONLY",
+                    "message": "No writable file configured.",
+                    "detail": None,
+                },
+            )
         ensure_parent_dir(writable)
         existing = read_text(writable) if os.path.exists(writable) else ""
         prefix = "\n" if existing and not existing.endswith(("\n", "\r")) else ""
@@ -1618,7 +1825,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         line_no = len(existing.splitlines()) + 1
         return {
             "line": line_no,
-            "item": api_item(parsed_items[0], writable, id_key_from_config(app.state.config)),
+            "item": api_item(
+                parsed_items[0], writable, id_key_from_config(app.state.config)
+            ),
         }
 
     @app.get("/api/items/id/{item_id}")
@@ -1634,7 +1843,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
-            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+            raise HTTPException(
+                status_code=404, detail="Item id:%s was not found." % item_id
+            )
         return {
             "item": api_item(
                 item,
@@ -1677,7 +1888,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
-            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+            raise HTTPException(
+                status_code=404, detail="Item id:%s was not found." % item_id
+            )
         if item.status == "[x]":
             return {
                 "id": item_id,
@@ -1688,7 +1901,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if date_value:
             completion_dt = parse_date_or_datetime(str(date_value), is_end=False)
             if completion_dt is None:
-                raise HTTPException(status_code=400, detail="Invalid date %r. Use YYYY-MM-DD." % date_value)
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid date %r. Use YYYY-MM-DD." % date_value,
+                )
             completion_date = completion_dt.date()
         else:
             completion_date = timezone_today()
@@ -1698,7 +1914,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if item.details.get("repeat"):
             repeat_base = resolve_web_repeat_base(item, app.state.config)
             try:
-                anchor_key, next_dt, _rule = next_repeat_occurrence(item, repeat_base, completion_date)
+                anchor_key, next_dt, _rule = next_repeat_occurrence(
+                    item, repeat_base, completion_date
+                )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=error_detail(exc))
             if next_dt is not None:
@@ -1728,13 +1946,22 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             updated = update_item_by_id_in_file(
                 app.state.writable_path,
                 item_id,
-                {"status": "[x]", "type": item.kind, "title": item.title, "details": details},
+                {
+                    "status": "[x]",
+                    "type": item.kind,
+                    "title": item.title,
+                    "details": details,
+                },
                 key=key,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
 
-        result = {"id": item_id, "item": api_item(updated, app.state.writable_path, key), "next": None}
+        result = {
+            "id": item_id,
+            "item": api_item(updated, app.state.writable_path, key),
+            "next": None,
+        }
         if next_item is not None:
             append_item_to_file(app.state.writable_path, next_item)
             result["next"] = api_item(next_item, app.state.writable_path, key)
@@ -1994,7 +2221,12 @@ def public_web_dashboard_config(web):
 
 
 PRESENCE_STATE_CLASSES = (
-    "p-available", "p-busy", "p-focus", "p-away", "p-off", "p-unknown",
+    "p-available",
+    "p-busy",
+    "p-focus",
+    "p-away",
+    "p-off",
+    "p-unknown",
 )
 
 
@@ -2013,7 +2245,7 @@ def public_web_presence_config(web):
         prefix = "states."
         for key, value in presence.items():
             if isinstance(key, str) and key.startswith(prefix):
-                states[key[len(prefix):]] = value
+                states[key[len(prefix) :]] = value
     result = OrderedDict()
     for word, cls in states.items():
         cls_name = str(cls).strip()
@@ -2036,7 +2268,9 @@ def public_web_config(config):
     web = config_section(config, "web")
     return {
         "display_refresh": _int_or_default(web.get("display_refresh"), 60),
-        "notification_poll_seconds": _int_or_default(web.get("notification_poll_seconds"), 30),
+        "notification_poll_seconds": _int_or_default(
+            web.get("notification_poll_seconds"), 30
+        ),
         "notification_lookahead": web.get("notification_lookahead", "0m"),
         "default_limit": web.get("default_limit", ""),
         "default_sort": web.get("default_sort", "line"),
@@ -2086,7 +2320,9 @@ def public_views_config(config):
     data = OrderedDict()
     for name, values in views.items():
         if isinstance(values, dict):
-            data[str(name)] = OrderedDict((str(key), str(value)) for key, value in values.items())
+            data[str(name)] = OrderedDict(
+                (str(key), str(value)) for key, value in values.items()
+            )
     return data
 
 
@@ -2335,7 +2571,11 @@ def message_reply_from_payload(original, original_id, payload, config=None):
         details[key] = list(values) if isinstance(values, list) else [values]
     details.setdefault("parent", []).append(original_id)
 
-    if "recipient" not in data and "recipients" not in data and "recipient" not in details:
+    if (
+        "recipient" not in data
+        and "recipients" not in data
+        and "recipient" not in details
+    ):
         sender = original.details.get("sender", [])
         if sender:
             details["recipient"] = [sender[0]]
@@ -2444,13 +2684,17 @@ def ack_message_in_file(path, message_id, payload=None, now=None, key="id"):
     )
 
 
-def snooze_message_in_file(path, message_id, payload=None, config=None, now=None, key="id"):
+def snooze_message_in_file(
+    path, message_id, payload=None, config=None, now=None, key="id"
+):
     payload = payload if isinstance(payload, dict) else {}
     until = payload.get("snooze_until") or payload.get("until")
     if not until:
         duration = payload.get("duration")
         if not duration:
-            duration = config_section(config or {}, "notifications").get("snooze_default")
+            duration = config_section(config or {}, "notifications").get(
+                "snooze_default"
+            )
         duration = duration or "10m"
         until = _format_datetime(_now(now) + parse_duration(duration))
     return patch_item_details_by_id_in_file(
@@ -2466,7 +2710,9 @@ def snooze_message_in_file(path, message_id, payload=None, config=None, now=None
     )
 
 
-def patch_item_details_by_id_in_file(path, item_id, detail_updates, kind=None, key="id"):
+def patch_item_details_by_id_in_file(
+    path, item_id, detail_updates, kind=None, key="id"
+):
     line_no, item = find_item_line_by_id(path, item_id, kind=kind, key=key)
     details = OrderedDict()
     for key, values in item.details.items():
@@ -2620,12 +2866,15 @@ def _subgraph(nodes, edges, root, depth):
             if edge["target"] == current and edge["source"] not in reachable:
                 queue.append((edge["source"], d + 1))
     filtered_nodes = [n for n in nodes if n["id"] in reachable]
-    filtered_edges = [e for e in edges if e["source"] in reachable and e["target"] in reachable]
+    filtered_edges = [
+        e for e in edges if e["source"] in reachable and e["target"] in reachable
+    ]
     return filtered_nodes, filtered_edges
 
 
 def _elapsed_to_minutes(value):
     import re
+
     text = str(value).strip()
     m = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?", text)
     if m and (m.group(1) or m.group(2)):

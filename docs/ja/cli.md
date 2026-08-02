@@ -506,7 +506,10 @@ JSON diagnostics:
 `severity`、`code`、`category`、`message`、`source`、`line`、`column`、
 `hint` です。`category` は公開 contract の一部で、`--category` が受け付ける
 category と一致します。`hint` は常に string として存在し、補足がない diagnostic
-では `""` を使います。
+では `""` を使います。parser/validator diagnostic は、安全な一般的修正案が
+ある場合に非空の `hint` を返します。この release では、意図的に空のまま残す
+parser/validator diagnostic code はありません。その他の diagnostic producer は、
+安全な案内がない場合だけ `""` を返すことがあります。
 
 `source`、`line`、`column` は、その location component が分からない場合は
 省略されます。consumer は未知 field を無視してください。これにより、将来の

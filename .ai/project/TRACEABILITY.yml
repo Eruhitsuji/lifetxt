@@ -216,6 +216,35 @@ traceability:
         #64 completes the stable field contract. Parser/validator diagnostics
         still use `hint: ""` until actionable hint text is authored in #65.
       status: implemented
+    - requirement_id: req-diagnostic-hint-content
+      capability_id: cap-stable-diagnostics
+      epic: P1 Configuration and Workspace Foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/65
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/68
+      changed_files_or_scope:
+        - Add parser diagnostic hint registry and route parser diagnostics through it
+        - Add validator diagnostic hint registry and route validator diagnostics through it
+        - Update CLI/Web/MCP diagnostic contract fixtures to include non-empty parser and validator hints
+        - Document that empty hints are reserved for diagnostics without safe generic guidance
+        - lifetxt/parser.py
+        - lifetxt/validator.py
+        - tests/diagnostic_contract_fixtures.py
+        - tests/test_diagnostic_contract.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_diagnostic_contract
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        No parser or validator diagnostic code is intentionally left with an
+        empty hint. The model default remains `hint: ""` so diagnostics outside
+        the parser/validator hint registries can still represent absent guidance
+        without changing the stable object shape.
+      status: implemented
     - requirement_id: req-cross-surface-consistency
       capability_id: cap-surface-capability-consistency
       epic: P1 Shared Surface Contracts

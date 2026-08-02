@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lifetxt import mutation
+from lifetxt import mutation, transaction_journal
 from lifetxt.multi_target import MultiTargetCommitError, apply_multi_target, text_plan
 from lifetxt.transaction_journal import (
     TransactionJournalConflict,
@@ -16,6 +16,7 @@ from lifetxt.transaction_journal import (
     list_journals,
     resume,
 )
+from lifetxt.transaction_policy import fault_injection
 
 
 class TransactionJournalV3Tests(unittest.TestCase):
@@ -40,6 +41,134 @@ class TransactionJournalV3Tests(unittest.TestCase):
     def read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()
+
+    def temporary_names(self, directory):
+        return sorted(
+            name for name in os.listdir(directory) if name.startswith(".lifetxt-tx-")
+        )
+
+    def test_durable_write_retries_transient_replace_permission_refusal(self):
+        target = self.write("journal.json", "old\n")
+        attempts = []
+
+        def fail_twice(point, details):
+            if point != "before_file_replace":
+                return
+            attempts.append(details["attempt"])
+            if len(attempts) <= 2:
+                raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_OS_NAMES",
+                frozenset((os.name,)),
+            ),
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS",
+                (0.0, 0.0, 0.0),
+            ),
+            mock.patch.object(transaction_journal.time, "sleep") as sleep,
+            fault_injection(fail_twice),
+        ):
+            transaction_journal._write_bytes_durable(target, b"new\n")
+
+        self.assertEqual("new\n", self.read(target))
+        self.assertEqual([1, 2, 3], attempts)
+        self.assertEqual(2, sleep.call_count)
+        self.assertEqual([], self.temporary_names(os.path.dirname(target)))
+
+    def test_replace_permission_retry_is_platform_scoped(self):
+        target = self.write("journal.json", "old\n")
+        attempts = []
+
+        def fail(point, details):
+            if point == "before_file_replace":
+                attempts.append(details["attempt"])
+                raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_OS_NAMES",
+                frozenset(),
+            ),
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS",
+                (0.0, 0.0),
+            ),
+            mock.patch.object(transaction_journal.time, "sleep") as sleep,
+            fault_injection(fail),
+        ):
+            with self.assertRaises(PermissionError):
+                transaction_journal._write_bytes_durable(target, b"new\n")
+
+        self.assertEqual("old\n", self.read(target))
+        self.assertEqual([1], attempts)
+        sleep.assert_not_called()
+        self.assertEqual([], self.temporary_names(os.path.dirname(target)))
+
+    def test_exhausted_journal_replace_retry_leaves_transaction_recoverable(self):
+        target = self.write("one.txt", "one\n")
+        revision = mutation.read_text_snapshot(target).content_hash
+        journal_attempts = []
+
+        def fail_journal_state_update(point, details):
+            if point != "before_file_replace":
+                return
+            if os.path.basename(details["path"]) != "journal.json":
+                return
+            journal_attempts.append(details["attempt"])
+            if len(journal_attempts) >= 2:
+                raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_OS_NAMES",
+                frozenset((os.name,)),
+            ),
+            mock.patch.object(
+                transaction_journal,
+                "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS",
+                (0.0, 0.0),
+            ),
+            mock.patch.object(transaction_journal.time, "sleep") as sleep,
+            fault_injection(fail_journal_state_update),
+        ):
+            with self.assertRaises(PermissionError):
+                apply_multi_target(
+                    [
+                        text_plan(
+                            target,
+                            lambda _text: "ONE\n",
+                            revision,
+                        )
+                    ],
+                    operation="journal.replace-refusal",
+                    journal_dir=self.journal_dir,
+                    transaction_id="replace-refusal",
+                )
+
+        self.assertEqual([1, 1, 2, 3], journal_attempts)
+        self.assertEqual(2, sleep.call_count)
+        self.assertEqual("one\n", self.read(target))
+        journal_path = os.path.join(self.journal_dir, "replace-refusal", "journal.json")
+        report = inspect_journal(journal_path)
+        self.assertEqual("prepared", report["state"])
+        self.assertTrue(report["recovery_required"])
+        self.assertEqual(
+            ["before"], [row["relation"] for row in report["observed_targets"]]
+        )
+        self.assertIn("resume", report["available_actions"])
+        self.assertIn("compensate", report["available_actions"])
+        self.assertIn("abandon", report["available_actions"])
+
+        resumed = resume(journal_path)
+        self.assertEqual("committed", resumed["state"])
+        self.assertEqual("ONE\n", self.read(target))
 
     def test_successful_transaction_records_exact_artifacts_and_terminal_state(self):
         first = self.write("one.txt", "one\n")

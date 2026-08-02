@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 import uuid
 from collections import OrderedDict
 
@@ -46,6 +47,8 @@ RECOVERY_STATES = frozenset(
         "compensation_failed",
     )
 )
+_REPLACE_PERMISSION_RETRY_OS_NAMES = frozenset(("nt",))
+_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS = (0.01, 0.05, 0.1, 0.25)
 
 
 class TransactionJournalError(RuntimeError):
@@ -920,8 +923,7 @@ def _write_bytes_durable(path, data):
             fault_point("before_file_fsync", path=path, temporary=temporary)
             os.fsync(handle.fileno())
             fault_point("after_file_fsync", path=path, temporary=temporary)
-        fault_point("before_file_replace", path=path, temporary=temporary)
-        os.replace(temporary, path)
+        _replace_file(temporary, path)
         fault_point("after_file_replace", path=path)
         fault_point("before_parent_fsync", path=path, directory=directory)
         _fsync_directory(directory)
@@ -939,6 +941,30 @@ def _write_json_durable(path, value):
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     ).encode("utf-8")
     _write_bytes_durable(path, payload)
+
+
+def _replace_file(temporary, path):
+    """Replace a file, retrying transient Windows handle refusals briefly."""
+    retry_enabled = os.name in _REPLACE_PERMISSION_RETRY_OS_NAMES
+    retry_delays = (
+        tuple(_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS) if retry_enabled else ()
+    )
+    attempts = len(retry_delays) + 1
+    for attempt in range(attempts):
+        try:
+            fault_point(
+                "before_file_replace",
+                path=path,
+                temporary=temporary,
+                attempt=attempt + 1,
+                max_attempts=attempts,
+            )
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt >= len(retry_delays):
+                raise
+            time.sleep(float(retry_delays[attempt]))
 
 
 def _fsync_directory(path):

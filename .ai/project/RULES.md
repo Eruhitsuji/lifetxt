@@ -123,6 +123,28 @@ another source, declare it here first.
 Adding any further mandatory dependency is a decision, not an implementation
 detail. Record the reason and the alternative that was rejected, as here.
 
+## Verification Evidence
+
+A failing or flaky suite run must be reported with its captured output. A
+summary line is not a diagnosis, and the output is gone the moment the terminal
+scrolls or the command is piped through something that truncates it.
+
+Use `unit_test_captured` (or its PowerShell variant) from
+`.ai/project/COMMANDS.yml` when a run might fail. It keeps the complete output
+in `.test-output.log` and prints only the summary, so truncating the display
+cannot destroy the evidence. `.test-output.log` is already ignored by the
+leading `.*` rule in `.gitignore`.
+
+This rule exists because a full run reported `FAILED (errors=1)` during #76 and
+the error text was lost to a truncating pipe before anyone read it. Two later
+runs passed and the cause was never identified (#78). One unexplained failure is
+tolerable; being unable to look at it is not.
+
+When a run does fail, record the interpreter version, the shell, whether
+`BashCompletionExecutionTests` ran or skipped, and whether the working tree was
+modified while the run was in flight. Each of those has already changed the
+reading of a result at least once in this project.
+
 ## Tracked Exceptions
 
 `.ai/project/COMMANDS.yml` may record a command as `tracked_exception` when no

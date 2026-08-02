@@ -401,6 +401,22 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-local-unittest-compatibility
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/80
+      pull_request: null
+      changed_files_or_scope:
+        - Record how to enter the virtual environment, not only how to create one
+        - .ai/project/COMMANDS.yml
+        - readme.md
+      tests_or_evidence:
+        - 'from a shell whose default python is 3.6.5, following the recorded activation line makes every recorded command succeed: verify -> 3.12.3 and Ran 2 tests OK; integration_test -> OK: 10 item(s); ruff format --check -> 241 files already formatted; ruff check -> All checks passed!'
+        - 'readme.md no longer mixes an explicit .venv path with a bare python in consecutive blocks'
+        - 'the fix belongs in the repository rather than one tool config: development uses both Codex and Claude Code, and AI_TOOL_COMPATIBILITY.md forbids adapters defining tool-specific behaviour'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

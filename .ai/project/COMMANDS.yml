@@ -14,6 +14,21 @@ preconditions:
       A system `python` older than the baseline is common. Use a virtual
       environment created from a supported interpreter, for example
       `py -3.12 -m venv .venv`, and run the commands from it.
+    activate:
+      why: >-
+        Creating the environment is not enough: every command below starts with
+        a bare `python`, so the environment has to be entered first or those
+        commands still reach the system interpreter. An existing, fully
+        provisioned .venv that is simply not on PATH fails exactly like a
+        missing one.
+      values:
+        - . .venv/bin/activate
+      windows_powershell:
+        - . .\.venv\Scripts\Activate.ps1
+      note: >-
+        Activation lasts for the shell session. Tools that run each command in a
+        fresh shell must either activate in every invocation or call the
+        interpreter by path, for example `.venv/Scripts/python -m unittest discover`.
 
 commands:
   setup:

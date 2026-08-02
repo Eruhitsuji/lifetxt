@@ -309,35 +309,36 @@ def _is_ascii_header_value(value):
 
 
 def _timezone_for_name(name):
-    errors = []
+    """Resolve a timezone through the one source the project declares.
+
+    `dateutil` and `pytz` fallbacks lived here until #76. They were never
+    declared, so they only ever resolved anything when an unrelated package
+    happened to have installed one -- which is how #73 stayed hidden. Every
+    supported platform now reaches `zoneinfo`: Linux and macOS through the
+    system database, Windows through the declared `tzdata` dependency.
+    """
     try:
         from zoneinfo import ZoneInfo
+    except Exception as exc:
+        raise ValueError(_no_database_message(exc))
 
+    try:
         return ZoneInfo(name)
     except Exception as exc:
-        errors.append(str(exc))
-    try:
-        from dateutil import tz
+        # "Not found" means two very different things: an unknown zone name, or
+        # no database to look in at all. Telling a user with a typo to install
+        # tzdata sends them the wrong way, so probe a zone that must exist.
+        try:
+            ZoneInfo("UTC")
+        except Exception:
+            raise ValueError(_no_database_message(exc))
+        raise ValueError("Unknown timezone %r: %s" % (name, exc))
 
-        zone = tz.gettz(name)
-        if zone is not None:
-            return zone
-        errors.append("dateutil could not find timezone")
-    except Exception as exc:
-        errors.append(str(exc))
-    try:
-        import pytz
 
-        return pytz.timezone(name)
-    except Exception as exc:
-        errors.append(str(exc))
-    detail = "; ".join(error for error in errors if error)
-    # Listing three failures without a remedy sends the reader looking for a
-    # bad timezone name. The usual cause is that no tz database is present at
-    # all, which the platform marker on `tzdata` normally prevents.
-    raise ValueError(
-        "%s. No timezone database is available. Install the `tzdata` package, "
-        "or reinstall lifetxt so its platform dependencies are applied." % detail
+def _no_database_message(exc):
+    return (
+        "No timezone database is available (%s). Install the `tzdata` package, "
+        "or reinstall lifetxt so its platform dependencies are applied." % exc
     )
 
 

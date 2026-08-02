@@ -106,12 +106,19 @@ runtime stay free of third-party requirements.
 
 `tzdata`, declared for Windows only, is the one mandatory runtime dependency.
 Do not remove it as unnecessary. Windows has no IANA timezone database for
-`zoneinfo` to read, and the `dateutil` / `pytz` fallbacks in
-`lifetxt/safety_foundation.py` are not declared either, so a clean Windows
-install could resolve no timezone at all — the recorded `integration_test`
-command failed in an environment built by the recorded `setup` command (#73).
-It is data-only, has no transitive dependencies, and its platform marker keeps
-every other platform dependency-free.
+`zoneinfo` to read, so a clean Windows install could resolve no timezone at all
+— the recorded `integration_test` command failed in an environment built by the
+recorded `setup` command (#73). It is data-only, has no transitive
+dependencies, and its platform marker keeps every other platform
+dependency-free.
+
+Timezone resolution now uses that one declared source and nothing else. The
+`dateutil` and `pytz` fallbacks were removed in #76: being undeclared, they only
+ever resolved anything when an unrelated package happened to install one, which
+is exactly how #73 stayed hidden on an Anaconda environment for so long. Code
+that works only when a dependency arrives by accident reads as supported and is
+not. Do not reintroduce an undeclared fallback; if a platform genuinely needs
+another source, declare it here first.
 
 Adding any further mandatory dependency is a decision, not an implementation
 detail. Record the reason and the alternative that was rejected, as here.

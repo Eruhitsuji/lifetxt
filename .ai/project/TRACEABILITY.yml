@@ -364,6 +364,25 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-clean-install-runtime
+      capability_id: cap-supported-platform-install
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/76
+      pull_request: null
+      changed_files_or_scope:
+        - Remove the undeclared dateutil and pytz timezone fallbacks
+        - lifetxt/safety_foundation.py
+        - tests/test_safety_foundation.py
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'no dateutil or pytz reference remains in lifetxt/ outside one explanatory docstring'
+        - 'regression test blocks the declared source while making working dateutil and pytz importable, and asserts resolution still fails'
+        - 'the regression test was confirmed to fail when a fallback is reintroduced in-process'
+        - 'unknown zone name reports "Unknown timezone" and does not suggest installing tzdata; a missing database does'
+        - 'ruff format --check -> 241 files already formatted; ruff check -> All checks passed'
+      release_or_deployment: 'behaviour change for release notes: an environment resolving timezones only through an incidentally installed dateutil or pytz will now fail'
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

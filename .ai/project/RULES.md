@@ -98,6 +98,24 @@ Revisit when any of these becomes true:
 - status automation (boards, workflows) would carry its own weight
 - the `read:project` scope is granted and Projects becomes usable from the CLI
 
+## Runtime Dependencies
+
+The project is dependency-light by design: `web`, `tui`, and `dev` are optional
+extras, and the core parser, CLI, ticket model, and future counter-machine
+runtime stay free of third-party requirements.
+
+`tzdata`, declared for Windows only, is the one mandatory runtime dependency.
+Do not remove it as unnecessary. Windows has no IANA timezone database for
+`zoneinfo` to read, and the `dateutil` / `pytz` fallbacks in
+`lifetxt/safety_foundation.py` are not declared either, so a clean Windows
+install could resolve no timezone at all — the recorded `integration_test`
+command failed in an environment built by the recorded `setup` command (#73).
+It is data-only, has no transitive dependencies, and its platform marker keeps
+every other platform dependency-free.
+
+Adding any further mandatory dependency is a decision, not an implementation
+detail. Record the reason and the alternative that was rejected, as here.
+
 ## Tracked Exceptions
 
 `.ai/project/COMMANDS.yml` may record a command as `tracked_exception` when no

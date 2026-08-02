@@ -402,6 +402,10 @@ py -3.12 -m venv .venv            # Windows; use python3.12 -m venv .venv elsewh
 .venv/Scripts/python -m pip install -e ".[web,dev]" httpx
 ```
 
+On Windows this also installs `tzdata`, the only mandatory runtime dependency.
+`zoneinfo` has no timezone database to read there, so without it no timezone
+resolves at all. Other platforms use the system database and do not receive it.
+
 The `web` extra and `httpx` are what the Web API tests need; without them those
 tests skip, which again means a green run proves less than it looks like it
 does.

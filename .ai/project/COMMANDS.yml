@@ -46,6 +46,22 @@ commands:
     values:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
 
+  unit_test_captured:
+    status: configured
+    description: >-
+      Same run as unit_test, but the complete output is retained in
+      .test-output.log and only the summary reaches the terminal. Use this when
+      reporting a failure, and attach the file: a summary line alone is not a
+      diagnosis. The log is already ignored by the leading `.*` rule in
+      .gitignore.
+    values:
+      - 'MPLBACKEND=Agg python -m unittest discover > .test-output.log 2>&1; code=$?; tail -n 5 .test-output.log; echo "exit=$code  full output: .test-output.log"'
+
+  unit_test_captured_windows_powershell:
+    status: configured
+    values:
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover *> .test-output.log; $code=$LASTEXITCODE; Get-Content .test-output.log -Tail 5; "exit=$code  full output: .test-output.log"'
+
   integration_test:
     status: configured
     values:

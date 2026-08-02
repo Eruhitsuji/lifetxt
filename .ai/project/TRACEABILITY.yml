@@ -417,6 +417,26 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-module-structure-decomposition
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/67
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/82
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/83
+      changed_files_or_scope:
+        - Extract the embedded Web page asset out of webapp.py (slice 1 of the #67 plan)
+        - lifetxt/web_assets.py
+        - lifetxt/webapp.py
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - 'served page sha256 before and after: 4c8b51969c012696... identical, 428783 bytes both'
+        - 'webapp.py 11959 -> 2939 lines; the 9019-line literal was 75.4 percent of the module'
+        - 'surface_runtime.py unedited; bridge marker present in webapp.HTML_PAGE and absent from web_assets.HTML_PAGE'
+        - 'tests/test_web_assets.py adds the first coverage of the rebinding, which nothing asserted before'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1772 tests, OK (skipped=14); 1766 before, 6 new, no new skips'
+        - 'ruff format --check -> 243 files already formatted; ruff check -> All checks passed'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

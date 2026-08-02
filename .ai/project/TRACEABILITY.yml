@@ -405,7 +405,7 @@ traceability:
       capability_id: cap-local-test-compatibility
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/80
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/81
       changed_files_or_scope:
         - Record how to enter the virtual environment, not only how to create one
         - .ai/project/COMMANDS.yml

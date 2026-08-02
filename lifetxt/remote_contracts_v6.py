@@ -583,7 +583,7 @@ def _patch_capabilities():
     def capability_document(read_only=False, authentication="token", writable_targets=None, config=None):
         return enrich(original_base(
             read_only=read_only, authentication=authentication,
-            writable_targets=writable_targets,
+            writable_targets=writable_targets, config=config,
         ), config=config)
 
     surface_runtime.capability_document_for = capability_document_for

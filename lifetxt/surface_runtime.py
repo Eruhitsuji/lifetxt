@@ -322,11 +322,12 @@ def _patch_capability_document():
     original = safety_foundation.capability_document
     _ORIGINALS["capability_document"] = original
 
-    def registered_capability_document(read_only=False, authentication="token", writable_targets=None):
+    def registered_capability_document(read_only=False, authentication="token", writable_targets=None, config=None):
         data = original(
             read_only=read_only,
             authentication=authentication,
             writable_targets=writable_targets,
+            config=config,
         )
         data["operations"] = operation_names()
         data["operation_matrix"] = operation_matrix()

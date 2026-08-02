@@ -287,3 +287,41 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-surface-structure
+    name: Web surface structure
+    summary: >-
+      Keep the Web page asset separate from the routes that serve it, while
+      lifetxt.webapp.HTML_PAGE stays the rebindable name that surface_runtime
+      patches to install the browser revision bridge.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-module-structure-decomposition
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - lifetxt/webapp.py
+      - tests/test_web_assets.py
+    public_interfaces:
+      - lifetxt.webapp.HTML_PAGE
+      - lifetxt.web_assets.HTML_PAGE
+    tests_or_evidence:
+      - tests/test_web_assets.py
+      - 'the served page must stay byte-identical across any restructuring: compare sha256 of GET / before and after'
+      - 'surface_runtime must keep rebinding webapp.HTML_PAGE; the bridge marker lifetxt-revision-contract-v1 has to be present in what webapp exposes and absent from the pristine asset'
+      - 'a restructuring that drops the rebinding fails nothing else: the suite stays green while the browser silently stops sending If-Match'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1772 tests, OK (skipped=14)'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/67
+      - https://github.com/Eruhitsuji/lifetxt/issues/82
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Slice 1 of the decomposition plan in docs/design/module-structure.md. The asset
+      is a Python module rather than package data because pyproject declares only
+      packages = ["lifetxt"] with no package-data, so a data file would be missing from
+      the wheel. Route grouping is slice 2 and depends on this.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

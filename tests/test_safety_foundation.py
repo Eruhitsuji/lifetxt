@@ -112,11 +112,57 @@ class SafetyFoundationTests(unittest.TestCase):
         try:
             safety_foundation_module._timezone_for_name("Asia/Tokyo")
         except Exception as exc:
-            self.skipTest("IANA timezone provider unavailable: %s" % exc)
+            self.skipTest(
+                "No IANA timezone database on this host: %s. On Windows the "
+                "declared `tzdata` dependency supplies one; elsewhere the system "
+                "database is expected." % exc
+            )
 
         valid, error = validate_timezone("Asia/Tokyo")
         self.assertTrue(valid)
         self.assertEqual("", error)
+
+    def test_resolution_does_not_fall_back_beyond_the_declared_source(self):
+        """Re-adding an undeclared fallback must fail this test.
+
+        The `dateutil` and `pytz` branches were removed in #76 because they only
+        ever resolved anything when an unrelated package happened to install
+        one. Make both importable and working, block the declared source, and
+        confirm resolution still fails: neither is consulted.
+        """
+        import sys
+        import types
+
+        dateutil = types.ModuleType("dateutil")
+        dateutil.tz = types.ModuleType("dateutil.tz")
+        dateutil.tz.gettz = lambda name: "dateutil-must-not-be-used"
+        pytz = types.ModuleType("pytz")
+        pytz.timezone = lambda name: "pytz-must-not-be-used"
+
+        # A None entry in sys.modules makes `import name` raise ImportError,
+        # which is how the declared source is taken away here.
+        overrides = {
+            "zoneinfo": None,
+            "dateutil": dateutil,
+            "dateutil.tz": dateutil.tz,
+            "pytz": pytz,
+        }
+        saved = {name: sys.modules.get(name) for name in overrides}
+        sys.modules.update(overrides)
+        try:
+            with self.assertRaises(ValueError) as caught:
+                safety_foundation_module._timezone_for_name("Asia/Tokyo")
+        finally:
+            for name, module in saved.items():
+                if module is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = module
+
+        message = str(caught.exception)
+        self.assertIn("tzdata", message)
+        self.assertNotIn("dateutil", message)
+        self.assertNotIn("pytz", message)
 
     def test_unrecognized_host_timezone_falls_back_to_local(self):
         original = safety_foundation_module._host_timezone_name

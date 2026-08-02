@@ -43,6 +43,10 @@ body:
     id: acceptance
     attributes:
       label: Acceptance criteria
+      description: >-
+        For configuration-setting changes, include criteria for schema/registry
+        metadata, `config explain`, examples, migration behavior, and English
+        and Japanese documentation, or state why each item is not applicable.
       value: |
         - [ ]
         - [ ]

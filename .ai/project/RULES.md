@@ -119,6 +119,29 @@ This rule exists because the `format` and `lint` exceptions were tracked by #39,
 a general post-adoption foundation issue. #39 was legitimately completed by #40
 while both exceptions remained, and nothing surfaced them again until #44.
 
+## Configuration Setting Completion
+
+Configuration documentation is part of the acceptance criteria for every new,
+changed, deprecated, or removed configuration setting. A setting is not complete
+when only the implementation, default, template, or schema changes.
+
+For any task that changes a configuration setting, the issue and PR must either
+update these items together or explicitly state why an item is not applicable:
+
+- authoritative schema/registry metadata, including default, type, provenance,
+  restart requirement, secret status, versioning, and deprecation or replacement
+  metadata when relevant
+- `lifetxt config explain` behavior and any generated explanation data
+- English and Japanese configuration documentation
+- examples or fixtures that demonstrate the setting when the behavior is visible
+  to users
+- migration, compatibility, and downgrade behavior, including tests or recorded
+  evidence for the chosen behavior
+
+Configuration-setting task acceptance criteria must call out this rule. If the
+task intentionally narrows or rejects one part of the rule, the replacement
+expectation belongs in the issue and PR rather than only in reviewer comments.
+
 ## Where Decisions Live
 
 Per #51:

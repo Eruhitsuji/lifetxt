@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 import warnings
@@ -14,8 +16,291 @@ from lifetxt.surface_runtime import (
     UnsupportedFormatVersion,
     capability_document_for,
     operation_matrix,
+    operation_names,
     transaction_scope,
 )
+
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DRIFT_EXCEPTION_PATH = os.path.join(
+    REPO_ROOT,
+    ".ai",
+    "project",
+    "CAPABILITY_DRIFT_EXCEPTIONS.json",
+)
+CAPABILITY_GATE_FIELDS = (
+    "surface",
+    "server",
+    "capability_version",
+    "format_versions",
+    "canonical_versions",
+    "schema_versions",
+    "read_only",
+    "authentication",
+    "writable_targets",
+    "operations",
+    "operation_matrix",
+    "optional_feature_state",
+)
+
+
+def _load_capability_drift_exceptions(testcase):
+    with open(DRIFT_EXCEPTION_PATH, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    testcase.assertEqual(1, data.get("schema_version"))
+    exceptions = data.get("exceptions")
+    testcase.assertIsInstance(exceptions, list)
+    for entry in exceptions:
+        testcase.assertIsInstance(entry, dict)
+        for field in (
+            "id",
+            "surface",
+            "field",
+            "operation",
+            "reason",
+            "owner",
+            "removal_condition",
+            "tracked_by",
+        ):
+            testcase.assertTrue(
+                entry.get(field),
+                "capability drift exception must set %s: %r" % (field, entry),
+            )
+        testcase.assertRegex(
+            entry["tracked_by"],
+            r"^https://github\.com/Eruhitsuji/lifetxt/issues/[0-9]+$",
+        )
+    return exceptions
+
+
+def _exception_matches(entry, mismatch):
+    return (
+        entry.get("surface") in ("*", mismatch["surface"])
+        and entry.get("field") in ("*", mismatch["field"])
+        and entry.get("operation") in ("*", mismatch["operation"])
+    )
+
+
+def _format_mismatch(mismatch):
+    surfaces = ",".join(mismatch.get("surfaces") or [mismatch["surface"]])
+    return "surface=%s operation=%s field=%s surfaces=%s detail=%s" % (
+        mismatch["surface"],
+        mismatch["operation"],
+        mismatch["field"],
+        surfaces,
+        mismatch["detail"],
+    )
+
+
+def _assert_no_capability_drift(testcase, mismatches):
+    exceptions = _load_capability_drift_exceptions(testcase)
+    undocumented = [
+        mismatch
+        for mismatch in mismatches
+        if not any(_exception_matches(entry, mismatch) for entry in exceptions)
+    ]
+    testcase.assertEqual(
+        [],
+        undocumented,
+        "undocumented capability drift:\n%s"
+        % "\n".join(_format_mismatch(row) for row in undocumented),
+    )
+
+
+def _operation_mismatches(surface, actual, expected):
+    mismatches = []
+    actual_ops = list(actual.get("operations") or [])
+    expected_ops = list(expected.get("operations") or operation_names(surface))
+    for operation in sorted(set(expected_ops) - set(actual_ops)):
+        mismatches.append(
+            {
+                "surface": surface,
+                "operation": operation,
+                "field": "operations",
+                "surfaces": [surface],
+                "detail": "missing from live capability document",
+            }
+        )
+    for operation in sorted(set(actual_ops) - set(expected_ops)):
+        mismatches.append(
+            {
+                "surface": surface,
+                "operation": operation,
+                "field": "operations",
+                "surfaces": [surface],
+                "detail": "not listed for this surface in the operation registry",
+            }
+        )
+    if actual_ops == expected_ops:
+        return mismatches
+    if not mismatches:
+        mismatches.append(
+            {
+                "surface": surface,
+                "operation": "*",
+                "field": "operations",
+                "surfaces": [surface],
+                "detail": "operation order differs from the registry",
+            }
+        )
+    return mismatches
+
+
+def _matrix_mismatches(surface, actual, expected):
+    mismatches = []
+    actual_rows = {
+        row.get("operation"): row
+        for row in (actual.get("operation_matrix") or [])
+        if isinstance(row, dict)
+    }
+    expected_rows = {
+        row.get("operation"): row
+        for row in (expected.get("operation_matrix") or operation_matrix())
+        if isinstance(row, dict)
+    }
+    for operation in sorted(set(expected_rows) - set(actual_rows)):
+        mismatches.append(
+            {
+                "surface": surface,
+                "operation": operation,
+                "field": "operation_matrix",
+                "surfaces": list(expected_rows[operation].get("surfaces") or []),
+                "detail": "missing operation_matrix row",
+            }
+        )
+    for operation in sorted(set(actual_rows) - set(expected_rows)):
+        mismatches.append(
+            {
+                "surface": surface,
+                "operation": operation,
+                "field": "operation_matrix",
+                "surfaces": list(actual_rows[operation].get("surfaces") or []),
+                "detail": "extra operation_matrix row",
+            }
+        )
+    for operation in sorted(set(expected_rows) & set(actual_rows)):
+        if actual_rows[operation] != expected_rows[operation]:
+            mismatches.append(
+                {
+                    "surface": surface,
+                    "operation": operation,
+                    "field": "operation_matrix",
+                    "surfaces": list(expected_rows[operation].get("surfaces") or []),
+                    "detail": "row differs from registry: %r != %r"
+                    % (actual_rows[operation], expected_rows[operation]),
+                }
+            )
+    return mismatches
+
+
+def _capability_mismatches(surface, actual, expected):
+    mismatches = []
+    mismatches.extend(_operation_mismatches(surface, actual, expected))
+    mismatches.extend(_matrix_mismatches(surface, actual, expected))
+    for field in CAPABILITY_GATE_FIELDS:
+        if field in ("operations", "operation_matrix"):
+            continue
+        if actual.get(field) != expected.get(field):
+            mismatches.append(
+                {
+                    "surface": surface,
+                    "operation": "*",
+                    "field": field,
+                    "surfaces": [surface],
+                    "detail": "%r != %r" % (actual.get(field), expected.get(field)),
+                }
+            )
+    return mismatches
+
+
+def _command_catalog_mismatches(payload):
+    from lifetxt.tui_app import COMMANDS, COMMANDS_BY_NAME
+    from lifetxt.webapp import WEB_COMMAND_NOTES, WEB_COMMANDS
+
+    mismatches = []
+    actual_rows = {
+        row.get("name"): row
+        for row in payload.get("commands") or []
+        if isinstance(row, dict)
+    }
+    expected_names = [command.name for command in COMMANDS]
+    actual_names = list(actual_rows)
+    for command in sorted(set(expected_names) - set(actual_names)):
+        mismatches.append(
+            {
+                "surface": "tui",
+                "operation": command,
+                "field": "command_catalog",
+                "surfaces": ["tui", "web"],
+                "detail": "TUI command missing from live Web command catalog",
+            }
+        )
+    for command in sorted(set(actual_names) - set(expected_names)):
+        mismatches.append(
+            {
+                "surface": "web",
+                "operation": command,
+                "field": "command_catalog",
+                "surfaces": ["tui", "web"],
+                "detail": "Web command catalog row is not in the TUI registry",
+            }
+        )
+    if payload.get("count") != len(COMMANDS):
+        mismatches.append(
+            {
+                "surface": "web",
+                "operation": "*",
+                "field": "command_catalog",
+                "surfaces": ["tui", "web"],
+                "detail": "count %r != TUI registry count %r"
+                % (payload.get("count"), len(COMMANDS)),
+            }
+        )
+    for command in COMMANDS:
+        row = actual_rows.get(command.name)
+        if row is None:
+            continue
+        expected_web = command.name in WEB_COMMANDS
+        expected_note = WEB_COMMAND_NOTES.get(command.name, "")
+        expected = {
+            "name": command.name,
+            "alias": command.alias or "",
+            "usage": command.usage,
+            "summary": command.summary,
+            "web": expected_web,
+            "note": expected_note,
+        }
+        if row != expected:
+            mismatches.append(
+                {
+                    "surface": "web",
+                    "operation": command.name,
+                    "field": "command_catalog",
+                    "surfaces": ["tui", "web"],
+                    "detail": "%r != %r" % (row, expected),
+                }
+            )
+    for command in sorted(WEB_COMMANDS - set(COMMANDS_BY_NAME)):
+        mismatches.append(
+            {
+                "surface": "web",
+                "operation": command,
+                "field": "command_catalog",
+                "surfaces": ["tui", "web"],
+                "detail": "WEB_COMMANDS advertises a command absent from TUI registry",
+            }
+        )
+    for command in sorted(set(WEB_COMMAND_NOTES) - set(COMMANDS_BY_NAME)):
+        mismatches.append(
+            {
+                "surface": "web",
+                "operation": command,
+                "field": "command_catalog",
+                "surfaces": ["tui", "web"],
+                "detail": "WEB_COMMAND_NOTES documents a command absent from TUI registry",
+            }
+        )
+    return mismatches
 
 
 class SurfaceRuntimeTests(unittest.TestCase):
@@ -38,6 +323,30 @@ class SurfaceRuntimeTests(unittest.TestCase):
 
     def initial_text(self):
         return "#! format_version: 1\n[ ] T Existing id:T-1\n"
+
+    def write_json(self, path, data):
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+
+    def cli_capabilities(self, config_path):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "lifetxt",
+                "--config",
+                config_path,
+                "capabilities",
+                "--pretty",
+            ],
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        return json.loads(result.stdout)
 
     def public_tool(self, name, arguments, context):
         response = mcp.handle_request(
@@ -100,6 +409,62 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertEqual(document["surface"], "mcp")
         self.assertIn("capabilities", document["operations"])
         self.assertEqual(document["operation_matrix"], operation_matrix())
+
+    def test_cli_mcp_and_resource_capabilities_match_registry_gate(self):
+        from lifetxt.config import load_config
+
+        path = self.path()
+        self.write(path, self.initial_text())
+        config_path = self.path("config.json")
+        self.write_json(
+            config_path,
+            {
+                "config_version": 1,
+                "git": {"enable_api": True},
+                "timer": {"state_file": self.path("timer.json")},
+            },
+        )
+        config = load_config(config_path)
+        context = McpContext(paths=[path], writable_path=path, config=config)
+
+        cli_capabilities = self.cli_capabilities(config_path)
+        self.assertEqual("lifetxt", cli_capabilities["server"]["package"])
+        self.assertEqual(lifetxt.__version__, cli_capabilities["server"]["version"])
+        for feature in ("web", "tui", "mcp", "git", "smtp"):
+            state = cli_capabilities["optional_feature_state"][feature]
+            self.assertIn("installed", state)
+            self.assertIn("configured", state)
+        mcp_capabilities = mcp.call_tool("get_capabilities", {}, context)
+        resource = mcp.resource_read(context, "lifetxt://capabilities")
+        mcp_resource = json.loads(resource["contents"][0]["text"])
+        self.assertEqual(mcp_capabilities, mcp_resource)
+
+        mismatches = []
+        mismatches.extend(
+            _capability_mismatches(
+                "cli",
+                cli_capabilities,
+                capability_document_for(
+                    "cli",
+                    authentication="token",
+                    writable_targets=[],
+                    config=config,
+                ),
+            )
+        )
+        mismatches.extend(
+            _capability_mismatches(
+                "mcp",
+                mcp_capabilities,
+                capability_document_for(
+                    "mcp",
+                    authentication="stdio",
+                    writable_targets=[path],
+                    config=config,
+                ),
+            )
+        )
+        _assert_no_capability_drift(self, mismatches)
 
     def test_named_review_ranges_share_one_deterministic_resolver(self):
         today = datetime.date(2026, 7, 23)
@@ -295,6 +660,27 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
         capabilities = client.get("/api/capabilities")
         self.assertEqual(capabilities.json()["surface"], "web")
         self.assertEqual(capabilities.headers.get("etag"), next_revision)
+
+    def test_web_capabilities_match_registry_gate(self):
+        client = self.client()
+        capabilities = client.get("/api/capabilities").json()
+        expected = capability_document_for(
+            "web",
+            read_only=False,
+            authentication="none",
+            writable_targets=[self.path],
+            config={},
+        )
+        _assert_no_capability_drift(
+            self,
+            _capability_mismatches("web", capabilities, expected),
+        )
+
+    def test_live_web_command_catalog_matches_tui_registry_gate(self):
+        client = self.client()
+        payload = client.get("/api/commands").json()
+
+        _assert_no_capability_drift(self, _command_catalog_mismatches(payload))
 
     def test_legacy_web_write_is_allowed_with_visible_warning(self):
         client = self.client()

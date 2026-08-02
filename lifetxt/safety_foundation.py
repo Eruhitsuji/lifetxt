@@ -9,10 +9,13 @@ from __future__ import unicode_literals
 import ast
 import codecs
 import datetime
+import importlib
 import json
 import os
 import re
+import shutil
 import socket
+import sys
 import tempfile
 import unicodedata
 from collections import OrderedDict
@@ -268,10 +271,108 @@ def audit_python_writes(root):
     return findings
 
 
-def capability_document(read_only=False, authentication="token", writable_targets=None):
+def _module_available(name):
+    try:
+        return importlib.util.find_spec(str(name)) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
+
+
+def _package_version():
+    package = sys.modules.get("lifetxt")
+    return str(getattr(package, "__version__", None) or "unknown")
+
+
+def _configured_section(config, name):
+    if not isinstance(config, dict):
+        return {}
+    section = config.get(name)
+    return section if isinstance(section, dict) else {}
+
+
+def _env_value(config_section, key, default):
+    name = config_section.get(key) or default
+    return bool(os.environ.get(str(name)))
+
+
+def optional_feature_state(config=None):
+    """Return install/configuration state without exposing local secrets."""
+    config = config or {}
+    web_modules = OrderedDict(
+        (name, _module_available(name)) for name in ("fastapi", "uvicorn")
+    )
+    tui_modules = OrderedDict(
+        (name, _module_available(name)) for name in ("textual", "watchdog")
+    )
+    email = _configured_section(_configured_section(config, "notifications"), "email")
+    git = _configured_section(config, "git")
+    api = _configured_section(config, "api")
+    return OrderedDict(
+        (
+            (
+                "web",
+                OrderedDict(
+                    (
+                        ("installed", all(web_modules.values())),
+                        ("configured", bool(_configured_section(config, "web") or api.get("token"))),
+                        ("modules", web_modules),
+                    )
+                ),
+            ),
+            (
+                "tui",
+                OrderedDict(
+                    (
+                        ("installed", all(tui_modules.values())),
+                        ("configured", True),
+                        ("modules", tui_modules),
+                    )
+                ),
+            ),
+            (
+                "mcp",
+                OrderedDict(
+                    (
+                        ("installed", True),
+                        ("configured", True),
+                        ("modules", OrderedDict()),
+                    )
+                ),
+            ),
+            (
+                "git",
+                OrderedDict(
+                    (
+                        ("installed", shutil.which("git") is not None),
+                        ("configured", bool(git.get("enable_api") or git.get("repo"))),
+                        ("modules", OrderedDict()),
+                    )
+                ),
+            ),
+            (
+                "smtp",
+                OrderedDict(
+                    (
+                        ("installed", True),
+                        (
+                            "configured",
+                            _env_value(email, "smtp_host_env", "LIFETXT_SMTP_HOST")
+                            and _env_value(email, "smtp_user_env", "LIFETXT_SMTP_USER")
+                            and _env_value(email, "smtp_pass_env", "LIFETXT_SMTP_PASS"),
+                        ),
+                        ("modules", OrderedDict((("smtplib", True),))),
+                    )
+                ),
+            ),
+        )
+    )
+
+
+def capability_document(read_only=False, authentication="token", writable_targets=None, config=None):
     return OrderedDict(
         (
             ("capability_version", CAPABILITY_VERSION),
+            ("server", OrderedDict((("package", "lifetxt"), ("version", _package_version())))),
             ("format_versions", [FORMAT_VERSION]),
             ("canonical_versions", [CANON_VERSION]),
             ("schema_versions", [SCHEMA_VERSION]),
@@ -281,6 +382,7 @@ def capability_document(read_only=False, authentication="token", writable_target
             ("revision_preconditions", {"supported": True, "required_for_remote_writes": True, "algorithm": "sha256"}),
             ("operations", ["query", "create", "update", "delete", "complete", "timer", "message", "acknowledge", "presence", "agenda", "review", "links", "attachments"]),
             ("optional_features", {"web": True, "mcp": True, "git": True, "smtp": True}),
+            ("optional_feature_state", optional_feature_state(config)),
         )
     )
 

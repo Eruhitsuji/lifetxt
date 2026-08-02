@@ -248,3 +248,37 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-supported-platform-install
+    name: Supported platform install
+    summary: >-
+      Keep a clean install on every supported platform able to run the recorded commands,
+      including resolving timezones on Windows where zoneinfo has no database to read.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-clean-install-runtime
+    implementation_locations:
+      - pyproject.toml
+      - lifetxt/safety_foundation.py
+      - readme.md
+      - .ai/project/RULES.md
+    public_interfaces:
+      - pyproject.toml project.dependencies
+    tests_or_evidence:
+      - 'a clean environment built by the recorded setup command must pass integration_test on every supported platform'
+      - 'the tzdata marker must evaluate true only on win32; verified by evaluating the PEP 508 marker, not by assuming it'
+      - 'when every timezone source fails, the message must name the remedy rather than only listing three import errors'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1765 tests, OK (skipped=14)'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/73
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Linux CI cannot detect a regression here: the marker excludes tzdata there and the
+      system database hides the defect, so removing the dependency would leave CI green
+      while breaking clean Windows installs. Verification must be run on Windows.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

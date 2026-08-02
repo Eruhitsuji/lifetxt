@@ -343,6 +343,27 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-clean-install-runtime
+      capability_id: cap-supported-platform-install
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/73
+      pull_request: null
+      changed_files_or_scope:
+        - Declare tzdata for Windows so a clean install can resolve timezones
+        - pyproject.toml
+        - lifetxt/safety_foundation.py
+        - .ai/project/RULES.md
+        - readme.md
+      tests_or_evidence:
+        - 'before the fix, a clean Windows 3.12 environment built by the recorded setup command: integration_test failed and the suite reported 15 failures / 28 errors'
+        - 'installing tzdata alone restored python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+        - 'PEP 508 marker evaluated per platform -> win32 True, linux False, darwin False'
+        - 'clean run on the branch: Ran 1765 tests in 346.909s, OK (skipped=14) on Python 3.12'
+        - 'ruff format --check -> 241 files already formatted; ruff check -> All checks passed'
+        - 'Linux CI cannot verify this change; the marker excludes the dependency there'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

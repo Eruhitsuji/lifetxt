@@ -148,7 +148,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/62
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/70
       changed_files_or_scope:
         - Record the configuration-setting completion rule as a project rule
         - Add a task-template acceptance-criteria prompt for configuration-setting changes
@@ -160,10 +160,7 @@ traceability:
         - git diff --check
         - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null
-      notes: >-
-        The pull_request field is filled after GitHub assigns the pull request
-        number for this task.
-      status: proposed
+      status: implemented
     - requirement_id: req-config-concurrent-write-safety
       capability_id: cap-config-safe-writes
       epic: null

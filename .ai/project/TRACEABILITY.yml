@@ -476,6 +476,37 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-durable-transaction-recovery
+      capability_id: cap-durable-transaction-recovery
+      epic: P0 durable recovery / todo.md:59
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/86
+      pull_request: null
+      changed_files_or_scope:
+        - Add a Windows-scoped bounded retry for transient PermissionError at the durable replace boundary
+        - Preserve loud failure and cleanup when the retry budget is exhausted
+        - Record the durable transaction recovery capability
+        - lifetxt/transaction_journal.py
+        - tests/test_transaction_journal_v3.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'tests/test_transaction_journal_v3.py covers transient replace retry success, platform scope, exhausted budget, and inspect/resume recovery of the failed journal write -> Ran 11 tests, OK'
+        - tests/test_fault_matrix_v6.py tests/test_fault_drill_v5.py -> Ran 5 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 245 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        Behaviour change for release notes: on Windows, journal writes retry
+        transient os.replace PermissionError caused by temporary target-handle
+        refusal before failing loudly.
+      notes: >-
+        Retry budget is the initial replace attempt plus four Windows-only
+        retries after 0.01, 0.05, 0.1, and 0.25 seconds. Exhaustion re-raises
+        PermissionError and leaves recovery to the existing
+        inspect/resume/compensate/abandon contract.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

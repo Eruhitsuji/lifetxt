@@ -333,3 +333,45 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-durable-transaction-recovery
+    name: Durable transaction recovery
+    summary: >-
+      Keep multi-target transaction journals durable and explicitly recoverable when
+      filesystem boundaries interrupt journal writes, including transient Windows
+      replace handle refusals.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-durable-transaction-recovery
+    implementation_locations:
+      - lifetxt/transaction_journal.py
+    public_interfaces:
+      - lifetxt.transaction_journal.prepare
+      - lifetxt.transaction_journal.inspect_journal
+      - lifetxt.transaction_journal.resume
+      - lifetxt.transaction_journal.compensate
+      - lifetxt.transaction_journal.abandon_with_backup
+    tests_or_evidence:
+      - tests/test_transaction_journal_v3.py replace PermissionError retry and recovery tests -> Ran 11 tests, OK
+      - tests/test_fault_matrix_v6.py tests/test_fault_drill_v5.py -> Ran 5 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts -> 245 files already formatted
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/76
+      - https://github.com/Eruhitsuji/lifetxt/issues/78
+      - https://github.com/Eruhitsuji/lifetxt/issues/86
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `_write_bytes_durable` retries `PermissionError` only when `os.name` is
+      `nt`, using the initial replace attempt plus four retries after 0.01,
+      0.05, 0.1, and 0.25 seconds. Exhausting that budget re-raises the
+      `PermissionError`; the existing journal and target state remain available
+      for inspect/resume/compensate/abandon instead of being silently swallowed.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

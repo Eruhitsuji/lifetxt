@@ -520,7 +520,10 @@ JSON diagnostics:
 are `severity`, `code`, `category`, `message`, `source`, `line`, `column`, and
 `hint`. `category` is part of the published contract and matches the categories
 accepted by `--category`. `hint` is always present as a string; diagnostics with
-no extra guidance use `""`.
+no safe generic guidance use `""`. Parser and validator diagnostics with clear
+remediation publish non-empty hints. This release leaves no parser or validator
+diagnostic code intentionally empty; other diagnostic producers may still emit
+`""` when there is no safe guidance to provide.
 
 `source`, `line`, and `column` are omitted when that location component is not
 known. Consumers must ignore unknown fields so future releases can add fields

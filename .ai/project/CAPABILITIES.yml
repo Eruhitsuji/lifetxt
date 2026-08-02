@@ -155,7 +155,10 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-diagnostic-contract-stability
+      - req-diagnostic-hint-content
     implementation_locations:
+      - lifetxt/parser.py
+      - lifetxt/validator.py
       - lifetxt/model.py
       - lifetxt/diagnostic_contract.py
       - lifetxt/cli.py
@@ -181,12 +184,13 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/64
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
-      `span` remains deferred until parser-native end spans are implemented. At
-      #64 merge time parser/validator diagnostics publish the stable `hint`
-      field but rely on the absent representation (`""`); authoring actionable
-      non-empty hint text is tracked separately by #65. Consumers must tolerate
-      unknown added fields, while stable fields are not removed or renamed
-      without a documented transition period.
+      `span` remains deferred until parser-native end spans are implemented.
+      Parser and validator diagnostics with clear remediation now publish
+      actionable non-empty `hint` text. No parser or validator diagnostic code is
+      intentionally left empty; other diagnostic producers may still use the
+      absent representation (`""`) when no safe generic guidance is available.
+      Consumers must tolerate unknown added fields, while stable fields are not
+      removed or renamed without a documented transition period.
     replacement:
       replaces: []
       replaced_by: null

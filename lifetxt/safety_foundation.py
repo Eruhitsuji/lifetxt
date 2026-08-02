@@ -331,7 +331,14 @@ def _timezone_for_name(name):
         return pytz.timezone(name)
     except Exception as exc:
         errors.append(str(exc))
-    raise ValueError("; ".join(error for error in errors if error))
+    detail = "; ".join(error for error in errors if error)
+    # Listing three failures without a remedy sends the reader looking for a
+    # bad timezone name. The usual cause is that no tz database is present at
+    # all, which the platform marker on `tzdata` normally prevents.
+    raise ValueError(
+        "%s. No timezone database is available. Install the `tzdata` package, "
+        "or reinstall lifetxt so its platform dependencies are applied." % detail
+    )
 
 
 def serve_target_diagnostic(read_paths, write_path):

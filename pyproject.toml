@@ -21,6 +21,12 @@ classifiers = [
   "Topic :: Office/Business :: Scheduling",
   "Topic :: Text Processing"
 ]
+# Windows has no IANA timezone database for `zoneinfo` to read, so a clean
+# install cannot resolve any zone without this. Data only, no transitive
+# dependencies, and the marker keeps every other platform dependency-free.
+dependencies = [
+  "tzdata; sys_platform == 'win32'"
+]
 [project.scripts]
 lifetxt = "lifetxt.entrypoint:main"
 

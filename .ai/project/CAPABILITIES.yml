@@ -182,6 +182,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/65
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/64
+      - https://github.com/Eruhitsuji/lifetxt/pull/68
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       `span` remains deferred until parser-native end spans are implemented.

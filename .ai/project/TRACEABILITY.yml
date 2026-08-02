@@ -220,7 +220,7 @@ traceability:
       capability_id: cap-stable-diagnostics
       epic: P1 Configuration and Workspace Foundation
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/65
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/68
       changed_files_or_scope:
         - Add parser diagnostic hint registry and route parser diagnostics through it
         - Add validator diagnostic hint registry and route validator diagnostics through it

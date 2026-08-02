@@ -41,7 +41,7 @@ def read_text_exact(path):
     with open(path, "rb") as handle:
         data = handle.read()
     bom = data.startswith(codecs.BOM_UTF8)
-    payload = data[len(codecs.BOM_UTF8):] if bom else data
+    payload = data[len(codecs.BOM_UTF8) :] if bom else data
     return payload.decode("utf-8"), data, bom
 
 
@@ -98,30 +98,132 @@ def canonicalize_text(text):
 def canonical_issues(text, raw_bytes=None, bom=False, source=None):
     issues = []
     if bom or (raw_bytes is not None and raw_bytes.startswith(codecs.BOM_UTF8)):
-        issues.append(_policy_diag("warning", "F101", "UTF-8 BOM is not canonical.", source, 1, 1, "Remove the BOM."))
+        issues.append(
+            _policy_diag(
+                "warning",
+                "F101",
+                "UTF-8 BOM is not canonical.",
+                source,
+                1,
+                1,
+                "Remove the BOM.",
+            )
+        )
     if "\r\n" in text:
-        issues.append(_policy_diag("warning", "F102", "CRLF line endings are not canonical.", source, 1, 1, "Convert line endings to LF."))
+        issues.append(
+            _policy_diag(
+                "warning",
+                "F102",
+                "CRLF line endings are not canonical.",
+                source,
+                1,
+                1,
+                "Convert line endings to LF.",
+            )
+        )
     elif "\r" in text:
-        issues.append(_policy_diag("warning", "F103", "CR line endings are not canonical.", source, 1, 1, "Convert line endings to LF."))
+        issues.append(
+            _policy_diag(
+                "warning",
+                "F103",
+                "CR line endings are not canonical.",
+                source,
+                1,
+                1,
+                "Convert line endings to LF.",
+            )
+        )
     if unicodedata.normalize("NFC", text) != text:
-        issues.append(_policy_diag("warning", "F104", "Text is not NFC-normalized.", source, 1, 1, "Normalize Unicode to NFC."))
+        issues.append(
+            _policy_diag(
+                "warning",
+                "F104",
+                "Text is not NFC-normalized.",
+                source,
+                1,
+                1,
+                "Normalize Unicode to NFC.",
+            )
+        )
     for line_no, line in enumerate(text.splitlines(), 1):
         if line.rstrip(" \t") != line:
-            issues.append(_policy_diag("warning", "F105", "Trailing whitespace is not canonical.", source, line_no, len(line.rstrip(" \t")) + 1, "Remove trailing spaces or tabs."))
+            issues.append(
+                _policy_diag(
+                    "warning",
+                    "F105",
+                    "Trailing whitespace is not canonical.",
+                    source,
+                    line_no,
+                    len(line.rstrip(" \t")) + 1,
+                    "Remove trailing spaces or tabs.",
+                )
+            )
         for match in DETAIL_KEY_RE.finditer(line):
             key = match.group(1)
             if key.lower() != key:
-                issues.append(_policy_diag("warning", "F106", "Detail keys are case-sensitive and canonical keys are lowercase: %s" % key, source, line_no, match.start(1) + 1, "Use %s:." % key.lower()))
+                issues.append(
+                    _policy_diag(
+                        "warning",
+                        "F106",
+                        "Detail keys are case-sensitive and canonical keys are lowercase: %s"
+                        % key,
+                        source,
+                        line_no,
+                        match.start(1) + 1,
+                        "Use %s:." % key.lower(),
+                    )
+                )
     if text and not text.endswith(("\n", "\r")):
-        issues.append(_policy_diag("warning", "F107", "File does not end with a newline.", source, len(text.splitlines()) or 1, 1, "Add one LF at end of file."))
+        issues.append(
+            _policy_diag(
+                "warning",
+                "F107",
+                "File does not end with a newline.",
+                source,
+                len(text.splitlines()) or 1,
+                1,
+                "Add one LF at end of file.",
+            )
+        )
     directives, duplicates = file_directives(text)
     for key, line_no in duplicates:
-        issues.append(_policy_diag("error", "F108", "Duplicate metadata directive: %s" % key, source, line_no, 1, "Keep one authoritative directive."))
+        issues.append(
+            _policy_diag(
+                "error",
+                "F108",
+                "Duplicate metadata directive: %s" % key,
+                source,
+                line_no,
+                1,
+                "Keep one authoritative directive.",
+            )
+        )
     report = format_version_report(text)
     if report["state"] == "unversioned":
-        issues.append(_policy_diag("info", "F109", report["message"], source, 1, 1, "Add #! format_version: %s when opting into Format 1.0." % FORMAT_VERSION))
+        issues.append(
+            _policy_diag(
+                "info",
+                "F109",
+                report["message"],
+                source,
+                1,
+                1,
+                "Add #! format_version: %s when opting into Format 1.0."
+                % FORMAT_VERSION,
+            )
+        )
     elif report["state"] == "unsupported":
-        issues.append(_policy_diag("error", "F110", report["message"], source, 1, 1, "Use a supported migration tool before writing."))
+        issues.append(
+            _policy_diag(
+                "error",
+                "F110",
+                report["message"],
+                source,
+                1,
+                1,
+                "Use a supported migration tool before writing.",
+            )
+        )
     return issues
 
 
@@ -132,18 +234,29 @@ def stable_diagnostics(path):
     for diagnostic in diagnostics:
         data = diagnostic.to_dict()
         data.setdefault("source", path)
-        data["span"] = {"start": {"line": data.get("line"), "column": data.get("column")}, "end": {"line": data.get("line"), "column": data.get("column")}}
+        data["span"] = {
+            "start": {"line": data.get("line"), "column": data.get("column")},
+            "end": {"line": data.get("line"), "column": data.get("column")},
+        }
         data["hint"] = ""
         result.append(data)
     for diagnostic in canonical_issues(text, raw_bytes=raw, bom=bom, source=path):
         result.append(diagnostic)
-    return OrderedDict((("ok", not any(row["severity"] == "error" for row in result)), ("item_count", len(items)), ("diagnostics", result)))
+    return OrderedDict(
+        (
+            ("ok", not any(row["severity"] == "error" for row in result)),
+            ("item_count", len(items)),
+            ("diagnostics", result),
+        )
+    )
 
 
 def resolve_timezone_policy(config=None, text="", cli_timezone=None):
     config = config or {}
     directives, _duplicates = file_directives(text)
-    defaults = config.get("defaults") if isinstance(config.get("defaults"), dict) else {}
+    defaults = (
+        config.get("defaults") if isinstance(config.get("defaults"), dict) else {}
+    )
     candidates = (
         ("cli", cli_timezone),
         ("file", directives.get("timezone")),
@@ -156,8 +269,24 @@ def resolve_timezone_policy(config=None, text="", cli_timezone=None):
             valid, error = validate_timezone(name)
             if source == "host" and (not valid or not _is_ascii_header_value(name)):
                 continue
-            return OrderedDict((("timezone", name), ("source", source), ("valid", valid), ("error", error), ("precedence", ["cli", "file", "config", "host"])))
-    return OrderedDict((("timezone", "local"), ("source", "host"), ("valid", True), ("error", ""), ("precedence", ["cli", "file", "config", "host"])))
+            return OrderedDict(
+                (
+                    ("timezone", name),
+                    ("source", source),
+                    ("valid", valid),
+                    ("error", error),
+                    ("precedence", ["cli", "file", "config", "host"]),
+                )
+            )
+    return OrderedDict(
+        (
+            ("timezone", "local"),
+            ("source", "host"),
+            ("valid", True),
+            ("error", ""),
+            ("precedence", ["cli", "file", "config", "host"]),
+        )
+    )
 
 
 def validate_timezone(name):
@@ -206,17 +335,32 @@ def _timezone_for_name(name):
 
 
 def serve_target_diagnostic(read_paths, write_path):
-    reads = [os.path.abspath(path) for path in (read_paths or []) if path and path != "-"]
+    reads = [
+        os.path.abspath(path) for path in (read_paths or []) if path and path != "-"
+    ]
     write_abs = os.path.abspath(write_path) if write_path else ""
     mismatch = bool(write_abs and reads and write_abs not in reads)
     windows_drive_relative = bool(re.match(r"^[A-Za-z]:[^\\/]", str(write_path or "")))
     severity = "warning" if mismatch or windows_drive_relative else "ok"
     messages = []
     if mismatch:
-        messages.append("The server reads %s but writes %s." % (", ".join(reads), write_abs))
+        messages.append(
+            "The server reads %s but writes %s." % (", ".join(reads), write_abs)
+        )
     if windows_drive_relative:
-        messages.append("The write target is Windows drive-relative; use an absolute path such as C:\\path\\life.txt.")
-    return OrderedDict((("severity", severity), ("read_paths", reads), ("write_path", write_abs), ("mismatch", mismatch), ("windows_drive_relative", windows_drive_relative), ("messages", messages)))
+        messages.append(
+            "The write target is Windows drive-relative; use an absolute path such as C:\\path\\life.txt."
+        )
+    return OrderedDict(
+        (
+            ("severity", severity),
+            ("read_paths", reads),
+            ("write_path", write_abs),
+            ("mismatch", mismatch),
+            ("windows_drive_relative", windows_drive_relative),
+            ("messages", messages),
+        )
+    )
 
 
 def inspect_locks(paths, stale_after=300.0, now=None):
@@ -224,7 +368,9 @@ def inspect_locks(paths, stale_after=300.0, now=None):
     records = []
     seen = set()
     for path in paths or []:
-        lock_path = path if str(path).endswith(".lifetxt.lock") else str(path) + ".lifetxt.lock"
+        lock_path = (
+            path if str(path).endswith(".lifetxt.lock") else str(path) + ".lifetxt.lock"
+        )
         if lock_path in seen or not os.path.exists(lock_path):
             continue
         seen.add(lock_path)
@@ -234,9 +380,24 @@ def inspect_locks(paths, stale_after=300.0, now=None):
         except Exception:
             owner = {}
         age = max(0.0, now - os.path.getmtime(lock_path))
-        pid_alive = _pid_alive(owner.get("pid")) if owner.get("host") == socket.gethostname() else None
+        pid_alive = (
+            _pid_alive(owner.get("pid"))
+            if owner.get("host") == socket.gethostname()
+            else None
+        )
         stale = age >= float(stale_after) and pid_alive is not True
-        records.append(OrderedDict((("path", lock_path), ("target", lock_path[:-len(".lifetxt.lock")]), ("age_seconds", round(age, 3)), ("stale", stale), ("pid_alive", pid_alive), ("owner", owner))))
+        records.append(
+            OrderedDict(
+                (
+                    ("path", lock_path),
+                    ("target", lock_path[: -len(".lifetxt.lock")]),
+                    ("age_seconds", round(age, 3)),
+                    ("stale", stale),
+                    ("pid_alive", pid_alive),
+                    ("owner", owner),
+                )
+            )
+        )
     return records
 
 
@@ -267,7 +428,9 @@ def audit_python_writes(root):
                 if mode is None:
                     continue
                 if any(flag in mode for flag in ("w", "a", "x")):
-                    findings.append({"path": path, "line": node.lineno, "call": "open(%s)" % mode})
+                    findings.append(
+                        {"path": path, "line": node.lineno, "call": "open(%s)" % mode}
+                    )
     return findings
 
 
@@ -314,7 +477,12 @@ def optional_feature_state(config=None):
                 OrderedDict(
                     (
                         ("installed", all(web_modules.values())),
-                        ("configured", bool(_configured_section(config, "web") or api.get("token"))),
+                        (
+                            "configured",
+                            bool(
+                                _configured_section(config, "web") or api.get("token")
+                            ),
+                        ),
                         ("modules", web_modules),
                     )
                 ),
@@ -368,20 +536,52 @@ def optional_feature_state(config=None):
     )
 
 
-def capability_document(read_only=False, authentication="token", writable_targets=None, config=None):
+def capability_document(
+    read_only=False, authentication="token", writable_targets=None, config=None
+):
     return OrderedDict(
         (
             ("capability_version", CAPABILITY_VERSION),
-            ("server", OrderedDict((("package", "lifetxt"), ("version", _package_version())))),
+            (
+                "server",
+                OrderedDict((("package", "lifetxt"), ("version", _package_version()))),
+            ),
             ("format_versions", [FORMAT_VERSION]),
             ("canonical_versions", [CANON_VERSION]),
             ("schema_versions", [SCHEMA_VERSION]),
             ("authentication", authentication),
             ("read_only", bool(read_only)),
             ("writable_targets", list(writable_targets or [])),
-            ("revision_preconditions", {"supported": True, "required_for_remote_writes": True, "algorithm": "sha256"}),
-            ("operations", ["query", "create", "update", "delete", "complete", "timer", "message", "acknowledge", "presence", "agenda", "review", "links", "attachments"]),
-            ("optional_features", {"web": True, "mcp": True, "git": True, "smtp": True}),
+            (
+                "revision_preconditions",
+                {
+                    "supported": True,
+                    "required_for_remote_writes": True,
+                    "algorithm": "sha256",
+                },
+            ),
+            (
+                "operations",
+                [
+                    "query",
+                    "create",
+                    "update",
+                    "delete",
+                    "complete",
+                    "timer",
+                    "message",
+                    "acknowledge",
+                    "presence",
+                    "agenda",
+                    "review",
+                    "links",
+                    "attachments",
+                ],
+            ),
+            (
+                "optional_features",
+                {"web": True, "mcp": True, "git": True, "smtp": True},
+            ),
             ("optional_feature_state", optional_feature_state(config)),
         )
     )
@@ -391,19 +591,70 @@ def release_gate(root, paths=None):
     checks = []
     checks.append(_gate("mutation_cas", _cas_probe()))
     checks.append(_gate("timezone_roundtrip", _timezone_probe()))
-    checks.append(_gate("golden_corpus", os.path.exists(os.path.join(root, "tests", "golden", "roundtrip_cases.json"))))
-    checks.append(_gate("packaging_metadata", any(os.path.exists(os.path.join(root, name)) for name in ("pyproject.toml", "setup.py", "setup.cfg"))))
+    checks.append(
+        _gate(
+            "golden_corpus",
+            os.path.exists(
+                os.path.join(root, "tests", "golden", "roundtrip_cases.json")
+            ),
+        )
+    )
+    checks.append(
+        _gate(
+            "packaging_metadata",
+            any(
+                os.path.exists(os.path.join(root, name))
+                for name in ("pyproject.toml", "setup.py", "setup.cfg")
+            ),
+        )
+    )
     schema_dir = os.path.join(root, "dist", "schemas")
-    checks.append(_gate("published_schemas", os.path.isdir(schema_dir) and len([name for name in os.listdir(schema_dir) if name.endswith(".json")]) >= 3))
+    checks.append(
+        _gate(
+            "published_schemas",
+            os.path.isdir(schema_dir)
+            and len([name for name in os.listdir(schema_dir) if name.endswith(".json")])
+            >= 3,
+        )
+    )
     findings = audit_python_writes(root)
-    checks.append(OrderedDict((("name", "write_route_audit"), ("ok", not findings), ("detail", findings))))
+    checks.append(
+        OrderedDict(
+            (("name", "write_route_audit"), ("ok", not findings), ("detail", findings))
+        )
+    )
     for path in paths or []:
         try:
             report = stable_diagnostics(path)
-            checks.append(OrderedDict((("name", "format:%s" % path), ("ok", report["ok"]), ("detail", report))))
+            checks.append(
+                OrderedDict(
+                    (
+                        ("name", "format:%s" % path),
+                        ("ok", report["ok"]),
+                        ("detail", report),
+                    )
+                )
+            )
         except OSError as exc:
-            checks.append(OrderedDict((("name", "format:%s" % path), ("ok", False), ("detail", str(exc)))))
-    return OrderedDict((("ok", all(check["ok"] for check in checks)), ("checks", checks), ("versions", {"format": FORMAT_VERSION, "canon": CANON_VERSION, "schema": SCHEMA_VERSION})))
+            checks.append(
+                OrderedDict(
+                    (("name", "format:%s" % path), ("ok", False), ("detail", str(exc)))
+                )
+            )
+    return OrderedDict(
+        (
+            ("ok", all(check["ok"] for check in checks)),
+            ("checks", checks),
+            (
+                "versions",
+                {
+                    "format": FORMAT_VERSION,
+                    "canon": CANON_VERSION,
+                    "schema": SCHEMA_VERSION,
+                },
+            ),
+        )
+    )
 
 
 def write_schema_bundle(directory):
@@ -420,15 +671,123 @@ def write_schema_bundle(directory):
 
 def schema_bundle():
     base = "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/"
-    item = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": base + "item-v1.schema.json", "title": "lifetxt item v1", "type": "object", "required": ["status", "type", "title", "details"], "properties": {"status": {"type": "string"}, "type": {"type": "string"}, "title": {"type": "string"}, "details": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": ["string", "number", "boolean"]}}}}, "additionalProperties": True}
-    diagnostic = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": base + "diagnostic-v1.schema.json", "title": "lifetxt diagnostic v1", "type": "object", "required": ["severity", "code", "message", "source", "line", "column", "span", "hint"], "properties": {"severity": {"enum": ["info", "warning", "error"]}, "code": {"type": "string"}, "message": {"type": "string"}, "source": {"type": ["string", "null"]}, "line": {"type": ["integer", "null"]}, "column": {"type": ["integer", "null"]}, "span": {"type": "object"}, "hint": {"type": "string"}}, "additionalProperties": False}
-    capability = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": base + "capability-v1.schema.json", "title": "lifetxt capability v1", "type": "object", "required": ["capability_version", "format_versions", "schema_versions", "operations", "revision_preconditions"], "properties": {"capability_version": {"const": CAPABILITY_VERSION}, "format_versions": {"type": "array", "items": {"type": "string"}}, "schema_versions": {"type": "array", "items": {"type": "string"}}, "operations": {"type": "array", "items": {"type": "string"}}, "revision_preconditions": {"type": "object"}}, "additionalProperties": True}
-    conflict = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": base + "conflict-v1.schema.json", "title": "lifetxt conflict v1", "type": "object", "required": ["error", "expected_revision", "current_revision", "attempted_change"], "properties": {"error": {"const": "CONFLICT"}, "expected_revision": {"type": "string"}, "current_revision": {"type": "string"}, "current_item": {"type": ["object", "null"]}, "attempted_change": {"type": "object"}}, "additionalProperties": False}
-    return OrderedDict((("item-v1.schema.json", item), ("diagnostic-v1.schema.json", diagnostic), ("capability-v1.schema.json", capability), ("conflict-v1.schema.json", conflict)))
+    item = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": base + "item-v1.schema.json",
+        "title": "lifetxt item v1",
+        "type": "object",
+        "required": ["status", "type", "title", "details"],
+        "properties": {
+            "status": {"type": "string"},
+            "type": {"type": "string"},
+            "title": {"type": "string"},
+            "details": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {"type": ["string", "number", "boolean"]},
+                },
+            },
+        },
+        "additionalProperties": True,
+    }
+    diagnostic = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": base + "diagnostic-v1.schema.json",
+        "title": "lifetxt diagnostic v1",
+        "type": "object",
+        "required": [
+            "severity",
+            "code",
+            "message",
+            "source",
+            "line",
+            "column",
+            "span",
+            "hint",
+        ],
+        "properties": {
+            "severity": {"enum": ["info", "warning", "error"]},
+            "code": {"type": "string"},
+            "message": {"type": "string"},
+            "source": {"type": ["string", "null"]},
+            "line": {"type": ["integer", "null"]},
+            "column": {"type": ["integer", "null"]},
+            "span": {"type": "object"},
+            "hint": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    capability = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": base + "capability-v1.schema.json",
+        "title": "lifetxt capability v1",
+        "type": "object",
+        "required": [
+            "capability_version",
+            "format_versions",
+            "schema_versions",
+            "operations",
+            "revision_preconditions",
+        ],
+        "properties": {
+            "capability_version": {"const": CAPABILITY_VERSION},
+            "format_versions": {"type": "array", "items": {"type": "string"}},
+            "schema_versions": {"type": "array", "items": {"type": "string"}},
+            "operations": {"type": "array", "items": {"type": "string"}},
+            "revision_preconditions": {"type": "object"},
+        },
+        "additionalProperties": True,
+    }
+    conflict = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": base + "conflict-v1.schema.json",
+        "title": "lifetxt conflict v1",
+        "type": "object",
+        "required": [
+            "error",
+            "expected_revision",
+            "current_revision",
+            "attempted_change",
+        ],
+        "properties": {
+            "error": {"const": "CONFLICT"},
+            "expected_revision": {"type": "string"},
+            "current_revision": {"type": "string"},
+            "current_item": {"type": ["object", "null"]},
+            "attempted_change": {"type": "object"},
+        },
+        "additionalProperties": False,
+    }
+    return OrderedDict(
+        (
+            ("item-v1.schema.json", item),
+            ("diagnostic-v1.schema.json", diagnostic),
+            ("capability-v1.schema.json", capability),
+            ("conflict-v1.schema.json", conflict),
+        )
+    )
 
 
 def _policy_diag(severity, code, message, source, line, column, hint):
-    return OrderedDict((("severity", severity), ("code", code), ("message", message), ("source", source), ("line", line), ("column", column), ("span", {"start": {"line": line, "column": column}, "end": {"line": line, "column": column}}), ("hint", hint)))
+    return OrderedDict(
+        (
+            ("severity", severity),
+            ("code", code),
+            ("message", message),
+            ("source", source),
+            ("line", line),
+            ("column", column),
+            (
+                "span",
+                {
+                    "start": {"line": line, "column": column},
+                    "end": {"line": line, "column": column},
+                },
+            ),
+            ("hint", hint),
+        )
+    )
 
 
 def _call_label(func):
@@ -444,7 +803,11 @@ def _ast_string_value(node):
     if isinstance(node, ast.Str):
         return str(node.s)
     constant = getattr(ast, "Constant", None)
-    if constant is not None and isinstance(node, constant) and isinstance(node.value, str):
+    if (
+        constant is not None
+        and isinstance(node, constant)
+        and isinstance(node.value, str)
+    ):
         return str(node.value)
     return None
 
@@ -476,9 +839,19 @@ def _cas_probe():
     path = os.path.join(directory, "life.txt")
     try:
         first = write_text(path, "one\n", operation="release_gate.create", create=True)
-        write_text(path, "two\n", expected_hash=first.after_hash, operation="release_gate.first")
+        write_text(
+            path,
+            "two\n",
+            expected_hash=first.after_hash,
+            operation="release_gate.first",
+        )
         try:
-            write_text(path, "stale\n", expected_hash=first.after_hash, operation="release_gate.stale")
+            write_text(
+                path,
+                "stale\n",
+                expected_hash=first.after_hash,
+                operation="release_gate.stale",
+            )
         except MutationConflict:
             return True
         return False

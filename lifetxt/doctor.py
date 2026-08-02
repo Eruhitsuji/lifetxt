@@ -6,7 +6,13 @@ import importlib.util
 import os
 
 from .revision_telemetry import store_from_config
-from .transaction_journal import cleanup_terminal, inspect_journal, journal_directory, journal_policy_report, list_journals
+from .transaction_journal import (
+    cleanup_terminal,
+    inspect_journal,
+    journal_directory,
+    journal_policy_report,
+    list_journals,
+)
 from .safety_foundation import inspect_locks, read_text_exact, serve_target_diagnostic
 from .timezone_policy import policy_report
 from .workspace_diagnostics import workspace_diagnostics
@@ -31,7 +37,9 @@ def doctor_report(
 ):
     config = config or {}
     paths = [os.path.abspath(path) for path in (paths or []) if path and path != "-"]
-    write_path = os.path.abspath(write_path) if write_path else (paths[0] if paths else "")
+    write_path = (
+        os.path.abspath(write_path) if write_path else (paths[0] if paths else "")
+    )
     text = ""
     if paths and os.path.exists(paths[0]):
         text, _raw, _bom = read_text_exact(paths[0])
@@ -49,17 +57,24 @@ def doctor_report(
     if not timer_paths:
         try:
             from .timer import timer_state_file
+
             timer_paths = [timer_state_file(config)]
         except Exception:
             timer_paths = []
     resolved_journal_dir = os.path.abspath(
         journal_dir or journal_directory(config, writable_path=write_path or None)
     )
-    transaction_section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    transaction_section = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
     configured_backups = transaction_section.get("backup_dirs") or []
     if isinstance(configured_backups, str):
         configured_backups = [configured_backups]
-    transaction_backup_paths = [os.path.abspath(os.path.expanduser(str(value))) for value in configured_backups]
+    transaction_backup_paths = [
+        os.path.abspath(os.path.expanduser(str(value))) for value in configured_backups
+    ]
     transaction_policy = journal_policy_report(resolved_journal_dir, config=config)
     transaction_rows = list_journals(resolved_journal_dir, include_terminal=True)
     transaction_details = []
@@ -71,28 +86,38 @@ def doctor_report(
             transaction_details.append(inspect_journal(row["journal_path"]))
         except Exception as exc:
             broken = dict(row)
-            broken.update({"state": "corrupt", "recovery_required": True, "error": str(exc)})
+            broken.update(
+                {"state": "corrupt", "recovery_required": True, "error": str(exc)}
+            )
             transaction_details.append(broken)
-    transaction_cleanup = cleanup_terminal(
-        resolved_journal_dir,
-        older_than_days=transaction_retention_days,
-        force=bool(force and cleanup_transactions),
-        config=config,
-    ) if cleanup_transactions else {
-        "journal_dir": resolved_journal_dir,
-        "requested": False,
-        "removed": [],
-        "skipped": [],
-        "errors": [],
-    }
-    locks_before = inspect_locks(paths + list(timer_paths or []), stale_after=stale_after)
+    transaction_cleanup = (
+        cleanup_terminal(
+            resolved_journal_dir,
+            older_than_days=transaction_retention_days,
+            force=bool(force and cleanup_transactions),
+            config=config,
+        )
+        if cleanup_transactions
+        else {
+            "journal_dir": resolved_journal_dir,
+            "requested": False,
+            "removed": [],
+            "skipped": [],
+            "errors": [],
+        }
+    )
+    locks_before = inspect_locks(
+        paths + list(timer_paths or []), stale_after=stale_after
+    )
     cleanup = cleanup_stale_locks(
         locks_before,
         stale_after=stale_after,
         enabled=cleanup_stale,
         force=force,
     )
-    locks_after = inspect_locks(paths + list(timer_paths or []), stale_after=stale_after)
+    locks_after = inspect_locks(
+        paths + list(timer_paths or []), stale_after=stale_after
+    )
     target = serve_target_diagnostic(paths, write_path)
     diagnostics = workspace_diagnostics(
         paths,
@@ -116,7 +141,10 @@ def doctor_report(
         hard_failures.append("lock_cleanup")
     if transaction_cleanup.get("errors"):
         hard_failures.append("transaction_cleanup")
-    if any(row.get("recovery_required") or row.get("state") == "corrupt" for row in transaction_details):
+    if any(
+        row.get("recovery_required") or row.get("state") == "corrupt"
+        for row in transaction_details
+    ):
         hard_failures.append("transaction_recovery")
     if not transaction_policy.get("ok"):
         hard_failures.append("transaction_policy")

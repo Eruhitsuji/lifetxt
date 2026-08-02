@@ -32,6 +32,7 @@ def parse_timestamp(value):
 def server_now(now=None):
     if now is None:
         from .timezone_policy import utcnow
+
         value = utcnow()
     else:
         value = now
@@ -48,7 +49,10 @@ def clock_skew_report(client_time=None, config=None, now=None):
     authoritative = server_now(now)
     report = OrderedDict(
         (
-            ("server_time_utc", authoritative.replace(microsecond=0).isoformat().replace("+00:00", "Z")),
+            (
+                "server_time_utc",
+                authoritative.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            ),
             ("server_authoritative", True),
             ("warning_seconds", warning),
             ("reject_seconds", reject),
@@ -75,7 +79,10 @@ def clock_skew_report(client_time=None, config=None, now=None):
         allowed = True
     report.update(
         (
-            ("client_time_utc", client.replace(microsecond=0).isoformat().replace("+00:00", "Z")),
+            (
+                "client_time_utc",
+                client.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            ),
             ("skew_seconds", skew),
             ("absolute_skew_seconds", absolute),
             ("state", state),

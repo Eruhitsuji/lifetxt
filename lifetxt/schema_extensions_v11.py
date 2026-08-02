@@ -36,7 +36,10 @@ def schema_bundle_v11():
                             "required": ["teams", "groups"],
                             "properties": {
                                 "teams": {"type": "array", "items": {"type": "string"}},
-                                "groups": {"type": "array", "items": {"type": "string"}},
+                                "groups": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
                             },
                             "additionalProperties": False,
                         },

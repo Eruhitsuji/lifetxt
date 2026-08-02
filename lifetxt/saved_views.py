@@ -59,8 +59,10 @@ def normalize_view(name, definition):
 
 
 def list_saved_views(config):
-    return [normalize_view(name, definition)
-            for name, definition in _raw_views(config).items()]
+    return [
+        normalize_view(name, definition)
+        for name, definition in _raw_views(config).items()
+    ]
 
 
 def get_saved_view(config, name):
@@ -79,18 +81,24 @@ def validate_saved_views(config):
     for view in list_saved_views(config):
         if not view["query"]:
             rows.append(
-                _view_diagnostic("error", "V001",
-                                 "Saved view %r has an empty query." % view["name"],
-                                 view["name"])
+                _view_diagnostic(
+                    "error",
+                    "V001",
+                    "Saved view %r has an empty query." % view["name"],
+                    view["name"],
+                )
             )
             continue
         _plan, query_diags = parse_query(view["query"])
         for diag in query_diags:
             if diag["severity"] == "error":
                 rows.append(
-                    _view_diagnostic("error", "V002",
-                                     "Saved view %r: %s" % (view["name"], diag["message"]),
-                                     view["name"])
+                    _view_diagnostic(
+                        "error",
+                        "V002",
+                        "Saved view %r: %s" % (view["name"], diag["message"]),
+                        view["name"],
+                    )
                 )
     return rows
 
@@ -109,5 +117,11 @@ def _view_diagnostic(severity, code, message, name):
 def run_saved_view(items, config, name):
     view = get_saved_view(config, name)
     sort = view["sort"][0] if view["sort"] else None
-    return run_query(items, view["query"], config=config, sort=sort,
-                     order=view["order"], limit=view["limit"])
+    return run_query(
+        items,
+        view["query"],
+        config=config,
+        sort=sort,
+        order=view["order"],
+        limit=view["limit"],
+    )

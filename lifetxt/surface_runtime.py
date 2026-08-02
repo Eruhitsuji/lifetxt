@@ -159,7 +159,10 @@ class SurfaceTransaction(object):
                 % self.operation
             )
         self.before = _mutation.read_text_snapshot(self.path, allow_missing=True)
-        if self.expected_hash is not None and self.expected_hash != self.before.content_hash:
+        if (
+            self.expected_hash is not None
+            and self.expected_hash != self.before.content_hash
+        ):
             raise MutationConflict(
                 self.path,
                 self.expected_hash,
@@ -243,7 +246,10 @@ def precondition_payload(path, operation):
             ("message", "An expected revision is required for this write."),
             ("expected_revision", None),
             ("current_revision", current_revision(path)),
-            ("attempted_change", {"operation": operation, "path": os.path.abspath(path)}),
+            (
+                "attempted_change",
+                {"operation": operation, "path": os.path.abspath(path)},
+            ),
         )
     )
 
@@ -256,7 +262,10 @@ def conflict_payload(exc, attempted_change=None):
             ("expected_revision", exc.expected_hash),
             ("current_revision", exc.actual_hash),
             ("current_item", None),
-            ("attempted_change", attempted_change or {"operation": exc.operation, "path": exc.path}),
+            (
+                "attempted_change",
+                attempted_change or {"operation": exc.operation, "path": exc.path},
+            ),
         )
     )
 
@@ -273,7 +282,9 @@ def unsupported_format_payload(exc, operation):
     )
 
 
-def capability_document_for(surface, read_only=False, authentication="token", writable_targets=None, config=None):
+def capability_document_for(
+    surface, read_only=False, authentication="token", writable_targets=None, config=None
+):
     original = _ORIGINALS.get("capability_document")
     if original is None:
         from .safety_foundation import capability_document as original
@@ -322,7 +333,9 @@ def _patch_capability_document():
     original = safety_foundation.capability_document
     _ORIGINALS["capability_document"] = original
 
-    def registered_capability_document(read_only=False, authentication="token", writable_targets=None, config=None):
+    def registered_capability_document(
+        read_only=False, authentication="token", writable_targets=None, config=None
+    ):
         data = original(
             read_only=read_only,
             authentication=authentication,
@@ -376,7 +389,9 @@ def _patch_webapp():
             config=config,
             read_only=read_only,
         )
-        actual_report = serve_target_diagnostic(app.state.paths, app.state.writable_path)
+        actual_report = serve_target_diagnostic(
+            app.state.paths, app.state.writable_path
+        )
         app.state.serve_target_diagnostic = actual_report
 
         @app.get("/api/revision")
@@ -389,8 +404,14 @@ def _patch_webapp():
             data = capability_document_for(
                 "web",
                 read_only=app.state.read_only,
-                authentication=("token" if (app.state.config or {}).get("api", {}).get("token") else "none"),
-                writable_targets=[] if app.state.read_only else [app.state.writable_path],
+                authentication=(
+                    "token"
+                    if (app.state.config or {}).get("api", {}).get("token")
+                    else "none"
+                ),
+                writable_targets=[]
+                if app.state.read_only
+                else [app.state.writable_path],
                 config=app.state.config,
             )
             data["revision"] = current_revision(app.state.writable_path)
@@ -416,14 +437,19 @@ def _patch_webapp():
             token = None
             operation = _web_operation(method, path)
             if guarded:
-                header_supplied = "if-match" in request.headers or "x-lifetxt-expected-revision" in request.headers
+                header_supplied = (
+                    "if-match" in request.headers
+                    or "x-lifetxt-expected-revision" in request.headers
+                )
                 raw_expected = request.headers.get("if-match")
                 if raw_expected is None:
                     raw_expected = request.headers.get("x-lifetxt-expected-revision")
                 if not header_supplied:
                     return JSONResponse(
                         status_code=428,
-                        content=precondition_payload(app.state.writable_path, operation),
+                        content=precondition_payload(
+                            app.state.writable_path, operation
+                        ),
                     )
                 try:
                     transaction = SurfaceTransaction(
@@ -434,7 +460,9 @@ def _patch_webapp():
                 except ExpectedRevisionRequired:
                     return JSONResponse(
                         status_code=428,
-                        content=precondition_payload(app.state.writable_path, operation),
+                        content=precondition_payload(
+                            app.state.writable_path, operation
+                        ),
                     )
                 except MutationConflict as exc:
                     return JSONResponse(status_code=409, content=conflict_payload(exc))
@@ -450,7 +478,9 @@ def _patch_webapp():
                     try:
                         revision = transaction.commit()
                     except MutationConflict as exc:
-                        return JSONResponse(status_code=409, content=conflict_payload(exc))
+                        return JSONResponse(
+                            status_code=409, content=conflict_payload(exc)
+                        )
                     except UnsupportedFormatVersion as exc:
                         return JSONResponse(
                             status_code=409,
@@ -517,9 +547,17 @@ def _patch_mcp():
         if name not in MCP_REVISION_TOOLS:
             return _ORIGINALS["mcp_call_tool"](name, args, context)
         supplied = "expected_file_hash" in args or "file_hash" in args
-        expected = args.get("expected_file_hash") if "expected_file_hash" in args else args.get("file_hash")
+        expected = (
+            args.get("expected_file_hash")
+            if "expected_file_hash" in args
+            else args.get("file_hash")
+        )
         operation = "mcp.%s" % name
-        attempted = {"operation": operation, "tool": name, "argument_keys": sorted(args)}
+        attempted = {
+            "operation": operation,
+            "tool": name,
+            "argument_keys": sorted(args),
+        }
         if not supplied:
             return precondition_payload(context.writable_path, operation)
         try:
@@ -558,7 +596,9 @@ def _patch_mcp():
         found_capabilities = False
         for schema in schemas:
             name = schema.get("name")
-            input_schema = schema.setdefault("inputSchema", {"type": "object", "properties": {}})
+            input_schema = schema.setdefault(
+                "inputSchema", {"type": "object", "properties": {}}
+            )
             properties = input_schema.setdefault("properties", {})
             if name in MCP_REVISION_TOOLS:
                 properties["expected_file_hash"] = {
@@ -574,7 +614,10 @@ def _patch_mcp():
                     "enum": ["last-week", "last-month", "year"],
                     "description": "Named review range resolved by the shared review module.",
                 }
-                properties["year"] = {"type": "integer", "description": "Year used with range=year."}
+                properties["year"] = {
+                    "type": "integer",
+                    "description": "Year used with range=year.",
+                }
             if name == "get_capabilities":
                 found_capabilities = True
         if not found_capabilities:
@@ -582,7 +625,11 @@ def _patch_mcp():
                 {
                     "name": "get_capabilities",
                     "description": "Return the versioned MCP capability and revision contract.",
-                    "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": False,
+                    },
                     "annotations": {
                         "title": "get capabilities",
                         "readOnlyHint": True,

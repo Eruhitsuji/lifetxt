@@ -40,9 +40,11 @@ def install_release_policy_compatibility():
             require_validator=require_validator,
         )
         manifest["checks"]["translation_coverage"] = translation_policy_report(root)
-        manifest["checks"]["release_policy_definition"] = release_policy_definition_report(
-            root,
-            manifest["checks"],
+        manifest["checks"]["release_policy_definition"] = (
+            release_policy_definition_report(
+                root,
+                manifest["checks"],
+            )
         )
         manifest["ok"] = all(
             bool(report.get("ok")) for report in manifest["checks"].values()
@@ -112,7 +114,9 @@ def _fallback_packaging_metadata_report(root):
     )
     for name in ("web", "tui"):
         if name not in available_extras:
-            errors.append("project.optional-dependencies.%s is missing or empty." % name)
+            errors.append(
+                "project.optional-dependencies.%s is missing or empty." % name
+            )
     if not values["requires-python"]:
         errors.append("project.requires-python is required.")
     if not re.search(r"^\s*license\s*=", project, re.M):
@@ -180,7 +184,9 @@ def release_policy_definition_report(root, checks):
     available = set(checks)
     missing = sorted(set(required) - available)
     if missing:
-        errors.append("Required release checks are unavailable: %s." % ", ".join(missing))
+        errors.append(
+            "Required release checks are unavailable: %s." % ", ".join(missing)
+        )
     duplicate = len(required) != len(set(required))
     if duplicate:
         errors.append("required_checks contains duplicate names.")

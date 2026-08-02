@@ -50,8 +50,14 @@ DETAIL_EXAMPLES = (
 DETAIL_DESCRIPTIONS = {
     "id": ("Item ID.", "id:task_001"),
     "parent": ("Parent item ID for hierarchy or message thread.", "parent:task_001"),
-    "ref": ("Generic reference to another item ID. Repeat for multiple references.", "ref:task_001"),
-    "depends_on": ("Item ID that must be completed or resolved first.", "depends_on:task_001"),
+    "ref": (
+        "Generic reference to another item ID. Repeat for multiple references.",
+        "ref:task_001",
+    ),
+    "depends_on": (
+        "Item ID that must be completed or resolved first.",
+        "depends_on:task_001",
+    ),
     "blocks": ("Item ID that is blocked by this item.", "blocks:task_002"),
     "related": ("Looser related item ID.", "related:note_001"),
     "created": ("Creation date or datetime.", "created:2026-06-06"),
@@ -61,28 +67,55 @@ DETAIL_DESCRIPTIONS = {
     "do": ("Planned execution date or datetime.", "do:2026-06-10"),
     "from": ("Start datetime.", "from:2026-06-08T13:00"),
     "to": ("End datetime.", "to:2026-06-08T14:30"),
-    "state": ("Status / presence state such as busy, away, focus, or sleeping.", "state:busy"),
-    "user": ("User related to the item. Prefer a specific role key when possible.", "user:alice"),
+    "state": (
+        "Status / presence state such as busy, away, focus, or sleeping.",
+        "state:busy",
+    ),
+    "user": (
+        "User related to the item. Prefer a specific role key when possible.",
+        "user:alice",
+    ),
     "person": ("Person or target whose status is recorded.", "person:self"),
     "owner": ("Person accountable for the item.", "owner:alice"),
     "assignee": ("Person assigned to do the work.", "assignee:alice"),
     "attendee": ("Event participant. Repeat for multiple attendees.", "attendee:alice"),
     "sender": ("Message sender.", "sender:self"),
-    "recipient": ("Message recipient. Repeat for multiple recipients.", "recipient:alice"),
+    "recipient": (
+        "Message recipient. Repeat for multiple recipients.",
+        "recipient:alice",
+    ),
     "team": ("Team related to the item or used for team filtering.", "team:research"),
     "group": ("User group related to the item.", "group:lab"),
     "service": ("Source or target service.", "service:teams"),
     "channel": ("Message channel or delivery route.", "channel:teams"),
     "visibility": ("Visibility scope.", "visibility:team"),
     "notify_at": ("Notification date or datetime.", "notify_at:2026-06-06T09:00"),
-    "notify_from": ("Notification period start date or datetime.", "notify_from:2026-06-06T09:00"),
-    "notify_to": ("Notification period end date or datetime.", "notify_to:2026-06-06T17:00"),
+    "notify_from": (
+        "Notification period start date or datetime.",
+        "notify_from:2026-06-06T09:00",
+    ),
+    "notify_to": (
+        "Notification period end date or datetime.",
+        "notify_to:2026-06-06T17:00",
+    ),
     "ack": ("Notification acknowledgement date or datetime.", "ack:2026-06-06T09:05"),
-    "snooze_until": ("Suppress message notification until this date or datetime.", "snooze_until:2026-06-06T09:30"),
+    "snooze_until": (
+        "Suppress message notification until this date or datetime.",
+        "snooze_until:2026-06-06T09:30",
+    ),
     "on": ("All-day date.", "on:2026-06-08"),
-    "at": ("Reminder or execution time. Time values may include seconds, fractional seconds, or timezone.", "at:18:00:30.5+09:00"),
-    "repeat": ("Recurrence value: daily, weekly, monthly, yearly, weekdays, or RRULE:... .", "repeat:daily"),
-    "interval": ("Repeat every N units. For repeat:weekly interval:2 means every two weeks.", "interval:2"),
+    "at": (
+        "Reminder or execution time. Time values may include seconds, fractional seconds, or timezone.",
+        "at:18:00:30.5+09:00",
+    ),
+    "repeat": (
+        "Recurrence value: daily, weekly, monthly, yearly, weekdays, or RRULE:... .",
+        "repeat:daily",
+    ),
+    "interval": (
+        "Repeat every N units. For repeat:weekly interval:2 means every two weeks.",
+        "interval:2",
+    ),
     "until": ("Last recurrence date or datetime.", "until:2026-12-31"),
     "count": ("Maximum number of recurrence occurrences.", "count:10"),
     "project": ("Project name.", "project:research"),
@@ -93,7 +126,10 @@ DETAIL_DESCRIPTIONS = {
     "elapsed": ("Actual elapsed duration.", "elapsed:1h30m"),
     "tag": ("Tag. Repeat the key for multiple tags.", "tag:important"),
     "note": ("Short note.", 'note:"Check later"'),
-    "body": ("Long body text for any type. Multiline life.txt uses continuation lines starting with |.", "body:short_text"),
+    "body": (
+        "Long body text for any type. Multiline life.txt uses continuation lines starting with |.",
+        "body:short_text",
+    ),
     "mood": ("Mood for a diary or journal entry.", "mood:good"),
     "weather": ("Weather for a diary or journal entry.", "weather:sunny"),
     "url": ("Related URL.", "url:https://example.com"),
@@ -110,7 +146,9 @@ class PromptSession(object):
         if enable_completion:
             self._readline = _import_readline()
 
-    def read(self, name, default="", candidates=None, help_topic=None, allow_empty=True):
+    def read(
+        self, name, default="", candidates=None, help_topic=None, allow_empty=True
+    ):
         candidates = candidates or []
         while True:
             prompt = _format_prompt(name, default)
@@ -172,7 +210,9 @@ class FieldCompleter(object):
 
     def matches_for(self, text):
         prefix = text or ""
-        return [candidate for candidate in self.candidates if candidate.startswith(prefix)]
+        return [
+            candidate for candidate in self.candidates if candidate.startswith(prefix)
+        ]
 
     def complete_value(self, value):
         prefix, token = _completion_prefix(value)
@@ -302,7 +342,9 @@ def print_help(topic=None):
         print("Interactive assist help")
         print("  Enter ? or help at any prompt to show help.")
         print("  Enter ?type, ?status, or ?detail for specific help.")
-        print("  Tab completes values when the terminal supports it; Up/Down recall history.")
+        print(
+            "  Tab completes values when the terminal supports it; Up/Down recall history."
+        )
         print("  Empty input accepts the displayed default.")
         _print_type_help()
         _print_status_help()
@@ -314,7 +356,9 @@ def print_detail_help(kind):
 
 def print_detail_summary(kind):
     print("Details: key:value or key=value. Empty finishes.")
-    print("Help: ?detail lists suggested keys; ?all lists known keys; ?due shows key help.")
+    print(
+        "Help: ?detail lists suggested keys; ?all lists known keys; ?due shows key help."
+    )
     if kind in RECOMMENDED_KEYS_BY_TYPE:
         keys = ", ".join(RECOMMENDED_KEYS_BY_TYPE[kind])
         print("Suggested keys for %s: %s" % (kind, keys))
@@ -336,14 +380,18 @@ def _print_type_help():
     print("Type values:")
     for code, name, description in TYPE_DESCRIPTIONS:
         aliases = _aliases_for(TYPE_ALIASES, code)
-        print("  %-2s %-9s %s%s" % (code, name + ":", description, _alias_suffix(aliases)))
+        print(
+            "  %-2s %-9s %s%s" % (code, name + ":", description, _alias_suffix(aliases))
+        )
 
 
 def _print_status_help():
     print("Status values:")
     for code, name, description in STATUS_DESCRIPTIONS:
         aliases = _aliases_for(STATUS_ALIASES, code)
-        print("  %-3s %-9s %s%s" % (code, name + ":", description, _alias_suffix(aliases)))
+        print(
+            "  %-3s %-9s %s%s" % (code, name + ":", description, _alias_suffix(aliases))
+        )
     print("Suggested detail keys by status:")
     for code, keys in RECOMMENDED_KEYS_BY_STATUS.items():
         print("  %-3s %s" % (code, ", ".join(keys)))
@@ -357,7 +405,9 @@ def _print_detail_help(kind):
     if kind == "all":
         print("Known detail keys by category:")
         _print_all_key_tables()
-        print("Type-specific and status-specific help lists the shorter recommended set.")
+        print(
+            "Type-specific and status-specific help lists the shorter recommended set."
+        )
         print("Detail format:")
         print("  key:value or key=value")
         return
@@ -393,7 +443,9 @@ def _print_key_help(topic):
     print("%s: %s" % (key, description))
     print("Example: " + example)
     if key == "state":
-        print("Recommended values: available, busy, away, offline, dnd, focus, sleeping, commuting, working, studying, meeting, custom")
+        print(
+            "Recommended values: available, busy, away, offline, dnd, focus, sleeping, commuting, working, studying, meeting, custom"
+        )
 
 
 def _print_key_table(keys):
@@ -471,7 +523,11 @@ def _format_prompt(name, default):
 
 def _is_help_request(value):
     value = value.strip().lower()
-    return value in ("?", "help", "h") or value.startswith("?") or value.startswith("help ")
+    return (
+        value in ("?", "help", "h")
+        or value.startswith("?")
+        or value.startswith("help ")
+    )
 
 
 def _help_topic_from_request(value, fallback):

@@ -1,4 +1,5 @@
 """Schemas for typed development-ticket custom fields."""
+
 from __future__ import unicode_literals
 
 import copy
@@ -21,8 +22,14 @@ def custom_field_registry_schema():
             "type": {
                 "type": "string",
                 "enum": [
-                    "string", "integer", "number", "boolean",
-                    "date", "datetime", "duration", "enum",
+                    "string",
+                    "integer",
+                    "number",
+                    "boolean",
+                    "date",
+                    "datetime",
+                    "duration",
+                    "enum",
                 ],
                 "default": "string",
             },
@@ -79,8 +86,13 @@ def custom_field_registry_schema():
                 {
                     "type": "string",
                     "enum": [
-                        "string", "integer", "number", "boolean",
-                        "date", "datetime", "duration",
+                        "string",
+                        "integer",
+                        "number",
+                        "boolean",
+                        "date",
+                        "datetime",
+                        "duration",
                     ],
                 },
                 definition,
@@ -91,7 +103,12 @@ def custom_field_registry_schema():
 
 def schema_bundle_v17():
     return OrderedDict(
-        (("ticket-custom-field-registry-v1.schema.json", custom_field_registry_schema()),)
+        (
+            (
+                "ticket-custom-field-registry-v1.schema.json",
+                custom_field_registry_schema(),
+            ),
+        )
     )
 
 

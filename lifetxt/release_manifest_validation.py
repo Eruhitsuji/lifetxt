@@ -28,7 +28,9 @@ def install_release_manifest_validation():
                     ("validator_available", False),
                     (
                         "errors",
-                        ["Install jsonschema to validate the generated release manifest."]
+                        [
+                            "Install jsonschema to validate the generated release manifest."
+                        ]
                         if require_validator
                         else [],
                     ),

@@ -5,7 +5,12 @@ import os
 import tempfile
 import unittest
 
-from lifetxt.mutation import MISSING_HASH, MutationConflict, read_text_snapshot, write_text
+from lifetxt.mutation import (
+    MISSING_HASH,
+    MutationConflict,
+    read_text_snapshot,
+    write_text,
+)
 from lifetxt.revision_telemetry import (
     RevisionMetricsStore,
     RevisionTelemetryError,
@@ -130,7 +135,9 @@ class RevisionTelemetryWebTests(unittest.TestCase):
         )
         self.assertEqual(428, response.status_code)
         self.assertEqual("required", response.json()["revision_mode"])
-        self.assertEqual(0, client.get("/api/revision-metrics").json()["legacy_fallback_total"])
+        self.assertEqual(
+            0, client.get("/api/revision-metrics").json()["legacy_fallback_total"]
+        )
 
     def test_required_mode_accepts_if_match_and_exposes_timezone(self):
         client = self.TestClient(self.app("required"))

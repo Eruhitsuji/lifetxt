@@ -40,7 +40,20 @@ class WorkspaceDiagnosticsV2Tests(unittest.TestCase):
         self.assertTrue({"F111", "F112", "F113", "F114"}.issubset(codes))
         stable = stable_file_diagnostics(path)
         self.assertFalse(stable["ok"])
-        self.assertEqual(sorted(stable["diagnostics"], key=lambda row: (row.get("source") or "", row.get("line") or 0, row.get("column") or 0, {"error": 0, "warning": 1, "info": 2}.get(row.get("severity"), 9), row.get("code") or "", row.get("message") or "")), stable["diagnostics"])
+        self.assertEqual(
+            sorted(
+                stable["diagnostics"],
+                key=lambda row: (
+                    row.get("source") or "",
+                    row.get("line") or 0,
+                    row.get("column") or 0,
+                    {"error": 0, "warning": 1, "info": 2}.get(row.get("severity"), 9),
+                    row.get("code") or "",
+                    row.get("message") or "",
+                ),
+            ),
+            stable["diagnostics"],
+        )
 
     def test_duplicate_ids_across_active_and_archive_are_errors(self):
         active = self.write("active.txt", "[ ] T Active id:X\n")
@@ -60,7 +73,9 @@ class WorkspaceDiagnosticsV2Tests(unittest.TestCase):
         self.assertIn("F116", codes)
         self.assertIn("F117", codes)
         self.assertIn("F118", codes)
-        cycle_messages = [row["message"] for row in report["diagnostics"] if row["code"] == "F118"]
+        cycle_messages = [
+            row["message"] for row in report["diagnostics"] if row["code"] == "F118"
+        ]
         self.assertEqual(1, len(cycle_messages))
 
     def test_corrupt_timer_state_is_reported(self):

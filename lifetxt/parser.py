@@ -308,7 +308,9 @@ def parse_line(line, line_no=1):
 
     if pos >= len(text):
         diagnostics.append(
-            _diagnostic("error", "E004", "Expected an item type.", line_no, indent + pos + 1)
+            _diagnostic(
+                "error", "E004", "Expected an item type.", line_no, indent + pos + 1
+            )
         )
         return None, diagnostics
 
@@ -336,7 +338,9 @@ def parse_line(line, line_no=1):
     if pos is None:
         return None, diagnostics
 
-    title, pos = _parse_string(text, pos, line_no, diagnostics, "title", column_offset=indent)
+    title, pos = _parse_string(
+        text, pos, line_no, diagnostics, "title", column_offset=indent
+    )
     if title is None:
         return None, diagnostics
 
@@ -372,11 +376,21 @@ def parse_line(line, line_no=1):
                 )
             )
             break
-        key, value, pos = _parse_detail(text, pos, line_no, diagnostics, column_offset=indent)
+        key, value, pos = _parse_detail(
+            text, pos, line_no, diagnostics, column_offset=indent
+        )
         if key is not None:
             details.setdefault(key, []).append(value)
 
-    return Item(status, kind, title, details, line_no, source_text=line.rstrip("\r\n"), indent=indent), diagnostics
+    return Item(
+        status,
+        kind,
+        title,
+        details,
+        line_no,
+        source_text=line.rstrip("\r\n"),
+        indent=indent,
+    ), diagnostics
 
 
 def _append_body_continuation(item, line):
@@ -484,7 +498,13 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
 
     if pos == key_start:
         diagnostics.append(
-            _diagnostic("error", "E009", "Expected a detail key.", line_no, column_offset + pos + 1)
+            _diagnostic(
+                "error",
+                "E009",
+                "Expected a detail key.",
+                line_no,
+                column_offset + pos + 1,
+            )
         )
         return None, None, _skip_token(text, pos)
 
@@ -540,7 +560,9 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
 def _parse_string(text, pos, line_no, diagnostics, role, column_offset=0):
     if pos >= len(text):
         diagnostics.append(
-            _diagnostic("error", "E013", "Expected %s." % role, line_no, column_offset + pos + 1)
+            _diagnostic(
+                "error", "E013", "Expected %s." % role, line_no, column_offset + pos + 1
+            )
         )
         return None, pos
 
@@ -625,7 +647,7 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
                     _diagnostic(
                         "warning",
                         "W005",
-                        "Only \\\" and \\\\ escapes are defined by the specification.",
+                        'Only \\" and \\\\ escapes are defined by the specification.',
                         line_no,
                         column_offset + pos + 1,
                     )

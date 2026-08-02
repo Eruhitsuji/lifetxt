@@ -4,6 +4,7 @@ The WKST cases come from RFC 5545 section 3.8.5.3, which gives two rules that
 differ only in WKST and produce different dates. That pair is the whole point
 of the feature, so it is asserted verbatim.
 """
+
 import os
 import shutil
 import sys
@@ -21,8 +22,10 @@ from lifetxt.parser import parse_text
 
 
 def _dates(rule, start, **kwargs):
-    return [moment.strftime("%Y-%m-%d")
-            for moment in recurrence.expand(recurrence.parse_rule(rule), start, **kwargs)]
+    return [
+        moment.strftime("%Y-%m-%d")
+        for moment in recurrence.expand(recurrence.parse_rule(rule), start, **kwargs)
+    ]
 
 
 class WkstParsingTests(unittest.TestCase):
@@ -52,18 +55,30 @@ class Rfc5545ExampleTests(unittest.TestCase):
     START = datetime(1997, 8, 5, 9, 0)
 
     def test_week_starting_monday(self):
-        dates = _dates("RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO", self.START)
+        dates = _dates(
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO", self.START
+        )
 
-        self.assertEqual(["1997-08-05", "1997-08-10", "1997-08-19", "1997-08-24"], dates)
+        self.assertEqual(
+            ["1997-08-05", "1997-08-10", "1997-08-19", "1997-08-24"], dates
+        )
 
     def test_week_starting_sunday(self):
-        dates = _dates("RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU", self.START)
+        dates = _dates(
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU", self.START
+        )
 
-        self.assertEqual(["1997-08-05", "1997-08-17", "1997-08-19", "1997-08-31"], dates)
+        self.assertEqual(
+            ["1997-08-05", "1997-08-17", "1997-08-19", "1997-08-31"], dates
+        )
 
     def test_the_two_actually_differ(self):
-        monday = _dates("RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO", self.START)
-        sunday = _dates("RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU", self.START)
+        monday = _dates(
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO", self.START
+        )
+        sunday = _dates(
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU", self.START
+        )
 
         self.assertNotEqual(monday, sunday)
 
@@ -92,20 +107,27 @@ class WkstScopeTests(unittest.TestCase):
         self.assertIn("weeks start Sunday", text)
 
     def test_description_stays_quiet_when_it_cannot_matter(self):
-        self.assertNotIn("weeks start", recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=MO;WKST=SU"))
-        self.assertNotIn("weeks start", recurrence.describe("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO"))
+        self.assertNotIn(
+            "weeks start", recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=MO;WKST=SU")
+        )
+        self.assertNotIn(
+            "weeks start", recurrence.describe("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")
+        )
 
 
 class DescriptionAccuracyTests(unittest.TestCase):
     def test_weekly_does_not_claim_a_position_it_ignores(self):
         # Weekly expansion drops the number, so describing "2nd Monday" while
         # returning every Monday was a lie about what would happen.
-        self.assertEqual("Every week on Monday",
-                         recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=2MO"))
+        self.assertEqual(
+            "Every week on Monday", recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=2MO")
+        )
 
     def test_monthly_still_names_the_position(self):
-        self.assertEqual("Every month on 2nd Monday",
-                         recurrence.describe("RRULE:FREQ=MONTHLY;BYDAY=2MO"))
+        self.assertEqual(
+            "Every month on 2nd Monday",
+            recurrence.describe("RRULE:FREQ=MONTHLY;BYDAY=2MO"),
+        )
 
 
 class ValidatorAgreesWithTheEngineTests(unittest.TestCase):
@@ -113,12 +135,16 @@ class ValidatorAgreesWithTheEngineTests(unittest.TestCase):
 
     def _warnings(self, line):
         items = parse_text(line)[0]
-        return [d.message for item in items for d in validate_item(item) if d.code == "W223"]
+        return [
+            d.message for item in items for d in validate_item(item) if d.code == "W223"
+        ]
 
     def test_supported_keys_are_derived_from_the_engine(self):
         from lifetxt import validator
 
-        self.assertEqual(set(recurrence.SUPPORTED_PARTS), validator._SUPPORTED_RRULE_KEYS)
+        self.assertEqual(
+            set(recurrence.SUPPORTED_PARTS), validator._SUPPORTED_RRULE_KEYS
+        )
 
     def test_expandable_rules_produce_no_warning(self):
         for rule in (
@@ -133,19 +159,33 @@ class ValidatorAgreesWithTheEngineTests(unittest.TestCase):
             self.assertEqual([], self._warnings(line), rule)
 
     def test_genuinely_unsupported_parts_still_warn(self):
-        self.assertTrue(self._warnings("[ ] E M repeat:RRULE:FREQ=WEEKLY;BYSETPOS=1 from:2026-07-06\n"))
-        self.assertTrue(self._warnings("[ ] E M repeat:RRULE:FREQ=HOURLY from:2026-07-06\n"))
+        self.assertTrue(
+            self._warnings(
+                "[ ] E M repeat:RRULE:FREQ=WEEKLY;BYSETPOS=1 from:2026-07-06\n"
+            )
+        )
+        self.assertTrue(
+            self._warnings("[ ] E M repeat:RRULE:FREQ=HOURLY from:2026-07-06\n")
+        )
 
     def test_positional_byday_warns_only_where_it_is_ignored(self):
-        weekly = self._warnings("[ ] E M repeat:RRULE:FREQ=WEEKLY;BYDAY=2MO from:2026-07-06\n")
-        monthly = self._warnings("[ ] E M repeat:RRULE:FREQ=MONTHLY;BYDAY=2MO from:2026-07-06\n")
+        weekly = self._warnings(
+            "[ ] E M repeat:RRULE:FREQ=WEEKLY;BYDAY=2MO from:2026-07-06\n"
+        )
+        monthly = self._warnings(
+            "[ ] E M repeat:RRULE:FREQ=MONTHLY;BYDAY=2MO from:2026-07-06\n"
+        )
 
         self.assertTrue(weekly)
         self.assertIn("ignored for FREQ=WEEKLY", weekly[0])
         self.assertEqual([], monthly)
 
     def test_a_malformed_weekday_still_warns(self):
-        self.assertTrue(self._warnings("[ ] E M repeat:RRULE:FREQ=WEEKLY;BYDAY=XX from:2026-07-06\n"))
+        self.assertTrue(
+            self._warnings(
+                "[ ] E M repeat:RRULE:FREQ=WEEKLY;BYDAY=XX from:2026-07-06\n"
+            )
+        )
 
 
 ICS = """BEGIN:VCALENDAR
@@ -179,7 +219,12 @@ class IcsExpansionTests(unittest.TestCase):
         self.assertEqual(5, len(items))
         starts = [i.details["from"][0] for i in items[:4]]
         self.assertEqual(
-            ["2026-07-06T09:00", "2026-07-08T09:00", "2026-07-13T09:00", "2026-07-15T09:00"],
+            [
+                "2026-07-06T09:00",
+                "2026-07-08T09:00",
+                "2026-07-13T09:00",
+                "2026-07-15T09:00",
+            ],
             starts,
         )
 
@@ -219,7 +264,9 @@ class IcsExpansionTests(unittest.TestCase):
         items = items_from_ics_text(text, expand=True)
         starts = [i.details["from"][0][:10] for i in items[:4]]
 
-        self.assertEqual(["1997-08-05", "1997-08-17", "1997-08-19", "1997-08-31"], starts)
+        self.assertEqual(
+            ["1997-08-05", "1997-08-17", "1997-08-19", "1997-08-31"], starts
+        )
 
     def test_expansion_is_bounded(self):
         unbounded = (
@@ -260,7 +307,9 @@ class IcsExpansionTests(unittest.TestCase):
             "DTSTART:20260706T090000\nRRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=4\n"
             "%sEND:VEVENT\nEND:VCALENDAR\n" % extra
         )
-        return [i.details["from"][0][:10] for i in items_from_ics_text(text, expand=True)]
+        return [
+            i.details["from"][0][:10] for i in items_from_ics_text(text, expand=True)
+        ]
 
     def test_exdate_removes_a_cancelled_occurrence(self):
         # A feed cancels one date with EXDATE. Materializing it anyway would

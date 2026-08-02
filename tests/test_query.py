@@ -123,11 +123,15 @@ class SavedViewTests(unittest.TestCase):
             saved_views.get_saved_view(self.config, "nope")
 
     def test_validate_reports_bad_query(self):
-        rows = saved_views.validate_saved_views({"saved_views": {"bad": {"query": "due<xx"}}})
+        rows = saved_views.validate_saved_views(
+            {"saved_views": {"bad": {"query": "due<xx"}}}
+        )
         self.assertEqual("V002", rows[0]["code"])
 
     def test_validate_reports_empty_query(self):
-        rows = saved_views.validate_saved_views({"saved_views": {"empty": {"query": ""}}})
+        rows = saved_views.validate_saved_views(
+            {"saved_views": {"empty": {"query": ""}}}
+        )
         self.assertEqual("V001", rows[0]["code"])
 
     def test_list_form_supported(self):

@@ -25,6 +25,8 @@ guide for command compatibility, filters, output formats, and conversion rules.
 
 ## Getting Started
 
+lifetxt supports Python 3.10 or newer.
+
 New to lifetxt? Start with `init` and `doctor`:
 
 ```sh
@@ -386,4 +388,12 @@ Run tests with:
 
 ```sh
 python -m unittest discover
+```
+
+Install developer tooling and run the configured commands with:
+
+```sh
+python -m pip install -e ".[dev]"
+ruff format lifetxt tests scripts
+ruff check lifetxt tests scripts
 ```

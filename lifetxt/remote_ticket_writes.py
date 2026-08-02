@@ -1,4 +1,5 @@
 """Install protocol-v2 authenticated single-source Remote ticket mutations."""
+
 from __future__ import unicode_literals
 
 from . import mutation
@@ -50,9 +51,9 @@ def install_remote_ticket_writes():
         return enrich_capability(original_capability, config, protocol_version)
 
     remote_access.capability = capability
-    remote_access.capability_revision = (
-        lambda config: capability(config, 2)["capability_revision"]
-    )
+    remote_access.capability_revision = lambda config: capability(config, 2)[
+        "capability_revision"
+    ]
     remote_web.capability = capability
     original_create_app = webapp.create_app
 
@@ -96,9 +97,7 @@ def install_remote_ticket_writes():
                         "A writable life.txt source is required.",
                         409,
                     )
-                operation = str(
-                    (payload or {}).get("operation") or ""
-                ).strip().lower()
+                operation = str((payload or {}).get("operation") or "").strip().lower()
                 if operation not in OPERATIONS:
                     raise RemoteAccessError(
                         "REMOTE_TICKET_OPERATION_UNKNOWN",
@@ -108,9 +107,7 @@ def install_remote_ticket_writes():
                 txid = transaction_id(payload)
                 digest = request_hash(operation, payload)
                 key = ticket_key(app.state.config)
-                ticket_id_value = str(
-                    (payload or {}).get("ticket_id") or ""
-                ).strip()
+                ticket_id_value = str((payload or {}).get("ticket_id") or "").strip()
                 path = (
                     writable_path
                     if operation == "create"
@@ -190,9 +187,7 @@ def install_remote_ticket_writes():
                     result.get("revision_after"),
                 )
                 aggregate_after = (
-                    aggregate_before
-                    if dry_run
-                    else source_revision(app.state.paths)
+                    aggregate_before if dry_run else source_revision(app.state.paths)
                 )
                 return mutation_response(
                     operation,

@@ -41,9 +41,14 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
             self.assertTrue(strict["ok"], strict)
             self.assertEqual(76, strict["schema_count"])
             self.assertEqual(76, strict["sample_count"])
-            self.assertEqual("network-free referencing.Registry over published bundle", strict["reference_resolution"])
+            self.assertEqual(
+                "network-free referencing.Registry over published bundle",
+                strict["reference_resolution"],
+            )
 
-    @unittest.skipUnless(has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available")
+    @unittest.skipUnless(
+        has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available"
+    )
     def test_real_doctor_report_validates_with_references(self):
         from jsonschema import Draft202012Validator
         from referencing import Registry, Resource
@@ -96,7 +101,9 @@ class RealCapabilitySchemaTests(unittest.TestCase):
     def test_actual_web_capability_response_validates(self):
         from fastapi.testclient import TestClient
 
-        client = TestClient(webapp.create_app(paths=[self.path], writable_path=self.path))
+        client = TestClient(
+            webapp.create_app(paths=[self.path], writable_path=self.path)
+        )
         response = client.get("/api/capabilities")
         self.assertEqual(200, response.status_code)
         self.validate_capability(response.json())

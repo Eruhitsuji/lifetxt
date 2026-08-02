@@ -111,9 +111,7 @@ def status_records_to_json(records, pretty=False):
 def status_records_to_jsonl(records):
     lines = []
     for record in records:
-        lines.append(
-            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
-        )
+        lines.append(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
     return "\n".join(lines)
 
 

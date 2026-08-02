@@ -41,30 +41,59 @@ class P0CliV6Tests(unittest.TestCase):
             )
         proposal = os.path.join(self.root, "proposal.json")
         command = "%s %s {file}" % (shlex.quote(sys.executable), shlex.quote(script))
-        prepared = self.run_cli([
-            "safety", "delegated", "prepare", "--path", self.life,
-            "--proposal", proposal, "--command", command,
-        ])
+        prepared = self.run_cli(
+            [
+                "safety",
+                "delegated",
+                "prepare",
+                "--path",
+                self.life,
+                "--proposal",
+                proposal,
+                "--command",
+                command,
+            ]
+        )
         self.assertTrue(prepared["changed"])
-        inspected = self.run_cli([
-            "safety", "delegated", "inspect", "--proposal", proposal,
-        ])
+        inspected = self.run_cli(
+            [
+                "safety",
+                "delegated",
+                "inspect",
+                "--proposal",
+                proposal,
+            ]
+        )
         self.assertEqual("prepared", inspected["state"])
         self.assertEqual(prepared["proposal_revision"], inspected["proposal_revision"])
-        applied = self.run_cli([
-            "safety", "delegated", "apply", "--proposal", proposal,
-            "--expected-proposal-revision", inspected["proposal_revision"],
-        ])
+        applied = self.run_cli(
+            [
+                "safety",
+                "delegated",
+                "apply",
+                "--proposal",
+                proposal,
+                "--expected-proposal-revision",
+                inspected["proposal_revision"],
+            ]
+        )
         self.assertTrue(applied["applied"])
         with open(self.life, encoding="utf-8") as handle:
             self.assertIn("After", handle.read())
 
     def test_fault_drill_cli_auto_recovery_and_repeat(self):
-        report = self.run_cli([
-            "safety", "transactions", "drill",
-            "--point", "after_journal_publish",
-            "--recovery", "auto", "--repeat-recovery",
-        ])
+        report = self.run_cli(
+            [
+                "safety",
+                "transactions",
+                "drill",
+                "--point",
+                "after_journal_publish",
+                "--recovery",
+                "auto",
+                "--repeat-recovery",
+            ]
+        )
         self.assertTrue(report["ok"])
         self.assertEqual("resume", report["recovery"])
         self.assertTrue(report["repeat_recovery"])
@@ -75,23 +104,38 @@ class P0CliV6Tests(unittest.TestCase):
         with open(other, "w", encoding="utf-8") as handle:
             handle.write("before-other\n")
         journals = os.path.join(self.root, "journals")
-        result = apply_multi_target([
-            text_plan(
-                self.life, lambda _value: "[x] T After id:t1\n",
-                mutation.read_text_snapshot(self.life).content_hash,
-            ),
-            text_plan(
-                other, lambda _value: "after-other\n",
-                mutation.read_text_snapshot(other).content_hash,
-            ),
-        ], operation="cli.restore", journal_dir=journals, transaction_id="cli-restore")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    self.life,
+                    lambda _value: "[x] T After id:t1\n",
+                    mutation.read_text_snapshot(self.life).content_hash,
+                ),
+                text_plan(
+                    other,
+                    lambda _value: "after-other\n",
+                    mutation.read_text_snapshot(other).content_hash,
+                ),
+            ],
+            operation="cli.restore",
+            journal_dir=journals,
+            transaction_id="cli-restore",
+        )
         backup_root = os.path.join(self.root, "backups")
         abandoned = abandon_with_backup(result.journal_path, backup_root)
-        report = self.run_cli([
-            "safety", "transactions", "restore-backup",
-            "--backup-dir", abandoned["backup_path"],
-            "--restore-action", "inspect", "--operator", "alice",
-        ])
+        report = self.run_cli(
+            [
+                "safety",
+                "transactions",
+                "restore-backup",
+                "--backup-dir",
+                abandoned["backup_path"],
+                "--restore-action",
+                "inspect",
+                "--operator",
+                "alice",
+            ]
+        )
         self.assertTrue(report["ok"])
         self.assertIsNone(report["working_dir"])
 

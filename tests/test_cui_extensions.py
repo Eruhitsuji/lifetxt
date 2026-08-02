@@ -31,7 +31,9 @@ class CompletionTests(unittest.TestCase):
             script = generator()
 
             self.assertTrue(script.strip(), name)
-            self.assertNotIn("%(", script, "%s left an unsubstituted placeholder" % name)
+            self.assertNotIn(
+                "%(", script, "%s left an unsubstituted placeholder" % name
+            )
 
     def test_shell_generators_include_the_shared_option_values(self):
         for name in ("bash", "zsh"):
@@ -96,8 +98,17 @@ class CompletionTests(unittest.TestCase):
         # completion from argparse alone silently dropped them from every shell.
         offered = completion._command_names()
 
-        for command in ("next", "show", "edit", "path", "count",
-                        "invoice", "standup", "to-ics", "from-todo"):
+        for command in (
+            "next",
+            "show",
+            "edit",
+            "path",
+            "count",
+            "invoice",
+            "standup",
+            "to-ics",
+            "from-todo",
+        ):
             self.assertIn(command, offered)
 
     def test_completion_options_cover_argparse_long_options(self):
@@ -132,7 +143,15 @@ class CliParserConsistencyTests(unittest.TestCase):
             "--after",
             "--before",
         }
-        for command in ("filter", "agenda", "stats", "to-json", "to-jsonl", "to-csv", "markdown"):
+        for command in (
+            "filter",
+            "agenda",
+            "stats",
+            "to-json",
+            "to-jsonl",
+            "to-csv",
+            "markdown",
+        ):
             subparser = _subparser(parser, command)
             options = {
                 option
@@ -206,7 +225,9 @@ class GitHookTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             hooks_dir = os.path.join(tmp, ".git", "hooks")
             os.makedirs(hooks_dir)
-            with open(os.path.join(hooks_dir, "pre-commit"), "w", encoding="utf-8") as handle:
+            with open(
+                os.path.join(hooks_dir, "pre-commit"), "w", encoding="utf-8"
+            ) as handle:
                 handle.write("#!/bin/sh\necho custom\n")
             args = argparse.Namespace(
                 repo_dir=tmp,
@@ -281,7 +302,9 @@ class TimerTests(unittest.TestCase):
                 config_data=config_data,
             )
             command_args = argparse.Namespace(config_data=config_data)
-            stop_args = argparse.Namespace(path=None, item_id=None, config_data=config_data)
+            stop_args = argparse.Namespace(
+                path=None, item_id=None, config_data=config_data
+            )
             status_args = argparse.Namespace(paths=[path], config_data=config_data)
             original_now = timer._now
             try:
@@ -355,7 +378,9 @@ class TimerTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertIn("Running: t1", stdout)
 
-            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "pause")
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config", config_path, "timer", "pause"
+            )
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertIn("Paused timer for t1", stdout)
@@ -373,14 +398,18 @@ class TimerTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertIn("Paused: t1", stdout)
 
-            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "resume")
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config", config_path, "timer", "resume"
+            )
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertIn("Resumed timer for t1", stdout)
             with open(state_file, "r", encoding="utf-8") as handle:
                 self.assertEqual("", json.load(handle)["paused_at"])
 
-            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "stop")
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config", config_path, "timer", "stop"
+            )
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertIn("Stopped timer for t1", stdout)
@@ -401,7 +430,9 @@ class TimerTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertTrue(os.path.exists(state_file))
 
-            stdout, stderr, code = run_lifetxt_cli("--config", config_path, "timer", "cancel")
+            stdout, stderr, code = run_lifetxt_cli(
+                "--config", config_path, "timer", "cancel"
+            )
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             self.assertIn("Canceled running timer.", stdout)
@@ -529,7 +560,9 @@ class EditorResolutionTests(unittest.TestCase):
         self.assertLess(command.index("-n"), command.index("--wait"))
 
     def test_quoted_path_with_spaces_stays_one_argument(self):
-        command = fzf_helper.editor_command('"C:/Program Files/App/ed.exe"', "life.txt", 3)
+        command = fzf_helper.editor_command(
+            '"C:/Program Files/App/ed.exe"', "life.txt", 3
+        )
 
         self.assertEqual("C:/Program Files/App/ed.exe", command[0])
         self.assertEqual("life.txt", command[-1])
@@ -578,12 +611,16 @@ class WorkspaceEditSuspendTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T A id:t1\n")
-            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            args = argparse.Namespace(
+                paths=[path], config_data={"tui": {"session": "off"}}
+            )
             state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
             state.reload()
             state.suspend = suspend
 
-            with patch.object(fzf_helper, "open_editor", lambda *a, **k: events.append("editor")):
+            with patch.object(
+                fzf_helper, "open_editor", lambda *a, **k: events.append("editor")
+            ):
                 tui_app.run_command(state, "/edit")
 
         self.assertEqual(["suspend", "editor", "restore"], events)
@@ -593,7 +630,9 @@ class WorkspaceEditSuspendTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T A id:t1\n")
-            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            args = argparse.Namespace(
+                paths=[path], config_data={"tui": {"session": "off"}}
+            )
             state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
             state.reload()
 
@@ -639,7 +678,9 @@ class FzfHelperTests(unittest.TestCase):
         self.assertIn("id:t1", line)
 
     def test_preview_token_formats_body_and_source(self):
-        items, diagnostics = parse_text("[ ] T Write_Report id:t1\n| first line\n| second line\n")
+        items, diagnostics = parse_text(
+            "[ ] T Write_Report id:t1\n| first line\n| second line\n"
+        )
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
         items[0].source = "life.txt"
 
@@ -664,7 +705,10 @@ class FzfHelperTests(unittest.TestCase):
         original_stdin = sys.stdin
         try:
             sys.stdin = io.StringIO("y\n")
-            with redirect_stdout(io.StringIO()) as stdout, redirect_stderr(io.StringIO()):
+            with (
+                redirect_stdout(io.StringIO()) as stdout,
+                redirect_stderr(io.StringIO()),
+            ):
                 result = fzf_helper.run_action("delete", [record], args)
         finally:
             sys.stdin = original_stdin
@@ -690,7 +734,9 @@ class TuiTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T Write_Report id:t1\n")
-            output = tui.render_dashboard(argparse.Namespace(paths=[path]), focus="tasks")
+            output = tui.render_dashboard(
+                argparse.Namespace(paths=[path]), focus="tasks"
+            )
 
         self.assertIn("modern terminal workspace", output)
         self.assertIn("Cards: open:1", output)
@@ -713,13 +759,19 @@ class TuiTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(
-                    "[ ] T First id:t1 project:work\n"
-                    "[ ] T Second id:t2 project:work\n"
+                    "[ ] T First id:t1 project:work\n[ ] T Second id:t2 project:work\n"
                 )
             output = tui.render_dashboard(
                 argparse.Namespace(
                     paths=[path],
-                    config_data={"tui": {"theme": "light", "keymap": "arrows", "limit": 1, "agenda_window": "6h"}},
+                    config_data={
+                        "tui": {
+                            "theme": "light",
+                            "keymap": "arrows",
+                            "limit": 1,
+                            "agenda_window": "6h",
+                        }
+                    },
                 ),
                 focus="tasks",
             )
@@ -801,7 +853,9 @@ class TuiTests(unittest.TestCase):
         self.assertNotIn("Work_Task", filtered)
 
     def test_render_dashboard_safe_shows_errors(self):
-        output = tui.render_dashboard_safe(argparse.Namespace(paths=["missing.life.txt"]))
+        output = tui.render_dashboard_safe(
+            argparse.Namespace(paths=["missing.life.txt"])
+        )
 
         self.assertIn("Could not load life.txt data.", output)
         self.assertIn("ERROR:", output)
@@ -920,7 +974,9 @@ class WorkspaceStateTests(unittest.TestCase):
         path = os.path.join(self._tmp.name, "life.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(self.SAMPLE if text is None else text)
-        args = argparse.Namespace(paths=[path], config_data={"tui": config} if config else {})
+        args = argparse.Namespace(
+            paths=[path], config_data={"tui": config} if config else {}
+        )
         state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
         state.reload()
         return state, path
@@ -1048,7 +1104,9 @@ class WorkspaceStateTests(unittest.TestCase):
         self.assertEqual(["Buy_Milk"], [row["title"] for row in state.rows])
 
     def test_limit_applies_inside_a_single_section_view(self):
-        rows = "".join("[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30))
+        rows = "".join(
+            "[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30)
+        )
         state, _path = self._state(rows, limit=5)
 
         tui_app.run_command(state, "/view tasks")
@@ -1221,7 +1279,9 @@ class WorkspaceInterruptTests(unittest.TestCase):
             setattr(module, name, 300 + index)
         for index, name in enumerate(("A_BOLD", "A_DIM", "A_REVERSE", "A_UNDERLINE")):
             setattr(module, name, 1 << index)
-        for index, name in enumerate(("COLOR_BLACK", "COLOR_BLUE", "COLOR_CYAN", "COLOR_WHITE")):
+        for index, name in enumerate(
+            ("COLOR_BLACK", "COLOR_BLUE", "COLOR_CYAN", "COLOR_WHITE")
+        ):
             setattr(module, name, index)
         module.has_colors = lambda: False
         module.curs_set = lambda number: None
@@ -1256,7 +1316,9 @@ class WorkspaceInterruptTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T A id:t1\n")
-            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            args = argparse.Namespace(
+                paths=[path], config_data={"tui": {"session": "off"}}
+            )
             with patch.dict(sys.modules, {"curses": self._curses_raising_on_getch()}):
                 result = tui_app.run_workspace(args)
 
@@ -1272,9 +1334,11 @@ class WorkspaceInterruptTests(unittest.TestCase):
             def boom(_args):
                 raise KeyboardInterrupt()
 
-            with patch.object(tui, "_stdout_is_tty", lambda: True), \
-                    patch.dict(sys.modules, {"curses": types.ModuleType("curses")}), \
-                    patch("lifetxt.tui_app.run_workspace", boom):
+            with (
+                patch.object(tui, "_stdout_is_tty", lambda: True),
+                patch.dict(sys.modules, {"curses": types.ModuleType("curses")}),
+                patch("lifetxt.tui_app.run_workspace", boom),
+            ):
                 result = tui.cmd_tui(args)
 
         self.assertEqual(0, result)
@@ -1298,7 +1362,10 @@ class WorkspaceCommandTests(unittest.TestCase):
             handle.write(self.SAMPLE if text is None else text)
         args = argparse.Namespace(
             paths=[path],
-            config_data={"tui": {"session": "off"}, "timer": {"state_file": os.path.join(tmp.name, "timer.json")}},
+            config_data={
+                "tui": {"session": "off"},
+                "timer": {"state_file": os.path.join(tmp.name, "timer.json")},
+            },
         )
         state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
         state.reload()
@@ -1332,7 +1399,8 @@ class WorkspaceCommandTests(unittest.TestCase):
 
     def test_next_view_excludes_someday_and_blocked_rows(self):
         state, _path, _tmp = self._state(
-            self.SAMPLE + "[ ] T Blocked_Task id:t5 depends_on:t1\n[ ] T Maybe_Task id:t6 tag:someday\n"
+            self.SAMPLE
+            + "[ ] T Blocked_Task id:t5 depends_on:t1\n[ ] T Maybe_Task id:t6 tag:someday\n"
         )
 
         tui_app.run_command(state, "/next")
@@ -1380,10 +1448,14 @@ class WorkspaceCommandTests(unittest.TestCase):
         # the tasks and agenda sections. The agenda copy used to lose its source
         # file, which made every editing command fail on it.
         soon = (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
-        state, path, _tmp = self._state("[ ] T Soon_Task id:t1 project:work due:%s\n" % soon)
+        state, path, _tmp = self._state(
+            "[ ] T Soon_Task id:t1 project:work due:%s\n" % soon
+        )
 
         agenda_rows = [row for row in state.rows if row["section"] == "agenda"]
-        self.assertTrue(agenda_rows, "expected the due task to appear in the agenda section")
+        self.assertTrue(
+            agenda_rows, "expected the due task to appear in the agenda section"
+        )
         for row in agenda_rows:
             self.assertTrue(row.get("source"), "agenda row is missing its source file")
 
@@ -1406,7 +1478,9 @@ class WorkspaceCommandTests(unittest.TestCase):
         self.assertNotIn("due:", self._line_for(path, "t3"))
 
     def test_limit_truncation_is_reported_rather_than_silent(self):
-        rows = "".join("[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30))
+        rows = "".join(
+            "[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30)
+        )
         state, _path, _tmp = self._state(rows)
         state.options["limit"] = 10
         state.refresh()
@@ -1418,10 +1492,15 @@ class WorkspaceCommandTests(unittest.TestCase):
         text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 22))
         self.assertIn("TASKS 10/30", text)
         # ...and as a trailing row when the list is tall enough to reach it.
-        self.assertIn("more hidden by limit", tui_app.frame_to_text(tui_app.build_frame(state, 92, 40)))
+        self.assertIn(
+            "more hidden by limit",
+            tui_app.frame_to_text(tui_app.build_frame(state, 92, 40)),
+        )
 
     def test_sorted_views_still_honour_the_limit(self):
-        rows = "".join("[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30))
+        rows = "".join(
+            "[ ] T Task%02d id:t%02d\n" % (index, index) for index in range(30)
+        )
         state, _path, _tmp = self._state(rows)
         state.options["limit"] = 10
 
@@ -1496,7 +1575,9 @@ class WorkspaceCommandTests(unittest.TestCase):
         state, path, _tmp = self._state()
         tui_app.run_command(state, "/goto t3")
 
-        self.assertIn("No running timer", tui_app.run_command(state, "/timer status")[1])
+        self.assertIn(
+            "No running timer", tui_app.run_command(state, "/timer status")[1]
+        )
         tui_app.run_command(state, "/timer start")
         self.assertIn("t3", tui_app.run_command(state, "/timer status")[1])
         level, message = tui_app.run_command(state, "/timer stop")
@@ -1523,14 +1604,18 @@ class WorkspaceCommandTests(unittest.TestCase):
         tui_app.run_command(state, "/timer cancel")
 
         self.assertNotIn("elapsed:", self._line_for(path, "t3"))
-        self.assertIn("No running timer", tui_app.run_command(state, "/timer status")[1])
+        self.assertIn(
+            "No running timer", tui_app.run_command(state, "/timer status")[1]
+        )
 
     def test_export_writes_markdown_csv_and_json(self):
         state, _path, tmp = self._state()
 
         for fmt in tui_app.EXPORT_FORMATS:
             target = os.path.join(tmp, "out.%s" % fmt)
-            level, _message = tui_app.run_command(state, "/export %s %s" % (fmt, target))
+            level, _message = tui_app.run_command(
+                state, "/export %s %s" % (fmt, target)
+            )
             self.assertEqual("success", level)
             with open(target, "r", encoding="utf-8") as handle:
                 content = handle.read()
@@ -1549,7 +1634,9 @@ class WorkspaceCommandTests(unittest.TestCase):
         self.assertEqual("Write_Report", payload[0]["title"])
 
         csv_text = tui_app.render_export(state.rows, "csv")
-        self.assertTrue(csv_text.startswith("section,status,type,title,id,project,due,priority"))
+        self.assertTrue(
+            csv_text.startswith("section,status,type,title,id,project,due,priority")
+        )
 
     def test_help_search_ranks_matching_commands(self):
         state, _path, _tmp = self._state()
@@ -1594,7 +1681,9 @@ class WorkspaceCommandTests(unittest.TestCase):
     def test_session_ignores_values_that_are_no_longer_valid(self):
         state, _path, _tmp = self._state()
 
-        tui_app.apply_session(state, {"view": "bogus", "sort": "bogus", "project": 42, "history": "nope"})
+        tui_app.apply_session(
+            state, {"view": "bogus", "sort": "bogus", "project": 42, "history": "nope"}
+        )
 
         self.assertEqual("all", state.view)
         self.assertEqual("natural", state.sort)
@@ -1602,7 +1691,9 @@ class WorkspaceCommandTests(unittest.TestCase):
 
     def test_session_save_and_load_use_the_configured_path(self):
         state, _path, tmp = self._state()
-        state.args.config_data["tui"] = {"session_file": os.path.join(tmp, "session.json")}
+        state.args.config_data["tui"] = {
+            "session_file": os.path.join(tmp, "session.json")
+        }
         state.view = "tasks"
         state.sort = "title"
 
@@ -1681,7 +1772,10 @@ class WorkspaceCommandTests(unittest.TestCase):
 
 
 class WorkspaceFrameTests(unittest.TestCase):
-    def _state(self, text="[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n"):
+    def _state(
+        self,
+        text="[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n",
+    ):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
@@ -1713,7 +1807,9 @@ class WorkspaceFrameTests(unittest.TestCase):
         self.assertIn("type to filter", text)
 
     def test_wide_characters_keep_columns_aligned(self):
-        state = self._state("[ ] T 日本語のタスク id:t1 project:home\n[ ] T Ascii_Task id:t2 project:home\n")
+        state = self._state(
+            "[ ] T 日本語のタスク id:t1 project:home\n[ ] T Ascii_Task id:t2 project:home\n"
+        )
 
         frame = tui_app.build_frame(state, 92, 30)
         rows = [
@@ -1723,7 +1819,9 @@ class WorkspaceFrameTests(unittest.TestCase):
         ]
 
         self.assertEqual(2, len(rows))
-        widths = set(tui_app.display_width(tui_app.spans_to_text(line)) for line in rows)
+        widths = set(
+            tui_app.display_width(tui_app.spans_to_text(line)) for line in rows
+        )
         self.assertEqual(1, len(widths))
 
     def test_narrow_terminal_drops_meta_columns_instead_of_wrapping(self):
@@ -1804,10 +1902,14 @@ class WorkspaceFrameTests(unittest.TestCase):
 
         for width in (118, 130, 200):
             for line in tui_app.build_frame(state, width, 24):
-                self.assertLessEqual(tui_app.display_width(tui_app.spans_to_text(line)), width)
+                self.assertLessEqual(
+                    tui_app.display_width(tui_app.spans_to_text(line)), width
+                )
 
     def test_stats_panel_breaks_visible_rows_down(self):
-        state = self._state("[ ] T A id:t1 project:work\n[x] T B id:t2 project:work\n[ ] T C id:t3 project:home\n")
+        state = self._state(
+            "[ ] T A id:t1 project:work\n[x] T B id:t2 project:work\n[ ] T C id:t3 project:home\n"
+        )
         state.show_stats = True
 
         text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
@@ -1882,7 +1984,9 @@ class WorkspaceFrameTests(unittest.TestCase):
         state = self._state()
         state.notify("Marked done: t1", "success")
 
-        self.assertIn("Marked done: t1", tui_app.frame_to_text(tui_app.build_frame(state, 92, 30)))
+        self.assertIn(
+            "Marked done: t1", tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
+        )
 
         state.toast.created -= tui_app.TOAST_SECONDS + 1
         self.assertTrue(state.toast.expired())
@@ -1931,16 +2035,32 @@ class WorkspaceRunnerTests(unittest.TestCase):
     def _fake_curses(self, screen):
         module = types.ModuleType("curses")
         specials = (
-            "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_END",
-            "KEY_NPAGE", "KEY_PPAGE", "KEY_BACKSPACE", "KEY_ENTER", "KEY_RESIZE", "KEY_DC",
+            "KEY_UP",
+            "KEY_DOWN",
+            "KEY_LEFT",
+            "KEY_RIGHT",
+            "KEY_HOME",
+            "KEY_END",
+            "KEY_NPAGE",
+            "KEY_PPAGE",
+            "KEY_BACKSPACE",
+            "KEY_ENTER",
+            "KEY_RESIZE",
+            "KEY_DC",
         )
         for index, name in enumerate(specials):
             setattr(module, name, 300 + index)
         for index, name in enumerate(("A_BOLD", "A_DIM", "A_REVERSE", "A_UNDERLINE")):
             setattr(module, name, 1 << index)
         colors = (
-            "COLOR_BLACK", "COLOR_RED", "COLOR_GREEN", "COLOR_YELLOW",
-            "COLOR_BLUE", "COLOR_MAGENTA", "COLOR_CYAN", "COLOR_WHITE",
+            "COLOR_BLACK",
+            "COLOR_RED",
+            "COLOR_GREEN",
+            "COLOR_YELLOW",
+            "COLOR_BLUE",
+            "COLOR_MAGENTA",
+            "COLOR_CYAN",
+            "COLOR_WHITE",
         )
         for index, name in enumerate(colors):
             setattr(module, name, index)
@@ -1984,13 +2104,23 @@ class WorkspaceRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
-                handle.write("[ ] T Write_Report id:t1 project:work\n[ ] T Buy_Milk id:t3 project:home\n")
+                handle.write(
+                    "[ ] T Write_Report id:t1 project:work\n[ ] T Buy_Milk id:t3 project:home\n"
+                )
 
-            keys = [ord(char) for char in "milk"] + [10] + [ord(char) for char in "/done"] + [10] + [3]
+            keys = (
+                [ord(char) for char in "milk"]
+                + [10]
+                + [ord(char) for char in "/done"]
+                + [10]
+                + [3]
+            )
             screen = self._Screen(keys)
             # Sessions off: a saved view from a previous run would otherwise be
             # restored here and silently change which rows are listed.
-            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            args = argparse.Namespace(
+                paths=[path], config_data={"tui": {"session": "off"}}
+            )
             with patch.dict(sys.modules, {"curses": self._fake_curses(screen)}):
                 result = tui_app.run_workspace(args)
 
@@ -2011,7 +2141,9 @@ class WorkspaceRunnerTests(unittest.TestCase):
                 handle.write(original)
 
             screen = self._Screen([3])
-            args = argparse.Namespace(paths=[path], config_data={"tui": {"session": "off"}})
+            args = argparse.Namespace(
+                paths=[path], config_data={"tui": {"session": "off"}}
+            )
             with patch.dict(sys.modules, {"curses": self._fake_curses(screen)}):
                 result = tui_app.run_workspace(args)
 
@@ -2086,7 +2218,10 @@ class TuiFallbackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
             output = io.StringIO()
-            with patch.dict(sys.modules, {"curses": fake_curses}), redirect_stdout(output):
+            with (
+                patch.dict(sys.modules, {"curses": fake_curses}),
+                redirect_stdout(output),
+            ):
                 result = tui.run_curses_or_plain(args)
 
         self.assertEqual(0, result)
@@ -2095,6 +2230,7 @@ class TuiFallbackTests(unittest.TestCase):
 
     def test_curses_failure_falls_back_to_plain_output(self):
         """A terminal that cannot drive curses must degrade, not traceback."""
+
         class FakeCursesError(Exception):
             pass
 
@@ -2110,9 +2246,12 @@ class TuiFallbackTests(unittest.TestCase):
             args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
             output = io.StringIO()
             errors = io.StringIO()
-            with patch.dict(sys.modules, {"curses": fake_curses}), \
-                    patch.object(tui, "_stdout_is_tty", lambda: True), \
-                    redirect_stdout(output), redirect_stderr(errors):
+            with (
+                patch.dict(sys.modules, {"curses": fake_curses}),
+                patch.object(tui, "_stdout_is_tty", lambda: True),
+                redirect_stdout(output),
+                redirect_stderr(errors),
+            ):
                 result = tui.run_curses_or_plain(args)
 
         self.assertEqual(0, result)
@@ -2135,8 +2274,11 @@ class TuiFallbackTests(unittest.TestCase):
             args = argparse.Namespace(paths=[self._life_path(tmp)], config_data={})
             output = io.StringIO()
             errors = io.StringIO()
-            with patch.dict(sys.modules, {"curses": fake_curses}), \
-                    redirect_stdout(output), redirect_stderr(errors):
+            with (
+                patch.dict(sys.modules, {"curses": fake_curses}),
+                redirect_stdout(output),
+                redirect_stderr(errors),
+            ):
                 result = tui_app.run_workspace(args)
 
         self.assertEqual(0, result)
@@ -2156,7 +2298,10 @@ class TuiFallbackTests(unittest.TestCase):
             output = io.StringIO()
 
             def run():
-                with patch.dict(sys.modules, {"curses": fake_curses}), redirect_stdout(output):
+                with (
+                    patch.dict(sys.modules, {"curses": fake_curses}),
+                    redirect_stdout(output),
+                ):
                     return tui.run_textual(args)
 
             result = self._with_module_forced_missing("textual", run)
@@ -2186,7 +2331,10 @@ class FzfPreviewQuotingTests(unittest.TestCase):
         self.assertFalse(command.startswith('"'))
 
     def test_native_windows_without_shell_uses_double_quote_form(self):
-        with patch.object(fzf_helper.os, "name", "nt"), patch.dict(os.environ, {}, clear=False):
+        with (
+            patch.object(fzf_helper.os, "name", "nt"),
+            patch.dict(os.environ, {}, clear=False),
+        ):
             os.environ.pop("SHELL", None)
             command = fzf_helper._preview_command()
         self.assertTrue(command.startswith('"'))
@@ -2195,7 +2343,10 @@ class FzfPreviewQuotingTests(unittest.TestCase):
     def test_windows_with_posix_shell_uses_shlex_quote_form(self):
         # git-bash / WSL / MSYS builds of fzf set $SHELL and run the preview
         # command through a POSIX shell even on Windows.
-        with patch.object(fzf_helper.os, "name", "nt"), patch.dict(os.environ, {"SHELL": "/bin/bash"}):
+        with (
+            patch.object(fzf_helper.os, "name", "nt"),
+            patch.dict(os.environ, {"SHELL": "/bin/bash"}),
+        ):
             command = fzf_helper._preview_command()
         self.assertFalse(command.startswith('"'))
         self.assertIn("fzf-preview {1}", command)
@@ -2274,14 +2425,24 @@ class TimerMultiCycleTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T Deep_Work id:t1\n")
             config_data = {"timer": {"state_file": state_file}}
-            start_args = argparse.Namespace(path=path, item_id="t1", note=None, config_data=config_data)
+            start_args = argparse.Namespace(
+                path=path, item_id="t1", note=None, config_data=config_data
+            )
             command_args = argparse.Namespace(config_data=config_data)
-            stop_args = argparse.Namespace(path=None, item_id=None, config_data=config_data)
+            stop_args = argparse.Namespace(
+                path=None, item_id=None, config_data=config_data
+            )
 
             # Three 10-minute work intervals separated by pauses: expect 30m total.
             ticks = [
-                (0, "start"), (10, "pause"), (20, "resume"),
-                (30, "pause"), (40, "resume"), (50, "pause"), (60, "resume"), (70, "stop"),
+                (0, "start"),
+                (10, "pause"),
+                (20, "resume"),
+                (30, "pause"),
+                (40, "resume"),
+                (50, "pause"),
+                (60, "resume"),
+                (70, "stop"),
             ]
             base = datetime(2026, 6, 10, 10, 0, 0)
             original_now = timer._now

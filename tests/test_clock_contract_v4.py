@@ -19,10 +19,18 @@ class ClockContractV4Tests(unittest.TestCase):
     def test_unclassified_direct_clock_is_detected(self):
         with tempfile.TemporaryDirectory() as root:
             os.makedirs(os.path.join(root, "lifetxt"))
-            with open(os.path.join(root, "lifetxt", "sample.py"), "w", encoding="utf-8") as handle:
+            with open(
+                os.path.join(root, "lifetxt", "sample.py"), "w", encoding="utf-8"
+            ) as handle:
                 handle.write("import time\nvalue = time.time()\n")
             os.makedirs(os.path.join(root, "config", "release"))
-            with open(os.path.join(root, "config", "release", "clock-boundary-baseline-v1.json"), "w", encoding="utf-8") as handle:
+            with open(
+                os.path.join(
+                    root, "config", "release", "clock-boundary-baseline-v1.json"
+                ),
+                "w",
+                encoding="utf-8",
+            ) as handle:
                 json.dump({"baseline_version": 1, "allowed": []}, handle)
             report = clock_boundary_report(root)
             self.assertFalse(report["ok"])

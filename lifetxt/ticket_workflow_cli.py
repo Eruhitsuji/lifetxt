@@ -1,4 +1,5 @@
 """CLI adapters for ticket workflow, append-only history, and time entries."""
+
 from __future__ import unicode_literals
 
 import argparse
@@ -33,7 +34,9 @@ def _subparsers(parser):
 
 
 def _has_option(parser, option):
-    return any(option in getattr(action, "option_strings", []) for action in parser._actions)
+    return any(
+        option in getattr(action, "option_strings", []) for action in parser._actions
+    )
 
 
 def _input(parser, cli_module):
@@ -77,7 +80,9 @@ def _ticket_target(args, cli_module):
     path = find_ticket_file(cli_module._ticket_paths(args), args.id, key=key)
     if not path:
         raise ValueError("Ticket %r not found." % args.id)
-    cli_module._ensure_writable_path(path, config, getattr(args, "workflow_operation", "ticket activity"))
+    cli_module._ensure_writable_path(
+        path, config, getattr(args, "workflow_operation", "ticket activity")
+    )
     return config, key, path
 
 
@@ -113,7 +118,6 @@ def _write_mutation(args, cli_module, result):
             ),
         )
     return 0
-
 
 
 def _safe_write_command(function):
@@ -191,7 +195,9 @@ def _command_workflow(args):
                 ),
             )
         for row in report["diagnostics"]:
-            cli_module.sys.stderr.write("%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+            cli_module.sys.stderr.write(
+                "%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"])
+            )
     return 0 if report["valid"] else 1
 
 
@@ -341,7 +347,9 @@ def _activity(args):
     from . import cli as cli_module
 
     config = cli_module._config(args)
-    items, diagnostics = cli_module._parse_or_exit(cli_module._ticket_paths(args), config)
+    items, diagnostics = cli_module._parse_or_exit(
+        cli_module._ticket_paths(args), config
+    )
     cli_module._print_warnings(diagnostics)
     types = getattr(args, "event_types", None)
     return cli_module, ticket_activity_report(
@@ -430,7 +438,9 @@ def _command_history_validate(args):
     config = cli_module._config(args)
     items, diagnostics = cli_module._parse_or_exit(args.paths, config)
     cli_module._print_warnings(diagnostics)
-    rows = validate_ticket_history(items, config=config, key=cli_module.id_key_from_config(config))
+    rows = validate_ticket_history(
+        items, config=config, key=cli_module.id_key_from_config(config)
+    )
     result = OrderedDict(
         (
             ("ok", not any(row["severity"] == "error" for row in rows)),
@@ -442,7 +452,10 @@ def _command_history_validate(args):
         _write_json(cli_module, result, pretty=getattr(args, "pretty", False))
     else:
         for row in rows:
-            cli_module.write_text(None, "%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+            cli_module.write_text(
+                None,
+                "%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]),
+            )
         if not rows:
             cli_module.write_text(None, "Ticket history is valid.\n")
     return 0 if result["ok"] else 1
@@ -456,14 +469,18 @@ def _install_commands(parser, cli_module):
         return parser
 
     if "file-revision" not in actions.choices:
-        command = actions.add_parser("file-revision", help="Print the exact writable-file revision.")
+        command = actions.add_parser(
+            "file-revision", help="Print the exact writable-file revision."
+        )
         command.add_argument("path", nargs="?")
         command.add_argument("--json", action="store_true")
         command.add_argument("--pretty", action="store_true")
         command.set_defaults(func=_command_file_revision)
 
     if "workflow" not in actions.choices:
-        command = actions.add_parser("workflow", help="Inspect the effective ticket workflow.")
+        command = actions.add_parser(
+            "workflow", help="Inspect the effective ticket workflow."
+        )
         command.add_argument("--tracker")
         command.add_argument("--project")
         command.add_argument("--role")
@@ -472,7 +489,10 @@ def _install_commands(parser, cli_module):
         command.set_defaults(func=_command_workflow)
 
     if "transition" not in actions.choices:
-        command = actions.add_parser("transition", help="Apply an allowed transition and append its event atomically.")
+        command = actions.add_parser(
+            "transition",
+            help="Apply an allowed transition and append its event atomically.",
+        )
         command.add_argument("id")
         command.add_argument("status")
         _input(command, cli_module)
@@ -485,11 +505,18 @@ def _install_commands(parser, cli_module):
         command.add_argument("--json", action="store_true")
         command.add_argument("--pretty", action="store_true")
         _write_options(command)
-        command.set_defaults(func=_safe_write_command(_command_transition), workflow_operation="ticket transition")
+        command.set_defaults(
+            func=_safe_write_command(_command_transition),
+            workflow_operation="ticket transition",
+        )
 
     specs = (
         ("comment", "Append an immutable ticket comment event.", _command_comment),
-        ("reassign", "Change assignee and append an assignment event.", _command_reassign),
+        (
+            "reassign",
+            "Change assignee and append an assignment event.",
+            _command_reassign,
+        ),
         ("change", "Change fields and append a field_change event.", _command_change),
     )
     for name, help_text, function in specs:
@@ -513,12 +540,17 @@ def _install_commands(parser, cli_module):
         command.add_argument("--json", action="store_true")
         command.add_argument("--pretty", action="store_true")
         _write_options(command)
-        command.set_defaults(func=_safe_write_command(function), workflow_operation="ticket %s" % name)
+        command.set_defaults(
+            func=_safe_write_command(function), workflow_operation="ticket %s" % name
+        )
 
     for name, add in (("watch", True), ("unwatch", False)):
         if name in actions.choices:
             continue
-        command = actions.add_parser(name, help="%s a watcher and append an event." % ("Add" if add else "Remove"))
+        command = actions.add_parser(
+            name,
+            help="%s a watcher and append an event." % ("Add" if add else "Remove"),
+        )
         command.add_argument("id")
         command.add_argument("watcher")
         _input(command, cli_module)
@@ -527,12 +559,16 @@ def _install_commands(parser, cli_module):
         command.add_argument("--pretty", action="store_true")
         _write_options(command)
         command.set_defaults(
-            func=_safe_write_command(lambda args, enabled=add: _command_watch(args, enabled)),
+            func=_safe_write_command(
+                lambda args, enabled=add: _command_watch(args, enabled)
+            ),
             workflow_operation="ticket %s" % name,
         )
 
     if "log-time" not in actions.choices:
-        command = actions.add_parser("log-time", help="Append a time entry and its audit event atomically.")
+        command = actions.add_parser(
+            "log-time", help="Append a time entry and its audit event atomically."
+        )
         command.add_argument("id")
         command.add_argument("duration")
         _input(command, cli_module)
@@ -546,20 +582,29 @@ def _install_commands(parser, cli_module):
         command.add_argument("--json", action="store_true")
         command.add_argument("--pretty", action="store_true")
         _write_options(command)
-        command.set_defaults(func=_safe_write_command(_command_log_time), workflow_operation="ticket log-time")
+        command.set_defaults(
+            func=_safe_write_command(_command_log_time),
+            workflow_operation="ticket log-time",
+        )
 
     if "activity" not in actions.choices:
-        command = actions.add_parser("activity", help="Show ticket events and time entries.")
+        command = actions.add_parser(
+            "activity", help="Show ticket events and time entries."
+        )
         command.add_argument("id")
         _input(command, cli_module)
-        command.add_argument("--event", action="append", dest="event_types", choices=EVENT_TYPES)
+        command.add_argument(
+            "--event", action="append", dest="event_types", choices=EVENT_TYPES
+        )
         command.add_argument("--limit", type=int)
         command.add_argument("--format", choices=("text", "json"), default="text")
         command.add_argument("--pretty", action="store_true")
         command.set_defaults(func=_command_activity)
 
     if "time" not in actions.choices:
-        command = actions.add_parser("time", help="Show authoritative append-only ticket time.")
+        command = actions.add_parser(
+            "time", help="Show authoritative append-only ticket time."
+        )
         command.add_argument("id")
         _input(command, cli_module)
         command.add_argument("--format", choices=("text", "json"), default="text")
@@ -567,7 +612,10 @@ def _install_commands(parser, cli_module):
         command.set_defaults(func=_command_time)
 
     if "validate-history" not in actions.choices:
-        command = actions.add_parser("validate-history", help="Validate append-only ticket events and time entries.")
+        command = actions.add_parser(
+            "validate-history",
+            help="Validate append-only ticket events and time entries.",
+        )
         _read_options(command, cli_module)
         command.set_defaults(func=_command_history_validate)
     return parser

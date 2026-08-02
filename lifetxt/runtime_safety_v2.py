@@ -150,11 +150,11 @@ def _install_web_revision_policy():
                 response.headers["X-Lifetxt-Metrics-Revision"] = store.content_hash()
             # Guard against an inner compatibility counter changing without a
             # persisted event. The normal path records exactly once above.
-            if (
-                response.headers.get("X-Lifetxt-Legacy-Revision-Fallback") != "used"
-                and app.state.revision_contract_metrics.get("legacy_fallback_total", 0)
-                > report.get("legacy_fallback_total", before_total)
-            ):
+            if response.headers.get(
+                "X-Lifetxt-Legacy-Revision-Fallback"
+            ) != "used" and app.state.revision_contract_metrics.get(
+                "legacy_fallback_total", 0
+            ) > report.get("legacy_fallback_total", before_total):
                 _sync_legacy_metric_state(app, report)
             return response
 
@@ -183,7 +183,9 @@ def _sync_legacy_metric_state(app, report):
     metrics = app.state.revision_contract_metrics
     metrics["legacy_fallback_enabled"] = bool(report.get("legacy_fallback_enabled"))
     metrics["legacy_fallback_total"] = int(report.get("legacy_fallback_total") or 0)
-    metrics["legacy_fallback_by_path"] = dict(report.get("legacy_fallback_by_path") or {})
+    metrics["legacy_fallback_by_path"] = dict(
+        report.get("legacy_fallback_by_path") or {}
+    )
     metrics["legacy_fallback_last_used"] = report.get("legacy_fallback_last_used")
 
 

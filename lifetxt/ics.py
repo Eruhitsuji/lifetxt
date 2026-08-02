@@ -11,8 +11,9 @@ _DATE_RE = re.compile(r"^\d{8}$")
 _DATETIME_RE = re.compile(r"^\d{8}T\d{4}(\d{2})?Z?$")
 
 
-def items_from_ics_text(text, project=None, tags=None, expand=False,
-                        expand_until=None, expand_count=None):
+def items_from_ics_text(
+    text, project=None, tags=None, expand=False, expand_until=None, expand_count=None
+):
     """Convert VEVENT components in iCalendar text to life.txt event items.
 
     By default a recurring event stays one record carrying `repeat:RRULE:...`,
@@ -28,9 +29,7 @@ def items_from_ics_text(text, project=None, tags=None, expand=False,
             items.append(item)
             continue
         items.extend(
-            _expanded_occurrences(
-                item, event, until=expand_until, count=expand_count
-            )
+            _expanded_occurrences(item, event, until=expand_until, count=expand_count)
         )
     return items
 

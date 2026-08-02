@@ -43,10 +43,7 @@ def items_from_csv_text(text):
 
     ignored = set(FIXED_COLUMNS) | set(IGNORED_INPUT_COLUMNS) | {"kind"}
     detail_fields = [
-        field
-        for field in fields
-        if field
-        and field.lower() not in ignored
+        field for field in fields if field and field.lower() not in ignored
     ]
 
     items = []
@@ -94,7 +91,9 @@ def _values_to_cell(values):
         return ""
     if len(values) == 1:
         return str(values[0])
-    return json.dumps([str(value) for value in values], ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(
+        [str(value) for value in values], ensure_ascii=False, separators=(",", ":")
+    )
 
 
 def _cell_to_values(value):

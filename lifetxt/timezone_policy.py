@@ -102,7 +102,9 @@ def classify_wall_time(value, timezone_name=None):
     }
 
 
-def localize_datetime(value, timezone_name=None, fold_policy="error", gap_policy="error"):
+def localize_datetime(
+    value, timezone_name=None, fold_policy="error", gap_policy="error"
+):
     """Attach policy timezone to a naive datetime with explicit DST behavior.
 
     ``fold_policy`` is ``error``, ``earlier`` or ``later``. ``gap_policy`` is
@@ -154,7 +156,9 @@ def localize_datetime(value, timezone_name=None, fold_policy="error", gap_policy
     raise TimezonePolicyError("Could not resolve timezone gap within three hours.")
 
 
-def interpret_datetime(value, timezone_name=None, fold_policy="error", gap_policy="error"):
+def interpret_datetime(
+    value, timezone_name=None, fold_policy="error", gap_policy="error"
+):
     """Parse/interpret a datetime, preserving explicit offsets and localizing naive values."""
     parsed = value
     if isinstance(value, str):
@@ -166,17 +170,27 @@ def interpret_datetime(value, timezone_name=None, fold_policy="error", gap_polic
     return localize_datetime(parsed, timezone_name, fold_policy, gap_policy)
 
 
-def convert_datetime(value, timezone_name=None, source_timezone=None, fold_policy="error", gap_policy="error"):
+def convert_datetime(
+    value,
+    timezone_name=None,
+    source_timezone=None,
+    fold_policy="error",
+    gap_policy="error",
+):
     """Convert ``value`` from its offset/source timezone into ``timezone_name``."""
     parsed = value if isinstance(value, datetime.datetime) else parse_datetime(value)
     if not isinstance(parsed, datetime.datetime):
         raise TimezonePolicyError("Invalid datetime value: %r" % value)
     if parsed.tzinfo is None or parsed.utcoffset() is None:
-        parsed = localize_datetime(parsed, source_timezone or timezone_name, fold_policy, gap_policy)
+        parsed = localize_datetime(
+            parsed, source_timezone or timezone_name, fold_policy, gap_policy
+        )
     return parsed.astimezone(timezone_info(timezone_name))
 
 
-def interpret_time(value, anchor_date=None, timezone_name=None, fold_policy="error", gap_policy="error"):
+def interpret_time(
+    value, anchor_date=None, timezone_name=None, fold_policy="error", gap_policy="error"
+):
     """Interpret a time-only value on ``anchor_date`` without discarding offsets."""
     if isinstance(anchor_date, str):
         anchor_date = parse_date(anchor_date)
@@ -206,7 +220,9 @@ def date_boundaries(value, timezone_name=None):
     parsed = parse_date(value) if isinstance(value, str) else value
     if not isinstance(parsed, datetime.date):
         raise TimezonePolicyError("Invalid date value: %r" % value)
-    start = localize_datetime(datetime.datetime.combine(parsed, datetime.time.min), timezone_name)
+    start = localize_datetime(
+        datetime.datetime.combine(parsed, datetime.time.min), timezone_name
+    )
     end = localize_datetime(
         datetime.datetime.combine(parsed, datetime.time(23, 59, 59, 999999)),
         timezone_name,
@@ -242,10 +258,14 @@ def now(timezone_name=None):
     if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
         value = datetime.datetime.combine(value, datetime.time.min)
     if not isinstance(value, datetime.datetime):
-        raise TypeError("clock_context expects a date, datetime, or callable returning one.")
+        raise TypeError(
+            "clock_context expects a date, datetime, or callable returning one."
+        )
     zone = timezone_info(timezone_name)
     if value.tzinfo is None or value.utcoffset() is None:
-        return localize_datetime(value, timezone_name, fold_policy="earlier", gap_policy="next")
+        return localize_datetime(
+            value, timezone_name, fold_policy="earlier", gap_policy="next"
+        )
     return value.astimezone(zone)
 
 
@@ -261,7 +281,14 @@ def local_now_naive(timezone_name=None):
     return now(timezone_name).replace(tzinfo=None)
 
 
-def policy_report(config=None, text="", cli_timezone=None, sample=None, fold_policy="error", gap_policy="error"):
+def policy_report(
+    config=None,
+    text="",
+    cli_timezone=None,
+    sample=None,
+    fold_policy="error",
+    gap_policy="error",
+):
     base = resolve_timezone_policy(config or {}, text=text, cli_timezone=cli_timezone)
     result = dict(base)
     result.update(
@@ -275,7 +302,9 @@ def policy_report(config=None, text="", cli_timezone=None, sample=None, fold_pol
     )
     if sample:
         try:
-            interpreted = interpret_datetime(sample, base["timezone"], fold_policy, gap_policy)
+            interpreted = interpret_datetime(
+                sample, base["timezone"], fold_policy, gap_policy
+            )
             result["sample"] = {
                 "input": sample,
                 "output": interpreted.isoformat(),

@@ -241,7 +241,9 @@ STATUS_STATE_VALUES = (
 class Diagnostic(object):
     """A parser or validator message."""
 
-    def __init__(self, severity, code, message, line=None, column=None, source=None, hint=""):
+    def __init__(
+        self, severity, code, message, line=None, column=None, source=None, hint=""
+    ):
         self.severity = severity
         self.code = code
         self.message = message
@@ -266,7 +268,11 @@ class Diagnostic(object):
 
     def format(self):
         location = ""
-        if self.source is not None and self.line is not None and self.column is not None:
+        if (
+            self.source is not None
+            and self.line is not None
+            and self.column is not None
+        ):
             location = "%s:%s:%s: " % (self.source, self.line, self.column)
         elif self.source is not None and self.line is not None:
             location = "%s:%s: " % (self.source, self.line)

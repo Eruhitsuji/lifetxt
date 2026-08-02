@@ -61,7 +61,9 @@ class TicketProjectReportTests(unittest.TestCase):
                 updated="2026-06-01T00:00:00Z",
             )
         ]
-        report = build_ticket_project_report(items, reference_time=self.now, stale_after_days=14)
+        report = build_ticket_project_report(
+            items, reference_time=self.now, stale_after_days=14
+        )
         row = report["tickets"][0]
         self.assertTrue(row["blocked"])
         self.assertTrue(row["overdue"])
@@ -78,12 +80,16 @@ class TicketProjectReportTests(unittest.TestCase):
         self.assertFalse(report["tickets"][0]["overdue"])
         after_midnight = datetime(2026, 7, 26, 0, 0, tzinfo=timezone.utc)
         report = build_ticket_project_report(
-            [ticket("Due yesterday", "T-1", due="2026-07-25")], reference_time=after_midnight
+            [ticket("Due yesterday", "T-1", due="2026-07-25")],
+            reference_time=after_midnight,
         )
         self.assertTrue(report["tickets"][0]["overdue"])
 
     def test_open_dependency_marks_ticket_blocked(self):
-        items = [ticket("Dependency", "T-1"), ticket("Dependent", "T-2", depends_on="T-1")]
+        items = [
+            ticket("Dependency", "T-1"),
+            ticket("Dependent", "T-2", depends_on="T-1"),
+        ]
         report = build_ticket_project_report(items, reference_time=self.now)
         dependent = next(row for row in report["tickets"] if row["id"] == "T-2")
         self.assertTrue(dependent["blocked"])
@@ -102,7 +108,8 @@ class TicketProjectReportTests(unittest.TestCase):
 
     def test_missing_dependency_is_reported_without_guessing_blocked_state(self):
         report = build_ticket_project_report(
-            [ticket("Dependent", "T-2", depends_on="T-missing")], reference_time=self.now
+            [ticket("Dependent", "T-2", depends_on="T-missing")],
+            reference_time=self.now,
         )
         row = report["tickets"][0]
         self.assertFalse(row["blocked"])
@@ -115,11 +122,16 @@ class TicketProjectReportTests(unittest.TestCase):
             ticket("Other dependency", "T-1", project="beta"),
             ticket("Scoped ticket", "T-2", project="alpha", depends_on="T-1"),
         ]
-        report = build_ticket_project_report(items, reference_time=self.now, project="alpha")
+        report = build_ticket_project_report(
+            items, reference_time=self.now, project="alpha"
+        )
         self.assertEqual(report["summary"]["total"], 1)
         self.assertFalse(report["tickets"][0]["blocked"])
         self.assertTrue(report["tickets"][0]["dependency_unknown"])
-        self.assertIn("Project filtering occurs before dependency evaluation", " ".join(report["caveats"]))
+        self.assertIn(
+            "Project filtering occurs before dependency evaluation",
+            " ".join(report["caveats"]),
+        )
 
     def test_estimate_elapsed_coverage_and_variance(self):
         items = [
@@ -127,7 +139,9 @@ class TicketProjectReportTests(unittest.TestCase):
             ticket("Estimate only", "T-2", est="2h"),
             ticket("Invalid", "T-3", est="soon", elapsed="1h"),
         ]
-        project = build_ticket_project_report(items, reference_time=self.now)["projects"][0]
+        project = build_ticket_project_report(items, reference_time=self.now)[
+            "projects"
+        ][0]
         self.assertEqual(project["estimate_hours"], 10.0)
         self.assertEqual(project["estimate_ticket_count"], 2)
         self.assertEqual(project["elapsed_hours"], 11.0)
@@ -144,7 +158,10 @@ class TicketProjectReportTests(unittest.TestCase):
     def test_iso_datetime_parser_normalizes_offsets(self):
         parsed = parse_datetime("2026-07-25T21:00:00+09:00")
         self.assertEqual(parsed, self.now)
-        self.assertEqual(parse_datetime("2026-07-25"), datetime(2026, 7, 25, 0, 0, tzinfo=timezone.utc))
+        self.assertEqual(
+            parse_datetime("2026-07-25"),
+            datetime(2026, 7, 25, 0, 0, tzinfo=timezone.utc),
+        )
         self.assertIsNone(parse_datetime("tomorrow"))
 
     def test_board_order_is_deterministic(self):
@@ -159,19 +176,27 @@ class TicketProjectReportTests(unittest.TestCase):
         self.assertLess(rendered.index("## open"), rendered.index("## closed"))
 
     def test_coarse_terminal_status_is_terminal_without_detailed_status(self):
-        item = FakeItem("[x]", "T", "Legacy closed ticket", {
-            "record": ["ticket"], "id": ["T-legacy"], "project": ["alpha"]
-        })
+        item = FakeItem(
+            "[x]",
+            "T",
+            "Legacy closed ticket",
+            {"record": ["ticket"], "id": ["T-legacy"], "project": ["alpha"]},
+        )
         report = build_ticket_project_report([item], reference_time=self.now)
         self.assertEqual(report["summary"]["terminal"], 1)
         self.assertEqual(report["tickets"][0]["status"], "done")
 
     def test_defaults_follow_ticket_core_statuses_and_severities(self):
-        report = build_ticket_project_report([
-            ticket("Won't fix", "T-1", ticket_status="wont_fix", severity="critical"),
-            ticket("Major", "T-2", severity="major"),
-            ticket("Critical", "T-3", severity="critical"),
-        ], reference_time=self.now)
+        report = build_ticket_project_report(
+            [
+                ticket(
+                    "Won't fix", "T-1", ticket_status="wont_fix", severity="critical"
+                ),
+                ticket("Major", "T-2", severity="major"),
+                ticket("Critical", "T-3", severity="critical"),
+            ],
+            reference_time=self.now,
+        )
         self.assertEqual(report["summary"]["terminal"], 1)
         self.assertEqual(report["summary"]["high_severity"], 1)
         self.assertIn("wont_fix", report["configuration"]["terminal_statuses"])
@@ -200,14 +225,20 @@ class TicketProjectReportTests(unittest.TestCase):
             ],
             reference_time=self.now,
         )
-        schema_path = Path(__file__).resolve().parents[1] / "schemas" / "ticket-project-report-v1.schema.json"
+        schema_path = (
+            Path(__file__).resolve().parents[1]
+            / "schemas"
+            / "ticket-project-report-v1.schema.json"
+        )
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(report)
 
     def test_negative_stale_window_is_rejected(self):
         with self.assertRaises(ValueError):
-            build_ticket_project_report([], reference_time=self.now, stale_after_days=-1)
+            build_ticket_project_report(
+                [], reference_time=self.now, stale_after_days=-1
+            )
 
     def test_unassigned_project_bucket(self):
         item = ticket("No project", "T-1")

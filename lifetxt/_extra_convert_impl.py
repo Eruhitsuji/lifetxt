@@ -21,7 +21,13 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from .timezone_policy import today as timezone_today, utcnow
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .config import (
+    config_paths,
+    config_section,
+    config_user_name,
+    config_write_file,
+    load_config,
+)
 from .model import Item
 from .parser import parse_text
 from .paths import expand_paths
@@ -35,7 +41,15 @@ _MARKDOWN_TASK_RE = re.compile(r"^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$")
 
 
 def _ics_escape(value):
-    return str(value).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r\n", "\\n").replace("\n", "\\n").replace("\r", "\\n")
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+        .replace("\r", "\\n")
+    )
 
 
 def _ics_fold(line):
@@ -62,7 +76,9 @@ def _ics_datetime(value):
     normalized = text
     if normalized.endswith("Z"):
         normalized = normalized[:-1] + "+0000"
-    elif len(normalized) >= 6 and normalized[-6] in ("+", "-") and normalized[-3] == ":":
+    elif (
+        len(normalized) >= 6 and normalized[-6] in ("+", "-") and normalized[-3] == ":"
+    ):
         normalized = normalized[:-3] + normalized[-2:]
     formats = (
         "%Y-%m-%dT%H:%M",
@@ -89,7 +105,14 @@ def _ics_datetime(value):
 def command_to_ics(args, config_data):
     items = _load_items(args.paths, config_data)
     now = utcnow().strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//lifetxt//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:%s" % _ics_escape(args.calendar_name)]
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//lifetxt//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:%s" % _ics_escape(args.calendar_name),
+    ]
     for item in items:
         if item.kind != "E" or item.status in ("[-]", "[>]"):
             continue
@@ -98,12 +121,29 @@ def command_to_ics(args, config_data):
         end = _first(item, "to")
         if not on and not start:
             continue
-        uid = _first(item, "uid") or _item_id(item) or hashlib.sha256((item.title + str(item.source) + str(item.line)).encode("utf-8")).hexdigest()[:20] + "@lifetxt"
-        lines.extend(("BEGIN:VEVENT", "UID:%s" % _ics_escape(uid), "DTSTAMP:%s" % now, "SUMMARY:%s" % _ics_escape(item.title)))
+        uid = (
+            _first(item, "uid")
+            or _item_id(item)
+            or hashlib.sha256(
+                (item.title + str(item.source) + str(item.line)).encode("utf-8")
+            ).hexdigest()[:20]
+            + "@lifetxt"
+        )
+        lines.extend(
+            (
+                "BEGIN:VEVENT",
+                "UID:%s" % _ics_escape(uid),
+                "DTSTAMP:%s" % now,
+                "SUMMARY:%s" % _ics_escape(item.title),
+            )
+        )
         if on:
             on_date = _parse_date(on, "event on date")
             lines.append("DTSTART;VALUE=DATE:%s" % on_date.strftime("%Y%m%d"))
-            lines.append("DTEND;VALUE=DATE:%s" % (on_date + datetime.timedelta(days=1)).strftime("%Y%m%d"))
+            lines.append(
+                "DTEND;VALUE=DATE:%s"
+                % (on_date + datetime.timedelta(days=1)).strftime("%Y%m%d")
+            )
         else:
             lines.append("DTSTART:%s" % _ics_datetime(start))
             if end:
@@ -168,7 +208,9 @@ def _todo_item(raw, source, line_no, project_override=None, tags=None):
         details["created"] = [date_tokens[0]]
     details["source"] = ["todo.txt"]
     details["id"] = [_stable_id("todo_", "%s:%s:%s" % (source, line_no, raw))]
-    return Item("[x]" if completed else "[ ]", "T", text or "Untitled", details, line=line_no)
+    return Item(
+        "[x]" if completed else "[ ]", "T", text or "Untitled", details, line=line_no
+    )
 
 
 def command_from_todo(args, config_data):
@@ -233,7 +275,14 @@ def command_from_markdown(args, config_data):
                 stack.pop()
             if stack:
                 details["parent"] = [stack[-1][1]]
-            item = Item("[x]" if done else "[ ]", "T", cleaned, details, line=line_no, indent=indent)
+            item = Item(
+                "[x]" if done else "[ ]",
+                "T",
+                cleaned,
+                details,
+                line=line_no,
+                indent=indent,
+            )
             items.append(item)
             stack.append((indent, item_id))
     output = "".join(item_to_line(item) + "\n" for item in items)

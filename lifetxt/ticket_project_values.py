@@ -10,24 +10,48 @@ try:
     from .tickets import DEFAULT_STATUS_MAP, TERMINAL_STATUSES
 except ImportError:  # pragma: no cover - isolated module tests
     DEFAULT_STATUS_MAP = {
-        "new": "[ ]", "triaged": "[ ]", "assigned": "[ ]",
-        "in_progress": "[/]", "review": "[/]", "testing": "[/]",
-        "needs_info": "[?]", "blocked": "[?]", "deferred": "[>]",
-        "resolved": "[x]", "closed": "[x]", "rejected": "[-]",
-        "duplicate": "[-]", "wont_fix": "[-]",
+        "new": "[ ]",
+        "triaged": "[ ]",
+        "assigned": "[ ]",
+        "in_progress": "[/]",
+        "review": "[/]",
+        "testing": "[/]",
+        "needs_info": "[?]",
+        "blocked": "[?]",
+        "deferred": "[>]",
+        "resolved": "[x]",
+        "closed": "[x]",
+        "rejected": "[-]",
+        "duplicate": "[-]",
+        "wont_fix": "[-]",
     }
     TERMINAL_STATUSES = ("resolved", "closed", "rejected", "duplicate", "wont_fix")
 
 REPORT_SCHEMA = "ticket-project-report-v1"
 DEFAULT_STALE_DAYS = 14
 DEFAULT_HIGH_SEVERITIES = frozenset(("blocker", "critical"))
-DEFAULT_TERMINAL_STATUSES = frozenset(tuple(TERMINAL_STATUSES) + ("done", "cancelled", "canceled"))
-STATUS_ORDER = ("new", "open") + tuple(key for key in DEFAULT_STATUS_MAP if key != "new") + ("done", "cancelled", "unknown")
+DEFAULT_TERMINAL_STATUSES = frozenset(
+    tuple(TERMINAL_STATUSES) + ("done", "cancelled", "canceled")
+)
+STATUS_ORDER = (
+    ("new", "open")
+    + tuple(key for key in DEFAULT_STATUS_MAP if key != "new")
+    + ("done", "cancelled", "unknown")
+)
 PRIORITY_ORDER = {
-    "immediate": 0, "urgent": 0, "highest": 0, "critical": 0, "high": 1,
-    "normal": 2, "medium": 2, "low": 3, "lowest": 4,
+    "immediate": 0,
+    "urgent": 0,
+    "highest": 0,
+    "critical": 0,
+    "high": 1,
+    "normal": 2,
+    "medium": 2,
+    "low": 3,
+    "lowest": 4,
 }
-_DURATION_TOKEN = re.compile(r"(?P<number>\d+(?:\.\d+)?)\s*(?P<unit>w|d|h|m)", re.IGNORECASE)
+_DURATION_TOKEN = re.compile(
+    r"(?P<number>\d+(?:\.\d+)?)\s*(?P<unit>w|d|h|m)", re.IGNORECASE
+)
 _DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -115,8 +139,12 @@ def ticket_status(item: Any) -> str:
     return "unknown"
 
 
-def ticket_is_terminal(item: Any, terminal_statuses: Iterable[str] = DEFAULT_TERMINAL_STATUSES) -> bool:
-    return ticket_status(item) in set(normalize_status(value) for value in terminal_statuses)
+def ticket_is_terminal(
+    item: Any, terminal_statuses: Iterable[str] = DEFAULT_TERMINAL_STATUSES
+) -> bool:
+    return ticket_status(item) in set(
+        normalize_status(value) for value in terminal_statuses
+    )
 
 
 def parse_datetime(value: str) -> Optional[datetime]:
@@ -127,13 +155,24 @@ def parse_datetime(value: str) -> Optional[datetime]:
     normalized = text
     if normalized.endswith("Z"):
         normalized = normalized[:-1] + "+0000"
-    elif len(normalized) >= 6 and normalized[-6] in ("+", "-") and normalized[-3] == ":":
+    elif (
+        len(normalized) >= 6 and normalized[-6] in ("+", "-") and normalized[-3] == ":"
+    ):
         normalized = normalized[:-3] + normalized[-2:]
     formats = (
-        "%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M%z",
-        "%Y-%m-%d %H:%M:%S.%f%z", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d %H:%M%z",
-        "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M",
-        "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M%z",
+        "%Y-%m-%d %H:%M:%S.%f%z",
+        "%Y-%m-%d %H:%M:%S%z",
+        "%Y-%m-%d %H:%M%z",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
     )
     parsed = None
     for format_string in formats:
@@ -161,7 +200,7 @@ def parse_duration_hours(value: str) -> Optional[float]:
     position, total, matched = 0, 0.0, False
     factors = {"w": 40.0, "d": 8.0, "h": 1.0, "m": 1.0 / 60.0}
     for match in _DURATION_TOKEN.finditer(text):
-        if text[position:match.start()].strip():
+        if text[position : match.start()].strip():
             return None
         matched = True
         total += float(match.group("number")) * factors[match.group("unit").lower()]
@@ -192,23 +231,35 @@ def due_time(item: Any) -> Optional[datetime]:
         raw = detail_first(item, key)
         parsed = parse_datetime(raw)
         if parsed is not None:
-            return parsed + timedelta(days=1) if _DATE_ONLY.match(raw.strip()) else parsed
+            return (
+                parsed + timedelta(days=1) if _DATE_ONLY.match(raw.strip()) else parsed
+            )
     return None
 
 
 def ticket_row(item: Any) -> Mapping[str, Any]:
-    estimate = parse_duration_hours(detail_first(item, "est") or detail_first(item, "estimate"))
+    estimate = parse_duration_hours(
+        detail_first(item, "est") or detail_first(item, "estimate")
+    )
     elapsed = parse_duration_hours(detail_first(item, "elapsed"))
     return {
-        "id": ticket_id(item), "title": item_title(item), "project": ticket_project(item),
-        "status": ticket_status(item), "tracker": detail_first(item, "tracker", "(unspecified)"),
+        "id": ticket_id(item),
+        "title": item_title(item),
+        "project": ticket_project(item),
+        "status": ticket_status(item),
+        "tracker": detail_first(item, "tracker", "(unspecified)"),
         "priority": detail_first(item, "priority", "(unspecified)"),
         "severity": detail_first(item, "severity", "(unspecified)"),
-        "assignee": detail_first(item, "assignee"), "reporter": detail_first(item, "reporter"),
+        "assignee": detail_first(item, "assignee"),
+        "reporter": detail_first(item, "reporter"),
         "component": detail_first(item, "component", "(unspecified)"),
         "due": detail_first(item, "due") or detail_first(item, "deadline"),
-        "updated": detail_first(item, "updated") or detail_first(item, "modified") or detail_first(item, "changed"),
-        "estimate_hours": estimate, "elapsed_hours": elapsed, "depends_on": detail_values(item, "depends_on"),
+        "updated": detail_first(item, "updated")
+        or detail_first(item, "modified")
+        or detail_first(item, "changed"),
+        "estimate_hours": estimate,
+        "elapsed_hours": elapsed,
+        "depends_on": detail_values(item, "depends_on"),
     }
 
 
@@ -217,5 +268,6 @@ def sort_key(row: Mapping[str, Any]) -> Tuple[Any, ...]:
     return (
         PRIORITY_ORDER.get(str(row.get("priority") or "").lower(), 10),
         due or datetime.max.replace(tzinfo=timezone.utc),
-        str(row.get("id") or ""), str(row.get("title") or "").lower(),
+        str(row.get("id") or ""),
+        str(row.get("title") or "").lower(),
     )

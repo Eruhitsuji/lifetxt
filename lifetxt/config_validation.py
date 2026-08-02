@@ -66,7 +66,8 @@ def _walk_secrets(node, prefix, rows):
             if _is_secret_key(key) and isinstance(value, str) and value.strip():
                 rows.append(
                     diagnostic(
-                        "error", "C003",
+                        "error",
+                        "C003",
                         "Plaintext secret in configuration key %r." % dotted,
                         "Store the secret in an environment variable and reference it "
                         "with a '%s_env' key holding the variable name." % key,
@@ -85,7 +86,8 @@ def _version_diagnostics(config):
     if not isinstance(version, int):
         rows.append(
             diagnostic(
-                "error", "C002",
+                "error",
+                "C002",
                 "config_version must be an integer, got %r." % (version,),
                 "Set config_version to a supported integer (1).",
                 "config_version",
@@ -94,13 +96,19 @@ def _version_diagnostics(config):
         return rows
     if version < 1:
         rows.append(
-            diagnostic("error", "C002", "config_version must be >= 1.",
-                       "Set config_version to 1.", "config_version")
+            diagnostic(
+                "error",
+                "C002",
+                "config_version must be >= 1.",
+                "Set config_version to 1.",
+                "config_version",
+            )
         )
     elif version > CONFIG_SCHEMA_VERSION:
         rows.append(
             diagnostic(
-                "error", "C001",
+                "error",
+                "C001",
                 "Unsupported config_version %d; this build supports up to %d."
                 % (version, CONFIG_SCHEMA_VERSION),
                 "Upgrade lifetxt or inspect the file read-only; writes are refused.",
@@ -119,9 +127,13 @@ def _deprecation_diagnostics(config):
             continue
         if _has_dotted(config, key):
             replacement = entry.get("replacement")
-            hint = ("Use %s instead." % replacement) if replacement else "Remove this key."
+            hint = (
+                ("Use %s instead." % replacement) if replacement else "Remove this key."
+            )
             rows.append(
-                diagnostic("warning", "C007", "Deprecated config key %r." % key, hint, key)
+                diagnostic(
+                    "warning", "C007", "Deprecated config key %r." % key, hint, key
+                )
             )
     return rows
 
@@ -142,8 +154,13 @@ def _workspace_diagnostics(config):
         return rows
     if not isinstance(workspaces, dict):
         rows.append(
-            diagnostic("error", "C005", "'workspaces' must be an object.",
-                       "Map each workspace name to a definition object.", "workspaces")
+            diagnostic(
+                "error",
+                "C005",
+                "'workspaces' must be an object.",
+                "Map each workspace name to a definition object.",
+                "workspaces",
+            )
         )
         return rows
     for name, definition in workspaces.items():
@@ -155,14 +172,24 @@ def _workspace_diagnostics(config):
             sources = definition
         if sources is None:
             rows.append(
-                diagnostic("error", "C006", "Workspace %r has no sources." % name,
-                           "Add a 'sources' array of paths or source objects.", dotted)
+                diagnostic(
+                    "error",
+                    "C006",
+                    "Workspace %r has no sources." % name,
+                    "Add a 'sources' array of paths or source objects.",
+                    dotted,
+                )
             )
             continue
         if not isinstance(sources, (list, tuple)):
             rows.append(
-                diagnostic("error", "C006", "Workspace %r sources must be an array." % name,
-                           "Use a list of path strings or source objects.", dotted)
+                diagnostic(
+                    "error",
+                    "C006",
+                    "Workspace %r sources must be an array." % name,
+                    "Use a list of path strings or source objects.",
+                    dotted,
+                )
             )
             continue
         for index, entry in enumerate(sources):
@@ -171,17 +198,25 @@ def _workspace_diagnostics(config):
             if isinstance(entry, dict):
                 if not entry.get("path"):
                     rows.append(
-                        diagnostic("error", "C006",
-                                   "Workspace %r source #%d is missing 'path'." % (name, index),
-                                   "Every source object needs a 'path'.",
-                                   "%s.sources[%d]" % (dotted, index))
+                        diagnostic(
+                            "error",
+                            "C006",
+                            "Workspace %r source #%d is missing 'path'."
+                            % (name, index),
+                            "Every source object needs a 'path'.",
+                            "%s.sources[%d]" % (dotted, index),
+                        )
                     )
             else:
                 rows.append(
-                    diagnostic("error", "C006",
-                               "Workspace %r source #%d must be a string or object." % (name, index),
-                               "Use a path string or a source object.",
-                               "%s.sources[%d]" % (dotted, index))
+                    diagnostic(
+                        "error",
+                        "C006",
+                        "Workspace %r source #%d must be a string or object."
+                        % (name, index),
+                        "Use a path string or a source object.",
+                        "%s.sources[%d]" % (dotted, index),
+                    )
                 )
     return rows
 
@@ -197,14 +232,21 @@ def _jsonschema_diagnostics(config):
     schema = schema_bundle().get("config-v1.schema.json")
     if not schema:
         return []
-    data = OrderedDict((k, v) for k, v in config.items() if k not in ("_path", "_active_workspace"))
+    data = OrderedDict(
+        (k, v) for k, v in config.items() if k not in ("_path", "_active_workspace")
+    )
     rows = []
     validator = Draft202012Validator(schema)
     for error in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
         path = ".".join(str(part) for part in error.path) or "(root)"
         rows.append(
-            diagnostic("error", "C008", "Schema violation at %s: %s" % (path, error.message),
-                       "Fix the value to match config-v1.schema.json.", path)
+            diagnostic(
+                "error",
+                "C008",
+                "Schema violation at %s: %s" % (path, error.message),
+                "Fix the value to match config-v1.schema.json.",
+                path,
+            )
         )
     return rows
 
@@ -227,8 +269,11 @@ def validation_report(config, use_jsonschema=True):
     return OrderedDict(
         (
             ("ok", not any(row["severity"] == "error" for row in rows)),
-            ("writable", is_supported_version(config)
-             and not any(row["severity"] == "error" for row in rows)),
+            (
+                "writable",
+                is_supported_version(config)
+                and not any(row["severity"] == "error" for row in rows),
+            ),
             ("config_version", config_version(config)),
             ("diagnostic_count", len(rows)),
             ("diagnostics", rows),

@@ -19,18 +19,24 @@ class RemoteClientWritesTests(unittest.TestCase):
     def test_permissions_expose_effective_write_access_and_grants(self, request):
         request.side_effect = [
             (
-                {"principal": {
-                    "id": "alice", "role": "editor",
-                    "scopes": ["read", "write"],
-                    "projects": ["web"], "visibilities": ["shared"],
-                }},
+                {
+                    "principal": {
+                        "id": "alice",
+                        "role": "editor",
+                        "scopes": ["read", "write"],
+                        "projects": ["web"],
+                        "visibilities": ["shared"],
+                    }
+                },
                 {"lifetxt_negotiated_protocol": 2},
             ),
             (
-                {"mutation_policy": {
-                    "ticket_mutations_enabled": True,
-                    "ticket_operations": ["create", "edit"],
-                }},
+                {
+                    "mutation_policy": {
+                        "ticket_mutations_enabled": True,
+                        "ticket_operations": ["create", "edit"],
+                    }
+                },
                 {
                     "lifetxt_negotiated_protocol": 2,
                     "X-Lifetxt-Remote-Capability-Revision": "cap-1",
@@ -75,7 +81,12 @@ class RemoteClientWritesTests(unittest.TestCase):
 
     @mock.patch("lifetxt.remote_client_writes.mutate_ticket")
     def test_edit_parses_fields(self, mutate):
-        edit_ticket({"url": "https://example.test"}, "WEB-2", {"priority": "high"}, ["milestone"])
+        edit_ticket(
+            {"url": "https://example.test"},
+            "WEB-2",
+            {"priority": "high"},
+            ["milestone"],
+        )
         payload = mutate.call_args[0][2]
         self.assertEqual(payload["set"], {"priority": "high"})
         self.assertEqual(payload["unset"], ["milestone"])
@@ -172,11 +183,17 @@ class RemoteClientWritesTests(unittest.TestCase):
     def test_cli_conflict_returns_stable_exit_code(self, get_profile, edit):
         get_profile.return_value = {"url": "https://example.test"}
         edit.side_effect = RemoteMutationConflict(
-            "conflict", requested_revision="old", current_revision="new")
+            "conflict", requested_revision="old", current_revision="new"
+        )
         args = mock.Mock(
-            profile="home", profiles_file=None, ticket_id="T-1",
-            set=["priority=high"], unset=[], comment=None,
-            transaction_id="tx", dry_run=False,
+            profile="home",
+            profiles_file=None,
+            ticket_id="T-1",
+            set=["priority=high"],
+            unset=[],
+            comment=None,
+            transaction_id="tx",
+            dry_run=False,
         )
         with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             code = _cmd_edit(args)

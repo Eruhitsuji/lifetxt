@@ -19,7 +19,13 @@ from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .config import (
+    config_paths,
+    config_section,
+    config_user_name,
+    config_write_file,
+    load_config,
+)
 from .model import Item
 from .parser import parse_text
 from .paths import expand_paths
@@ -28,13 +34,82 @@ from .timeutil import parse_elapsed
 
 OPEN_STATUSES = ("[ ]", "[/]")
 CLOSED_STATUSES = ("[x]", "[-]", "[>]")
-BLOCKED_OPENERS = frozenset((
-    ".app", ".bat", ".cmd", ".com", ".desktop", ".exe", ".jar", ".js",
-    ".jse", ".lnk", ".msi", ".ps1", ".scr", ".sh", ".url", ".vbs",
-    ".vbe", ".wsf",
-))
+BLOCKED_OPENERS = frozenset(
+    (
+        ".app",
+        ".bat",
+        ".cmd",
+        ".com",
+        ".desktop",
+        ".exe",
+        ".jar",
+        ".js",
+        ".jse",
+        ".lnk",
+        ".msi",
+        ".ps1",
+        ".scr",
+        ".sh",
+        ".url",
+        ".vbs",
+        ".vbe",
+        ".wsf",
+    )
+)
 
-__all__ = ['OPEN_STATUSES', 'CLOSED_STATUSES', 'BLOCKED_OPENERS', '_first', '_values', '_item_id', '_parse_date', '_date_value', '_latest_date', '_load_config', '_resolved_input_paths', '_load_items', '_find_item', '_write_output', '_json_text', '_display_width', '_pad', '_table', '_blocked', '_priority_key', '_item_record', '_filter_user', '_emit', '_resolved_path', 'Item', 'OrderedDict', 'datetime', 'os', 'sys', 'shlex', 'subprocess', 'tempfile', 'json', 'csv', 'io', 'math', 'calendar', 'hashlib', 're', 'Decimal', 'InvalidOperation', 'ROUND_HALF_UP', 'item_to_line', 'parse_elapsed', 'expand_paths', 'config_paths', 'config_section', 'config_user_name', 'config_write_file', 'load_config', 'atomic_write_text']
+__all__ = [
+    "OPEN_STATUSES",
+    "CLOSED_STATUSES",
+    "BLOCKED_OPENERS",
+    "_first",
+    "_values",
+    "_item_id",
+    "_parse_date",
+    "_date_value",
+    "_latest_date",
+    "_load_config",
+    "_resolved_input_paths",
+    "_load_items",
+    "_find_item",
+    "_write_output",
+    "_json_text",
+    "_display_width",
+    "_pad",
+    "_table",
+    "_blocked",
+    "_priority_key",
+    "_item_record",
+    "_filter_user",
+    "_emit",
+    "_resolved_path",
+    "Item",
+    "OrderedDict",
+    "datetime",
+    "os",
+    "sys",
+    "shlex",
+    "subprocess",
+    "tempfile",
+    "json",
+    "csv",
+    "io",
+    "math",
+    "calendar",
+    "hashlib",
+    "re",
+    "Decimal",
+    "InvalidOperation",
+    "ROUND_HALF_UP",
+    "item_to_line",
+    "parse_elapsed",
+    "expand_paths",
+    "config_paths",
+    "config_section",
+    "config_user_name",
+    "config_write_file",
+    "load_config",
+    "atomic_write_text",
+]
 
 
 def _first(item, key, default=""):
@@ -68,7 +143,9 @@ def _date_value(value):
         return None
 
 
-def _latest_date(item, keys=("done", "updated", "to", "from", "on", "do", "due", "created")):
+def _latest_date(
+    item, keys=("done", "updated", "to", "from", "on", "do", "due", "created")
+):
     result = None
     for key in keys:
         for value in _values(item, key):
@@ -107,11 +184,21 @@ def _load_items(paths, config_data, allow_stdin=True):
                 text = handle.read()
             source = os.path.abspath(path)
         parsed, diagnostics = parse_text(text)
-        errors = [diagnostic for diagnostic in diagnostics if getattr(diagnostic, "severity", "") == "error"]
+        errors = [
+            diagnostic
+            for diagnostic in diagnostics
+            if getattr(diagnostic, "severity", "") == "error"
+        ]
         if errors:
             first_error = errors[0]
-            message = first_error.format() if hasattr(first_error, "format") else str(first_error)
-            raise ValueError("Cannot use %s because it contains parse errors: %s" % (source, message))
+            message = (
+                first_error.format()
+                if hasattr(first_error, "format")
+                else str(first_error)
+            )
+            raise ValueError(
+                "Cannot use %s because it contains parse errors: %s" % (source, message)
+            )
         for item in parsed:
             item.source = source
         items.extend(parsed)
@@ -124,7 +211,9 @@ def _find_item(items, item_id):
         raise ValueError("Item ID not found: %s" % item_id)
     if len(matches) > 1:
         locations = ["%s:%s" % (item.source, item.line) for item in matches]
-        raise ValueError("Item ID %s is duplicated at %s" % (item_id, ", ".join(locations)))
+        raise ValueError(
+            "Item ID %s is duplicated at %s" % (item_id, ", ".join(locations))
+        )
     return matches[0]
 
 
@@ -145,12 +234,15 @@ def _write_output(text, output=None, append=False):
 
 
 def _json_text(data, pretty=False):
-    return json.dumps(
-        data,
-        ensure_ascii=False,
-        indent=2 if pretty else None,
-        separators=None if pretty else (",", ":"),
-    ) + "\n"
+    return (
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2 if pretty else None,
+            separators=None if pretty else (",", ":"),
+        )
+        + "\n"
+    )
 
 
 def _display_width(value):
@@ -173,9 +265,14 @@ def _table(headers, rows):
     for index, header in enumerate(headers):
         values = [str(header)] + [row[index] for row in rows]
         widths.append(max(_display_width(value) for value in values))
-    lines = ["  ".join(_pad(header, widths[index]) for index, header in enumerate(headers))]
+    lines = [
+        "  ".join(_pad(header, widths[index]) for index, header in enumerate(headers))
+    ]
     lines.append("  ".join("-" * width for width in widths))
-    lines.extend("  ".join(_pad(row[index], widths[index]) for index in range(len(headers))) for row in rows)
+    lines.extend(
+        "  ".join(_pad(row[index], widths[index]) for index in range(len(headers)))
+        for row in rows
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -206,7 +303,12 @@ def _item_record(item):
             ("status", item.status),
             ("type", item.kind),
             ("title", item.title),
-            ("details", OrderedDict((key, list(values)) for key, values in item.details.items())),
+            (
+                "details",
+                OrderedDict(
+                    (key, list(values)) for key, values in item.details.items()
+                ),
+            ),
             ("source", item.source),
             ("line", item.line),
         )

@@ -5,10 +5,21 @@ from datetime import timedelta
 from typing import Any, Dict, Iterable, List, MutableMapping, Optional
 
 from .ticket_project_values import (
-    DEFAULT_HIGH_SEVERITIES, DEFAULT_STALE_DAYS, DEFAULT_TERMINAL_STATUSES,
-    REPORT_SCHEMA, STATUS_ORDER, due_time, is_ticket, last_activity,
-    normalize_status, reference_time, sort_key, ticket_id, ticket_project,
-    ticket_row, ticket_status,
+    DEFAULT_HIGH_SEVERITIES,
+    DEFAULT_STALE_DAYS,
+    DEFAULT_TERMINAL_STATUSES,
+    REPORT_SCHEMA,
+    STATUS_ORDER,
+    due_time,
+    is_ticket,
+    last_activity,
+    normalize_status,
+    reference_time,
+    sort_key,
+    ticket_id,
+    ticket_project,
+    ticket_row,
+    ticket_status,
 )
 
 
@@ -24,7 +35,7 @@ def build_ticket_project_report(
     project: Optional[str] = None,
     terminal_statuses: Iterable[str] = DEFAULT_TERMINAL_STATUSES,
     high_severities: Iterable[str] = DEFAULT_HIGH_SEVERITIES,
-    **compat: Any
+    **compat: Any,
 ) -> Dict[str, Any]:
     """Build one read-only report with explicit formulas and caveats.
 
@@ -49,10 +60,16 @@ def build_ticket_project_report(
     by_id = dict((ticket_id(item), item) for item in selected if ticket_id(item))
     all_rows = []  # type: List[Dict[str, Any]]
     projects = {}  # type: MutableMapping[str, List[Dict[str, Any]]]
-    attention = OrderedDict((
-        ("blocked", []), ("dependency_unknown", []), ("overdue", []),
-        ("unassigned", []), ("high_severity", []), ("stale", []),
-    ))  # type: MutableMapping[str, List[Dict[str, Any]]]
+    attention = OrderedDict(
+        (
+            ("blocked", []),
+            ("dependency_unknown", []),
+            ("overdue", []),
+            ("unassigned", []),
+            ("high_severity", []),
+            ("stale", []),
+        )
+    )  # type: MutableMapping[str, List[Dict[str, Any]]]
 
     for item in selected:
         row = dict(ticket_row(item))
@@ -65,25 +82,39 @@ def build_ticket_project_report(
                     unknown_dependencies.append(dependency_id)
                 elif ticket_status(dependency) not in terminal:
                     open_dependencies.append(dependency_id)
-        row.update({
-            "terminal": not is_open,
-            "blocked": bool(is_open and (row["status"] == "blocked" or open_dependencies)),
-            "dependency_unknown": bool(is_open and unknown_dependencies),
-            "unresolved_dependencies": open_dependencies,
-            "unevaluated_dependencies": unknown_dependencies,
-        })
+        row.update(
+            {
+                "terminal": not is_open,
+                "blocked": bool(
+                    is_open and (row["status"] == "blocked" or open_dependencies)
+                ),
+                "dependency_unknown": bool(is_open and unknown_dependencies),
+                "unresolved_dependencies": open_dependencies,
+                "unevaluated_dependencies": unknown_dependencies,
+            }
+        )
         due = due_time(item)
         activity = last_activity(item)
-        row.update({
-            "overdue": bool(is_open and due is not None and due <= now),
-            "unassigned": bool(is_open and not row["assignee"]),
-            "high_severity": bool(is_open and str(row["severity"]).lower() in severe),
-            "stale": bool(is_open and activity is not None and activity < now - timedelta(days=stale_after_days)),
-            "variance_hours": (
-                row["elapsed_hours"] - row["estimate_hours"]
-                if row["estimate_hours"] is not None and row["elapsed_hours"] is not None else None
-            ),
-        })
+        row.update(
+            {
+                "overdue": bool(is_open and due is not None and due <= now),
+                "unassigned": bool(is_open and not row["assignee"]),
+                "high_severity": bool(
+                    is_open and str(row["severity"]).lower() in severe
+                ),
+                "stale": bool(
+                    is_open
+                    and activity is not None
+                    and activity < now - timedelta(days=stale_after_days)
+                ),
+                "variance_hours": (
+                    row["elapsed_hours"] - row["estimate_hours"]
+                    if row["estimate_hours"] is not None
+                    and row["elapsed_hours"] is not None
+                    else None
+                ),
+            }
+        )
         all_rows.append(row)
         projects.setdefault(row["project"], []).append(row)
         for key in attention:
@@ -101,36 +132,54 @@ def build_ticket_project_report(
         rows = projects[project_name]
         total = len(rows)
         terminal_count = sum(1 for row in rows if row["terminal"])
-        estimates = [row["estimate_hours"] for row in rows if row["estimate_hours"] is not None]
-        elapsed = [row["elapsed_hours"] for row in rows if row["elapsed_hours"] is not None]
-        paired = [row["variance_hours"] for row in rows if row["variance_hours"] is not None]
-        project_summaries.append({
-            "project": project_name, "total": total, "open": total - terminal_count,
-            "terminal": terminal_count,
-            "progress_percent": round(terminal_count * 100.0 / total, 2) if total else None,
-            "blocked": sum(1 for row in rows if row["blocked"]),
-            "dependency_unknown": sum(1 for row in rows if row["dependency_unknown"]),
-            "overdue": sum(1 for row in rows if row["overdue"]),
-            "unassigned": sum(1 for row in rows if row["unassigned"]),
-            "high_severity": sum(1 for row in rows if row["high_severity"]),
-            "stale": sum(1 for row in rows if row["stale"]),
-            "by_status": _counter(row["status"] for row in rows),
-            "by_priority": _counter(row["priority"] for row in rows),
-            "by_severity": _counter(row["severity"] for row in rows),
-            "by_tracker": _counter(row["tracker"] for row in rows),
-            "by_assignee": _counter(row["assignee"] or "(unassigned)" for row in rows),
-            "by_component": _counter(row["component"] for row in rows),
-            "estimate_hours": round(sum(estimates), 4) if estimates else None,
-            "estimate_ticket_count": len(estimates),
-            "elapsed_hours": round(sum(elapsed), 4) if elapsed else None,
-            "elapsed_ticket_count": len(elapsed),
-            "paired_variance_hours": round(sum(paired), 4) if paired else None,
-            "paired_variance_ticket_count": len(paired),
-        })
+        estimates = [
+            row["estimate_hours"] for row in rows if row["estimate_hours"] is not None
+        ]
+        elapsed = [
+            row["elapsed_hours"] for row in rows if row["elapsed_hours"] is not None
+        ]
+        paired = [
+            row["variance_hours"] for row in rows if row["variance_hours"] is not None
+        ]
+        project_summaries.append(
+            {
+                "project": project_name,
+                "total": total,
+                "open": total - terminal_count,
+                "terminal": terminal_count,
+                "progress_percent": round(terminal_count * 100.0 / total, 2)
+                if total
+                else None,
+                "blocked": sum(1 for row in rows if row["blocked"]),
+                "dependency_unknown": sum(
+                    1 for row in rows if row["dependency_unknown"]
+                ),
+                "overdue": sum(1 for row in rows if row["overdue"]),
+                "unassigned": sum(1 for row in rows if row["unassigned"]),
+                "high_severity": sum(1 for row in rows if row["high_severity"]),
+                "stale": sum(1 for row in rows if row["stale"]),
+                "by_status": _counter(row["status"] for row in rows),
+                "by_priority": _counter(row["priority"] for row in rows),
+                "by_severity": _counter(row["severity"] for row in rows),
+                "by_tracker": _counter(row["tracker"] for row in rows),
+                "by_assignee": _counter(
+                    row["assignee"] or "(unassigned)" for row in rows
+                ),
+                "by_component": _counter(row["component"] for row in rows),
+                "estimate_hours": round(sum(estimates), 4) if estimates else None,
+                "estimate_ticket_count": len(estimates),
+                "elapsed_hours": round(sum(elapsed), 4) if elapsed else None,
+                "elapsed_ticket_count": len(elapsed),
+                "paired_variance_hours": round(sum(paired), 4) if paired else None,
+                "paired_variance_ticket_count": len(paired),
+            }
+        )
 
     board = OrderedDict()
     known = list(STATUS_ORDER)
-    extras = sorted(set(row["status"] for row in all_rows if row["status"] not in known))
+    extras = sorted(
+        set(row["status"] for row in all_rows if row["status"] not in known)
+    )
     for status in known + extras:
         rows = [row for row in all_rows if row["status"] == status]
         if rows:
@@ -147,22 +196,36 @@ def build_ticket_project_report(
         "Ticket-count progress does not model subtasks, effort, scope growth, or delivery probability.",
     ]
     if project is not None:
-        caveats.append("Project filtering occurs before dependency evaluation, so cross-project dependencies may be dependency_unknown.")
+        caveats.append(
+            "Project filtering occurs before dependency evaluation, so cross-project dependencies may be dependency_unknown."
+        )
     summary = {
-        "total": total, "open": total - terminal_count, "terminal": terminal_count,
+        "total": total,
+        "open": total - terminal_count,
+        "terminal": terminal_count,
         "progress_percent": round(terminal_count * 100.0 / total, 2) if total else None,
         "project_count": len(project_summaries),
         "blocked": len(attention["blocked"]),
         "dependency_unknown": len(attention["dependency_unknown"]),
-        "overdue": len(attention["overdue"]), "unassigned": len(attention["unassigned"]),
-        "high_severity": len(attention["high_severity"]), "stale": len(attention["stale"]),
+        "overdue": len(attention["overdue"]),
+        "unassigned": len(attention["unassigned"]),
+        "high_severity": len(attention["high_severity"]),
+        "stale": len(attention["stale"]),
     }
     return {
-        "schema": REPORT_SCHEMA, "reference_time": now.isoformat(),
-        "stale_after_days": stale_after_days, "scope": {"project": project},
-        "configuration": {"terminal_statuses": sorted(terminal), "high_severities": sorted(severe)},
-        "summary": summary, "projects": project_summaries, "board": board,
-        "attention": attention, "tickets": all_rows,
+        "schema": REPORT_SCHEMA,
+        "reference_time": now.isoformat(),
+        "stale_after_days": stale_after_days,
+        "scope": {"project": project},
+        "configuration": {
+            "terminal_statuses": sorted(terminal),
+            "high_severities": sorted(severe),
+        },
+        "summary": summary,
+        "projects": project_summaries,
+        "board": board,
+        "attention": attention,
+        "tickets": all_rows,
         "formulas": {
             "open": "ticket_status not in configured terminal_statuses",
             "progress_percent": "terminal ticket count / total ticket count * 100; count-based, not a forecast",

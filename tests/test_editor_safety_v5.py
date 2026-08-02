@@ -22,6 +22,7 @@ class EditorSafetyTests(unittest.TestCase):
             with open(target, "w", encoding="utf-8") as handle:
                 handle.write("[x] T One id:t1\n[ ] T Two id:t2\n")
             return 0
+
         result = safe_edit(self.path, "cat", runner=runner)
         self.assertTrue(result["written"])
 
@@ -34,6 +35,7 @@ class EditorSafetyTests(unittest.TestCase):
             with open(command[-1], "a", encoding="utf-8") as handle:
                 handle.write("[ ] N Note id:n1\n")
             return 0
+
         result = safe_edit(self.path, "cat", runner=runner, review_only=True)
         self.assertFalse(result["written"])
 
@@ -45,8 +47,13 @@ class EditorSafetyTests(unittest.TestCase):
             with open(command[-1], "a", encoding="utf-8") as handle:
                 handle.write("[ ] N Edited id:n1\n")
             snap = mutation.read_text_snapshot(self.path)
-            mutation.write_text(self.path, snap.text + "[ ] N External id:n2\n", expected_hash=snap.content_hash)
+            mutation.write_text(
+                self.path,
+                snap.text + "[ ] N External id:n2\n",
+                expected_hash=snap.content_hash,
+            )
             return 0
+
         with self.assertRaises(mutation.MutationConflict):
             safe_edit(self.path, "cat", runner=runner)
 
@@ -58,8 +65,13 @@ class EditorSafetyTests(unittest.TestCase):
             with open(target, "w", encoding="utf-8") as handle:
                 handle.write(text.replace("One", "Edited_One"))
             snap = mutation.read_text_snapshot(self.path)
-            mutation.write_text(self.path, snap.text.replace("Two", "External_Two"), expected_hash=snap.content_hash)
+            mutation.write_text(
+                self.path,
+                snap.text.replace("Two", "External_Two"),
+                expected_hash=snap.content_hash,
+            )
             return 0
+
         result = safe_edit(self.path, "cat", runner=runner, reconcile=True)
         with open(self.path, encoding="utf-8") as handle:
             text = handle.read()
@@ -75,8 +87,13 @@ class EditorSafetyTests(unittest.TestCase):
             with open(target, "w", encoding="utf-8") as handle:
                 handle.write(text.replace("One", "Edited"))
             snap = mutation.read_text_snapshot(self.path)
-            mutation.write_text(self.path, snap.text.replace("One", "External"), expected_hash=snap.content_hash)
+            mutation.write_text(
+                self.path,
+                snap.text.replace("One", "External"),
+                expected_hash=snap.content_hash,
+            )
             return 0
+
         with self.assertRaises(EditorReconcileConflict):
             safe_edit(self.path, "cat", runner=runner, reconcile=True)
 

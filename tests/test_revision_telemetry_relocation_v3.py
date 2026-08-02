@@ -23,7 +23,9 @@ class RevisionTelemetryRelocationV3Tests(unittest.TestCase):
         after = RevisionMetricsStore(self.destination, window_days=7).snapshot()
         self.assertTrue(result["relocated"])
         self.assertEqual(before["server_instance_id"], after["server_instance_id"])
-        self.assertEqual(before["observation_started_at"], after["observation_started_at"])
+        self.assertEqual(
+            before["observation_started_at"], after["observation_started_at"]
+        )
         self.assertEqual(1, after["legacy_fallback_total"])
         self.assertTrue(os.path.exists(self.source))
 

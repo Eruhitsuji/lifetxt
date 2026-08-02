@@ -1,4 +1,5 @@
 """Exact-revision compound ticket and append-only activity mutations."""
+
 from __future__ import unicode_literals
 
 import copy
@@ -10,10 +11,20 @@ from .serializer import item_to_line
 from . import mutation
 from .surface_runtime import normalize_revision
 from .ticket_activity import (
-    _first, _utc_text, _sequence, _time_sequence, _safe_id, _changed_fields,
-    build_ticket_event, build_time_entry, event_view, time_entry_view,
-    iter_ticket_events, validate_ticket_history,
+    _first,
+    _utc_text,
+    _sequence,
+    _time_sequence,
+    _safe_id,
+    _changed_fields,
+    build_ticket_event,
+    build_time_entry,
+    event_view,
+    time_entry_view,
+    iter_ticket_events,
+    validate_ticket_history,
 )
+
 
 def _append_items(text, items):
     if not items:
@@ -29,8 +40,12 @@ def _append_items(text, items):
 def _parse_items(text, key):
     from .parser import parse_text
 
-    items, diagnostics = parse_text(text, id_key=key, check_ids=False, check_references=False)
-    errors = [d.to_dict() for d in diagnostics if getattr(d, "severity", None) == "error"]
+    items, diagnostics = parse_text(
+        text, id_key=key, check_ids=False, check_references=False
+    )
+    errors = [
+        d.to_dict() for d in diagnostics if getattr(d, "severity", None) == "error"
+    ]
     if errors:
         raise ValueError(errors)
     return items
@@ -40,7 +55,8 @@ def _find_ticket(items, ticket_id, key):
     from .tickets import is_ticket, ticket_id_of
 
     matches = [
-        item for item in items
+        item
+        for item in items
         if is_ticket(item) and str(ticket_id_of(item, key)) == str(ticket_id)
     ]
     if not matches:
@@ -52,7 +68,9 @@ def _find_ticket(items, ticket_id, key):
 
 def _copy_item(item):
     cloned = copy.copy(item)
-    cloned.details = OrderedDict((key, list(values)) for key, values in item.details.items())
+    cloned.details = OrderedDict(
+        (key, list(values)) for key, values in item.details.items()
+    )
     return cloned
 
 
@@ -62,7 +80,13 @@ def _transaction_id(ticket_id, sequence, timestamp, supplied=None):
         if not re.match(r"^[A-Za-z0-9_.:-]+$", value):
             raise ValueError("Transaction id contains unsupported characters.")
         return value
-    stamp = str(timestamp).replace("-", "").replace(":", "").replace("T", "-").replace("Z", "")
+    stamp = (
+        str(timestamp)
+        .replace("-", "")
+        .replace(":", "")
+        .replace("T", "-")
+        .replace("Z", "")
+    )
     return "TX-%s-%06d-%s" % (_safe_id(ticket_id), int(sequence), stamp)
 
 
@@ -88,7 +112,9 @@ def apply_ticket_activity(
     from .ticket_revision_writes import _replace_ticket_text
     from .tickets import validate_ticket
 
-    expected = normalize_revision(expected_revision, supplied=expected_revision is not None)
+    expected = normalize_revision(
+        expected_revision, supplied=expected_revision is not None
+    )
     if expected is None:
         raise ValueError(
             "Ticket activity writes require an exact --revision from `ticket revision`."
@@ -96,7 +122,9 @@ def apply_ticket_activity(
     timestamp = _utc_text(at)
     snapshot = mutation.read_text_snapshot(path, allow_missing=False)
     if snapshot.content_hash != expected:
-        raise mutation.MutationConflict(path, expected, snapshot.content_hash, operation=operation or event_type)
+        raise mutation.MutationConflict(
+            path, expected, snapshot.content_hash, operation=operation or event_type
+        )
 
     holder = {}
 
@@ -122,13 +150,16 @@ def apply_ticket_activity(
 
         changed_ticket = bool(detail_updates) or status is not None
         if changed_ticket:
-            replacement, updated = _replace_ticket_text(current, ticket_id, key, update_item)
+            replacement, updated = _replace_ticket_text(
+                current, ticket_id, key, update_item
+            )
         else:
             replacement = current
             updated = _copy_item(before_ticket)
 
         ticket_errors = [
-            row for row in validate_ticket(updated, config or {}, key=key)
+            row
+            for row in validate_ticket(updated, config or {}, key=key)
             if row.get("severity") == "error"
         ]
         if ticket_errors:
@@ -176,7 +207,8 @@ def apply_ticket_activity(
         final_text = _append_items(replacement, appended)
         final_items = _parse_items(final_text, key)
         history_errors = [
-            row for row in validate_ticket_history(final_items, config=config, key=key)
+            row
+            for row in validate_ticket_history(final_items, config=config, key=key)
             if row.get("severity") == "error"
         ]
         if history_errors:
@@ -222,7 +254,9 @@ def apply_ticket_activity(
             ("event", event_view(holder["event"])),
             (
                 "time_entry",
-                time_entry_view(holder["time_entry"]) if holder.get("time_entry") is not None else None,
+                time_entry_view(holder["time_entry"])
+                if holder.get("time_entry") is not None
+                else None,
             ),
         )
     )

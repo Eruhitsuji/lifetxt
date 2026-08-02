@@ -24,7 +24,9 @@ class TimezoneClockV3Tests(unittest.TestCase):
     def test_frozen_naive_clock_is_resolved_wall_time(self):
         frozen = datetime.datetime(2026, 1, 2, 3, 4)
         with clock_context(frozen), timezone_context("Asia/Kathmandu"):
-            self.assertEqual("+05:45", now().strftime("%z")[:3] + ":" + now().strftime("%z")[3:])
+            self.assertEqual(
+                "+05:45", now().strftime("%z")[:3] + ":" + now().strftime("%z")[3:]
+            )
             self.assertEqual(datetime.date(2026, 1, 2), today())
 
     def test_time_only_default_anchor_uses_context_today(self):

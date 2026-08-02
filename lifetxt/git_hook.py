@@ -38,7 +38,9 @@ def uninstall_hooks(args):
         if not os.path.exists(path):
             continue
         if not _is_lifetxt_hook(path):
-            raise ValueError("%s is not a lifetxt hook; remove it manually if needed." % path)
+            raise ValueError(
+                "%s is not a lifetxt hook; remove it manually if needed." % path
+            )
         os.remove(path)
         removed.append(name)
     if removed:
@@ -68,7 +70,10 @@ def _hooks_dir(repo_dir):
     root = os.path.abspath(repo_dir or os.getcwd())
     hooks = os.path.join(root, ".git", "hooks")
     if not os.path.isdir(hooks):
-        raise ValueError("%s does not exist. Run this inside a Git repository or pass --repo-dir." % hooks)
+        raise ValueError(
+            "%s does not exist. Run this inside a Git repository or pass --repo-dir."
+            % hooks
+        )
     return hooks
 
 

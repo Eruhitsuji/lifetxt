@@ -29,12 +29,20 @@ def snapshot(path, allow_missing=False):
 
 def resolve_expected_revision(path, expected_revision=None, allow_missing=False):
     current = snapshot(path, allow_missing=allow_missing)
-    expected = current.content_hash if expected_revision in (None, "") else str(expected_revision)
+    expected = (
+        current.content_hash
+        if expected_revision in (None, "")
+        else str(expected_revision)
+    )
     return current, expected
 
 
-def append_text(path, payload, expected_revision=None, operation="semantic.append", create=True):
-    current, expected = resolve_expected_revision(path, expected_revision, allow_missing=create)
+def append_text(
+    path, payload, expected_revision=None, operation="semantic.append", create=True
+):
+    current, expected = resolve_expected_revision(
+        path, expected_revision, allow_missing=create
+    )
     value = str(payload)
 
     def transform(text):
@@ -53,7 +61,9 @@ def append_text(path, payload, expected_revision=None, operation="semantic.appen
     )
 
 
-def append_life_records(path, text, expected_revision=None, operation="semantic.append_records"):
+def append_life_records(
+    path, text, expected_revision=None, operation="semantic.append_records"
+):
     payload = str(text)
     if payload and not payload.endswith(("\n", "\r")):
         payload += "\n"
@@ -62,10 +72,14 @@ def append_life_records(path, text, expected_revision=None, operation="semantic.
         _parse_or_raise(replacement)
         return True
 
-    current, expected = resolve_expected_revision(path, expected_revision, allow_missing=True)
+    current, expected = resolve_expected_revision(
+        path, expected_revision, allow_missing=True
+    )
 
     def transform(existing):
-        prefix = "" if not existing or existing.endswith(("\n", "\r")) else current.newline
+        prefix = (
+            "" if not existing or existing.endswith(("\n", "\r")) else current.newline
+        )
         return existing + prefix + payload
 
     return mutation.write_text(
@@ -94,7 +108,9 @@ def mutate_items(
     Every requested ID must match exactly one record in the current in-lock text.
     """
     normalized = _normalize_changes(changes)
-    current, expected = resolve_expected_revision(path, expected_revision, allow_missing=create)
+    current, expected = resolve_expected_revision(
+        path, expected_revision, allow_missing=create
+    )
 
     def transform(text):
         return transform_items_text(text, normalized, id_key=id_key)
@@ -159,25 +175,33 @@ def transform_items_text(text, changes, id_key="id"):
         ending = default_ending
         if 0 <= end - 1 < len(lines):
             ending = _line_ending(lines[end - 1])
-        replacement_lines = [] if replacement == "" else (replacement + ending).splitlines(True)
+        replacement_lines = (
+            [] if replacement == "" else (replacement + ending).splitlines(True)
+        )
         lines[start:end] = replacement_lines
     result = "".join(lines)
     _parse_or_raise(result)
     return result
 
 
-def mutate_item_files(file_changes, id_key="id", operation="items.multi_file", journal_dir=None):
+def mutate_item_files(
+    file_changes, id_key="id", operation="items.multi_file", journal_dir=None
+):
     """Commit ID-addressed changes across files in one journal-backed transaction."""
     plans = []
     for path in sorted(file_changes):
         spec = file_changes[path]
         expected = spec.get("expected_revision")
-        current, expected = resolve_expected_revision(path, expected, allow_missing=False)
+        current, expected = resolve_expected_revision(
+            path, expected, allow_missing=False
+        )
         changes = _normalize_changes(spec.get("changes") or [])
         plans.append(
             text_plan(
                 path,
-                lambda text, _changes=changes: transform_items_text(text, _changes, id_key=id_key),
+                lambda text, _changes=changes: transform_items_text(
+                    text, _changes, id_key=id_key
+                ),
                 expected,
                 validate=lambda replacement: _parse_or_raise(replacement),
             )
@@ -185,8 +209,9 @@ def mutate_item_files(file_changes, id_key="id", operation="items.multi_file", j
     return apply_multi_target(plans, operation=operation, journal_dir=journal_dir)
 
 
-
-def commit_text_replacements(replacements, operation="text.multi_replace", journal_dir=None, config=None):
+def commit_text_replacements(
+    replacements, operation="text.multi_replace", journal_dir=None, config=None
+):
     """Commit precomputed replacements with exact source revisions in one journal.
 
     Each value is a mapping containing ``text`` and optional ``expected_revision``,
@@ -202,7 +227,11 @@ def commit_text_replacements(replacements, operation="text.multi_replace", journ
             path, spec.get("expected_revision"), allow_missing=create
         )
         replacement = str(spec.get("text") or "")
-        validator = (lambda value: _parse_or_raise(value)) if spec.get("validate_life") else None
+        validator = (
+            (lambda value: _parse_or_raise(value))
+            if spec.get("validate_life")
+            else None
+        )
         plans.append(
             text_plan(
                 path,
@@ -219,8 +248,15 @@ def commit_text_replacements(replacements, operation="text.multi_replace", journ
 
 
 def merge_tag_and_alias(
-    life_path, old_tag, new_tag, config_path=None, life_revision=None,
-    config_revision=None, id_key="id", journal_dir=None, config=None,
+    life_path,
+    old_tag,
+    new_tag,
+    config_path=None,
+    life_revision=None,
+    config_revision=None,
+    id_key="id",
+    journal_dir=None,
+    config=None,
 ):
     """Merge a tag and update the optional alias configuration atomically."""
     life_current, life_expected = resolve_expected_revision(life_path, life_revision)
@@ -249,11 +285,15 @@ def merge_tag_and_alias(
                     replacement.append(candidate)
             changes.append({"id": str(ids[0]), "set_details": {"tag": replacement}})
         changed["count"] = len(changes)
-        return text if not changes else transform_items_text(text, changes, id_key=id_key)
+        return (
+            text if not changes else transform_items_text(text, changes, id_key=id_key)
+        )
 
     plans = [
         text_plan(
-            life_path, life_transform, life_expected,
+            life_path,
+            life_transform,
+            life_expected,
             validate=lambda replacement: _parse_or_raise(replacement),
         )
     ]
@@ -273,14 +313,18 @@ def merge_tag_and_alias(
 
         plans.append(
             json_plan(
-                config_path, config_transform, config_expected,
-                create=config_expected == MISSING_HASH, default={},
+                config_path,
+                config_transform,
+                config_expected,
+                create=config_expected == MISSING_HASH,
+                default={},
             )
         )
     result = apply_multi_target(
         plans, operation="tag.merge", journal_dir=journal_dir, config=config
     )
     return result, changed["count"]
+
 
 def merge_tag(path, old_tag, new_tag, expected_revision=None, id_key="id"):
     old_tag = str(old_tag)
@@ -289,7 +333,9 @@ def merge_tag(path, old_tag, new_tag, expected_revision=None, id_key="id"):
     changed = {"count": 0}
 
     def transform(text):
-        items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+        items, diagnostics = parse_text(
+            text, id_key=id_key, check_ids=False, check_references=False
+        )
         _raise_parse_errors(diagnostics)
         changes = []
         for item in items:
@@ -299,14 +345,17 @@ def merge_tag(path, old_tag, new_tag, expected_revision=None, id_key="id"):
             item_id_values = item.details.get(id_key) or []
             if not item_id_values:
                 raise SemanticWriteError(
-                    "Cannot merge tag on %r because it has no %s:." % (item.title, id_key)
+                    "Cannot merge tag on %r because it has no %s:."
+                    % (item.title, id_key)
                 )
             replaced = []
             for value in values:
                 candidate = new_tag if value == old_tag else value
                 if candidate not in replaced:
                     replaced.append(candidate)
-            changes.append({"id": str(item_id_values[0]), "set_details": {"tag": replaced}})
+            changes.append(
+                {"id": str(item_id_values[0]), "set_details": {"tag": replaced}}
+            )
         changed["count"] = len(changes)
         if not changes:
             return text
@@ -323,7 +372,9 @@ def merge_tag(path, old_tag, new_tag, expected_revision=None, id_key="id"):
     return result, changed["count"]
 
 
-def restore_text(path, replacement_text, expected_revision=None, operation="undo.restore"):
+def restore_text(
+    path, replacement_text, expected_revision=None, operation="undo.restore"
+):
     _parse_or_raise(replacement_text)
     _current, expected = resolve_expected_revision(path, expected_revision)
     return mutation.write_text(
@@ -335,8 +386,12 @@ def restore_text(path, replacement_text, expected_revision=None, operation="undo
     )
 
 
-def mutate_config(path, transform, expected_revision=None, create=False, operation="config.semantic"):
-    current, expected = resolve_expected_revision(path, expected_revision, allow_missing=create)
+def mutate_config(
+    path, transform, expected_revision=None, create=False, operation="config.semantic"
+):
+    current, expected = resolve_expected_revision(
+        path, expected_revision, allow_missing=create
+    )
     return mutation.mutate_json(
         path,
         transform,
@@ -384,7 +439,9 @@ def _parse_or_raise(text):
 
 
 def _raise_parse_errors(diagnostics):
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+    errors = [
+        diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+    ]
     if errors:
         raise SemanticWriteError(errors[0].format())
 

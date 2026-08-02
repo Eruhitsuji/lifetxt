@@ -49,10 +49,15 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         with open(source, "w", encoding="utf-8") as handle:
             handle.write("hello")
         config = dict(self.config)
-        config["attachments"] = dict(self.config["attachments"], allowed_mime=["image/*"])
+        config["attachments"] = dict(
+            self.config["attachments"], allowed_mime=["image/*"]
+        )
         with self.assertRaises(AttachmentTransactionError):
             put_attachment_from_path(
-                self.life, "t1", "./copy.txt", source,
+                self.life,
+                "t1",
+                "./copy.txt",
+                source,
                 config=config,
                 attachment_expected_revision=mutation.MISSING_HASH,
             )
@@ -81,14 +86,19 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         self.assertEqual(manifest1["package_sha256"], manifest2["package_sha256"])
         package_path = os.path.join(self.root, "package.zip")
         result = package_directory(
-            self.life, "t1", directory, "./package.zip",
+            self.life,
+            "t1",
+            directory,
+            "./package.zip",
             config=self.config,
             attachment_expected_revision=mutation.MISSING_HASH,
         )
         self.assertEqual(result["action"], "package")
         self.assertTrue(os.path.exists(package_path))
         with zipfile.ZipFile(package_path) as archive:
-            self.assertEqual(archive.namelist(), ["a.txt", "b.txt", "lifetxt-package-manifest.json"])
+            self.assertEqual(
+                archive.namelist(), ["a.txt", "b.txt", "lifetxt-package-manifest.json"]
+            )
             manifest = json.loads(archive.read("lifetxt-package-manifest.json"))
             self.assertEqual(manifest["file_count"], 2)
 
@@ -97,7 +107,10 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         with open(target, "w", encoding="utf-8") as handle:
             handle.write("old")
         initial = put_attachment_from_path(
-            self.life, "t1", "./copy.txt", target,
+            self.life,
+            "t1",
+            "./copy.txt",
+            target,
             config=self.config,
             attachment_expected_revision=mutation.MISSING_HASH,
         )
@@ -105,7 +118,9 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         with open(stored, "w", encoding="utf-8") as handle:
             handle.write("new")
         result = reconcile_attachment(
-            self.life, "t1", "./copy.txt",
+            self.life,
+            "t1",
+            "./copy.txt",
             recorded_revision=initial["attachment_revision"][:16],
             config=self.config,
         )
@@ -125,7 +140,8 @@ class AttachmentPackageV5Tests(unittest.TestCase):
         self.assertEqual(metadata["references"]["./open.txt"]["count"], 1)
         with self.assertRaises(AttachmentTransactionError):
             prepare_open_reference(
-                self.life, "./open.txt",
+                self.life,
+                "./open.txt",
                 attachment_expected_revision="stale",
                 config=self.config,
                 require_revisions=True,

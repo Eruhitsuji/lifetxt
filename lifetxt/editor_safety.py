@@ -46,7 +46,10 @@ def safe_edit(
     """
     absolute = os.path.abspath(path)
     before = mutation.read_text_snapshot(absolute)
-    if expected_revision not in (None, "") and str(expected_revision) != before.content_hash:
+    if (
+        expected_revision not in (None, "")
+        and str(expected_revision) != before.content_hash
+    ):
         raise mutation.MutationConflict(
             absolute,
             str(expected_revision),
@@ -133,7 +136,9 @@ def reconcile_text(base, edited, current):
                     % (left[0] + 1, max(left[1], left[0] + 1))
                 )
     merged = base.splitlines(keepends=True)
-    for start, end, replacement in sorted(editor_changes + current_changes, key=lambda row: (row[0], row[1]), reverse=True):
+    for start, end, replacement in sorted(
+        editor_changes + current_changes, key=lambda row: (row[0], row[1]), reverse=True
+    ):
         merged[start:end] = replacement
     return "".join(merged)
 
@@ -155,7 +160,9 @@ def _changes(base, variant):
     base_lines = base.splitlines(keepends=True)
     variant_lines = variant.splitlines(keepends=True)
     rows = []
-    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, base_lines, variant_lines).get_opcodes():
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
+        None, base_lines, variant_lines
+    ).get_opcodes():
         if tag != "equal":
             rows.append((i1, i2, variant_lines[j1:j2]))
     return rows

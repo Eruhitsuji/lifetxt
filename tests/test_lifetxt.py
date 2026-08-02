@@ -29,10 +29,14 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
         self.assertEqual(1, len(items))
         self.assertEqual("Create_Slides", items[0].title)
-        self.assertEqual(["important", "thesis", "presentation"], items[0].details["tag"])
+        self.assertEqual(
+            ["important", "thesis", "presentation"], items[0].details["tag"]
+        )
 
     def test_quoted_values_round_trip(self):
-        text = '[ ] E "Research Meeting" loc:"Meeting Room A" note:"Use \\"life.txt\\""\n'
+        text = (
+            '[ ] E "Research Meeting" loc:"Meeting Room A" note:"Use \\"life.txt\\""\n'
+        )
         items, diagnostics = parse_text(text)
 
         self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
@@ -45,10 +49,7 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "E010" for d in diagnostics))
 
     def test_line_continuation_joins_next_line(self):
-        text = (
-            "[ ] T Write_Report \\\n"
-            "  due:2026-06-12 project:research\n"
-        )
+        text = "[ ] T Write_Report \\\n  due:2026-06-12 project:research\n"
 
         items, diagnostics = parse_text(text)
 
@@ -63,10 +64,7 @@ class LifeTxtParserTests(unittest.TestCase):
         )
 
     def test_line_continuation_strips_trailing_and_leading_whitespace(self):
-        text = (
-            "[ ] T Review \\   \n"
-            "    due:2026-06-12\n"
-        )
+        text = "[ ] T Review \\   \n    due:2026-06-12\n"
 
         items, diagnostics = parse_text(text)
 
@@ -79,17 +77,14 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "E020" for d in diagnostics))
 
     def test_line_continuation_into_body_reports_error(self):
-        _items, diagnostics = parse_text(
-            "[ ] T Broken \\\n"
-            "| body\n"
-        )
+        _items, diagnostics = parse_text("[ ] T Broken \\\n| body\n")
 
         self.assertTrue(any(d.code == "E021" for d in diagnostics))
 
     def test_jsonl_round_trip(self):
         text = (
             "[ ] T Write_Report due:2026-06-12 tag:report tag:important\n"
-            "[N] N Presentation_Memo note:\"Use figures\"\n"
+            '[N] N Presentation_Memo note:"Use figures"\n'
         )
         items, diagnostics = parse_text(text)
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
@@ -223,17 +218,15 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn("<ul>", html)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
         self.assertNotIn("<script>", html)
-        self.assertEqual("Heading\nbold and site", markdown_to_plain("# Heading\n**bold** and [site](https://example.com)"))
+        self.assertEqual(
+            "Heading\nbold and site",
+            markdown_to_plain("# Heading\n**bold** and [site](https://example.com)"),
+        )
 
     def test_markdown_table_renders_html(self):
         from lifetxt.markdown import markdown_to_html, markdown_to_plain
 
-        md = (
-            "| Name | Score |\n"
-            "|------|-------|\n"
-            "| Alice | 10 |\n"
-            "| Bob | 20 |\n"
-        )
+        md = "| Name | Score |\n|------|-------|\n| Alice | 10 |\n| Bob | 20 |\n"
         result = markdown_to_html(md)
 
         self.assertIn("<table>", result)
@@ -248,11 +241,7 @@ class LifeTxtParserTests(unittest.TestCase):
     def test_markdown_table_alignment(self):
         from lifetxt.markdown import markdown_to_html
 
-        md = (
-            "| Left | Center | Right |\n"
-            "|:-----|:------:|------:|\n"
-            "| a | b | c |\n"
-        )
+        md = "| Left | Center | Right |\n|:-----|:------:|------:|\n| a | b | c |\n"
         result = markdown_to_html(md)
 
         self.assertIn('style="text-align:left"', result)
@@ -262,11 +251,7 @@ class LifeTxtParserTests(unittest.TestCase):
     def test_markdown_table_inline_formatting(self):
         from lifetxt.markdown import markdown_to_html
 
-        md = (
-            "| Task | Status |\n"
-            "|------|--------|\n"
-            "| **Done** | `ok` |\n"
-        )
+        md = "| Task | Status |\n|------|--------|\n| **Done** | `ok` |\n"
         result = markdown_to_html(md)
 
         self.assertIn("<strong>Done</strong>", result)
@@ -275,12 +260,7 @@ class LifeTxtParserTests(unittest.TestCase):
     def test_markdown_table_plain_text(self):
         from lifetxt.markdown import markdown_to_plain
 
-        md = (
-            "| Name | Score |\n"
-            "|------|-------|\n"
-            "| Alice | 10 |\n"
-            "| Bob | 200 |\n"
-        )
+        md = "| Name | Score |\n|------|-------|\n| Alice | 10 |\n| Bob | 200 |\n"
         result = markdown_to_plain(md)
 
         self.assertEqual(
@@ -316,11 +296,7 @@ class LifeTxtParserTests(unittest.TestCase):
             "json",
             "--field",
             "body",
-            input_text=(
-                '[N] J "Research day" on:2026-06-23\n'
-                "| **Done**\n"
-                "| - Parser\n"
-            ),
+            input_text=('[N] J "Research day" on:2026-06-23\n| **Done**\n| - Parser\n'),
         )
 
         data = json.loads(stdout)
@@ -613,7 +589,12 @@ class LifeTxtParserTests(unittest.TestCase):
 
         records = link_records(items)
         compact = [
-            (record["relation"], record["source_id"], record["target_id"], record["status"])
+            (
+                record["relation"],
+                record["source_id"],
+                record["target_id"],
+                record["status"],
+            )
             for record in records
         ]
         self.assertIn(("parent", "task_child", "task_root", "ok"), compact)
@@ -663,10 +644,7 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertEqual(4, items[2].to_dict()["indent"])
 
     def test_indented_item_warns_when_parent_has_no_id(self):
-        _items, diagnostics = parse_text(
-            "[ ] T Parent_Without_ID\n"
-            "  [ ] T Child\n"
-        )
+        _items, diagnostics = parse_text("[ ] T Parent_Without_ID\n  [ ] T Child\n")
 
         self.assertTrue(any(d.code == "W221" for d in diagnostics))
 
@@ -687,8 +665,7 @@ class LifeTxtParserTests(unittest.TestCase):
 
     def test_parent_cycle_reports_warning(self):
         _items, diagnostics = parse_text(
-            "[ ] T First id:a parent:b\n"
-            "[ ] T Second id:b parent:a\n"
+            "[ ] T First id:a parent:b\n[ ] T Second id:b parent:a\n"
         )
 
         self.assertTrue(any(d.code == "W217" for d in diagnostics))
@@ -713,8 +690,7 @@ class LifeTxtParserTests(unittest.TestCase):
 
     def test_duplicate_id_reports_warning(self):
         _items, diagnostics = parse_text(
-            "[ ] T First id:task_001\n"
-            "[ ] T Second id:task_001\n"
+            "[ ] T First id:task_001\n[ ] T Second id:task_001\n"
         )
 
         duplicate_warnings = [d for d in diagnostics if d.code == "W213"]
@@ -740,11 +716,15 @@ class LifeTxtParserTests(unittest.TestCase):
             ("do", "due", "priority", "assignee", "owner", "project", "tag", "id"),
             RECOMMENDED_KEYS_BY_TYPE["T"],
         )
-        self.assertLessEqual(max(len(keys) for keys in RECOMMENDED_KEYS_BY_TYPE.values()), 10)
+        self.assertLessEqual(
+            max(len(keys) for keys in RECOMMENDED_KEYS_BY_TYPE.values()), 10
+        )
         self.assertIn("depends_on", KNOWN_KEYS)
         self.assertNotIn("depends_on", RECOMMENDED_KEYS_BY_TYPE["T"])
 
-        _items, diagnostics = parse_text("[ ] T Write_Report depends_on:t0 body:details\n")
+        _items, diagnostics = parse_text(
+            "[ ] T Write_Report depends_on:t0 body:details\n"
+        )
 
         self.assertFalse(any(d.code == "W106" for d in diagnostics))
 
@@ -930,10 +910,7 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertNotIn("Boundary", normalized)
 
     def test_agenda_cli_around_window(self):
-        text = (
-            "[ ] R Break at:2026-06-06T14:15\n"
-            "[ ] T Morning due:2026-06-06T10:00\n"
-        )
+        text = "[ ] R Break at:2026-06-06T14:15\n[ ] T Morning due:2026-06-06T10:00\n"
 
         stdout, stderr, code = run_cli(
             "agenda",
@@ -1124,7 +1101,9 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
         self.assertEqual(["Training"], [entry["title"] for entry in data])
         self.assertEqual("2026-06-03T09:00..2026-06-03T10:00", data[0]["when"])
         self.assertEqual("repeat:from/to", data[0]["key"])
-        self.assertEqual("RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3", data[0]["matches"][0]["repeat"])
+        self.assertEqual(
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3", data[0]["matches"][0]["repeat"]
+        )
         self.assertEqual(2, data[0]["matches"][0]["occurrence_index"])
 
     def test_agenda_cli_rrule_count_limits_later_occurrences(self):
@@ -1383,10 +1362,7 @@ class LifeTxtAgendaCliTests(unittest.TestCase):
                 )
 
     def test_agenda_cli_week_window(self):
-        text = (
-            "[ ] D Soon due:2026-06-12\n"
-            "[ ] D Later due:2026-06-15\n"
-        )
+        text = "[ ] D Soon due:2026-06-12\n[ ] D Later due:2026-06-15\n"
 
         stdout, stderr, code = run_cli(
             "agenda",
@@ -1513,10 +1489,7 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         )
 
     def test_filter_canonical_outputs_explicit_parent_without_indent(self):
-        text = (
-            "[ ] T Project id:proj_research\n"
-            "  [ ] T Literature_Review id:task_lit\n"
-        )
+        text = "[ ] T Project id:proj_research\n  [ ] T Literature_Review id:task_lit\n"
 
         stdout, stderr, code = run_cli("filter", input_text=text)
 
@@ -1806,7 +1779,12 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         data = json.loads(stdout)
         compact = [
-            (record["relation"], record["source_id"], record["target_id"], record["status"])
+            (
+                record["relation"],
+                record["source_id"],
+                record["target_id"],
+                record["status"],
+            )
             for record in data
         ]
         self.assertEqual(
@@ -1836,7 +1814,9 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         data = json.loads(stdout)
-        self.assertEqual(["blocks", "depends_on"], sorted(record["relation"] for record in data))
+        self.assertEqual(
+            ["blocks", "depends_on"], sorted(record["relation"] for record in data)
+        )
 
     def test_links_cli_chain_traces_depends_on_and_blocks(self):
         text = (
@@ -1936,10 +1916,7 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertIn("task_mid -> task_leaf", out)
 
     def test_deps_cli_depth_zero_outputs_root_only(self):
-        text = (
-            "[ ] T Root id:task_root depends_on:task_mid\n"
-            "[ ] T Mid id:task_mid\n"
-        )
+        text = "[ ] T Root id:task_root depends_on:task_mid\n[ ] T Mid id:task_mid\n"
 
         stdout, stderr, code = run_cli(
             "deps",
@@ -2033,7 +2010,9 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             with open(first_path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T Root id:task_root\n")
             with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
-                handle.write("[ ] T Child id:task_child parent:task_root depends_on:task_root\n")
+                handle.write(
+                    "[ ] T Child id:task_child parent:task_root depends_on:task_root\n"
+                )
 
             stdout, stderr, code = run_cli("check", first_path, second_path)
 
@@ -2098,8 +2077,13 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual(0, code)
             data = json.loads(stdout)
             items = data["items"]
-            self.assertEqual(["First", "Parent", "Child"], [entry["title"] for entry in items])
-            self.assertEqual(["first.life.txt", "second.life.txt", "second.life.txt"], [os.path.basename(entry["source"]) for entry in items])
+            self.assertEqual(
+                ["First", "Parent", "Child"], [entry["title"] for entry in items]
+            )
+            self.assertEqual(
+                ["first.life.txt", "second.life.txt", "second.life.txt"],
+                [os.path.basename(entry["source"]) for entry in items],
+            )
             self.assertEqual([1, 1, 2], [entry["line"] for entry in items])
             self.assertEqual("parent", items[2]["parent"])
             self.assertEqual(2, items[2]["indent"])
@@ -2143,7 +2127,9 @@ class LifeTxtFilterCliTests(unittest.TestCase):
             self.assertEqual("", stderr)
             self.assertEqual(0, code)
             data = json.loads(stdout)
-            self.assertEqual(["First", "Second"], sorted(entry["title"] for entry in data))
+            self.assertEqual(
+                ["First", "Second"], sorted(entry["title"] for entry in data)
+            )
 
             stdout, stderr, code = run_cli("check", temp_dir)
 
@@ -2224,8 +2210,7 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertEqual(
-            "[ ] T Project id:proj_research\n"
-            '  [ ] T "Literature Review" id:task_lit\n',
+            '[ ] T Project id:proj_research\n  [ ] T "Literature Review" id:task_lit\n',
             normalize_newlines(stdout),
         )
 
@@ -2259,7 +2244,9 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
             with open(src, "w", encoding="utf-8", newline="\n") as f:
                 f.write(self.SOURCE_TEXT)
 
-            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--dry-run", "--yes")
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--dry-run", "--yes"
+            )
 
             self.assertEqual(0, code, stderr)
             self.assertIn("(dry run", stdout)
@@ -2297,7 +2284,9 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
             with open(src, "w", encoding="utf-8", newline="\n") as f:
                 f.write(self.SOURCE_TEXT)
 
-            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--copy", "--yes")
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, "--copy", "--yes"
+            )
 
             self.assertEqual(0, code, stderr)
             with open(src, "r", encoding="utf-8") as f:
@@ -2315,7 +2304,14 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
                 f.write(self.SOURCE_TEXT)
 
             stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--before", "2026-04-01", "--dry-run", "--yes"
+                "archive",
+                src,
+                "--dest",
+                dest,
+                "--before",
+                "2026-04-01",
+                "--dry-run",
+                "--yes",
             )
 
             self.assertEqual(0, code, stderr)
@@ -2360,7 +2356,9 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
             with open(src, "w", encoding="utf-8", newline="\n") as f:
                 f.write(self.SOURCE_TEXT)
 
-            stdout, stderr, code = run_cli("archive", src, "--dest", dest, input_text="n\n")
+            stdout, stderr, code = run_cli(
+                "archive", src, "--dest", dest, input_text="n\n"
+            )
 
             self.assertEqual(0, code, stderr)
             self.assertIn("Aborted", stdout)
@@ -2370,6 +2368,7 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
 class LifeTxtDirectiveTests(unittest.TestCase):
     def test_parse_directives_extracts_block(self):
         from lifetxt.parser import parse_directives
+
         text = "#! self: alice\n#! timezone: UTC\n#! project: work\n[ ] T Task\n"
         directives = parse_directives(text)
         self.assertEqual("alice", directives["self"])
@@ -2378,22 +2377,26 @@ class LifeTxtDirectiveTests(unittest.TestCase):
 
     def test_parse_directives_stops_at_blank_line(self):
         from lifetxt.parser import parse_directives
+
         text = "#! self: alice\n\n#! timezone: UTC\n"
         directives = parse_directives(text)
         self.assertEqual({"self": "alice"}, dict(directives))
 
     def test_parse_directives_stops_at_non_directive(self):
         from lifetxt.parser import parse_directives
+
         text = "#! self: alice\n# regular comment\n#! timezone: UTC\n"
         directives = parse_directives(text)
         self.assertEqual({"self": "alice"}, dict(directives))
 
     def test_parse_directives_empty_file(self):
         from lifetxt.parser import parse_directives
+
         self.assertEqual({}, dict(parse_directives("")))
 
     def test_parse_directives_no_directives(self):
         from lifetxt.parser import parse_directives
+
         text = "[ ] T Task\n"
         self.assertEqual({}, dict(parse_directives(text)))
 
@@ -2444,7 +2447,10 @@ class LifeTxtQuickCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             stdout, stderr, code = run_cli(
-                "quick", "Buy_milk", "--append", path,
+                "quick",
+                "Buy_milk",
+                "--append",
+                path,
             )
             self.assertEqual(0, code, stderr)
             self.assertIn("Buy_milk", stdout)
@@ -2456,10 +2462,14 @@ class LifeTxtQuickCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             run_cli(
-                "quick", "Buy_milk",
-                "--due", "2026-12-31",
-                "--project", "home",
-                "--append", path,
+                "quick",
+                "Buy_milk",
+                "--due",
+                "2026-12-31",
+                "--project",
+                "home",
+                "--append",
+                path,
             )
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2468,6 +2478,7 @@ class LifeTxtQuickCliTests(unittest.TestCase):
 
     def test_quick_resolves_today(self):
         import datetime as dt
+
         today_iso = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -2478,6 +2489,7 @@ class LifeTxtQuickCliTests(unittest.TestCase):
 
     def test_quick_resolves_tomorrow(self):
         import datetime as dt
+
         tomorrow_iso = (dt.date.today() + dt.timedelta(days=1)).isoformat()
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -2523,7 +2535,9 @@ class LifeTxtQuickCliTests(unittest.TestCase):
             self.assertIn("Captured_from_stdin", content)
 
     def test_quick_stdin_empty_title_fails_loud(self):
-        stdout, stderr, code = run_cli("quick", "-", "--append", "unused.life.txt", input_text="\n")
+        stdout, stderr, code = run_cli(
+            "quick", "-", "--append", "unused.life.txt", input_text="\n"
+        )
         self.assertEqual(1, code)
         self.assertIn("requires a non-empty title", stderr)
 
@@ -2546,6 +2560,7 @@ class LifeTxtDoneCliTests(unittest.TestCase):
 
     def test_done_by_id_appends_done_date(self):
         import datetime as dt
+
         today_iso = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -2584,7 +2599,9 @@ class LifeTxtDoneCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("done", path, "--text", "Buy", input_text="1\n")
+            stdout, stderr, code = run_cli(
+                "done", path, "--text", "Buy", input_text="1\n"
+            )
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2593,6 +2610,7 @@ class LifeTxtDoneCliTests(unittest.TestCase):
 
     def test_done_already_done_no_rewrite(self):
         import datetime as dt
+
         date = dt.date.today().isoformat()
         source = "[x] T Done_task id:t001 done:%s\n" % date
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2676,7 +2694,9 @@ class LifeTxtDoneHabitCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("done", path, "h1", "--date", "2026-06-01", "--force")
+            stdout, stderr, code = run_cli(
+                "done", path, "h1", "--date", "2026-06-01", "--force"
+            )
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2690,7 +2710,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("complete", path, "t1", "--date", "2026-07-08")
+            stdout, stderr, code = run_cli(
+                "complete", path, "t1", "--date", "2026-07-08"
+            )
             self.assertEqual(0, code, stderr)
             self.assertIn("Completed:", stdout)
             self.assertIn("Next:", stdout)
@@ -2721,7 +2743,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("complete", path, "p1", "--date", "2026-07-08")
+            stdout, stderr, code = run_cli(
+                "complete", path, "p1", "--date", "2026-07-08"
+            )
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2735,7 +2759,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("complete", path, "s1", "--date", "2026-07-08")
+            stdout, stderr, code = run_cli(
+                "complete", path, "s1", "--date", "2026-07-08"
+            )
             self.assertEqual(0, code, stderr)
             self.assertIn("series ended", stdout.lower())
             with open(path, encoding="utf-8") as f:
@@ -2773,7 +2799,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
 
     def test_complete_positional_byday_rule_materializes_correctly(self):
         # First Monday of August 2026 is the 3rd; of September, the 7th.
-        source = '[ ] T Board repeat:"RRULE:FREQ=MONTHLY;BYDAY=1MO" due:2026-08-03 id:s4\n'
+        source = (
+            '[ ] T Board repeat:"RRULE:FREQ=MONTHLY;BYDAY=1MO" due:2026-08-03 id:s4\n'
+        )
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -2790,7 +2818,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("complete", path, "d1", "--date", "2026-07-08")
+            stdout, stderr, code = run_cli(
+                "complete", path, "d1", "--date", "2026-07-08"
+            )
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2815,7 +2845,9 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
-            stdout, stderr, code = run_cli("complete", path, "t1", "--date", "2026-07-08", "--dry-run")
+            stdout, stderr, code = run_cli(
+                "complete", path, "t1", "--date", "2026-07-08", "--dry-run"
+            )
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -2903,7 +2935,9 @@ class LifeTxtDoneEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(self.SOURCE)
-            stdout, stderr, code = run_cli("done", path, "--text", "xyz_nonexistent_999")
+            stdout, stderr, code = run_cli(
+                "done", path, "--text", "xyz_nonexistent_999"
+            )
             self.assertEqual(1, code)
             self.assertIn("xyz_nonexistent_999", stderr)
 
@@ -2947,7 +2981,9 @@ class LifeTxtSummaryEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Task_one\n")
-            stdout, stderr, code = run_cli("summary", path, "--format", "json", "--pretty")
+            stdout, stderr, code = run_cli(
+                "summary", path, "--format", "json", "--pretty"
+            )
             self.assertEqual(0, code, stderr)
             self.assertIn("  ", stdout)
             data = json.loads(stdout)
@@ -3141,12 +3177,14 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
             '123,Write docs,Docs,Use spec,2026-06-12,4,"writing,docs",\n'
         )
 
-        stdout, stderr, code = run_cli("import-ics", "--preset", "todoist", input_text=csv_text)
+        stdout, stderr, code = run_cli(
+            "import-ics", "--preset", "todoist", input_text=csv_text
+        )
 
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertEqual(
-            '[ ] T Write_docs source:todoist uid:123 id:todoist-123 project:Docs '
+            "[ ] T Write_docs source:todoist uid:123 id:todoist-123 project:Docs "
             'note:"Use spec" due:2026-06-12 priority:A tag:writing tag:docs\n',
             normalize_newlines(stdout),
         )
@@ -3186,10 +3224,10 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertEqual(0, code)
         self.assertEqual(
-            '[x] T Fix_import source:github id:github-42 ref:github-42 '
-            'url:https://github.com/example/repo/issues/42 project:repo '
+            "[x] T Fix_import source:github id:github-42 ref:github-42 "
+            "url:https://github.com/example/repo/issues/42 project:repo "
             'note:"Handle edge case" owner:alice assignee:bob tag:bug tag:cli '
-            'created:2026-06-01T10:20 updated:2026-06-02T11:00 done:2026-06-03T12:00\n',
+            "created:2026-06-01T10:20 updated:2026-06-02T11:00 done:2026-06-03T12:00\n",
             normalize_newlines(stdout),
         )
 
@@ -3370,11 +3408,7 @@ class LifeTxtConfigCliTests(unittest.TestCase):
 
 class LifeTxtIdDiagnosticsTests(unittest.TestCase):
     def test_ids_cli_text_reports_duplicates_and_missing_ids(self):
-        text = (
-            "[ ] T First id:task_001\n"
-            "[ ] T Second id:task_001\n"
-            "[ ] N Missing\n"
-        )
+        text = "[ ] T First id:task_001\n[ ] T Second id:task_001\n[ ] N Missing\n"
 
         stdout, stderr, code = run_cli("ids", input_text=text)
 
@@ -3390,10 +3424,7 @@ class LifeTxtIdDiagnosticsTests(unittest.TestCase):
         self.assertIn("WARNING W213", stderr)
 
     def test_ids_cli_json_missing_only(self):
-        text = (
-            "[ ] T First id:task_001\n"
-            "[ ] T Missing\n"
-        )
+        text = "[ ] T First id:task_001\n[ ] T Missing\n"
 
         stdout, stderr, code = run_cli(
             "ids",
@@ -3448,10 +3479,7 @@ class LifeTxtIdDiagnosticsTests(unittest.TestCase):
             self.assertTrue(data["cross_file_duplicates"][0]["cross_file"])
 
     def test_ids_cli_same_file_duplicate_no_cross_file_marker(self):
-        text = (
-            "[ ] T First id:task_001\n"
-            "[ ] T Second id:task_001\n"
-        )
+        text = "[ ] T First id:task_001\n[ ] T Second id:task_001\n"
 
         stdout, stderr, code = run_cli("ids", input_text=text)
 
@@ -3829,6 +3857,7 @@ class LifeTxtNotifyTests(unittest.TestCase):
 class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
     def test_check_line_valid_item_returns_ok(self):
         from lifetxt.parser import parse_text as pt
+
         text = "[ ] T Valid_task due:2026-06-30\n"
         items, diags = pt(text)
         self.assertEqual(1, len(items))
@@ -3836,18 +3865,21 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
 
     def test_check_line_invalid_item_has_error_diagnostic(self):
         from lifetxt.parser import parse_text as pt
+
         text = "NOTAVALIDLINE\n"
         items, diags = pt(text)
         self.assertEqual(0, len(items))
 
     def test_webapp_check_line_function_ok(self):
         from lifetxt.webapp import create_app
+
         items, diags = parse_text("[ ] T Good_task project:work\n")
         has_error = any(d.severity == "error" for d in diags)
         self.assertFalse(has_error)
 
     def test_public_git_config_defaults(self):
         from lifetxt.webapp import public_git_config
+
         result = public_git_config({})
         self.assertFalse(result["enable_api"])
         self.assertTrue(result["ui_poll"])
@@ -3855,27 +3887,32 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
 
     def test_public_web_config_due_soon_days(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config({"web": {"due_soon_days": "7"}})
         self.assertEqual(7, result["due_soon_days"])
 
     def test_public_web_config_due_soon_days_default(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config({})
         self.assertEqual(3, result["due_soon_days"])
 
     def test_public_web_config_week_start_default_monday(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config({})
         self.assertEqual("monday", result["week_start"])
 
     def test_public_web_config_week_start_sunday(self):
         from lifetxt.webapp import public_web_config
+
         for value in ("sunday", "Sun", "0", "7", "SUNDAY"):
             result = public_web_config({"web": {"week_start": value}})
             self.assertEqual("sunday", result["week_start"], value)
 
     def test_public_web_config_week_start_invalid_falls_back_to_monday(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config({"web": {"week_start": "friday"}})
         self.assertEqual("monday", result["week_start"])
 
@@ -3885,14 +3922,16 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         except Exception as exc:
             self.skipTest(f"FastAPI test client is unavailable: {exc}")
         from lifetxt.webapp import create_app
+
         client = TestClient(create_app(paths=[]))
         html = client.get("/").text
         self.assertIn('data-page="calendar"', html)
         self.assertIn("function loadCalendar", html)
-        self.assertIn("data-view=\"calendar\"", html)
+        self.assertIn('data-view="calendar"', html)
 
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config(
             {
                 "web": {
@@ -3906,10 +3945,13 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         )
         self.assertEqual({"accent": "#123456"}, dict(result["theme"]))
         self.assertEqual(["projects", "today"], result["dashboard"]["cards"])
-        self.assertEqual({"today": 4, "projects": 2}, dict(result["dashboard"]["limits"]))
+        self.assertEqual(
+            {"today": 4, "projects": 2}, dict(result["dashboard"]["limits"])
+        )
 
     def test_public_web_config_theme_and_dashboard_dotted_keys(self):
         from lifetxt.webapp import public_web_config
+
         result = public_web_config(
             {
                 "web": {
@@ -3920,13 +3962,16 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
             }
         )
         self.assertEqual("#0f766e", result["theme"]["accent"])
-        self.assertEqual(["needs_attention", "completions"], result["dashboard"]["cards"])
+        self.assertEqual(
+            ["needs_attention", "completions"], result["dashboard"]["cards"]
+        )
         self.assertEqual({"needs_attention": 3}, dict(result["dashboard"]["limits"]))
 
 
 class LifeTxtItemsRawTests(unittest.TestCase):
     def test_items_raw_parse_valid_line(self):
         from lifetxt.parser import parse_text
+
         text = "[ ] T Buy_milk due:2026-06-30 project:home\n"
         items, diags = parse_text(text)
         self.assertEqual(1, len(items))
@@ -3934,12 +3979,14 @@ class LifeTxtItemsRawTests(unittest.TestCase):
 
     def test_items_raw_empty_line_parses_nothing(self):
         from lifetxt.parser import parse_text
+
         text = "\n"
         items, diags = parse_text(text)
         self.assertEqual(0, len(items))
 
     def test_items_raw_invalid_line_has_no_items(self):
         from lifetxt.parser import parse_text
+
         text = "NOT A VALID LINE\n"
         items, diags = parse_text(text)
         self.assertEqual(0, len(items))
@@ -3947,6 +3994,7 @@ class LifeTxtItemsRawTests(unittest.TestCase):
     def test_items_raw_write_appends_newline(self):
         import tempfile, os
         from lifetxt.webapp import write_text, read_text, ensure_parent_dir
+
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
             f.write("[ ] T Existing_task\n")
             path = f.name
@@ -3991,7 +4039,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
 
             response = client.post(
                 "/api/items/parse",
-                json={"line": '[N] J "Research day" on:2026-06-23 tag:lab\n| Wrote notes'},
+                json={
+                    "line": '[N] J "Research day" on:2026-06-23 tag:lab\n| Wrote notes'
+                },
             )
 
             self.assertEqual(200, response.status_code)
@@ -4025,8 +4075,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             Path(path).write_text(
-                "[ ] T Open id:task_open\n"
-                "[x] T Done id:task_done\n",
+                "[ ] T Open id:task_open\n[x] T Done id:task_done\n",
                 encoding="utf-8",
             )
             client = self._client([path], writable_path=path)
@@ -4067,8 +4116,12 @@ class LifeTxtWebApiTests(unittest.TestCase):
             )
             client = self._client([path], writable_path=path)
 
-            false_response = client.get("/api/agenda?from=2026-06-06&to=2026-06-06&open_only=false")
-            true_response = client.get("/api/agenda?from=2026-06-06&to=2026-06-06&open_only=true")
+            false_response = client.get(
+                "/api/agenda?from=2026-06-06&to=2026-06-06&open_only=false"
+            )
+            true_response = client.get(
+                "/api/agenda?from=2026-06-06&to=2026-06-06&open_only=true"
+            )
 
             self.assertEqual(200, false_response.status_code)
             self.assertEqual(2, false_response.json()["count"])
@@ -4120,10 +4173,14 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_chart_mood_api_empty_range_returns_null_points(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text("[N] J Morning on:2026-06-01 mood:happy\n", encoding="utf-8")
+            Path(path).write_text(
+                "[N] J Morning on:2026-06-01 mood:happy\n", encoding="utf-8"
+            )
             client = self._client([path], writable_path=path)
 
-            response = client.get("/api/chart/mood?from=2026-07-01&to=2026-07-03&group=daily")
+            response = client.get(
+                "/api/chart/mood?from=2026-07-01&to=2026-07-03&group=daily"
+            )
 
             self.assertEqual(200, response.status_code)
             data = response.json()
@@ -4180,7 +4237,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual("Done_task", data["completed"][0]["title"])
             self.assertEqual("T001", data["completed"][0]["id"])
             self.assertEqual(50, data["habits"]["Exercise"]["completion_rate"])
-            self.assertEqual([{"date": "2026-01-15", "mood": "good"}], data["mood_trend"])
+            self.assertEqual(
+                [{"date": "2026-01-15", "mood": "good"}], data["mood_trend"]
+            )
             self.assertEqual({"demo": "1h30m"}, data["elapsed_by_project"])
 
     def test_review_api_rejects_invalid_month_and_filters_project(self):
@@ -4216,9 +4275,16 @@ class LifeTxtWebApiTests(unittest.TestCase):
             graph = client.get("/api/graph?root=task_root").json()
             thread = client.get("/api/messages/thread/msg_001").json()
 
-            self.assertEqual({"task_root", "task_child"}, {node["id"] for node in graph["nodes"]})
-            self.assertEqual([("task_child", "task_root")], [(edge["source"], edge["target"]) for edge in graph["edges"]])
-            self.assertEqual(["msg_001", "msg_002"], [item["id"] for item in thread["items"]])
+            self.assertEqual(
+                {"task_root", "task_child"}, {node["id"] for node in graph["nodes"]}
+            )
+            self.assertEqual(
+                [("task_child", "task_root")],
+                [(edge["source"], edge["target"]) for edge in graph["edges"]],
+            )
+            self.assertEqual(
+                ["msg_001", "msg_002"], [item["id"] for item in thread["items"]]
+            )
 
     def test_agenda_api_marks_recurrence_occurrences_generated(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -4250,7 +4316,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
             )
             client = self._client([path], writable_path=path)
 
-            response = client.get("/api/chart/elapsed?from=2026-06-10&to=2026-06-10&project=work")
+            response = client.get(
+                "/api/chart/elapsed?from=2026-06-10&to=2026-06-10&project=work"
+            )
 
             self.assertEqual(200, response.status_code)
             data = response.json()
@@ -4280,7 +4348,10 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(201, response.status_code)
             self.assertEqual(200, thread.status_code)
             items = thread.json()["items"]
-            self.assertEqual(["msg_001", response.json()["item"]["id"]], [item["id"] for item in items])
+            self.assertEqual(
+                ["msg_001", response.json()["item"]["id"]],
+                [item["id"] for item in items],
+            )
             self.assertEqual(["msg_001"], response.json()["item"]["details"]["parent"])
 
     def test_blockers_api_returns_transitive_chain(self):
@@ -4333,9 +4404,15 @@ class LifeTxtWebApiTests(unittest.TestCase):
             )
             client = self._client([path], writable_path=path)
 
-            all_records = client.get("/api/agenda?from=2026-06-10&to=2026-06-10").json()["records"]
-            only = client.get("/api/agenda?from=2026-06-10&to=2026-06-10&blocked=only").json()["records"]
-            hidden = client.get("/api/agenda?from=2026-06-10&to=2026-06-10&blocked=hide").json()["records"]
+            all_records = client.get(
+                "/api/agenda?from=2026-06-10&to=2026-06-10"
+            ).json()["records"]
+            only = client.get(
+                "/api/agenda?from=2026-06-10&to=2026-06-10&blocked=only"
+            ).json()["records"]
+            hidden = client.get(
+                "/api/agenda?from=2026-06-10&to=2026-06-10&blocked=hide"
+            ).json()["records"]
 
             by_title = {record["title"]: record for record in all_records}
             self.assertTrue(by_title["Blocked_task"]["blocked"])
@@ -4379,7 +4456,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
 
             self.assertEqual(200, depth_one.status_code)
             self.assertEqual(1, depth_one.json()["count"])
-            self.assertEqual(["task_b"], [entry["blocker_id"] for entry in depth_one.json()["chain"]])
+            self.assertEqual(
+                ["task_b"], [entry["blocker_id"] for entry in depth_one.json()["chain"]]
+            )
             self.assertEqual(200, clamped.status_code)
             self.assertEqual(2, clamped.json()["count"])
             self.assertEqual(200, invalid.status_code)
@@ -4401,10 +4480,18 @@ class LifeTxtWebApiTests(unittest.TestCase):
             invalid_depth = client.get("/api/graph?root=task_a&depth=not-a-number")
 
             self.assertEqual(200, depth_one.status_code)
-            self.assertEqual({"task_a", "task_b", "task_c"}, {node["id"] for node in depth_one.json()["nodes"]})
+            self.assertEqual(
+                {"task_a", "task_b", "task_c"},
+                {node["id"] for node in depth_one.json()["nodes"]},
+            )
             self.assertEqual(200, invalid_depth.status_code)
-            self.assertEqual({"task_a", "task_b", "task_c"}, {node["id"] for node in invalid_depth.json()["nodes"]})
-            self.assertNotIn("task_other", {node["id"] for node in invalid_depth.json()["nodes"]})
+            self.assertEqual(
+                {"task_a", "task_b", "task_c"},
+                {node["id"] for node in invalid_depth.json()["nodes"]},
+            )
+            self.assertNotIn(
+                "task_other", {node["id"] for node in invalid_depth.json()["nodes"]}
+            )
 
 
 class LifeTxtMcpTests(unittest.TestCase):
@@ -4444,7 +4531,9 @@ class LifeTxtMcpTests(unittest.TestCase):
             self.assertIn("get_agenda", tool_names)
             self.assertIn("get_review", tool_names)
             self.assertIn("get_graph", tool_names)
-            self.assertEqual("lifetxt://source/0", resources["result"]["resources"][0]["uri"])
+            self.assertEqual(
+                "lifetxt://source/0", resources["result"]["resources"][0]["uri"]
+            )
             self.assertIn("task_root", read["result"]["contents"][0]["text"])
 
     def test_mcp_read_tools_match_api_shapes(self):
@@ -4465,12 +4554,18 @@ class LifeTxtMcpTests(unittest.TestCase):
             graph = call_tool("get_graph", {"root": "task_child"}, context)
             blockers = call_tool("get_blockers", {"id": "task_child"}, context)
             status = call_tool("list_status", {"active": True}, context)
-            parsed = call_tool("check_line", {"line": "[ ] T Valid id:task_valid"}, context)
+            parsed = call_tool(
+                "check_line", {"line": "[ ] T Valid id:task_valid"}, context
+            )
 
             self.assertEqual(2, items["count"])
-            self.assertEqual({"task_child", "task_root"}, {node["id"] for node in graph["nodes"]})
+            self.assertEqual(
+                {"task_child", "task_root"}, {node["id"] for node in graph["nodes"]}
+            )
             self.assertTrue(blockers["blocked"])
-            self.assertEqual(["task_root"], [entry["blocker_id"] for entry in blockers["chain"]])
+            self.assertEqual(
+                ["task_root"], [entry["blocker_id"] for entry in blockers["chain"]]
+            )
             self.assertEqual("self", status["records"][0]["person"])
             self.assertTrue(parsed["ok"])
 
@@ -4535,7 +4630,9 @@ class LifeTxtMcpTests(unittest.TestCase):
                 },
                 context,
             )
-            done = call_tool("mark_done", {"id": item_id, "done": "2026-06-12"}, context)
+            done = call_tool(
+                "mark_done", {"id": item_id, "done": "2026-06-12"}, context
+            )
             deleted = call_tool("delete_item", {"id": item_id}, context)
 
             self.assertTrue(item_id)
@@ -4556,9 +4653,13 @@ class LifeTxtMcpTests(unittest.TestCase):
                 "[ ] T Water_plants repeat:daily due:2026-07-01 id:t1\n",
                 encoding="utf-8",
             )
-            context = McpContext(paths=[path], writable_path=path, config={"ids": {"auto": True}})
+            context = McpContext(
+                paths=[path], writable_path=path, config={"ids": {"auto": True}}
+            )
 
-            result = call_tool("complete_item", {"id": "t1", "date": "2026-07-08"}, context)
+            result = call_tool(
+                "complete_item", {"id": "t1", "date": "2026-07-08"}, context
+            )
 
             self.assertEqual("[x]", result["item"]["status"])
             self.assertEqual(["2026-07-08"], result["item"]["details"]["done"])
@@ -4600,9 +4701,15 @@ class LifeTxtMcpTests(unittest.TestCase):
             )
 
             listed = call_tool("list_messages", {"recipient": "self"}, context)
-            reply = call_tool("reply_message", {"id": "msg_001", "title": "Reply"}, context)
-            acked = call_tool("ack_message", {"id": "msg_001", "ack": "2026-06-10T09:05"}, context)
-            snoozed = call_tool("snooze_message", {"id": "msg_001", "duration": "10m"}, context)
+            reply = call_tool(
+                "reply_message", {"id": "msg_001", "title": "Reply"}, context
+            )
+            acked = call_tool(
+                "ack_message", {"id": "msg_001", "ack": "2026-06-10T09:05"}, context
+            )
+            snoozed = call_tool(
+                "snooze_message", {"id": "msg_001", "duration": "10m"}, context
+            )
 
             self.assertEqual(1, listed["count"])
             self.assertEqual(["msg_001"], reply["item"]["details"]["parent"])
@@ -4614,6 +4721,7 @@ class LifeTxtHeatmapTests(unittest.TestCase):
     def test_habit_completion_dates_returns_date_set(self):
         from lifetxt.stats import item_completion_dates
         from lifetxt.parser import parse_text
+
         items, _ = parse_text("[x] H Exercise done:2026-06-20 done:2026-06-21\n")
         if items:
             dates = item_completion_dates(items[0])
@@ -4622,6 +4730,7 @@ class LifeTxtHeatmapTests(unittest.TestCase):
     def test_streak_days_zero_for_empty(self):
         from lifetxt.stats import streak_days
         import datetime
+
         result = streak_days(set(), datetime.date.today())
         self.assertEqual(0, result)
 
@@ -4629,11 +4738,13 @@ class LifeTxtHeatmapTests(unittest.TestCase):
 class LifeTxtStatsSummaryTests(unittest.TestCase):
     def _make_items(self, text):
         from lifetxt.parser import parse_text
+
         items, _ = parse_text(text)
         return items
 
     def test_project_stats_returns_by_project(self):
         from lifetxt.stats import project_stats
+
         items = self._make_items(
             "[ ] T Task1 project:alpha\n"
             "[x] T Task2 project:alpha\n"
@@ -4646,6 +4757,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
 
     def test_project_stats_rate_calculation(self):
         from lifetxt.stats import project_stats
+
         items = self._make_items(
             "[x] T Done project:work\n"
             "[x] T Done2 project:work\n"
@@ -4657,6 +4769,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
     def test_habit_chart_data_is_numeric(self):
         from lifetxt.stats import make_buckets, item_completion_dates, streak_days
         import datetime
+
         items = self._make_items("[ ] H Exercise done:2026-06-01 done:2026-06-02\n")
         if not items:
             return
@@ -4680,6 +4793,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
     def test_make_buckets_weekly_produces_7day_buckets(self):
         from lifetxt.stats import make_buckets
         import datetime
+
         s = datetime.date(2026, 6, 1)
         e = datetime.date(2026, 6, 21)
         buckets = make_buckets(s, e, "weekly")
@@ -4690,6 +4804,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
     def test_make_buckets_monthly_covers_full_month(self):
         from lifetxt.stats import make_buckets
         import datetime
+
         s = datetime.date(2026, 1, 1)
         e = datetime.date(2026, 3, 31)
         buckets = make_buckets(s, e, "monthly")
@@ -4698,6 +4813,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
     def test_mood_chart_data_is_numeric_or_none(self):
         from lifetxt.stats import make_buckets, mood_stats
         import datetime
+
         items = self._make_items("[ ] J Journal mood:good\n")
         s = datetime.date(2026, 6, 1)
         e = datetime.date(2026, 6, 30)
@@ -4709,6 +4825,7 @@ class LifeTxtStatsSummaryTests(unittest.TestCase):
 class LifeTxtWebappHelperTests(unittest.TestCase):
     def test_subgraph_returns_reachable_nodes_only(self):
         from lifetxt.webapp import _subgraph
+
         nodes = [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}]
         edges = [
             {"source": "a", "target": "b", "relation": "depends_on"},
@@ -4723,6 +4840,7 @@ class LifeTxtWebappHelperTests(unittest.TestCase):
 
     def test_subgraph_depth_limit(self):
         from lifetxt.webapp import _subgraph
+
         nodes = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
         edges = [
             {"source": "a", "target": "b", "relation": "depends_on"},
@@ -4736,6 +4854,7 @@ class LifeTxtWebappHelperTests(unittest.TestCase):
 
     def test_subgraph_unknown_root_returns_empty(self):
         from lifetxt.webapp import _subgraph
+
         nodes = [{"id": "a"}]
         edges = []
         fn, fe = _subgraph(nodes, edges, "zzz", depth=None)
@@ -4744,20 +4863,24 @@ class LifeTxtWebappHelperTests(unittest.TestCase):
 
     def test_elapsed_to_minutes_compact_form(self):
         from lifetxt.webapp import _elapsed_to_minutes
+
         self.assertEqual(90, _elapsed_to_minutes("1h30m"))
         self.assertEqual(30, _elapsed_to_minutes("30m"))
         self.assertEqual(60, _elapsed_to_minutes("1h"))
 
     def test_elapsed_to_minutes_bare_integer(self):
         from lifetxt.webapp import _elapsed_to_minutes
+
         self.assertEqual(90, _elapsed_to_minutes("90"))
 
     def test_elapsed_to_minutes_invalid_returns_none(self):
         from lifetxt.webapp import _elapsed_to_minutes
+
         self.assertIsNone(_elapsed_to_minutes("abc"))
 
     def test_chart_tasks_stats_via_library(self):
         from lifetxt.stats import stats_range, make_buckets, task_bucket_stats
+
         items_text = "[x] T Done done:2026-06-01\n[ ] T Open due:2026-06-01\n"
         items, _ = parse_text(items_text)
         s, e = stats_range("2026-06-01", "2026-06-30")
@@ -4769,6 +4892,7 @@ class LifeTxtWebappHelperTests(unittest.TestCase):
 
     def test_chart_mood_via_library(self):
         from lifetxt.stats import stats_range, make_buckets, mood_stats
+
         items_text = "[x] J Morning mood:happy done:2026-06-01\n[x] J Evening mood:sad done:2026-06-02\n"
         items, _ = parse_text(items_text)
         s, e = stats_range("2026-06-01", "2026-06-30")
@@ -4813,8 +4937,7 @@ class LifeTxtWebAppTests(unittest.TestCase):
 
             with open(path, "r", encoding="utf-8") as handle:
                 self.assertEqual(
-                    "# life\n"
-                    '[ ] T "First Updated" project:life\n',
+                    '# life\n[ ] T "First Updated" project:life\n',
                     handle.read(),
                 )
 
@@ -4825,9 +4948,7 @@ class LifeTxtWebAppTests(unittest.TestCase):
             path = os.path.join(temp_dir, "life.txt")
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(
-                    '# life\n[N] J "Day one" on:2026-06-23\n'
-                    "| Old body\n"
-                    "[ ] T Next\n"
+                    '# life\n[N] J "Day one" on:2026-06-23\n| Old body\n[ ] T Next\n'
                 )
 
             updated = webapp.update_item_in_file(
@@ -4899,7 +5020,9 @@ class LifeTxtWebAppTests(unittest.TestCase):
             with open(second_path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T Second\n")
 
-            items, diagnostics = webapp.read_life_inputs([os.path.join(temp_dir, "*life.txt")])
+            items, diagnostics = webapp.read_life_inputs(
+                [os.path.join(temp_dir, "*life.txt")]
+            )
 
             self.assertFalse(any(d.severity == "error" for d in diagnostics))
             self.assertEqual(["First", "Second"], sorted(item.title for item in items))
@@ -4965,7 +5088,9 @@ class LifeTxtWebAppTests(unittest.TestCase):
         file_b_items, diagnostics_b = parse_text(
             "[ ] T Other id:msg_20260621120000_2\n"
         )
-        self.assertFalse(any(d.severity == "error" for d in diagnostics_a + diagnostics_b))
+        self.assertFalse(
+            any(d.severity == "error" for d in diagnostics_a + diagnostics_b)
+        )
 
         item = webapp.message_item_from_payload(
             {
@@ -5039,11 +5164,15 @@ class LifeTxtWebAppTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write("[ ] T First uid:task_001\n")
 
-            items, diagnostics = webapp.read_life_inputs([path], {"ids": {"key": "uid"}})
+            items, diagnostics = webapp.read_life_inputs(
+                [path], {"ids": {"key": "uid"}}
+            )
             self.assertFalse(any(d.severity == "error" for d in diagnostics))
             found = webapp.find_item_by_id(items, "task_001", key="uid")
             self.assertEqual("First", found.title)
-            self.assertEqual("task_001", webapp.api_item(found, path, id_key="uid")["id"])
+            self.assertEqual(
+                "task_001", webapp.api_item(found, path, id_key="uid")["id"]
+            )
 
             updated = webapp.update_item_by_id_in_file(
                 path,
@@ -5060,9 +5189,7 @@ class LifeTxtWebAppTests(unittest.TestCase):
         from lifetxt import webapp
 
         items, diagnostics = parse_text(
-            '[N] J "Research **day**"\n'
-            "| **Done**\n"
-            "| [bad](javascript:alert(1))\n"
+            '[N] J "Research **day**"\n| **Done**\n| [bad](javascript:alert(1))\n'
         )
 
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
@@ -5133,16 +5260,14 @@ class LifeTxtWebAppTests(unittest.TestCase):
     def test_webapp_sort_items_by_title_and_time(self):
         from lifetxt import webapp
 
-        text = (
-            "[ ] T Zebra due:2026-06-12\n"
-            "[ ] T Alpha due:2026-06-10\n"
-            "[ ] T Middle\n"
-        )
+        text = "[ ] T Zebra due:2026-06-12\n[ ] T Alpha due:2026-06-10\n[ ] T Middle\n"
         items, diagnostics = parse_text(text)
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
 
         by_title = webapp.sort_items(items, "title", "asc")
-        self.assertEqual(["Alpha", "Middle", "Zebra"], [item.title for item in by_title])
+        self.assertEqual(
+            ["Alpha", "Middle", "Zebra"], [item.title for item in by_title]
+        )
 
         by_time = webapp.sort_items(items, "time", "asc")
         self.assertEqual(["Alpha", "Zebra", "Middle"], [item.title for item in by_time])
@@ -5159,9 +5284,17 @@ class LifeTxtWebAppTests(unittest.TestCase):
         items, diagnostics = parse_text("[ ] T One\n[ ] T Two\n[ ] T Three\n")
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
 
-        self.assertEqual(["One", "Two"], [item.title for item in webapp.limit_items(items, 2)])
-        self.assertEqual(["One", "Two", "Three"], [item.title for item in webapp.limit_items(items, "")])
-        self.assertEqual(["One", "Two", "Three"], [item.title for item in webapp.limit_items(items, "bad")])
+        self.assertEqual(
+            ["One", "Two"], [item.title for item in webapp.limit_items(items, 2)]
+        )
+        self.assertEqual(
+            ["One", "Two", "Three"],
+            [item.title for item in webapp.limit_items(items, "")],
+        )
+        self.assertEqual(
+            ["One", "Two", "Three"],
+            [item.title for item in webapp.limit_items(items, "bad")],
+        )
 
     def test_serve_help_does_not_require_web_dependencies(self):
         stdout, stderr, code = run_cli("serve", "--help")
@@ -5174,7 +5307,11 @@ class LifeTxtWebAppTests(unittest.TestCase):
         self.assertIn("--insecure-public", stdout)
 
     def test_serve_public_safety_helpers(self):
-        from lifetxt.cli import _config_with_api_token, _is_public_bind_host, _truthy_config
+        from lifetxt.cli import (
+            _config_with_api_token,
+            _is_public_bind_host,
+            _truthy_config,
+        )
 
         self.assertTrue(_is_public_bind_host("0.0.0.0"))
         self.assertFalse(_is_public_bind_host("127.0.0.1"))
@@ -5187,9 +5324,14 @@ class LifeTxtWebAppTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
             state_path = os.path.join(temp_dir, "notifications.json")
-            notify_at = datetime.now().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
+            notify_at = (
+                datetime.now()
+                .replace(second=0, microsecond=0)
+                .strftime("%Y-%m-%dT%H:%M")
+            )
             Path(path).write_text(
-                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:%s\n" % notify_at,
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:%s\n"
+                % notify_at,
                 encoding="utf-8",
             )
 
@@ -5499,14 +5641,7 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             "--interactive",
             "--no-completion",
             input_text=(
-                "?\n"
-                "T\n"
-                "?status\n"
-                "[ ]\n"
-                "Write_Report\n"
-                "?detail\n"
-                "project:research\n"
-                "\n"
+                "?\nT\n?status\n[ ]\nWrite_Report\n?detail\nproject:research\n\n"
             ),
         )
 
@@ -5517,23 +5652,21 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertIn("Status values:", normalized)
         self.assertIn("Recommended detail keys for type T:", normalized)
         self.assertIn("| Key | Meaning | Example |", normalized)
-        self.assertIn("| due | Deadline date or datetime. | `due:2026-06-12` |", normalized)
+        self.assertIn(
+            "| due | Deadline date or datetime. | `due:2026-06-12` |", normalized
+        )
         self.assertIn("-" * 56, normalized)
         self.assertIn("-" * 32, normalized)
-        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report project:research"))
+        self.assertTrue(
+            normalized.rstrip().endswith("[ ] T Write_Report project:research")
+        )
 
     def test_assist_interactive_title_help_is_title_specific(self):
         stdout, stderr, code = run_cli(
             "assist",
             "--interactive",
             "--no-completion",
-            input_text=(
-                "T\n"
-                "[ ]\n"
-                "?\n"
-                "Write_Report\n"
-                "\n"
-            ),
+            input_text=("T\n[ ]\n?\nWrite_Report\n\n"),
         )
 
         normalized = normalize_newlines(stdout)
@@ -5549,12 +5682,7 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             "assist",
             "--interactive",
             "--no-completion",
-            input_text=(
-                "N\n"
-                "N\n"
-                "Memo\n"
-                "\n"
-            ),
+            input_text=("N\nN\nMemo\n\n"),
         )
 
         self.assertEqual("", stderr)
@@ -5566,16 +5694,7 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             "assist",
             "--interactive",
             "--no-completion",
-            input_text=(
-                "J\n"
-                "N\n"
-                "Research_day\n"
-                "body<<\n"
-                "First line\n"
-                "Second line\n"
-                ".\n"
-                "\n"
-            ),
+            input_text=("J\nN\nResearch_day\nbody<<\nFirst line\nSecond line\n.\n\n"),
         )
 
         normalized = normalize_newlines(stdout)
@@ -5583,7 +5702,9 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertIn("Enter body lines. Finish with a single '.' line.", normalized)
         self.assertTrue(
-            normalized.rstrip().endswith("[N] J Research_day\n| First line\n| Second line")
+            normalized.rstrip().endswith(
+                "[N] J Research_day\n| First line\n| Second line"
+            )
         )
 
     def test_assist_interactive_detail_key_help(self):
@@ -5591,14 +5712,7 @@ class LifeTxtAssistCliTests(unittest.TestCase):
             "assist",
             "--interactive",
             "--no-completion",
-            input_text=(
-                "T\n"
-                "[ ]\n"
-                "Write_Report\n"
-                "?due\n"
-                "due:2026-06-12\n"
-                "\n"
-            ),
+            input_text=("T\n[ ]\nWrite_Report\n?due\ndue:2026-06-12\n\n"),
         )
 
         normalized = normalize_newlines(stdout)
@@ -5607,21 +5721,16 @@ class LifeTxtAssistCliTests(unittest.TestCase):
         self.assertIn("due: Deadline date or datetime.", normalized)
         self.assertIn("Example: due:2026-06-12", normalized)
         self.assertIn("-" * 32, normalized)
-        self.assertTrue(normalized.rstrip().endswith("[ ] T Write_Report due:2026-06-12"))
+        self.assertTrue(
+            normalized.rstrip().endswith("[ ] T Write_Report due:2026-06-12")
+        )
 
     def test_assist_interactive_all_key_help_and_status_key_suggestions(self):
         stdout, stderr, code = run_cli(
             "assist",
             "--interactive",
             "--no-completion",
-            input_text=(
-                "T\n"
-                "?\n"
-                "[ ]\n"
-                "Write_Report\n"
-                "?all\n"
-                "\n"
-            ),
+            input_text=("T\n?\n[ ]\nWrite_Report\n?all\n\n"),
         )
 
         normalized = normalize_newlines(stdout)
@@ -5665,15 +5774,23 @@ class LifeTxtDirectiveWiringTests(unittest.TestCase):
 
     def test_quick_applies_self_directive_as_person_for_S_item(self):
         import datetime
+
         now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("#! self: alice\n\n")
             stdout, stderr, code = run_cli(
-                "quick", "At_office", "--type", "S",
-                "--from", now, "--state", "working",
-                "--append", life_file,
+                "quick",
+                "At_office",
+                "--type",
+                "S",
+                "--from",
+                now,
+                "--state",
+                "working",
+                "--append",
+                life_file,
             )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
@@ -5700,11 +5817,16 @@ class LifeTxtInitCliTests(unittest.TestCase):
             cfg_file = os.path.join(tmp, ".lifetxt.json")
             stdout, stderr, code = run_cli(
                 "init",
-                "--file", life_file,
-                "--config-output", cfg_file,
-                "--name", "alice",
-                "--timezone", "Asia/Tokyo",
-                "--project", "work",
+                "--file",
+                life_file,
+                "--config-output",
+                cfg_file,
+                "--name",
+                "alice",
+                "--timezone",
+                "Asia/Tokyo",
+                "--project",
+                "work",
             )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
@@ -5720,10 +5842,14 @@ class LifeTxtInitCliTests(unittest.TestCase):
             cfg_file = os.path.join(tmp, ".lifetxt.json")
             run_cli(
                 "init",
-                "--file", life_file,
-                "--config-output", cfg_file,
-                "--name", "bob",
-                "--timezone", "UTC",
+                "--file",
+                life_file,
+                "--config-output",
+                cfg_file,
+                "--name",
+                "bob",
+                "--timezone",
+                "UTC",
             )
             data = json.loads(open(cfg_file, encoding="utf-8").read())
             self.assertEqual("bob", data["defaults"]["person"])
@@ -5735,7 +5861,11 @@ class LifeTxtInitCliTests(unittest.TestCase):
             cfg_file = os.path.join(tmp, ".lifetxt.json")
             stdin = "carol\nEurope/London\nresearch\n"
             stdout, stderr, code = run_cli(
-                "init", "--file", life_file, "--config-output", cfg_file,
+                "init",
+                "--file",
+                life_file,
+                "--config-output",
+                cfg_file,
                 input_text=stdin,
             )
             self.assertEqual(0, code, stderr)
@@ -5750,8 +5880,15 @@ class LifeTxtInitCliTests(unittest.TestCase):
             cfg_file = os.path.join(tmp, ".lifetxt.json")
             open(life_file, "w").close()
             stdout, stderr, code = run_cli(
-                "init", "--file", life_file, "--config-output", cfg_file,
-                "--name", "alice", "--timezone", "UTC",
+                "init",
+                "--file",
+                life_file,
+                "--config-output",
+                cfg_file,
+                "--name",
+                "alice",
+                "--timezone",
+                "UTC",
                 input_text="n\n",
             )
             self.assertEqual(0, code, stderr)
@@ -5835,7 +5972,9 @@ class LifeTxtAssignCliTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("[ ] T Fix_login id:T001\n")
-            stdout, stderr, code = run_cli("assign", life_file, "T001", "--to", "dave", "--notify")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "T001", "--to", "dave", "--notify"
+            )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
             self.assertIn("[ ] M", content)
@@ -5863,6 +6002,7 @@ class LifeTxtHealthCliTests(unittest.TestCase):
 
     def test_health_w303_upcoming_task(self):
         import datetime
+
         soon = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")
@@ -5994,8 +6134,10 @@ class LifeTxtUndoCliTests(unittest.TestCase):
         cfg_path = os.path.join(tmp, ".lifetxt.json")
         with open(cfg_path, "w", encoding="utf-8") as f:
             json.dump(
-                {"undo": {"dir": os.path.join(tmp, "undo")},
-                 "backup": {"dir": os.path.join(tmp, "backup")}},
+                {
+                    "undo": {"dir": os.path.join(tmp, "undo")},
+                    "backup": {"dir": os.path.join(tmp, "backup")},
+                },
                 f,
             )
         return cfg_path
@@ -6061,8 +6203,7 @@ class LifeTxtReviewCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             today = __import__("datetime").date.today().isoformat()
             content = (
-                "[x] T Finished_task done:%s id:T001\n"
-                "[ ] T Open_task id:T002\n"
+                "[x] T Finished_task done:%s id:T001\n[ ] T Open_task id:T002\n"
             ) % today
             life_file = self._make_file(tmp, content)
             stdout, stderr, code = run_cli("review", life_file, "--week")
@@ -6074,9 +6215,13 @@ class LifeTxtReviewCliTests(unittest.TestCase):
     def test_review_json_format(self):
         with tempfile.TemporaryDirectory() as tmp:
             today = __import__("datetime").date.today().isoformat()
-            content = "[x] T Done_task done:%s id:T001\n[ ] T Open_task id:T002\n" % today
+            content = (
+                "[x] T Done_task done:%s id:T001\n[ ] T Open_task id:T002\n" % today
+            )
             life_file = self._make_file(tmp, content)
-            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            stdout, stderr, code = run_cli(
+                "review", life_file, "--week", "--format", "json"
+            )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
             self.assertIn("completed_tasks", data)
@@ -6101,13 +6246,11 @@ class LifeTxtReviewCliTests(unittest.TestCase):
 
     def test_review_habit_completion_rate(self):
         with tempfile.TemporaryDirectory() as tmp:
-            content = (
-                "[x] H Exercise\n"
-                "[x] H Exercise\n"
-                "[ ] H Exercise\n"
-            )
+            content = "[x] H Exercise\n[x] H Exercise\n[ ] H Exercise\n"
             life_file = self._make_file(tmp, content)
-            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            stdout, stderr, code = run_cli(
+                "review", life_file, "--week", "--format", "json"
+            )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
             self.assertIn("Exercise", data["habits"])
@@ -6182,8 +6325,7 @@ class LifeTxtW225Tests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[x] T Parent_task id:P001\n"
-                    "[ ] T Child_task parent:P001 id:C001\n"
+                    "[x] T Parent_task id:P001\n[ ] T Child_task parent:P001 id:C001\n"
                 )
             stdout, stderr, code = run_cli("check", life_file)
             out = normalize_newlines(stdout + stderr)
@@ -6194,8 +6336,7 @@ class LifeTxtW225Tests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[x] T Parent_task id:P001\n"
-                    "[x] T Child_task parent:P001 id:C001\n"
+                    "[x] T Parent_task id:P001\n[x] T Child_task parent:P001 id:C001\n"
                 )
             stdout, stderr, code = run_cli("check", life_file)
             out = normalize_newlines(stdout + stderr)
@@ -6206,8 +6347,7 @@ class LifeTxtW225Tests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[ ] T Parent_task id:P001\n"
-                    "[ ] T Child_task parent:P001 id:C001\n"
+                    "[ ] T Parent_task id:P001\n[ ] T Child_task parent:P001 id:C001\n"
                 )
             stdout, stderr, code = run_cli("check", life_file)
             out = normalize_newlines(stdout + stderr)
@@ -6233,8 +6373,10 @@ class LifeTxtInitYesTests(unittest.TestCase):
             config_file = os.path.join(tmp, ".lifetxt.json")
             stdout, stderr, code = run_cli(
                 "init",
-                "--file", life_file,
-                "--config-output", config_file,
+                "--file",
+                life_file,
+                "--config-output",
+                config_file,
                 "--yes",
             )
             self.assertEqual(0, code, stderr)
@@ -6250,10 +6392,13 @@ class LifeTxtInitYesTests(unittest.TestCase):
             config_file = os.path.join(tmp, ".lifetxt.json")
             run_cli(
                 "init",
-                "--file", life_file,
-                "--config-output", config_file,
+                "--file",
+                life_file,
+                "--config-output",
+                config_file,
                 "--yes",
-                "--name", "alice",
+                "--name",
+                "alice",
             )
             content = open(life_file, encoding="utf-8").read()
             self.assertIn("#! self: alice", content)
@@ -6267,8 +6412,10 @@ class LifeTxtInitYesTests(unittest.TestCase):
                 f.write("# existing\n")
             stdout, stderr, code = run_cli(
                 "init",
-                "--file", life_file,
-                "--config-output", config_file,
+                "--file",
+                life_file,
+                "--config-output",
+                config_file,
                 "--yes",
             )
             self.assertEqual(0, code, stderr)
@@ -6283,8 +6430,7 @@ class LifeTxtCheckIgnoreTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[x] T Parent_task id:P001\n"
-                    "[ ] T Child_task id:C001 parent:P001\n"
+                    "[x] T Parent_task id:P001\n[ ] T Child_task id:C001 parent:P001\n"
                 )
             stdout, stderr, code = run_cli("check", life_file, "--ignore", "W225")
             self.assertEqual(0, code, stderr)
@@ -6304,8 +6450,7 @@ class LifeTxtCheckIgnoreTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[x] T Parent_task id:P001\n"
-                    "[ ] T Child_task id:C001 parent:P001\n"
+                    "[x] T Parent_task id:P001\n[ ] T Child_task id:C001 parent:P001\n"
                 )
             stdout, stderr, code = run_cli("check", life_file)
             self.assertIn("W225", normalize_newlines(stdout))
@@ -6316,10 +6461,7 @@ class LifeTxtCheckIgnoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
-                f.write(
-                    "[x] T Parent id:P001\n"
-                    "[ ] T Child parent:P001 est:90m\n"
-                )
+                f.write("[x] T Parent id:P001\n[ ] T Child parent:P001 est:90m\n")
             stdout, stderr, code = run_cli("check", life_file, "--ignore", "W225,W222")
             self.assertEqual(0, code, stderr)
             self.assertNotIn("W225", normalize_newlines(stdout))
@@ -6332,7 +6474,9 @@ class LifeTxtAssignTextTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("[ ] T Fix_login_bug id:T001 assignee:alice\n")
-            stdout, stderr, code = run_cli("assign", life_file, "--text", "Fix_login", "--to", "bob")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "--text", "Fix_login", "--to", "bob"
+            )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
             self.assertIn("assignee:bob", content)
@@ -6343,7 +6487,9 @@ class LifeTxtAssignTextTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("[ ] T Fix_login id:T001\n")
-            stdout, stderr, code = run_cli("assign", life_file, "--text", "nonexistent", "--to", "bob")
+            stdout, stderr, code = run_cli(
+                "assign", life_file, "--text", "nonexistent", "--to", "bob"
+            )
             self.assertEqual(1, code)
             self.assertIn("nonexistent", stderr)
 
@@ -6375,8 +6521,7 @@ class LifeTxtHealthExtTests(unittest.TestCase):
             life_file = os.path.join(tmp, "life.txt")
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write(
-                    "[ ] T Old_task due:2020-01-01\n"
-                    "[ ] H Daily_habit repeat:daily\n"
+                    "[ ] T Old_task due:2020-01-01\n[ ] H Daily_habit repeat:daily\n"
                 )
             stdout, stderr, code = run_cli("health", life_file, "--type", "H")
             self.assertEqual(1, code)
@@ -6386,6 +6531,7 @@ class LifeTxtHealthExtTests(unittest.TestCase):
 
     def test_health_w301_suppressed_for_deferred_items(self):
         import datetime as _dt
+
         old_date = (_dt.date.today() - _dt.timedelta(days=60)).isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")
@@ -6482,9 +6628,7 @@ class LifeTxtArchiveOrphanTests(unittest.TestCase):
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(self.SOURCE_WITH_CHILDREN)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--dry-run"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--dry-run")
             self.assertEqual(1, code)
             self.assertIn("P001", normalize_newlines(stdout))
             self.assertFalse(os.path.exists(dest))
@@ -6499,9 +6643,7 @@ class LifeTxtArchiveOrphanTests(unittest.TestCase):
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(content)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--yes"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--yes")
             self.assertEqual(0, code, stderr)
             archive_content = open(dest, encoding="utf-8").read()
             self.assertIn("Parent_done", archive_content)
@@ -6519,9 +6661,7 @@ class LifeTxtArchiveExternalRefsTests(unittest.TestCase):
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(content)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--yes"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--yes")
             self.assertEqual(0, code, stderr)
             out = normalize_newlines(stdout)
             self.assertIn("Warning", out)
@@ -6549,34 +6689,28 @@ class LifeTxtArchiveExternalRefsTests(unittest.TestCase):
 
     def test_archive_no_external_refs_no_warning(self):
         content = (
-            "[x] T Done_task id:T001 done:2026-01-01\n"
-            "[ ] T Unrelated_task id:T002\n"
+            "[x] T Done_task id:T001 done:2026-01-01\n[ ] T Unrelated_task id:T002\n"
         )
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "life.txt")
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(content)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--yes"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--yes")
             self.assertEqual(0, code, stderr)
             out = normalize_newlines(stdout)
             self.assertNotIn("Warning", out)
 
     def test_archive_dry_run_shows_external_ref_warning(self):
         content = (
-            "[x] T Done_task id:T001 done:2026-01-01\n"
-            "[ ] T Ref_task depends_on:T001\n"
+            "[x] T Done_task id:T001 done:2026-01-01\n[ ] T Ref_task depends_on:T001\n"
         )
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "life.txt")
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(content)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--dry-run"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--dry-run")
             self.assertEqual(0, code, stderr)
             out = normalize_newlines(stdout)
             self.assertIn("Warning", out)
@@ -6588,6 +6722,7 @@ class LifeTxtArchiveExternalRefsTests(unittest.TestCase):
 class LifeTxtCleanupArchiveHintTests(unittest.TestCase):
     def test_cleanup_suggests_archive_for_many_old_done_items(self):
         import datetime as _dt
+
         old_date = (_dt.date.today() - _dt.timedelta(days=100)).isoformat()
         lines = ""
         for i in range(12):
@@ -6603,6 +6738,7 @@ class LifeTxtCleanupArchiveHintTests(unittest.TestCase):
 
     def test_cleanup_no_archive_hint_for_few_old_items(self):
         import datetime as _dt
+
         old_date = (_dt.date.today() - _dt.timedelta(days=100)).isoformat()
         lines = "[x] T Old_task id:T001 done:%s\n" % old_date
         with tempfile.TemporaryDirectory() as tmp:
@@ -6622,7 +6758,14 @@ class LifeTxtAssignFromUserEdgeCaseTests(unittest.TestCase):
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("[ ] T Task id:T001\n")
             stdout, stderr, code = run_cli(
-                "assign", life_file, "T001", "--to", "bob", "--notify", "--from-user", ""
+                "assign",
+                life_file,
+                "T001",
+                "--to",
+                "bob",
+                "--notify",
+                "--from-user",
+                "",
             )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
@@ -6651,6 +6794,7 @@ class LifeTxtReviewJournalBodyTests(unittest.TestCase):
 
     def test_review_journal_body_shown_in_text_output(self):
         import datetime as _dt
+
         today = _dt.date.today().isoformat()
         content = '[ ] J Morning_notes on:%s body:"Had_a_great_day"\n' % today
         with tempfile.TemporaryDirectory() as tmp:
@@ -6663,6 +6807,7 @@ class LifeTxtReviewJournalBodyTests(unittest.TestCase):
 
     def test_review_journal_no_body_still_shows_title(self):
         import datetime as _dt
+
         today = _dt.date.today().isoformat()
         content = "[ ] J Evening_notes on:%s\n" % today
         with tempfile.TemporaryDirectory() as tmp:
@@ -6674,6 +6819,7 @@ class LifeTxtReviewJournalBodyTests(unittest.TestCase):
 
     def test_review_journal_body_truncated_at_200_chars(self):
         import datetime as _dt
+
         today = _dt.date.today().isoformat()
         long_body = "x" * 300
         content = '[ ] J Long_entry on:%s body:"%s"\n' % (today, long_body)
@@ -6687,11 +6833,14 @@ class LifeTxtReviewJournalBodyTests(unittest.TestCase):
 
     def test_review_journal_body_in_json_output(self):
         import datetime as _dt
+
         today = _dt.date.today().isoformat()
         content = '[ ] J Morning_notes on:%s body:"Had_a_great_day"\n' % today
         with tempfile.TemporaryDirectory() as tmp:
             life_file = self._make_file(tmp, content)
-            stdout, stderr, code = run_cli("review", life_file, "--week", "--format", "json")
+            stdout, stderr, code = run_cli(
+                "review", life_file, "--week", "--format", "json"
+            )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
             self.assertEqual(1, data["journals"])
@@ -6760,9 +6909,7 @@ class LifeTxtArchivePreserveStructureTests(unittest.TestCase):
             dest = os.path.join(tmp, "archive.txt")
             with open(src, "w", encoding="utf-8") as f:
                 f.write(self.SOURCE)
-            stdout, stderr, code = run_cli(
-                "archive", src, "--dest", dest, "--yes"
-            )
+            stdout, stderr, code = run_cli("archive", src, "--dest", dest, "--yes")
             self.assertEqual(0, code, stderr)
             archive_content = open(dest, encoding="utf-8").read()
             self.assertNotIn("# Tasks section", archive_content)
@@ -6776,8 +6923,14 @@ class LifeTxtAssignFromUserTests(unittest.TestCase):
             with open(life_file, "w", encoding="utf-8") as f:
                 f.write("[ ] T Review_PR id:T001\n")
             stdout, stderr, code = run_cli(
-                "assign", life_file, "T001", "--to", "bob",
-                "--notify", "--from-user", "alice",
+                "assign",
+                life_file,
+                "T001",
+                "--to",
+                "bob",
+                "--notify",
+                "--from-user",
+                "alice",
             )
             self.assertEqual(0, code, stderr)
             content = open(life_file, encoding="utf-8").read()
@@ -6806,42 +6959,49 @@ class LifeTxtLinksMermaidTests(unittest.TestCase):
     )
 
     def test_mermaid_starts_with_graph_lr(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text=self.TEXT
+        )
         self.assertEqual(0, code, stderr)
         self.assertTrue(normalize_newlines(stdout).startswith("graph LR"))
 
     def test_mermaid_contains_node_ids(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text=self.TEXT
+        )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
         self.assertIn("root_001", out)
         self.assertIn("child_001", out)
 
     def test_mermaid_contains_relation_edges(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text=self.TEXT
+        )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
         self.assertIn("depends_on", out)
         self.assertIn("-->", out)
 
     def test_mermaid_done_node_has_class(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text=self.TEXT
+        )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
         self.assertIn(":::done", out)
         self.assertIn("classDef done", out)
 
     def test_mermaid_no_links_still_outputs_graph(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text="[ ] T Solo\n")
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text="[ ] T Solo\n"
+        )
         self.assertEqual(0, code, stderr)
         self.assertIn("graph LR", normalize_newlines(stdout))
 
 
 class LifeTxtLinksDotTests(unittest.TestCase):
-    TEXT = (
-        "[ ] T Task_A id:ta depends_on:tb\n"
-        "[x] T Task_B id:tb\n"
-    )
+    TEXT = "[ ] T Task_A id:ta depends_on:tb\n[x] T Task_B id:tb\n"
 
     def test_dot_starts_with_digraph(self):
         stdout, stderr, code = run_cli("links", "--format", "dot", input_text=self.TEXT)
@@ -6861,7 +7021,9 @@ class LifeTxtLinksDotTests(unittest.TestCase):
         self.assertIn("style=dashed", normalize_newlines(stdout))
 
     def test_dot_no_links_outputs_empty_digraph(self):
-        stdout, stderr, code = run_cli("links", "--format", "dot", input_text="[ ] T Solo\n")
+        stdout, stderr, code = run_cli(
+            "links", "--format", "dot", input_text="[ ] T Solo\n"
+        )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
         self.assertIn("digraph links", out)
@@ -6901,9 +7063,14 @@ class LifeTxtReviewEdgeCaseTests(unittest.TestCase):
             )
             path = self._make_file(tmp, content)
             stdout, stderr, code = run_cli(
-                "review", path,
-                "--from", "2026-03-01", "--to", "2026-03-31",
-                "--format", "json",
+                "review",
+                path,
+                "--from",
+                "2026-03-01",
+                "--to",
+                "2026-03-31",
+                "--format",
+                "json",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -6914,9 +7081,14 @@ class LifeTxtReviewEdgeCaseTests(unittest.TestCase):
             content = "[x] T Old_task done:2025-01-01 id:T001\n"
             path = self._make_file(tmp, content)
             stdout, stderr, code = run_cli(
-                "review", path,
-                "--from", "2026-05-01", "--to", "2026-05-31",
-                "--format", "json",
+                "review",
+                path,
+                "--from",
+                "2026-05-01",
+                "--to",
+                "2026-05-31",
+                "--format",
+                "json",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -6926,9 +7098,14 @@ class LifeTxtReviewEdgeCaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = self._make_file(tmp, "[x] T Task done:2026-03-15 id:T001\n")
             stdout, stderr, code = run_cli(
-                "review", path,
-                "--from", "2026-03-01", "--to", "2026-03-31",
-                "--format", "json",
+                "review",
+                path,
+                "--from",
+                "2026-03-01",
+                "--to",
+                "2026-03-31",
+                "--format",
+                "json",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -6945,9 +7122,15 @@ class LifeTxtReviewEdgeCaseTests(unittest.TestCase):
             with open(p2, "w", encoding="utf-8") as f:
                 f.write("[x] T Task_B done:2026-03-12 id:B001\n")
             stdout, stderr, code = run_cli(
-                "review", p1, p2,
-                "--from", "2026-03-01", "--to", "2026-03-31",
-                "--format", "json",
+                "review",
+                p1,
+                p2,
+                "--from",
+                "2026-03-01",
+                "--to",
+                "2026-03-31",
+                "--format",
+                "json",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -7006,7 +7189,9 @@ class LifeTxtWhoCommandTests(unittest.TestCase):
         self.assertNotIn("focus", out)
 
     def test_who_json_returns_list(self):
-        stdout, stderr, code = run_cli("who", "--format", "json", input_text=self.SOURCE)
+        stdout, stderr, code = run_cli(
+            "who", "--format", "json", input_text=self.SOURCE
+        )
         self.assertEqual(0, code, stderr)
         data = json.loads(stdout)
         self.assertIsInstance(data, list)
@@ -7020,9 +7205,7 @@ class LifeTxtWhoCommandTests(unittest.TestCase):
         self.assertIn("No active", normalize_newlines(stdout))
 
     def test_who_excludes_finished_s_records(self):
-        source = (
-            "[ ] S Alice person:alice state:focus from:2026-06-27T09:00 to:2026-06-27T10:00\n"
-        )
+        source = "[ ] S Alice person:alice state:focus from:2026-06-27T09:00 to:2026-06-27T10:00\n"
         stdout, stderr, code = run_cli("who", input_text=source)
         self.assertEqual(0, code, stderr)
         self.assertIn("No active", normalize_newlines(stdout))
@@ -7043,7 +7226,9 @@ class LifeTxtSearchCommandTests(unittest.TestCase):
         self.assertNotIn("Write_unit_tests", normalize_newlines(stdout))
 
     def test_search_no_match_exits_nonzero(self):
-        stdout, stderr, code = run_cli("search", "zzz_nonexistent", input_text=self.SOURCE)
+        stdout, stderr, code = run_cli(
+            "search", "zzz_nonexistent", input_text=self.SOURCE
+        )
         self.assertEqual(1, code)
 
     def test_search_regex_flag(self):
@@ -7086,6 +7271,7 @@ class LifeTxtSearchCommandTests(unittest.TestCase):
 class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
     def test_health_ignore_suppresses_w303(self):
         import datetime as dt
+
         today = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
@@ -7097,6 +7283,7 @@ class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
 
     def test_health_w301_not_fired_for_recently_updated_task(self):
         import datetime as dt
+
         today = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
@@ -7108,6 +7295,7 @@ class LifeTxtHealthEdgeCaseTests(unittest.TestCase):
 
     def test_health_w302_not_fired_for_recently_completed_habit(self):
         import datetime as dt
+
         today = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
@@ -7165,10 +7353,7 @@ class LifeTxtCleanupIgnoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
-                f.write(
-                    "[x] T Parent_task id:P001\n"
-                    "[ ] T Child_task parent:P001\n"
-                )
+                f.write("[x] T Parent_task id:P001\n[ ] T Child_task parent:P001\n")
             stdout, stderr, code = run_cli("cleanup", path, "--ignore", "W225")
             self.assertEqual(0, code, stderr)
 
@@ -7192,10 +7377,7 @@ class LifeTxtCleanupIgnoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
-                f.write(
-                    "[x] T Parent id:P001\n"
-                    "[ ] T Child parent:P001 est:90m\n"
-                )
+                f.write("[x] T Parent id:P001\n[ ] T Child parent:P001 est:90m\n")
             stdout, stderr, code = run_cli("cleanup", path, "--ignore", "W225,W222")
             self.assertEqual(0, code, stderr)
 
@@ -7206,7 +7388,10 @@ class LifeTxtUndoEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             cfg_path = os.path.join(tmp, "config.toml")
             with open(cfg_path, "w", encoding="utf-8") as f:
-                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+                f.write(
+                    '{"undo": {"dir": "%s"}}'
+                    % os.path.join(tmp, "undo").replace("\\", "/")
+                )
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Old_task\n")
             run_cli("quick", "New_task", "--append", path, "--config", cfg_path)
@@ -7219,7 +7404,10 @@ class LifeTxtUndoEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             cfg_path = os.path.join(tmp, "config.toml")
             with open(cfg_path, "w", encoding="utf-8") as f:
-                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+                f.write(
+                    '{"undo": {"dir": "%s"}}'
+                    % os.path.join(tmp, "undo").replace("\\", "/")
+                )
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Original_task\n")
             run_cli("quick", "Added_task", "--append", path, "--config", cfg_path)
@@ -7233,7 +7421,10 @@ class LifeTxtUndoEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             cfg_path = os.path.join(tmp, "config.toml")
             with open(cfg_path, "w", encoding="utf-8") as f:
-                f.write('{"undo": {"dir": "%s"}}' % os.path.join(tmp, "undo").replace("\\", "/"))
+                f.write(
+                    '{"undo": {"dir": "%s"}}'
+                    % os.path.join(tmp, "undo").replace("\\", "/")
+                )
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Buy_milk id:t001\n")
             run_cli("done", path, "t001", "--config", cfg_path)
@@ -7253,13 +7444,15 @@ class LifeTxtHealthW304Tests(unittest.TestCase):
 
     def test_w304_not_fired_when_assignee_has_recent_s_record(self):
         import datetime as dt
+
         today = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(
                     "[ ] T Fix_bug assignee:alice updated:%s\n"
-                    "[ ] S Alice person:alice state:active from:%sT09:00\n" % (today, today)
+                    "[ ] S Alice person:alice state:active from:%sT09:00\n"
+                    % (today, today)
                 )
             stdout, stderr, code = run_cli("health", path)
             self.assertNotIn("W304", normalize_newlines(stdout))
@@ -7274,8 +7467,14 @@ class LifeTxtLinksScopeTests(unittest.TestCase):
 
     def test_links_id_scope_mermaid_limits_nodes(self):
         stdout, stderr, code = run_cli(
-            "links", "--id", "root", "--direction", "incoming",
-            "--format", "mermaid", input_text=self.TEXT
+            "links",
+            "--id",
+            "root",
+            "--direction",
+            "incoming",
+            "--format",
+            "mermaid",
+            input_text=self.TEXT,
         )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
@@ -7285,8 +7484,14 @@ class LifeTxtLinksScopeTests(unittest.TestCase):
 
     def test_links_id_scope_dot_limits_nodes(self):
         stdout, stderr, code = run_cli(
-            "links", "--id", "root", "--direction", "incoming",
-            "--format", "dot", input_text=self.TEXT
+            "links",
+            "--id",
+            "root",
+            "--direction",
+            "incoming",
+            "--format",
+            "dot",
+            input_text=self.TEXT,
         )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
@@ -7302,10 +7507,7 @@ class LifeTxtDependencyEdgeCaseTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W215" for d in diags))
 
     def test_duplicate_depends_on_blocks_pair_allowed(self):
-        text = (
-            "[ ] T Task_A id:A depends_on:B\n"
-            "[ ] T Task_B id:B blocks:A\n"
-        )
+        text = "[ ] T Task_A id:A depends_on:B\n[ ] T Task_B id:B blocks:A\n"
         _items, diags = parse_text(text)
         errors = [d for d in diags if d.severity == "error"]
         self.assertEqual([], errors)
@@ -7316,11 +7518,7 @@ class LifeTxtDependencyEdgeCaseTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W216" for d in diags))
 
     def test_ambiguous_id_fires_w218(self):
-        text = (
-            "[ ] T Task_A id:dup\n"
-            "[ ] T Task_B id:dup\n"
-            "[ ] T Task_C depends_on:dup\n"
-        )
+        text = "[ ] T Task_A id:dup\n[ ] T Task_B id:dup\n[ ] T Task_C depends_on:dup\n"
         _items, diags = parse_text(text)
         self.assertTrue(any(d.code == "W218" for d in diags))
 
@@ -7362,6 +7560,7 @@ class LifeTxtDoneTests(unittest.TestCase):
 
     def test_done_appends_done_date_today(self):
         import datetime
+
         today = datetime.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
@@ -7397,6 +7596,7 @@ class LifeTxtW222Tests(unittest.TestCase):
 class LifeTxtDirectiveParserTests(unittest.TestCase):
     def test_directives_at_top_are_parsed(self):
         from lifetxt.parser import parse_directives
+
         text = "#! self: alice\n#! project: myproject\n[ ] T Task\n"
         d = parse_directives(text)
         self.assertEqual("alice", d.get("self"))
@@ -7404,6 +7604,7 @@ class LifeTxtDirectiveParserTests(unittest.TestCase):
 
     def test_unknown_directive_key_returned_without_error(self):
         from lifetxt.parser import parse_directives
+
         text = "#! unknown_key: value\n#! self: alice\n"
         d = parse_directives(text)
         self.assertEqual("value", d.get("unknown_key"))
@@ -7411,12 +7612,14 @@ class LifeTxtDirectiveParserTests(unittest.TestCase):
 
     def test_directive_after_item_line_is_not_parsed(self):
         from lifetxt.parser import parse_directives
+
         text = "[ ] T Task\n#! self: alice\n"
         d = parse_directives(text)
         self.assertEqual(0, len(d))
 
     def test_directive_block_ends_at_blank_line(self):
         from lifetxt.parser import parse_directives
+
         text = "#! self: alice\n\n#! project: late\n"
         d = parse_directives(text)
         self.assertIn("self", d)
@@ -7436,8 +7639,14 @@ class LifeTxtReviewMoodTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(self.SOURCE)
             stdout, stderr, code = run_cli(
-                "review", path, "--format", "json",
-                "--from", "2026-06-01", "--to", "2026-06-30"
+                "review",
+                path,
+                "--format",
+                "json",
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -7453,8 +7662,14 @@ class LifeTxtReviewMoodTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)
             stdout, stderr, code = run_cli(
-                "review", path, "--format", "json",
-                "--from", "2026-06-01", "--to", "2026-06-30"
+                "review",
+                path,
+                "--format",
+                "json",
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
             )
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
@@ -7476,9 +7691,13 @@ class LifeTxtArchiveMultiFileRefsTests(unittest.TestCase):
             with open(ref_path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Depends_on_done depends_on:d001\n")
             stdout, stderr, code = run_cli(
-                "archive", main_path, ref_path,
-                "--dest", archive_path,
-                "--dry-run", "--yes"
+                "archive",
+                main_path,
+                ref_path,
+                "--dest",
+                archive_path,
+                "--dry-run",
+                "--yes",
             )
             out = normalize_newlines(stdout)
             self.assertIn("d001", out)
@@ -7494,9 +7713,14 @@ class LifeTxtArchiveMultiFileRefsTests(unittest.TestCase):
             with open(ref_path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Depends_on_done depends_on:d001\n")
             stdout, stderr, code = run_cli(
-                "archive", main_path, ref_path,
-                "--dest", archive_path,
-                "--dry-run", "--yes", "--block-on-external-refs"
+                "archive",
+                main_path,
+                ref_path,
+                "--dest",
+                archive_path,
+                "--dry-run",
+                "--yes",
+                "--block-on-external-refs",
             )
             self.assertEqual(1, code)
             self.assertIn("Blocked", normalize_newlines(stdout))
@@ -7526,6 +7750,7 @@ class LifeTxtW219ExtraTests(unittest.TestCase):
 class LifeTxtQuickExtraTests(unittest.TestCase):
     def test_quick_relative_due_date_resolved(self):
         import datetime
+
         today = datetime.date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "life.txt")
@@ -7544,10 +7769,7 @@ class LifeTxtQuickExtraTests(unittest.TestCase):
 
 class LifeTxtSummaryStdinTest(unittest.TestCase):
     def test_summary_reads_from_stdin(self):
-        text = (
-            "[ ] T Open_task\n"
-            "[x] T Done_task\n"
-        )
+        text = "[ ] T Open_task\n[x] T Done_task\n"
         stdout, stderr, code = run_cli("summary", "--format", "json", input_text=text)
         self.assertEqual(0, code, stderr)
         data = json.loads(stdout)
@@ -7574,7 +7796,9 @@ class LifeTxtCheckIgnoreExtraTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[x] T Old_task\n[ ] T Task est:90m\n")
-            stdout, stderr, code = run_cli("check", path, "--ignore", "W103", "--ignore", "W222")
+            stdout, stderr, code = run_cli(
+                "check", path, "--ignore", "W103", "--ignore", "W222"
+            )
             self.assertEqual(0, code, stderr)
             out = normalize_newlines(stdout)
             self.assertNotIn("W103", out)
@@ -7593,11 +7817,20 @@ class LifeTxtUndoEvictionTests(unittest.TestCase):
             cfg_path = os.path.join(tmp, "config.json")
             undo_dir = os.path.join(tmp, "undo")
             with open(cfg_path, "w", encoding="utf-8") as f:
-                f.write('{"undo": {"dir": "%s", "keep": 2}}' % undo_dir.replace("\\", "/"))
+                f.write(
+                    '{"undo": {"dir": "%s", "keep": 2}}' % undo_dir.replace("\\", "/")
+                )
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Task_v1\n")
             for i in range(3):
-                run_cli("quick", "Task_v%d" % (i + 2), "--append", path, "--config", cfg_path)
+                run_cli(
+                    "quick",
+                    "Task_v%d" % (i + 2),
+                    "--append",
+                    path,
+                    "--config",
+                    cfg_path,
+                )
             entries = sorted(os.listdir(os.path.join(undo_dir, "life.txt")))
             self.assertLessEqual(len(entries), 2)
 
@@ -7618,7 +7851,9 @@ class LifeTxtUndoEvictionTests(unittest.TestCase):
             backup_subdir = os.path.join(backup_dir, "life.txt")
             self.assertTrue(os.path.isdir(backup_subdir), "backup dir should exist")
             entries = os.listdir(backup_subdir)
-            self.assertGreater(len(entries), 0, "backup should contain at least one file")
+            self.assertGreater(
+                len(entries), 0, "backup should contain at least one file"
+            )
 
 
 class LifeTxtLinksSpecialCharsTests(unittest.TestCase):
@@ -7628,7 +7863,9 @@ class LifeTxtLinksSpecialCharsTests(unittest.TestCase):
     )
 
     def test_links_mermaid_sanitizes_dash_in_node_id(self):
-        stdout, stderr, code = run_cli("links", "--format", "mermaid", input_text=self.TEXT)
+        stdout, stderr, code = run_cli(
+            "links", "--format", "mermaid", input_text=self.TEXT
+        )
         self.assertEqual(0, code, stderr)
         out = normalize_newlines(stdout)
         self.assertIn("dash_001", out)
@@ -7696,7 +7933,9 @@ class LifeTxtAssignEdgeCaseTests(unittest.TestCase):
             path = os.path.join(tmp, "life.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("[ ] T Fix_bug id:bug001\n")
-            stdout, stderr, code = run_cli("assign", path, "bug001", "--to", "bob", "--notify")
+            stdout, stderr, code = run_cli(
+                "assign", path, "bug001", "--to", "bob", "--notify"
+            )
             self.assertEqual(0, code, stderr)
             content = open(path, encoding="utf-8").read()
             self.assertIn("[ ] M", content)
@@ -7795,7 +8034,9 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         self.assertTrue(result["ok"])
 
     def test_valid_event_line(self):
-        result = self._check_line("[ ] E Team_standup  from:2026-01-01T09:00  to:2026-01-01T09:30")
+        result = self._check_line(
+            "[ ] E Team_standup  from:2026-01-01T09:00  to:2026-01-01T09:30"
+        )
         self.assertTrue(result["ok"])
         self.assertEqual(result["item_count"], 1)
 
@@ -7809,7 +8050,9 @@ class LifeTxtSummaryCommandTests(unittest.TestCase):
     """Tests for the summary command output."""
 
     def _run_summary(self, text, fmt="text"):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as f:
             f.write(text)
             f.flush()
             fname = f.name
@@ -7831,11 +8074,7 @@ class LifeTxtSummaryCommandTests(unittest.TestCase):
         self.assertIn("3", out)
 
     def test_summary_type_counts_shown(self):
-        text = (
-            "[ ] T Task_one\n"
-            "[ ] T Task_two\n"
-            "[ ] N Note_one\n"
-        )
+        text = "[ ] T Task_one\n[ ] T Task_two\n[ ] N Note_one\n"
         out, err, rc = self._run_summary(text)
         self.assertEqual(rc, 0)
         self.assertIn("T:", out)
@@ -7846,14 +8085,18 @@ class LifeTxtSummaryCommandTests(unittest.TestCase):
         out, err, rc = self._run_summary(text, fmt="json")
         self.assertEqual(rc, 0)
         data = json.loads(out)
-        for key in ("source", "line_count", "item_count", "type_counts", "status_counts"):
+        for key in (
+            "source",
+            "line_count",
+            "item_count",
+            "type_counts",
+            "status_counts",
+        ):
             self.assertIn(key, data)
 
     def test_summary_status_counts_accurate(self):
         text = (
-            "[ ] T Open_task\n"
-            "[x] T Done_task  done:2026-01-01\n"
-            "[-] T Cancelled_task\n"
+            "[ ] T Open_task\n[x] T Done_task  done:2026-01-01\n[-] T Cancelled_task\n"
         )
         out, err, rc = self._run_summary(text, fmt="json")
         self.assertEqual(rc, 0)
@@ -7867,7 +8110,9 @@ class LifeTxtDoneCommandTests(unittest.TestCase):
     """Tests for the done command."""
 
     def _run_done(self, text, *extra_args):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as f:
             f.write(text)
             f.flush()
             fname = f.name
@@ -7905,6 +8150,7 @@ class LifeTxtDoneCommandTests(unittest.TestCase):
 
     def test_done_writes_today_date(self):
         import datetime as _dt
+
         today = _dt.date.today().isoformat()
         text = "[ ] T Dateable_task\n"
         out, err, rc, new_text = self._run_done(text, "--line", "1")
@@ -7973,14 +8219,18 @@ class LifeTxtSearchCommandTests(unittest.TestCase):
     """Tests for the search command."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
         return f.name
 
     def test_search_finds_substring_in_title(self):
-        path = self._make_file("[ ] T My_special_task  project:work\n[x] T Other_task\n")
+        path = self._make_file(
+            "[ ] T My_special_task  project:work\n[x] T Other_task\n"
+        )
         try:
             out, err, rc = run_cli("search", path, "special")
             self.assertEqual(rc, 0)
@@ -8018,9 +8268,13 @@ class LifeTxtSearchCommandTests(unittest.TestCase):
             os.unlink(path)
 
     def test_search_in_field_scope(self):
-        path = self._make_file("[ ] T Task  project:targeted_project\n[ ] T Other  project:different\n")
+        path = self._make_file(
+            "[ ] T Task  project:targeted_project\n[ ] T Other  project:different\n"
+        )
         try:
-            out, err, rc = run_cli("search", path, "targeted", "--in", "project", "--format", "json")
+            out, err, rc = run_cli(
+                "search", path, "targeted", "--in", "project", "--format", "json"
+            )
             self.assertEqual(rc, 0)
             data = json.loads(out)
             # Only the item with project:targeted_project should match
@@ -8078,7 +8332,9 @@ class LifeTxtLintCommandTests(unittest.TestCase):
     """Tests for the lint command."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8125,7 +8381,9 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
     """Tests for the diff command."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8140,7 +8398,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertIn("added", out)
             self.assertIn("New_task", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_detects_removed_item(self):
         a = self._make_file("[ ] T Task_one\n[ ] T Task_two\n")
@@ -8151,7 +8410,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertIn("removed", out)
             self.assertIn("Task_two", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_detects_completed_item(self):
         a = self._make_file("[ ] T Task_one\n")
@@ -8161,7 +8421,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("Task_one", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_detects_detail_change(self):
         a = self._make_file("[ ] T Task_one  project:work\n")
@@ -8171,7 +8432,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("detail-changed", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_no_changes_empty_output(self):
         a = self._make_file("[ ] T Task_one\n")
@@ -8181,7 +8443,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("No differences", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_json_format(self):
         a = self._make_file("[ ] T Task_one\n")
@@ -8194,7 +8457,8 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             self.assertEqual(len(data), 1)
             self.assertEqual(data[0]["change"], "added")
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_diff_type_filter(self):
         a = self._make_file("[ ] T Task_add\n")
@@ -8207,14 +8471,17 @@ class LifeTxtDiffCommandTests(unittest.TestCase):
             for item in data:
                 self.assertEqual(item["type"], "T")
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
 
 class LifeTxtMigrateCommandTests(unittest.TestCase):
     """Tests for the migrate command."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8223,7 +8490,9 @@ class LifeTxtMigrateCommandTests(unittest.TestCase):
     def test_rename_key_dry_run(self):
         path = self._make_file("[ ] T Task  proj:work\n")
         try:
-            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project", "--dry-run")
+            out, err, rc = run_cli(
+                "migrate", path, "--migration", "rename-key=proj=project", "--dry-run"
+            )
             self.assertEqual(rc, 0)
             self.assertIn("dry-run", out.lower())
             self.assertIn("project", out)
@@ -8236,7 +8505,9 @@ class LifeTxtMigrateCommandTests(unittest.TestCase):
     def test_rename_key_applies_change(self):
         path = self._make_file("[ ] T Task  proj:work\n")
         try:
-            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project")
+            out, err, rc = run_cli(
+                "migrate", path, "--migration", "rename-key=proj=project"
+            )
             self.assertEqual(rc, 0)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
@@ -8259,7 +8530,9 @@ class LifeTxtMigrateCommandTests(unittest.TestCase):
     def test_backup_flag_creates_bak(self):
         path = self._make_file("[ ] T Task  proj:work\n")
         try:
-            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project", "--backup")
+            out, err, rc = run_cli(
+                "migrate", path, "--migration", "rename-key=proj=project", "--backup"
+            )
             self.assertEqual(rc, 0)
             self.assertTrue(os.path.exists(path + ".bak"))
         finally:
@@ -8270,14 +8543,18 @@ class LifeTxtMigrateCommandTests(unittest.TestCase):
     def test_no_changes_exits_zero(self):
         path = self._make_file("[ ] T Task  project:work\n")
         try:
-            out, err, rc = run_cli("migrate", path, "--migration", "rename-key=proj=project")
+            out, err, rc = run_cli(
+                "migrate", path, "--migration", "rename-key=proj=project"
+            )
             self.assertEqual(rc, 0)
             self.assertIn("No changes", out)
         finally:
             os.unlink(path)
 
     def test_missing_file_exits_nonzero(self):
-        out, err, rc = run_cli("migrate", "/nonexistent/path.txt", "--migration", "normalize-elapsed")
+        out, err, rc = run_cli(
+            "migrate", "/nonexistent/path.txt", "--migration", "normalize-elapsed"
+        )
         self.assertNotEqual(rc, 0)
 
 
@@ -8285,7 +8562,9 @@ class LifeTxtLintFixTests(unittest.TestCase):
     """Tests for lint --fix auto-correction."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8304,7 +8583,9 @@ class LifeTxtLintFixTests(unittest.TestCase):
             os.unlink(path)
 
     def test_fix_reports_count(self):
-        path = self._make_file("[ ] T Task  proj:work\n[ ] T Another  date:2026-01-01\n")
+        path = self._make_file(
+            "[ ] T Task  proj:work\n[ ] T Another  date:2026-01-01\n"
+        )
         try:
             out, err, rc = run_cli("lint", path, "--fix")
             self.assertIn("Fixed", out)
@@ -8327,7 +8608,9 @@ class LifeTxtReviewMarkdownTests(unittest.TestCase):
     """Tests for review --format markdown."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8335,6 +8618,7 @@ class LifeTxtReviewMarkdownTests(unittest.TestCase):
 
     def test_markdown_output_has_heading(self):
         import datetime as _dt
+
         today = _dt.date.today()
         path = self._make_file(
             "[x] T Completed_task  done:%s\n[ ] T Open_task\n" % today.isoformat()
@@ -8349,6 +8633,7 @@ class LifeTxtReviewMarkdownTests(unittest.TestCase):
 
     def test_markdown_completed_section(self):
         import datetime as _dt
+
         today = _dt.date.today()
         path = self._make_file("[x] T My_done_task  done:%s\n" % today.isoformat())
         try:
@@ -8375,7 +8660,9 @@ class LifeTxtFilterLimitTests(unittest.TestCase):
     """Tests for filter --limit N."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8408,14 +8695,18 @@ class LifeTxtSearchHighlightCountTests(unittest.TestCase):
     """Tests for search --highlight and --count."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
         return f.name
 
     def test_count_returns_number(self):
-        path = self._make_file("[ ] T Apple_task\n[ ] T Banana_task\n[ ] T Another_apple\n")
+        path = self._make_file(
+            "[ ] T Apple_task\n[ ] T Banana_task\n[ ] T Another_apple\n"
+        )
         try:
             out, err, rc = run_cli("search", path, "apple", "--count")
             self.assertEqual(rc, 0)
@@ -8437,7 +8728,9 @@ class LifeTxtDoneDryRunTests(unittest.TestCase):
     """Tests for done --dry-run."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8488,7 +8781,9 @@ class LifeTxtFromMarkdownTests(unittest.TestCase):
         self.assertIn("Task_three", out)
 
     def test_project_flag_applied(self):
-        out, err, rc = run_cli("from-markdown", "-", "--project", "myproject", input_text="- [ ] A task\n")
+        out, err, rc = run_cli(
+            "from-markdown", "-", "--project", "myproject", input_text="- [ ] A task\n"
+        )
         self.assertEqual(rc, 0)
         self.assertIn("project:myproject", out)
 
@@ -8509,7 +8804,9 @@ class LifeTxtSummaryCompareTests(unittest.TestCase):
     """Tests for summary --compare."""
 
     def _make_file(self, text):
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         f.write(text)
         f.flush()
         f.close()
@@ -8517,13 +8814,16 @@ class LifeTxtSummaryCompareTests(unittest.TestCase):
 
     def test_compare_shows_both_files(self):
         a = self._make_file("[ ] T Task_one\n[ ] T Task_two\n")
-        b = self._make_file("[ ] T Task_one\n[x] T Task_two  done:2026-01-01\n[ ] T Task_three\n")
+        b = self._make_file(
+            "[ ] T Task_one\n[x] T Task_two  done:2026-01-01\n[ ] T Task_three\n"
+        )
         try:
             out, err, rc = run_cli("summary", a, "--compare", b)
             self.assertEqual(rc, 0)
             self.assertIn("Items", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
     def test_compare_shows_delta(self):
         a = self._make_file("[ ] T Task_one\n")
@@ -8533,19 +8833,24 @@ class LifeTxtSummaryCompareTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("+2", out)
         finally:
-            os.unlink(a); os.unlink(b)
+            os.unlink(a)
+            os.unlink(b)
 
 
 class LifeTxtCliExpansionTests(unittest.TestCase):
     def _make_file(self, text):
-        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        handle = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         handle.write(text)
         handle.flush()
         handle.close()
         return handle.name
 
     def test_agenda_json_includes_occurrence_metadata(self):
-        path = self._make_file("[ ] T Daily_check from:2026-06-01T09:00 repeat:daily id:t-daily\n")
+        path = self._make_file(
+            "[ ] T Daily_check from:2026-06-01T09:00 repeat:daily id:t-daily\n"
+        )
         try:
             out, err, rc = run_cli(
                 "agenda",
@@ -8629,7 +8934,16 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
     def test_stats_width_compact_output(self):
         path = self._make_file("[x] T Done done:2026-06-10 project:work\n")
         try:
-            out, err, rc = run_cli("stats", path, "--from", "2026-06-01", "--to", "2026-06-30", "--width", "50")
+            out, err, rc = run_cli(
+                "stats",
+                path,
+                "--from",
+                "2026-06-01",
+                "--to",
+                "2026-06-30",
+                "--width",
+                "50",
+            )
             self.assertEqual(rc, 0, err)
             self.assertIn("tasks done", out)
             self.assertLessEqual(max(len(line) for line in out.splitlines()), 50)
@@ -8661,7 +8975,9 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             data = json.loads(out)
             self.assertEqual(1, data["tasks"]["total"])
             self.assertEqual(1, data["tasks"]["done"])
-            self.assertEqual({"work": {"done": 1, "total": 1, "rate": 100}}, data["by_project"])
+            self.assertEqual(
+                {"work": {"done": 1, "total": 1, "rate": 100}}, data["by_project"]
+            )
         finally:
             os.unlink(path)
 
@@ -8702,9 +9018,14 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         data = json.loads(out)
         self.assertEqual(2, len(data))
-        self.assertEqual(["2026-06-01T09:00", "2026-06-03T09:00"], [row["occurrence_start"] for row in data])
+        self.assertEqual(
+            ["2026-06-01T09:00", "2026-06-03T09:00"],
+            [row["occurrence_start"] for row in data],
+        )
         self.assertEqual(["Training", "Training"], [row["title"] for row in data])
-        self.assertEqual(["event_training", "event_training"], [row["source_id"] for row in data])
+        self.assertEqual(
+            ["event_training", "event_training"], [row["source_id"] for row in data]
+        )
         self.assertEqual([1, 2], [row["occurrence_index"] for row in data])
 
     def test_to_csv_occurrences_exports_stable_columns(self):
@@ -8747,8 +9068,13 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
 
         self.assertEqual(rc, 0, err)
         rows = [json.loads(line) for line in normalize_newlines(out).splitlines()]
-        self.assertEqual(["2026-06-01T07:00", "2026-06-02T07:00"], [row["occurrence_start"] for row in rows])
-        self.assertEqual(["habit_stretch", "habit_stretch"], [row["source_id"] for row in rows])
+        self.assertEqual(
+            ["2026-06-01T07:00", "2026-06-02T07:00"],
+            [row["occurrence_start"] for row in rows],
+        )
+        self.assertEqual(
+            ["habit_stretch", "habit_stretch"], [row["source_id"] for row in rows]
+        )
 
     def test_to_json_occurrences_requires_bounded_range(self):
         out, err, rc = run_cli(
@@ -8765,11 +9091,15 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
         path = self._make_file("[N] N Secret note:hidden\n")
         key_path = self._make_file("passphrase\n")
         try:
-            out, err, rc = run_cli("encrypt", path, "--field", "note", "--key-file", key_path)
+            out, err, rc = run_cli(
+                "encrypt", path, "--field", "note", "--key-file", key_path
+            )
             self.assertEqual(rc, 0, err)
             encrypted = Path(path).read_text(encoding="utf-8")
             self.assertIn("note:enc:XSK:", encrypted)
-            out, err, rc = run_cli("decrypt", path, "--field", "note", "--key-file", key_path)
+            out, err, rc = run_cli(
+                "decrypt", path, "--field", "note", "--key-file", key_path
+            )
             self.assertEqual(rc, 0, err)
             self.assertIn("note:hidden", Path(path).read_text(encoding="utf-8"))
         finally:
@@ -8799,7 +9129,9 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             encrypted = Path(path).read_text(encoding="utf-8")
             self.assertIn("note:enc:GCM:", encrypted)
 
-            out, err, rc = run_cli("decrypt", path, "--field", "note", "--key-file", key_path)
+            out, err, rc = run_cli(
+                "decrypt", path, "--field", "note", "--key-file", key_path
+            )
             self.assertEqual(rc, 0, err)
             self.assertIn("note:hidden", Path(path).read_text(encoding="utf-8"))
         finally:
@@ -8821,7 +9153,9 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
             self.assertEqual("", out)
             self.assertEqual(1, rc)
             self.assertIn("refuses to modify generated file", err)
-            self.assertEqual("[ ] T Task id:t1\n", Path(life_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                "[ ] T Task id:t1\n", Path(life_path).read_text(encoding="utf-8")
+            )
 
     def test_review_html_output(self):
         path = self._make_file("[x] T Done done:2026-06-10\n")
@@ -8897,7 +9231,9 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
         first = self._make_file("[ ] T Task_one tag:old\n")
         second = self._make_file("[ ] T Task_two tag:old\n")
         try:
-            out, err, rc = run_cli("batch", "tag-rename", first, second, "--old", "old", "--new", "new")
+            out, err, rc = run_cli(
+                "batch", "tag-rename", first, second, "--old", "old", "--new", "new"
+            )
             self.assertEqual(rc, 0, err)
             self.assertIn("Applied 2 batch operation", out)
             self.assertIn("tag:new", Path(first).read_text(encoding="utf-8"))
@@ -8908,8 +9244,7 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
 
     def test_filter_table_output_and_width(self):
         path = self._make_file(
-            "[x] T Write_Report project:research\n"
-            "[ ] T Read_Papers project:research\n"
+            "[x] T Write_Report project:research\n[ ] T Read_Papers project:research\n"
         )
         try:
             out, err, rc = run_cli("filter", path, "--format", "table")
@@ -8928,7 +9263,9 @@ class LifeTxtCliExpansionTests(unittest.TestCase):
 
 class LifeTxtShareDigestTemplateTests(unittest.TestCase):
     def _make_file(self, text):
-        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        handle = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
         handle.write(text)
         handle.flush()
         handle.close()
@@ -8941,7 +9278,9 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
         )
         out_path = path + ".html"
         try:
-            out, err, rc = run_cli("share", path, "-o", out_path, "--title", "Weekly report")
+            out, err, rc = run_cli(
+                "share", path, "-o", out_path, "--title", "Weekly report"
+            )
             self.assertEqual(rc, 0, err)
             self.assertIn("Wrote", out)
             html_text = Path(out_path).read_text(encoding="utf-8")
@@ -8956,13 +9295,19 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
 
     def test_share_markdown_output_with_filters(self):
         path = self._make_file(
-            "[x] T Write_Report project:research\n"
-            "[ ] T Read_Papers project:other\n"
+            "[x] T Write_Report project:research\n[ ] T Read_Papers project:other\n"
         )
         out_path = path + ".md"
         try:
             out, err, rc = run_cli(
-                "share", path, "--project", "research", "--format", "markdown", "-o", out_path
+                "share",
+                path,
+                "--project",
+                "research",
+                "--format",
+                "markdown",
+                "-o",
+                out_path,
             )
             self.assertEqual(rc, 0, err)
             md_text = Path(out_path).read_text(encoding="utf-8")
@@ -8978,8 +9323,15 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
         digest_path = path + ".digest.md"
         try:
             out, err, rc = run_cli(
-                "digest", path, "--month", "2026-06",
-                "--format", "file", "--path", digest_path, "--dry-run",
+                "digest",
+                path,
+                "--month",
+                "2026-06",
+                "--format",
+                "file",
+                "--path",
+                digest_path,
+                "--dry-run",
             )
             self.assertEqual(rc, 0, err)
             self.assertIn("[dry-run]", out)
@@ -8992,8 +9344,14 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
         digest_path = path + ".digest.md"
         try:
             out, err, rc = run_cli(
-                "digest", path, "--month", "2026-06",
-                "--format", "file", "--path", digest_path,
+                "digest",
+                path,
+                "--month",
+                "2026-06",
+                "--format",
+                "file",
+                "--path",
+                digest_path,
             )
             self.assertEqual(rc, 0, err)
             self.assertTrue(os.path.exists(digest_path))
@@ -9009,7 +9367,12 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
         path = self._make_file("[x] T Done done:2026-06-10\n")
         try:
             out, err, rc = run_cli(
-                "digest", path, "--format", "slack-webhook", "--url-env", "LIFETXT_TEST_MISSING_WEBHOOK_ENV",
+                "digest",
+                path,
+                "--format",
+                "slack-webhook",
+                "--url-env",
+                "LIFETXT_TEST_MISSING_WEBHOOK_ENV",
             )
             self.assertEqual(rc, 1)
             self.assertIn("LIFETXT_TEST_MISSING_WEBHOOK_ENV", err)
@@ -9018,30 +9381,48 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
 
     def test_template_list_and_apply(self):
         life_path = self._make_file("[ ] T Existing\n")
-        config_path = self._make_file(json.dumps({
-            "templates": {
-                "weekly_review": {
-                    "lines": [
-                        "[ ] T Weekly_Review due:{next_monday} project:reflection",
-                    ]
+        config_path = self._make_file(
+            json.dumps(
+                {
+                    "templates": {
+                        "weekly_review": {
+                            "lines": [
+                                "[ ] T Weekly_Review due:{next_monday} project:reflection",
+                            ]
+                        }
+                    }
                 }
-            }
-        }))
+            )
+        )
         try:
             out, err, rc = run_cli("--config", config_path, "template", "list")
             self.assertEqual(rc, 0, err)
             self.assertIn("weekly_review", out)
 
             out, err, rc = run_cli(
-                "--config", config_path, "template", "apply", "weekly_review",
-                "--append", life_path, "--dry-run",
+                "--config",
+                config_path,
+                "template",
+                "apply",
+                "weekly_review",
+                "--append",
+                life_path,
+                "--dry-run",
             )
             self.assertEqual(rc, 0, err)
             self.assertIn("[dry-run]", out)
-            self.assertNotIn("Weekly_Review", Path(life_path).read_text(encoding="utf-8"))
+            self.assertNotIn(
+                "Weekly_Review", Path(life_path).read_text(encoding="utf-8")
+            )
 
             out, err, rc = run_cli(
-                "--config", config_path, "template", "apply", "weekly_review", "--append", life_path,
+                "--config",
+                config_path,
+                "template",
+                "apply",
+                "weekly_review",
+                "--append",
+                life_path,
             )
             self.assertEqual(rc, 0, err)
             self.assertIn("Weekly_Review", Path(life_path).read_text(encoding="utf-8"))
@@ -9052,7 +9433,9 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
     def test_template_apply_unknown_name_errors(self):
         life_path = self._make_file("[ ] T Existing\n")
         try:
-            out, err, rc = run_cli("template", "apply", "does_not_exist", "--append", life_path)
+            out, err, rc = run_cli(
+                "template", "apply", "does_not_exist", "--append", life_path
+            )
             self.assertEqual(rc, 1)
             self.assertIn("Template not found", err)
         finally:
@@ -9068,7 +9451,9 @@ class LifeTxtDemoCommandTests(unittest.TestCase):
         self.assertEqual(0, rc)
         self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
         self.assertEqual(9, len(items))
-        self.assertEqual(["T", "E", "D", "R", "H", "N", "S", "M", "J"], [item.kind for item in items])
+        self.assertEqual(
+            ["T", "E", "D", "R", "H", "N", "S", "M", "J"], [item.kind for item in items]
+        )
         self.assertEqual(["2026-07-12"], items[0].details["do"])
         self.assertEqual(["2026-07-14"], items[0].details["due"])
 
@@ -9099,7 +9484,15 @@ class LifeTxtDemoCommandTests(unittest.TestCase):
         self.assertIn(items[0].details["person"][0], ("self", "alice"))
 
     def test_demo_preserves_timezone_in_timed_values(self):
-        out, err, rc = run_cli("demo", "--count", "1", "--date", "2026-07-12T09:30:15+09:00", "--types", "E")
+        out, err, rc = run_cli(
+            "demo",
+            "--count",
+            "1",
+            "--date",
+            "2026-07-12T09:30:15+09:00",
+            "--types",
+            "E",
+        )
 
         items, diagnostics = parse_text(out)
         self.assertEqual("", err)
@@ -9113,12 +9506,16 @@ class LifeTxtDemoCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "demo.life.txt")
 
-            out, err, rc = run_cli("demo", "--count", "2", "--date", "2026-07-12", "-o", path)
+            out, err, rc = run_cli(
+                "demo", "--count", "2", "--date", "2026-07-12", "-o", path
+            )
             self.assertEqual("", err)
             self.assertEqual(0, rc)
             self.assertIn("Generated 2 demo item(s)", out)
 
-            out, err, rc = run_cli("demo", "--count", "2", "--date", "2026-07-13", "-o", path, "--append")
+            out, err, rc = run_cli(
+                "demo", "--count", "2", "--date", "2026-07-13", "-o", path, "--append"
+            )
             self.assertEqual("", err)
             self.assertEqual(0, rc)
             self.assertIn("Appended 2 demo item(s)", out)

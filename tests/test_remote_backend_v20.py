@@ -41,7 +41,16 @@ class RemoteReadBackendTests(unittest.TestCase):
 
     def test_catalog_is_stable(self):
         self.assertEqual(
-            ["items", "tickets", "projects", "ticket-report", "links", "status", "agenda", "search"],
+            [
+                "items",
+                "tickets",
+                "projects",
+                "ticket-report",
+                "links",
+                "status",
+                "agenda",
+                "search",
+            ],
             [row["name"] for row in resource_catalog()],
         )
 
@@ -59,14 +68,20 @@ class RemoteReadBackendTests(unittest.TestCase):
         tickets = read_resource("tickets", [self.path], self.config, self.principal)
         self.assertEqual(["TK-1"], [row["id"] for row in tickets["data"]["tickets"]])
         projects = read_resource("projects", [self.path], self.config, self.principal)
-        self.assertEqual(["web"], [row["project"] for row in projects["data"]["projects"]])
-        report = read_resource("ticket-report", [self.path], self.config, self.principal)
+        self.assertEqual(
+            ["web"], [row["project"] for row in projects["data"]["projects"]]
+        )
+        report = read_resource(
+            "ticket-report", [self.path], self.config, self.principal
+        )
         self.assertEqual(1, report["data"]["summary"]["total"])
 
     def test_status_search_and_snapshot(self):
         status = read_resource("status", [self.path], self.config, self.principal)
         self.assertEqual("alice", status["data"]["status"][0]["person"])
-        search = read_resource("search", [self.path], self.config, self.principal, {"q": "Shared"})
+        search = read_resource(
+            "search", [self.path], self.config, self.principal, {"q": "Shared"}
+        )
         self.assertGreaterEqual(search["data"]["total"], 1)
         value = snapshot([self.path], self.config, self.principal)
         self.assertEqual("remote-snapshot-v1.schema.json", value["schema"])
@@ -74,10 +89,18 @@ class RemoteReadBackendTests(unittest.TestCase):
 
     def test_invalid_parameters_fail_loudly(self):
         with self.assertRaises(RemoteAccessError) as caught:
-            read_resource("items", [self.path], self.config, self.principal, {"limit": "many"})
+            read_resource(
+                "items", [self.path], self.config, self.principal, {"limit": "many"}
+            )
         self.assertEqual("REMOTE_PARAMETER_INVALID", caught.exception.code)
         with self.assertRaises(RemoteAccessError):
-            read_resource("search", [self.path], self.config, self.principal, {"q": "x", "types": "proposal"})
+            read_resource(
+                "search",
+                [self.path],
+                self.config,
+                self.principal,
+                {"q": "x", "types": "proposal"},
+            )
 
     def test_unknown_resource_fails_closed(self):
         with self.assertRaises(RemoteAccessError) as caught:

@@ -8,6 +8,10 @@
 __pycache__/
 *.py[cod]
 
+# Produced by the recorded `setup` command (`pip install -e .`).
+# `.venv/` is already covered by the leading `.*` rule.
+*.egg-info/
+
 # AI Development Standard
 !.ai/
 !.ai/**

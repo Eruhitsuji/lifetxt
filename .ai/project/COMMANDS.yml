@@ -1,3 +1,20 @@
+preconditions:
+  interpreter:
+    requirement: pyproject.toml requires-python (currently >=3.10)
+    why: >-
+      Every command below assumes `python` resolves to a supported interpreter.
+      On an older one the suite still runs, but modules using newer syntax fail
+      to import, so it covers fewer tests than it appears to and the result is
+      not evidence. tests/test_supported_runtime.py fails loudly in that case
+      rather than letting the run look successful.
+    verify:
+      - python -c "import sys; print(sys.version)"
+      - python -m unittest tests.test_supported_runtime
+    note: >-
+      A system `python` older than the baseline is common. Use a virtual
+      environment created from a supported interpreter, for example
+      `py -3.12 -m venv .venv`, and run the commands from it.
+
 commands:
   setup:
     status: configured

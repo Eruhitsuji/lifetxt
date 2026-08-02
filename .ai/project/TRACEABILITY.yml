@@ -144,6 +144,23 @@ traceability:
         - 'configuration documentation completion rule filed as follow-up issue #62 because .ai/project/RULES.md is out of scope for #57'
       release_or_deployment: null
       status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: standard adoption / foundation setup
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/62
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/70
+      changed_files_or_scope:
+        - Record the configuration-setting completion rule as a project rule
+        - Add a task-template acceptance-criteria prompt for configuration-setting changes
+        - .ai/project/RULES.md
+        - .github/ISSUE_TEMPLATE/task.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/TRACEABILITY.yml and .github/ISSUE_TEMPLATE/task.yml
+        - git diff --check
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-config-concurrent-write-safety
       capability_id: cap-config-safe-writes
       epic: null

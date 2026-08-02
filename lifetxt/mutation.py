@@ -385,7 +385,7 @@ def mutate_text(
     validate=None,
     create=False,
     default_text="",
-    **kwargs
+    **kwargs,
 ):
     """Convenience wrapper around :class:`MutationOperation`."""
     contract = MutationOperation(
@@ -407,7 +407,7 @@ def write_text(
     validate=None,
     transform=None,
     default_text="",
-    **kwargs
+    **kwargs,
 ):
     """Write text through the shared CAS and lock contract.
 
@@ -428,7 +428,7 @@ def write_text(
             validate=validate,
             create=create,
             default_text=default_text,
-            **kwargs
+            **kwargs,
         )
     if not isinstance(text, str):
         raise TypeError("write_text expects text.")
@@ -440,7 +440,7 @@ def write_text(
         validate=validate,
         create=create,
         default_text=default_text,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -453,7 +453,7 @@ def mutate_json(
     default=None,
     pretty=True,
     sort_keys=True,
-    **kwargs
+    **kwargs,
 ):
     """Mutate a JSON document while retaining the same conflict contract."""
 
@@ -470,13 +470,16 @@ def mutate_json(
         replacement = transform(value)
         indent = 2 if pretty else None
         separators = None if pretty else (",", ":")
-        return json.dumps(
-            replacement,
-            ensure_ascii=False,
-            indent=indent,
-            separators=separators,
-            sort_keys=sort_keys,
-        ) + "\n"
+        return (
+            json.dumps(
+                replacement,
+                ensure_ascii=False,
+                indent=indent,
+                separators=separators,
+                sort_keys=sort_keys,
+            )
+            + "\n"
+        )
 
     return mutate_text(
         path,
@@ -487,7 +490,7 @@ def mutate_json(
         default_text=(
             "" if default is None else json.dumps(default, ensure_ascii=False) + "\n"
         ),
-        **kwargs
+        **kwargs,
     )
 
 

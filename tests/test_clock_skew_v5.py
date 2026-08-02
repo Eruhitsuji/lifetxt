@@ -5,7 +5,11 @@ import os
 import tempfile
 import unittest
 
-from lifetxt.clock_skew import ClockSkewError, clock_skew_report, require_acceptable_clock
+from lifetxt.clock_skew import (
+    ClockSkewError,
+    clock_skew_report,
+    require_acceptable_clock,
+)
 from lifetxt.mcp import McpContext, call_tool
 
 
@@ -15,8 +19,13 @@ class ClockSkewTests(unittest.TestCase):
 
     def test_ok_warning_and_reject(self):
         config = {"clock": {"skew_warning_seconds": 10, "skew_reject_seconds": 60}}
-        self.assertEqual("ok", clock_skew_report("2026-07-24T12:00:05Z", config, self.now)["state"])
-        self.assertEqual("warning", clock_skew_report("2026-07-24T12:00:30Z", config, self.now)["state"])
+        self.assertEqual(
+            "ok", clock_skew_report("2026-07-24T12:00:05Z", config, self.now)["state"]
+        )
+        self.assertEqual(
+            "warning",
+            clock_skew_report("2026-07-24T12:00:30Z", config, self.now)["state"],
+        )
         rejected = clock_skew_report("2026-07-24T12:02:00Z", config, self.now)
         self.assertEqual("reject", rejected["state"])
         self.assertFalse(rejected["write_allowed"])

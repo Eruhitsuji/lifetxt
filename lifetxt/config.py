@@ -272,7 +272,18 @@ def config_template():
             ("output", ".generated/google_calendar.life.txt"),
             ("cache_dir", ".cache/lifetxt"),
             ("generated_paths", [".generated/google_calendar.life.txt"]),
-            ("sources", [OrderedDict([("name", "google"), ("url_env", "LIFETXT_GOOGLE_CAL_ICS"), ("tags", ["google"])])]),
+            (
+                "sources",
+                [
+                    OrderedDict(
+                        [
+                            ("name", "google"),
+                            ("url_env", "LIFETXT_GOOGLE_CAL_ICS"),
+                            ("tags", ["google"]),
+                        ]
+                    )
+                ],
+            ),
         ]
     )
     return data
@@ -303,7 +314,9 @@ def find_config_path(path=None):
     env_path = os.environ.get("LIFETXT_CONFIG")
     if env_path:
         if not os.path.exists(env_path):
-            raise ValueError("Config file from LIFETXT_CONFIG does not exist: %s" % env_path)
+            raise ValueError(
+                "Config file from LIFETXT_CONFIG does not exist: %s" % env_path
+            )
         return env_path
 
     for candidate in DEFAULT_CONFIG_CANDIDATES:

@@ -14,7 +14,9 @@ class WorkSessionV4Tests(unittest.TestCase):
         self.timer = os.path.join(self.temp.name, "timer.json")
         self.config = {
             "timer": {"state_file": self.timer},
-            "transactions": {"journal_dir": os.path.join(self.temp.name, "transactions")},
+            "transactions": {
+                "journal_dir": os.path.join(self.temp.name, "transactions")
+            },
             "defaults": {"timezone": "UTC"},
         }
         with open(self.life, "w", encoding="utf-8") as handle:

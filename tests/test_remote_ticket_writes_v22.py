@@ -282,7 +282,7 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
                 **{
                     "If-Match": revision,
                     "X-Lifetxt-Client-Time": "2026-07-26T12:00:00+09:00",
-                }
+                },
             ),
             json=payload,
         )

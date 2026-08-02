@@ -5,6 +5,7 @@ Ticket history stays in life.txt.  ``record:ticket_event`` and
 append the required side records in the same exact-revision mutation, so a
 successful ticket update without its audit event is impossible on this path.
 """
+
 from __future__ import unicode_literals
 
 import copy
@@ -27,12 +28,33 @@ TIME_ENTRY_SCHEMA = "ticket-time-entry-v1.schema.json"
 ACTIVITY_SCHEMA = "ticket-activity-v1.schema.json"
 
 EVENT_TYPES = (
-    "created", "comment", "transition", "assignment", "field_change",
-    "time_entry", "relation_added", "relation_removed", "commit_linked",
-    "pr_linked", "build_failed", "build_passed", "version_assigned",
-    "sprint_assigned", "watch_added", "watch_removed", "closed", "reopened",
+    "created",
+    "comment",
+    "transition",
+    "assignment",
+    "field_change",
+    "time_entry",
+    "relation_added",
+    "relation_removed",
+    "commit_linked",
+    "pr_linked",
+    "build_failed",
+    "build_passed",
+    "version_assigned",
+    "sprint_assigned",
+    "watch_added",
+    "watch_removed",
+    "closed",
+    "reopened",
 )
-DEFAULT_ACTIVITIES = ("development", "review", "testing", "research", "support", "meeting")
+DEFAULT_ACTIVITIES = (
+    "development",
+    "review",
+    "testing",
+    "research",
+    "support",
+    "meeting",
+)
 
 
 def _first(item, key, default=None):
@@ -59,14 +81,18 @@ def is_time_entry(item):
 def iter_ticket_events(items, ticket_id=None):
     rows = [item for item in items if is_ticket_event(item)]
     if ticket_id is not None:
-        rows = [item for item in rows if str(_first(item, "parent", "")) == str(ticket_id)]
+        rows = [
+            item for item in rows if str(_first(item, "parent", "")) == str(ticket_id)
+        ]
     return rows
 
 
 def iter_time_entries(items, ticket_id=None):
     rows = [item for item in items if is_time_entry(item)]
     if ticket_id is not None:
-        rows = [item for item in rows if str(_first(item, "parent", "")) == str(ticket_id)]
+        rows = [
+            item for item in rows if str(_first(item, "parent", "")) == str(ticket_id)
+        ]
     return rows
 
 
@@ -135,7 +161,9 @@ def _time_sequence(items, ticket_id):
 
 def _compact_change(field, before, after):
     return json.dumps(
-        OrderedDict((("field", field), ("before", list(before)), ("after", list(after)))),
+        OrderedDict(
+            (("field", field), ("before", list(before)), ("after", list(after)))
+        ),
         ensure_ascii=False,
         separators=(",", ":"),
     )
@@ -144,7 +172,9 @@ def _compact_change(field, before, after):
 def _changed_fields(before_item, after_item):
     rows = []
     if before_item.status != after_item.status:
-        rows.append(_compact_change("$status", [before_item.status], [after_item.status]))
+        rows.append(
+            _compact_change("$status", [before_item.status], [after_item.status])
+        )
     keys = sorted(set(before_item.details) | set(after_item.details))
     for key in keys:
         before = [str(v) for v in before_item.details.get(key, [])]
@@ -215,7 +245,11 @@ def build_ticket_event(
     for key, value in (extra or {}).items():
         if value in (None, ""):
             continue
-        details[str(key)] = [str(v) for v in value] if isinstance(value, (list, tuple)) else [str(value)]
+        details[str(key)] = (
+            [str(v) for v in value]
+            if isinstance(value, (list, tuple))
+            else [str(value)]
+        )
     return Item("[N]", "N", _event_title(event_type, ticket_id), details)
 
 
@@ -287,7 +321,16 @@ def _diag(code, message, item=None, hint=None):
 
 def validate_ticket_event(item, ticket_ids=None):
     rows = []
-    for key in ("id", "parent", "event", "author", "at", "sequence", "transaction", "ticket_revision"):
+    for key in (
+        "id",
+        "parent",
+        "event",
+        "author",
+        "at",
+        "sequence",
+        "transaction",
+        "ticket_revision",
+    ):
         if not _values(item, key):
             rows.append(_diag("TK020", "Ticket event is missing %s." % key, item))
     event_type = _first(item, "event")
@@ -301,16 +344,34 @@ def validate_ticket_event(item, ticket_ids=None):
         if int(_first(item, "sequence", 0)) <= 0:
             raise ValueError()
     except (TypeError, ValueError):
-        rows.append(_diag("TK023", "Ticket event sequence must be a positive integer.", item))
+        rows.append(
+            _diag("TK023", "Ticket event sequence must be a positive integer.", item)
+        )
     parent = str(_first(item, "parent", ""))
     if ticket_ids is not None and parent not in ticket_ids:
-        rows.append(_diag("TK024", "Ticket event parent %r does not resolve to a ticket." % parent, item))
+        rows.append(
+            _diag(
+                "TK024",
+                "Ticket event parent %r does not resolve to a ticket." % parent,
+                item,
+            )
+        )
     return rows
 
 
 def validate_time_entry(item, ticket_ids=None, activities=None):
     rows = []
-    for key in ("id", "parent", "user", "activity", "on", "elapsed", "sequence", "event_id", "created_at"):
+    for key in (
+        "id",
+        "parent",
+        "user",
+        "activity",
+        "on",
+        "elapsed",
+        "sequence",
+        "event_id",
+        "created_at",
+    ):
         if not _values(item, key):
             rows.append(_diag("TK025", "Time entry is missing %s." % key, item))
     try:
@@ -323,10 +384,18 @@ def validate_time_entry(item, ticket_ids=None, activities=None):
         rows.append(_diag("TK027", str(exc), item))
     activity = str(_first(item, "activity", ""))
     if activities and activity not in activities:
-        rows.append(_diag("TK028", "Time-entry activity %r is not configured." % activity, item))
+        rows.append(
+            _diag("TK028", "Time-entry activity %r is not configured." % activity, item)
+        )
     parent = str(_first(item, "parent", ""))
     if ticket_ids is not None and parent not in ticket_ids:
-        rows.append(_diag("TK029", "Time-entry parent %r does not resolve to a ticket." % parent, item))
+        rows.append(
+            _diag(
+                "TK029",
+                "Time-entry parent %r does not resolve to a ticket." % parent,
+                item,
+            )
+        )
     return rows
 
 
@@ -366,35 +435,59 @@ def validate_ticket_history(items, config=None, key="id"):
         identifier = str(_first(item, "id", ""))
         if identifier:
             if identifier in event_ids:
-                rows.append(_diag("TK030", "Duplicate ticket event id %r." % identifier, item))
+                rows.append(
+                    _diag("TK030", "Duplicate ticket event id %r." % identifier, item)
+                )
             event_ids[identifier] = item
         parent = str(_first(item, "parent", ""))
         sequence = str(_first(item, "sequence", ""))
         pair = (parent, sequence)
         if parent and sequence:
             if pair in sequences:
-                rows.append(_diag("TK031", "Duplicate event sequence %s for ticket %s." % (sequence, parent), item))
+                rows.append(
+                    _diag(
+                        "TK031",
+                        "Duplicate event sequence %s for ticket %s."
+                        % (sequence, parent),
+                        item,
+                    )
+                )
             sequences[pair] = item
         txid = str(_first(item, "transaction", ""))
         if txid:
             if txid in transactions:
-                rows.append(_diag("TK032", "Duplicate ticket transaction %r." % txid, item))
+                rows.append(
+                    _diag("TK032", "Duplicate ticket transaction %r." % txid, item)
+                )
             transactions[txid] = item
     time_ids = {}
     for item in iter_time_entries(items):
-        rows.extend(validate_time_entry(item, ticket_ids, configured_activities(config)))
+        rows.extend(
+            validate_time_entry(item, ticket_ids, configured_activities(config))
+        )
         identifier = str(_first(item, "id", ""))
         if identifier:
             if identifier in time_ids:
-                rows.append(_diag("TK033", "Duplicate time-entry id %r." % identifier, item))
+                rows.append(
+                    _diag("TK033", "Duplicate time-entry id %r." % identifier, item)
+                )
             time_ids[identifier] = item
         event_ref = str(_first(item, "event_id", ""))
         if event_ref and event_ref not in event_ids:
-            rows.append(_diag("TK034", "Time entry references missing event %r." % event_ref, item))
+            rows.append(
+                _diag(
+                    "TK034", "Time entry references missing event %r." % event_ref, item
+                )
+            )
         parent = str(_first(item, "parent", ""))
         sequence = _integer(_first(item, "sequence", 0))
         identifier = str(_first(item, "id", ""))
-        if parent and sequence > 0 and identifier and identifier != time_entry_id(parent, sequence):
+        if (
+            parent
+            and sequence > 0
+            and identifier
+            and identifier != time_entry_id(parent, sequence)
+        ):
             rows.append(
                 _diag(
                     "TK036",
@@ -407,7 +500,12 @@ def validate_ticket_history(items, config=None, key="id"):
         parent = str(_first(item, "parent", ""))
         sequence = _integer(_first(item, "sequence", 0))
         identifier = str(_first(item, "id", ""))
-        if parent and sequence > 0 and identifier and identifier != event_id(parent, sequence):
+        if (
+            parent
+            and sequence > 0
+            and identifier
+            and identifier != event_id(parent, sequence)
+        ):
             rows.append(
                 _diag(
                     "TK035",
@@ -429,19 +527,41 @@ def validate_ticket_history(items, config=None, key="id"):
             continue
         target_item = by_time_id.get(target)
         if target_item is None:
-            rows.append(_diag("TK037", "Time entry %r corrects missing entry %r." % (identifier, target), item))
+            rows.append(
+                _diag(
+                    "TK037",
+                    "Time entry %r corrects missing entry %r." % (identifier, target),
+                    item,
+                )
+            )
             continue
         if str(_first(target_item, "parent", "")) != str(_first(item, "parent", "")):
-            rows.append(_diag("TK037", "Time entry %r corrects an entry from another ticket." % identifier, item))
+            rows.append(
+                _diag(
+                    "TK037",
+                    "Time entry %r corrects an entry from another ticket." % identifier,
+                    item,
+                )
+            )
         if target == identifier:
-            rows.append(_diag("TK038", "Time entry %r cannot correct itself." % identifier, item))
+            rows.append(
+                _diag(
+                    "TK038", "Time entry %r cannot correct itself." % identifier, item
+                )
+            )
         corrections[identifier] = target
     for identifier in corrections:
         seen = set()
         current = identifier
         while current in corrections:
             if current in seen:
-                rows.append(_diag("TK038", "Time-entry correction cycle includes %r." % identifier, by_time_id.get(identifier)))
+                rows.append(
+                    _diag(
+                        "TK038",
+                        "Time-entry correction cycle includes %r." % identifier,
+                        by_time_id.get(identifier),
+                    )
+                )
                 break
             seen.add(current)
             current = corrections[current]
@@ -544,7 +664,9 @@ def _format_seconds(seconds):
     return "".join(parts)
 
 
-def ticket_activity_report(items, ticket_id, config=None, key="id", event_types=None, limit=None):
+def ticket_activity_report(
+    items, ticket_id, config=None, key="id", event_types=None, limit=None
+):
     from .tickets import is_ticket, ticket_id_of, ticket_view
 
     ticket = None
@@ -562,23 +684,31 @@ def ticket_activity_report(items, ticket_id, config=None, key="id", event_types=
     if limit is not None:
         events = events[-max(0, int(limit)) :]
     entries = [time_entry_view(item) for item in iter_time_entries(items, ticket_id)]
-    entries.sort(key=lambda row: (row["date"] or "", row["created_at"] or "", row["sequence"], row["id"] or ""))
+    entries.sort(
+        key=lambda row: (
+            row["date"] or "",
+            row["created_at"] or "",
+            row["sequence"],
+            row["id"] or "",
+        )
+    )
     superseded_ids = {
-        str(row.get("corrects"))
-        for row in entries
-        if row.get("corrects")
+        str(row.get("corrects")) for row in entries if row.get("corrects")
     }
     effective_entries = [
-        row for row in entries
-        if str(row.get("id")) not in superseded_ids
+        row for row in entries if str(row.get("id")) not in superseded_ids
     ]
     seconds = sum(row["seconds"] or 0 for row in effective_entries)
     corrected = sum(row["seconds"] or 0 for row in entries if row.get("corrects"))
     diagnostics = [
-        row for row in validate_ticket_history(items, config=config, key=key)
-        if str(ticket_id) in row.get("message", "") or row.get("line") in {
+        row
+        for row in validate_ticket_history(items, config=config, key=key)
+        if str(ticket_id) in row.get("message", "")
+        or row.get("line")
+        in {
             getattr(item, "line", None)
-            for item in iter_ticket_events(items, ticket_id) + iter_time_entries(items, ticket_id)
+            for item in iter_ticket_events(items, ticket_id)
+            + iter_time_entries(items, ticket_id)
         }
     ]
     return OrderedDict(
@@ -596,7 +726,10 @@ def ticket_activity_report(items, ticket_id, config=None, key="id", event_types=
                         ("authoritative_seconds", seconds),
                         ("authoritative_duration", _format_seconds(seconds)),
                         ("correction_seconds", corrected),
-                        ("effective_entry_ids", [row.get("id") for row in effective_entries]),
+                        (
+                            "effective_entry_ids",
+                            [row.get("id") for row in effective_entries],
+                        ),
                         ("superseded_entry_ids", sorted(superseded_ids)),
                         ("legacy_elapsed", _first(ticket, "elapsed")),
                         (
@@ -609,4 +742,3 @@ def ticket_activity_report(items, ticket_id, config=None, key="id", event_types=
             ("diagnostics", diagnostics),
         )
     )
-

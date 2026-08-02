@@ -11,8 +11,17 @@ from .extra_common import _json_text, _load_config, _resolved_input_paths, _writ
 from .release_policy import release_gate
 from .revision_telemetry import RevisionMetricsStore, store_from_config
 from .transaction_journal import (
-    abandon_with_backup, archive_terminal, cleanup_terminal, compensate, export_evidence,
-    inspect_journal, journal_directory, journal_policy_report, list_journals, resume, verify_backup,
+    abandon_with_backup,
+    archive_terminal,
+    cleanup_terminal,
+    compensate,
+    export_evidence,
+    inspect_journal,
+    journal_directory,
+    journal_policy_report,
+    list_journals,
+    resume,
+    verify_backup,
 )
 from .safety_foundation import (
     CANON_VERSION,
@@ -43,6 +52,7 @@ def command_safety(args, config_data):
         write_path = args.write_file
         if not write_path:
             from .config import config_write_file
+
             write_path = config_write_file(config_data) or (paths[0] if paths else "")
         report = serve_target_diagnostic(paths, write_path)
         return _output(report, args)
@@ -67,10 +77,13 @@ def command_safety(args, config_data):
             read_delegated_proposal,
             reject_delegated_proposal_file,
         )
+
         delegated_action = args.delegated_action
         if delegated_action == "prepare":
             if not getattr(args, "path", None) or not getattr(args, "command", None):
-                raise ValueError("safety delegated prepare requires --path and --command.")
+                raise ValueError(
+                    "safety delegated prepare requires --path and --command."
+                )
             report = prepare_delegated_mutation(
                 args.path,
                 args.command,
@@ -86,20 +99,25 @@ def command_safety(args, config_data):
         elif delegated_action == "apply":
             report = apply_delegated_proposal_file(
                 args.proposal,
-                expected_proposal_revision=getattr(args, "expected_proposal_revision", None),
+                expected_proposal_revision=getattr(
+                    args, "expected_proposal_revision", None
+                ),
                 expected_revision=getattr(args, "expected_revision", None),
                 unsafe=bool(getattr(args, "unsafe", False)),
             )
         else:
             report = reject_delegated_proposal_file(
                 args.proposal,
-                expected_proposal_revision=getattr(args, "expected_proposal_revision", None),
+                expected_proposal_revision=getattr(
+                    args, "expected_proposal_revision", None
+                ),
                 reason=getattr(args, "reason", None),
             )
         return _output(report, args)
     if action == "revisions":
         paths = _resolved_input_paths(args.paths, config_data)
         from .config import config_write_file
+
         write_path = config_write_file(config_data) or (paths[0] if paths else None)
         store = store_from_config(config_data, writable_path=write_path)
         if getattr(args, "metrics_path", None):
@@ -118,25 +136,48 @@ def command_safety(args, config_data):
             )
         else:
             report = store.snapshot()
-        report["metrics_revision"] = store.content_hash() if os.path.exists(store.path) else report.get("metrics_revision")
+        report["metrics_revision"] = (
+            store.content_hash()
+            if os.path.exists(store.path)
+            else report.get("metrics_revision")
+        )
         if getattr(args, "export_evidence", None):
             report["evidence"] = store.export_evidence(getattr(args, "export_evidence"))
         return _output(report, args)
     if action == "transactions":
         from .config import config_write_file
+
         write_path = config_write_file(config_data)
         root = os.path.abspath(
             getattr(args, "journal_dir", None)
             or journal_directory(config_data, writable_path=write_path)
         )
         tx_action = getattr(args, "transaction_action", "list")
-        if tx_action in ("policy-write", "policy-migrate", "rotate-archives", "audit", "archive", "cleanup", "abandon", "restore-backup"):
+        if tx_action in (
+            "policy-write",
+            "policy-migrate",
+            "rotate-archives",
+            "audit",
+            "archive",
+            "cleanup",
+            "abandon",
+            "restore-backup",
+        ):
             from .transaction_admin import authorize_operator
-            authorize_operator(config_data, getattr(args, "operator", None), action="transactions.%s" % tx_action)
+
+            authorize_operator(
+                config_data,
+                getattr(args, "operator", None),
+                action="transactions.%s" % tx_action,
+            )
         journal = getattr(args, "journal", None)
         if journal and not os.path.isabs(journal):
             candidate = os.path.join(root, journal)
-            journal = candidate if candidate.endswith("journal.json") else os.path.join(candidate, "journal.json")
+            journal = (
+                candidate
+                if candidate.endswith("journal.json")
+                else os.path.join(candidate, "journal.json")
+            )
         if tx_action == "list":
             rows = list_journals(root, include_terminal=True)
             report = {"journal_dir": root, "count": len(rows), "transactions": rows}
@@ -150,25 +191,49 @@ def command_safety(args, config_data):
             report = resume(journal)
         elif tx_action == "compensate":
             if not journal:
-                raise ValueError("transactions compensate requires --journal PATH_OR_ID.")
+                raise ValueError(
+                    "transactions compensate requires --journal PATH_OR_ID."
+                )
             report = compensate(journal)
         elif tx_action == "abandon":
             if not journal or not getattr(args, "backup_dir", None):
-                raise ValueError("transactions abandon requires --journal and --backup-dir.")
+                raise ValueError(
+                    "transactions abandon requires --journal and --backup-dir."
+                )
             report = abandon_with_backup(journal, args.backup_dir)
         elif tx_action == "export":
             if not journal or not getattr(args, "output", None):
                 raise ValueError("transactions export requires --journal and --output.")
             report = export_evidence(journal, args.output)
             args.output = None
-        elif tx_action in ("policy", "policy-write", "policy-migrate", "preflight", "rotate-archives", "audit"):
+        elif tx_action in (
+            "policy",
+            "policy-write",
+            "policy-migrate",
+            "preflight",
+            "rotate-archives",
+            "audit",
+        ):
             from .transaction_admin import (
-                append_admin_audit, audit_path, migrate_policy_file, policy_document,
-                policy_path, preflight_report, read_policy_document, rotate_archives,
+                append_admin_audit,
+                audit_path,
+                migrate_policy_file,
+                policy_document,
+                policy_path,
+                preflight_report,
+                read_policy_document,
+                rotate_archives,
                 write_policy_document,
             )
-            policy_file = os.path.abspath(getattr(args, "policy_file", None) or policy_path(root, config=config_data))
-            audit_file = os.path.abspath(getattr(args, "audit_file", None) or audit_path(root, config=config_data))
+
+            policy_file = os.path.abspath(
+                getattr(args, "policy_file", None)
+                or policy_path(root, config=config_data)
+            )
+            audit_file = os.path.abspath(
+                getattr(args, "audit_file", None)
+                or audit_path(root, config=config_data)
+            )
             operator = getattr(args, "operator", None)
             if tx_action == "policy":
                 policy_config = dict(config_data or {})
@@ -176,8 +241,15 @@ def command_safety(args, config_data):
                 tx_config["policy_file"] = policy_file
                 policy_config["transactions"] = tx_config
                 report = journal_policy_report(root, config=policy_config)
-                report["policy_file"] = {"path": policy_file, "document": read_policy_document(policy_file, allow_missing=True, allow_older=True)}
-                report["preflight"] = preflight_report(root, config=config_data, create=False)
+                report["policy_file"] = {
+                    "path": policy_file,
+                    "document": read_policy_document(
+                        policy_file, allow_missing=True, allow_older=True
+                    ),
+                }
+                report["preflight"] = preflight_report(
+                    root, config=config_data, create=False
+                )
             elif tx_action == "policy-write":
                 document = policy_document(config=config_data, operator=operator)
                 for assignment in getattr(args, "set", None) or []:
@@ -192,19 +264,40 @@ def command_safety(args, config_data):
                     except ValueError:
                         pass
                     document["policy"][key] = value
-                document["policy"] = __import__("lifetxt.transaction_policy", fromlist=["policy_from_config"]).policy_from_config({"transactions": document["policy"]})
-                report = write_policy_document(policy_file, document, expected_revision=getattr(args, "expected_revision", None), operator=operator, audit_file=audit_file)
+                document["policy"] = __import__(
+                    "lifetxt.transaction_policy", fromlist=["policy_from_config"]
+                ).policy_from_config({"transactions": document["policy"]})
+                report = write_policy_document(
+                    policy_file,
+                    document,
+                    expected_revision=getattr(args, "expected_revision", None),
+                    operator=operator,
+                    audit_file=audit_file,
+                )
             elif tx_action == "policy-migrate":
-                report = migrate_policy_file(policy_file, expected_revision=getattr(args, "expected_revision", None), operator=operator, audit_file=audit_file)
+                report = migrate_policy_file(
+                    policy_file,
+                    expected_revision=getattr(args, "expected_revision", None),
+                    operator=operator,
+                    audit_file=audit_file,
+                )
             elif tx_action == "preflight":
-                report = preflight_report(root, config=config_data, create=bool(getattr(args, "force", False)))
+                report = preflight_report(
+                    root, config=config_data, create=bool(getattr(args, "force", False))
+                )
             elif tx_action == "rotate-archives":
                 if not getattr(args, "archive_dir", None):
-                    raise ValueError("transactions rotate-archives requires --archive-dir.")
+                    raise ValueError(
+                        "transactions rotate-archives requires --archive-dir."
+                    )
                 report = rotate_archives(
                     args.archive_dir,
-                    max_archives=getattr(args, "max_archives", None) if getattr(args, "max_archives", None) is not None else 100,
-                    max_total_bytes=getattr(args, "max_archive_bytes", None) if getattr(args, "max_archive_bytes", None) is not None else 1024 * 1024 * 1024,
+                    max_archives=getattr(args, "max_archives", None)
+                    if getattr(args, "max_archives", None) is not None
+                    else 100,
+                    max_total_bytes=getattr(args, "max_archive_bytes", None)
+                    if getattr(args, "max_archive_bytes", None) is not None
+                    else 1024 * 1024 * 1024,
                     force=bool(getattr(args, "force", False)),
                     operator=operator,
                     audit_file=audit_file,
@@ -215,9 +308,16 @@ def command_safety(args, config_data):
                     details = json.loads(args.details_json)
                     if not isinstance(details, dict):
                         raise ValueError("--details-json must decode to an object.")
-                report = append_admin_audit(audit_file, getattr(args, "event", None) or "manual", operator=operator, details=details, config=config_data)
+                report = append_admin_audit(
+                    audit_file,
+                    getattr(args, "event", None) or "manual",
+                    operator=operator,
+                    details=details,
+                    config=config_data,
+                )
         elif tx_action == "drill":
             from .fault_drill import SUPPORTED_POINTS, run_fault_drill, run_fault_matrix
+
             if getattr(args, "matrix", False):
                 report = run_fault_matrix(
                     recovery=getattr(args, "recovery", "auto"),
@@ -225,7 +325,10 @@ def command_safety(args, config_data):
                 )
             else:
                 if not getattr(args, "point", None):
-                    raise ValueError("transactions drill requires --point (%s), or --matrix." % ", ".join(SUPPORTED_POINTS))
+                    raise ValueError(
+                        "transactions drill requires --point (%s), or --matrix."
+                        % ", ".join(SUPPORTED_POINTS)
+                    )
                 report = run_fault_drill(
                     args.point,
                     recovery=getattr(args, "recovery", "inspect"),
@@ -236,9 +339,11 @@ def command_safety(args, config_data):
             if not getattr(args, "archive_dir", None):
                 raise ValueError("transactions archive requires --archive-dir.")
             report = archive_terminal(
-                root, args.archive_dir,
+                root,
+                args.archive_dir,
                 older_than_days=getattr(args, "older_than_days", None)
-                if getattr(args, "older_than_days", None) is not None else 30.0,
+                if getattr(args, "older_than_days", None) is not None
+                else 30.0,
                 force=bool(getattr(args, "force", False)),
             )
         elif tx_action == "restore-backup":
@@ -246,13 +351,15 @@ def command_safety(args, config_data):
                 raise ValueError("transactions restore-backup requires --backup-dir.")
             from .transaction_journal import restore_backup
             from .transaction_admin import audit_path
+
             report = restore_backup(
                 args.backup_dir,
                 action=getattr(args, "restore_action", "inspect"),
                 working_dir=getattr(args, "working_dir", None),
                 operator=getattr(args, "operator", None),
                 config=config_data,
-                audit_file=getattr(args, "audit_file", None) or audit_path(root, config=config_data),
+                audit_file=getattr(args, "audit_file", None)
+                or audit_path(root, config=config_data),
             )
         elif tx_action == "verify-backup":
             if not getattr(args, "backup_dir", None):
@@ -270,7 +377,12 @@ def command_safety(args, config_data):
     if action == "write-routes":
         root = os.path.abspath(args.root or os.getcwd())
         findings = audit_python_writes(root)
-        report = {"ok": not findings, "root": root, "count": len(findings), "findings": findings}
+        report = {
+            "ok": not findings,
+            "root": root,
+            "count": len(findings),
+            "findings": findings,
+        }
         return _output(report, args, failure=bool(findings and args.strict))
     if action == "release-gate":
         root = os.path.abspath(args.root or os.getcwd())
@@ -283,7 +395,12 @@ def command_safety(args, config_data):
 def command_doctor(args, config_data):
     paths = _resolved_input_paths(args.paths, config_data)
     from .config import config_write_file
-    write_path = args.write_file or config_write_file(config_data) or (paths[0] if paths else None)
+
+    write_path = (
+        args.write_file
+        or config_write_file(config_data)
+        or (paths[0] if paths else None)
+    )
     report = doctor_report(
         paths,
         config=config_data,
@@ -303,6 +420,7 @@ def command_doctor(args, config_data):
     )
     if getattr(args, "support_bundle", None):
         from .support_bundle import write_support_bundle
+
         bundle = write_support_bundle(report, args.support_bundle)
         report["support_bundle"] = {
             "output": bundle["output"],
@@ -328,7 +446,12 @@ def command_format(args, _config_data):
                 "unicode": "NFC",
                 "detail_keys": "case-sensitive; canonical lowercase",
                 "tags_ids_contexts_users_teams_groups_areas_projects": "case-sensitive",
-                "metadata_precedence": ["CLI", "file directives", "config", "built-in defaults"],
+                "metadata_precedence": [
+                    "CLI",
+                    "file directives",
+                    "config",
+                    "built-in defaults",
+                ],
                 "multi_file": "IDs are workspace-unique; input order is authoritative; writes require an explicit target",
             },
         }
@@ -343,6 +466,7 @@ def command_format(args, _config_data):
         changed = replacement != text or bom
         if args.write and changed:
             from .mutation import read_text_snapshot, write_text
+
             snapshot = read_text_snapshot(args.path)
             write_text(
                 args.path,
@@ -361,10 +485,19 @@ def command_format(args, _config_data):
         if args.output and not args.write:
             _write_output(replacement, args.output)
             report["output"] = args.output
-        return _output(report, args, failure=bool(issues and args.strict and not args.write))
+        return _output(
+            report, args, failure=bool(issues and args.strict and not args.write)
+        )
     if action == "schemas":
         names = write_schema_bundle(args.directory)
-        return _output({"schema_version": "1", "directory": os.path.abspath(args.directory), "files": names}, args)
+        return _output(
+            {
+                "schema_version": "1",
+                "directory": os.path.abspath(args.directory),
+                "files": names,
+            },
+            args,
+        )
     raise ValueError("Unknown format action: %s" % action)
 
 
@@ -372,6 +505,7 @@ def command_capabilities(args, config_data):
     targets = []
     from .config import config_write_file
     from .surface_runtime import capability_document_for
+
     write_target = config_write_file(config_data)
     if write_target:
         targets.append(os.path.abspath(write_target))

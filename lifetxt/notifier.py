@@ -9,7 +9,11 @@ from .agenda import parse_duration
 from .atomic import atomic_write_json
 from .serializer import item_to_line
 from .timezone_policy import local_now_naive
-from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime, parse_datetime
+from .timeutil import (
+    format_datetime as format_life_datetime,
+    parse_date_or_datetime,
+    parse_datetime,
+)
 
 
 NOTIFIABLE_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
@@ -254,7 +258,9 @@ def _notification_matches(item, start, now, end):
             period_end = parse_datetime(ends[0])
         if period_end is None:
             period_end = period_start
-        if period_start <= now <= period_end or _overlaps(period_start, period_end, start, end):
+        if period_start <= now <= period_end or _overlaps(
+            period_start, period_end, start, end
+        ):
             matches.append(("notify_from/to", period_start, period_end))
 
     return matches

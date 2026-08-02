@@ -27,9 +27,16 @@ class SafetyCliTests(unittest.TestCase):
         return code, stdout.getvalue(), stderr.getvalue()
 
     def test_extended_parser_registers_new_command_families(self):
-        self.assertEqual("locks", _build_parser("safety").parse_args(["locks"]).safety_action)
-        self.assertEqual("info", _build_parser("format").parse_args(["info", "life.txt"]).format_action)
-        self.assertEqual("token", _build_parser("capabilities").parse_args([]).authentication)
+        self.assertEqual(
+            "locks", _build_parser("safety").parse_args(["locks"]).safety_action
+        )
+        self.assertEqual(
+            "info",
+            _build_parser("format").parse_args(["info", "life.txt"]).format_action,
+        )
+        self.assertEqual(
+            "token", _build_parser("capabilities").parse_args([]).authentication
+        )
         self.assertEqual(
             "json",
             _build_parser("doctor").parse_args(["--workspace-safety"]).format,
@@ -59,7 +66,9 @@ class SafetyCliTests(unittest.TestCase):
         path = self.path("life.txt")
         with open(path, "wb") as handle:
             handle.write(b"#! format_version: 1\r\n[ ] T Task  \r\n")
-        code, stdout, stderr = self.run_command(["format", "canon", path, "--write", "--pretty"])
+        code, stdout, stderr = self.run_command(
+            ["format", "canon", path, "--write", "--pretty"]
+        )
         self.assertEqual(0, code, stderr)
         self.assertTrue(json.loads(stdout)["written"])
         with open(path, "rb") as handle:
@@ -69,19 +78,23 @@ class SafetyCliTests(unittest.TestCase):
         path = self.path("life.txt")
         with open(path, "w", encoding="utf-8") as handle:
             handle.write("#! timezone: Asia/Tokyo\n")
-        code, stdout, stderr = self.run_command(["safety", "timezone", path, "--pretty"])
+        code, stdout, stderr = self.run_command(
+            ["safety", "timezone", path, "--pretty"]
+        )
         self.assertEqual(0, code, stderr)
         self.assertEqual("file", json.loads(stdout)["source"])
         other = self.path("other.txt")
-        code, stdout, stderr = self.run_command([
-            "safety", "serve-target", path, "--write-file", other, "--pretty"
-        ])
+        code, stdout, stderr = self.run_command(
+            ["safety", "serve-target", path, "--write-file", other, "--pretty"]
+        )
         self.assertEqual(0, code, stderr)
         self.assertTrue(json.loads(stdout)["mismatch"])
 
     def test_format_schemas_command_writes_expanded_contract_bundle(self):
         directory = self.path("schemas")
-        code, stdout, stderr = self.run_command(["format", "schemas", directory, "--pretty"])
+        code, stdout, stderr = self.run_command(
+            ["format", "schemas", directory, "--pretty"]
+        )
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
         self.assertEqual(76, len(report["files"]))

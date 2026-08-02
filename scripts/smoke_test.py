@@ -28,7 +28,8 @@ def main():
                     "[ ] T Write_Report id:task_001 due:2026-06-12 project:demo",
                     "[ ] E Standup id:event_001 from:2026-06-12T09:00 to:2026-06-12T09:15",
                     "[/] S Working id:status_001 from:2026-06-12T10:00 state:working person:self",
-                    "[ ] M Ping id:msg_001 sender:self recipient:self notify_at:%s" % _now_text(),
+                    "[ ] M Ping id:msg_001 sender:self recipient:self notify_at:%s"
+                    % _now_text(),
                     "",
                 ]
             ),
@@ -46,9 +47,17 @@ def main():
         _run("to-csv", str(life), "-o", str(csv_path))
         _run("from-json", str(json_path), "-o", str(roundtrip_path))
         _run("check", str(roundtrip_path))
-        _assert(json_path.exists() and json.loads(json_path.read_text(encoding="utf-8")), "JSON export is empty.")
-        _assert(jsonl_path.read_text(encoding="utf-8").strip(), "JSONL export is empty.")
-        _assert("Write_Report" in csv_path.read_text(encoding="utf-8"), "CSV export missed task.")
+        _assert(
+            json_path.exists() and json.loads(json_path.read_text(encoding="utf-8")),
+            "JSON export is empty.",
+        )
+        _assert(
+            jsonl_path.read_text(encoding="utf-8").strip(), "JSONL export is empty."
+        )
+        _assert(
+            "Write_Report" in csv_path.read_text(encoding="utf-8"),
+            "CSV export missed task.",
+        )
 
         half_open = work / "half_open.life.txt"
         half_open.write_text(
@@ -66,12 +75,18 @@ def main():
             "--format",
             "life",
         ).stdout
-        _assert("Late" in agenda, "Half-open date range missed same-day fractional second.")
-        _assert("Boundary" not in agenda, "Half-open date range included next-day boundary.")
+        _assert(
+            "Late" in agenda, "Half-open date range missed same-day fractional second."
+        )
+        _assert(
+            "Boundary" not in agenda, "Half-open date range included next-day boundary."
+        )
 
         timer_state = work / "timer.json"
         config = work / "config.json"
-        config.write_text(json.dumps({"timer": {"state_file": str(timer_state)}}), encoding="utf-8")
+        config.write_text(
+            json.dumps({"timer": {"state_file": str(timer_state)}}), encoding="utf-8"
+        )
         _run("--config", str(config), "timer", "start", str(life), "--id", "task_001")
         _assert(timer_state.exists(), "Timer state file was not created.")
         _run("--config", str(config), "timer", "status", str(life))
@@ -128,7 +143,10 @@ def _mcp_smoke(life):
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
         context,
     )
-    _assert(result["result"]["serverInfo"]["name"] == "lifetxt-mcp", "MCP initialize failed.")
+    _assert(
+        result["result"]["serverInfo"]["name"] == "lifetxt-mcp",
+        "MCP initialize failed.",
+    )
 
 
 def _web_api_smoke(work):
@@ -147,11 +165,18 @@ def _web_api_smoke(work):
     _assert(response.status_code == 200, "Web API items request failed.")
     response = client.post(
         "/api/items",
-        json={"status": "[ ]", "type": "T", "title": "From_API", "details": {"id": ["web_002"]}},
+        json={
+            "status": "[ ]",
+            "type": "T",
+            "title": "From_API",
+            "details": {"id": ["web_002"]},
+        },
     )
     _assert(response.status_code in (200, 201), "Web API write request failed.")
 
-    read_only = TestClient(create_app([str(path)], writable_path=str(path), read_only=True))
+    read_only = TestClient(
+        create_app([str(path)], writable_path=str(path), read_only=True)
+    )
     response = read_only.post(
         "/api/items",
         json={"status": "[ ]", "type": "T", "title": "Blocked", "details": {}},

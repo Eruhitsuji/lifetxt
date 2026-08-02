@@ -105,13 +105,17 @@ def _review_selector_args(argv, today=None):
     """Translate review convenience selectors into the legacy shared range flags."""
     args = list(argv)
     today = today or timezone_today()
-    selectors = [name for name in ("--last-week", "--last-month", "--year") if name in args]
+    selectors = [
+        name for name in ("--last-week", "--last-month", "--year") if name in args
+    ]
     if not selectors:
         return args
     if len(selectors) > 1:
         raise ValueError("Use only one of --last-week, --last-month, or --year.")
     if any(name in args for name in ("--week", "--month", "--from", "--to")):
-        raise ValueError("Convenience review selectors cannot be combined with --week, --month, --from, or --to.")
+        raise ValueError(
+            "Convenience review selectors cannot be combined with --week, --month, --from, or --to."
+        )
 
     selector = selectors[0]
     index = args.index(selector)
@@ -125,7 +129,9 @@ def _review_selector_args(argv, today=None):
         del args[index]
         first_this_month = today.replace(day=1)
         last_previous = first_this_month - datetime.timedelta(days=1)
-        args.extend(("--month", "%04d-%02d" % (last_previous.year, last_previous.month)))
+        args.extend(
+            ("--month", "%04d-%02d" % (last_previous.year, last_previous.month))
+        )
     else:
         year = today.year
         if index + 1 < len(args) and not args[index + 1].startswith("-"):
@@ -187,7 +193,11 @@ def main(argv=None):
         if command == "import-ics" and "--preset" in cleaned:
             preset_index = cleaned.index("--preset")
             if preset_index + 1 < len(cleaned) and cleaned[preset_index + 1] == "todo":
-                transformed = ["from-todo"] + cleaned[1:preset_index] + cleaned[preset_index + 2 :]
+                transformed = (
+                    ["from-todo"]
+                    + cleaned[1:preset_index]
+                    + cleaned[preset_index + 2 :]
+                )
                 from .extra_cli import main as extra_main
 
                 return extra_main(transformed, config_path=config_path)
@@ -214,7 +224,12 @@ def main(argv=None):
 
             return extra_main(cleaned, config_path=config_path)
         if command == "completion" and (
-            "powershell" in cleaned or ("install" in cleaned and "--shell" in cleaned and "powershell" in cleaned)
+            "powershell" in cleaned
+            or (
+                "install" in cleaned
+                and "--shell" in cleaned
+                and "powershell" in cleaned
+            )
         ):
             from .extra_cli import main as extra_main
 

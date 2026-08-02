@@ -4,33 +4,20 @@ commands:
     values:
       - python -m pip install -e .
 
+  setup_dev:
+    status: configured
+    values:
+      - python -m pip install -e ".[dev]"
+
   format:
-    status: tracked_exception
-    values: []
-    exception:
-      reason: >-
-        No dedicated formatter is configured. Adoption is blocked on the Python
-        baseline: the project declares requires-python >=3.6, ruff publishes no
-        3.6-compatible wheel, and the newest black usable on 3.6 is 22.8.0.
-        Adopting one would also reformat ~237 files / ~87k lines in a single
-        change.
-      removal_condition: >-
-        Remove this exception when a formatter runs on the supported Python
-        baseline and its command is recorded here.
-      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/44
+    status: configured
+    values:
+      - ruff format lifetxt tests scripts
 
   lint:
-    status: tracked_exception
-    values: []
-    exception:
-      reason: >-
-        No dedicated lint command is configured. Blocked on the same Python
-        baseline as the formatter exception above; the pylint 1.8.4 present in
-        the local 3.6 environment is too old to adopt as a project gate.
-      removal_condition: >-
-        Remove this exception when a linter runs on the supported Python
-        baseline and its command is recorded here.
-      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/44
+    status: configured
+    values:
+      - ruff check lifetxt tests scripts
 
   unit_test:
     status: configured

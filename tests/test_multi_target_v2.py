@@ -87,8 +87,16 @@ class MultiTargetV2Tests(unittest.TestCase):
         with self.assertRaises(MultiTargetCommitError) as caught:
             apply_multi_target(
                 [
-                    text_plan(first, lambda text: "changed-one\n", read_text_snapshot(first).content_hash),
-                    text_plan(second, lambda text: "changed-two\n", read_text_snapshot(second).content_hash),
+                    text_plan(
+                        first,
+                        lambda text: "changed-one\n",
+                        read_text_snapshot(first).content_hash,
+                    ),
+                    text_plan(
+                        second,
+                        lambda text: "changed-two\n",
+                        read_text_snapshot(second).content_hash,
+                    ),
                 ],
                 operation="compensation-test",
                 failure_hook=fail,
@@ -113,12 +121,22 @@ class MultiTargetV2Tests(unittest.TestCase):
             if phase == "before_commit" and index == 1:
                 raise RuntimeError("commit blocked")
 
-        with mock.patch.object(mutation, "atomic_write_bytes", side_effect=write_then_fail_rollback):
+        with mock.patch.object(
+            mutation, "atomic_write_bytes", side_effect=write_then_fail_rollback
+        ):
             with self.assertRaises(MultiTargetCommitError) as caught:
                 apply_multi_target(
                     [
-                        text_plan(first, lambda text: "changed\n", read_text_snapshot(first).content_hash),
-                        text_plan(second, lambda text: "changed\n", read_text_snapshot(second).content_hash),
+                        text_plan(
+                            first,
+                            lambda text: "changed\n",
+                            read_text_snapshot(first).content_hash,
+                        ),
+                        text_plan(
+                            second,
+                            lambda text: "changed\n",
+                            read_text_snapshot(second).content_hash,
+                        ),
                     ],
                     failure_hook=fail,
                 )
@@ -148,7 +166,9 @@ class MultiTargetV2Tests(unittest.TestCase):
     def test_delete_plan_removes_bytes_target(self):
         attachment = self.write("note.bin", b"payload", binary=True)
         expected = mutation.hash_bytes(b"payload")
-        result = apply_multi_target([delete_plan(attachment, expected)], operation="delete")
+        result = apply_multi_target(
+            [delete_plan(attachment, expected)], operation="delete"
+        )
         self.assertFalse(os.path.exists(attachment))
         self.assertTrue(result.targets[0].deleted)
 
@@ -190,7 +210,9 @@ class MultiTargetV2Tests(unittest.TestCase):
             except MutationConflict:
                 results.append("conflict")
 
-        threads = [threading.Thread(target=worker, args=(label,)) for label in ("x", "y")]
+        threads = [
+            threading.Thread(target=worker, args=(label,)) for label in ("x", "y")
+        ]
         for thread in threads:
             thread.start()
         for thread in threads:

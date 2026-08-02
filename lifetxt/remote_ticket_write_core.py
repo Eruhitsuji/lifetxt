@@ -1,4 +1,5 @@
 """Shared security, idempotency, and capability helpers for Remote ticket writes."""
+
 from __future__ import unicode_literals
 
 import hashlib
@@ -23,9 +24,19 @@ OPERATIONS = ("create", "edit", "transition", "comment", "log_time")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
 EDIT_FIELDS = frozenset(
     (
-        "priority", "severity", "assignee", "component", "category",
-        "version", "milestone", "sprint", "est", "story_points",
-        "branch", "build", "due",
+        "priority",
+        "severity",
+        "assignee",
+        "component",
+        "category",
+        "version",
+        "milestone",
+        "sprint",
+        "est",
+        "story_points",
+        "branch",
+        "build",
+        "due",
     )
 )
 

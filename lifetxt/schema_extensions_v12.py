@@ -18,8 +18,14 @@ def schema_bundle_v12():
                     "$id": BASE + "inbox-proposal-v1.schema.json",
                     "title": "lifetxt inbox proposal v1",
                     "type": "object",
-                    "required": ["proposal_version", "id", "operation", "source",
-                                 "changes", "status"],
+                    "required": [
+                        "proposal_version",
+                        "id",
+                        "operation",
+                        "source",
+                        "changes",
+                        "status",
+                    ],
                     "properties": {
                         "proposal_version": {"const": "1"},
                         "id": {"type": "string", "minLength": 1},
@@ -28,7 +34,9 @@ def schema_bundle_v12():
                         "expected_revision": {"type": "string"},
                         "changes": {"type": "array", "items": {"type": "object"}},
                         "warnings": {"type": "array", "items": {"type": "string"}},
-                        "status": {"enum": ["pending", "accepted", "rejected", "deferred"]},
+                        "status": {
+                            "enum": ["pending", "accepted", "rejected", "deferred"]
+                        },
                         "provenance": {"type": "object"},
                         "created": {"type": "string"},
                     },
@@ -51,8 +59,13 @@ def schema_samples_v12():
                     "source": "mcp",
                     "expected_revision": "",
                     "changes": [
-                        {"op": "create", "kind": "T", "status": "[ ]", "title": "Buy milk",
-                         "details": {"project": ["home"]}}
+                        {
+                            "op": "create",
+                            "kind": "T",
+                            "status": "[ ]",
+                            "title": "Buy milk",
+                            "details": {"project": ["home"]},
+                        }
                     ],
                     "warnings": [],
                     "status": "pending",

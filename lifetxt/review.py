@@ -81,7 +81,9 @@ def resolve_named_review_range(selector, year=None, today=None):
     )
 
 
-def resolve_review_range(week=False, month=None, from_date=None, to_date=None, today=None):
+def resolve_review_range(
+    week=False, month=None, from_date=None, to_date=None, today=None
+):
     """Return the (start, end) date window for a review.
 
     Selector precedence matches the CLI flags: week, then month, then
@@ -99,7 +101,9 @@ def resolve_review_range(week=False, month=None, from_date=None, to_date=None, t
             start = datetime.date(year_i, month_i, 1)
         except (ValueError, AttributeError):
             raise ValueError("Invalid month %r. Use YYYY-MM." % (month,))
-        return start, datetime.date(year_i, month_i, calendar.monthrange(year_i, month_i)[1])
+        return start, datetime.date(
+            year_i, month_i, calendar.monthrange(year_i, month_i)[1]
+        )
     start = parse_date_only(from_date) if from_date else None
     end = parse_date_only(to_date) if to_date else None
     if from_date and start is None:
@@ -124,7 +128,11 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
     """Aggregate a review report dict for items inside the date window."""
     today = today or timezone_today()
     if project:
-        items = [i for i in items if project in [str(v) for v in i.details.get("project", [])]]
+        items = [
+            i
+            for i in items
+            if project in [str(v) for v in i.details.get("project", [])]
+        ]
 
     completed_tasks = []
     open_tasks = 0
@@ -136,14 +144,18 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
     for item in items:
         if item.kind == "T":
             if item.status == "[x]":
-                done_dates = [parse_date_only(str(v)) for v in item.details.get("done", [])]
+                done_dates = [
+                    parse_date_only(str(v)) for v in item.details.get("done", [])
+                ]
                 if any(d and start <= d <= end for d in done_dates):
                     completed_tasks.append(item)
             elif item.status in OPEN_TASK_STATUSES:
                 open_tasks += 1
 
         elif item.kind == "H":
-            bucket = habits.setdefault(item.title, {"done": 0, "open": 0, "dates": set()})
+            bucket = habits.setdefault(
+                item.title, {"done": 0, "open": 0, "dates": set()}
+            )
             if item.status == "[x]":
                 bucket["done"] += 1
             elif item.status in ("[ ]", "[/]"):
@@ -201,7 +213,8 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
                 "open": h["open"],
                 "completion_rate": (
                     round(h["done"] / (h["done"] + h["open"]) * 100)
-                    if (h["done"] + h["open"] > 0) else 0
+                    if (h["done"] + h["open"] > 0)
+                    else 0
                 ),
                 "current_streak": streak_days(h["dates"], today),
                 "longest_streak": longest_streak_days(h["dates"]),
@@ -213,9 +226,7 @@ def build_review(items, start, end, project=None, id_key="id", today=None):
             {"date": d.isoformat(), "title": t, "excerpt": e}
             for d, t, e in sorted(journal_entries)
         ],
-        "mood_trend": [
-            {"date": d.isoformat(), "mood": m} for d, m in sorted(moods)
-        ],
+        "mood_trend": [{"date": d.isoformat(), "mood": m} for d, m in sorted(moods)],
         "elapsed_by_project": {
             proj: format_review_elapsed(m)
             for proj, m in sorted(elapsed_by_project.items(), key=lambda x: -x[1])

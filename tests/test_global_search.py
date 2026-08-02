@@ -51,7 +51,10 @@ class GlobalSearchTests(unittest.TestCase):
         self.assertEqual("alice", result["groups"]["person"][0]["name"])
 
     def test_group_match_by_name_and_alias(self):
-        self.assertIn("group", self.search("eng").groups if False else self.search("eng")["groups"])
+        self.assertIn(
+            "group",
+            self.search("eng").groups if False else self.search("eng")["groups"],
+        )
         result = self.search("engineering")
         self.assertEqual("eng", result["groups"]["group"][0]["name"])
 
@@ -89,7 +92,9 @@ class GlobalSearchProposalTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.config = dict(CONFIG)
-        self.config["inbox"] = {"proposals_file": os.path.join(self.temp.name, "p.json")}
+        self.config["inbox"] = {
+            "proposals_file": os.path.join(self.temp.name, "p.json")
+        }
         self.items, _ = parse_text(SAMPLE)
 
     def tearDown(self):

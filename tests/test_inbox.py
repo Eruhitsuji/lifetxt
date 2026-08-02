@@ -18,14 +18,18 @@ class InboxTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_stage_and_list(self):
-        inbox.stage_create(self.config, "Buy milk", details={"project": "home"}, source="capture")
+        inbox.stage_create(
+            self.config, "Buy milk", details={"project": "home"}, source="capture"
+        )
         proposals = inbox.list_proposals(self.config)
         self.assertEqual(1, len(proposals))
         self.assertEqual("pending", proposals[0]["status"])
         self.assertEqual("capture", proposals[0]["source"])
 
     def test_proposal_to_line_roundtrips(self):
-        proposal = inbox.stage_create(self.config, "Call Bob", details={"assignee": "bob"})
+        proposal = inbox.stage_create(
+            self.config, "Call Bob", details={"assignee": "bob"}
+        )
         line = inbox.proposal_to_line(proposal)
         items, diags = parse_text("#! timezone: UTC\n%s\n" % line)
         self.assertFalse([d for d in diags if d.severity == "error"])
@@ -33,8 +37,9 @@ class InboxTests(unittest.TestCase):
 
     def test_edit_pending_proposal(self):
         proposal = inbox.stage_create(self.config, "Task")
-        inbox.edit_proposal(self.config, proposal["id"], title="Renamed",
-                            details={"project": "web"})
+        inbox.edit_proposal(
+            self.config, proposal["id"], title="Renamed", details={"project": "web"}
+        )
         updated = inbox.get_proposal(self.config, proposal["id"])
         change = updated["changes"][0]
         self.assertEqual("Renamed", change["title"])
@@ -47,7 +52,9 @@ class InboxTests(unittest.TestCase):
         with open(self.target, "r", encoding="utf-8") as handle:
             content = handle.read()
         self.assertIn("Ship", content)
-        self.assertEqual("accepted", inbox.get_proposal(self.config, proposal["id"])["status"])
+        self.assertEqual(
+            "accepted", inbox.get_proposal(self.config, proposal["id"])["status"]
+        )
 
     def test_accept_twice_fails(self):
         proposal = inbox.stage_create(self.config, "Once")
@@ -60,8 +67,12 @@ class InboxTests(unittest.TestCase):
         p2 = inbox.stage_create(self.config, "B")
         inbox.reject(self.config, p1["id"])
         inbox.defer(self.config, p2["id"])
-        self.assertEqual("rejected", inbox.get_proposal(self.config, p1["id"])["status"])
-        self.assertEqual("deferred", inbox.get_proposal(self.config, p2["id"])["status"])
+        self.assertEqual(
+            "rejected", inbox.get_proposal(self.config, p1["id"])["status"]
+        )
+        self.assertEqual(
+            "deferred", inbox.get_proposal(self.config, p2["id"])["status"]
+        )
 
     def test_batch_apply(self):
         ids = [inbox.stage_create(self.config, "T%d" % i)["id"] for i in range(3)]

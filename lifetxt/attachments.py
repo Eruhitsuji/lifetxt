@@ -89,12 +89,15 @@ def split_value(value):
     if index < 0:
         return text, ""
     path = text[:index]
-    digest = text[index + len(HASH_MARKER):].strip().lower()
+    digest = text[index + len(HASH_MARKER) :].strip().lower()
     if not path:
-        raise AttachmentError("Attachment value %r has no path before %s." % (value, HASH_MARKER))
+        raise AttachmentError(
+            "Attachment value %r has no path before %s." % (value, HASH_MARKER)
+        )
     if digest and not _HEX.match(digest):
         raise AttachmentError(
-            "Attachment hash %r is not hexadecimal. Expected %s<hex>." % (digest, HASH_MARKER)
+            "Attachment hash %r is not hexadecimal. Expected %s<hex>."
+            % (digest, HASH_MARKER)
         )
     return path, digest
 
@@ -123,7 +126,11 @@ def normalize_stored_path(path):
     collapsed = posixpath.normpath(text)
     if collapsed == ".":
         return "."
-    if prefix and not collapsed.startswith(("../", "/")) and not _WINDOWS_DRIVE.match(collapsed):
+    if (
+        prefix
+        and not collapsed.startswith(("../", "/"))
+        and not _WINDOWS_DRIVE.match(collapsed)
+    ):
         collapsed = "./" + collapsed
     return collapsed
 
@@ -161,8 +168,13 @@ def hash_file(path, length=HASH_LENGTH):
     return digest.hexdigest()[:length]
 
 
-def hash_directory(path, length=HASH_LENGTH, ignores=None, max_files=DEFAULT_MAX_FILES,
-                   max_bytes=DEFAULT_MAX_BYTES):
+def hash_directory(
+    path,
+    length=HASH_LENGTH,
+    ignores=None,
+    max_files=DEFAULT_MAX_FILES,
+    max_bytes=DEFAULT_MAX_BYTES,
+):
     """Recursive tree hash: every file's relative path and content.
 
     Entries are sorted by their POSIX-form relative path so the value does not
@@ -183,7 +195,9 @@ def hash_directory(path, length=HASH_LENGTH, ignores=None, max_files=DEFAULT_MAX
             except OSError:
                 # A file that vanished mid-walk is reported, not skipped, so the
                 # hash never silently describes a different tree.
-                raise AttachmentError("Could not read %s while hashing %s." % (full, path))
+                raise AttachmentError(
+                    "Could not read %s while hashing %s." % (full, path)
+                )
             total_bytes += size
             entries.append((relative, full))
             if len(entries) > max_files:
@@ -328,15 +342,21 @@ def portability_notes(path):
     notes = []
     raw = str(path or "")
     if "\\" in raw:
-        notes.append("Backslash separators are Windows-only; stored as forward slashes.")
+        notes.append(
+            "Backslash separators are Windows-only; stored as forward slashes."
+        )
     if _WINDOWS_DRIVE.match(raw):
         notes.append("Drive letters only resolve on the machine that has that drive.")
     elif raw.startswith("//") or raw.startswith("\\\\"):
         notes.append("UNC paths only resolve on a network with that share mounted.")
     elif os.path.isabs(os.path.expanduser(raw)) and not raw.startswith("~"):
-        notes.append("Absolute paths are machine-specific; prefer a path relative to the life.txt file.")
+        notes.append(
+            "Absolute paths are machine-specific; prefer a path relative to the life.txt file."
+        )
     if raw != unicodedata.normalize("NFC", raw):
-        notes.append("Path is not NFC-normalized; macOS and Linux may disagree on the name.")
+        notes.append(
+            "Path is not NFC-normalized; macOS and Linux may disagree on the name."
+        )
     tail = posixpath.basename(normalize_stored_path(raw))
     if tail != tail.rstrip(" .") and tail not in (".", ".."):
         notes.append("Trailing spaces or dots in a name are invalid on Windows.")
@@ -361,9 +381,12 @@ def case_mismatch_note(resolved):
     lowered = name.lower()
     for entry in entries:
         if entry.lower() == lowered:
-            return "On-disk name is %r but the path says %r; this fails on case-sensitive filesystems." % (
-                entry,
-                name,
+            return (
+                "On-disk name is %r but the path says %r; this fails on case-sensitive filesystems."
+                % (
+                    entry,
+                    name,
+                )
             )
     return ""
 
@@ -463,7 +486,9 @@ def attachment_diagnostics(items, config=None, verify=True):
     diagnostics = []
     for item in items:
         base_dir = item_base_dir(item)
-        for record in attachment_records(item, base_dir=base_dir, config=config, verify=verify):
+        for record in attachment_records(
+            item, base_dir=base_dir, config=config, verify=verify
+        ):
             diagnostics.extend(_record_diagnostics(record, item, Diagnostic))
     return diagnostics
 
@@ -489,7 +514,12 @@ def _record_diagnostics(record, item, Diagnostic):
                 "warning",
                 "W402",
                 "%s:%s changed since its hash was recorded (%s -> %s). Run `lifetxt files --update`."
-                % (record["key"], record["path"], record["hash"], record["actual_hash"]),
+                % (
+                    record["key"],
+                    record["path"],
+                    record["hash"],
+                    record["actual_hash"],
+                ),
                 line,
             )
         )
@@ -519,11 +549,21 @@ def _record_diagnostics(record, item, Diagnostic):
             continue
         if note.startswith("On-disk name is"):
             out.append(
-                Diagnostic("warning", "W405", "%s:%s %s" % (record["key"], record["path"], note), line)
+                Diagnostic(
+                    "warning",
+                    "W405",
+                    "%s:%s %s" % (record["key"], record["path"], note),
+                    line,
+                )
             )
         else:
             out.append(
-                Diagnostic("warning", "W404", "%s:%s %s" % (record["key"], record["path"], note), line)
+                Diagnostic(
+                    "warning",
+                    "W404",
+                    "%s:%s %s" % (record["key"], record["path"], note),
+                    line,
+                )
             )
     return out
 

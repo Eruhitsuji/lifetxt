@@ -4,6 +4,7 @@ Sessions are opaque, process-local, bounded, and intentionally restart-invalidat
 Bearer tokens are accepted only by the login endpoint and are never placed in a
 cookie, response, profile, or audit detail.
 """
+
 from __future__ import unicode_literals
 
 import hmac
@@ -39,11 +40,16 @@ def _http_token(value, setting):
 
 
 def cookie_name(config):
-    return _http_token(_remote(config).get("session_cookie_name") or DEFAULT_COOKIE, "remote.session_cookie_name")
+    return _http_token(
+        _remote(config).get("session_cookie_name") or DEFAULT_COOKIE,
+        "remote.session_cookie_name",
+    )
 
 
 def csrf_header(config):
-    return _http_token(_remote(config).get("csrf_header") or DEFAULT_CSRF_HEADER, "remote.csrf_header")
+    return _http_token(
+        _remote(config).get("csrf_header") or DEFAULT_CSRF_HEADER, "remote.csrf_header"
+    )
 
 
 def browser_enabled(config):
@@ -93,7 +99,9 @@ class BrowserSessionStore(object):
 
     def __init__(self, clock=None, token_factory=None):
         self._clock = clock or time.monotonic
-        self._token_factory = token_factory or (lambda size=32: secrets.token_urlsafe(size))
+        self._token_factory = token_factory or (
+            lambda size=32: secrets.token_urlsafe(size)
+        )
         self._lock = threading.RLock()
         self._sessions = OrderedDict()
 
@@ -113,7 +121,9 @@ class BrowserSessionStore(object):
         with self._lock:
             return self._cleanup_locked(self._now())
 
-    def create(self, principal, authentication, config, client_host=None, user_agent=None):
+    def create(
+        self, principal, authentication, config, client_host=None, user_agent=None
+    ):
         ttl, idle, maximum = session_limits(config)
         now = self._now()
         with self._lock:
@@ -124,39 +134,51 @@ class BrowserSessionStore(object):
             csrf_token = self._token_factory(32)
             while session_id in self._sessions:
                 session_id = self._token_factory(32)
-            row = OrderedDict((
-                ("session_id", session_id),
-                ("csrf_token", csrf_token),
-                ("principal", dict(principal)),
-                ("authentication", str(authentication)),
-                ("created_monotonic", now),
-                ("last_seen_monotonic", now),
-                ("expires_monotonic", now + ttl),
-                ("idle_expires_monotonic", now + idle),
-                ("ttl_seconds", ttl),
-                ("idle_seconds", idle),
-                ("client_host", str(client_host or "")),
-                ("user_agent", str(user_agent or "")[:512]),
-            ))
+            row = OrderedDict(
+                (
+                    ("session_id", session_id),
+                    ("csrf_token", csrf_token),
+                    ("principal", dict(principal)),
+                    ("authentication", str(authentication)),
+                    ("created_monotonic", now),
+                    ("last_seen_monotonic", now),
+                    ("expires_monotonic", now + ttl),
+                    ("idle_expires_monotonic", now + idle),
+                    ("ttl_seconds", ttl),
+                    ("idle_seconds", idle),
+                    ("client_host", str(client_host or "")),
+                    ("user_agent", str(user_agent or "")[:512]),
+                )
+            )
             self._sessions[session_id] = row
             return dict(row)
 
     def resolve(self, session_id, config, touch=True):
         if not session_id:
-            raise RemoteAccessError("UNAUTHORIZED", "A valid browser session is required.", 401)
+            raise RemoteAccessError(
+                "UNAUTHORIZED", "A valid browser session is required.", 401
+            )
         _ttl, idle, _maximum = session_limits(config)
         now = self._now()
         with self._lock:
             self._cleanup_locked(now)
             row = self._sessions.get(str(session_id))
             if row is None:
-                raise RemoteAccessError("SESSION_EXPIRED", "The browser session expired or was revoked.", 401)
+                raise RemoteAccessError(
+                    "SESSION_EXPIRED",
+                    "The browser session expired or was revoked.",
+                    401,
+                )
             if row.get("principal", {}).get("disabled"):
                 self._sessions.pop(str(session_id), None)
-                raise RemoteAccessError("SESSION_REVOKED", "The browser session principal is disabled.", 401)
+                raise RemoteAccessError(
+                    "SESSION_REVOKED", "The browser session principal is disabled.", 401
+                )
             if touch:
                 row["last_seen_monotonic"] = now
-                row["idle_expires_monotonic"] = min(row["expires_monotonic"], now + idle)
+                row["idle_expires_monotonic"] = min(
+                    row["expires_monotonic"], now + idle
+                )
                 self._sessions.move_to_end(str(session_id))
             return dict(row)
 
@@ -183,14 +205,16 @@ def session_payload(row, include_csrf=True):
     now = float(row.get("last_seen_monotonic") or row.get("created_monotonic") or 0.0)
     expires_in = max(0, int(float(row.get("expires_monotonic") or now) - now))
     idle_in = max(0, int(float(row.get("idle_expires_monotonic") or now) - now))
-    payload = OrderedDict((
-        ("schema", "remote-browser-session-v1.schema.json"),
-        ("principal", public_principal(row.get("principal") or {})),
-        ("authentication", row.get("authentication") or "browser-session"),
-        ("expires_in_seconds", expires_in),
-        ("idle_expires_in_seconds", idle_in),
-        ("restart_invalidates_session", True),
-    ))
+    payload = OrderedDict(
+        (
+            ("schema", "remote-browser-session-v1.schema.json"),
+            ("principal", public_principal(row.get("principal") or {})),
+            ("authentication", row.get("authentication") or "browser-session"),
+            ("expires_in_seconds", expires_in),
+            ("idle_expires_in_seconds", idle_in),
+            ("restart_invalidates_session", True),
+        )
+    )
     if include_csrf:
         payload["csrf_token"] = row.get("csrf_token")
     return payload
@@ -207,32 +231,45 @@ def require_csrf(session, headers, method, origin, expected_origin, config):
             break
     expected = str((session or {}).get("csrf_token") or "")
     if not supplied or not expected or not hmac.compare_digest(supplied, expected):
-        raise RemoteAccessError("CSRF_REQUIRED", "%s must contain the browser-session CSRF token." % header_name, 403)
+        raise RemoteAccessError(
+            "CSRF_REQUIRED",
+            "%s must contain the browser-session CSRF token." % header_name,
+            403,
+        )
     require_origin(origin, expected_origin, config)
 
 
 def require_origin(origin, expected_origin, config):
     remote = _remote(config)
-    allowed = set(str(value).rstrip("/") for value in remote.get("allowed_origins") or [] if value)
+    allowed = set(
+        str(value).rstrip("/") for value in remote.get("allowed_origins") or [] if value
+    )
     if expected_origin:
         allowed.add(str(expected_origin).rstrip("/"))
     candidate = str(origin or "").rstrip("/")
     if not candidate:
-        raise RemoteAccessError("ORIGIN_REQUIRED", "Browser session writes require an Origin header.", 403)
+        raise RemoteAccessError(
+            "ORIGIN_REQUIRED", "Browser session writes require an Origin header.", 403
+        )
     if candidate not in allowed:
-        raise RemoteAccessError("ORIGIN_FORBIDDEN", "The browser request origin is not allowed.", 403)
+        raise RemoteAccessError(
+            "ORIGIN_FORBIDDEN", "The browser request origin is not allowed.", 403
+        )
 
 
 def cookie_security(request, config):
     host = request.client.host if request.client else ""
     forwarded = request.headers.get("x-forwarded-proto")
     from .remote_access import trusted_peer
+
     if forwarded and trusted_peer(config, host):
         scheme = str(forwarded).split(",")[0].strip().lower()
     else:
         scheme = str(request.url.scheme or "http").strip().lower()
     loopback = str(host) in ("127.0.0.1", "::1", "localhost", "testclient")
-    secure = scheme == "https" or not (loopback and _remote(config).get("allow_loopback_http", True))
+    secure = scheme == "https" or not (
+        loopback and _remote(config).get("allow_loopback_http", True)
+    )
     ttl, _idle, _maximum = session_limits(config)
     return {
         "key": cookie_name(config),

@@ -14,7 +14,16 @@ def _source_manifest_entry():
         "required": ["path"],
         "properties": {
             "path": {"type": "string", "minLength": 1},
-            "role": {"enum": ["primary", "input", "generated", "archive", "readonly", "reference"]},
+            "role": {
+                "enum": [
+                    "primary",
+                    "input",
+                    "generated",
+                    "archive",
+                    "readonly",
+                    "reference",
+                ]
+            },
             "required": {"type": "boolean"},
             "writable": {"type": "boolean"},
             "default_visible": {"type": "boolean"},
@@ -62,8 +71,14 @@ def schema_bundle_v5():
                         "base_dir": {"type": "string"},
                         "write_file": {"type": ["string", "null"]},
                         "input_paths": {"type": "array", "items": {"type": "string"}},
-                        "default_visible_paths": {"type": "array", "items": {"type": "string"}},
-                        "generated_paths": {"type": "array", "items": {"type": "string"}},
+                        "default_visible_paths": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "generated_paths": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
                         "archive_paths": {"type": "array", "items": {"type": "string"}},
                         "ok": {"type": "boolean"},
                         "sources": {"type": "array", "items": {"type": "object"}},
@@ -91,7 +106,10 @@ def schema_bundle_v5():
                         "workspace": {
                             "type": "object",
                             "properties": {
-                                "max_total_source_bytes": {"type": "integer", "minimum": 1},
+                                "max_total_source_bytes": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                },
                             },
                             "additionalProperties": True,
                         },
@@ -144,7 +162,10 @@ def schema_samples_v5():
                         "personal": {
                             "sources": [
                                 "life.txt",
-                                {"path": ".generated/cal.life.txt", "role": "generated"},
+                                {
+                                    "path": ".generated/cal.life.txt",
+                                    "role": "generated",
+                                },
                             ],
                             "write_file": "life.txt",
                         }

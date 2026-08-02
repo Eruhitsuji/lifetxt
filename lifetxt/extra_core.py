@@ -21,7 +21,13 @@ from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_user_name, config_write_file, load_config
+from .config import (
+    config_paths,
+    config_section,
+    config_user_name,
+    config_write_file,
+    load_config,
+)
 from .model import Item
 from .parser import parse_text
 from .paths import expand_paths
@@ -59,11 +65,22 @@ def command_next(args, config_data):
     if args.limit:
         selected = selected[: args.limit]
     if args.format == "json":
-        return _emit(_json_text([_item_record(item) for item in selected], args.pretty), args.output)
+        return _emit(
+            _json_text([_item_record(item) for item in selected], args.pretty),
+            args.output,
+        )
     if args.format == "life":
-        return _emit("".join(item_to_line(item) + "\n" for item in selected), args.output)
+        return _emit(
+            "".join(item_to_line(item) + "\n" for item in selected), args.output
+        )
     rows = [
-        (_item_id(item) or "-", _first(item, "priority") or "-", _first(item, "due") or "-", _first(item, "project") or "-", item.title)
+        (
+            _item_id(item) or "-",
+            _first(item, "priority") or "-",
+            _first(item, "due") or "-",
+            _first(item, "project") or "-",
+            item.title,
+        )
         for item in selected
     ]
     return _emit(_table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows), args.output)
@@ -76,12 +93,17 @@ def command_show(args, config_data):
         return _emit(_json_text(_item_record(item), args.pretty), args.output)
     if args.format == "life":
         return _emit(item_to_line(item) + "\n", args.output)
-    id_map = dict((_item_id(candidate), candidate) for candidate in items if _item_id(candidate))
+    id_map = dict(
+        (_item_id(candidate), candidate) for candidate in items if _item_id(candidate)
+    )
     incoming = []
     for candidate in items:
         for key in ("parent", "ref", "depends_on", "blocks", "related"):
             if args.id in _values(candidate, key):
-                incoming.append("%s:%s from %s" % (key, _item_id(candidate) or candidate.title, candidate.source))
+                incoming.append(
+                    "%s:%s from %s"
+                    % (key, _item_id(candidate) or candidate.title, candidate.source)
+                )
     parent_chain = []
     seen = set()
     current = item
@@ -116,7 +138,13 @@ def command_show(args, config_data):
 
 
 def _resolve_editor(args, config_data):
-    return args.editor or str(config_data.get("editor") or "") or os.environ.get("VISUAL") or os.environ.get("EDITOR") or ("notepad" if os.name == "nt" else "vi")
+    return (
+        args.editor
+        or str(config_data.get("editor") or "")
+        or os.environ.get("VISUAL")
+        or os.environ.get("EDITOR")
+        or ("notepad" if os.name == "nt" else "vi")
+    )
 
 
 def _editor_command(editor, path, line):
@@ -144,6 +172,7 @@ def command_edit(args, config_data):
         sys.stdout.write(" ".join(shlex.quote(part) for part in command) + "\n")
         return 0
     from .editor_safety import safe_edit
+
     result = safe_edit(
         item.source,
         editor,
@@ -153,32 +182,61 @@ def command_edit(args, config_data):
         keep_temp=bool(getattr(args, "keep_temp", False)),
         operation="cli.edit",
     )
-    if result.get("diff") and (getattr(args, "review_only", False) or getattr(args, "show_diff", False)):
+    if result.get("diff") and (
+        getattr(args, "review_only", False) or getattr(args, "show_diff", False)
+    ):
         sys.stdout.write(result["diff"])
     if result.get("temporary_path"):
         sys.stdout.write("Temporary edited copy: %s\n" % result["temporary_path"])
     if result.get("review_only"):
         sys.stdout.write("Review only; no changes were written.\n")
     elif result.get("written"):
-        sys.stdout.write("Applied editor changes with revision %s.\n" % result["after_revision"])
+        sys.stdout.write(
+            "Applied editor changes with revision %s.\n" % result["after_revision"]
+        )
     else:
         sys.stdout.write("Editor closed without changes.\n")
     return 0
 
 
 def command_path(args, config_data, config_path):
-    config_dir = os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
-    inputs = [_resolved_path(path, config_dir) for path in (config_paths(config_data) or ["life.txt"])]
+    config_dir = (
+        os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
+    )
+    inputs = [
+        _resolved_path(path, config_dir)
+        for path in (config_paths(config_data) or ["life.txt"])
+    ]
     timer = config_section(config_data, "timer")
     notifications = config_section(config_data, "notifications")
     data = OrderedDict(
         (
-            ("config", _resolved_path(config_data.get("_path") or config_path) if (config_data.get("_path") or config_path) else None),
+            (
+                "config",
+                _resolved_path(config_data.get("_path") or config_path)
+                if (config_data.get("_path") or config_path)
+                else None,
+            ),
             ("inputs", inputs),
-            ("write_file", _resolved_path(config_write_file(config_data) or inputs[0], config_dir)),
+            (
+                "write_file",
+                _resolved_path(config_write_file(config_data) or inputs[0], config_dir),
+            ),
             ("editor", str(config_data.get("editor") or "")),
-            ("timer_state", _resolved_path(timer.get("state_file") or "~/.lifetxt_timer.json", config_dir)),
-            ("notification_state", _resolved_path(notifications.get("state_file") or ".cache/lifetxt/notifications.json", config_dir)),
+            (
+                "timer_state",
+                _resolved_path(
+                    timer.get("state_file") or "~/.lifetxt_timer.json", config_dir
+                ),
+            ),
+            (
+                "notification_state",
+                _resolved_path(
+                    notifications.get("state_file")
+                    or ".cache/lifetxt/notifications.json",
+                    config_dir,
+                ),
+            ),
             ("cache_dir", _resolved_path(".cache/lifetxt", config_dir)),
         )
     )
@@ -238,7 +296,9 @@ def command_workload(args, config_data):
         people = _values(item, "assignee") or _values(item, "owner") or ["(unassigned)"]
         due = _date_value(_first(item, "due"))
         for person in set(people):
-            bucket = data.setdefault(person, {"open": 0, "due_soon": 0, "overdue": 0, "in_progress": 0})
+            bucket = data.setdefault(
+                person, {"open": 0, "due_soon": 0, "overdue": 0, "in_progress": 0}
+            )
             bucket["open"] += 1
             if item.status == "[/]":
                 bucket["in_progress"] += 1
@@ -249,7 +309,16 @@ def command_workload(args, config_data):
     ordered = OrderedDict((name, data[name]) for name in sorted(data))
     if args.format == "json":
         return _emit(_json_text(ordered, args.pretty))
-    rows = [(name, values["open"], values["in_progress"], values["due_soon"], values["overdue"]) for name, values in ordered.items()]
+    rows = [
+        (
+            name,
+            values["open"],
+            values["in_progress"],
+            values["due_soon"],
+            values["overdue"],
+        )
+        for name, values in ordered.items()
+    ]
     return _emit(_table(("PERSON", "OPEN", "DOING", "DUE SOON", "OVERDUE"), rows))
 
 
@@ -260,7 +329,9 @@ def _attachment_value(value):
 
 def _is_within(path, root):
     try:
-        return os.path.commonpath((os.path.realpath(path), os.path.realpath(root))) == os.path.realpath(root)
+        return os.path.commonpath(
+            (os.path.realpath(path), os.path.realpath(root))
+        ) == os.path.realpath(root)
     except ValueError:
         return False
 
@@ -290,14 +361,22 @@ def command_files_open(args, config_data):
     if key == "dir" and not os.path.isdir(path):
         raise ValueError("dir: attachment is not a directory: %s" % path)
     if not args.allow_outside and not _is_within(path, base):
-        raise ValueError("Attachment resolves outside the life.txt directory; pass --allow-outside to confirm.")
+        raise ValueError(
+            "Attachment resolves outside the life.txt directory; pass --allow-outside to confirm."
+        )
     extension = os.path.splitext(path)[1].lower()
     # os.access(X_OK) is meaningless on Windows: it reports True for any
     # readable file, which would block every attachment. There, the extension
     # blocklist above is the signal that actually distinguishes an executable.
     executable_bit = os.name != "nt" and os.access(path, os.X_OK)
-    if os.path.isfile(path) and not args.allow_unsafe and (extension in BLOCKED_OPENERS or executable_bit):
-        raise ValueError("Refusing to open a potentially executable attachment; pass --allow-unsafe to confirm.")
+    if (
+        os.path.isfile(path)
+        and not args.allow_unsafe
+        and (extension in BLOCKED_OPENERS or executable_bit)
+    ):
+        raise ValueError(
+            "Refusing to open a potentially executable attachment; pass --allow-unsafe to confirm."
+        )
     if args.dry_run:
         sys.stdout.write(path + "\n")
         return 0
@@ -319,10 +398,27 @@ def command_someday(args, config_data):
         touched = _latest_date(item, ("updated", "created", "do", "due", "on"))
         if touched is None or touched <= cutoff:
             selected.append(item)
-    selected.sort(key=lambda item: (_latest_date(item) or datetime.date.min, item.title.lower()))
+    selected.sort(
+        key=lambda item: (_latest_date(item) or datetime.date.min, item.title.lower())
+    )
     if args.format == "json":
-        return _emit(_json_text([_item_record(item) for item in selected], args.pretty), args.output)
+        return _emit(
+            _json_text([_item_record(item) for item in selected], args.pretty),
+            args.output,
+        )
     if args.format == "life":
-        return _emit("".join(item_to_line(item) + "\n" for item in selected), args.output)
-    rows = [(_item_id(item) or "-", (_latest_date(item) or datetime.date.min).isoformat() if _latest_date(item) else "unknown", _first(item, "project") or "-", item.title) for item in selected]
+        return _emit(
+            "".join(item_to_line(item) + "\n" for item in selected), args.output
+        )
+    rows = [
+        (
+            _item_id(item) or "-",
+            (_latest_date(item) or datetime.date.min).isoformat()
+            if _latest_date(item)
+            else "unknown",
+            _first(item, "project") or "-",
+            item.title,
+        )
+        for item in selected
+    ]
     return _emit(_table(("ID", "LAST TOUCHED", "PROJECT", "TITLE"), rows), args.output)

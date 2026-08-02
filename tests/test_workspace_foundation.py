@@ -113,7 +113,11 @@ class WorkspaceResolutionTests(unittest.TestCase):
 
     def test_required_missing_source_is_error(self):
         config = self.config(
-            {"workspaces": {"w": {"sources": [{"path": "missing.txt", "required": True}]}}}
+            {
+                "workspaces": {
+                    "w": {"sources": [{"path": "missing.txt", "required": True}]}
+                }
+            }
         )
         resolution = resolve_workspace(config, "w")
         codes = {row["code"] for row in resolution["diagnostics"]}
@@ -168,7 +172,10 @@ class WorkspaceResolutionTests(unittest.TestCase):
         config = self.config(
             {
                 "default_workspace": "b",
-                "workspaces": {"a": {"sources": ["a.txt"]}, "b": {"sources": ["b.txt"]}},
+                "workspaces": {
+                    "a": {"sources": ["a.txt"]},
+                    "b": {"sources": ["b.txt"]},
+                },
             }
         )
         self.assertEqual("b", default_workspace_name(config))
@@ -236,7 +243,9 @@ class WorkspaceResolutionTests(unittest.TestCase):
         target = self.write("life.txt")
         link = os.path.join(self.root, "alias.txt")
         self.symlink(target, link)
-        config = self.config({"workspaces": {"w": {"sources": ["life.txt", "alias.txt"]}}})
+        config = self.config(
+            {"workspaces": {"w": {"sources": ["life.txt", "alias.txt"]}}}
+        )
         resolution = resolve_workspace(config, "w")
         codes = {row["code"] for row in resolution["diagnostics"]}
         self.assertIn("WS011", codes)
@@ -321,7 +330,9 @@ class WorkspaceResolutionTests(unittest.TestCase):
         self.assertFalse(resolution["ok"])
 
     def test_source_reason_describes_source(self):
-        record = normalize_source({"path": "notes/*.txt", "role": "reference", "required": True}, self.root)
+        record = normalize_source(
+            {"path": "notes/*.txt", "role": "reference", "required": True}, self.root
+        )
         record["matched_glob"] = True
         record["exclude"] = []
         reason = source_reason(record)
@@ -351,7 +362,24 @@ class ConfigLayerTests(unittest.TestCase):
         config = OrderedDict(
             [
                 ("defaults", OrderedDict([("timezone", "UTC")])),
-                ("profiles", OrderedDict([("p", OrderedDict([("defaults", OrderedDict([("timezone", "Asia/Tokyo")]))]))])),
+                (
+                    "profiles",
+                    OrderedDict(
+                        [
+                            (
+                                "p",
+                                OrderedDict(
+                                    [
+                                        (
+                                            "defaults",
+                                            OrderedDict([("timezone", "Asia/Tokyo")]),
+                                        )
+                                    ]
+                                ),
+                            )
+                        ]
+                    ),
+                ),
             ]
         )
         merged, prov = effective_config(config)
@@ -362,7 +390,9 @@ class ConfigLayerTests(unittest.TestCase):
         self.assertEqual("Asia/Tokyo", merged["defaults"]["timezone"])
         self.assertEqual("profile:p", prov["defaults.timezone"])
 
-        merged, prov = effective_config(config, env={"LIFETXT_TIMEZONE": "Europe/Paris"})
+        merged, prov = effective_config(
+            config, env={"LIFETXT_TIMEZONE": "Europe/Paris"}
+        )
         self.assertEqual("Europe/Paris", merged["defaults"]["timezone"])
         self.assertEqual("env:LIFETXT_TIMEZONE", prov["defaults.timezone"])
 
@@ -371,7 +401,9 @@ class ConfigLayerTests(unittest.TestCase):
         self.assertEqual("builtin-default", prov.get("defaults.timezone"))
         self.assertIn("web", merged)
         self.assertEqual(67108864, merged["workspace"]["max_total_source_bytes"])
-        self.assertEqual("builtin-default", prov.get("workspace.max_total_source_bytes"))
+        self.assertEqual(
+            "builtin-default", prov.get("workspace.max_total_source_bytes")
+        )
 
     def test_dotted_get_set_unset(self):
         config = OrderedDict()
@@ -383,7 +415,12 @@ class ConfigLayerTests(unittest.TestCase):
 
     def test_secret_values_redacted_in_provenance_rows(self):
         config = OrderedDict(
-            [("notifications", OrderedDict([("email", OrderedDict([("password", "hunter2")]))]))]
+            [
+                (
+                    "notifications",
+                    OrderedDict([("email", OrderedDict([("password", "hunter2")]))]),
+                )
+            ]
         )
         rows = {path: value for path, value, _ in flatten_provenance(config)}
         self.assertEqual("***redacted***", rows["notifications.email.password"])
@@ -433,7 +470,9 @@ class ExampleConfigTests(unittest.TestCase):
 
         for name in self.EXAMPLE_NAMES:
             config = self._load(name)
-            errors = [row for row in validate_config(config) if row["severity"] == "error"]
+            errors = [
+                row for row in validate_config(config) if row["severity"] == "error"
+            ]
             self.assertEqual([], errors, name)
 
     def test_examples_validate_against_config_schema(self):

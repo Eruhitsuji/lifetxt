@@ -19,9 +19,7 @@ from lifetxt.serializer import (
 )
 
 
-GOLDEN_PATH = os.path.join(
-    os.path.dirname(__file__), "golden", "roundtrip_cases.json"
-)
+GOLDEN_PATH = os.path.join(os.path.dirname(__file__), "golden", "roundtrip_cases.json")
 
 
 def _canonical_text(items):
@@ -73,7 +71,15 @@ def _run_bash_probe(probe_dir):
     environment = dict(os.environ)
     environment["PATH"] = probe_dir + os.pathsep + environment.get("PATH", "")
     return subprocess.run(
-        [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", _BASH_PROBE, "bash", script_path],
+        [
+            BASH_EXECUTABLE,
+            "--noprofile",
+            "--norc",
+            "-c",
+            _BASH_PROBE,
+            "bash",
+            script_path,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=15.0,
@@ -132,7 +138,9 @@ _BASH_SKIP_REASON = _bash_skip_reason()
 
 
 def _error_codes(diagnostics):
-    return [diagnostic.code for diagnostic in diagnostics if diagnostic.severity == "error"]
+    return [
+        diagnostic.code for diagnostic in diagnostics if diagnostic.severity == "error"
+    ]
 
 
 class GoldenRoundTripTests(unittest.TestCase):
@@ -212,7 +220,9 @@ class GoldenRoundTripTests(unittest.TestCase):
     def test_indented_repeated_body_reports_continuation_column(self):
         text = "  [N] N Note body:first body:second\n  | continuation\n"
         _items, diagnostics = parse_text(text)
-        error = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E022")
+        error = next(
+            diagnostic for diagnostic in diagnostics if diagnostic.code == "E022"
+        )
         self.assertEqual(2, error.line)
         self.assertEqual(3, error.column)
 
@@ -221,7 +231,9 @@ class GoldenRoundTripTests(unittest.TestCase):
         items, diagnostics = parse_text(text)
         self.assertNotIn("E022", _error_codes(diagnostics))
         self.assertEqual("First_line\nSecond line", items[0].details["body"][0])
-        self.assertEqual("[N] N Note\n| First_line\n| Second line", item_to_line(items[0]))
+        self.assertEqual(
+            "[N] N Note\n| First_line\n| Second line", item_to_line(items[0])
+        )
 
     def test_repeated_body_with_multiline_value_cannot_serialize(self):
         item = Item(
@@ -264,16 +276,26 @@ class BashCompletionExecutionTests(unittest.TestCase):
     def _complete(self, words, cword):
         quoted_words = " ".join("'%s'" % word.replace("'", "'\\''") for word in words)
         command = (
-            "source \"$1\"\n"
+            'source "$1"\n'
             "COMP_WORDS=(%s)\n"
             "COMP_CWORD=%d\n"
             "_lifetxt_completion\n"
             "printf '%s\\n' \"${COMPREPLY[@]}\"\n"
         ) % (quoted_words, cword, "%s")
         environment = dict(os.environ)
-        environment["PATH"] = self.temp_dir.name + os.pathsep + environment.get("PATH", "")
+        environment["PATH"] = (
+            self.temp_dir.name + os.pathsep + environment.get("PATH", "")
+        )
         result = subprocess.run(
-            [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", command, "bash", self.script_path],
+            [
+                BASH_EXECUTABLE,
+                "--noprofile",
+                "--norc",
+                "-c",
+                command,
+                "bash",
+                self.script_path,
+            ],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

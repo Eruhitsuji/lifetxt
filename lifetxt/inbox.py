@@ -56,7 +56,9 @@ def _save(config, proposals):
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    atomic_write_text(path, json.dumps(list(proposals), ensure_ascii=False, indent=2) + "\n")
+    atomic_write_text(
+        path, json.dumps(list(proposals), ensure_ascii=False, indent=2) + "\n"
+    )
 
 
 def new_proposal_id():
@@ -89,8 +91,15 @@ def _normalize_details(details):
     return result
 
 
-def new_proposal(operation, source, changes, warnings=None, expected_revision="",
-                 provenance=None, proposal_id=None):
+def new_proposal(
+    operation,
+    source,
+    changes,
+    warnings=None,
+    expected_revision="",
+    provenance=None,
+    proposal_id=None,
+):
     return OrderedDict(
         (
             ("proposal_version", PROPOSAL_VERSION),
@@ -118,8 +127,9 @@ def stage_proposal(config, proposal):
     return proposal
 
 
-def stage_create(config, title, kind="T", details=None, source="manual",
-                 warnings=None, status="[ ]"):
+def stage_create(
+    config, title, kind="T", details=None, source="manual", warnings=None, status="[ ]"
+):
     change = build_create_change(kind=kind, title=title, details=details, status=status)
     proposal = new_proposal("create", source, [change], warnings=warnings)
     return stage_proposal(config, proposal)
@@ -154,7 +164,9 @@ def set_status(config, proposal_id, status):
     return get_proposal(config, proposal_id)
 
 
-def edit_proposal(config, proposal_id, title=None, details=None, kind=None, status=None):
+def edit_proposal(
+    config, proposal_id, title=None, details=None, kind=None, status=None
+):
     """Edit a pending create proposal's fields before it is applied."""
     proposals = load_proposals(config)
     target = None
@@ -209,7 +221,8 @@ def apply_proposal(config, proposal, target, expected_revision=None):
 
     line = proposal_to_line(proposal)
     result = append_life_records(
-        target, line + "\n",
+        target,
+        line + "\n",
         expected_revision=expected_revision,
         operation="inbox.accept",
     )
@@ -251,7 +264,9 @@ def batch_apply(config, proposal_ids, target, expected_revision=None):
             expected_revision = None  # revision changes after the first append
         except ValueError as exc:
             results.append(
-                OrderedDict((("id", proposal_id), ("applied", False), ("error", str(exc))))
+                OrderedDict(
+                    (("id", proposal_id), ("applied", False), ("error", str(exc)))
+                )
             )
     applied = sum(1 for r in results if r.get("applied"))
     return OrderedDict(

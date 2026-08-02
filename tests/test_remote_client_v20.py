@@ -17,7 +17,10 @@ from lifetxt.remote_client import (
 class FakeResponse(object):
     def __init__(self, value, version="2"):
         self.value = value
-        self.headers = {"X-Lifetxt-Remote-Version": version, "X-Lifetxt-Remote-Capability-Revision": "a" * 64}
+        self.headers = {
+            "X-Lifetxt-Remote-Version": version,
+            "X-Lifetxt-Remote-Capability-Revision": "a" * 64,
+        }
 
     def __enter__(self):
         return self
@@ -34,7 +37,18 @@ class RemoteClientV20Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "profiles.json")
             with open(path, "w", encoding="utf-8") as handle:
-                json.dump({"version": 2, "profiles": {"home": {"url": "https://example.test", "token_env": "TOKEN"}}}, handle)
+                json.dump(
+                    {
+                        "version": 2,
+                        "profiles": {
+                            "home": {
+                                "url": "https://example.test",
+                                "token_env": "TOKEN",
+                            }
+                        },
+                    },
+                    handle,
+                )
             data = _load(path)
             self.assertEqual(PROFILE_VERSION, data["version"])
             self.assertEqual(2, data["profiles"]["home"]["protocol_version"])
@@ -43,7 +57,11 @@ class RemoteClientV20Tests(unittest.TestCase):
     @mock.patch("lifetxt.remote_client.urlopen")
     def test_request_sends_and_validates_protocol_header(self, opener):
         opener.return_value = FakeResponse({"ok": True})
-        value, headers = request({"url": "https://example.test", "protocol_version": 2}, "GET", "/api/remote/v1/diagnostics")
+        value, headers = request(
+            {"url": "https://example.test", "protocol_version": 2},
+            "GET",
+            "/api/remote/v1/diagnostics",
+        )
         self.assertTrue(value["ok"])
         sent = opener.call_args[0][0]
         self.assertEqual("2", sent.headers["X-lifetxt-remote-version"])
@@ -53,15 +71,23 @@ class RemoteClientV20Tests(unittest.TestCase):
     def test_protocol_mismatch_is_rejected(self, opener):
         opener.return_value = FakeResponse({"ok": True}, version="1")
         with self.assertRaises(RuntimeError):
-            request({"url": "https://example.test", "protocol_version": 2}, "GET", "/api/remote/v1/session")
+            request(
+                {"url": "https://example.test", "protocol_version": 2},
+                "GET",
+                "/api/remote/v1/session",
+            )
 
     def test_profile_and_cli_include_protocol_and_resource_commands(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "profiles.json")
-            set_profile("home", "https://example.test", "TOKEN", protocol_version=2, path=path)
+            set_profile(
+                "home", "https://example.test", "TOKEN", protocol_version=2, path=path
+            )
             self.assertEqual(2, get_profile("home", path)["protocol_version"])
         parser = cli.build_parser()
-        args = parser.parse_args(["remote", "get", "home", "items", "--param", "q=test"])
+        args = parser.parse_args(
+            ["remote", "get", "home", "items", "--param", "q=test"]
+        )
         self.assertEqual("items", args.resource)
         args = parser.parse_args(["remote", "profile-remove", "home"])
         self.assertEqual("home", args.name)

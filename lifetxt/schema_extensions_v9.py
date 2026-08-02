@@ -18,17 +18,29 @@ def schema_bundle_v9():
                     "$id": BASE + "query-plan-v1.schema.json",
                     "title": "lifetxt compiled query plan v1",
                     "type": "object",
-                    "required": ["query", "membership", "date_filters", "text", "open_only"],
+                    "required": [
+                        "query",
+                        "membership",
+                        "date_filters",
+                        "text",
+                        "open_only",
+                    ],
                     "properties": {
                         "query": {"type": "string"},
                         "membership": {
                             "type": "object",
-                            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "excludes": {"type": "array", "items": {"type": "string"}},
                         "details": {
                             "type": "object",
-                            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "date_filters": {
                             "type": "array",

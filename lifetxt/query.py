@@ -52,8 +52,19 @@ MEMBERSHIP_FIELDS = OrderedDict(
 
 # Detail keys compared as dates rather than string membership.
 DATE_FIELDS = (
-    "due", "do", "from", "to", "on", "at", "done", "created", "updated",
-    "notify_at", "notify_from", "notify_to", "until",
+    "due",
+    "do",
+    "from",
+    "to",
+    "on",
+    "at",
+    "done",
+    "created",
+    "updated",
+    "notify_at",
+    "notify_from",
+    "notify_to",
+    "until",
 )
 
 EXCLUDE_FIELDS = ("exclude_tag", "extag", "-tag")
@@ -116,7 +127,7 @@ def _split_field_op(token):
     for op in COMPARISON_OPS:
         index = token.find(op)
         if index > 0:
-            return token[:index], op, token[index + len(op):]
+            return token[:index], op, token[index + len(op) :]
     return None, None, None
 
 
@@ -164,22 +175,32 @@ def parse_query(text):
             parsed = _parse_date_literal(value)
             if parsed is None:
                 diagnostics.append(
-                    diagnostic("error", "Q002",
-                               "Invalid date %r in %r." % (value, token),
-                               "Use YYYY-MM-DD.", token)
+                    diagnostic(
+                        "error",
+                        "Q002",
+                        "Invalid date %r in %r." % (value, token),
+                        "Use YYYY-MM-DD.",
+                        token,
+                    )
                 )
                 continue
             plan["date_filters"].append(
-                OrderedDict((("field", field), ("op", op), ("date", parsed.isoformat())))
+                OrderedDict(
+                    (("field", field), ("op", op), ("date", parsed.isoformat()))
+                )
             )
             continue
 
         if field in MEMBERSHIP_FIELDS:
             if op not in (":", "="):
                 diagnostics.append(
-                    diagnostic("error", "Q004",
-                               "Operator %r is not supported for %r." % (op, field),
-                               "Use field:value for membership fields.", token)
+                    diagnostic(
+                        "error",
+                        "Q004",
+                        "Operator %r is not supported for %r." % (op, field),
+                        "Use field:value for membership fields.",
+                        token,
+                    )
                 )
                 continue
             values = plan["membership"].setdefault(field, [])
@@ -189,9 +210,13 @@ def parse_query(text):
         if field in KNOWN_KEYS or field in CUSTOM_DETAIL_FIELDS:
             if op not in (":", "="):
                 diagnostics.append(
-                    diagnostic("error", "Q004",
-                               "Operator %r is not supported for detail %r." % (op, field),
-                               "Use field:value.", token)
+                    diagnostic(
+                        "error",
+                        "Q004",
+                        "Operator %r is not supported for detail %r." % (op, field),
+                        "Use field:value.",
+                        token,
+                    )
                 )
                 continue
             values = plan["details"].setdefault(field, [])
@@ -199,8 +224,13 @@ def parse_query(text):
             continue
 
         diagnostics.append(
-            diagnostic("warning", "Q001", "Unknown query field %r; term ignored." % field,
-                       "Known fields: %s." % ", ".join(query_fields()), token)
+            diagnostic(
+                "warning",
+                "Q001",
+                "Unknown query field %r; term ignored." % field,
+                "Known fields: %s." % ", ".join(query_fields()),
+                token,
+            )
         )
 
     plan["diagnostics"] = diagnostics
@@ -210,8 +240,13 @@ def parse_query(text):
 def _add_values(target, value, diagnostics, token):
     if value is None or value == "":
         diagnostics.append(
-            diagnostic("warning", "Q003", "Empty value in %r; term ignored." % token,
-                       "Provide a value after the field.", token)
+            diagnostic(
+                "warning",
+                "Q003",
+                "Empty value in %r; term ignored." % token,
+                "Provide a value after the field.",
+                token,
+            )
         )
         return
     for part in value.split(","):
@@ -233,7 +268,9 @@ def apply_query(items, plan, config=None):
     """Filter ``items`` by a compiled plan, returning the matching items."""
     from .agenda import filter_items
     from .config import (
-        config_tag_aliases, config_team_aliases, config_team_members,
+        config_tag_aliases,
+        config_team_aliases,
+        config_team_members,
         config_user_aliases,
     )
 
@@ -252,7 +289,7 @@ def apply_query(items, plan, config=None):
         team_members=config_team_members(config),
         team_aliases=config_team_aliases(config),
         tag_aliases=config_tag_aliases(config),
-        **kwargs
+        **kwargs,
     )
 
     details = plan.get("details") or {}
@@ -310,8 +347,10 @@ def run_query(items, query_text, config=None, sort=None, order="asc", limit=None
     filtered = apply_query(items, plan, config)
     if sort:
         from .webapp import sort_items
+
         filtered = sort_items(filtered, sort, order)
     if limit not in (None, "", 0):
         from .webapp import limit_items
+
         filtered = limit_items(filtered, limit)
     return filtered, diagnostics

@@ -1,4 +1,5 @@
 """Schemas for ticket workflow, append-only history, time, and planning."""
+
 from __future__ import unicode_literals
 
 import copy
@@ -27,13 +28,25 @@ def workflow_schema():
         "properties": {
             "to": {"type": "string"},
             "from": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
-            "roles": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
-            "required_fields": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
+            "roles": {
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": True,
+            },
+            "required_fields": {
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": True,
+            },
             "resolution_required": {"type": "boolean"},
             "comment_required": {"type": "boolean"},
             "event": {"type": "string"},
             "set": {"type": "object", "additionalProperties": {"type": "string"}},
-            "unset": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
+            "unset": {
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": True,
+            },
             "label": {"type": "string"},
             "description": {"type": "string"},
             "allowed_for_role": {"type": "boolean"},
@@ -87,7 +100,16 @@ def event_schema():
             "source": {"type": ["string", "null"]},
             "line": {"type": ["integer", "null"]},
         },
-        ("id", "ticket_id", "event", "author", "at", "sequence", "transaction_id", "ticket_revision"),
+        (
+            "id",
+            "ticket_id",
+            "event",
+            "author",
+            "at",
+            "sequence",
+            "transaction_id",
+            "ticket_revision",
+        ),
     )
 
 
@@ -113,7 +135,17 @@ def time_entry_schema():
             "sequence": {"type": "integer", "minimum": 1},
             "line": {"type": ["integer", "null"]},
         },
-        ("id", "ticket_id", "user", "activity", "date", "duration", "event_id", "created_at", "sequence"),
+        (
+            "id",
+            "ticket_id",
+            "user",
+            "activity",
+            "date",
+            "duration",
+            "event_id",
+            "created_at",
+            "sequence",
+        ),
     )
 
 
@@ -135,14 +167,25 @@ def activity_schema():
             },
             "time": {
                 "type": "object",
-                "required": ["entry_count", "authoritative_seconds", "authoritative_duration", "policy"],
+                "required": [
+                    "entry_count",
+                    "authoritative_seconds",
+                    "authoritative_duration",
+                    "policy",
+                ],
                 "properties": {
                     "entry_count": {"type": "integer", "minimum": 0},
                     "authoritative_seconds": {"type": "integer", "minimum": 0},
                     "authoritative_duration": {"type": "string"},
                     "correction_seconds": {"type": "integer", "minimum": 0},
-                    "effective_entry_ids": {"type": "array", "items": {"type": ["string", "null"]}},
-                    "superseded_entry_ids": {"type": "array", "items": {"type": "string"}},
+                    "effective_entry_ids": {
+                        "type": "array",
+                        "items": {"type": ["string", "null"]},
+                    },
+                    "superseded_entry_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
                     "legacy_elapsed": {"type": ["string", "null"]},
                     "policy": {"type": "string"},
                 },
@@ -162,7 +205,10 @@ def version_schema():
             "id": {"type": "string"},
             "title": {"type": "string"},
             "project": {"type": "string"},
-            "state": {"type": "string", "enum": ["open", "locked", "released", "closed"]},
+            "state": {
+                "type": "string",
+                "enum": ["open", "locked", "released", "closed"],
+            },
             "due": {"type": ["string", "null"], "format": "date"},
             "release": {"type": ["string", "null"], "format": "date"},
             "description": {"type": ["string", "null"]},
@@ -175,7 +221,16 @@ def version_schema():
             "source": {"type": ["string", "null"]},
             "line": {"type": ["integer", "null"]},
         },
-        ("id", "title", "project", "state", "ticket_ids", "open_ticket_ids", "ticket_count", "open_ticket_count"),
+        (
+            "id",
+            "title",
+            "project",
+            "state",
+            "ticket_ids",
+            "open_ticket_ids",
+            "ticket_count",
+            "open_ticket_count",
+        ),
     )
 
 
@@ -202,7 +257,16 @@ def sprint_schema():
             "source": {"type": ["string", "null"]},
             "line": {"type": ["integer", "null"]},
         },
-        ("id", "title", "project", "state", "start", "end", "ticket_ids", "open_ticket_ids"),
+        (
+            "id",
+            "title",
+            "project",
+            "state",
+            "start",
+            "end",
+            "ticket_ids",
+            "open_ticket_ids",
+        ),
     )
 
 
@@ -326,7 +390,11 @@ def schema_samples_v18():
                 {
                     "schema": "ticket-activity-v1.schema.json",
                     "contract_version": "1",
-                    "ticket": {"summary": {"id": "BUG-1", "title": "Bug", "status": "[/]"}, "fields": {}, "relations": {}},
+                    "ticket": {
+                        "summary": {"id": "BUG-1", "title": "Bug", "status": "[/]"},
+                        "fields": {},
+                        "relations": {},
+                    },
                     "events": [],
                     "time_entries": [],
                     "time": {

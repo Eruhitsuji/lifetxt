@@ -49,113 +49,206 @@ del _install_release_manifest_validation
 # revision telemetry, explicit timezone contexts, workspace diagnostics,
 # compensated multi-target operations, and the expanded schema bundle.
 from .runtime_safety_v2 import install_runtime_safety_v2 as _install_runtime_safety_v2
-from .schema_validation_v2 import install_schema_validation_v2 as _install_schema_validation_v2
+from .schema_validation_v2 import (
+    install_schema_validation_v2 as _install_schema_validation_v2,
+)
 from .safety_compat_v2 import install_safety_compat_v2 as _install_safety_compat_v2
 
 _install_runtime_safety_v2()
 _install_schema_validation_v2()
 _install_safety_compat_v2()
-from .schema_extensions_v4 import install_schema_extensions_v4 as _install_schema_extensions_v4
+from .schema_extensions_v4 import (
+    install_schema_extensions_v4 as _install_schema_extensions_v4,
+)
+
 _install_schema_extensions_v4()
 del _install_schema_extensions_v4
-from .schema_extensions_v5 import install_schema_extensions_v5 as _install_schema_extensions_v5
+from .schema_extensions_v5 import (
+    install_schema_extensions_v5 as _install_schema_extensions_v5,
+)
+
 _install_schema_extensions_v5()
 del _install_schema_extensions_v5
-from .schema_extensions_v6 import install_schema_extensions_v6 as _install_schema_extensions_v6
+from .schema_extensions_v6 import (
+    install_schema_extensions_v6 as _install_schema_extensions_v6,
+)
+
 _install_schema_extensions_v6()
 del _install_schema_extensions_v6
-from .schema_extensions_v7 import install_schema_extensions_v7 as _install_schema_extensions_v7
+from .schema_extensions_v7 import (
+    install_schema_extensions_v7 as _install_schema_extensions_v7,
+)
+
 _install_schema_extensions_v7()
 del _install_schema_extensions_v7
-from .schema_extensions_v8 import install_schema_extensions_v8 as _install_schema_extensions_v8
+from .schema_extensions_v8 import (
+    install_schema_extensions_v8 as _install_schema_extensions_v8,
+)
+
 _install_schema_extensions_v8()
 del _install_schema_extensions_v8
-from .schema_extensions_v9 import install_schema_extensions_v9 as _install_schema_extensions_v9
+from .schema_extensions_v9 import (
+    install_schema_extensions_v9 as _install_schema_extensions_v9,
+)
+
 _install_schema_extensions_v9()
 del _install_schema_extensions_v9
-from .schema_extensions_v10 import install_schema_extensions_v10 as _install_schema_extensions_v10
+from .schema_extensions_v10 import (
+    install_schema_extensions_v10 as _install_schema_extensions_v10,
+)
+
 _install_schema_extensions_v10()
 del _install_schema_extensions_v10
-from .schema_extensions_v11 import install_schema_extensions_v11 as _install_schema_extensions_v11
+from .schema_extensions_v11 import (
+    install_schema_extensions_v11 as _install_schema_extensions_v11,
+)
+
 _install_schema_extensions_v11()
 del _install_schema_extensions_v11
-from .schema_extensions_v12 import install_schema_extensions_v12 as _install_schema_extensions_v12
+from .schema_extensions_v12 import (
+    install_schema_extensions_v12 as _install_schema_extensions_v12,
+)
+
 _install_schema_extensions_v12()
 del _install_schema_extensions_v12
-from .schema_extensions_v13 import install_schema_extensions_v13 as _install_schema_extensions_v13
+from .schema_extensions_v13 import (
+    install_schema_extensions_v13 as _install_schema_extensions_v13,
+)
+
 _install_schema_extensions_v13()
 del _install_schema_extensions_v13
-from .schema_extensions_v14 import install_schema_extensions_v14 as _install_schema_extensions_v14
+from .schema_extensions_v14 import (
+    install_schema_extensions_v14 as _install_schema_extensions_v14,
+)
+
 _install_schema_extensions_v14()
 del _install_schema_extensions_v14
-from .schema_extensions_v15 import install_schema_extensions_v15 as _install_schema_extensions_v15
+from .schema_extensions_v15 import (
+    install_schema_extensions_v15 as _install_schema_extensions_v15,
+)
+
 _install_schema_extensions_v15()
 del _install_schema_extensions_v15
-from .schema_extensions_v16 import install_schema_extensions_v16 as _install_schema_extensions_v16
+from .schema_extensions_v16 import (
+    install_schema_extensions_v16 as _install_schema_extensions_v16,
+)
+
 _install_schema_extensions_v16()
 del _install_schema_extensions_v16
-from .schema_extensions_v17 import install_schema_extensions_v17 as _install_schema_extensions_v17
+from .schema_extensions_v17 import (
+    install_schema_extensions_v17 as _install_schema_extensions_v17,
+)
+
 _install_schema_extensions_v17()
 del _install_schema_extensions_v17
-from .schema_extensions_v18 import install_schema_extensions_v18 as _install_schema_extensions_v18
+from .schema_extensions_v18 import (
+    install_schema_extensions_v18 as _install_schema_extensions_v18,
+)
+
 _install_schema_extensions_v18()
 del _install_schema_extensions_v18
-from .remote_contracts_v6 import install_remote_contracts_v6 as _install_remote_contracts_v6
+from .remote_contracts_v6 import (
+    install_remote_contracts_v6 as _install_remote_contracts_v6,
+)
+
 _install_remote_contracts_v6()
 del _install_remote_contracts_v6
-from .schema_extensions_v19 import install_schema_extensions_v19 as _install_schema_extensions_v19
+from .schema_extensions_v19 import (
+    install_schema_extensions_v19 as _install_schema_extensions_v19,
+)
+
 _install_schema_extensions_v19()
 del _install_schema_extensions_v19
-from .schema_extensions_v20 import install_schema_extensions_v20 as _install_schema_extensions_v20
+from .schema_extensions_v20 import (
+    install_schema_extensions_v20 as _install_schema_extensions_v20,
+)
+
 _install_schema_extensions_v20()
 del _install_schema_extensions_v20
-from .remote_compatibility_v21 import install_remote_compatibility_v21 as _install_remote_compatibility_v21
+from .remote_compatibility_v21 import (
+    install_remote_compatibility_v21 as _install_remote_compatibility_v21,
+)
+
 _install_remote_compatibility_v21()
 del _install_remote_compatibility_v21
-from .schema_extensions_v21 import install_schema_extensions_v21 as _install_schema_extensions_v21
+from .schema_extensions_v21 import (
+    install_schema_extensions_v21 as _install_schema_extensions_v21,
+)
+
 _install_schema_extensions_v21()
 del _install_schema_extensions_v21
-from .schema_extensions_v22 import install_schema_extensions_v22 as _install_schema_extensions_v22
+from .schema_extensions_v22 import (
+    install_schema_extensions_v22 as _install_schema_extensions_v22,
+)
+
 _install_schema_extensions_v22()
 del _install_schema_extensions_v22
 from .remote_web import install_remote_web as _install_remote_web
+
 _install_remote_web()
 del _install_remote_web
 from .remote_client import install_remote_client_cli as _install_remote_client_cli
+
 _install_remote_client_cli()
 del _install_remote_client_cli
-from .remote_client_writes import install_remote_client_writes_cli as _install_remote_client_writes_cli
+from .remote_client_writes import (
+    install_remote_client_writes_cli as _install_remote_client_writes_cli,
+)
+
 _install_remote_client_writes_cli()
 del _install_remote_client_writes_cli
 from .remote_client_writes_compat_v25 import (
     install_remote_client_writes_compat_v25 as _install_remote_client_writes_compat_v25,
 )
+
 _install_remote_client_writes_compat_v25()
 del _install_remote_client_writes_compat_v25
 from .remote_compatibility_v21 import (
     install_remote_client_compatibility_v21 as _install_remote_client_compatibility_v21,
 )
+
 _install_remote_client_compatibility_v21()
 del _install_remote_client_compatibility_v21
-from .ticket_project_surfaces import install_ticket_project_surfaces as _install_ticket_project_surfaces
+from .ticket_project_surfaces import (
+    install_ticket_project_surfaces as _install_ticket_project_surfaces,
+)
+
 _install_ticket_project_surfaces()
 del _install_ticket_project_surfaces
-from .ticket_revision_writes import install_ticket_revision_writes as _install_ticket_revision_writes
+from .ticket_revision_writes import (
+    install_ticket_revision_writes as _install_ticket_revision_writes,
+)
+
 _install_ticket_revision_writes()
 del _install_ticket_revision_writes
-from .ticket_custom_fields import install_ticket_custom_fields as _install_ticket_custom_fields
+from .ticket_custom_fields import (
+    install_ticket_custom_fields as _install_ticket_custom_fields,
+)
+
 _install_ticket_custom_fields()
 del _install_ticket_custom_fields
-from .ticket_workflow_cli import install_ticket_workflow_cli as _install_ticket_workflow_cli
+from .ticket_workflow_cli import (
+    install_ticket_workflow_cli as _install_ticket_workflow_cli,
+)
+
 _install_ticket_workflow_cli()
 del _install_ticket_workflow_cli
-from .ticket_planning_cli import install_ticket_planning_cli as _install_ticket_planning_cli
+from .ticket_planning_cli import (
+    install_ticket_planning_cli as _install_ticket_planning_cli,
+)
+
 _install_ticket_planning_cli()
 del _install_ticket_planning_cli
-from .ticket_workflow_surfaces import install_ticket_workflow_surfaces as _install_ticket_workflow_surfaces
+from .ticket_workflow_surfaces import (
+    install_ticket_workflow_surfaces as _install_ticket_workflow_surfaces,
+)
+
 _install_ticket_workflow_surfaces()
 del _install_ticket_workflow_surfaces
-from .remote_ticket_writes import install_remote_ticket_writes as _install_remote_ticket_writes
+from .remote_ticket_writes import (
+    install_remote_ticket_writes as _install_remote_ticket_writes,
+)
+
 _install_remote_ticket_writes()
 del _install_remote_ticket_writes
 del _install_runtime_safety_v2

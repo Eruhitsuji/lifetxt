@@ -3,6 +3,7 @@
 The generated scripts are what users actually load, so these assert on the
 generated text and on `dynamic_values` rather than on internal helpers alone.
 """
+
 import os
 import shutil
 import sys
@@ -34,12 +35,19 @@ class DynamicValueTests(unittest.TestCase):
             self.assertIn(state, values)
         self.assertIn("hyperfocus", values)
         # The documented ones come first so a brand-new file still completes.
-        self.assertEqual(list(COMMON_STATES), values[:len(COMMON_STATES)])
+        self.assertEqual(list(COMMON_STATES), values[: len(COMMON_STATES)])
 
     def test_projects_tags_ids_and_people_come_from_the_file(self):
-        self.assertEqual(["work", "research"], completion.dynamic_values("project", [self.path]).split())
-        self.assertEqual(["urgent", "reading"], completion.dynamic_values("tag", [self.path]).split())
-        self.assertEqual(["rep", "paper"], completion.dynamic_values("id", [self.path]).split())
+        self.assertEqual(
+            ["work", "research"],
+            completion.dynamic_values("project", [self.path]).split(),
+        )
+        self.assertEqual(
+            ["urgent", "reading"], completion.dynamic_values("tag", [self.path]).split()
+        )
+        self.assertEqual(
+            ["rep", "paper"], completion.dynamic_values("id", [self.path]).split()
+        )
 
         people = completion.dynamic_values("person", [self.path]).split()
         self.assertIn("alice", people)
@@ -52,10 +60,17 @@ class DynamicValueTests(unittest.TestCase):
     def test_unreadable_file_falls_back_instead_of_failing(self):
         # A shell calls this while the user types; an exception would corrupt
         # the completion display, so a missing file yields the built-ins.
-        values = completion.dynamic_values("state", [os.path.join(self.directory, "gone.txt")])
+        values = completion.dynamic_values(
+            "state", [os.path.join(self.directory, "gone.txt")]
+        )
 
         self.assertEqual(list(COMMON_STATES), values.split())
-        self.assertEqual("", completion.dynamic_values("project", [os.path.join(self.directory, "gone.txt")]))
+        self.assertEqual(
+            "",
+            completion.dynamic_values(
+                "project", [os.path.join(self.directory, "gone.txt")]
+            ),
+        )
 
     def test_unknown_kind_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -106,7 +121,9 @@ class StateCompletionTests(unittest.TestCase):
         # `lifetxt state busy` is the form people type, so completing only
         # `--state` would miss the common case entirely.
         bash = completion.bash_completion()
-        self.assertIn("state) COMPREPLY=( $(compgen -W \"$(_lifetxt_values state)\"", bash)
+        self.assertIn(
+            'state) COMPREPLY=( $(compgen -W "$(_lifetxt_values state)"', bash
+        )
 
         for name in ("zsh", "fish"):
             script = getattr(completion, "%s_completion" % name)()

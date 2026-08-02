@@ -25,13 +25,17 @@ class TransactionPolicyV4Tests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
 
     def test_policy_config_is_bounded_and_typed(self):
-        policy = policy_from_config({"transactions": {
-            "terminal_retention_days": "7",
-            "max_transactions": "3",
-            "max_total_bytes": "4096",
-            "max_transaction_bytes": "2048",
-            "require_private_permissions": "false",
-        }})
+        policy = policy_from_config(
+            {
+                "transactions": {
+                    "terminal_retention_days": "7",
+                    "max_transactions": "3",
+                    "max_total_bytes": "4096",
+                    "max_transaction_bytes": "2048",
+                    "require_private_permissions": "false",
+                }
+            }
+        )
         self.assertEqual(7.0, policy["terminal_retention_days"])
         self.assertEqual(3, policy["max_transactions"])
         self.assertFalse(policy["require_private_permissions"])
@@ -54,9 +58,13 @@ class TransactionPolicyV4Tests(unittest.TestCase):
         with self.assertRaises(TransactionPolicyError):
             enforce_capacity(root, dict(policy_from_config(), max_transactions=1), 0)
         with self.assertRaises(TransactionPolicyError):
-            enforce_capacity(root, dict(policy_from_config(), max_total_bytes=1024), 4096)
+            enforce_capacity(
+                root, dict(policy_from_config(), max_total_bytes=1024), 4096
+            )
         with self.assertRaises(TransactionPolicyError):
-            enforce_capacity(root, dict(policy_from_config(), max_transaction_bytes=1024), 2048)
+            enforce_capacity(
+                root, dict(policy_from_config(), max_transaction_bytes=1024), 2048
+            )
 
     def test_integrity_manifest_detects_tampering(self):
         root = os.path.join(self.temp.name, "backup")
@@ -91,7 +99,9 @@ class TransactionPolicyV4Tests(unittest.TestCase):
     def test_version_compatibility_is_read_only_for_noncurrent_versions(self):
         self.assertTrue(version_compatibility({"schema_version": 1}, 1)["writable"])
         self.assertFalse(version_compatibility({"schema_version": 2}, 1)["writable"])
-        self.assertEqual("newer", version_compatibility({"schema_version": 2}, 1)["state"])
+        self.assertEqual(
+            "newer", version_compatibility({"schema_version": 2}, 1)["state"]
+        )
         self.assertEqual("invalid", version_compatibility({}, 1)["state"])
 
     @unittest.skipUnless(os.name != "nt", "POSIX mode bits required")

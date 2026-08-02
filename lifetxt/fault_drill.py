@@ -75,11 +75,21 @@ def run_fault_drill(
         else:
             recovery = "cleanup-orphan" if point in PRE_JOURNAL_POINTS else "resume"
     if recovery not in ("inspect", "resume", "compensate", "cleanup-orphan"):
-        raise ValueError("recovery must be inspect, resume, compensate, cleanup-orphan, or auto.")
+        raise ValueError(
+            "recovery must be inspect, resume, compensate, cleanup-orphan, or auto."
+        )
     owned = workspace is None
     root = os.path.abspath(workspace or tempfile.mkdtemp(prefix="lifetxt-fault-drill-"))
     os.makedirs(root, exist_ok=True)
-    command = [sys.executable, "-m", "lifetxt.fault_drill", "--child", root, "--point", point]
+    command = [
+        sys.executable,
+        "-m",
+        "lifetxt.fault_drill",
+        "--child",
+        root,
+        "--point",
+        point,
+    ]
     completed = subprocess.run(
         command,
         stdout=subprocess.PIPE,
@@ -101,12 +111,20 @@ def run_fault_drill(
     if recovery in ("resume", "compensate") and journal_path:
         stale_locks = _age_dead_child_locks(root)
         try:
-            recovery_result = resume(journal_path) if recovery == "resume" else compensate(journal_path)
+            recovery_result = (
+                resume(journal_path)
+                if recovery == "resume"
+                else compensate(journal_path)
+            )
         except Exception as exc:
             recovery_error = str(exc)
         if repeat_recovery and recovery_error is None:
             try:
-                repeated_result = resume(journal_path) if recovery == "resume" else compensate(journal_path)
+                repeated_result = (
+                    resume(journal_path)
+                    if recovery == "resume"
+                    else compensate(journal_path)
+                )
             except Exception as exc:
                 repeated_error = str(exc)
     elif recovery == "cleanup-orphan":
@@ -115,19 +133,31 @@ def run_fault_drill(
         except Exception as exc:
             recovery_error = str(exc)
     elif recovery in ("resume", "compensate") and not journal_path:
-        recovery_error = "journal was not published; use cleanup-orphan after verifying targets"
+        recovery_error = (
+            "journal was not published; use cleanup-orphan after verifying targets"
+        )
 
-    after = _state(root, journal_path if os.path.exists(journal_path or "") else None, tx_dir)
+    after = _state(
+        root, journal_path if os.path.exists(journal_path or "") else None, tx_dir
+    )
     journal_expected = point not in PRE_JOURNAL_POINTS
     evidence_matches = bool(journal_path) == journal_expected
     recovery_ok = recovery_error is None and repeated_error is None
     if recovery == "cleanup-orphan":
-        recovery_ok = recovery_ok and bool(recovery_result and recovery_result.get("removed"))
+        recovery_ok = recovery_ok and bool(
+            recovery_result and recovery_result.get("removed")
+        )
     report = OrderedDict(
         (
-            ("ok", completed.returncode == EXIT_CODE and evidence_matches and recovery_ok),
+            (
+                "ok",
+                completed.returncode == EXIT_CODE and evidence_matches and recovery_ok,
+            ),
             ("point", point),
-            ("boundary_phase", "pre-journal" if point in PRE_JOURNAL_POINTS else "journal-or-commit"),
+            (
+                "boundary_phase",
+                "pre-journal" if point in PRE_JOURNAL_POINTS else "journal-or-commit",
+            ),
             ("exit_code", completed.returncode),
             ("expected_exit_code", EXIT_CODE),
             ("workspace", root),
@@ -145,7 +175,10 @@ def run_fault_drill(
             ("after_recovery", after),
             ("stdout", completed.stdout),
             ("stderr", completed.stderr),
-            ("scope", "abrupt interpreter termination; not power-loss portability evidence"),
+            (
+                "scope",
+                "abrupt interpreter termination; not power-loss portability evidence",
+            ),
         )
     )
     if owned and not keep:
@@ -164,7 +197,9 @@ def run_fault_matrix(points=None, recovery="inspect", keep=False):
             if point == "before_transaction_directory":
                 chosen_recovery = "inspect"
             else:
-                chosen_recovery = "cleanup-orphan" if point in PRE_JOURNAL_POINTS else "resume"
+                chosen_recovery = (
+                    "cleanup-orphan" if point in PRE_JOURNAL_POINTS else "resume"
+                )
         results.append(run_fault_drill(point, recovery=chosen_recovery, keep=keep))
     return OrderedDict(
         (
@@ -173,7 +208,10 @@ def run_fault_matrix(points=None, recovery="inspect", keep=False):
             ("passed", sum(1 for row in results if row.get("ok"))),
             ("failed", sum(1 for row in results if not row.get("ok"))),
             ("results", results),
-            ("scope", "subprocess termination matrix; not physical power-loss evidence"),
+            (
+                "scope",
+                "subprocess termination matrix; not physical power-loss evidence",
+            ),
         )
     )
 
@@ -284,7 +322,11 @@ def main(argv=None):
     parser.add_argument("--child")
     parser.add_argument("--point", choices=SUPPORTED_POINTS)
     parser.add_argument("--matrix", action="store_true")
-    parser.add_argument("--recovery", choices=("inspect", "resume", "compensate", "cleanup-orphan", "auto"), default="inspect")
+    parser.add_argument(
+        "--recovery",
+        choices=("inspect", "resume", "compensate", "cleanup-orphan", "auto"),
+        default="inspect",
+    )
     parser.add_argument("--repeat-recovery", action="store_true")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)

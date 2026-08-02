@@ -21,15 +21,27 @@ SUNDAY = datetime.date(2026, 7, 19)
 
 class DateTokenTests(unittest.TestCase):
     def test_named_days(self):
-        self.assertEqual("2026-07-19", shorthand.resolve_date_token("today", today=SUNDAY))
-        self.assertEqual("2026-07-20", shorthand.resolve_date_token("tomorrow", today=SUNDAY))
-        self.assertEqual("2026-07-18", shorthand.resolve_date_token("yesterday", today=SUNDAY))
+        self.assertEqual(
+            "2026-07-19", shorthand.resolve_date_token("today", today=SUNDAY)
+        )
+        self.assertEqual(
+            "2026-07-20", shorthand.resolve_date_token("tomorrow", today=SUNDAY)
+        )
+        self.assertEqual(
+            "2026-07-18", shorthand.resolve_date_token("yesterday", today=SUNDAY)
+        )
 
     def test_weekday_resolves_to_the_next_occurrence(self):
         # SUNDAY is a Sunday, so "sunday" must mean a week out, not today.
-        self.assertEqual("2026-07-20", shorthand.resolve_date_token("monday", today=SUNDAY))
-        self.assertEqual("2026-07-26", shorthand.resolve_date_token("sunday", today=SUNDAY))
-        self.assertEqual("2026-07-27", shorthand.resolve_date_token("next_monday", today=SUNDAY))
+        self.assertEqual(
+            "2026-07-20", shorthand.resolve_date_token("monday", today=SUNDAY)
+        )
+        self.assertEqual(
+            "2026-07-26", shorthand.resolve_date_token("sunday", today=SUNDAY)
+        )
+        self.assertEqual(
+            "2026-07-27", shorthand.resolve_date_token("next_monday", today=SUNDAY)
+        )
 
     def test_signed_offsets(self):
         cases = {
@@ -40,7 +52,9 @@ class DateTokenTests(unittest.TestCase):
             "+0d": "2026-07-19",
         }
         for token, expected in cases.items():
-            self.assertEqual(expected, shorthand.resolve_date_token(token, today=SUNDAY), token)
+            self.assertEqual(
+                expected, shorthand.resolve_date_token(token, today=SUNDAY), token
+            )
 
     def test_month_offset_clamps_to_a_valid_day(self):
         # 31 January + 1 month has no 31st to land on.
@@ -50,10 +64,14 @@ class DateTokenTests(unittest.TestCase):
         )
 
     def test_iso_dates_pass_through(self):
-        self.assertEqual("2026-01-05", shorthand.resolve_date_token("2026-01-05", today=SUNDAY))
+        self.assertEqual(
+            "2026-01-05", shorthand.resolve_date_token("2026-01-05", today=SUNDAY)
+        )
 
     def test_unknown_token_passes_through_unless_strict(self):
-        self.assertEqual("garbage", shorthand.resolve_date_token("garbage", today=SUNDAY))
+        self.assertEqual(
+            "garbage", shorthand.resolve_date_token("garbage", today=SUNDAY)
+        )
         with self.assertRaises(shorthand.ShorthandError):
             shorthand.resolve_date_token("garbage", today=SUNDAY, strict=True)
 
@@ -103,13 +121,17 @@ class CaptureSigilTests(unittest.TestCase):
         self.assertEqual({}, details)
 
     def test_bare_sigil_character_is_left_alone(self):
-        title, details = shorthand.parse_capture("Compute 10 ^ 2 carefully", today=SUNDAY)
+        title, details = shorthand.parse_capture(
+            "Compute 10 ^ 2 carefully", today=SUNDAY
+        )
 
         self.assertEqual("Compute 10 ^ 2 carefully", title)
         self.assertEqual({}, details)
 
     def test_backslash_escapes_a_sigil(self):
-        title, details = shorthand.parse_capture(r"Escaped \@notaproject stays", today=SUNDAY)
+        title, details = shorthand.parse_capture(
+            r"Escaped \@notaproject stays", today=SUNDAY
+        )
 
         self.assertEqual("Escaped @notaproject stays", title)
         self.assertEqual({}, details)
@@ -156,10 +178,14 @@ class PresenceTransitionTests(unittest.TestCase):
             self.OPEN, state="focus", person="self", moment=self.MOMENT
         ).closed
 
-        self.assertIn("from:2026-07-19T09:00 to:2026-07-19T14:30 state:available", closed[0])
+        self.assertIn(
+            "from:2026-07-19T09:00 to:2026-07-19T14:30 state:available", closed[0]
+        )
 
     def test_other_people_are_untouched(self):
-        text = self.OPEN + "[/] S Working from:2026-07-19T10:00 state:busy person:alice\n"
+        text = (
+            self.OPEN + "[/] S Working from:2026-07-19T10:00 state:busy person:alice\n"
+        )
 
         result = presence.status_transition(
             text, state="away", person="self", moment=self.MOMENT
@@ -167,7 +193,9 @@ class PresenceTransitionTests(unittest.TestCase):
         new_text, closed = result.text, result.closed
 
         self.assertEqual(1, len(closed))
-        self.assertIn("[/] S Working from:2026-07-19T10:00 state:busy person:alice", new_text)
+        self.assertIn(
+            "[/] S Working from:2026-07-19T10:00 state:busy person:alice", new_text
+        )
 
     def test_already_closed_records_are_left_alone(self):
         text = "[x] S Sleeping from:2026-07-19T01:00 to:2026-07-19T08:30 state:sleeping person:self\n"
@@ -280,7 +308,9 @@ class PresenceTransitionTests(unittest.TestCase):
         text = "[/] S Future from:2026-12-31T09:00 state:busy person:self\n"
 
         with self.assertRaises(ValueError) as caught:
-            presence.status_transition(text, state="away", person="self", moment=self.MOMENT)
+            presence.status_transition(
+                text, state="away", person="self", moment=self.MOMENT
+            )
 
         self.assertIn("after", str(caught.exception))
 
@@ -335,7 +365,9 @@ def _run_cli(cwd, *args):
 
 
 class CliShorthandTests(unittest.TestCase):
-    def _workspace(self, content="[ ] T Write_Report id:t1 project:work\n", config=None):
+    def _workspace(
+        self, content="[ ] T Write_Report id:t1 project:work\n", config=None
+    ):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
@@ -346,7 +378,9 @@ class CliShorthandTests(unittest.TestCase):
             "timer": {"state_file": os.path.join(tmp.name, "timer.json")},
         }
         settings.update(config or {})
-        with open(os.path.join(tmp.name, ".lifetxt.json"), "w", encoding="utf-8") as handle:
+        with open(
+            os.path.join(tmp.name, ".lifetxt.json"), "w", encoding="utf-8"
+        ) as handle:
             json.dump(settings, handle)
         return tmp.name, path
 
@@ -391,7 +425,9 @@ class CliShorthandTests(unittest.TestCase):
     def test_quick_flags_win_over_sigils_for_single_valued_keys(self):
         cwd, path = self._workspace("")
 
-        _out, code = _run_cli(cwd, "q", "Report @work #x", "--project", "override", "--tag", "y")
+        _out, code = _run_cli(
+            cwd, "q", "Report @work #x", "--project", "override", "--tag", "y"
+        )
 
         self.assertEqual(0, code)
         items, _diagnostics = parse_text(self._read(path))
@@ -788,7 +824,9 @@ class WebShorthandApiTests(unittest.TestCase):
         self.assertEqual(201, first.status_code)
         self.assertEqual([], first.json()["closed"])
 
-        second = client.post("/api/status", json={"state": "focus", "title": "Deep Work"})
+        second = client.post(
+            "/api/status", json={"state": "focus", "title": "Deep Work"}
+        )
         self.assertEqual(201, second.status_code)
         self.assertEqual(1, len(second.json()["closed"]))
 
@@ -848,7 +886,8 @@ class WebShorthandApiTests(unittest.TestCase):
         client, path = self._client()
 
         response = client.post(
-            "/api/items/capture", json={"text": "Buy milk @home #errand !high ^tomorrow"}
+            "/api/items/capture",
+            json={"text": "Buy milk @home #errand !high ^tomorrow"},
         )
 
         self.assertEqual(201, response.status_code)

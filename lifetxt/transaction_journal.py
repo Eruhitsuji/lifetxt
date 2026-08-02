@@ -21,9 +21,15 @@ from collections import OrderedDict
 from . import mutation
 from .mutation import FileLock, MISSING_HASH, MutationConflict
 from .transaction_policy import (
-    build_integrity_manifest, enforce_capacity, ensure_private_tree, fault_point,
-    permission_report, policy_from_config, version_compatibility,
-    verify_integrity_manifest, write_integrity_manifest,
+    build_integrity_manifest,
+    enforce_capacity,
+    ensure_private_tree,
+    fault_point,
+    permission_report,
+    policy_from_config,
+    version_compatibility,
+    verify_integrity_manifest,
+    write_integrity_manifest,
 )
 from .timeutil import parse_iso_datetime
 
@@ -75,28 +81,51 @@ def utc_now_text(now=None):
 
 def journal_directory(config=None, writable_path=None):
     config = config or {}
-    section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
-    configured = os.environ.get("LIFETXT_TRANSACTION_JOURNAL_DIR") or section.get("journal_dir")
+    section = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
+    configured = os.environ.get("LIFETXT_TRANSACTION_JOURNAL_DIR") or section.get(
+        "journal_dir"
+    )
     if configured:
         return os.path.abspath(os.path.expanduser(str(configured)))
     if writable_path:
-        return os.path.join(os.path.dirname(os.path.abspath(writable_path)), ".lifetxt-transactions")
+        return os.path.join(
+            os.path.dirname(os.path.abspath(writable_path)), ".lifetxt-transactions"
+        )
     return os.path.abspath(os.path.join(".cache", "lifetxt", "transactions"))
 
 
 def transaction_id(value=None):
     raw = str(value or uuid.uuid4().hex).strip()
-    if not raw or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for ch in raw):
-        raise ValueError("transaction_id may contain only letters, digits, dash, and underscore.")
+    if not raw or any(
+        ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+        for ch in raw
+    ):
+        raise ValueError(
+            "transaction_id may contain only letters, digits, dash, and underscore."
+        )
     return raw
 
 
-def prepare(operation, staged_rows, journal_dir, transaction_id_value=None, now=None, config=None, policy=None):
+def prepare(
+    operation,
+    staged_rows,
+    journal_dir,
+    transaction_id_value=None,
+    now=None,
+    config=None,
+    policy=None,
+):
     """Persist exact before/after artifacts and return a journal handle."""
     txid = transaction_id(transaction_id_value)
     root = os.path.abspath(journal_dir)
     resolved_policy = policy or policy_from_config(config)
-    ensure_private_tree(root, require_private=resolved_policy["require_private_permissions"])
+    ensure_private_tree(
+        root, require_private=resolved_policy["require_private_permissions"]
+    )
     estimated = 4096
     for row in staged_rows:
         estimated += len(_before_bytes(row))
@@ -129,7 +158,9 @@ def prepare(operation, staged_rows, journal_dir, transaction_id_value=None, now=
         if not plan.delete:
             after_artifact = "after-%03d.bin" % index
             fault_point("before_after_artifact", path=plan.path, index=index)
-            _write_bytes_durable(os.path.join(tx_dir, after_artifact), after_bytes or b"")
+            _write_bytes_durable(
+                os.path.join(tx_dir, after_artifact), after_bytes or b""
+            )
             fault_point("after_after_artifact", path=plan.path, index=index)
         targets.append(
             OrderedDict(
@@ -199,7 +230,9 @@ class TransactionJournal(object):
 
         return self.update(transform, now=now)
 
-    def mark_target(self, index, commit_state=None, compensation_state=None, error=None, now=None):
+    def mark_target(
+        self, index, commit_state=None, compensation_state=None, error=None, now=None
+    ):
         def transform(record):
             target = record["targets"][int(index)]
             if commit_state is not None:
@@ -217,7 +250,9 @@ def load_record(path, allow_newer_read_only=False):
         with open(path, "r", encoding="utf-8") as handle:
             record = json.load(handle, object_pairs_hook=OrderedDict)
     except (OSError, ValueError) as exc:
-        raise TransactionJournalError("Cannot read transaction journal %s: %s" % (path, exc))
+        raise TransactionJournalError(
+            "Cannot read transaction journal %s: %s" % (path, exc)
+        )
     validate_record(record, path, allow_newer_read_only=allow_newer_read_only)
     return record
 
@@ -225,7 +260,9 @@ def load_record(path, allow_newer_read_only=False):
 def validate_record(record, path=None, allow_newer_read_only=False):
     source = path or "<journal>"
     if not isinstance(record, dict):
-        raise TransactionJournalError("Transaction journal root must be an object: %s" % source)
+        raise TransactionJournalError(
+            "Transaction journal root must be an object: %s" % source
+        )
     required = (
         "schema_version",
         "transaction_id",
@@ -237,35 +274,60 @@ def validate_record(record, path=None, allow_newer_read_only=False):
     )
     missing = [name for name in required if name not in record]
     if missing:
-        raise TransactionJournalError("Transaction journal %s is missing %s." % (source, ", ".join(missing)))
+        raise TransactionJournalError(
+            "Transaction journal %s is missing %s." % (source, ", ".join(missing))
+        )
     compatibility = version_compatibility(record, SCHEMA_VERSION)
     if compatibility["state"] == "invalid":
-        raise TransactionJournalError("Invalid transaction journal schema version in %s." % source)
-    if compatibility["state"] != "current" and not (allow_newer_read_only and compatibility["state"] == "newer"):
+        raise TransactionJournalError(
+            "Invalid transaction journal schema version in %s." % source
+        )
+    if compatibility["state"] != "current" and not (
+        allow_newer_read_only and compatibility["state"] == "newer"
+    ):
         raise TransactionJournalError(
             "Unsupported transaction journal schema version %r in %s."
             % (record.get("schema_version"), source)
         )
     if not isinstance(record.get("targets"), list) or not record["targets"]:
-        raise TransactionJournalError("Transaction journal must contain at least one target: %s" % source)
+        raise TransactionJournalError(
+            "Transaction journal must contain at least one target: %s" % source
+        )
     seen = set()
     for index, target in enumerate(record["targets"]):
         if not isinstance(target, dict):
-            raise TransactionJournalError("Target %d in %s must be an object." % (index, source))
-        for name in ("path", "kind", "before_hash", "after_hash", "commit_state", "compensation_state"):
+            raise TransactionJournalError(
+                "Target %d in %s must be an object." % (index, source)
+            )
+        for name in (
+            "path",
+            "kind",
+            "before_hash",
+            "after_hash",
+            "commit_state",
+            "compensation_state",
+        ):
             if name not in target:
-                raise TransactionJournalError("Target %d in %s is missing %s." % (index, source, name))
+                raise TransactionJournalError(
+                    "Target %d in %s is missing %s." % (index, source, name)
+                )
         absolute = os.path.abspath(target["path"])
         if absolute in seen:
-            raise TransactionJournalError("Duplicate target path in %s: %s" % (source, absolute))
+            raise TransactionJournalError(
+                "Duplicate target path in %s: %s" % (source, absolute)
+            )
         seen.add(absolute)
         target["path"] = absolute
         if target["kind"] not in ("text", "json", "bytes"):
-            raise TransactionJournalError("Unsupported target kind %r in %s." % (target["kind"], source))
+            raise TransactionJournalError(
+                "Unsupported target kind %r in %s." % (target["kind"], source)
+            )
         for artifact_key in ("before_artifact", "after_artifact"):
             artifact = target.get(artifact_key)
             if artifact and (os.path.isabs(artifact) or os.path.dirname(artifact)):
-                raise TransactionJournalError("Artifact paths must be local file names in %s." % source)
+                raise TransactionJournalError(
+                    "Artifact paths must be local file names in %s." % source
+                )
     return record
 
 
@@ -305,9 +367,13 @@ def inspect_journal(path):
     result = OrderedDict(record)
     result["journal_path"] = os.path.abspath(path)
     result["recovery_required"] = record.get("state") not in TERMINAL_STATES
-    compatibility = record.get("version_compatibility") or version_compatibility(record, SCHEMA_VERSION)
+    compatibility = record.get("version_compatibility") or version_compatibility(
+        record, SCHEMA_VERSION
+    )
     result["read_only"] = not compatibility.get("writable", False)
-    result["permission_report"] = permission_report(os.path.dirname(path), require_private=True)
+    result["permission_report"] = permission_report(
+        os.path.dirname(path), require_private=True
+    )
     observed = []
     for target in record["targets"]:
         actual = current_hash(target["path"])
@@ -332,7 +398,9 @@ def inspect_journal(path):
 
 
 def available_actions(record, observed=None):
-    compatibility = record.get("version_compatibility") or version_compatibility(record, SCHEMA_VERSION)
+    compatibility = record.get("version_compatibility") or version_compatibility(
+        record, SCHEMA_VERSION
+    )
     if not compatibility.get("writable", False):
         return ["inspect", "export"]
     state = record.get("state")
@@ -352,7 +420,9 @@ def resume(path, lock_timeout=5.0):
     if record["state"] == "committed":
         return inspect_journal(path)
     if record["state"] in ("compensated", "abandoned"):
-        raise TransactionJournalError("Cannot resume terminal transaction state %s." % record["state"])
+        raise TransactionJournalError(
+            "Cannot resume terminal transaction state %s." % record["state"]
+        )
     journal.set_state("committing")
     try:
         with _target_locks(record, "transaction.resume", lock_timeout):
@@ -391,11 +461,15 @@ def abandon_with_backup(path, backup_dir, now=None):
     os.makedirs(destination_root, exist_ok=True)
     destination = os.path.join(destination_root, record["transaction_id"])
     if os.path.exists(destination):
-        raise TransactionJournalError("Backup destination already exists: %s" % destination)
+        raise TransactionJournalError(
+            "Backup destination already exists: %s" % destination
+        )
     shutil.copytree(journal.directory, destination)
     manifest_path, manifest = write_integrity_manifest(destination)
     _fsync_tree(destination)
-    journal.set_state("abandoned", error="Abandoned with backup at %s" % destination, now=now)
+    journal.set_state(
+        "abandoned", error="Abandoned with backup at %s" % destination, now=now
+    )
     report = inspect_journal(path)
     report["backup_path"] = destination
     report["backup_manifest"] = manifest_path
@@ -424,7 +498,9 @@ def export_evidence(path, output_path):
     return evidence
 
 
-def cleanup_terminal(journal_dir, older_than_days=30, force=False, now=None, policy=None, config=None):
+def cleanup_terminal(
+    journal_dir, older_than_days=30, force=False, now=None, policy=None, config=None
+):
     root = os.path.abspath(journal_dir)
     resolved_policy = policy or policy_from_config(config)
     if older_than_days is None:
@@ -436,16 +512,30 @@ def cleanup_terminal(journal_dir, older_than_days=30, force=False, now=None, pol
     for row in list_journals(root, include_terminal=True):
         path = row["journal_path"]
         if row.get("state") not in TERMINAL_STATES:
-            skipped.append({"journal_path": path, "reason": "transaction is not terminal"})
+            skipped.append(
+                {"journal_path": path, "reason": "transaction is not terminal"}
+            )
             continue
         try:
             record = load_record(path)
-            terminal = _parse_utc(record.get("terminal_at_utc") or record.get("updated_at_utc"))
-            age_days = 0.0 if terminal is None else max(
-                0.0, (now_value.astimezone(datetime.timezone.utc) - terminal).total_seconds() / 86400.0
+            terminal = _parse_utc(
+                record.get("terminal_at_utc") or record.get("updated_at_utc")
+            )
+            age_days = (
+                0.0
+                if terminal is None
+                else max(
+                    0.0,
+                    (
+                        now_value.astimezone(datetime.timezone.utc) - terminal
+                    ).total_seconds()
+                    / 86400.0,
+                )
             )
             if age_days < float(older_than_days):
-                skipped.append({"journal_path": path, "reason": "retention window not complete"})
+                skipped.append(
+                    {"journal_path": path, "reason": "retention window not complete"}
+                )
                 continue
             if not force:
                 skipped.append({"journal_path": path, "reason": "--force is required"})
@@ -471,8 +561,11 @@ def cleanup_terminal(journal_dir, older_than_days=30, force=False, now=None, pol
 def journal_policy_report(journal_dir, config=None, policy=None):
     resolved = policy or policy_from_config(config)
     from .transaction_policy import journal_usage
+
     usage = journal_usage(journal_dir)
-    permissions = permission_report(journal_dir, require_private=resolved["require_private_permissions"])
+    permissions = permission_report(
+        journal_dir, require_private=resolved["require_private_permissions"]
+    )
     violations = []
     if usage["transactions"] > resolved["max_transactions"]:
         violations.append("max_transactions")
@@ -480,14 +573,24 @@ def journal_policy_report(journal_dir, config=None, policy=None):
         violations.append("max_total_bytes")
     if permissions.get("problems"):
         violations.append("permissions")
-    return OrderedDict((("ok", not violations), ("policy", resolved), ("usage", usage), ("permissions", permissions), ("violations", violations)))
+    return OrderedDict(
+        (
+            ("ok", not violations),
+            ("policy", resolved),
+            ("usage", usage),
+            ("permissions", permissions),
+            ("violations", violations),
+        )
+    )
 
 
 def verify_backup(backup_dir):
     return verify_integrity_manifest(backup_dir)
 
 
-def archive_terminal(journal_dir, archive_dir, older_than_days=30, force=False, now=None):
+def archive_terminal(
+    journal_dir, archive_dir, older_than_days=30, force=False, now=None
+):
     root = os.path.abspath(journal_dir)
     destination_root = os.path.abspath(archive_dir)
     os.makedirs(destination_root, mode=0o700, exist_ok=True)
@@ -498,35 +601,67 @@ def archive_terminal(journal_dir, archive_dir, older_than_days=30, force=False, 
     for row in list_journals(root, include_terminal=True):
         path = row["journal_path"]
         if row.get("state") not in TERMINAL_STATES:
-            skipped.append({"journal_path": path, "reason": "transaction is not terminal"})
+            skipped.append(
+                {"journal_path": path, "reason": "transaction is not terminal"}
+            )
             continue
         try:
             record = load_record(path)
-            terminal = _parse_utc(record.get("terminal_at_utc") or record.get("updated_at_utc"))
-            age_days = 0.0 if terminal is None else max(0.0, (now_value.astimezone(datetime.timezone.utc) - terminal).total_seconds() / 86400.0)
+            terminal = _parse_utc(
+                record.get("terminal_at_utc") or record.get("updated_at_utc")
+            )
+            age_days = (
+                0.0
+                if terminal is None
+                else max(
+                    0.0,
+                    (
+                        now_value.astimezone(datetime.timezone.utc) - terminal
+                    ).total_seconds()
+                    / 86400.0,
+                )
+            )
             if age_days < float(older_than_days):
-                skipped.append({"journal_path": path, "reason": "retention window not complete"})
+                skipped.append(
+                    {"journal_path": path, "reason": "retention window not complete"}
+                )
                 continue
             if not force:
                 skipped.append({"journal_path": path, "reason": "--force is required"})
                 continue
             destination = os.path.join(destination_root, record["transaction_id"])
             if os.path.exists(destination):
-                raise TransactionJournalError("Archive destination already exists: %s" % destination)
+                raise TransactionJournalError(
+                    "Archive destination already exists: %s" % destination
+                )
             shutil.copytree(os.path.dirname(path), destination)
             manifest_path, manifest = write_integrity_manifest(destination)
             _fsync_tree(destination)
             if not verify_integrity_manifest(destination).get("ok"):
-                raise TransactionJournalError("Archive integrity verification failed: %s" % destination)
+                raise TransactionJournalError(
+                    "Archive integrity verification failed: %s" % destination
+                )
             shutil.rmtree(os.path.dirname(path))
-            archived.append({"journal_path": path, "archive_path": destination, "manifest": manifest_path, "manifest_sha256": manifest.get("manifest_sha256")})
+            archived.append(
+                {
+                    "journal_path": path,
+                    "archive_path": destination,
+                    "manifest": manifest_path,
+                    "manifest_sha256": manifest.get("manifest_sha256"),
+                }
+            )
         except Exception as exc:
             errors.append({"journal_path": path, "error": str(exc)})
     if os.path.isdir(root):
         _fsync_directory(root)
     _fsync_directory(destination_root)
-    return {"journal_dir": root, "archive_dir": destination_root, "archived": archived, "skipped": skipped, "errors": errors}
-
+    return {
+        "journal_dir": root,
+        "archive_dir": destination_root,
+        "archived": archived,
+        "skipped": skipped,
+        "errors": errors,
+    }
 
 
 def restore_backup(
@@ -541,31 +676,39 @@ def restore_backup(
     from .transaction_admin import append_admin_audit, authorize_operator
     from .transaction_policy import write_integrity_manifest
 
-    authorization = authorize_operator(config, operator, action="transaction backup restore")
+    authorization = authorize_operator(
+        config, operator, action="transaction backup restore"
+    )
     source = os.path.abspath(backup_dir)
     verification = verify_integrity_manifest(source)
     if not verification.get("ok"):
-        raise TransactionJournalError("Backup integrity verification failed: %s" % source)
+        raise TransactionJournalError(
+            "Backup integrity verification failed: %s" % source
+        )
     source_journal = os.path.join(source, "journal.json")
     record = load_record(source_journal, allow_newer_read_only=True)
     if action == "inspect":
-        return OrderedDict((
-            ("ok", True),
-            ("action", "inspect"),
-            ("backup_dir", source),
-            ("verification", verification),
-            ("authorization", authorization),
-            ("journal", inspect_journal(source_journal)),
-            ("working_dir", None),
-            ("original_backup_unchanged", True),
-        ))
+        return OrderedDict(
+            (
+                ("ok", True),
+                ("action", "inspect"),
+                ("backup_dir", source),
+                ("verification", verification),
+                ("authorization", authorization),
+                ("journal", inspect_journal(source_journal)),
+                ("working_dir", None),
+                ("original_backup_unchanged", True),
+            )
+        )
     if action not in ("resume", "compensate"):
         raise ValueError("restore action must be inspect, resume, or compensate.")
     if working_dir is None:
         working_dir = source + ".restore-" + uuid.uuid4().hex[:8]
     destination = os.path.abspath(working_dir)
     if os.path.exists(destination):
-        raise TransactionJournalError("Restore working directory already exists: %s" % destination)
+        raise TransactionJournalError(
+            "Restore working directory already exists: %s" % destination
+        )
     shutil.copytree(source, destination)
     manifest_path = os.path.join(destination, "integrity-manifest.json")
     try:
@@ -574,7 +717,11 @@ def restore_backup(
         pass
     working_journal = os.path.join(destination, "journal.json")
     try:
-        report = resume(working_journal) if action == "resume" else compensate(working_journal)
+        report = (
+            resume(working_journal)
+            if action == "resume"
+            else compensate(working_journal)
+        )
     except Exception:
         # Preserve the working copy exactly as failure evidence and publish a new
         # manifest for operator handoff before propagating the recovery failure.
@@ -595,19 +742,25 @@ def restore_backup(
             },
             config=config,
         )
-    return OrderedDict((
-        ("ok", True),
-        ("action", action),
-        ("backup_dir", source),
-        ("working_dir", destination),
-        ("verification", verification),
-        ("authorization", authorization),
-        ("transaction_id", record.get("transaction_id")),
-        ("result", report),
-        ("working_manifest", new_manifest_path),
-        ("working_manifest_sha256", new_manifest.get("manifest_sha256")),
-        ("original_backup_unchanged", verify_integrity_manifest(source).get("ok", False)),
-    ))
+    return OrderedDict(
+        (
+            ("ok", True),
+            ("action", action),
+            ("backup_dir", source),
+            ("working_dir", destination),
+            ("verification", verification),
+            ("authorization", authorization),
+            ("transaction_id", record.get("transaction_id")),
+            ("result", report),
+            ("working_manifest", new_manifest_path),
+            ("working_manifest_sha256", new_manifest.get("manifest_sha256")),
+            (
+                "original_backup_unchanged",
+                verify_integrity_manifest(source).get("ok", False),
+            ),
+        )
+    )
+
 
 def current_hash(path):
     try:
@@ -641,13 +794,20 @@ def _resume_target(journal, target):
         return
     if actual != target["before_hash"]:
         raise TransactionJournalConflict(
-            target["path"], target["before_hash"], target["after_hash"], actual, "resume"
+            target["path"],
+            target["before_hash"],
+            target["after_hash"],
+            actual,
+            "resume",
         )
     _write_target(journal.directory, target, use_after=True)
     latest = current_hash(target["path"])
     if latest != target["after_hash"]:
         raise MutationConflict(
-            target["path"], target["after_hash"], latest, operation="transaction.resume.verify"
+            target["path"],
+            target["after_hash"],
+            latest,
+            operation="transaction.resume.verify",
         )
     journal.mark_target(target["index"], commit_state="verified")
 
@@ -659,37 +819,58 @@ def _compensate_target(journal, target):
         return
     if actual != target["after_hash"]:
         raise TransactionJournalConflict(
-            target["path"], target["before_hash"], target["after_hash"], actual, "compensate"
+            target["path"],
+            target["before_hash"],
+            target["after_hash"],
+            actual,
+            "compensate",
         )
     _write_target(journal.directory, target, use_after=False)
     latest = current_hash(target["path"])
     if latest != target["before_hash"]:
         raise MutationConflict(
-            target["path"], target["before_hash"], latest, operation="transaction.compensate.verify"
+            target["path"],
+            target["before_hash"],
+            latest,
+            operation="transaction.compensate.verify",
         )
     journal.mark_target(target["index"], compensation_state="verified")
 
 
 def _write_target(tx_dir, target, use_after):
-    fault_point("before_recovery_target_write", path=target["path"], use_after=bool(use_after))
+    fault_point(
+        "before_recovery_target_write", path=target["path"], use_after=bool(use_after)
+    )
     expected = target["after_hash"] if use_after else target["before_hash"]
-    artifact = target.get("after_artifact") if use_after else target.get("before_artifact")
+    artifact = (
+        target.get("after_artifact") if use_after else target.get("before_artifact")
+    )
     if expected == MISSING_HASH:
         try:
             os.unlink(target["path"])
         except FileNotFoundError:
             pass
         _fsync_directory(os.path.dirname(target["path"]) or ".")
-        fault_point("after_recovery_target_write", path=target["path"], use_after=bool(use_after))
+        fault_point(
+            "after_recovery_target_write",
+            path=target["path"],
+            use_after=bool(use_after),
+        )
         return
     if not artifact:
-        raise TransactionJournalError("Missing recovery artifact for %s." % target["path"])
+        raise TransactionJournalError(
+            "Missing recovery artifact for %s." % target["path"]
+        )
     with open(os.path.join(tx_dir, artifact), "rb") as handle:
         payload = handle.read()
     if mutation.hash_bytes(payload) != expected:
-        raise TransactionJournalError("Recovery artifact hash mismatch for %s." % target["path"])
+        raise TransactionJournalError(
+            "Recovery artifact hash mismatch for %s." % target["path"]
+        )
     mutation.atomic_write_bytes(target["path"], payload)
-    fault_point("after_recovery_target_write", path=target["path"], use_after=bool(use_after))
+    fault_point(
+        "after_recovery_target_write", path=target["path"], use_after=bool(use_after)
+    )
 
 
 def _before_bytes(row):
@@ -697,7 +878,9 @@ def _before_bytes(row):
     if not before.exists:
         return b""
     if row["plan"].kind in ("text", "json"):
-        return mutation._encode_text(before.text, encoding=before.encoding, bom=before.bom)
+        return mutation._encode_text(
+            before.text, encoding=before.encoding, bom=before.bom
+        )
     return before.data
 
 
@@ -752,7 +935,9 @@ def _write_bytes_durable(path, data):
 
 
 def _write_json_durable(path, value):
-    payload = (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    payload = (
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
     _write_bytes_durable(path, payload)
 
 

@@ -35,7 +35,9 @@ class CommandCatalogTests(unittest.TestCase):
             handle.write(content)
         config = {"timer": {"state_file": os.path.join(tmp.name, "timer.json")}}
         try:
-            return TestClient(create_app([path], writable_path=path, config=config)), path
+            return TestClient(
+                create_app([path], writable_path=path, config=config)
+            ), path
         except Exception as exc:
             self.skipTest("FastAPI test client could not start: %s" % exc)
 
@@ -53,7 +55,9 @@ class CommandCatalogTests(unittest.TestCase):
     def test_catalog_carries_alias_usage_and_summary(self):
         client, _path = self._client()
 
-        rows = {row["name"]: row for row in client.get("/api/commands").json()["commands"]}
+        rows = {
+            row["name"]: row for row in client.get("/api/commands").json()["commands"]
+        }
 
         done = rows["done"]
         self.assertEqual(COMMANDS_BY_NAME["done"].summary, done["summary"])
@@ -63,7 +67,9 @@ class CommandCatalogTests(unittest.TestCase):
     def test_terminal_only_commands_are_marked_with_a_reason(self):
         client, _path = self._client()
 
-        rows = {row["name"]: row for row in client.get("/api/commands").json()["commands"]}
+        rows = {
+            row["name"]: row for row in client.get("/api/commands").json()["commands"]
+        }
 
         self.assertFalse(rows["edit"]["web"])
         self.assertTrue(rows["edit"]["note"], "an unsupported command must explain why")
@@ -86,8 +92,12 @@ class BrowserHandlerTests(unittest.TestCase):
     def test_every_supported_command_has_a_browser_handler(self):
         handlers = set(re.findall(r"^      ([a-z_]+): async", _handler_block(), re.M))
 
-        self.assertEqual(set(), WEB_COMMANDS - handlers, "advertised but not implemented")
-        self.assertEqual(set(), handlers - WEB_COMMANDS, "implemented but not advertised")
+        self.assertEqual(
+            set(), WEB_COMMANDS - handlers, "advertised but not implemented"
+        )
+        self.assertEqual(
+            set(), handlers - WEB_COMMANDS, "implemented but not advertised"
+        )
 
     def test_handlers_only_call_functions_that_exist(self):
         # A typo here is a ReferenceError the moment the command runs, which
@@ -95,11 +105,37 @@ class BrowserHandlerTests(unittest.TestCase):
         block = _handler_block()
         called = set(re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", block))
         builtins = {
-            "String", "Array", "JSON", "Error", "Number", "Object", "Boolean",
-            "Set", "Map", "if", "for", "while", "switch", "catch", "return",
-            "async", "await", "function", "parseInt", "parseFloat", "isNaN",
-            "encodeURIComponent", "decodeURIComponent", "setTimeout",
-            "clearTimeout", "console", "fetch", "Date", "Math", "RegExp", "split",
+            "String",
+            "Array",
+            "JSON",
+            "Error",
+            "Number",
+            "Object",
+            "Boolean",
+            "Set",
+            "Map",
+            "if",
+            "for",
+            "while",
+            "switch",
+            "catch",
+            "return",
+            "async",
+            "await",
+            "function",
+            "parseInt",
+            "parseFloat",
+            "isNaN",
+            "encodeURIComponent",
+            "decodeURIComponent",
+            "setTimeout",
+            "clearTimeout",
+            "console",
+            "fetch",
+            "Date",
+            "Math",
+            "RegExp",
+            "split",
         }
         missing = []
         for name in sorted(called - builtins):
@@ -115,7 +151,12 @@ class BrowserHandlerTests(unittest.TestCase):
         self.assertEqual([], missing, "handlers reference undefined functions")
 
     def test_command_state_variables_are_declared(self):
-        for name in ("COMMAND_CATALOG", "bulkSelectedLines", "currentItems", "selectedItem"):
+        for name in (
+            "COMMAND_CATALOG",
+            "bulkSelectedLines",
+            "currentItems",
+            "selectedItem",
+        ):
             self.assertTrue(
                 re.search(r"\b(?:const|let|var)\s+%s\b" % name, SCRIPT), name
             )
@@ -155,7 +196,9 @@ class CommandBackingEndpointTests(unittest.TestCase):
             handle.write("[ ] T Write_Report id:t1 project:work\n[ ] T Second id:t2\n")
         config = {"timer": {"state_file": os.path.join(tmp.name, "timer.json")}}
         try:
-            return TestClient(create_app([path], writable_path=path, config=config)), path
+            return TestClient(
+                create_app([path], writable_path=path, config=config)
+            ), path
         except Exception as exc:
             self.skipTest("FastAPI test client could not start: %s" % exc)
 
@@ -178,7 +221,9 @@ class CommandBackingEndpointTests(unittest.TestCase):
     def test_parse_without_a_date_still_returns_the_token_reference(self):
         client, _path = self._client()
 
-        payload = client.post("/api/shorthand/parse", json={"text": "Buy milk @home"}).json()
+        payload = client.post(
+            "/api/shorthand/parse", json={"text": "Buy milk @home"}
+        ).json()
 
         self.assertNotIn("date", payload)
         self.assertTrue(payload["date_tokens"])
@@ -195,14 +240,21 @@ class CommandBackingEndpointTests(unittest.TestCase):
     def test_state_command_endpoint(self):
         client, _path = self._client()
 
-        self.assertEqual(201, client.post("/api/status", json={"state": "busy"}).status_code)
+        self.assertEqual(
+            201, client.post("/api/status", json={"state": "busy"}).status_code
+        )
 
     def test_done_and_delete_command_endpoints(self):
         client, path = self._client()
 
         updated = client.put(
             "/api/items/1",
-            json={"status": "[x]", "type": "T", "title": "Write_Report", "details": {"id": ["t1"]}},
+            json={
+                "status": "[x]",
+                "type": "T",
+                "title": "Write_Report",
+                "details": {"id": ["t1"]},
+            },
         )
         deleted = client.delete("/api/items/2")
 
@@ -231,7 +283,9 @@ class TimerEndpointTests(unittest.TestCase):
             handle.write("[ ] T A id:t1\n[ ] T B id:t2\n")
         config = {"timer": {"state_file": os.path.join(tmp.name, "timer.json")}}
         try:
-            return TestClient(create_app([path], writable_path=path, config=config)), path
+            return TestClient(
+                create_app([path], writable_path=path, config=config)
+            ), path
         except Exception as exc:
             self.skipTest("FastAPI test client could not start: %s" % exc)
 
@@ -274,17 +328,23 @@ class TimerEndpointTests(unittest.TestCase):
     def test_stop_without_a_timer_conflicts(self):
         client, _path = self._client()
 
-        self.assertEqual(409, client.post("/api/timer", json={"action": "stop"}).status_code)
+        self.assertEqual(
+            409, client.post("/api/timer", json={"action": "stop"}).status_code
+        )
 
     def test_start_requires_an_id(self):
         client, _path = self._client()
 
-        self.assertEqual(400, client.post("/api/timer", json={"action": "start"}).status_code)
+        self.assertEqual(
+            400, client.post("/api/timer", json={"action": "start"}).status_code
+        )
 
     def test_unknown_action_is_rejected(self):
         client, _path = self._client()
 
-        self.assertEqual(400, client.post("/api/timer", json={"action": "explode"}).status_code)
+        self.assertEqual(
+            400, client.post("/api/timer", json={"action": "explode"}).status_code
+        )
 
     def test_timer_endpoints_do_not_write_to_stdout(self):
         # The timer helpers print for CLI use; a server must stay quiet.

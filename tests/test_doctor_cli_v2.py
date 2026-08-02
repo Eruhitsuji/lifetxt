@@ -32,7 +32,14 @@ class DoctorCliV2Tests(unittest.TestCase):
 
     def test_parsers_register_doctor_revisions_and_timezone_policies(self):
         doctor = _build_parser("doctor").parse_args(
-            ["--workspace-safety", self.life, "--fold-policy", "later", "--gap-policy", "next"]
+            [
+                "--workspace-safety",
+                self.life,
+                "--fold-policy",
+                "later",
+                "--gap-policy",
+                "next",
+            ]
         )
         self.assertTrue(doctor.workspace_safety)
         self.assertEqual("later", doctor.fold_policy)
@@ -172,7 +179,9 @@ class DoctorCliV2Tests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
         self.assertTrue(os.path.exists(lock))
-        self.assertEqual("--force is required", report["locks"]["cleanup"]["skipped"][0]["reason"])
+        self.assertEqual(
+            "--force is required", report["locks"]["cleanup"]["skipped"][0]["reason"]
+        )
         code, stdout, stderr = self.run_command(
             [
                 "doctor",

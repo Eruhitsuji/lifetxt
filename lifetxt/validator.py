@@ -29,7 +29,10 @@ from .timeutil import (
 
 _KEY_STYLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _RRULE_PREFIX = "RRULE:"
-from .recurrence import FREQ_NAMES as _RRULE_FREQ_NAMES, SUPPORTED_PARTS as _RRULE_SUPPORTED_PARTS
+from .recurrence import (
+    FREQ_NAMES as _RRULE_FREQ_NAMES,
+    SUPPORTED_PARTS as _RRULE_SUPPORTED_PARTS,
+)
 
 # Derived from recurrence.py, which owns expansion. Hand-maintained copies
 # drifted: BYMONTHDAY, BYMONTH, and positional BYDAY were all warned about as
@@ -212,7 +215,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W202",
-                    "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
+                    "%s: should use YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone."
+                    % key,
                     item.line,
                 )
             )
@@ -222,7 +226,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W203",
-                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone." % key,
+                    "%s: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone."
+                    % key,
                     item.line,
                 )
             )
@@ -232,7 +237,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W204",
-                    "%s: should use HH:MM, HH:MM:SS, fractional seconds, optional timezone, or YYYY-MM-DDTHH:MM." % key,
+                    "%s: should use HH:MM, HH:MM:SS, fractional seconds, optional timezone, or YYYY-MM-DDTHH:MM."
+                    % key,
                     item.line,
                 )
             )
@@ -242,7 +248,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W214",
-                    "%s: should be a compact ASCII token without spaces or quotes." % key,
+                    "%s: should be a compact ASCII token without spaces or quotes."
+                    % key,
                     item.line,
                 )
             )
@@ -275,7 +282,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W226",
-                    "%s: duration %r is not recognized; use forms like 25m, 1h30m, or 90." % (key, value),
+                    "%s: duration %r is not recognized; use forms like 25m, 1h30m, or 90."
+                    % (key, value),
                     item.line,
                 )
             )
@@ -285,7 +293,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W222",
-                    "%s: duration %r should be in compact form; use %r." % (key, value, normalized),
+                    "%s: duration %r should be in compact form; use %r."
+                    % (key, value, normalized),
                     item.line,
                 )
             )
@@ -314,7 +323,8 @@ def _validate_rrule_value(item, value):
         diagnostics.append(
             _rrule_warning(
                 item,
-                "RRULE FREQ=%s is stored but not expanded by the dependency-free core." % freq,
+                "RRULE FREQ=%s is stored but not expanded by the dependency-free core."
+                % freq,
             )
         )
 
@@ -329,10 +339,14 @@ def _validate_rrule_value(item, value):
         )
 
     if "INTERVAL" in parts and not _is_positive_integer(parts["INTERVAL"]):
-        diagnostics.append(_rrule_warning(item, "RRULE INTERVAL should be a positive integer."))
+        diagnostics.append(
+            _rrule_warning(item, "RRULE INTERVAL should be a positive integer.")
+        )
 
     if "COUNT" in parts and not _is_positive_integer(parts["COUNT"]):
-        diagnostics.append(_rrule_warning(item, "RRULE COUNT should be a positive integer."))
+        diagnostics.append(
+            _rrule_warning(item, "RRULE COUNT should be a positive integer.")
+        )
 
     if "UNTIL" in parts and not _is_rrule_until(parts["UNTIL"]):
         diagnostics.append(
@@ -353,7 +367,7 @@ def _validate_rrule_value(item, value):
 def _parse_rrule_parts(value):
     text = str(value or "")
     if text.startswith(_RRULE_PREFIX):
-        text = text[len(_RRULE_PREFIX):]
+        text = text[len(_RRULE_PREFIX) :]
     parts = {}
     for raw_part in text.split(";"):
         if "=" not in raw_part:
@@ -568,7 +582,11 @@ def _validate_message_item(item):
         end = item.details["notify_to"][0]
         parsed_start = parse_date_or_datetime(start, is_end=False)
         parsed_end = parse_date_or_datetime(end, is_end=True)
-        if parsed_start is not None and parsed_end is not None and parsed_end < parsed_start:
+        if (
+            parsed_start is not None
+            and parsed_end is not None
+            and parsed_end < parsed_start
+        ):
             diagnostics.append(
                 _diagnostic(
                     "warning",

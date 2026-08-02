@@ -145,9 +145,13 @@ class TicketCustomFieldTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             custom_field_definitions(config, strict=True)
 
-    def test_validation_enforces_required_type_bounds_cardinality_and_applicability(self):
+    def test_validation_enforces_required_type_bounds_cardinality_and_applicability(
+        self,
+    ):
         missing = self.ticket()
-        codes = {row["code"] for row in validate_ticket_custom_fields(missing, self.config)}
+        codes = {
+            row["code"] for row in validate_ticket_custom_fields(missing, self.config)
+        }
         self.assertIn("TK007", codes)
 
         invalid = self.ticket(
@@ -161,10 +165,22 @@ class TicketCustomFieldTests(unittest.TestCase):
         self.assertGreaterEqual(sum(row["code"] == "TK009" for row in rows), 3)
 
         repeated = self.ticket({"risk_score": ["1", "2"]})
-        self.assertIn("TK008", {row["code"] for row in validate_ticket_custom_fields(repeated, self.config)})
+        self.assertIn(
+            "TK008",
+            {
+                row["code"]
+                for row in validate_ticket_custom_fields(repeated, self.config)
+            },
+        )
 
         wrong_tracker = self.ticket({"risk_score": ["3"]}, tracker="feature")
-        self.assertIn("TK010", {row["code"] for row in validate_ticket_custom_fields(wrong_tracker, self.config)})
+        self.assertIn(
+            "TK010",
+            {
+                row["code"]
+                for row in validate_ticket_custom_fields(wrong_tracker, self.config)
+            },
+        )
 
     def test_unknown_unconfigured_keys_remain_valid(self):
         item = self.ticket({"risk_score": ["3"], "vendor_extension": ["anything"]})
@@ -189,16 +205,36 @@ class TicketCustomFieldTests(unittest.TestCase):
         self.write_life("")
         code, stdout, stderr = self.run_cli(
             [
-                "ticket", "new", "Login failure", "--tracker", "bug", "--project", "web",
-                "--field", "risk_score=7", "--field", "customer_tier=enterprise",
-                "--field", "security_label=auth", "--field", "security_label=cve",
+                "ticket",
+                "new",
+                "Login failure",
+                "--tracker",
+                "bug",
+                "--project",
+                "web",
+                "--field",
+                "risk_score=7",
+                "--field",
+                "customer_tier=enterprise",
+                "--field",
+                "security_label=auth",
+                "--field",
+                "security_label=cve",
             ]
         )
         self.assertEqual(0, code, stderr)
         self.assertIn("risk_score:7", Path(self.life).read_text(encoding="utf-8"))
 
         code, stdout, stderr = self.run_cli(
-            ["ticket", "list", "--field", "risk_score=7", "--field", "customer_tier=enterprise", "--json"]
+            [
+                "ticket",
+                "list",
+                "--field",
+                "risk_score=7",
+                "--field",
+                "customer_tier=enterprise",
+                "--json",
+            ]
         )
         self.assertEqual(0, code, stderr)
         self.assertEqual(1, len(json.loads(stdout)))
@@ -209,7 +245,9 @@ class TicketCustomFieldTests(unittest.TestCase):
         self.assertEqual("7", shown["custom_fields"]["risk_score"])
         self.assertEqual(["auth", "cve"], shown["custom_fields"]["security_label"])
 
-        code, stdout, stderr = self.run_cli(["ticket", "fields", "--format", "json", "--pretty"])
+        code, stdout, stderr = self.run_cli(
+            ["ticket", "fields", "--format", "json", "--pretty"]
+        )
         self.assertEqual(0, code, stderr)
         self.assertIn("risk_score", json.loads(stdout)["definitions"])
 
@@ -232,7 +270,15 @@ class TicketCustomFieldTests(unittest.TestCase):
         before = Path(self.life).read_bytes()
         revision = ticket_file_revision(self.life)
         code, stdout, stderr = self.run_cli(
-            ["ticket", "edit", "BUG-1", "--set", "risk_score=99", "--revision", revision]
+            [
+                "ticket",
+                "edit",
+                "BUG-1",
+                "--set",
+                "risk_score=99",
+                "--revision",
+                revision,
+            ]
         )
         self.assertEqual(1, code)
         self.assertIn("TK009", stderr)
@@ -276,7 +322,11 @@ class TicketCustomFieldTests(unittest.TestCase):
 
     def test_role_visibility_and_assignment_normalization(self):
         item = self.ticket(
-            {"risk_score": ["3"], "customer_tier": ["enterprise"], "security_label": ["cve"]}
+            {
+                "risk_score": ["3"],
+                "customer_tier": ["enterprise"],
+                "security_label": ["cve"],
+            }
         )
         viewer = custom_field_values(item, self.config, role="viewer")
         self.assertNotIn("customer_tier", viewer)

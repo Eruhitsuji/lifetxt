@@ -1,4 +1,5 @@
 """Permission-aware Remote CLI and interactive TUI ticket operations."""
+
 from __future__ import unicode_literals
 
 import argparse
@@ -20,8 +21,14 @@ _CONFLICT_CODES = {
 class RemoteMutationConflict(RuntimeError):
     """Structured, non-retrying Remote mutation conflict."""
 
-    def __init__(self, message, detail=None, requested_revision=None,
-                 current_revision=None, comparison=None):
+    def __init__(
+        self,
+        message,
+        detail=None,
+        requested_revision=None,
+        current_revision=None,
+        comparison=None,
+    ):
         super().__init__(message)
         self.detail = dict(detail or {})
         self.requested_revision = requested_revision
@@ -64,7 +71,9 @@ def _grant_list(principal, name):
 def remote_permissions(profile):
     """Return authenticated identity, grants, negotiation, and mutation policy."""
     session, session_headers = request(profile, "GET", "/api/remote/v1/session")
-    capabilities, capability_headers = request(profile, "GET", "/api/remote/v1/capabilities")
+    capabilities, capability_headers = request(
+        profile, "GET", "/api/remote/v1/capabilities"
+    )
     principal = dict(session.get("principal") or {})
     policy = dict(capabilities.get("mutation_policy") or {})
     scopes = list(principal.get("scopes") or [])
@@ -135,14 +144,23 @@ def _bounded_comparison(payload, current, limit=20):
     rows = []
     ticket_id = payload.get("ticket_id")
     if ticket_id is not None:
-        rows.append({"field": "ticket_id", "requested": ticket_id,
-                     "current": _ticket_id(current) or None})
+        rows.append(
+            {
+                "field": "ticket_id",
+                "requested": ticket_id,
+                "current": _ticket_id(current) or None,
+            }
+        )
     for key, requested in sorted((payload.get("set") or {}).items()):
-        rows.append({"field": key, "requested": requested,
-                     "current": current.get(key)})
+        rows.append({"field": key, "requested": requested, "current": current.get(key)})
     if payload.get("target_status") is not None:
-        rows.append({"field": "status", "requested": payload.get("target_status"),
-                     "current": current.get("status")})
+        rows.append(
+            {
+                "field": "status",
+                "requested": payload.get("target_status"),
+                "current": current.get("status"),
+            }
+        )
     for key in payload.get("unset") or []:
         rows.append({"field": key, "requested": None, "current": current.get(key)})
     return rows[:limit]
@@ -158,13 +176,18 @@ def _runtime_detail(exc):
 
 def _error_code(detail):
     candidates = [
-        detail.get("code"), detail.get("error"),
-        (detail.get("detail") or {}).get("code") if isinstance(detail.get("detail"), dict) else None,
+        detail.get("code"),
+        detail.get("error"),
+        (detail.get("detail") or {}).get("code")
+        if isinstance(detail.get("detail"), dict)
+        else None,
     ]
     return next((str(value).upper() for value in candidates if value), "")
 
 
-def mutate_ticket(profile, operation, payload, revision=None, transaction_id=None, dry_run=False):
+def mutate_ticket(
+    profile, operation, payload, revision=None, transaction_id=None, dry_run=False
+):
     """Submit one revision-checked mutation without automatic conflict retry."""
     before = snapshot(profile)
     current_revision = revision or before.get("revision")
@@ -203,48 +226,94 @@ def mutate_ticket(profile, operation, payload, revision=None, transaction_id=Non
         )
 
 
-def create_ticket(profile, ticket_id, subject, tracker=None, project=None, priority=None,
-                  visibility=None, transaction_id=None, dry_run=False):
+def create_ticket(
+    profile,
+    ticket_id,
+    subject,
+    tracker=None,
+    project=None,
+    priority=None,
+    visibility=None,
+    transaction_id=None,
+    dry_run=False,
+):
     payload = {"ticket_id": ticket_id, "subject": subject}
-    for key, value in (("tracker", tracker), ("project", project),
-                       ("priority", priority), ("visibility", visibility)):
+    for key, value in (
+        ("tracker", tracker),
+        ("project", project),
+        ("priority", priority),
+        ("visibility", visibility),
+    ):
         if value is not None:
             payload[key] = value
-    return mutate_ticket(profile, "create", payload, transaction_id=transaction_id, dry_run=dry_run)
+    return mutate_ticket(
+        profile, "create", payload, transaction_id=transaction_id, dry_run=dry_run
+    )
 
 
-def edit_ticket(profile, ticket_id, set_values=None, unset_values=None, comment=None,
-                transaction_id=None, dry_run=False):
+def edit_ticket(
+    profile,
+    ticket_id,
+    set_values=None,
+    unset_values=None,
+    comment=None,
+    transaction_id=None,
+    dry_run=False,
+):
     payload = {"ticket_id": ticket_id, "set": dict(set_values or {})}
     if unset_values:
         payload["unset"] = list(unset_values)
     if comment:
         payload["comment"] = comment
-    return mutate_ticket(profile, "edit", payload, transaction_id=transaction_id, dry_run=dry_run)
+    return mutate_ticket(
+        profile, "edit", payload, transaction_id=transaction_id, dry_run=dry_run
+    )
 
 
-def transition_ticket(profile, ticket_id, target_status, comment=None,
-                      transaction_id=None, dry_run=False):
+def transition_ticket(
+    profile, ticket_id, target_status, comment=None, transaction_id=None, dry_run=False
+):
     payload = {"ticket_id": ticket_id, "target_status": target_status}
     if comment:
         payload["comment"] = comment
-    return mutate_ticket(profile, "transition", payload, transaction_id=transaction_id, dry_run=dry_run)
+    return mutate_ticket(
+        profile, "transition", payload, transaction_id=transaction_id, dry_run=dry_run
+    )
 
 
 def comment_ticket(profile, ticket_id, body, transaction_id=None, dry_run=False):
-    return mutate_ticket(profile, "comment", {"ticket_id": ticket_id, "body": body},
-                         transaction_id=transaction_id, dry_run=dry_run)
+    return mutate_ticket(
+        profile,
+        "comment",
+        {"ticket_id": ticket_id, "body": body},
+        transaction_id=transaction_id,
+        dry_run=dry_run,
+    )
 
 
-def log_ticket_time(profile, ticket_id, duration, activity=None, date=None, comment=None,
-                    corrects=None, transaction_id=None, dry_run=False):
+def log_ticket_time(
+    profile,
+    ticket_id,
+    duration,
+    activity=None,
+    date=None,
+    comment=None,
+    corrects=None,
+    transaction_id=None,
+    dry_run=False,
+):
     payload = {"ticket_id": ticket_id, "duration": duration}
-    for key, value in (("activity", activity), ("date", date),
-                       ("comment", comment), ("corrects", corrects)):
+    for key, value in (
+        ("activity", activity),
+        ("date", date),
+        ("comment", comment),
+        ("corrects", corrects),
+    ):
         if value is not None:
             payload[key] = value
-    return mutate_ticket(profile, "log_time", payload,
-                         transaction_id=transaction_id, dry_run=dry_run)
+    return mutate_ticket(
+        profile, "log_time", payload, transaction_id=transaction_id, dry_run=dry_run
+    )
 
 
 def _pairs(values):
@@ -292,8 +361,10 @@ def render_ticket_detail(value):
 def _list_tickets(data, output):
     output.write("revision: %s\n" % (data.get("revision") or "-"))
     for row in data.get("tickets", []):
-        output.write("[ticket] %-16s %s\n" % (
-            _ticket_id(row) or "-", row.get("title") or row.get("text") or ""))
+        output.write(
+            "[ticket] %-16s %s\n"
+            % (_ticket_id(row) or "-", row.get("title") or row.get("text") or "")
+        )
 
 
 def _operation_payload(operation, input_fn):
@@ -301,11 +372,15 @@ def _operation_payload(operation, input_fn):
     if operation == "create":
         return {"ticket_id": ticket_id, "subject": input_fn("subject: ").strip()}
     if operation == "edit":
-        return {"ticket_id": ticket_id,
-                "set": _pairs([input_fn("field key=value: ").strip()])}
+        return {
+            "ticket_id": ticket_id,
+            "set": _pairs([input_fn("field key=value: ").strip()]),
+        }
     if operation == "transition":
-        return {"ticket_id": ticket_id,
-                "target_status": input_fn("target status: ").strip()}
+        return {
+            "ticket_id": ticket_id,
+            "target_status": input_fn("target status: ").strip(),
+        }
     if operation == "comment":
         return {"ticket_id": ticket_id, "body": input_fn("comment: ")}
     return {"ticket_id": ticket_id, "duration": input_fn("duration: ").strip()}
@@ -319,7 +394,11 @@ def interactive_tui(profile, input_fn=input, output=None):
     output.write(render_permissions(permissions))
     data = snapshot(profile)
     _list_tickets(data, output)
-    writes = list(permissions.get("ticket_operations") or []) if permissions.get("can_write") else []
+    writes = (
+        list(permissions.get("ticket_operations") or [])
+        if permissions.get("can_write")
+        else []
+    )
     allowed = ["show", "refresh", "quit"] + writes
     last_result = None
     while True:
@@ -343,48 +422,77 @@ def interactive_tui(profile, input_fn=input, output=None):
             continue
         payload = _operation_payload(operation, input_fn)
         output.write("proposed mutation:\n")
-        output.write(json.dumps({"operation": operation, "payload": payload},
-                                ensure_ascii=False, indent=2, sort_keys=True) + "\n")
-        if input_fn("apply authoritative mutation? [y/N]: ").strip().lower() not in ("y", "yes"):
+        output.write(
+            json.dumps(
+                {"operation": operation, "payload": payload},
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        if input_fn("apply authoritative mutation? [y/N]: ").strip().lower() not in (
+            "y",
+            "yes",
+        ):
             last_result = {"cancelled": True, "operation": operation}
             continue
         try:
             last_result = mutate_ticket(profile, operation, payload)
-            output.write(json.dumps(last_result, ensure_ascii=False,
-                                    indent=2, sort_keys=True) + "\n")
+            output.write(
+                json.dumps(last_result, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n"
+            )
             data = snapshot(profile)
         except RemoteMutationConflict as exc:
             last_result = exc.as_dict()
-            output.write(json.dumps(last_result, ensure_ascii=False,
-                                    indent=2, sort_keys=True) + "\n")
+            output.write(
+                json.dumps(last_result, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n"
+            )
             data = snapshot(profile)
 
 
 def install_remote_client_writes_cli():
     from . import cli
+
     if getattr(cli, "_lifetxt_remote_client_writes_v24", False):
         return
     original = cli.build_parser
 
     def build_parser():
         parser = original()
-        root = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+        root = next(
+            action
+            for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+        )
         remote = root.choices.get("remote")
         if remote is None:
             return parser
-        subs = next(action for action in remote._actions if isinstance(action, argparse._SubParsersAction))
+        subs = next(
+            action
+            for action in remote._actions
+            if isinstance(action, argparse._SubParsersAction)
+        )
         if "permissions" not in subs.choices:
-            command = subs.add_parser("permissions", help="Show effective Remote permissions.")
+            command = subs.add_parser(
+                "permissions", help="Show effective Remote permissions."
+            )
             _profile_args(command)
             command.set_defaults(func=_cmd_permissions)
         if "ticket-show" not in subs.choices:
-            command = subs.add_parser("ticket-show", help="Show one visible Remote ticket.")
+            command = subs.add_parser(
+                "ticket-show", help="Show one visible Remote ticket."
+            )
             _profile_args(command)
             command.add_argument("ticket_id")
             command.set_defaults(func=_cmd_show)
         definitions = (
-            ("ticket-create", _cmd_create), ("ticket-edit", _cmd_edit),
-            ("ticket-transition", _cmd_transition), ("ticket-comment", _cmd_comment),
+            ("ticket-create", _cmd_create),
+            ("ticket-edit", _cmd_edit),
+            ("ticket-transition", _cmd_transition),
+            ("ticket-comment", _cmd_comment),
             ("ticket-log-time", _cmd_log_time),
         )
         for name, function in definitions:
@@ -397,22 +505,30 @@ def install_remote_client_writes_cli():
             command.add_argument("--dry-run", action="store_true")
             if name == "ticket-create":
                 command.add_argument("subject")
-                command.add_argument("--tracker"); command.add_argument("--project")
-                command.add_argument("--priority"); command.add_argument("--visibility")
+                command.add_argument("--tracker")
+                command.add_argument("--project")
+                command.add_argument("--priority")
+                command.add_argument("--visibility")
             elif name == "ticket-edit":
                 command.add_argument("--set", action="append", default=[])
                 command.add_argument("--unset", action="append", default=[])
                 command.add_argument("--comment")
             elif name == "ticket-transition":
-                command.add_argument("target_status"); command.add_argument("--comment")
+                command.add_argument("target_status")
+                command.add_argument("--comment")
             elif name == "ticket-comment":
                 command.add_argument("body")
             else:
-                command.add_argument("duration"); command.add_argument("--activity")
-                command.add_argument("--date"); command.add_argument("--comment"); command.add_argument("--corrects")
+                command.add_argument("duration")
+                command.add_argument("--activity")
+                command.add_argument("--date")
+                command.add_argument("--comment")
+                command.add_argument("--corrects")
             command.set_defaults(func=function)
         tui = subs.choices.get("tui")
-        if tui is not None and not any(action.dest == "interactive" for action in tui._actions):
+        if tui is not None and not any(
+            action.dest == "interactive" for action in tui._actions
+        ):
             tui.add_argument("--interactive", action="store_true")
             old = tui.get_default("func")
             tui.set_defaults(func=lambda args, old=old: _cmd_tui(args, old))
@@ -441,8 +557,10 @@ def _emit_mutation(function, *args):
     try:
         return _emit(function(*args))
     except RemoteMutationConflict as exc:
-        print(json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True),
-              file=sys.stderr)
+        print(
+            json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True),
+            file=sys.stderr,
+        )
         return 3
 
 
@@ -455,31 +573,69 @@ def _cmd_show(args):
 
 
 def _cmd_create(args):
-    return _emit_mutation(create_ticket, _profile(args), args.ticket_id, args.subject,
-                          args.tracker, args.project, args.priority, args.visibility,
-                          args.transaction_id, args.dry_run)
+    return _emit_mutation(
+        create_ticket,
+        _profile(args),
+        args.ticket_id,
+        args.subject,
+        args.tracker,
+        args.project,
+        args.priority,
+        args.visibility,
+        args.transaction_id,
+        args.dry_run,
+    )
 
 
 def _cmd_edit(args):
-    return _emit_mutation(edit_ticket, _profile(args), args.ticket_id, _pairs(args.set),
-                          args.unset, args.comment, args.transaction_id, args.dry_run)
+    return _emit_mutation(
+        edit_ticket,
+        _profile(args),
+        args.ticket_id,
+        _pairs(args.set),
+        args.unset,
+        args.comment,
+        args.transaction_id,
+        args.dry_run,
+    )
 
 
 def _cmd_transition(args):
-    return _emit_mutation(transition_ticket, _profile(args), args.ticket_id,
-                          args.target_status, args.comment, args.transaction_id,
-                          args.dry_run)
+    return _emit_mutation(
+        transition_ticket,
+        _profile(args),
+        args.ticket_id,
+        args.target_status,
+        args.comment,
+        args.transaction_id,
+        args.dry_run,
+    )
 
 
 def _cmd_comment(args):
-    return _emit_mutation(comment_ticket, _profile(args), args.ticket_id, args.body,
-                          args.transaction_id, args.dry_run)
+    return _emit_mutation(
+        comment_ticket,
+        _profile(args),
+        args.ticket_id,
+        args.body,
+        args.transaction_id,
+        args.dry_run,
+    )
 
 
 def _cmd_log_time(args):
-    return _emit_mutation(log_ticket_time, _profile(args), args.ticket_id, args.duration,
-                          args.activity, args.date, args.comment, args.corrects,
-                          args.transaction_id, args.dry_run)
+    return _emit_mutation(
+        log_ticket_time,
+        _profile(args),
+        args.ticket_id,
+        args.duration,
+        args.activity,
+        args.date,
+        args.comment,
+        args.corrects,
+        args.transaction_id,
+        args.dry_run,
+    )
 
 
 def _cmd_tui(args, old):

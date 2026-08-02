@@ -82,6 +82,38 @@ traceability:
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/44
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/71
+      changed_files_or_scope:
+        - Raise the declared Python runtime baseline from >=3.6 to >=3.10
+        - Adopt Ruff as the formatter and linter
+        - Apply Ruff formatting to existing Python files
+        - Remove the format and lint tracked exceptions from .ai/project/COMMANDS.yml
+        - pyproject.toml
+        - readme.md
+        - lifetxt/
+        - tests/
+        - scripts/
+        - .ai/project/COMMANDS.yml
+        - .ai/project/PROJECT.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/adoption/REPORT.md
+      tests_or_evidence:
+        - 'ruff format --check lifetxt tests scripts -> 240 files already formatted'
+        - ruff check lifetxt tests scripts
+        - YAML parse of edited project records
+        - Ruff 0.16.1 parsed pyproject.toml while running the configured lint selection
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        The linter starts with Ruff fatal Python error rules
+        (E9,F63,F7,F82) so the command can gate the current codebase before
+        wider style and modernization rules are enabled in follow-up work.
+      status: implemented
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/52
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/53
       changed_files_or_scope:

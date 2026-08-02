@@ -1,4 +1,5 @@
 """Compatibility normalization for permission-aware Remote client writes."""
+
 from __future__ import unicode_literals
 
 import json
@@ -25,9 +26,7 @@ def install_remote_client_writes_compat_v25():
         policy = dict(capabilities.get("mutation_policy") or {})
         scopes = list(principal.get("scopes") or [])
         operations = list(
-            policy.get("ticket_operations")
-            or policy.get("operations")
-            or []
+            policy.get("ticket_operations") or policy.get("operations") or []
         )
         enabled = bool(
             policy.get("ticket_mutations_enabled")
@@ -95,7 +94,8 @@ def install_remote_client_writes_compat_v25():
             "capability_revision": target._header(
                 capability_headers,
                 "X-Lifetxt-Remote-Capability-Revision",
-            ) or capabilities.get("capability_revision"),
+            )
+            or capabilities.get("capability_revision"),
             "server_read_only": bool(
                 policy.get("read_only")
                 or capabilities.get("read_only")
@@ -127,15 +127,16 @@ def install_remote_client_writes_compat_v25():
         target._list_tickets(data, output)
         writes = (
             list(permissions.get("ticket_operations") or [])
-            if permissions.get("can_write") else []
+            if permissions.get("can_write")
+            else []
         )
         allowed = ["show", "refresh", "quit"] + writes
         last_result = None
         while True:
             try:
-                operation = input_fn(
-                    "operation [%s]: " % "/".join(allowed)
-                ).strip().lower()
+                operation = (
+                    input_fn("operation [%s]: " % "/".join(allowed)).strip().lower()
+                )
             except (EOFError, KeyboardInterrupt):
                 output.write("\nRemote TUI cancelled.\n")
                 return {"cancelled": True, "reason": "interrupted"}
@@ -161,12 +162,15 @@ def install_remote_client_writes_compat_v25():
                         "error": "REMOTE_TICKET_NOT_VISIBLE",
                         "message": str(exc),
                     }
-                    output.write(json.dumps(
-                        last_result,
-                        ensure_ascii=False,
-                        indent=2,
-                        sort_keys=True,
-                    ) + "\n")
+                    output.write(
+                        json.dumps(
+                            last_result,
+                            ensure_ascii=False,
+                            indent=2,
+                            sort_keys=True,
+                        )
+                        + "\n"
+                    )
                     continue
                 output.write(target.render_ticket_detail(value))
                 last_result = value
@@ -181,16 +185,19 @@ def install_remote_client_writes_compat_v25():
                 last_result = {"cancelled": True, "operation": operation}
                 continue
             output.write("proposed mutation:\n")
-            output.write(json.dumps(
-                {"operation": operation, "payload": payload},
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ) + "\n")
+            output.write(
+                json.dumps(
+                    {"operation": operation, "payload": payload},
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
             try:
-                confirmed = input_fn(
-                    "apply authoritative mutation? [y/N]: "
-                ).strip().lower()
+                confirmed = (
+                    input_fn("apply authoritative mutation? [y/N]: ").strip().lower()
+                )
             except (EOFError, KeyboardInterrupt):
                 output.write("\nMutation confirmation cancelled.\n")
                 last_result = {"cancelled": True, "operation": operation}
@@ -200,21 +207,27 @@ def install_remote_client_writes_compat_v25():
                 continue
             try:
                 last_result = target.mutate_ticket(profile, operation, payload)
-                output.write(json.dumps(
-                    last_result,
-                    ensure_ascii=False,
-                    indent=2,
-                    sort_keys=True,
-                ) + "\n")
+                output.write(
+                    json.dumps(
+                        last_result,
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
                 data = target.snapshot(profile)
             except target.RemoteMutationConflict as exc:
                 last_result = exc.as_dict()
-                output.write(json.dumps(
-                    last_result,
-                    ensure_ascii=False,
-                    indent=2,
-                    sort_keys=True,
-                ) + "\n")
+                output.write(
+                    json.dumps(
+                        last_result,
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
                 data = target.snapshot(profile)
 
     target.remote_permissions = remote_permissions

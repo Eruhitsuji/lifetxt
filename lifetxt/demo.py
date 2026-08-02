@@ -27,7 +27,9 @@ def parse_demo_base_datetime(value=None, now=None):
             return parsed_exact.replace(microsecond=0)
         parsed = parse_date_or_datetime(value)
         if parsed is None:
-            raise ValueError("--date must be YYYY-MM-DD or YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone.")
+            raise ValueError(
+                "--date must be YYYY-MM-DD or YYYY-MM-DDTHH:MM with optional seconds, fractional seconds, and timezone."
+            )
         return parsed.replace(microsecond=0)
     if now is None:
         now = local_now_naive()
@@ -45,7 +47,10 @@ def parse_demo_types(values):
                 continue
             kind = normalize_type(text)
             if kind not in VALID_TYPES:
-                raise ValueError("Unknown demo type %r. Use one of: %s." % (text, ", ".join(VALID_TYPES)))
+                raise ValueError(
+                    "Unknown demo type %r. Use one of: %s."
+                    % (text, ", ".join(VALID_TYPES))
+                )
             if kind not in result:
                 result.append(kind)
     if not result:
@@ -53,7 +58,15 @@ def parse_demo_types(values):
     return tuple(result)
 
 
-def demo_items(count=DEFAULT_COUNT, base_datetime=None, types=None, seed=1, project=None, people=None, start_index=1):
+def demo_items(
+    count=DEFAULT_COUNT,
+    base_datetime=None,
+    types=None,
+    seed=1,
+    project=None,
+    people=None,
+    start_index=1,
+):
     count = int(count)
     if count < 0:
         raise ValueError("--count must be zero or greater.")
@@ -74,14 +87,26 @@ def demo_items(count=DEFAULT_COUNT, base_datetime=None, types=None, seed=1, proj
         kind = selected_types[index % len(selected_types)]
         item_no = start_index + index
         offset = rng.randint(-2, 6)
-        items.append(_make_item(kind, item_no, base_datetime, offset, project, people, rng))
+        items.append(
+            _make_item(kind, item_no, base_datetime, offset, project, people, rng)
+        )
     return items
 
 
-def demo_text(count=DEFAULT_COUNT, base_datetime=None, types=None, seed=1, project=None, people=None, start_index=1):
+def demo_text(
+    count=DEFAULT_COUNT,
+    base_datetime=None,
+    types=None,
+    seed=1,
+    project=None,
+    people=None,
+    start_index=1,
+):
     lines = [
         item_to_line(item)
-        for item in demo_items(count, base_datetime, types, seed, project, people, start_index)
+        for item in demo_items(
+            count, base_datetime, types, seed, project, people, start_index
+        )
     ]
     return ("\n".join(lines) + "\n") if lines else ""
 
@@ -227,7 +252,10 @@ def _journal(number, base, offset_days, default_project, rng):
         ("mood", _pick(MOODS, number)),
         ("project", _project(default_project, number)),
         ("tag", "journal"),
-        ("body", "Generated journal entry.\nReviewed tasks, events, and status updates."),
+        (
+            "body",
+            "Generated journal entry.\nReviewed tasks, events, and status updates.",
+        ),
     )
     return Item("[N]", "J", "Demo_Journal_%03d" % number, details)
 
@@ -299,4 +327,6 @@ def _normalize_demo_timezone(text):
 
 def _at(base, offset_days, hour, minute):
     date = base.date() + datetime.timedelta(days=offset_days)
-    return datetime.datetime.combine(date, datetime.time(hour % 24, minute, tzinfo=base.tzinfo))
+    return datetime.datetime.combine(
+        date, datetime.time(hour % 24, minute, tzinfo=base.tzinfo)
+    )

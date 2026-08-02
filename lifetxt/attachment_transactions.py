@@ -14,7 +14,18 @@ import zipfile
 from collections import OrderedDict
 
 from . import mutation
-from .attachments import (DIR_KEY, FILE_KEY, HASH_LENGTH, DEFAULT_IGNORES, DEFAULT_MAX_BYTES, DEFAULT_MAX_FILES, hash_directory, join_value, normalize_stored_path, split_value)
+from .attachments import (
+    DIR_KEY,
+    FILE_KEY,
+    HASH_LENGTH,
+    DEFAULT_IGNORES,
+    DEFAULT_MAX_BYTES,
+    DEFAULT_MAX_FILES,
+    hash_directory,
+    join_value,
+    normalize_stored_path,
+    split_value,
+)
 from .ids import id_key_from_config
 from .multi_target import attachment_and_item_transaction, bytes_plan, delete_plan
 from .transaction_journal import journal_directory
@@ -90,7 +101,9 @@ def put_attachment(
     _reject_executable_target(target, payload, allow_executable)
     item_snapshot = mutation.read_text_snapshot(life_path)
     target_revision = attachment_revision(target)
-    item_expected = _resolve_revision(item_revision, item_snapshot.content_hash, require_revisions, "item_revision")
+    item_expected = _resolve_revision(
+        item_revision, item_snapshot.content_hash, require_revisions, "item_revision"
+    )
     attachment_expected = _resolve_revision(
         attachment_expected_revision,
         target_revision,
@@ -148,7 +161,9 @@ def reference_attachment(
         raise AttachmentTransactionError("Attachment target is not a file: %s" % target)
     item_snapshot = mutation.read_text_snapshot(life_path)
     target_revision = attachment_revision(target)
-    item_expected = _resolve_revision(item_revision, item_snapshot.content_hash, require_revisions, "item_revision")
+    item_expected = _resolve_revision(
+        item_revision, item_snapshot.content_hash, require_revisions, "item_revision"
+    )
     attachment_expected = _resolve_revision(
         attachment_expected_revision,
         target_revision,
@@ -197,8 +212,12 @@ def delete_attachment(
     item_snapshot = mutation.read_text_snapshot(life_path)
     target_revision = attachment_revision(target)
     if target_revision == mutation.MISSING_HASH:
-        raise AttachmentTransactionError("Attachment target does not exist: %s" % target)
-    item_expected = _resolve_revision(item_revision, item_snapshot.content_hash, require_revisions, "item_revision")
+        raise AttachmentTransactionError(
+            "Attachment target does not exist: %s" % target
+        )
+    item_expected = _resolve_revision(
+        item_revision, item_snapshot.content_hash, require_revisions, "item_revision"
+    )
     attachment_expected = _resolve_revision(
         attachment_expected_revision,
         target_revision,
@@ -234,7 +253,11 @@ def attachment_state(life_path, stored_path, config=None, allow_symlink=False):
     exists = os.path.exists(target)
     is_file = os.path.isfile(target)
     is_dir = os.path.isdir(target)
-    mime_type = mimetypes.guess_type(target)[0] if is_file else ("inode/directory" if is_dir else None)
+    mime_type = (
+        mimetypes.guess_type(target)[0]
+        if is_file
+        else ("inode/directory" if is_dir else None)
+    )
     size = os.path.getsize(target) if is_file else None
     file_type = _file_type(target) if exists else "missing"
     policy = _content_policy(config or {}, target, mime_type=mime_type, size=size)
@@ -252,10 +275,14 @@ def attachment_state(life_path, stored_path, config=None, allow_symlink=False):
             ("size", size),
             ("executable", _is_executable(target) if exists else False),
             ("policy", policy),
-            ("revision", directory_revision(target, config=config) if is_dir else attachment_revision(target)),
+            (
+                "revision",
+                directory_revision(target, config=config)
+                if is_dir
+                else attachment_revision(target),
+            ),
         )
     )
-
 
 
 def read_bounded_file(path, max_bytes=None, chunk_size=1024 * 1024):
@@ -270,18 +297,23 @@ def read_bounded_file(path, max_bytes=None, chunk_size=1024 * 1024):
             payload.extend(chunk)
             if len(payload) > limit:
                 raise AttachmentTransactionError(
-                    "Attachment source exceeds the configured maximum of %d bytes." % limit
+                    "Attachment source exceeds the configured maximum of %d bytes."
+                    % limit
                 )
     return bytes(payload)
 
 
-def put_attachment_from_path(life_path, item_id, stored_path, source_path, config=None, **kwargs):
+def put_attachment_from_path(
+    life_path, item_id, stored_path, source_path, config=None, **kwargs
+):
     config = config or {}
     policy = _attachment_settings(config)
     payload = read_bounded_file(source_path, max_bytes=policy["max_file_bytes"])
     mime_type = mimetypes.guess_type(source_path)[0] or "application/octet-stream"
     _enforce_mime_policy(config, stored_path, mime_type)
-    result = put_attachment(life_path, item_id, stored_path, payload, config=config, **kwargs)
+    result = put_attachment(
+        life_path, item_id, stored_path, payload, config=config, **kwargs
+    )
     result["source"] = os.path.abspath(source_path)
     result["mime_type"] = mime_type
     result["size"] = len(payload)
@@ -311,60 +343,83 @@ def reference_directory(
 ):
     config = config or {}
     target, _root = resolve_attachment_target(
-        life_path, stored_path, root=_attachment_root(config, life_path), allow_symlink=allow_symlink
+        life_path,
+        stored_path,
+        root=_attachment_root(config, life_path),
+        allow_symlink=allow_symlink,
     )
     if not os.path.isdir(target):
-        raise AttachmentTransactionError("Directory attachment target is not a directory: %s" % target)
+        raise AttachmentTransactionError(
+            "Directory attachment target is not a directory: %s" % target
+        )
     if _file_type(target) != "directory":
-        raise AttachmentTransactionError("Unsupported directory attachment type: %s" % _file_type(target))
+        raise AttachmentTransactionError(
+            "Unsupported directory attachment type: %s" % _file_type(target)
+        )
     digest = directory_revision(target, config=config)
     directory_expected = _resolve_revision(
         attachment_expected_revision, digest, require_revisions, "attachment_revision"
     )
     if directory_expected != digest:
-        raise AttachmentTransactionError("Directory attachment revision changed before reference.")
+        raise AttachmentTransactionError(
+            "Directory attachment revision changed before reference."
+        )
     normalized = _stored_relative_path(life_path, target)
     value = join_value(normalized, digest[:HASH_LENGTH])
     snapshot = mutation.read_text_snapshot(life_path)
-    expected = _resolve_revision(item_revision, snapshot.content_hash, require_revisions, "item_revision")
+    expected = _resolve_revision(
+        item_revision, snapshot.content_hash, require_revisions, "item_revision"
+    )
     id_key = id_key_from_config(config)
     # A sidecar lock serializes lifetxt-aware directory writers while the tree
     # revision is rechecked and the life.txt reference is committed.
     with mutation.FileLock(target, operation="attachment.directory_reference"):
         latest = directory_revision(target, config=config)
         if latest != directory_expected:
-            raise AttachmentTransactionError("Directory attachment revision changed before commit.")
+            raise AttachmentTransactionError(
+                "Directory attachment revision changed before commit."
+            )
         result = mutation.write_text(
             life_path,
             expected_hash=expected,
             operation="attachment.directory_reference",
             create=False,
-            transform=lambda text: _set_reference(text, item_id, id_key, DIR_KEY, value, normalized),
+            transform=lambda text: _set_reference(
+                text, item_id, id_key, DIR_KEY, value, normalized
+            ),
         )
-    return OrderedDict((
-        ("action", "directory-reference"),
-        ("id", item_id),
-        ("path", target),
-        ("value", value),
-        ("attachment_revision", digest),
-        ("item_revision", result.after_hash),
-        ("file_count_limit", _attachment_settings(config)["max_files"]),
-        ("byte_limit", _attachment_settings(config)["max_bytes"]),
-    ))
+    return OrderedDict(
+        (
+            ("action", "directory-reference"),
+            ("id", item_id),
+            ("path", target),
+            ("value", value),
+            ("attachment_revision", digest),
+            ("item_revision", result.after_hash),
+            ("file_count_limit", _attachment_settings(config)["max_files"]),
+            ("byte_limit", _attachment_settings(config)["max_bytes"]),
+        )
+    )
 
 
-
-def resolve_package_source(life_path, source_directory, config=None, allow_symlink=False):
+def resolve_package_source(
+    life_path, source_directory, config=None, allow_symlink=False
+):
     """Resolve a server-side package source under the configured remote source root."""
     config = config or {}
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
     root = section.get("remote_source_root") or _attachment_root(config, life_path)
     target, root_abs = resolve_attachment_target(
         life_path, source_directory, root=root, allow_symlink=allow_symlink
     )
     if not os.path.isdir(target):
-        raise AttachmentTransactionError("Package source is not a confined directory: %s" % target)
+        raise AttachmentTransactionError(
+            "Package source is not a confined directory: %s" % target
+        )
     return target, root_abs
+
 
 def package_directory(
     life_path,
@@ -374,14 +429,19 @@ def package_directory(
     config=None,
     include_hidden=False,
     allow_symlink=False,
-    **kwargs
+    **kwargs,
 ):
     config = config or {}
     target, _root = resolve_attachment_target(
-        life_path, stored_path, root=_attachment_root(config, life_path), allow_symlink=allow_symlink
+        life_path,
+        stored_path,
+        root=_attachment_root(config, life_path),
+        allow_symlink=allow_symlink,
     )
     if not str(target).lower().endswith(".zip"):
-        raise AttachmentTransactionError("Directory packages must use a .zip attachment path.")
+        raise AttachmentTransactionError(
+            "Directory packages must use a .zip attachment path."
+        )
     payload, manifest = build_directory_package(
         source_directory,
         config=config,
@@ -395,7 +455,7 @@ def package_directory(
         payload,
         config=config,
         allow_symlink=allow_symlink,
-        **kwargs
+        **kwargs,
     )
     result["action"] = "package"
     result["package"] = manifest
@@ -403,34 +463,55 @@ def package_directory(
     return result
 
 
-def build_directory_package(source_directory, config=None, include_hidden=False, allow_symlink=False):
+def build_directory_package(
+    source_directory, config=None, include_hidden=False, allow_symlink=False
+):
     config = config or {}
     source = os.path.abspath(source_directory)
     if not os.path.isdir(source):
-        raise AttachmentTransactionError("Package source is not a directory: %s" % source)
+        raise AttachmentTransactionError(
+            "Package source is not a directory: %s" % source
+        )
     settings = _attachment_settings(config)
     records = []
     total = 0
     for root, dirnames, filenames in os.walk(source, followlinks=allow_symlink):
-        dirnames[:] = sorted(name for name in dirnames if name not in settings["ignores"] and (include_hidden or not name.startswith(".")))
+        dirnames[:] = sorted(
+            name
+            for name in dirnames
+            if name not in settings["ignores"]
+            and (include_hidden or not name.startswith("."))
+        )
         for name in sorted(filenames):
-            if name in settings["ignores"] or (not include_hidden and name.startswith(".")):
+            if name in settings["ignores"] or (
+                not include_hidden and name.startswith(".")
+            ):
                 continue
             full = os.path.join(root, name)
             if os.path.islink(full) and not allow_symlink:
-                raise AttachmentTransactionError("Package source contains a symlink: %s" % full)
+                raise AttachmentTransactionError(
+                    "Package source contains a symlink: %s" % full
+                )
             if _file_type(full) != "file":
-                raise AttachmentTransactionError("Package source contains a non-regular file: %s" % full)
+                raise AttachmentTransactionError(
+                    "Package source contains a non-regular file: %s" % full
+                )
             relative = os.path.relpath(full, source).replace(os.sep, "/")
             if relative.startswith("../") or relative.startswith("/"):
-                raise AttachmentTransactionError("Package entry escapes its root: %s" % relative)
+                raise AttachmentTransactionError(
+                    "Package entry escapes its root: %s" % relative
+                )
             size = os.path.getsize(full)
             total += size
             records.append((relative, full, size))
             if len(records) > settings["max_files"]:
-                raise AttachmentTransactionError("Directory package exceeds %d files." % settings["max_files"])
+                raise AttachmentTransactionError(
+                    "Directory package exceeds %d files." % settings["max_files"]
+                )
             if total > settings["max_bytes"]:
-                raise AttachmentTransactionError("Directory package exceeds %d bytes." % settings["max_bytes"])
+                raise AttachmentTransactionError(
+                    "Directory package exceeds %d bytes." % settings["max_bytes"]
+                )
     manifest_files = []
     buffer = io.BytesIO()
     with _open_deterministic_zip(buffer) as archive:
@@ -440,26 +521,39 @@ def build_directory_package(source_directory, config=None, include_hidden=False,
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100600 << 16
             archive.writestr(info, data)
-            manifest_files.append(OrderedDict((
-                ("path", relative),
-                ("size", size),
-                ("sha256", hashlib.sha256(data).hexdigest()),
-            )))
-        manifest = OrderedDict((
-            ("version", 1),
-            ("source_name", os.path.basename(source)),
-            ("file_count", len(manifest_files)),
-            ("total_bytes", total),
-            ("files", manifest_files),
-        ))
-        manifest_bytes = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
-        info = zipfile.ZipInfo("lifetxt-package-manifest.json", date_time=(1980, 1, 1, 0, 0, 0))
+            manifest_files.append(
+                OrderedDict(
+                    (
+                        ("path", relative),
+                        ("size", size),
+                        ("sha256", hashlib.sha256(data).hexdigest()),
+                    )
+                )
+            )
+        manifest = OrderedDict(
+            (
+                ("version", 1),
+                ("source_name", os.path.basename(source)),
+                ("file_count", len(manifest_files)),
+                ("total_bytes", total),
+                ("files", manifest_files),
+            )
+        )
+        manifest_bytes = (
+            json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+        ).encode("utf-8")
+        info = zipfile.ZipInfo(
+            "lifetxt-package-manifest.json", date_time=(1980, 1, 1, 0, 0, 0)
+        )
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o100600 << 16
         archive.writestr(info, manifest_bytes)
     payload = buffer.getvalue()
     if len(payload) > settings["max_file_bytes"]:
-        raise AttachmentTransactionError("Compressed directory package exceeds %d bytes." % settings["max_file_bytes"])
+        raise AttachmentTransactionError(
+            "Compressed directory package exceeds %d bytes."
+            % settings["max_file_bytes"]
+        )
     manifest["package_sha256"] = hashlib.sha256(payload).hexdigest()
     manifest["package_bytes"] = len(payload)
     return payload, manifest
@@ -477,62 +571,93 @@ def reconcile_attachment(
     require_revisions=False,
 ):
     config = config or {}
-    target, _root = resolve_attachment_target(life_path, stored_path, root=_attachment_root(config, life_path))
+    target, _root = resolve_attachment_target(
+        life_path, stored_path, root=_attachment_root(config, life_path)
+    )
     if key == DIR_KEY:
         if not os.path.isdir(target):
-            raise AttachmentTransactionError("Directory attachment does not exist: %s" % target)
+            raise AttachmentTransactionError(
+                "Directory attachment does not exist: %s" % target
+            )
         actual = directory_revision(target, config=config)
     else:
         if not os.path.isfile(target):
-            raise AttachmentTransactionError("File attachment does not exist: %s" % target)
+            raise AttachmentTransactionError(
+                "File attachment does not exist: %s" % target
+            )
         actual = attachment_revision(target)
     attachment_expected = _resolve_revision(
         attachment_expected_revision, actual, require_revisions, "attachment_revision"
     )
     if attachment_expected != actual:
-        raise AttachmentTransactionError("Attachment revision changed before reconcile.")
+        raise AttachmentTransactionError(
+            "Attachment revision changed before reconcile."
+        )
     normalized = _stored_relative_path(life_path, target)
     snapshot = mutation.read_text_snapshot(life_path)
-    expected = _resolve_revision(item_revision, snapshot.content_hash, require_revisions, "item_revision")
+    expected = _resolve_revision(
+        item_revision, snapshot.content_hash, require_revisions, "item_revision"
+    )
     id_key = id_key_from_config(config)
     if recorded_revision:
-        _assert_recorded_reference(snapshot.text, item_id, id_key, key, normalized, recorded_revision)
+        _assert_recorded_reference(
+            snapshot.text, item_id, id_key, key, normalized, recorded_revision
+        )
 
     with mutation.FileLock(target, operation="attachment.reconcile.target"):
-        latest = directory_revision(target, config=config) if key == DIR_KEY else attachment_revision(target)
+        latest = (
+            directory_revision(target, config=config)
+            if key == DIR_KEY
+            else attachment_revision(target)
+        )
         if latest != attachment_expected:
-            raise AttachmentTransactionError("Attachment revision changed before reconcile commit.")
+            raise AttachmentTransactionError(
+                "Attachment revision changed before reconcile commit."
+            )
         value = join_value(normalized, latest[:HASH_LENGTH])
         result = mutation.write_text(
             life_path,
             expected_hash=expected,
             operation="attachment.reconcile",
             create=False,
-            transform=lambda text: _set_reference(text, item_id, id_key, key, value, normalized),
+            transform=lambda text: _set_reference(
+                text, item_id, id_key, key, value, normalized
+            ),
         )
-        final_revision = directory_revision(target, config=config) if key == DIR_KEY else attachment_revision(target)
+        final_revision = (
+            directory_revision(target, config=config)
+            if key == DIR_KEY
+            else attachment_revision(target)
+        )
         if final_revision != latest:
             try:
                 mutation.write_text(
-                    life_path, snapshot.text, expected_hash=result.after_hash,
-                    operation="attachment.reconcile.rollback", create=False,
+                    life_path,
+                    snapshot.text,
+                    expected_hash=result.after_hash,
+                    operation="attachment.reconcile.rollback",
+                    create=False,
                 )
             except Exception as rollback_error:
                 raise AttachmentTransactionError(
-                    "Attachment changed during reconcile and the life.txt rollback failed: %s" % rollback_error
+                    "Attachment changed during reconcile and the life.txt rollback failed: %s"
+                    % rollback_error
                 )
             raise AttachmentTransactionError(
                 "Attachment changed during reconcile; the life.txt reference was restored."
             )
-    return OrderedDict((
-        ("action", "reconcile"),
-        ("id", item_id),
-        ("key", key),
-        ("path", target),
-        ("value", value),
-        ("attachment_revision", latest),
-        ("item_revision", result.after_hash),
-    ))
+    return OrderedDict(
+        (
+            ("action", "reconcile"),
+            ("id", item_id),
+            ("key", key),
+            ("path", target),
+            ("value", value),
+            ("attachment_revision", latest),
+            ("item_revision", result.after_hash),
+        )
+    )
+
 
 def prepare_open_reference(
     life_path,
@@ -546,28 +671,47 @@ def prepare_open_reference(
     config = config or {}
     state = attachment_state(life_path, stored_path, config=config)
     if not state["exists"] or state["file_type"] not in ("file", "directory"):
-        raise AttachmentTransactionError("Attachment is not openable: %s" % state["resolved_path"])
+        raise AttachmentTransactionError(
+            "Attachment is not openable: %s" % state["resolved_path"]
+        )
     if not state["policy"]["allowed"]:
-        raise AttachmentTransactionError("Attachment open policy rejected the target: %s" % "; ".join(state["policy"]["problems"]))
-    expected = _resolve_revision(attachment_expected_revision, state["revision"], require_revisions, "attachment_revision")
+        raise AttachmentTransactionError(
+            "Attachment open policy rejected the target: %s"
+            % "; ".join(state["policy"]["problems"])
+        )
+    expected = _resolve_revision(
+        attachment_expected_revision,
+        state["revision"],
+        require_revisions,
+        "attachment_revision",
+    )
     if expected != state["revision"]:
         raise AttachmentTransactionError("Attachment revision changed before open.")
     command = _platform_open_command(state["resolved_path"])
-    report = OrderedDict((
-        ("action", "open-reference"),
-        ("path", state["resolved_path"]),
-        ("stored_path", state["stored_path"]),
-        ("attachment_revision", state["revision"]),
-        ("platform", platform.system().lower() or os.name),
-        ("command", command),
-        ("metadata_written", False),
-    ))
+    report = OrderedDict(
+        (
+            ("action", "open-reference"),
+            ("path", state["resolved_path"]),
+            ("stored_path", state["stored_path"]),
+            ("attachment_revision", state["revision"]),
+            ("platform", platform.system().lower() or os.name),
+            ("command", command),
+            ("metadata_written", False),
+        )
+    )
     if record:
         metadata_path = _open_metadata_path(config, life_path)
         from .timezone_policy import utcnow
+
         now_value = utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")
         snapshot = mutation.read_text_snapshot(metadata_path, allow_missing=True)
-        metadata_expected = _resolve_revision(metadata_revision, snapshot.content_hash, require_revisions, "metadata_revision")
+        metadata_expected = _resolve_revision(
+            metadata_revision,
+            snapshot.content_hash,
+            require_revisions,
+            "metadata_revision",
+        )
+
         def transform(value):
             value = value if isinstance(value, dict) else {}
             records = value.setdefault("references", {})
@@ -578,6 +722,7 @@ def prepare_open_reference(
             row["platform"] = report["platform"]
             value["version"] = 1
             return value
+
         meta_result = mutation.mutate_json(
             metadata_path,
             transform,
@@ -590,7 +735,6 @@ def prepare_open_reference(
         report["metadata_path"] = metadata_path
         report["metadata_revision"] = meta_result.after_hash
     return report
-
 
 
 def read_attachment_chunk(
@@ -609,18 +753,33 @@ def read_attachment_chunk(
         life_path, stored_path, root=_attachment_root(config, life_path)
     )
     if not os.path.isfile(target):
-        raise AttachmentTransactionError("Attachment target is not a regular file: %s" % target)
+        raise AttachmentTransactionError(
+            "Attachment target is not a regular file: %s" % target
+        )
     revision = attachment_revision(target)
-    if attachment_expected_revision not in (None, "") and str(attachment_expected_revision) != revision:
-        raise AttachmentTransactionError("Attachment revision changed before chunk read.")
+    if (
+        attachment_expected_revision not in (None, "")
+        and str(attachment_expected_revision) != revision
+    ):
+        raise AttachmentTransactionError(
+            "Attachment revision changed before chunk read."
+        )
     settings = _attachment_settings(config)
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
-    remote_max = max(1, min(int(section.get("remote_chunk_bytes") or 65536), 1024 * 1024))
-    bounded_limit = max(1, min(int(limit), settings["max_file_bytes"], remote_max, 1024 * 1024))
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
+    remote_max = max(
+        1, min(int(section.get("remote_chunk_bytes") or 65536), 1024 * 1024)
+    )
+    bounded_limit = max(
+        1, min(int(limit), settings["max_file_bytes"], remote_max, 1024 * 1024)
+    )
     bounded_offset = max(0, int(offset))
     size = os.path.getsize(target)
     if size > settings["max_file_bytes"]:
-        raise AttachmentTransactionError("Attachment exceeds the configured file limit.")
+        raise AttachmentTransactionError(
+            "Attachment exceeds the configured file limit."
+        )
     if bounded_offset > size:
         raise AttachmentTransactionError("Attachment chunk offset exceeds file size.")
     with open(target, "rb") as handle:
@@ -630,18 +789,20 @@ def read_attachment_chunk(
     if latest != revision:
         raise AttachmentTransactionError("Attachment changed during chunk read.")
     next_offset = bounded_offset + len(data)
-    return OrderedDict((
-        ("path", target),
-        ("stored_path", _stored_relative_path(life_path, target)),
-        ("attachment_revision", revision),
-        ("size", size),
-        ("offset", bounded_offset),
-        ("limit", bounded_limit),
-        ("bytes", len(data)),
-        ("content_base64", base64.b64encode(data).decode("ascii")),
-        ("next_offset", next_offset),
-        ("eof", next_offset >= size),
-    ))
+    return OrderedDict(
+        (
+            ("path", target),
+            ("stored_path", _stored_relative_path(life_path, target)),
+            ("attachment_revision", revision),
+            ("size", size),
+            ("offset", bounded_offset),
+            ("limit", bounded_limit),
+            ("bytes", len(data)),
+            ("content_base64", base64.b64encode(data).decode("ascii")),
+            ("next_offset", next_offset),
+            ("eof", next_offset >= size),
+        )
+    )
 
 
 def inspect_directory_package(
@@ -656,23 +817,36 @@ def inspect_directory_package(
         life_path, stored_path, root=_attachment_root(config, life_path)
     )
     if not os.path.isfile(target):
-        raise AttachmentTransactionError("Directory package does not exist: %s" % target)
+        raise AttachmentTransactionError(
+            "Directory package does not exist: %s" % target
+        )
     revision = attachment_revision(target)
-    if attachment_expected_revision not in (None, "") and str(attachment_expected_revision) != revision:
-        raise AttachmentTransactionError("Directory package revision changed before inspection.")
+    if (
+        attachment_expected_revision not in (None, "")
+        and str(attachment_expected_revision) != revision
+    ):
+        raise AttachmentTransactionError(
+            "Directory package revision changed before inspection."
+        )
     settings = _attachment_settings(config)
     if os.path.getsize(target) > settings["max_file_bytes"]:
-        raise AttachmentTransactionError("Directory package exceeds the configured file limit.")
+        raise AttachmentTransactionError(
+            "Directory package exceeds the configured file limit."
+        )
     try:
         with zipfile.ZipFile(target, "r") as archive:
             names = archive.namelist()
             if "lifetxt-package-manifest.json" not in names:
-                raise AttachmentTransactionError("Directory package is missing lifetxt-package-manifest.json.")
+                raise AttachmentTransactionError(
+                    "Directory package is missing lifetxt-package-manifest.json."
+                )
             raw = archive.read("lifetxt-package-manifest.json")
             manifest = json.loads(raw.decode("utf-8"), object_pairs_hook=OrderedDict)
             records = manifest.get("files") if isinstance(manifest, dict) else None
             if not isinstance(records, list):
-                raise AttachmentTransactionError("Directory package manifest files must be an array.")
+                raise AttachmentTransactionError(
+                    "Directory package manifest files must be an array."
+                )
             problems = []
             if len(names) != len(set(names)):
                 problems.append("duplicate package entry")
@@ -717,41 +891,70 @@ def inspect_directory_package(
                 problems.append("total_bytes mismatch")
     except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
         raise AttachmentTransactionError("Cannot inspect directory package: %s" % exc)
-    return OrderedDict((
-        ("ok", not problems),
-        ("path", target),
-        ("stored_path", _stored_relative_path(life_path, target)),
-        ("attachment_revision", revision),
-        ("manifest", manifest),
-        ("problems", problems),
-    ))
+    return OrderedDict(
+        (
+            ("ok", not problems),
+            ("path", target),
+            ("stored_path", _stored_relative_path(life_path, target)),
+            ("attachment_revision", revision),
+            ("manifest", manifest),
+            ("problems", problems),
+        )
+    )
 
-def _assert_recorded_reference(text, item_id, id_key, key, normalized_path, recorded_revision):
+
+def _assert_recorded_reference(
+    text, item_id, id_key, key, normalized_path, recorded_revision
+):
     from .parser import parse_text
-    items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    items, diagnostics = parse_text(
+        text, id_key=id_key, check_ids=False, check_references=False
+    )
     errors = [row for row in diagnostics if row.severity == "error"]
     if errors:
         raise AttachmentTransactionError(errors[0].format())
-    matches = [item for item in items if item_id in [str(v) for v in item.details.get(id_key, [])]]
+    matches = [
+        item
+        for item in items
+        if item_id in [str(v) for v in item.details.get(id_key, [])]
+    ]
     if len(matches) != 1:
-        raise AttachmentTransactionError("Expected exactly one item with %s:%s." % (id_key, item_id))
+        raise AttachmentTransactionError(
+            "Expected exactly one item with %s:%s." % (id_key, item_id)
+        )
     for value in matches[0].details.get(key, []):
         path, digest = split_value(value)
         if normalize_stored_path(path) == normalize_stored_path(normalized_path):
-            if str(digest) != str(recorded_revision)[:len(str(digest))]:
-                raise AttachmentTransactionError("Recorded attachment revision does not match the item reference.")
+            if str(digest) != str(recorded_revision)[: len(str(digest))]:
+                raise AttachmentTransactionError(
+                    "Recorded attachment revision does not match the item reference."
+                )
             return
-    raise AttachmentTransactionError("Item does not contain the requested attachment reference.")
+    raise AttachmentTransactionError(
+        "Item does not contain the requested attachment reference."
+    )
 
 
 def _attachment_settings(config):
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
     ignores = section.get("ignores")
     return {
         "max_files": max(1, int(section.get("max_files") or DEFAULT_MAX_FILES)),
         "max_bytes": max(1, int(section.get("max_bytes") or DEFAULT_MAX_BYTES)),
-        "max_file_bytes": max(1, int(section.get("max_file_bytes") or section.get("max_bytes") or DEFAULT_MAX_BYTES)),
-        "ignores": tuple(ignores) if isinstance(ignores, (list, tuple)) else tuple(DEFAULT_IGNORES),
+        "max_file_bytes": max(
+            1,
+            int(
+                section.get("max_file_bytes")
+                or section.get("max_bytes")
+                or DEFAULT_MAX_BYTES
+            ),
+        ),
+        "ignores": tuple(ignores)
+        if isinstance(ignores, (list, tuple))
+        else tuple(DEFAULT_IGNORES),
     }
 
 
@@ -772,19 +975,27 @@ def _content_policy(config, path, mime_type=None, size=None):
 
 
 def _enforce_mime_policy(config, path, mime_type):
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
     allowed = section.get("allowed_mime") or []
     blocked = section.get("blocked_mime") or []
     mime = str(mime_type or "application/octet-stream").lower()
     if any(_mime_match(mime, pattern) for pattern in blocked):
-        raise AttachmentTransactionError("MIME type %s is blocked for %s." % (mime, path))
+        raise AttachmentTransactionError(
+            "MIME type %s is blocked for %s." % (mime, path)
+        )
     if allowed and not any(_mime_match(mime, pattern) for pattern in allowed):
-        raise AttachmentTransactionError("MIME type %s is not in attachments.allowed_mime." % mime)
+        raise AttachmentTransactionError(
+            "MIME type %s is not in attachments.allowed_mime." % mime
+        )
 
 
 def _mime_match(value, pattern):
     pattern = str(pattern).lower().strip()
-    return pattern == value or (pattern.endswith("/*") and value.startswith(pattern[:-1]))
+    return pattern == value or (
+        pattern.endswith("/*") and value.startswith(pattern[:-1])
+    )
 
 
 def _file_type(path):
@@ -817,22 +1028,35 @@ def _platform_open_command(path):
 
 
 def _open_metadata_path(config, life_path):
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
     value = section.get("open_state_file") or ".lifetxt-attachment-open.json"
     if not os.path.isabs(str(value)):
         value = os.path.join(os.path.dirname(os.path.abspath(life_path)), str(value))
     return os.path.abspath(value)
 
+
 def _set_reference(text, item_id, id_key, key, value, normalized_path):
     from .parser import parse_text
 
-    items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+    items, diagnostics = parse_text(
+        text, id_key=id_key, check_ids=False, check_references=False
+    )
+    errors = [
+        diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+    ]
     if errors:
         raise AttachmentTransactionError(errors[0].format())
-    matches = [item for item in items if item_id in [str(v) for v in item.details.get(id_key, [])]]
+    matches = [
+        item
+        for item in items
+        if item_id in [str(v) for v in item.details.get(id_key, [])]
+    ]
     if len(matches) != 1:
-        raise AttachmentTransactionError("Expected exactly one item with %s:%s." % (id_key, item_id))
+        raise AttachmentTransactionError(
+            "Expected exactly one item with %s:%s." % (id_key, item_id)
+        )
     existing = []
     for old in matches[0].details.get(key, []):
         try:
@@ -852,13 +1076,23 @@ def _set_reference(text, item_id, id_key, key, value, normalized_path):
 def _remove_reference(text, item_id, id_key, normalized_path):
     from .parser import parse_text
 
-    items, diagnostics = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
-    errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
+    items, diagnostics = parse_text(
+        text, id_key=id_key, check_ids=False, check_references=False
+    )
+    errors = [
+        diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"
+    ]
     if errors:
         raise AttachmentTransactionError(errors[0].format())
-    matches = [item for item in items if item_id in [str(v) for v in item.details.get(id_key, [])]]
+    matches = [
+        item
+        for item in items
+        if item_id in [str(v) for v in item.details.get(id_key, [])]
+    ]
     if len(matches) != 1:
-        raise AttachmentTransactionError("Expected exactly one item with %s:%s." % (id_key, item_id))
+        raise AttachmentTransactionError(
+            "Expected exactly one item with %s:%s." % (id_key, item_id)
+        )
     updates = {}
     removed = False
     for key in ("file", "dir"):
@@ -869,7 +1103,9 @@ def _remove_reference(text, item_id, id_key, normalized_path):
             except Exception:
                 kept.append(str(old))
                 continue
-            if normalize_stored_path(old_path) == normalize_stored_path(normalized_path):
+            if normalize_stored_path(old_path) == normalize_stored_path(
+                normalized_path
+            ):
                 removed = True
             else:
                 kept.append(str(old))
@@ -878,7 +1114,9 @@ def _remove_reference(text, item_id, id_key, normalized_path):
         raise AttachmentTransactionError(
             "Item %s does not reference attachment %s." % (item_id, normalized_path)
         )
-    return transform_items_text(text, [{"id": item_id, "set_details": updates}], id_key=id_key)
+    return transform_items_text(
+        text, [{"id": item_id, "set_details": updates}], id_key=id_key
+    )
 
 
 def _result(result, item_id, target, value, action):
@@ -922,7 +1160,9 @@ def _resolve_revision(provided, actual, required, label):
 
 
 def _attachment_root(config, life_path):
-    section = config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    section = (
+        config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
+    )
     value = section.get("root") or os.path.dirname(os.path.abspath(life_path))
     if not os.path.isabs(str(value)):
         value = os.path.join(os.path.dirname(os.path.abspath(life_path)), str(value))
@@ -942,8 +1182,17 @@ def _is_executable(path):
         mode = os.stat(path).st_mode
     except OSError:
         return False
-    return bool(mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)) or os.path.splitext(path)[1].lower() in (
-        ".exe", ".com", ".bat", ".cmd", ".ps1", ".sh", ".app", ".msi"
+    return bool(
+        mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    ) or os.path.splitext(path)[1].lower() in (
+        ".exe",
+        ".com",
+        ".bat",
+        ".cmd",
+        ".ps1",
+        ".sh",
+        ".app",
+        ".msi",
     )
 
 
@@ -952,9 +1201,13 @@ def _reject_executable_target(path, payload, allow):
         return
     extension = os.path.splitext(path)[1].lower()
     if extension in (".exe", ".com", ".bat", ".cmd", ".ps1", ".sh", ".app", ".msi"):
-        raise AttachmentTransactionError("Refusing to create a potentially executable attachment: %s" % path)
+        raise AttachmentTransactionError(
+            "Refusing to create a potentially executable attachment: %s" % path
+        )
     if payload.startswith(b"#!"):
-        raise AttachmentTransactionError("Refusing to create a script attachment without allow_executable.")
+        raise AttachmentTransactionError(
+            "Refusing to create a script attachment without allow_executable."
+        )
 
 
 def _validate_payload(payload, allow_executable):

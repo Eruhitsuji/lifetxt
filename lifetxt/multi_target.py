@@ -124,7 +124,9 @@ def apply_multi_target(
         if journal:
             from .transaction_journal import journal_directory, prepare
 
-            resolved_journal_dir = journal_dir or journal_directory(writable_path=ordered_paths[0])
+            resolved_journal_dir = journal_dir or journal_directory(
+                writable_path=ordered_paths[0]
+            )
             journal_handle = prepare(
                 operation,
                 staged,
@@ -139,9 +141,20 @@ def apply_multi_target(
                 if failure_hook is not None:
                     failure_hook("before_commit", row["plan"], index)
                 from .transaction_policy import fault_point
-                fault_point("before_target_commit", path=row["plan"].path, index=index, operation=operation)
+
+                fault_point(
+                    "before_target_commit",
+                    path=row["plan"].path,
+                    index=index,
+                    operation=operation,
+                )
                 _commit_staged(row)
-                fault_point("after_target_commit", path=row["plan"].path, index=index, operation=operation)
+                fault_point(
+                    "after_target_commit",
+                    path=row["plan"].path,
+                    index=index,
+                    operation=operation,
+                )
                 committed.append(row)
                 if journal_handle is not None:
                     journal_handle.mark_target(index, commit_state="committed")
@@ -157,7 +170,9 @@ def apply_multi_target(
             if journal_handle is not None:
                 journal_handle.set_state(
                     "compensated" if not rollback_errors else "recovery_required",
-                    error=None if not rollback_errors else "; ".join(str(error) for error in rollback_errors),
+                    error=None
+                    if not rollback_errors
+                    else "; ".join(str(error) for error in rollback_errors),
                 )
             raise MultiTargetCommitError(operation, exc, rollback_errors)
         if journal_handle is not None:
@@ -198,7 +213,9 @@ def text_plan(path, transform, expected_hash, create=False, default="", validate
     )
 
 
-def json_plan(path, transform, expected_hash, create=False, default=None, validate=None):
+def json_plan(
+    path, transform, expected_hash, create=False, default=None, validate=None
+):
     return TargetPlan(
         path,
         transform,
@@ -210,7 +227,9 @@ def json_plan(path, transform, expected_hash, create=False, default=None, valida
     )
 
 
-def bytes_plan(path, transform, expected_hash, create=False, default=b"", validate=None):
+def bytes_plan(
+    path, transform, expected_hash, create=False, default=b"", validate=None
+):
     return TargetPlan(
         path,
         transform,
@@ -343,10 +362,12 @@ def _stage(plan, operation):
             result = plan.validate(replacement)
             if result is False:
                 raise ValueError("Validator rejected %s." % plan.path)
-        replacement_text = json.dumps(
-            replacement, ensure_ascii=False, indent=2, sort_keys=True
-        ) + "\n"
-        replacement_bytes = mutation._encode_text(replacement_text, encoding="utf-8", bom=False)
+        replacement_text = (
+            json.dumps(replacement, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        )
+        replacement_bytes = mutation._encode_text(
+            replacement_text, encoding="utf-8", bom=False
+        )
         after_hash = mutation.hash_bytes(replacement_bytes)
     else:
         current = before.text if before.exists else (plan.default or "")
@@ -363,9 +384,8 @@ def _stage(plan, operation):
             bom=before.bom if before.exists else False,
         )
         after_hash = mutation.hash_bytes(replacement_bytes)
-    changed = (
-        (plan.delete and before.exists)
-        or (not plan.delete and (not before.exists or before.content_hash != after_hash))
+    changed = (plan.delete and before.exists) or (
+        not plan.delete and (not before.exists or before.content_hash != after_hash)
     )
     return {
         "plan": plan,
@@ -453,7 +473,9 @@ def _compensate(committed, journal_handle=None):
                 journal_handle.mark_target(index, compensation_state="verified")
         except Exception as exc:
             if journal_handle is not None and index is not None:
-                journal_handle.mark_target(index, compensation_state="failed", error=exc)
+                journal_handle.mark_target(
+                    index, compensation_state="failed", error=exc
+                )
             errors.append(exc)
     return errors
 

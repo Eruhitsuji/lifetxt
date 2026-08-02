@@ -48,10 +48,22 @@ def _install_profile_dependencies(python, root, profile, include_web):
     _run([python, "-m", "pip", "install", "--upgrade", "pip"], cwd=root)
     _run([python, "-m", "pip", "install", "-e", "."], cwd=root)
     if include_web:
-        _run([python, "-m", "pip", "install", "-r", "requirements-web.txt", "httpx"], cwd=root)
+        _run(
+            [python, "-m", "pip", "install", "-r", "requirements-web.txt", "httpx"],
+            cwd=root,
+        )
     if profile == "release":
         _run(
-            [python, "-m", "pip", "install", "build", "jsonschema>=4", "twine", "tomli; python_version<'3.11'"],
+            [
+                python,
+                "-m",
+                "pip",
+                "install",
+                "build",
+                "jsonschema>=4",
+                "twine",
+                "tomli; python_version<'3.11'",
+            ],
             cwd=root,
         )
 
@@ -59,14 +71,21 @@ def _install_profile_dependencies(python, root, profile, include_web):
 def _run_tests(python, root, profile):
     _run([python, "-m", "compileall", "lifetxt", "tests", "scripts"], cwd=root)
     if profile == "mcp":
-        _run([python, "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp*.py"], cwd=root)
+        _run(
+            [python, "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp*.py"],
+            cwd=root,
+        )
         _run([python, "-m", "unittest", "tests.test_surface_runtime"], cwd=root)
     else:
         _run([python, "-m", "unittest", "discover"], cwd=root)
 
 
 def _run_examples(python, root):
-    for sample in ("examples/minimal_life.txt", "examples/status_presence.txt", "examples/messages_life.txt"):
+    for sample in (
+        "examples/minimal_life.txt",
+        "examples/status_presence.txt",
+        "examples/messages_life.txt",
+    ):
         _run([python, "-m", "lifetxt", "check", sample], cwd=root)
 
 
@@ -81,16 +100,31 @@ def _run_release_profile(python, root):
     if not os.path.isdir(manifest_dir):
         os.makedirs(manifest_dir)
     _run(
-        [python, "scripts/check_release_policy.py", "--root", root, "--pretty", "--output", manifest] + samples,
+        [
+            python,
+            "scripts/check_release_policy.py",
+            "--root",
+            root,
+            "--pretty",
+            "--output",
+            manifest,
+        ]
+        + samples,
         cwd=root,
     )
-    _run([python, "-m", "lifetxt", "safety", "release-gate", "--root", root] + samples, cwd=root)
+    _run(
+        [python, "-m", "lifetxt", "safety", "release-gate", "--root", root] + samples,
+        cwd=root,
+    )
 
     wheel_dir = tempfile.mkdtemp(prefix="lifetxt-wheel-")
     install_dir = tempfile.mkdtemp(prefix="lifetxt-wheel-install-")
     smoke_dir = tempfile.mkdtemp(prefix="lifetxt-wheel-smoke-")
     try:
-        _run([python, "-m", "build", "--sdist", "--wheel", "--outdir", wheel_dir], cwd=root)
+        _run(
+            [python, "-m", "build", "--sdist", "--wheel", "--outdir", wheel_dir],
+            cwd=root,
+        )
         archives = sorted(glob.glob(os.path.join(wheel_dir, "*")))
         if not archives:
             raise RuntimeError("Build produced no distribution archives.")
@@ -105,7 +139,13 @@ def _run_release_profile(python, root):
         _run([wheel_python, "-m", "lifetxt", "--help"], cwd=smoke_dir)
         _run([_script_in_venv(install_dir, "lifetxt"), "--help"], cwd=smoke_dir)
         _run(
-            [wheel_python, "-m", "lifetxt", "check", os.path.join(root, "examples", "minimal_life.txt")],
+            [
+                wheel_python,
+                "-m",
+                "lifetxt",
+                "check",
+                os.path.join(root, "examples", "minimal_life.txt"),
+            ],
             cwd=smoke_dir,
         )
     finally:
@@ -142,24 +182,46 @@ def run_for_interpreter(command, root, profile, include_web, keep_venv, skip_smo
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="Run named lifetxt CI profiles in clean virtual environments.")
-    parser.add_argument("--profile", choices=PROFILES, default="core", help="Validation profile. release is the strict publication gate.")
+    parser = argparse.ArgumentParser(
+        description="Run named lifetxt CI profiles in clean virtual environments."
+    )
+    parser.add_argument(
+        "--profile",
+        choices=PROFILES,
+        default="core",
+        help="Validation profile. release is the strict publication gate.",
+    )
     parser.add_argument(
         "--python",
         dest="interpreters",
         action="append",
         help='Python launcher command. Repeat for a matrix, e.g. --python python3.10 --python "py -3.12".',
     )
-    parser.add_argument("--no-web", action="store_true", help="Override the profile and omit optional Web dependencies.")
-    parser.add_argument("--keep-venv", action="store_true", help="Keep reusable environments under .cache/ci-like instead of deleting them.")
-    parser.add_argument("--skip-smoke", action="store_true", help="Skip scripts/smoke_test.py for a faster edit/test loop.")
+    parser.add_argument(
+        "--no-web",
+        action="store_true",
+        help="Override the profile and omit optional Web dependencies.",
+    )
+    parser.add_argument(
+        "--keep-venv",
+        action="store_true",
+        help="Keep reusable environments under .cache/ci-like instead of deleting them.",
+    )
+    parser.add_argument(
+        "--skip-smoke",
+        action="store_true",
+        help="Skip scripts/smoke_test.py for a faster edit/test loop.",
+    )
     return parser
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    commands = [shlex.split(value, posix=os.name != "nt") for value in (args.interpreters or [sys.executable])]
+    commands = [
+        shlex.split(value, posix=os.name != "nt")
+        for value in (args.interpreters or [sys.executable])
+    ]
     include_web = args.profile in ("core", "web", "release") and not args.no_web
     for command in commands:
         if not command:
@@ -172,7 +234,10 @@ def main(argv=None):
             args.keep_venv,
             args.skip_smoke,
         )
-    print("CI-like %s profile passed for %d interpreter(s)." % (args.profile, len(commands)))
+    print(
+        "CI-like %s profile passed for %d interpreter(s)."
+        % (args.profile, len(commands))
+    )
     return 0
 
 

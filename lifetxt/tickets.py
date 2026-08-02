@@ -49,7 +49,14 @@ TICKET_FIELDS = OrderedDict(
     )
 )
 
-RELATION_FIELDS = ("parent", "depends_on", "blocks", "related", "duplicate_of", "replaced_by")
+RELATION_FIELDS = (
+    "parent",
+    "depends_on",
+    "blocks",
+    "related",
+    "duplicate_of",
+    "replaced_by",
+)
 
 # Default detailed statuses and the coarse life.txt status each maps to. Users
 # can override or extend through the ``ticketing.statuses`` config, but these
@@ -104,7 +111,14 @@ def status_map(config):
         for name, meta in configured.items():
             if isinstance(meta, dict) and meta.get("life_status"):
                 mapping[str(name)] = str(meta["life_status"])
-            elif isinstance(meta, str) and meta in ("[ ]", "[/]", "[?]", "[>]", "[x]", "[-]"):
+            elif isinstance(meta, str) and meta in (
+                "[ ]",
+                "[/]",
+                "[?]",
+                "[>]",
+                "[x]",
+                "[-]",
+            ):
                 mapping[str(name)] = meta
             else:
                 mapping.setdefault(str(name), "[ ]")
@@ -121,7 +135,10 @@ def id_key(config):
 
 
 def is_ticket(item):
-    return TICKET_MARKER in [str(v) for v in item.details.get("record", [])] and item.kind == "T"
+    return (
+        TICKET_MARKER in [str(v) for v in item.details.get("record", [])]
+        and item.kind == "T"
+    )
 
 
 def _first(item, key, default=None):
@@ -148,7 +165,7 @@ def next_ticket_id(items, config):
     for item in iter_tickets(items):
         value = ticket_id_of(item, key)
         if value and str(value).startswith(prefix + "-"):
-            suffix = str(value)[len(prefix) + 1:]
+            suffix = str(value)[len(prefix) + 1 :]
             if suffix.isdigit():
                 highest = max(highest, int(suffix))
     return "%s-%d" % (prefix, highest + 1)
@@ -220,13 +237,22 @@ def ticket_list(items, config, filters=None, key="id"):
         if not _matches_filters(summary, filters):
             continue
         rows.append(summary)
-    rows.sort(key=lambda r: (str(r["id"] or "")))
+    rows.sort(key=lambda r: str(r["id"] or ""))
     return rows
 
 
 def _matches_filters(summary, filters):
-    for field in ("tracker", "ticket_status", "priority", "severity", "assignee",
-                  "component", "version", "sprint", "project"):
+    for field in (
+        "tracker",
+        "ticket_status",
+        "priority",
+        "severity",
+        "assignee",
+        "component",
+        "version",
+        "sprint",
+        "project",
+    ):
         wanted = filters.get(field)
         if wanted and str(summary.get(field)) != str(wanted):
             return False
@@ -240,22 +266,36 @@ def validate_ticket(item, config, key="id"):
     rows = []
     tid = ticket_id_of(item, key)
     if not tid:
-        rows.append(_diag("warning", "TK001", "Ticket has no id.", "Assign a stable id.", item))
+        rows.append(
+            _diag("warning", "TK001", "Ticket has no id.", "Assign a stable id.", item)
+        )
 
     detailed = ticket_status_of(item)
     mapping = status_map(config)
     if detailed:
         if detailed not in mapping:
-            rows.append(_diag("warning", "TK002",
-                              "Unknown ticket_status %r." % detailed,
-                              "Add it to ticketing.statuses or use a known status.", item))
+            rows.append(
+                _diag(
+                    "warning",
+                    "TK002",
+                    "Unknown ticket_status %r." % detailed,
+                    "Add it to ticketing.statuses or use a known status.",
+                    item,
+                )
+            )
         else:
             expected_life = mapping[detailed]
             if item.status != expected_life:
-                rows.append(_diag("error", "TK003",
-                                  "ticket_status %r expects life status %s but item is %s."
-                                  % (detailed, expected_life, item.status),
-                                  "Align the [ ]/[x]/... status with the ticket_status.", item))
+                rows.append(
+                    _diag(
+                        "error",
+                        "TK003",
+                        "ticket_status %r expects life status %s but item is %s."
+                        % (detailed, expected_life, item.status),
+                        "Align the [ ]/[x]/... status with the ticket_status.",
+                        item,
+                    )
+                )
 
     rows.extend(_registry_diagnostics(item, config))
     rows.extend(_required_field_diagnostics(item, config))
@@ -277,9 +317,15 @@ def _registry_diagnostics(item, config):
     for field, allowed in registries.items():
         value = _first(item, field)
         if value and allowed and str(value) not in allowed:
-            rows.append(_diag("warning", "TK004",
-                              "%s %r is not in the configured list." % (field, value),
-                              "Use one of: %s." % ", ".join(allowed), item))
+            rows.append(
+                _diag(
+                    "warning",
+                    "TK004",
+                    "%s %r is not in the configured list." % (field, value),
+                    "Use one of: %s." % ", ".join(allowed),
+                    item,
+                )
+            )
     return rows
 
 
@@ -288,9 +334,15 @@ def _required_field_diagnostics(item, config):
     required = _configured_list(config, "required_fields", [])
     for field in required:
         if not item.details.get(field):
-            rows.append(_diag("error", "TK005",
-                              "Required ticket field %r is missing." % field,
-                              "Set %s: on the ticket." % field, item))
+            rows.append(
+                _diag(
+                    "error",
+                    "TK005",
+                    "Required ticket field %r is missing." % field,
+                    "Set %s: on the ticket." % field,
+                    item,
+                )
+            )
     return rows
 
 
@@ -307,13 +359,30 @@ def _diag(severity, code, message, hint, item):
     )
 
 
-def build_ticket_line(config, subject, tracker=None, priority=None, severity=None,
-                      assignee=None, reporter=None, component=None, version=None,
-                      sprint=None, ticket_status="new", project=None, due=None,
-                      est=None, watchers=None, ticket_id=None, extra=None):
+def build_ticket_line(
+    config,
+    subject,
+    tracker=None,
+    priority=None,
+    severity=None,
+    assignee=None,
+    reporter=None,
+    component=None,
+    version=None,
+    sprint=None,
+    ticket_status="new",
+    project=None,
+    due=None,
+    est=None,
+    watchers=None,
+    ticket_id=None,
+    extra=None,
+):
     """Build a new ticket life.txt line with defaults applied."""
     section = ticketing_config(config)
-    defaults = section.get("defaults") if isinstance(section.get("defaults"), dict) else {}
+    defaults = (
+        section.get("defaults") if isinstance(section.get("defaults"), dict) else {}
+    )
     tracker = tracker or defaults.get("tracker") or "task"
     priority = priority or defaults.get("priority") or "normal"
     mapping = status_map(config)

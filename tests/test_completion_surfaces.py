@@ -3,6 +3,7 @@
 The point of these is that one source feeds every surface, so a value the
 shell offers is a value the Web UI and the TUI offer too.
 """
+
 import argparse
 import os
 import shutil
@@ -49,7 +50,9 @@ class SharedCandidateTests(unittest.TestCase):
         self.assertEqual(["research", "work"], pool)
 
     def test_non_matching_values_are_dropped(self):
-        self.assertEqual(["research"], completion.candidates("project", "res", items=_items()))
+        self.assertEqual(
+            ["research"], completion.candidates("project", "res", items=_items())
+        )
         self.assertEqual([], completion.candidates("project", "zzz", items=_items()))
 
     def test_prefix_ranking_puts_starts_with_first(self):
@@ -63,7 +66,7 @@ class SharedCandidateTests(unittest.TestCase):
     def test_builtins_precede_file_values(self):
         values = completion.candidates("state", items=_items())
 
-        self.assertEqual(list(COMMON_STATES), values[:len(COMMON_STATES)])
+        self.assertEqual(list(COMMON_STATES), values[: len(COMMON_STATES)])
         self.assertIn("hyperfocus", values)
 
     def test_person_spans_every_people_key(self):
@@ -100,20 +103,30 @@ class TuiArgumentCompletionTests(unittest.TestCase):
     def test_file_derived_arguments_complete(self):
         state = self._state()
 
-        self.assertEqual(["research"], tui_app.argument_suggestions(state, "/project re")[1])
+        self.assertEqual(
+            ["research"], tui_app.argument_suggestions(state, "/project re")[1]
+        )
         self.assertEqual(["urgent"], tui_app.argument_suggestions(state, "/tag ur")[1])
-        self.assertEqual(["alice"], tui_app.argument_suggestions(state, "/assign al")[1])
-        self.assertEqual(["office"], tui_app.argument_suggestions(state, "/context of")[1])
+        self.assertEqual(
+            ["alice"], tui_app.argument_suggestions(state, "/assign al")[1]
+        )
+        self.assertEqual(
+            ["office"], tui_app.argument_suggestions(state, "/context of")[1]
+        )
 
     def test_state_command_offers_the_files_own_state(self):
         state = self._state()
 
-        self.assertIn("hyperfocus", tui_app.argument_suggestions(state, "/state hyper")[1])
+        self.assertIn(
+            "hyperfocus", tui_app.argument_suggestions(state, "/state hyper")[1]
+        )
 
     def test_date_tokens_complete_for_due(self):
         state = self._state()
 
-        self.assertEqual(["tomorrow"], tui_app.argument_suggestions(state, "/due tomo")[1])
+        self.assertEqual(
+            ["tomorrow"], tui_app.argument_suggestions(state, "/due tomo")[1]
+        )
 
     def test_commands_without_value_arguments_offer_nothing(self):
         state = self._state()
@@ -176,7 +189,9 @@ class TuiArgumentCompletionTests(unittest.TestCase):
         state.input = "/tim"
         state.palette_index = 0
 
-        rendered = ["".join(t for t, _ in line) for line in tui_app._build_palette(state, 80)]
+        rendered = [
+            "".join(t for t, _ in line) for line in tui_app._build_palette(state, 80)
+        ]
 
         self.assertTrue(any("/timer" in line for line in rendered), rendered)
 
@@ -187,7 +202,9 @@ class TuiArgumentCompletionTests(unittest.TestCase):
             if not command.values:
                 continue
             if isinstance(command.values, tuple):
-                self.assertTrue(all(isinstance(v, str) for v in command.values), command.name)
+                self.assertTrue(
+                    all(isinstance(v, str) for v in command.values), command.name
+                )
                 continue
             self.assertIn(
                 command.values,
@@ -213,7 +230,17 @@ class WebApiCompletionTests(unittest.TestCase):
         self.client = TestClient(create_app(paths=[path]))
 
     def test_returns_candidates_for_each_kind(self):
-        for kind in ("state", "project", "tag", "id", "person", "context", "key", "type", "status"):
+        for kind in (
+            "state",
+            "project",
+            "tag",
+            "id",
+            "person",
+            "context",
+            "key",
+            "type",
+            "status",
+        ):
             response = self.client.get("/api/complete", params={"kind": kind})
 
             self.assertEqual(200, response.status_code, kind)
@@ -222,16 +249,22 @@ class WebApiCompletionTests(unittest.TestCase):
             self.assertTrue(body["candidates"], kind)
 
     def test_prefix_narrows_the_result(self):
-        body = self.client.get("/api/complete", params={"kind": "project", "prefix": "res"}).json()
+        body = self.client.get(
+            "/api/complete", params={"kind": "project", "prefix": "res"}
+        ).json()
 
         self.assertEqual(["research"], body["candidates"])
 
     def test_limit_is_clamped_not_trusted(self):
         # A hostile or mistyped limit must not turn completion into a dump.
-        body = self.client.get("/api/complete", params={"kind": "id", "limit": 99999}).json()
+        body = self.client.get(
+            "/api/complete", params={"kind": "id", "limit": 99999}
+        ).json()
         self.assertLessEqual(len(body["candidates"]), 200)
 
-        body = self.client.get("/api/complete", params={"kind": "id", "limit": "abc"}).json()
+        body = self.client.get(
+            "/api/complete", params={"kind": "id", "limit": "abc"}
+        ).json()
         self.assertLessEqual(len(body["candidates"]), 20)
 
     def test_unknown_kind_is_rejected_with_the_supported_list(self):
@@ -244,7 +277,9 @@ class WebApiCompletionTests(unittest.TestCase):
         # The browser must not drift from the shell and the TUI.
         body = self.client.get("/api/complete", params={"kind": "person"}).json()
 
-        self.assertEqual(completion.candidates("person", items=_items()), body["candidates"])
+        self.assertEqual(
+            completion.candidates("person", items=_items()), body["candidates"]
+        )
 
 
 class McpCompletionTests(unittest.TestCase):
@@ -259,7 +294,9 @@ class McpCompletionTests(unittest.TestCase):
             handle.write(SAMPLE)
 
     def _call(self, arguments):
-        context = self.mcp.McpContext(paths=[self.path], writable_path=self.path, config={})
+        context = self.mcp.McpContext(
+            paths=[self.path], writable_path=self.path, config={}
+        )
         return self.mcp.call_tool("complete", arguments, context)
 
     def test_tool_is_registered_and_read_only(self):
@@ -279,7 +316,9 @@ class McpCompletionTests(unittest.TestCase):
         self.assertEqual(len(result["values"]), result["count"])
 
     def test_prefix_and_limit_apply(self):
-        self.assertEqual(["busy"], self._call({"kind": "state", "prefix": "bu"})["values"])
+        self.assertEqual(
+            ["busy"], self._call({"kind": "state", "prefix": "bu"})["values"]
+        )
         self.assertEqual(1, len(self._call({"kind": "id", "limit": 1})["values"]))
 
     def test_unknown_kind_raises(self):

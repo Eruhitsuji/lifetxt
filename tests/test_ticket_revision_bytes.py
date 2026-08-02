@@ -34,7 +34,9 @@ class TicketRevisionByteTests(unittest.TestCase):
             self.assertTrue(changed.startswith(codecs.BOM_UTF8))
             self.assertIn(b"\r\n", changed)
             self.assertNotIn(b"\n", changed.replace(b"\r\n", b""))
-            self.assertEqual(hashlib.sha256(changed).hexdigest(), updated.revision_after)
+            self.assertEqual(
+                hashlib.sha256(changed).hexdigest(), updated.revision_after
+            )
             self.assertEqual(updated.revision_after, ticket_file_revision(path))
 
 

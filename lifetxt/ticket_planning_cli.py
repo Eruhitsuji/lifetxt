@@ -1,4 +1,5 @@
 """CLI adapters for ticket versions, sprints, backlog, and roadmap."""
+
 from __future__ import unicode_literals
 
 import argparse
@@ -53,7 +54,9 @@ def _target(args, cli_module):
     if not path:
         paths = cli_module.config_paths(config)
         path = paths[0] if paths else "life.txt"
-    cli_module._ensure_writable_path(path, config, getattr(args, "planning_operation", "ticket planning"))
+    cli_module._ensure_writable_path(
+        path, config, getattr(args, "planning_operation", "ticket planning")
+    )
     return config, cli_module.id_key_from_config(config), path
 
 
@@ -66,7 +69,9 @@ def _read(args, cli_module):
 
 
 def _actor(args, config, cli_module):
-    return str(getattr(args, "actor", None) or cli_module.config_user_name(config) or "local")
+    return str(
+        getattr(args, "actor", None) or cli_module.config_user_name(config) or "local"
+    )
 
 
 def _write_result(args, cli_module, result):
@@ -91,7 +96,9 @@ def _write_result(args, cli_module, result):
 
 
 def _write_options(parser):
-    parser.add_argument("--revision", "--expected-revision", dest="expected_revision", required=True)
+    parser.add_argument(
+        "--revision", "--expected-revision", dest="expected_revision", required=True
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--pretty", action="store_true")
@@ -99,7 +106,6 @@ def _write_options(parser):
 
 def _input(parser, cli_module):
     cli_module._add_input_paths(parser)
-
 
 
 def _safe_write_command(function):
@@ -144,7 +150,9 @@ def _command_version_list(args):
     _config, _key, items = _read(args, cli_module)
     tickets = iter_tickets(items)
     rows = [version_view(item, tickets) for item in iter_versions(items, args.project)]
-    rows.sort(key=lambda row: (row["release"] or row["due"] or "9999-12-31", row["id"] or ""))
+    rows.sort(
+        key=lambda row: (row["release"] or row["due"] or "9999-12-31", row["id"] or "")
+    )
     if args.format == "json":
         _json(cli_module, {"count": len(rows), "versions": rows}, pretty=args.pretty)
     else:
@@ -168,7 +176,11 @@ def _command_version_list(args):
 
 
 def _find_version(items, identifier):
-    matches = [item for item in iter_versions(items) if str((item.details.get("id") or [""])[0]) == str(identifier)]
+    matches = [
+        item
+        for item in iter_versions(items)
+        if str((item.details.get("id") or [""])[0]) == str(identifier)
+    ]
     if not matches:
         raise ValueError("Version %r not found." % identifier)
     return matches[0]
@@ -187,12 +199,19 @@ def _command_version_show(args):
             None,
             "%s %s\n  project=%s state=%s due=%s release=%s tickets=%d\n"
             % (
-                row["id"], row["title"], row["project"], row["state"],
-                row["due"] or "-", row["release"] or "-", row["ticket_count"],
+                row["id"],
+                row["title"],
+                row["project"],
+                row["state"],
+                row["due"] or "-",
+                row["release"] or "-",
+                row["ticket_count"],
             ),
         )
         if row["ticket_ids"]:
-            cli_module.write_text(None, "  tickets: %s\n" % ", ".join(row["ticket_ids"]))
+            cli_module.write_text(
+                None, "  tickets: %s\n" % ", ".join(row["ticket_ids"])
+            )
     return 0
 
 
@@ -268,7 +287,11 @@ def _command_sprint_list(args):
 
 
 def _find_sprint(items, identifier):
-    matches = [item for item in iter_sprints(items) if str((item.details.get("id") or [""])[0]) == str(identifier)]
+    matches = [
+        item
+        for item in iter_sprints(items)
+        if str((item.details.get("id") or [""])[0]) == str(identifier)
+    ]
     if not matches:
         raise ValueError("Sprint %r not found." % identifier)
     return matches[0]
@@ -287,12 +310,20 @@ def _command_sprint_show(args):
             None,
             "%s %s\n  project=%s state=%s range=%s..%s capacity=%s points=%s\n"
             % (
-                row["id"], row["title"], row["project"], row["state"],
-                row["start"], row["end"], row["capacity"] or "-", row["story_points"],
+                row["id"],
+                row["title"],
+                row["project"],
+                row["state"],
+                row["start"],
+                row["end"],
+                row["capacity"] or "-",
+                row["story_points"],
             ),
         )
         if row["open_ticket_ids"]:
-            cli_module.write_text(None, "  unresolved: %s\n" % ", ".join(row["open_ticket_ids"]))
+            cli_module.write_text(
+                None, "  unresolved: %s\n" % ", ".join(row["open_ticket_ids"])
+            )
         if row["warnings"]:
             cli_module.write_text(None, "  warnings: %s\n" % ", ".join(row["warnings"]))
     return 0
@@ -396,18 +427,31 @@ def _command_planning_report(args, mode):
             cli_module.write_text(
                 None,
                 "  version %-12s %-10s due=%-10s tickets=%d %s\n"
-                % (row["id"], row["state"], row["due"] or row["release"] or "-", row["ticket_count"], row["title"]),
+                % (
+                    row["id"],
+                    row["state"],
+                    row["due"] or row["release"] or "-",
+                    row["ticket_count"],
+                    row["title"],
+                ),
             )
         for row in report["sprints"]:
             cli_module.write_text(
                 None,
                 "  sprint  %-12s %-10s %s..%s open=%d/%d %s\n"
                 % (
-                    row["id"], row["state"], row["start"], row["end"],
-                    row["open_ticket_count"], row["ticket_count"], row["title"],
+                    row["id"],
+                    row["state"],
+                    row["start"],
+                    row["end"],
+                    row["open_ticket_count"],
+                    row["ticket_count"],
+                    row["title"],
                 ),
             )
-    return 0 if not any(row["severity"] == "error" for row in report["diagnostics"]) else 1
+    return (
+        0 if not any(row["severity"] == "error" for row in report["diagnostics"]) else 1
+    )
 
 
 def _command_planning_validate(args):
@@ -420,7 +464,10 @@ def _command_planning_validate(args):
         _json(cli_module, value, pretty=args.pretty)
     else:
         for row in rows:
-            cli_module.write_text(None, "%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]))
+            cli_module.write_text(
+                None,
+                "%s %s: %s\n" % (row["severity"].upper(), row["code"], row["message"]),
+            )
         if not rows:
             cli_module.write_text(None, "Ticket planning records are valid.\n")
     return 0 if value["ok"] else 1
@@ -449,7 +496,9 @@ def _install_version(root, cli_module):
     new.add_argument("--parent-version")
     new.add_argument("--path")
     _write_options(new)
-    new.set_defaults(func=_safe_write_command(_command_version_new), planning_operation="version new")
+    new.set_defaults(
+        func=_safe_write_command(_command_version_new), planning_operation="version new"
+    )
     listing = actions.add_parser("list")
     _read_options(listing, cli_module)
     listing.set_defaults(func=_command_version_list)
@@ -459,13 +508,23 @@ def _install_version(root, cli_module):
     show.add_argument("--format", choices=("text", "json"), default="text")
     show.add_argument("--pretty", action="store_true")
     show.set_defaults(func=_command_version_show)
-    for name, state in (("close", "closed"), ("release", "released"), ("lock", "locked"), ("reopen", "open")):
+    for name, state in (
+        ("close", "closed"),
+        ("release", "released"),
+        ("lock", "locked"),
+        ("reopen", "open"),
+    ):
         command = actions.add_parser(name)
         command.add_argument("id")
         command.add_argument("--path")
         command.add_argument("--force", action="store_true")
         _write_options(command)
-        command.set_defaults(func=_safe_write_command(lambda args, value=state: _command_version_state(args, value)), planning_operation="version %s" % name)
+        command.set_defaults(
+            func=_safe_write_command(
+                lambda args, value=state: _command_version_state(args, value)
+            ),
+            planning_operation="version %s" % name,
+        )
 
 
 def _install_sprint(root, cli_module):
@@ -485,7 +544,9 @@ def _install_sprint(root, cli_module):
     new.add_argument("--version")
     new.add_argument("--path")
     _write_options(new)
-    new.set_defaults(func=_safe_write_command(_command_sprint_new), planning_operation="sprint new")
+    new.set_defaults(
+        func=_safe_write_command(_command_sprint_new), planning_operation="sprint new"
+    )
     listing = actions.add_parser("list")
     _read_options(listing, cli_module)
     listing.set_defaults(func=_command_sprint_list)
@@ -495,18 +556,29 @@ def _install_sprint(root, cli_module):
     show.add_argument("--format", choices=("text", "json"), default="text")
     show.add_argument("--pretty", action="store_true")
     show.set_defaults(func=_command_sprint_show)
-    for name, state in (("start", "active"), ("close", "closed"), ("reopen", "planned")):
+    for name, state in (
+        ("start", "active"),
+        ("close", "closed"),
+        ("reopen", "planned"),
+    ):
         command = actions.add_parser(name)
         command.add_argument("id")
         command.add_argument("--path")
         command.add_argument("--force", action="store_true")
         _write_options(command)
-        command.set_defaults(func=_safe_write_command(lambda args, value=state: _command_sprint_state(args, value)), planning_operation="sprint %s" % name)
+        command.set_defaults(
+            func=_safe_write_command(
+                lambda args, value=state: _command_sprint_state(args, value)
+            ),
+            planning_operation="sprint %s" % name,
+        )
 
 
 def _install_ticket(actions, cli_module):
     if "plan" not in actions.choices:
-        command = actions.add_parser("plan", help="Assign or clear version/sprint membership with an event.")
+        command = actions.add_parser(
+            "plan", help="Assign or clear version/sprint membership with an event."
+        )
         command.add_argument("id")
         _input(command, cli_module)
         command.add_argument("--version")
@@ -522,9 +594,13 @@ def _install_ticket(actions, cli_module):
     for name in ("backlog", "roadmap"):
         if name in actions.choices:
             continue
-        command = actions.add_parser(name, help="Show the shared %s planning view." % name)
+        command = actions.add_parser(
+            name, help="Show the shared %s planning view." % name
+        )
         _read_options(command, cli_module)
-        command.set_defaults(func=(lambda args, mode=name: _command_planning_report(args, mode)))
+        command.set_defaults(
+            func=(lambda args, mode=name: _command_planning_report(args, mode))
+        )
     if "validate-planning" not in actions.choices:
         command = actions.add_parser("validate-planning")
         _read_options(command, cli_module)

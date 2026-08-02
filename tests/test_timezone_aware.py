@@ -75,7 +75,9 @@ class TimezoneComparisonTests(unittest.TestCase):
         aware = parse_datetime("2026-07-22T09:30+09:00")
         local = comparison_datetime(aware)
         self.assertEqual(timedelta(minutes=90), (local + timedelta(minutes=90)) - aware)
-        self.assertEqual(timedelta(minutes=-90), aware - (local + timedelta(minutes=90)))
+        self.assertEqual(
+            timedelta(minutes=-90), aware - (local + timedelta(minutes=90))
+        )
 
     def test_timer_elapsed_math_accepts_legacy_naive_now(self):
         aware = parse_datetime("2026-07-22T09:30+09:00")
@@ -150,7 +152,9 @@ class TimezoneInterchangeTests(unittest.TestCase):
         start = parse_datetime("2026-07-22T09:30+09:00")
         occurrences = expand(parse_rule("daily", count=3), start)
         self.assertEqual(3, len(occurrences))
-        self.assertTrue(all(value.utcoffset() == timedelta(hours=9) for value in occurrences))
+        self.assertTrue(
+            all(value.utcoffset() == timedelta(hours=9) for value in occurrences)
+        )
         self.assertEqual(
             [
                 "2026-07-22T09:30+09:00",

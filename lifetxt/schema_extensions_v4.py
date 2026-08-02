@@ -41,7 +41,15 @@ def schema_bundle_v4():
                 _object(
                     "attachment-transaction-v1.schema.json",
                     "lifetxt attachment transaction v1",
-                    ["action", "id", "path", "transaction_id", "journal_path", "recovery_required", "targets"],
+                    [
+                        "action",
+                        "id",
+                        "path",
+                        "transaction_id",
+                        "journal_path",
+                        "recovery_required",
+                        "targets",
+                    ],
                     {
                         "action": {"enum": ["put", "reference", "delete"]},
                         "id": {"type": "string"},
@@ -60,7 +68,15 @@ def schema_bundle_v4():
                 _object(
                     "transaction-policy-v1.schema.json",
                     "lifetxt transaction retention and privacy policy v1",
-                    ["terminal_retention_days", "max_transactions", "max_total_bytes", "max_transaction_bytes", "require_private_permissions", "allow_newer_read_only", "evidence_include_paths"],
+                    [
+                        "terminal_retention_days",
+                        "max_transactions",
+                        "max_total_bytes",
+                        "max_transaction_bytes",
+                        "require_private_permissions",
+                        "allow_newer_read_only",
+                        "evidence_include_paths",
+                    ],
                     {
                         "terminal_retention_days": {"type": "number", "minimum": 0},
                         "max_transactions": {"type": "integer", "minimum": 1},
@@ -89,12 +105,18 @@ def schema_bundle_v4():
                                 "properties": {
                                     "path": {"type": "string"},
                                     "size": {"type": "integer", "minimum": 0},
-                                    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                                    "sha256": {
+                                        "type": "string",
+                                        "pattern": "^[0-9a-f]{64}$",
+                                    },
                                 },
                                 "additionalProperties": False,
                             },
                         },
-                        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                        "manifest_sha256": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$",
+                        },
                     },
                     additional=False,
                 ),
@@ -152,7 +174,15 @@ def schema_bundle_v4():
                 _object(
                     "work-session-v1.schema.json",
                     "lifetxt compound work session v1",
-                    ["running", "id", "transaction_id", "journal_path", "recovery_required", "item_revision", "timer_revision"],
+                    [
+                        "running",
+                        "id",
+                        "transaction_id",
+                        "journal_path",
+                        "recovery_required",
+                        "item_revision",
+                        "timer_revision",
+                    ],
                     {
                         "running": {"type": "boolean"},
                         "id": {"type": "string"},
@@ -175,13 +205,23 @@ def schema_bundle_v4():
                 _object(
                     "clock-boundary-audit-v1.schema.json",
                     "lifetxt direct host-clock boundary audit v1",
-                    ["ok", "baseline_version", "finding_count", "new_findings", "stale_allowances", "classifications"],
+                    [
+                        "ok",
+                        "baseline_version",
+                        "finding_count",
+                        "new_findings",
+                        "stale_allowances",
+                        "classifications",
+                    ],
                     {
                         "ok": {"type": "boolean"},
                         "baseline_version": {"const": 1},
                         "finding_count": {"type": "integer", "minimum": 0},
                         "new_findings": {"type": "array", "items": {"type": "object"}},
-                        "stale_allowances": {"type": "array", "items": {"type": "object"}},
+                        "stale_allowances": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        },
                         "classifications": {"type": "object"},
                     },
                     additional=False,
@@ -194,40 +234,102 @@ def schema_bundle_v4():
 def schema_samples_v4():
     h0 = "0" * 64
     h1 = "1" * 64
-    target = {"path": "/tmp/a", "before_revision": h0, "after_revision": h1, "created": False, "deleted": False}
+    target = {
+        "path": "/tmp/a",
+        "before_revision": h0,
+        "after_revision": h1,
+        "created": False,
+        "deleted": False,
+    }
     return OrderedDict(
         (
             (
                 "attachment-transaction-v1.schema.json",
-                {"action": "reference", "id": "t1", "path": "/tmp/a", "value": "./a#sha256=0000000000000000", "transaction_id": "tx", "journal_path": "/tmp/tx/journal.json", "recovery_required": False, "targets": [target, dict(target, path="/tmp/life.txt")]},
+                {
+                    "action": "reference",
+                    "id": "t1",
+                    "path": "/tmp/a",
+                    "value": "./a#sha256=0000000000000000",
+                    "transaction_id": "tx",
+                    "journal_path": "/tmp/tx/journal.json",
+                    "recovery_required": False,
+                    "targets": [target, dict(target, path="/tmp/life.txt")],
+                },
             ),
             (
                 "transaction-policy-v1.schema.json",
-                {"terminal_retention_days": 30.0, "max_transactions": 500, "max_total_bytes": 268435456, "max_transaction_bytes": 67108864, "require_private_permissions": True, "allow_newer_read_only": True, "evidence_include_paths": False},
+                {
+                    "terminal_retention_days": 30.0,
+                    "max_transactions": 500,
+                    "max_total_bytes": 268435456,
+                    "max_transaction_bytes": 67108864,
+                    "require_private_permissions": True,
+                    "allow_newer_read_only": True,
+                    "evidence_include_paths": False,
+                },
             ),
             (
                 "backup-integrity-v1.schema.json",
-                {"version": 1, "files": [{"path": "journal.json", "size": 10, "sha256": h0}], "manifest_sha256": h1},
+                {
+                    "version": 1,
+                    "files": [{"path": "journal.json", "size": 10, "sha256": h0}],
+                    "manifest_sha256": h1,
+                },
             ),
             (
                 "semantic-write-result-v1.schema.json",
-                {"path": "/tmp/life.txt", "before_hash": h0, "after_hash": h1, "changed": True, "operation": "quick.capture"},
+                {
+                    "path": "/tmp/life.txt",
+                    "before_hash": h0,
+                    "after_hash": h1,
+                    "changed": True,
+                    "operation": "quick.capture",
+                },
             ),
             (
                 "fault-injection-report-v1.schema.json",
-                {"schema_version": 1, "boundary": "before_file_replace", "raised": True, "evidence_preserved": True, "details": {}},
+                {
+                    "schema_version": 1,
+                    "boundary": "before_file_replace",
+                    "raised": True,
+                    "evidence_preserved": True,
+                    "details": {},
+                },
             ),
             (
                 "archive-operation-v1.schema.json",
-                {"mode": "move", "item_count": 1, "destination": "/tmp/archive.txt", "transaction_id": "tx", "targets": [target]},
+                {
+                    "mode": "move",
+                    "item_count": 1,
+                    "destination": "/tmp/archive.txt",
+                    "transaction_id": "tx",
+                    "targets": [target],
+                },
             ),
             (
                 "work-session-v1.schema.json",
-                {"running": True, "id": "t1", "title": "Task", "transaction_id": "tx", "journal_path": "/tmp/tx/journal.json", "recovery_required": False, "item_revision": h1, "timer_revision": h1, "presence": "busy"},
+                {
+                    "running": True,
+                    "id": "t1",
+                    "title": "Task",
+                    "transaction_id": "tx",
+                    "journal_path": "/tmp/tx/journal.json",
+                    "recovery_required": False,
+                    "item_revision": h1,
+                    "timer_revision": h1,
+                    "presence": "busy",
+                },
             ),
             (
                 "clock-boundary-audit-v1.schema.json",
-                {"ok": True, "baseline_version": 1, "finding_count": 9, "new_findings": [], "stale_allowances": [], "classifications": {}},
+                {
+                    "ok": True,
+                    "baseline_version": 1,
+                    "finding_count": 9,
+                    "new_findings": [],
+                    "stale_allowances": [],
+                    "classifications": {},
+                },
             ),
         )
     )

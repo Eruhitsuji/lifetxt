@@ -14,12 +14,20 @@ class StartupPreflightTests(unittest.TestCase):
             open(path, "w", encoding="utf-8").close()
             journal = os.path.join(root, "journals")
             context = McpContext(
-                paths=[path], writable_path=path,
-                config={"transactions": {"journal_dir": journal, "preflight_on_startup": True}},
+                paths=[path],
+                writable_path=path,
+                config={
+                    "transactions": {
+                        "journal_dir": journal,
+                        "preflight_on_startup": True,
+                    }
+                },
             )
             self.assertTrue(context.transaction_preflight["ok"])
             self.assertTrue(os.path.isdir(journal))
-            self.assertEqual(context.transaction_preflight["policy_file"]["state"], "missing")
+            self.assertEqual(
+                context.transaction_preflight["policy_file"]["state"], "missing"
+            )
             self.assertEqual(context.transaction_preflight["errors"], [])
 
 

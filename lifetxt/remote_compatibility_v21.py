@@ -1,4 +1,5 @@
 """Expanded Remote capability and client-compatibility negotiation."""
+
 from __future__ import unicode_literals
 
 import hashlib
@@ -10,20 +11,25 @@ import threading
 from collections import OrderedDict
 
 
-_CONTRACT_PATTERNS = OrderedDict((
-    ("configuration", ("config", "effective-config", "configuration")),
-    ("workspace_manifest", ("workspace-source-manifest", "workspace-manifest")),
-    ("transaction_journal_policy", ("transaction", "journal", "policy")),
-    ("clock", ("clock", "timezone")),
-    ("ticket", ("ticket-v", "ticket-operation", "ticket-project-report")),
-    ("ticket_custom_field", ("ticket-custom-field",)),
-    ("ticket_workflow", ("ticket-workflow", "ticket-transition")),
-    ("ticket_event", ("ticket-event",)),
-    ("time_entry", ("time-entry",)),
-    ("ticket_planning", ("ticket-version", "ticket-sprint", "ticket-planning")),
-    ("attachment", ("attachment", "directory-package", "package-manifest")),
-    ("remote_resource", ("remote-capability", "remote-read-response", "remote-diagnostics")),
-))
+_CONTRACT_PATTERNS = OrderedDict(
+    (
+        ("configuration", ("config", "effective-config", "configuration")),
+        ("workspace_manifest", ("workspace-source-manifest", "workspace-manifest")),
+        ("transaction_journal_policy", ("transaction", "journal", "policy")),
+        ("clock", ("clock", "timezone")),
+        ("ticket", ("ticket-v", "ticket-operation", "ticket-project-report")),
+        ("ticket_custom_field", ("ticket-custom-field",)),
+        ("ticket_workflow", ("ticket-workflow", "ticket-transition")),
+        ("ticket_event", ("ticket-event",)),
+        ("time_entry", ("time-entry",)),
+        ("ticket_planning", ("ticket-version", "ticket-sprint", "ticket-planning")),
+        ("attachment", ("attachment", "directory-package", "package-manifest")),
+        (
+            "remote_resource",
+            ("remote-capability", "remote-read-response", "remote-diagnostics"),
+        ),
+    )
+)
 _VERSION_RE = re.compile(r"-v([0-9]+)(?:[.-]|$)")
 _SCHEMA_INVENTORY = None
 _SCHEMA_INVENTORY_LOCK = threading.Lock()
@@ -49,22 +55,36 @@ def optional_dependencies():
     if _OPTIONAL_DEPENDENCIES is None:
         with _OPTIONAL_DEPENDENCIES_LOCK:
             if _OPTIONAL_DEPENDENCIES is None:
-                groups = OrderedDict((
-                    ("web", ("fastapi", "uvicorn")),
-                    ("tui", ("textual", "watchdog")),
-                ))
+                groups = OrderedDict(
+                    (
+                        ("web", ("fastapi", "uvicorn")),
+                        ("tui", ("textual", "watchdog")),
+                    )
+                )
                 _OPTIONAL_DEPENDENCIES = OrderedDict(
                     (
                         name,
-                        OrderedDict((
-                            ("available", all(_module_available(module) for module in modules)),
-                            ("modules", list(modules)),
-                        )),
+                        OrderedDict(
+                            (
+                                (
+                                    "available",
+                                    all(
+                                        _module_available(module) for module in modules
+                                    ),
+                                ),
+                                ("modules", list(modules)),
+                            )
+                        ),
                     )
                     for name, modules in groups.items()
                 )
     return OrderedDict(
-        (name, OrderedDict((("available", row["available"]), ("modules", list(row["modules"])))))
+        (
+            name,
+            OrderedDict(
+                (("available", row["available"]), ("modules", list(row["modules"])))
+            ),
+        )
         for name, row in _OPTIONAL_DEPENDENCIES.items()
     )
 
@@ -78,7 +98,9 @@ def _schema_inventory():
 
                 bundle = OrderedDict(safety_foundation.schema_bundle())
                 names = tuple(sorted(str(name) for name in bundle))
-                canonical = json.dumps(bundle, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+                canonical = json.dumps(
+                    bundle, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                )
                 revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
                 _SCHEMA_INVENTORY = (names, revision)
     names, revision = _SCHEMA_INVENTORY
@@ -106,45 +128,64 @@ def contract_versions(schema_names=None):
     for contract, patterns in _CONTRACT_PATTERNS.items():
         names = [name for name in schema_names if _matches(name, patterns)]
         versions = _schema_versions(names)
-        result[contract] = OrderedDict((
-            ("available", bool(names)),
-            ("minimum", min(versions) if versions else None),
-            ("current", max(versions) if versions else None),
-            ("schemas", names),
-        ))
+        result[contract] = OrderedDict(
+            (
+                ("available", bool(names)),
+                ("minimum", min(versions) if versions else None),
+                ("current", max(versions) if versions else None),
+                ("schemas", names),
+            )
+        )
     return result
 
 
 def compatibility_policy():
     from .remote_access import REMOTE_PROTOCOL_CURRENT, REMOTE_PROTOCOL_MIN
 
-    return OrderedDict((
-        ("minimum_client_protocol", REMOTE_PROTOCOL_MIN),
-        ("current_client_protocol", REMOTE_PROTOCOL_CURRENT),
-        ("supported_protocols", list(range(REMOTE_PROTOCOL_MIN, REMOTE_PROTOCOL_CURRENT + 1))),
-        ("unknown_fields", "ignore"),
-        ("missing_optional_features", "disable"),
-        ("removed_features", "explicit-unsupported"),
-        ("future_protocols", "reject"),
-        ("downgrade", "client-selects-supported-protocol"),
-    ))
+    return OrderedDict(
+        (
+            ("minimum_client_protocol", REMOTE_PROTOCOL_MIN),
+            ("current_client_protocol", REMOTE_PROTOCOL_CURRENT),
+            (
+                "supported_protocols",
+                list(range(REMOTE_PROTOCOL_MIN, REMOTE_PROTOCOL_CURRENT + 1)),
+            ),
+            ("unknown_fields", "ignore"),
+            ("missing_optional_features", "disable"),
+            ("removed_features", "explicit-unsupported"),
+            ("future_protocols", "reject"),
+            ("downgrade", "client-selects-supported-protocol"),
+        )
+    )
 
 
 def compatibility_manifest():
     schema_names, bundle_revision = _schema_inventory()
-    return OrderedDict((
-        ("server", OrderedDict((
-            ("package", "lifetxt"),
-            ("version", _package_version()),
-        ))),
-        ("schema_bundle", OrderedDict((
-            ("document_count", len(schema_names)),
-            ("revision", bundle_revision),
-        ))),
-        ("contracts", contract_versions(schema_names)),
-        ("optional_dependencies", optional_dependencies()),
-        ("compatibility", compatibility_policy()),
-    ))
+    return OrderedDict(
+        (
+            (
+                "server",
+                OrderedDict(
+                    (
+                        ("package", "lifetxt"),
+                        ("version", _package_version()),
+                    )
+                ),
+            ),
+            (
+                "schema_bundle",
+                OrderedDict(
+                    (
+                        ("document_count", len(schema_names)),
+                        ("revision", bundle_revision),
+                    )
+                ),
+            ),
+            ("contracts", contract_versions(schema_names)),
+            ("optional_dependencies", optional_dependencies()),
+            ("compatibility", compatibility_policy()),
+        )
+    )
 
 
 def evaluate_compatibility(capabilities, requested_protocol=None):
@@ -152,38 +193,65 @@ def evaluate_compatibility(capabilities, requested_protocol=None):
     from .remote_access import REMOTE_PROTOCOL_CURRENT, REMOTE_PROTOCOL_MIN
 
     capabilities = dict(capabilities or {})
-    protocol = capabilities.get("protocol") if isinstance(capabilities.get("protocol"), dict) else {}
-    server_min = int(protocol.get("minimum", capabilities.get("protocol_min", REMOTE_PROTOCOL_MIN)))
-    server_current = int(protocol.get("current", capabilities.get("protocol_current", server_min)))
+    protocol = (
+        capabilities.get("protocol")
+        if isinstance(capabilities.get("protocol"), dict)
+        else {}
+    )
+    server_min = int(
+        protocol.get("minimum", capabilities.get("protocol_min", REMOTE_PROTOCOL_MIN))
+    )
+    server_current = int(
+        protocol.get("current", capabilities.get("protocol_current", server_min))
+    )
     client_min = REMOTE_PROTOCOL_MIN
     client_current = REMOTE_PROTOCOL_CURRENT
-    requested = int(requested_protocol if requested_protocol is not None else client_current)
+    requested = int(
+        requested_protocol if requested_protocol is not None else client_current
+    )
     overlap_min = max(server_min, client_min)
     overlap_current = min(server_current, client_current)
-    overlap = list(range(overlap_min, overlap_current + 1)) if overlap_min <= overlap_current else []
+    overlap = (
+        list(range(overlap_min, overlap_current + 1))
+        if overlap_min <= overlap_current
+        else []
+    )
     requested_supported = requested in overlap
     manifest_present = all(
         key in capabilities
-        for key in ("server", "schema_bundle", "contracts", "compatibility", "optional_dependencies")
+        for key in (
+            "server",
+            "schema_bundle",
+            "contracts",
+            "compatibility",
+            "optional_dependencies",
+        )
     )
     warnings = []
     if not manifest_present:
-        warnings.append("Server capability metadata predates the expanded compatibility manifest.")
+        warnings.append(
+            "Server capability metadata predates the expanded compatibility manifest."
+        )
     if server_current > client_current:
         warnings.append("Server supports a newer Remote protocol than this client.")
     if server_min > client_current:
         warnings.append("Server minimum Remote protocol is newer than this client.")
-    return OrderedDict((
-        ("ok", bool(overlap and requested_supported)),
-        ("status", "compatible" if overlap and requested_supported else "incompatible"),
-        ("requested_protocol", requested),
-        ("client", {"minimum": client_min, "current": client_current}),
-        ("server", {"minimum": server_min, "current": server_current}),
-        ("overlap", overlap),
-        ("selected_protocol", requested if requested_supported else None),
-        ("manifest_present", manifest_present),
-        ("warnings", warnings),
-    ))
+    return OrderedDict(
+        (
+            ("ok", bool(overlap and requested_supported)),
+            (
+                "status",
+                "compatible" if overlap and requested_supported else "incompatible",
+            ),
+            ("requested_protocol", requested),
+            ("client", {"minimum": client_min, "current": client_current}),
+            ("server", {"minimum": server_min, "current": server_current}),
+            ("overlap", overlap),
+            ("selected_protocol", requested if requested_supported else None),
+            ("manifest_present", manifest_present),
+            ("warnings", warnings),
+        )
+    )
 
 
 def install_remote_compatibility_v21():
@@ -198,7 +266,9 @@ def install_remote_compatibility_v21():
         payload.pop("capability_revision", None)
         payload.update(compatibility_manifest())
         payload["capability_revision"] = hashlib.sha256(
-            json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            json.dumps(
+                payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
         ).hexdigest()
         return payload
 

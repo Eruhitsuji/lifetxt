@@ -463,7 +463,7 @@ traceability:
       capability_id: cap-web-surface-structure
       epic: https://github.com/Eruhitsuji/lifetxt/issues/67
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/84
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/87
       changed_files_or_scope:
         - Cover the second guard refusal reason and the enabled Git path, which #85 did not
         - tests/test_web_routes_git.py

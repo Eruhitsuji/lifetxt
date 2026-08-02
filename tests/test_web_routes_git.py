@@ -79,13 +79,21 @@ class GitRouteModuleTests(unittest.TestCase):
 
 
 class GitRouteRegistrationTests(unittest.TestCase):
+    """The guard has two refusal reasons and one success path.
+
+    All three matter. Asserting only on the 403 status conflates the two
+    refusals, which is exactly the mistake made while reviewing this change: a
+    probe that enabled the API still saw 403 and it looked like broken config
+    plumbing, when it was the loopback check doing its job.
+    """
+
     def setUp(self):
         try:
             from fastapi.testclient import TestClient  # noqa: F401
         except Exception:
             self.skipTest("web extras unavailable, so routes cannot be exercised")
 
-    def build(self, config=None):
+    def build(self, config=None, loopback=False):
         import tempfile
 
         from fastapi.testclient import TestClient
@@ -96,10 +104,44 @@ class GitRouteRegistrationTests(unittest.TestCase):
         path = os.path.join(directory, "life.txt")
         with io.open(path, "w", encoding="utf-8") as handle:
             handle.write("[ ] T Sample\n")
-        return TestClient(create_app(paths=[path], writable_path=path, config=config))
+        app = create_app(paths=[path], writable_path=path, config=config)
+        client = (
+            TestClient(app, client=("127.0.0.1", 50000))
+            if loopback
+            else TestClient(app)
+        )
+        return client, directory
+
+    def enabled_repo_client(self):
+        """A loopback client over a real repository with one commit."""
+        import subprocess
+
+        client, directory = self.build({"git": {"enable_api": True}}, loopback=True)
+        commands = (
+            ["git", "init", "-q"],
+            ["git", "add", "life.txt"],
+            [
+                "git",
+                "-c",
+                "user.email=t@example.invalid",
+                "-c",
+                "user.name=T",
+                "commit",
+                "-q",
+                "-m",
+                "seed",
+            ],
+        )
+        for command in commands:
+            result = subprocess.run(
+                command, cwd=directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if result.returncode != 0:
+                self.skipTest("git is unavailable or refused %r" % (command,))
+        return client
 
     def test_every_git_route_is_registered(self):
-        client = self.build()
+        client, _ = self.build()
         registered = sorted(
             route.path
             for route in client.app.routes
@@ -109,7 +151,7 @@ class GitRouteRegistrationTests(unittest.TestCase):
 
     def test_guard_refuses_when_the_api_is_not_enabled(self):
         """The 403 body is part of the contract; moving code must not reshape it."""
-        client = self.build()
+        client, _ = self.build()
         response = client.get("/api/git/status")
         self.assertEqual(403, response.status_code)
         detail = response.json()
@@ -117,10 +159,53 @@ class GitRouteRegistrationTests(unittest.TestCase):
         self.assertIn("git.enable_api", detail["message"])
         self.assertIsNone(detail["detail"])
 
+    def test_guard_refuses_non_loopback_even_when_enabled(self):
+        """The second refusal reason, distinct from the first."""
+        client, _ = self.build({"git": {"enable_api": True}})
+        response = client.get("/api/git/status")
+        self.assertEqual(403, response.status_code)
+        detail = response.json()
+        self.assertIn("loopback", detail["message"])
+        self.assertNotIn("git.enable_api", detail["message"])
+
     def test_guard_applies_to_write_routes_too(self):
-        client = self.build()
+        client, _ = self.build()
         for path in ("/api/git/pull", "/api/git/push"):
             self.assertEqual(403, client.post(path).status_code, path)
+
+    def test_status_succeeds_for_an_enabled_loopback_caller(self):
+        client = self.enabled_repo_client()
+        response = client.get("/api/git/status")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(
+            ["exit_code", "ok", "stderr", "stdout"], sorted(response.json().keys())
+        )
+        self.assertTrue(response.json()["ok"])
+
+    def test_log_parses_commits_and_counts_them(self):
+        client = self.enabled_repo_client()
+        response = client.get("/api/git/log?n=3&count=true")
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(1, payload["total"])
+        self.assertEqual(1, len(payload["commits"]))
+        commit = payload["commits"][0]
+        self.assertEqual(["date", "hash", "message"], sorted(commit.keys()))
+        self.assertEqual("seed", commit["message"])
+        self.assertEqual(8, len(commit["hash"]))
+
+    def test_log_count_is_omitted_unless_requested(self):
+        client = self.enabled_repo_client()
+        payload = client.get("/api/git/log").json()
+        self.assertIsNone(payload["total"])
+
+    def test_commit_requires_a_message(self):
+        """The 400 body is a contract too, and it is reachable without writing."""
+        client = self.enabled_repo_client()
+        response = client.post("/api/git/commit", json={})
+        self.assertEqual(400, response.status_code)
+        self.assertIn("message is required", response.json()["message"])
 
 
 if __name__ == "__main__":

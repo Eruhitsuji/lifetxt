@@ -395,12 +395,20 @@ evidence. `tests/test_supported_runtime.py` fails with an explicit message in
 that case instead of letting the run look successful.
 
 If your default `python` is too old, work from a virtual environment created by
-a supported one:
+a supported one. Creating it is not enough — enter it, or the commands further
+down still reach the interpreter this section is warning you about:
 
 ```sh
 py -3.12 -m venv .venv            # Windows; use python3.12 -m venv .venv elsewhere
-.venv/Scripts/python -m pip install -e ".[web,dev]" httpx
+. .\.venv\Scripts\Activate.ps1    # Windows PowerShell; use . .venv/bin/activate elsewhere
+python -m pip install -e ".[web,dev]" httpx
 ```
+
+Activation lasts for the shell session, and every command below assumes it is
+active. To skip it, call the interpreter by path instead
+(`.venv/Scripts/python -m unittest discover`); do not mix the two styles in one
+session, which is how a run ends up on the wrong interpreter without anyone
+noticing.
 
 On Windows this also installs `tzdata`, the only mandatory runtime dependency.
 `zoneinfo` has no timezone database to read there, so without it no timezone

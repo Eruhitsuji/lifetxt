@@ -56,10 +56,14 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt
       - ruff check lifetxt tests scripts
       - 'environment-dependent suites must skip with a diagnostic reason rather than fail; verify both guard branches (working bash runs them, unusable bash skips them)'
+      - 'tests/test_supported_runtime.py must fail, not skip, on an interpreter below requires-python; a run on an unsupported interpreter silently covers fewer tests and is not evidence'
+      - 'the guard must read the baseline from pyproject.toml and raise when it cannot be parsed, so a reshuffle cannot disarm it'
+      - 'the guard module must stay in syntax the rejected interpreters can import, or its message degrades into the import error it exists to explain'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/36
       - https://github.com/Eruhitsuji/lifetxt/issues/41
       - https://github.com/Eruhitsuji/lifetxt/issues/44
+      - https://github.com/Eruhitsuji/lifetxt/issues/72
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/38
       - https://github.com/Eruhitsuji/lifetxt/pull/42

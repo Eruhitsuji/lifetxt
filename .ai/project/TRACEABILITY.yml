@@ -322,6 +322,27 @@ traceability:
         exception.
       status: implemented
 
+    - requirement_id: req-supported-runtime-verification
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/72
+      pull_request: null
+      changed_files_or_scope:
+        - Fail loudly instead of certifying the project on an interpreter below requires-python
+        - tests/test_supported_runtime.py
+        - .ai/project/COMMANDS.yml
+        - readme.md
+        - .gitignore
+      tests_or_evidence:
+        - 'guard on Python 3.12 -> pass; on Python 3.6.5 -> fails naming both versions'
+        - 'unsupported interpreter measured before the guard: Ran 1619 tests, FAILED (errors=1) versus 1765 on a supported one -- 146 tests never loaded'
+        - 'root cause: tests/test_cui_extensions.py:709 uses parenthesized with-statements (3.10+ syntax)'
+        - 'clean run on the branch: Ran 1765 tests in 392.731s, OK (skipped=14) on Python 3.12'
+        - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+        - 'ruff format --check lifetxt tests scripts -> 241 files already formatted; ruff check -> All checks passed'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

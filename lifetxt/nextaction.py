@@ -19,9 +19,21 @@ PARKED_TAGS = ("someday", "maybe", "waiting", "blocked")
 ACTIONABLE_KINDS = ("T", "D", "R", "H")
 
 PRIORITY_ORDER = {
-    "high": 0, "urgent": 0, "a": 0, "1": 0, "p1": 0,
-    "med": 1, "medium": 1, "normal": 1, "b": 1, "2": 1, "p2": 1,
-    "low": 2, "c": 2, "3": 2, "p3": 2,
+    "high": 0,
+    "urgent": 0,
+    "a": 0,
+    "1": 0,
+    "p1": 0,
+    "med": 1,
+    "medium": 1,
+    "normal": 1,
+    "b": 1,
+    "2": 1,
+    "p2": 1,
+    "low": 2,
+    "c": 2,
+    "3": 2,
+    "p3": 2,
 }
 
 
@@ -63,9 +75,13 @@ def next_action_items(items, key="id", limit=None, project=None, assignee=None):
             kind=item.kind,
         ):
             continue
-        if project and project not in [str(v) for v in item.details.get("project") or []]:
+        if project and project not in [
+            str(v) for v in item.details.get("project") or []
+        ]:
             continue
-        if assignee and assignee not in [str(v) for v in item.details.get("assignee") or []]:
+        if assignee and assignee not in [
+            str(v) for v in item.details.get("assignee") or []
+        ]:
             continue
         actionable.append(item)
 

@@ -95,7 +95,9 @@ def effective_config(config, profile=None, env=None, include_defaults=True):
         _deep_merge(merged, defaults, provenance, "builtin-default")
 
     config = config or {}
-    config_label = "config:%s" % config.get("_path") if config.get("_path") else "config"
+    config_label = (
+        "config:%s" % config.get("_path") if config.get("_path") else "config"
+    )
     _deep_merge(merged, _strip_private(config), provenance, config_label)
 
     if profile:
@@ -103,8 +105,12 @@ def effective_config(config, profile=None, env=None, include_defaults=True):
         if isinstance(profiles, dict) and str(profile) in profiles:
             profile_data = profiles[str(profile)]
             if isinstance(profile_data, dict):
-                _deep_merge(merged, _strip_private(profile_data), provenance,
-                            "profile:%s" % profile)
+                _deep_merge(
+                    merged,
+                    _strip_private(profile_data),
+                    provenance,
+                    "profile:%s" % profile,
+                )
 
     for env_name, dotted in ENV_OVERRIDES.items():
         if env_name in env and env[env_name] != "":
@@ -181,7 +187,9 @@ def flatten_provenance(config, profile=None, env=None):
                 if isinstance(value, dict) and value:
                     walk(value, dotted)
                 else:
-                    rows.append((dotted, value, provenance.get(dotted, "builtin-default")))
+                    rows.append(
+                        (dotted, value, provenance.get(dotted, "builtin-default"))
+                    )
         else:
             rows.append((prefix, node, provenance.get(prefix, "builtin-default")))
 

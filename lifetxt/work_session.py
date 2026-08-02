@@ -5,6 +5,7 @@ updates the task and opens presence in the same staged life.txt replacement;
 stop records elapsed time, optionally completes the task, closes presence, and
 removes timer state as one recoverable transaction.
 """
+
 from __future__ import unicode_literals
 
 import os
@@ -46,7 +47,9 @@ def start_work_transaction(
     config = config or {}
     item_snapshot = mutation.read_text_snapshot(path)
     item_expected = _resolve_revision(
-        expected_item_revision, item_snapshot.content_hash, require_revisions,
+        expected_item_revision,
+        item_snapshot.content_hash,
+        require_revisions,
         "item_revision",
     )
     key = id_key_from_config(config)
@@ -55,7 +58,9 @@ def start_work_transaction(
     timer_path = timer_state_file(config)
     timer_snapshot = mutation.read_text_snapshot(timer_path, allow_missing=True)
     timer_expected = _resolve_revision(
-        expected_timer_revision, timer_snapshot.content_hash, require_revisions and use_timer,
+        expected_timer_revision,
+        timer_snapshot.content_hash,
+        require_revisions and use_timer,
         "timer_revision",
     )
     moment = _now()
@@ -64,18 +69,25 @@ def start_work_transaction(
         if timer_snapshot.exists:
             running = _state_from_snapshot(timer_snapshot)
             raise ValueError("A timer is already running for %s." % running.get("id"))
-        timer_state = OrderedDict([
-            ("id", item_id),
-            ("file", os.path.abspath(path)),
-            ("started_at", format_datetime(moment)),
-            ("accumulated_minutes", 0),
-            ("paused_at", ""),
-            ("note", ""),
-        ])
-        plans.append(json_plan(
-            timer_path, lambda _current: timer_state, timer_expected,
-            create=True, default={},
-        ))
+        timer_state = OrderedDict(
+            [
+                ("id", item_id),
+                ("file", os.path.abspath(path)),
+                ("started_at", format_datetime(moment)),
+                ("accumulated_minutes", 0),
+                ("paused_at", ""),
+                ("note", ""),
+            ]
+        )
+        plans.append(
+            json_plan(
+                timer_path,
+                lambda _current: timer_state,
+                timer_expected,
+                create=True,
+                default={},
+            )
+        )
 
     opened = {"line": "", "closed": []}
 
@@ -102,25 +114,32 @@ def start_work_transaction(
             replacement = transition.text
         return replacement
 
-    plans.append(text_plan(
-        path, life_transform, item_expected,
-        validate=lambda value: _validate_life(value, key),
-    ))
+    plans.append(
+        text_plan(
+            path,
+            life_transform,
+            item_expected,
+            validate=lambda value: _validate_life(value, key),
+        )
+    )
     result = apply_multi_target(
         plans,
         operation="work.start",
         journal_dir=journal_directory(config, writable_path=path),
         config=config,
     )
-    payload = _timer_result(result, {
-        "running": bool(use_timer),
-        "id": item_id,
-        "title": item.title,
-        "started_at": format_datetime(moment) if use_timer else "",
-        "presence": state if use_presence else "",
-        "presence_opened": opened["line"],
-        "presence_closed": opened["closed"],
-    })
+    payload = _timer_result(
+        result,
+        {
+            "running": bool(use_timer),
+            "id": item_id,
+            "title": item.title,
+            "started_at": format_datetime(moment) if use_timer else "",
+            "presence": state if use_presence else "",
+            "presence_opened": opened["line"],
+            "presence_closed": opened["closed"],
+        },
+    )
     if not use_timer:
         payload["timer_revision"] = timer_snapshot.content_hash
     return payload
@@ -147,11 +166,15 @@ def stop_work_transaction(
     item_id = state.get("id")
     item_snapshot = mutation.read_text_snapshot(resolved_path)
     timer_expected = _resolve_revision(
-        expected_timer_revision, timer_snapshot.content_hash, require_revisions,
+        expected_timer_revision,
+        timer_snapshot.content_hash,
+        require_revisions,
         "timer_revision",
     )
     item_expected = _resolve_revision(
-        expected_item_revision, item_snapshot.content_hash, require_revisions,
+        expected_item_revision,
+        item_snapshot.content_hash,
+        require_revisions,
         "item_revision",
     )
     key = id_key_from_config(config)
@@ -162,8 +185,14 @@ def stop_work_transaction(
     total = existing + minutes
     closed = {"rows": []}
     done_value = timezone_now().replace(tzinfo=None)
-    done_precision = str(config_section(config, "done").get("precision") or "date").lower()
-    stamp = done_value.strftime("%Y-%m-%dT%H:%M") if done_precision == "datetime" else done_value.date().isoformat()
+    done_precision = str(
+        config_section(config, "done").get("precision") or "date"
+    ).lower()
+    stamp = (
+        done_value.strftime("%Y-%m-%dT%H:%M")
+        if done_precision == "datetime"
+        else done_value.date().isoformat()
+    )
 
     def life_transform(text):
         details = {"elapsed": [format_elapsed(total)]}
@@ -172,7 +201,9 @@ def stop_work_transaction(
             details["done"] = [stamp]
             status = "[x]"
         replacement = transform_items_text(
-            text, [{"id": item_id, "status": status, "set_details": details}], id_key=key
+            text,
+            [{"id": item_id, "status": status, "set_details": details}],
+            id_key=key,
         )
         if close_presence:
             transition = status_transition(
@@ -190,7 +221,9 @@ def stop_work_transaction(
         [
             delete_plan(timer_path, timer_expected, kind="json"),
             text_plan(
-                resolved_path, life_transform, item_expected,
+                resolved_path,
+                life_transform,
+                item_expected,
                 validate=lambda value: _validate_life(value, key),
             ),
         ],
@@ -198,22 +231,26 @@ def stop_work_transaction(
         journal_dir=journal_directory(config, writable_path=resolved_path),
         config=config,
     )
-    return _timer_result(result, {
-        "running": False,
-        "id": item_id,
-        "title": item.title,
-        "elapsed_minutes_added": minutes,
-        "elapsed_added": format_elapsed(minutes),
-        "elapsed_total_minutes": total,
-        "elapsed_total": format_elapsed(total),
-        "done": bool(done),
-        "done_value": stamp if done else "",
-        "presence_closed": closed["rows"],
-    })
+    return _timer_result(
+        result,
+        {
+            "running": False,
+            "id": item_id,
+            "title": item.title,
+            "elapsed_minutes_added": minutes,
+            "elapsed_added": format_elapsed(minutes),
+            "elapsed_total_minutes": total,
+            "elapsed_total": format_elapsed(total),
+            "done": bool(done),
+            "done_value": stamp if done else "",
+            "presence_closed": closed["rows"],
+        },
+    )
 
 
 def _validate_life(text, id_key):
     from .parser import parse_text
+
     _items, diagnostics = parse_text(text, id_key=id_key)
     errors = [row for row in diagnostics if row.severity == "error"]
     if errors:

@@ -111,7 +111,9 @@ def _legacy_workspace_definition(config):
         paths = [paths]
     elif not isinstance(paths, (list, tuple)):
         paths = []
-    generated = set(os.path.normcase(value) for value in _config_generated_paths(config))
+    generated = set(
+        os.path.normcase(value) for value in _config_generated_paths(config)
+    )
     sources = []
     for value in paths:
         text = str(value)
@@ -151,7 +153,9 @@ def normalize_source(entry, base_dir):
     elif isinstance(entry, dict):
         raw = entry
     else:
-        raise ValueError("Workspace source must be a string or object, not %r" % type(entry).__name__)
+        raise ValueError(
+            "Workspace source must be a string or object, not %r" % type(entry).__name__
+        )
 
     path = raw.get("path")
     if not path:
@@ -249,7 +253,9 @@ def _read_link_target(path):
 
 def _is_ancestor_or_same(parent, child):
     try:
-        return os.path.commonpath([_norm_abs(parent), _norm_abs(child)]) == _norm_abs(parent)
+        return os.path.commonpath([_norm_abs(parent), _norm_abs(child)]) == _norm_abs(
+            parent
+        )
     except ValueError:
         return False
 
@@ -376,7 +382,9 @@ def _source_cycle_diagnostics(record):
 
 
 def _mark_source_unexpanded(record):
-    record["matched_glob"] = _has_glob(record["path"]) or os.path.isdir(record["resolved_path"])
+    record["matched_glob"] = _has_glob(record["path"]) or os.path.isdir(
+        record["resolved_path"]
+    )
     record["files"] = []
     record["exists"] = False
 
@@ -418,7 +426,16 @@ def _expand_source_files(record):
         files = [
             path
             for path in files
-            if not any(fnmatch.fnmatch(os.path.normcase(path), os.path.normcase(_resolve_against(pattern, os.path.dirname(resolved)))) or fnmatch.fnmatch(path, pattern) for pattern in record["exclude"])
+            if not any(
+                fnmatch.fnmatch(
+                    os.path.normcase(path),
+                    os.path.normcase(
+                        _resolve_against(pattern, os.path.dirname(resolved))
+                    ),
+                )
+                or fnmatch.fnmatch(path, pattern)
+                for pattern in record["exclude"]
+            )
         ]
     record["matched_glob"] = matched_glob
     record["files"] = files
@@ -482,7 +499,9 @@ def _source_size_diagnostics(sources, limit):
             contributors.append((size, path))
     if total <= limit:
         return []
-    largest = sorted(contributors, key=lambda entry: (-entry[0], entry[1]))[:_MAX_SIZE_CONTRIBUTORS]
+    largest = sorted(contributors, key=lambda entry: (-entry[0], entry[1]))[
+        :_MAX_SIZE_CONTRIBUTORS
+    ]
     details = ", ".join("%s (%d bytes)" % (path, size) for size, path in largest)
     return [
         diagnostic(
@@ -527,15 +546,23 @@ def resolve_workspace(config, name=None, base_dir=None):
             record = normalize_source(entry, base_dir)
         except ValueError as exc:
             diagnostics.append(
-                diagnostic("error", "WS010", "Invalid workspace source: %s" % exc,
-                           "Use a path string or an object with a 'path' field.")
+                diagnostic(
+                    "error",
+                    "WS010",
+                    "Invalid workspace source: %s" % exc,
+                    "Use a path string or an object with a 'path' field.",
+                )
             )
             continue
         if record["role"] not in KNOWN_ROLES:
             diagnostics.append(
-                diagnostic("warning", "WS005",
-                           "Unknown source role %r for %s." % (record["role"], record["path"]),
-                           "Use one of: %s." % ", ".join(KNOWN_ROLES), record["path"])
+                diagnostic(
+                    "warning",
+                    "WS005",
+                    "Unknown source role %r for %s." % (record["role"], record["path"]),
+                    "Use one of: %s." % ", ".join(KNOWN_ROLES),
+                    record["path"],
+                )
             )
         cycle_rows = _source_cycle_diagnostics(record)
         if cycle_rows:
@@ -547,8 +574,12 @@ def resolve_workspace(config, name=None, base_dir=None):
 
     if not sources:
         diagnostics.append(
-            diagnostic("error", "WS009", "Workspace %r has no sources." % name,
-                       "Add at least one source path to the workspace.")
+            diagnostic(
+                "error",
+                "WS009",
+                "Workspace %r has no sources." % name,
+                "Add at least one source path to the workspace.",
+            )
         )
 
     diagnostics.extend(_duplicate_diagnostics(sources))
@@ -562,9 +593,13 @@ def resolve_workspace(config, name=None, base_dir=None):
     )
     if len(sources) > MAX_SOURCES:
         diagnostics.append(
-            diagnostic("warning", "WS013",
-                       "Workspace %r has %d sources (soft limit %d)." % (name, len(sources), MAX_SOURCES),
-                       "Split the workspace or narrow globs to keep resolution fast.")
+            diagnostic(
+                "warning",
+                "WS013",
+                "Workspace %r has %d sources (soft limit %d)."
+                % (name, len(sources), MAX_SOURCES),
+                "Split the workspace or narrow globs to keep resolution fast.",
+            )
         )
 
     input_paths = _ordered_input_paths(sources)
@@ -621,7 +656,11 @@ def _ordered_input_paths(sources, visible_only=False):
     result = []
     seen = set()
     for record in ordered:
-        if record["role"] in ("generated", "archive", "reference") and visible_only and not record["default_visible"]:
+        if (
+            record["role"] in ("generated", "archive", "reference")
+            and visible_only
+            and not record["default_visible"]
+        ):
             continue
         if visible_only and not record["default_visible"]:
             continue
@@ -669,10 +708,14 @@ def _duplicate_diagnostics(sources):
         if len(entries) > 1:
             origins = ", ".join(sorted(set(origin for origin, _ in entries)))
             rows.append(
-                diagnostic("warning", "WS002",
-                           "Duplicate physical file resolved from multiple sources: %s (from %s)."
-                           % (entries[0][1], origins),
-                           "Remove the duplicate source or use distinct files.", entries[0][1])
+                diagnostic(
+                    "warning",
+                    "WS002",
+                    "Duplicate physical file resolved from multiple sources: %s (from %s)."
+                    % (entries[0][1], origins),
+                    "Remove the duplicate source or use distinct files.",
+                    entries[0][1],
+                )
             )
     return rows
 
@@ -699,10 +742,14 @@ def _alias_diagnostics(sources):
     for real, paths in owners.items():
         if len(paths) > 1:
             rows.append(
-                diagnostic("warning", "WS011",
-                           "Multiple sources resolve to the same physical file through links: %s."
-                           % ", ".join(sorted(paths)),
-                           "Point sources at one canonical path or remove the alias.", real)
+                diagnostic(
+                    "warning",
+                    "WS011",
+                    "Multiple sources resolve to the same physical file through links: %s."
+                    % ", ".join(sorted(paths)),
+                    "Point sources at one canonical path or remove the alias.",
+                    real,
+                )
             )
     return rows
 
@@ -728,10 +775,13 @@ def _required_diagnostics(sources):
     for record in sources:
         if record["required"] and not record["exists"]:
             rows.append(
-                diagnostic("error", "WS001",
-                           "Required source is missing: %s." % record["path"],
-                           "Create the file or mark the source as not required.",
-                           record["resolved_path"])
+                diagnostic(
+                    "error",
+                    "WS001",
+                    "Required source is missing: %s." % record["path"],
+                    "Create the file or mark the source as not required.",
+                    record["resolved_path"],
+                )
             )
     return rows
 
@@ -747,40 +797,60 @@ def _outside_root_diagnostics(sources, base_dir):
             common = None
         if common != root:
             rows.append(
-                diagnostic("info", "WS003",
-                           "Source resolves outside the configuration directory: %s." % record["path"],
-                           "This is allowed but review it for portability.", record["resolved_path"])
+                diagnostic(
+                    "info",
+                    "WS003",
+                    "Source resolves outside the configuration directory: %s."
+                    % record["path"],
+                    "This is allowed but review it for portability.",
+                    record["resolved_path"],
+                )
             )
     return rows
 
 
-def _resolve_write_target(write_file, base_dir, writable_candidates, sources, diagnostics):
+def _resolve_write_target(
+    write_file, base_dir, writable_candidates, sources, diagnostics
+):
     candidate_keys = set(os.path.normcase(path) for path in writable_candidates)
     if write_file:
         resolved = _resolve_against(write_file, base_dir)
         role = _role_owning_path(sources, resolved)
         if role in _NON_WRITE_TARGET_ROLES:
             diagnostics.append(
-                diagnostic("error", "WS012",
-                           "Write target points at a %s source: %s." % (role, write_file),
-                           "Never write to generated or archive files; choose a primary source.",
-                           resolved)
+                diagnostic(
+                    "error",
+                    "WS012",
+                    "Write target points at a %s source: %s." % (role, write_file),
+                    "Never write to generated or archive files; choose a primary source.",
+                    resolved,
+                )
             )
-        if os.path.normcase(resolved) not in candidate_keys and not _is_writable_declared(sources, resolved):
+        if os.path.normcase(
+            resolved
+        ) not in candidate_keys and not _is_writable_declared(sources, resolved):
             # A configured write target should be an input the workspace also
             # reads; warn but honor it so single-file setups keep working.
             diagnostics.append(
-                diagnostic("warning", "WS006",
-                           "Write target is not one of the workspace's writable sources: %s." % write_file,
-                           "Add the write target as a writable source or point write_file at one.",
-                           resolved)
+                diagnostic(
+                    "warning",
+                    "WS006",
+                    "Write target is not one of the workspace's writable sources: %s."
+                    % write_file,
+                    "Add the write target as a writable source or point write_file at one.",
+                    resolved,
+                )
             )
         return resolved
     if writable_candidates:
         return writable_candidates[0]
     diagnostics.append(
-        diagnostic("error", "WS007", "Workspace has no writable source.",
-                   "Add a writable primary source or set write_file explicitly.")
+        diagnostic(
+            "error",
+            "WS007",
+            "Workspace has no writable source.",
+            "Add a writable primary source or set write_file explicitly.",
+        )
     )
     return None
 
@@ -844,7 +914,9 @@ def workspace_doctor(config):
             resolution = resolve_workspace(config, name)
         except ValueError as exc:
             all_rows.append(
-                diagnostic("error", "WS008", "Cannot resolve workspace %r: %s" % (name, exc))
+                diagnostic(
+                    "error", "WS008", "Cannot resolve workspace %r: %s" % (name, exc)
+                )
             )
             continue
         reports.append(
@@ -873,10 +945,13 @@ def workspace_doctor(config):
             ("workspace_count", len(reports)),
             ("default_workspace", default),
             ("workspaces", reports),
-            ("shared_files", [
-                OrderedDict((("path", key), ("workspaces", sorted(set(names)))))
-                for key, names in shared.items()
-            ]),
+            (
+                "shared_files",
+                [
+                    OrderedDict((("path", key), ("workspaces", sorted(set(names)))))
+                    for key, names in shared.items()
+                ],
+            ),
             ("diagnostic_count", len(all_rows)),
         )
     )

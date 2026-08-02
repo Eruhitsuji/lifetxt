@@ -1,4 +1,5 @@
 """Dependency-free Remote Safe Mode client and profile store."""
+
 from __future__ import unicode_literals
 
 import argparse
@@ -13,7 +14,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .remote_access import REMOTE_PROTOCOL_CURRENT, REMOTE_PROTOCOL_MIN, REMOTE_VERSION_HEADER
+from .remote_access import (
+    REMOTE_PROTOCOL_CURRENT,
+    REMOTE_PROTOCOL_MIN,
+    REMOTE_VERSION_HEADER,
+)
 
 PROFILE_VERSION = 3
 
@@ -21,7 +26,9 @@ PROFILE_VERSION = 3
 def profile_path(path=None):
     return os.path.abspath(
         os.path.expanduser(
-            path or os.environ.get("LIFETXT_REMOTE_PROFILES") or "~/.config/lifetxt/remote-profiles.json"
+            path
+            or os.environ.get("LIFETXT_REMOTE_PROFILES")
+            or "~/.config/lifetxt/remote-profiles.json"
         )
     )
 
@@ -35,7 +42,9 @@ def _normalized_profile(row):
         version = int(row.get("protocol_version") or REMOTE_PROTOCOL_CURRENT)
     except (TypeError, ValueError):
         version = REMOTE_PROTOCOL_CURRENT
-    row["protocol_version"] = max(REMOTE_PROTOCOL_MIN, min(REMOTE_PROTOCOL_CURRENT, version))
+    row["protocol_version"] = max(
+        REMOTE_PROTOCOL_MIN, min(REMOTE_PROTOCOL_CURRENT, version)
+    )
     return row
 
 
@@ -67,6 +76,7 @@ def _save(data, path=None):
         ),
     }
     from .atomic import atomic_write_text
+
     atomic_write_text(
         target,
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -79,12 +89,24 @@ def _save(data, path=None):
     return target
 
 
-def set_profile(name, url, token_env=None, verify_tls=True, protocol_version=REMOTE_PROTOCOL_CURRENT, path=None):
+def set_profile(
+    name,
+    url,
+    token_env=None,
+    verify_tls=True,
+    protocol_version=REMOTE_PROTOCOL_CURRENT,
+    path=None,
+):
     url = str(url).rstrip("/")
-    if url.startswith("http://") and not any(value in url for value in ("127.0.0.1", "localhost", "[::1]")):
+    if url.startswith("http://") and not any(
+        value in url for value in ("127.0.0.1", "localhost", "[::1]")
+    ):
         raise ValueError("Remote profiles require HTTPS outside loopback.")
     protocol_version = int(protocol_version)
-    if protocol_version < REMOTE_PROTOCOL_MIN or protocol_version > REMOTE_PROTOCOL_CURRENT:
+    if (
+        protocol_version < REMOTE_PROTOCOL_MIN
+        or protocol_version > REMOTE_PROTOCOL_CURRENT
+    ):
         raise ValueError("Unsupported Remote protocol version: %s" % protocol_version)
     data = _load(path)
     data["profiles"][str(name)] = {
@@ -122,10 +144,14 @@ def _ssl_context(profile):
 
 
 def _response_protocol(headers, requested):
-    raw = headers.get(REMOTE_VERSION_HEADER) or headers.get(REMOTE_VERSION_HEADER.lower())
+    raw = headers.get(REMOTE_VERSION_HEADER) or headers.get(
+        REMOTE_VERSION_HEADER.lower()
+    )
     if raw is None:
         if int(requested) > REMOTE_PROTOCOL_MIN:
-            raise RuntimeError("Remote server did not return protocol negotiation headers.")
+            raise RuntimeError(
+                "Remote server did not return protocol negotiation headers."
+            )
         return REMOTE_PROTOCOL_MIN
     try:
         negotiated = int(str(raw))
@@ -139,7 +165,9 @@ def _response_protocol(headers, requested):
     return negotiated
 
 
-def request(profile, method, route, payload=None, revision=None, params=None, timeout=20):
+def request(
+    profile, method, route, payload=None, revision=None, params=None, timeout=20
+):
     profile = _normalized_profile(profile)
     url = profile["url"].rstrip("/") + "/" + route.lstrip("/")
     if params:
@@ -152,9 +180,15 @@ def request(profile, method, route, payload=None, revision=None, params=None, ti
         REMOTE_VERSION_HEADER: str(requested),
         "X-Lifetxt-Client-Time": __import__(
             "lifetxt.timezone_policy", fromlist=["utcnow"]
-        ).utcnow().isoformat(),
+        )
+        .utcnow()
+        .isoformat(),
     }
-    token = os.environ.get(str(profile.get("token_env"))) if profile.get("token_env") else None
+    token = (
+        os.environ.get(str(profile.get("token_env")))
+        if profile.get("token_env")
+        else None
+    )
     if token:
         headers["Authorization"] = "Bearer " + token
     if revision:
@@ -168,7 +202,9 @@ def request(profile, method, route, payload=None, revision=None, params=None, ti
         context = _ssl_context(profile)
         if context is not None:
             kwargs["context"] = context
-        with urlopen(Request(url, data=body, headers=headers, method=method), **kwargs) as response:
+        with urlopen(
+            Request(url, data=body, headers=headers, method=method), **kwargs
+        ) as response:
             response_headers = dict(response.headers)
             negotiated = _response_protocol(response_headers, requested)
             value = json.loads(response.read().decode("utf-8"))
@@ -194,7 +230,9 @@ def resource_catalog(profile):
 
 
 def resource(profile, name, params=None):
-    return request(profile, "GET", "/api/remote/v1/resources/%s" % str(name), params=params)[0]
+    return request(
+        profile, "GET", "/api/remote/v1/resources/%s" % str(name), params=params
+    )[0]
 
 
 def diagnostics(profile):
@@ -202,14 +240,20 @@ def diagnostics(profile):
 
 
 def test_connection(profile):
-    capabilities, capability_headers = request(profile, "GET", "/api/remote/v1/capabilities")
+    capabilities, capability_headers = request(
+        profile, "GET", "/api/remote/v1/capabilities"
+    )
     session, session_headers = request(profile, "GET", "/api/remote/v1/session")
     requested = int(_normalized_profile(profile)["protocol_version"])
     return {
         "ok": True,
         "requested_protocol": requested,
-        "negotiated_protocol": int(session_headers.get("lifetxt_negotiated_protocol", requested)),
-        "capability_revision": capability_headers.get("X-Lifetxt-Remote-Capability-Revision"),
+        "negotiated_protocol": int(
+            session_headers.get("lifetxt_negotiated_protocol", requested)
+        ),
+        "capability_revision": capability_headers.get(
+            "X-Lifetxt-Remote-Capability-Revision"
+        ),
         "capabilities": capabilities,
         "session": session,
     }
@@ -218,16 +262,28 @@ def test_connection(profile):
 def export_snapshot(profile, path):
     value = snapshot(profile)
     from .atomic import atomic_write_text
-    atomic_write_text(path, json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    atomic_write_text(
+        path, json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return path
 
 
 def render_tui(value):
     lines = ["lifetxt remote (read-only)", "revision: %s" % value.get("revision", "-")]
     for row in value.get("tickets", []):
-        lines.append("[ticket] %-16s %s" % (row.get("id", "-"), row.get("title") or row.get("text") or ""))
+        lines.append(
+            "[ticket] %-16s %s"
+            % (row.get("id", "-"), row.get("title") or row.get("text") or "")
+        )
     for row in value.get("projects", []):
-        lines.append("[project] %-15s %s" % (row.get("project") or row.get("id") or row.get("name") or "-", row.get("title") or ""))
+        lines.append(
+            "[project] %-15s %s"
+            % (
+                row.get("project") or row.get("id") or row.get("name") or "-",
+                row.get("title") or "",
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -243,13 +299,18 @@ def _params(values):
 
 def install_remote_client_cli():
     from . import cli
+
     if getattr(cli, "_lifetxt_remote_client_v20", False):
         return
     original = cli.build_parser
 
     def build_parser():
         parser = original()
-        subs = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+        subs = next(
+            action
+            for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+        )
         if "remote" in subs.choices:
             return parser
         remote = subs.add_parser("remote", help="Use authenticated Remote Safe Mode.")
@@ -261,7 +322,12 @@ def install_remote_client_cli():
         command.add_argument("name")
         command.add_argument("url")
         command.add_argument("--token-env")
-        command.add_argument("--protocol-version", type=int, choices=range(REMOTE_PROTOCOL_MIN, REMOTE_PROTOCOL_CURRENT + 1), default=REMOTE_PROTOCOL_CURRENT)
+        command.add_argument(
+            "--protocol-version",
+            type=int,
+            choices=range(REMOTE_PROTOCOL_MIN, REMOTE_PROTOCOL_CURRENT + 1),
+            default=REMOTE_PROTOCOL_CURRENT,
+        )
         command.add_argument("--profiles-file")
         command.set_defaults(func=_cmd_set)
         command = remote_subs.add_parser("profile-list")
@@ -311,7 +377,15 @@ def _emit(value):
 
 
 def _cmd_set(args):
-    return _emit(set_profile(args.name, args.url, args.token_env, protocol_version=args.protocol_version, path=args.profiles_file))
+    return _emit(
+        set_profile(
+            args.name,
+            args.url,
+            args.token_env,
+            protocol_version=args.protocol_version,
+            path=args.profiles_file,
+        )
+    )
 
 
 def _cmd_list(args):

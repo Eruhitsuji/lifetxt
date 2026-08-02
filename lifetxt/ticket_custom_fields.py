@@ -4,6 +4,7 @@ Only fields declared under ``ticketing.custom_fields`` are typed here. Unknown
 life.txt detail keys remain valid and are deliberately ignored so this feature
 does not turn the extensible plain-text format into a closed global schema.
 """
+
 from __future__ import unicode_literals
 
 import argparse
@@ -109,19 +110,31 @@ def _definition_integer(raw, key, field, diagnostics):
         return None
     if isinstance(raw, bool):
         diagnostics.append(
-            _diag("TK006", "Custom field %r metadata %s must be an integer." % (field, key), field)
+            _diag(
+                "TK006",
+                "Custom field %r metadata %s must be an integer." % (field, key),
+                field,
+            )
         )
         return None
     try:
         value = int(raw)
     except (TypeError, ValueError):
         diagnostics.append(
-            _diag("TK006", "Custom field %r metadata %s must be an integer." % (field, key), field)
+            _diag(
+                "TK006",
+                "Custom field %r metadata %s must be an integer." % (field, key),
+                field,
+            )
         )
         return None
     if value < 0:
         diagnostics.append(
-            _diag("TK006", "Custom field %r metadata %s must be zero or greater." % (field, key), field)
+            _diag(
+                "TK006",
+                "Custom field %r metadata %s must be zero or greater." % (field, key),
+                field,
+            )
         )
         return None
     return value
@@ -134,12 +147,20 @@ def _definition_decimal(raw, key, field, diagnostics):
         value = Decimal(str(raw))
     except (InvalidOperation, ValueError, TypeError):
         diagnostics.append(
-            _diag("TK006", "Custom field %r metadata %s must be numeric." % (field, key), field)
+            _diag(
+                "TK006",
+                "Custom field %r metadata %s must be numeric." % (field, key),
+                field,
+            )
         )
         return None
     if not value.is_finite():
         diagnostics.append(
-            _diag("TK006", "Custom field %r metadata %s must be finite." % (field, key), field)
+            _diag(
+                "TK006",
+                "Custom field %r metadata %s must be finite." % (field, key),
+                field,
+            )
         )
         return None
     return value
@@ -148,22 +169,26 @@ def _definition_decimal(raw, key, field, diagnostics):
 def _reserved_names():
     from .tickets import RELATION_FIELDS, TICKET_FIELDS
 
-    return set(TICKET_FIELDS) | set(RELATION_FIELDS) | {
-        "record",
-        "id",
-        "source",
-        "uid",
-        "project",
-        "created",
-        "updated",
-        "done",
-        "due",
-        "do",
-        "tag",
-        "note",
-        "body",
-        "url",
-    }
+    return (
+        set(TICKET_FIELDS)
+        | set(RELATION_FIELDS)
+        | {
+            "record",
+            "id",
+            "source",
+            "uid",
+            "project",
+            "created",
+            "updated",
+            "done",
+            "due",
+            "do",
+            "tag",
+            "note",
+            "body",
+            "url",
+        }
+    )
 
 
 def custom_field_registry_report(config=None):
@@ -185,7 +210,10 @@ def custom_field_registry_report(config=None):
         )
     if not isinstance(raw_registry, dict):
         diagnostics.append(
-            _diag("TK006", "ticketing.custom_fields must be an object keyed by field name.")
+            _diag(
+                "TK006",
+                "ticketing.custom_fields must be an object keyed by field name.",
+            )
         )
         return OrderedDict(
             (
@@ -204,7 +232,8 @@ def custom_field_registry_report(config=None):
             diagnostics.append(
                 _diag(
                     "TK006",
-                    "Invalid custom field name %r; use letters, digits, underscore, dot, or hyphen." % name,
+                    "Invalid custom field name %r; use letters, digits, underscore, dot, or hyphen."
+                    % name,
                     name,
                 )
             )
@@ -212,7 +241,8 @@ def custom_field_registry_report(config=None):
             diagnostics.append(
                 _diag(
                     "TK006",
-                    "Custom field %r conflicts with a canonical, relation, or system ticket field." % name,
+                    "Custom field %r conflicts with a canonical, relation, or system ticket field."
+                    % name,
                     name,
                 )
             )
@@ -220,7 +250,12 @@ def custom_field_registry_report(config=None):
             raw_definition = {"type": raw_definition}
         if not isinstance(raw_definition, dict):
             diagnostics.append(
-                _diag("TK006", "Custom field %r definition must be an object or type string." % name, name)
+                _diag(
+                    "TK006",
+                    "Custom field %r definition must be an object or type string."
+                    % name,
+                    name,
+                )
             )
             continue
         unknown = sorted(set(raw_definition) - _DEFINITION_KEYS)
@@ -276,20 +311,45 @@ def custom_field_registry_report(config=None):
         enum_values = _string_list(enum_values)
         if field_type == "enum" and not enum_values:
             diagnostics.append(
-                _diag("TK006", "Enum custom field %r requires a non-empty enum or values list." % name, name)
+                _diag(
+                    "TK006",
+                    "Enum custom field %r requires a non-empty enum or values list."
+                    % name,
+                    name,
+                )
             )
 
-        minimum = _definition_decimal(raw_definition.get("minimum"), "minimum", name, diagnostics)
-        maximum = _definition_decimal(raw_definition.get("maximum"), "maximum", name, diagnostics)
+        minimum = _definition_decimal(
+            raw_definition.get("minimum"), "minimum", name, diagnostics
+        )
+        maximum = _definition_decimal(
+            raw_definition.get("maximum"), "maximum", name, diagnostics
+        )
         if minimum is not None and maximum is not None and minimum > maximum:
             diagnostics.append(
-                _diag("TK006", "Custom field %r minimum is greater than maximum." % name, name)
+                _diag(
+                    "TK006",
+                    "Custom field %r minimum is greater than maximum." % name,
+                    name,
+                )
             )
-        min_length = _definition_integer(raw_definition.get("min_length"), "min_length", name, diagnostics)
-        max_length = _definition_integer(raw_definition.get("max_length"), "max_length", name, diagnostics)
-        if min_length is not None and max_length is not None and min_length > max_length:
+        min_length = _definition_integer(
+            raw_definition.get("min_length"), "min_length", name, diagnostics
+        )
+        max_length = _definition_integer(
+            raw_definition.get("max_length"), "max_length", name, diagnostics
+        )
+        if (
+            min_length is not None
+            and max_length is not None
+            and min_length > max_length
+        ):
             diagnostics.append(
-                _diag("TK006", "Custom field %r min_length is greater than max_length." % name, name)
+                _diag(
+                    "TK006",
+                    "Custom field %r min_length is greater than max_length." % name,
+                    name,
+                )
             )
         pattern = raw_definition.get("pattern")
         if pattern is not None:
@@ -298,7 +358,11 @@ def custom_field_registry_report(config=None):
                 re.compile(pattern)
             except re.error as exc:
                 diagnostics.append(
-                    _diag("TK006", "Custom field %r pattern is invalid: %s." % (name, exc), name)
+                    _diag(
+                        "TK006",
+                        "Custom field %r pattern is invalid: %s." % (name, exc),
+                        name,
+                    )
                 )
 
         trackers = _string_list(
@@ -428,9 +492,17 @@ def _normalize_custom_value(value, definition):
         raise ValueError("must be one of: %s" % ", ".join(allowed))
     minimum = definition.get("minimum")
     maximum = definition.get("maximum")
-    if comparable is not None and minimum is not None and comparable < Decimal(str(minimum)):
+    if (
+        comparable is not None
+        and minimum is not None
+        and comparable < Decimal(str(minimum))
+    ):
         raise ValueError("must be at least %s" % minimum)
-    if comparable is not None and maximum is not None and comparable > Decimal(str(maximum)):
+    if (
+        comparable is not None
+        and maximum is not None
+        and comparable > Decimal(str(maximum))
+    ):
         raise ValueError("must be at most %s" % maximum)
     min_length = definition.get("min_length")
     max_length = definition.get("max_length")
@@ -451,7 +523,11 @@ def _definition_default_values(name, definition, diagnostics):
     values = list(raw) if isinstance(raw, (list, tuple)) else [raw]
     if not definition["repeatable"] and len(values) > 1:
         diagnostics.append(
-            _diag("TK006", "Custom field %r has multiple defaults but is not repeatable." % name, name)
+            _diag(
+                "TK006",
+                "Custom field %r has multiple defaults but is not repeatable." % name,
+                name,
+            )
         )
         return None
     normalized = []
@@ -460,9 +536,15 @@ def _definition_default_values(name, definition, diagnostics):
             normalized.append(_normalize_custom_value(value, definition))
         except ValueError as exc:
             diagnostics.append(
-                _diag("TK006", "Custom field %r default %r %s." % (name, value, exc), name)
+                _diag(
+                    "TK006", "Custom field %r default %r %s." % (name, value, exc), name
+                )
             )
-    return normalized if normalized and not any(row.get("field") == name for row in diagnostics) else None
+    return (
+        normalized
+        if normalized and not any(row.get("field") == name for row in diagnostics)
+        else None
+    )
 
 
 def _field_applies(definition, tracker_values=None, project_values=None):
@@ -470,9 +552,17 @@ def _field_applies(definition, tracker_values=None, project_values=None):
     projects = set(str(value) for value in (project_values or []) if str(value))
     allowed_trackers = set(definition.get("trackers") or [])
     allowed_projects = set(definition.get("projects") or [])
-    if allowed_trackers and tracker_values is not None and not (allowed_trackers & trackers):
+    if (
+        allowed_trackers
+        and tracker_values is not None
+        and not (allowed_trackers & trackers)
+    ):
         return False
-    if allowed_projects and project_values is not None and not (allowed_projects & projects):
+    if (
+        allowed_projects
+        and project_values is not None
+        and not (allowed_projects & projects)
+    ):
         return False
     return True
 
@@ -503,7 +593,8 @@ def validate_ticket_custom_fields(item, config=None):
             rows.append(
                 _diag(
                     "TK010",
-                    "Custom field %r is not applicable to this ticket tracker/project." % name,
+                    "Custom field %r is not applicable to this ticket tracker/project."
+                    % name,
                     name,
                     "Remove %s: or adjust its trackers/projects configuration." % name,
                     item,
@@ -516,7 +607,8 @@ def validate_ticket_custom_fields(item, config=None):
                     "TK007",
                     "Required custom ticket field %r is missing." % name,
                     name,
-                    "Set %s: to a value allowed by ticketing.custom_fields.%s." % (name, name),
+                    "Set %s: to a value allowed by ticketing.custom_fields.%s."
+                    % (name, name),
                     item,
                 )
             )
@@ -524,7 +616,8 @@ def validate_ticket_custom_fields(item, config=None):
             rows.append(
                 _diag(
                     "TK008",
-                    "Custom field %r is not repeatable but appears %d times." % (name, len(values)),
+                    "Custom field %r is not repeatable but appears %d times."
+                    % (name, len(values)),
                     name,
                     "Keep exactly one %s: value." % name,
                     item,
@@ -559,7 +652,9 @@ def custom_field_values(item, config=None, role=None, include_hidden=False):
     return result
 
 
-def apply_custom_defaults(details, config=None, tracker_values=None, project_values=None):
+def apply_custom_defaults(
+    details, config=None, tracker_values=None, project_values=None
+):
     definitions = custom_field_definitions(config, strict=True)
     for name, definition in definitions.items():
         if details.get(name):
@@ -582,7 +677,8 @@ def parse_custom_field_assignments(pairs, config=None, filter_only=False):
         name = name.strip()
         if name not in definitions:
             raise ValueError(
-                "Unknown configured custom field %r. Use `ticket fields` to inspect the registry." % name
+                "Unknown configured custom field %r. Use `ticket fields` to inspect the registry."
+                % name
             )
         definition = definitions[name]
         if filter_only and not definition.get("filterable"):
@@ -602,7 +698,9 @@ def ticket_custom_field_contract(config=None, role=None):
         value.pop("default_values", None)
         if role not in (None, ""):
             value["visible_for_role"] = _role_allowed(definition, role, "visible_roles")
-            value["editable_for_role"] = _role_allowed(definition, role, "editable_roles")
+            value["editable_for_role"] = _role_allowed(
+                definition, role, "editable_roles"
+            )
         definitions[name] = value
     return OrderedDict(
         (
@@ -636,14 +734,31 @@ def _patch_ticket_core():
         return rows
 
     def ticket_view(item, config, items=None, key="id"):
-        result = OrderedDict(_ORIGINALS["ticket_view"](item, config, items=items, key=key))
+        result = OrderedDict(
+            _ORIGINALS["ticket_view"](item, config, items=items, key=key)
+        )
         result["custom_fields"] = custom_field_values(item, config)
         return result
 
-    def build_ticket_line(config, subject, tracker=None, priority=None, severity=None,
-                          assignee=None, reporter=None, component=None, version=None,
-                          sprint=None, ticket_status="new", project=None, due=None,
-                          est=None, watchers=None, ticket_id=None, extra=None):
+    def build_ticket_line(
+        config,
+        subject,
+        tracker=None,
+        priority=None,
+        severity=None,
+        assignee=None,
+        reporter=None,
+        component=None,
+        version=None,
+        sprint=None,
+        ticket_status="new",
+        project=None,
+        due=None,
+        est=None,
+        watchers=None,
+        ticket_id=None,
+        extra=None,
+    ):
         line = _ORIGINALS["build_ticket_line"](
             config,
             subject,
@@ -669,7 +784,9 @@ def _patch_ticket_core():
             check_ids=False,
             check_references=False,
         )
-        errors = [d.to_dict() for d in diagnostics if getattr(d, "severity", None) == "error"]
+        errors = [
+            d.to_dict() for d in diagnostics if getattr(d, "severity", None) == "error"
+        ]
         if not parsed or errors:
             raise ValueError(errors or "Generated ticket did not parse.")
         item = parsed[0]
@@ -716,10 +833,21 @@ def _patch_revision_validation():
             raise ValueError(errors)
         return replacement, updated
 
-    def apply_ticket_patch(path, ticket_id, detail_updates=None, status=None, key="id",
-                           expected_revision=None, require_revision=False, dry_run=False,
-                           operation="ticket.patch", config=None):
-        token = _ACTIVE_CONFIG.set(config if config is not None else _ACTIVE_CONFIG.get())
+    def apply_ticket_patch(
+        path,
+        ticket_id,
+        detail_updates=None,
+        status=None,
+        key="id",
+        expected_revision=None,
+        require_revision=False,
+        dry_run=False,
+        operation="ticket.patch",
+        config=None,
+    ):
+        token = _ACTIVE_CONFIG.set(
+            config if config is not None else _ACTIVE_CONFIG.get()
+        )
         try:
             return _ORIGINALS["revision_apply_ticket_patch"](
                 path,
@@ -735,10 +863,22 @@ def _patch_revision_validation():
         finally:
             _ACTIVE_CONFIG.reset(token)
 
-    def apply_ticket_relation(path, ticket_id, relation, target_id, add=True, key="id",
-                              expected_revision=None, require_revision=False, dry_run=False,
-                              operation=None, config=None):
-        token = _ACTIVE_CONFIG.set(config if config is not None else _ACTIVE_CONFIG.get())
+    def apply_ticket_relation(
+        path,
+        ticket_id,
+        relation,
+        target_id,
+        add=True,
+        key="id",
+        expected_revision=None,
+        require_revision=False,
+        dry_run=False,
+        operation=None,
+        config=None,
+    ):
+        token = _ACTIVE_CONFIG.set(
+            config if config is not None else _ACTIVE_CONFIG.get()
+        )
         try:
             return _ORIGINALS["revision_apply_ticket_relation"](
                 path,
@@ -770,7 +910,9 @@ def _subparsers_action(parser):
 
 
 def _has_option(parser, option):
-    return any(option in getattr(action, "option_strings", []) for action in parser._actions)
+    return any(
+        option in getattr(action, "option_strings", []) for action in parser._actions
+    )
 
 
 def _install_cli_arguments(parser, cli_module):
@@ -806,11 +948,18 @@ def _install_cli_arguments(parser, cli_module):
         )
     if "fields" not in actions.choices:
         fields = actions.add_parser(
-            "fields", help="Inspect and validate the effective typed custom-field registry."
+            "fields",
+            help="Inspect and validate the effective typed custom-field registry.",
         )
-        fields.add_argument("--tracker", help="Show whether each field applies to this tracker.")
-        fields.add_argument("--project", help="Show whether each field applies to this project.")
-        fields.add_argument("--role", help="Evaluate visible/editable role restrictions.")
+        fields.add_argument(
+            "--tracker", help="Show whether each field applies to this tracker."
+        )
+        fields.add_argument(
+            "--project", help="Show whether each field applies to this project."
+        )
+        fields.add_argument(
+            "--role", help="Evaluate visible/editable role restrictions."
+        )
         fields.add_argument("--format", choices=("text", "json"), default="text")
         fields.add_argument("--pretty", action="store_true")
         fields.set_defaults(func=_command_ticket_fields)
@@ -872,12 +1021,21 @@ def _command_ticket_fields(args):
             cli_module.write_text(
                 None,
                 "%-20s %-9s %-9s %s\n"
-                % (name, definition["type"], definition["privacy"], ", ".join(flags) or "-"),
+                % (
+                    name,
+                    definition["type"],
+                    definition["privacy"],
+                    ", ".join(flags) or "-",
+                ),
             )
         for diagnostic in contract["diagnostics"]:
             cli_module.sys.stderr.write(
                 "%s %s: %s\n"
-                % (diagnostic["severity"].upper(), diagnostic["code"], diagnostic["message"])
+                % (
+                    diagnostic["severity"].upper(),
+                    diagnostic["code"],
+                    diagnostic["message"],
+                )
             )
     return 0 if contract["valid"] else 1
 
@@ -894,7 +1052,9 @@ def _patch_cli():
     _ORIGINALS["command_ticket_show"] = cli_module.command_ticket_show
 
     def build_parser():
-        return _install_cli_arguments(_ORIGINALS["custom_cli_build_parser"](), cli_module)
+        return _install_cli_arguments(
+            _ORIGINALS["custom_cli_build_parser"](), cli_module
+        )
 
     def command_ticket_new(args):
         config = cli_module._config(args)
@@ -902,7 +1062,9 @@ def _patch_cli():
             getattr(args, "custom_fields", None), config=config
         )
         key = cli_module.id_key_from_config(config)
-        items, _diagnostics = cli_module._parse_or_exit(cli_module._ticket_paths(args), config)
+        items, _diagnostics = cli_module._parse_or_exit(
+            cli_module._ticket_paths(args), config
+        )
         ticket_id = getattr(args, "id", None) or tickets.next_ticket_id(items, config)
         line = tickets.build_ticket_line(
             config,
@@ -928,7 +1090,11 @@ def _patch_cli():
         )
         if not parsed:
             raise ValueError("Generated ticket did not parse.")
-        errors = [row for row in tickets.validate_ticket(parsed[0], config, key=key) if row["severity"] == "error"]
+        errors = [
+            row
+            for row in tickets.validate_ticket(parsed[0], config, key=key)
+            if row["severity"] == "error"
+        ]
         if errors:
             raise ValueError(errors)
         if getattr(args, "dry_run", False):
@@ -940,16 +1106,27 @@ def _patch_cli():
             target = paths[0] if paths else "life.txt"
         cli_module._ensure_writable_path(target, config, "ticket new")
         cli_module.append_line(target, line)
-        cli_module.write_text(None, "Created %s in %s:\n  %s\n" % (ticket_id, target, line))
+        cli_module.write_text(
+            None, "Created %s in %s:\n  %s\n" % (ticket_id, target, line)
+        )
         return 0
 
     def command_ticket_list(args):
         config = cli_module._config(args)
-        items, _diagnostics = cli_module._parse_or_exit(cli_module._ticket_paths(args), config)
+        items, _diagnostics = cli_module._parse_or_exit(
+            cli_module._ticket_paths(args), config
+        )
         canonical = {}
         for field in (
-            "tracker", "status", "priority", "severity", "assignee", "component",
-            "version", "sprint", "project",
+            "tracker",
+            "status",
+            "priority",
+            "severity",
+            "assignee",
+            "component",
+            "version",
+            "sprint",
+            "project",
         ):
             value = getattr(args, field, None)
             if value:
@@ -970,7 +1147,9 @@ def _patch_cli():
             has_fields.append(name)
         rows = []
         for item in tickets.iter_tickets(items):
-            summary = tickets.ticket_summary(item, config, key=cli_module.id_key_from_config(config))
+            summary = tickets.ticket_summary(
+                item, config, key=cli_module.id_key_from_config(config)
+            )
             if not tickets._matches_filters(summary, canonical):
                 continue
             matched = True
@@ -985,7 +1164,9 @@ def _patch_cli():
                 rows.append(summary)
         rows.sort(key=lambda row: str(row["id"] or ""))
         if getattr(args, "json", False):
-            cli_module.write_text(None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+            cli_module.write_text(
+                None, json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+            )
             return 0
         if not rows:
             cli_module.write_text(None, "No tickets.\n")
@@ -1008,10 +1189,15 @@ def _patch_cli():
     def command_ticket_show(args):
         config = cli_module._config(args)
         key = cli_module.id_key_from_config(config)
-        items, _diagnostics = cli_module._parse_or_exit(cli_module._ticket_paths(args), config)
+        items, _diagnostics = cli_module._parse_or_exit(
+            cli_module._ticket_paths(args), config
+        )
         target = None
         for item in items:
-            if tickets.is_ticket(item) and str(tickets.ticket_id_of(item, key)) == args.id:
+            if (
+                tickets.is_ticket(item)
+                and str(tickets.ticket_id_of(item, key)) == args.id
+            ):
                 target = item
                 break
         if target is None:
@@ -1019,7 +1205,9 @@ def _patch_cli():
             return 1
         view = tickets.ticket_view(target, config, items, key=key)
         if getattr(args, "json", False):
-            cli_module.write_text(None, json.dumps(view, ensure_ascii=False, indent=2) + "\n")
+            cli_module.write_text(
+                None, json.dumps(view, ensure_ascii=False, indent=2) + "\n"
+            )
             return 0
         summary = view["summary"]
         cli_module.write_text(None, "%s  %s\n" % (summary["id"], summary["title"]))
@@ -1027,20 +1215,29 @@ def _patch_cli():
             None,
             "  tracker=%s status=%s (%s) priority=%s severity=%s\n"
             % (
-                summary["tracker"], summary["ticket_status"], summary["status"],
-                summary["priority"], summary["severity"],
+                summary["tracker"],
+                summary["ticket_status"],
+                summary["status"],
+                summary["priority"],
+                summary["severity"],
             ),
         )
         cli_module.write_text(
             None,
             "  assignee=%s reporter=%s project=%s component=%s version=%s sprint=%s\n"
             % (
-                summary["assignee"], summary["reporter"], summary["project"],
-                summary["component"], summary["version"], summary["sprint"],
+                summary["assignee"],
+                summary["reporter"],
+                summary["project"],
+                summary["component"],
+                summary["version"],
+                summary["sprint"],
             ),
         )
         if summary["watchers"]:
-            cli_module.write_text(None, "  watchers: %s\n" % ", ".join(summary["watchers"]))
+            cli_module.write_text(
+                None, "  watchers: %s\n" % ", ".join(summary["watchers"])
+            )
         if view["custom_fields"]:
             cli_module.write_text(None, "  custom fields:\n")
             for name, value in view["custom_fields"].items():
@@ -1049,7 +1246,9 @@ def _patch_cli():
         if view["relations"]:
             cli_module.write_text(None, "  relations:\n")
             for relation, targets in view["relations"].items():
-                cli_module.write_text(None, "    %s: %s\n" % (relation, ", ".join(targets)))
+                cli_module.write_text(
+                    None, "    %s: %s\n" % (relation, ", ".join(targets))
+                )
         if view["incoming_links"]:
             cli_module.write_text(None, "  referenced by:\n")
             for row in view["incoming_links"]:
@@ -1092,8 +1291,13 @@ def _patch_capabilities():
         result["ticket_custom_fields"] = ticket_custom_field_contract(config)
         return result
 
-    def capability_document_for(surface, read_only=False, authentication="token",
-                                writable_targets=None, config=None):
+    def capability_document_for(
+        surface,
+        read_only=False,
+        authentication="token",
+        writable_targets=None,
+        config=None,
+    ):
         return enrich(
             original_for(
                 surface,
@@ -1105,8 +1309,9 @@ def _patch_capabilities():
             config=config,
         )
 
-    def capability_document(read_only=False, authentication="token",
-                            writable_targets=None, config=None):
+    def capability_document(
+        read_only=False, authentication="token", writable_targets=None, config=None
+    ):
         return enrich(
             original_base(
                 read_only=read_only,

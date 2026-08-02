@@ -26,7 +26,9 @@ class ExtraCliTests(unittest.TestCase):
         with open(self.path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(SAMPLE)
         os.makedirs(os.path.join(self.tempdir.name, "docs"))
-        with open(os.path.join(self.tempdir.name, "docs", "readme.txt"), "w", encoding="utf-8") as handle:
+        with open(
+            os.path.join(self.tempdir.name, "docs", "readme.txt"), "w", encoding="utf-8"
+        ) as handle:
             handle.write("hello")
 
     def tearDown(self):
@@ -73,10 +75,20 @@ class ExtraCliTests(unittest.TestCase):
         self.assertIn("ideas", output)
 
     def test_invoice_and_workload_json(self):
-        output = self.run_extra([
-            "invoice", self.path, "--from", "2026-07-01", "--to", "2026-07-31",
-            "--default-rate", "1000", "--format", "json",
-        ])
+        output = self.run_extra(
+            [
+                "invoice",
+                self.path,
+                "--from",
+                "2026-07-01",
+                "--to",
+                "2026-07-31",
+                "--default-rate",
+                "1000",
+                "--format",
+                "json",
+            ]
+        )
         self.assertIn('"total":"2000.00"', output)
         output = self.run_extra(["who", self.path, "--workload", "--format", "json"])
         self.assertIn('"leo"', output)
@@ -85,9 +97,18 @@ class ExtraCliTests(unittest.TestCase):
     def test_someday_review_and_standup(self):
         output = self.run_extra(["review", self.path, "--someday", "--days", "30"])
         self.assertIn("Someday", output)
-        output = self.run_extra([
-            "standup", self.path, "--user", "leo", "--date", "2026-07-20", "--format", "json",
-        ])
+        output = self.run_extra(
+            [
+                "standup",
+                self.path,
+                "--user",
+                "leo",
+                "--date",
+                "2026-07-20",
+                "--format",
+                "json",
+            ]
+        )
         self.assertIn('"done_yesterday"', output)
         self.assertIn('"planned_today"', output)
 
@@ -114,7 +135,9 @@ class ExtraCliTests(unittest.TestCase):
 
     def test_attachment_open_dry_run_is_confined(self):
         output = self.run_extra(["files", self.path, "--open", "t1", "--dry-run"])
-        self.assertEqual(output.strip(), os.path.join(self.tempdir.name, "docs", "readme.txt"))
+        self.assertEqual(
+            output.strip(), os.path.join(self.tempdir.name, "docs", "readme.txt")
+        )
 
     def test_powershell_completion(self):
         output = self.run_extra(["completion", "powershell"])

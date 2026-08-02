@@ -1,4 +1,5 @@
 """Read-only surface integration for ticket workflow, history, time, and planning."""
+
 from __future__ import unicode_literals
 
 from collections import OrderedDict
@@ -30,7 +31,9 @@ _MCP_TOOLS = (
 
 def _activity_summary(items, ticket_id):
     events = [event_view(item) for item in iter_ticket_events(items or [], ticket_id)]
-    entries = [time_entry_view(item) for item in iter_time_entries(items or [], ticket_id)]
+    entries = [
+        time_entry_view(item) for item in iter_time_entries(items or [], ticket_id)
+    ]
     events.sort(key=lambda row: (row["at"] or "", row["sequence"], row["id"] or ""))
     superseded = {str(row.get("corrects")) for row in entries if row.get("corrects")}
     effective = [row for row in entries if str(row.get("id")) not in superseded]
@@ -42,7 +45,10 @@ def _activity_summary(items, ticket_id):
             ("time_entry_count", len(entries)),
             ("time_logged_seconds", seconds),
             ("history_append_only", True),
-            ("time_policy", "time entries authoritative when present; legacy elapsed remains separate"),
+            (
+                "time_policy",
+                "time entries authoritative when present; legacy elapsed remains separate",
+            ),
         )
     )
 
@@ -137,6 +143,7 @@ def _patch_ticket_view():
     tickets.ticket_view = ticket_view
     try:
         from . import mcp
+
         if hasattr(mcp, "ticket_view"):
             mcp.ticket_view = ticket_view
     except Exception:
@@ -250,7 +257,9 @@ def _mcp_validate_history(_args, context):
     from . import mcp
 
     items, _diagnostics = mcp._read_items(context)
-    rows = validate_ticket_history(items, config=context.config, key=mcp._id_key(context))
+    rows = validate_ticket_history(
+        items, config=context.config, key=mcp._id_key(context)
+    )
     return {
         "ok": not any(row["severity"] == "error" for row in rows),
         "diagnostic_count": len(rows),

@@ -59,10 +59,14 @@ class RemoteBrowserSessionTests(unittest.TestCase):
     def test_idle_and_absolute_expiry(self):
         clock = FakeClock()
         tokens = iter(("session-1", "csrf-1"))
-        store = BrowserSessionStore(clock=clock, token_factory=lambda _size: next(tokens))
+        store = BrowserSessionStore(
+            clock=clock, token_factory=lambda _size: next(tokens)
+        )
         row = store.create(self.principal(), "browser-session", self.config())
         clock.advance(20)
-        self.assertEqual("alice", store.resolve(row["session_id"], self.config())["principal"]["id"])
+        self.assertEqual(
+            "alice", store.resolve(row["session_id"], self.config())["principal"]["id"]
+        )
         clock.advance(31)
         with self.assertRaises(RemoteAccessError) as caught:
             store.resolve(row["session_id"], self.config())
@@ -99,12 +103,25 @@ class RemoteBrowserSessionTests(unittest.TestCase):
             config,
         )
         with self.assertRaises(RemoteAccessError) as caught:
-            require_csrf(session, {}, "POST", "https://life.example", "https://life.example", config)
+            require_csrf(
+                session,
+                {},
+                "POST",
+                "https://life.example",
+                "https://life.example",
+                config,
+            )
         self.assertEqual("CSRF_REQUIRED", caught.exception.code)
         with self.assertRaises(RemoteAccessError) as caught:
-            require_csrf(session, {"X-CSRF-Token": "csrf-1"}, "POST", "https://evil.example", "https://life.example", config)
+            require_csrf(
+                session,
+                {"X-CSRF-Token": "csrf-1"},
+                "POST",
+                "https://evil.example",
+                "https://life.example",
+                config,
+            )
         self.assertEqual("ORIGIN_FORBIDDEN", caught.exception.code)
-
 
     def test_invalid_cookie_header_and_origin_configuration_fail_closed(self):
         with self.assertRaises(RemoteAccessError) as caught:
@@ -113,7 +130,9 @@ class RemoteBrowserSessionTests(unittest.TestCase):
         with self.assertRaises(RemoteAccessError):
             validate_session_configuration(self.config(csrf_header="Bad Header"))
         with self.assertRaises(RemoteAccessError):
-            validate_session_configuration(self.config(allowed_origins=["https://example.test/path"]))
+            validate_session_configuration(
+                self.config(allowed_origins=["https://example.test/path"])
+            )
 
 
 if __name__ == "__main__":

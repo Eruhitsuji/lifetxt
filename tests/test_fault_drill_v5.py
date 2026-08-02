@@ -11,14 +11,22 @@ class FaultDrillTests(unittest.TestCase):
         self.assertTrue(report["ok"])
         self.assertEqual(EXIT_CODE, report["exit_code"])
         self.assertTrue(report["journal_path"])
-        self.assertEqual("after-first\n", report["after_recovery"]["files"]["first.txt"])
-        self.assertEqual("after-second\n", report["after_recovery"]["files"]["second.txt"])
+        self.assertEqual(
+            "after-first\n", report["after_recovery"]["files"]["first.txt"]
+        )
+        self.assertEqual(
+            "after-second\n", report["after_recovery"]["files"]["second.txt"]
+        )
 
     def test_after_first_target_commit_can_compensate(self):
         report = run_fault_drill("after_target_commit", recovery="compensate")
         self.assertTrue(report["ok"])
-        self.assertEqual("before-first\n", report["after_recovery"]["files"]["first.txt"])
-        self.assertEqual("before-second\n", report["after_recovery"]["files"]["second.txt"])
+        self.assertEqual(
+            "before-first\n", report["after_recovery"]["files"]["first.txt"]
+        )
+        self.assertEqual(
+            "before-second\n", report["after_recovery"]["files"]["second.txt"]
+        )
 
 
 if __name__ == "__main__":

@@ -161,10 +161,17 @@ def _stale_message(expected, current):
     )
 
 
-def write_config(path, data, validate=True, max_backups=DEFAULT_MAX_BACKUPS,
-                 allow_unsupported=False, expected_revision=None,
-                 require_revision=False, dry_run=False,
-                 max_rejected=DEFAULT_MAX_REJECTED):
+def write_config(
+    path,
+    data,
+    validate=True,
+    max_backups=DEFAULT_MAX_BACKUPS,
+    allow_unsupported=False,
+    expected_revision=None,
+    require_revision=False,
+    dry_run=False,
+    max_rejected=DEFAULT_MAX_REJECTED,
+):
     """Validate and atomically write ``data`` to ``path``.
 
     ``expected_revision`` makes the write a compare-and-set: when it does not
@@ -197,14 +204,18 @@ def write_config(path, data, validate=True, max_backups=DEFAULT_MAX_BACKUPS,
         errors = [row for row in diagnostics if row["severity"] == "error"]
         if errors:
             summary = "; ".join(row["message"] for row in errors[:5])
-            raise ConfigWriteError("Refusing to write invalid configuration: %s" % summary)
+            raise ConfigWriteError(
+                "Refusing to write invalid configuration: %s" % summary
+            )
     if not allow_unsupported and not is_supported_version(data):
         raise ConfigWriteError(
             "Refusing to write an unsupported config_version. Upgrade lifetxt first."
         )
 
     text = serialize_config(data)
-    expected = normalize_revision(expected_revision, supplied=expected_revision is not None)
+    expected = normalize_revision(
+        expected_revision, supplied=expected_revision is not None
+    )
     if require_revision and expected is None:
         raise ConfigRevisionRequired(
             "This configuration write requires an expected revision. "

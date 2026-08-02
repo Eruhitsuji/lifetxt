@@ -36,8 +36,12 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(((0, 0), (0, 2)), rule["byday"])
 
     def test_positional_byday(self):
-        self.assertEqual(((1, 0),), R.parse_rule("RRULE:FREQ=MONTHLY;BYDAY=1MO")["byday"])
-        self.assertEqual(((-1, 4),), R.parse_rule("RRULE:FREQ=MONTHLY;BYDAY=-1FR")["byday"])
+        self.assertEqual(
+            ((1, 0),), R.parse_rule("RRULE:FREQ=MONTHLY;BYDAY=1MO")["byday"]
+        )
+        self.assertEqual(
+            ((-1, 4),), R.parse_rule("RRULE:FREQ=MONTHLY;BYDAY=-1FR")["byday"]
+        )
 
     def test_bymonthday_and_bymonth(self):
         rule = R.parse_rule("RRULE:FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=1,-1")
@@ -55,8 +59,10 @@ class ParseTests(unittest.TestCase):
         rule = R.parse_rule("RRULE:FREQ=DAILY;UNTIL=20260725")
 
         self.assertEqual(23, rule["until"].hour)
-        self.assertEqual(datetime(2026, 7, 25, 12, 0), R.parse_rule(
-            "RRULE:FREQ=DAILY;UNTIL=2026-07-25T12:00")["until"])
+        self.assertEqual(
+            datetime(2026, 7, 25, 12, 0),
+            R.parse_rule("RRULE:FREQ=DAILY;UNTIL=2026-07-25T12:00")["until"],
+        )
 
     def test_sibling_details_fill_missing_parts(self):
         rule = R.parse_rule("weekly", interval=3, count=4, until=datetime(2027, 1, 1))
@@ -97,7 +103,8 @@ class ParseTests(unittest.TestCase):
 class ExpansionTests(unittest.TestCase):
     def test_daily_and_interval(self):
         self.assertEqual(
-            ["2026-07-20", "2026-07-21", "2026-07-22"], _days(R.expand("daily", MONDAY, limit=3))
+            ["2026-07-20", "2026-07-21", "2026-07-22"],
+            _days(R.expand("daily", MONDAY, limit=3)),
         )
         self.assertEqual(
             ["2026-07-20", "2026-07-23", "2026-07-26"],
@@ -107,7 +114,9 @@ class ExpansionTests(unittest.TestCase):
     def test_weekly_byday(self):
         moments = R.expand("RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR", MONDAY, limit=4)
 
-        self.assertEqual(["2026-07-20", "2026-07-22", "2026-07-24", "2026-07-27"], _days(moments))
+        self.assertEqual(
+            ["2026-07-20", "2026-07-22", "2026-07-24", "2026-07-27"], _days(moments)
+        )
 
     def test_weekly_interval_skips_weeks(self):
         moments = R.expand("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU", MONDAY, limit=3)
@@ -138,7 +147,9 @@ class ExpansionTests(unittest.TestCase):
     def test_monthly_anchor_day_clamps_on_short_months(self):
         moments = R.expand("monthly", datetime(2026, 1, 31), limit=4)
 
-        self.assertEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"], _days(moments))
+        self.assertEqual(
+            ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"], _days(moments)
+        )
 
     def test_yearly_bymonth_is_not_skipped(self):
         # Stepping 12 months at a time would never leave the anchor's month.
@@ -147,7 +158,9 @@ class ExpansionTests(unittest.TestCase):
         self.assertEqual(["2027-01-01", "2028-01-01", "2029-01-01"], _days(moments))
 
     def test_yearly_with_several_months(self):
-        moments = R.expand("RRULE:FREQ=YEARLY;BYMONTH=3,9;BYMONTHDAY=1", MONDAY, limit=3)
+        moments = R.expand(
+            "RRULE:FREQ=YEARLY;BYMONTH=3,9;BYMONTHDAY=1", MONDAY, limit=3
+        )
 
         self.assertEqual(["2026-09-01", "2027-03-01", "2027-09-01"], _days(moments))
 
@@ -160,7 +173,9 @@ class ExpansionTests(unittest.TestCase):
 
     def test_count_is_measured_from_the_series_start(self):
         # A windowed view must still reflect where the series really ends.
-        moments = R.expand("RRULE:FREQ=DAILY;COUNT=3", MONDAY, after=datetime(2026, 7, 21))
+        moments = R.expand(
+            "RRULE:FREQ=DAILY;COUNT=3", MONDAY, after=datetime(2026, 7, 21)
+        )
 
         self.assertEqual(["2026-07-21", "2026-07-22"], _days(moments))
 
@@ -172,13 +187,17 @@ class ExpansionTests(unittest.TestCase):
             before=datetime(2026, 8, 15),
         )
 
-        self.assertEqual(["2026-08-03", "2026-08-07", "2026-08-10", "2026-08-14"], _days(moments))
+        self.assertEqual(
+            ["2026-08-03", "2026-08-07", "2026-08-10", "2026-08-14"], _days(moments)
+        )
 
     def test_unbounded_rules_stop_at_a_ceiling(self):
         self.assertEqual(R.DEFAULT_MAX_OCCURRENCES, len(R.expand("daily", MONDAY)))
 
     def test_expansion_preserves_the_time_of_day(self):
-        moments = R.expand("RRULE:FREQ=WEEKLY;BYDAY=WE", datetime(2026, 7, 20, 14, 30), limit=2)
+        moments = R.expand(
+            "RRULE:FREQ=WEEKLY;BYDAY=WE", datetime(2026, 7, 20, 14, 30), limit=2
+        )
 
         for moment in moments:
             self.assertEqual((14, 30), (moment.hour, moment.minute))
@@ -222,14 +241,18 @@ class ItemIntegrationTests(unittest.TestCase):
         self.assertIsNone(R.rule_for_item(self._item("[ ] T A due:2026-07-20")))
 
     def test_complete_materializes_byday_occurrences(self):
-        item = self._item('[ ] T A due:2026-07-20 repeat:"RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"')
+        item = self._item(
+            '[ ] T A due:2026-07-20 repeat:"RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"'
+        )
 
         _key, nxt, _rule = next_repeat_occurrence(item, "due", date(2026, 7, 20))
 
         self.assertEqual(date(2026, 7, 22), nxt.date())
 
     def test_complete_materializes_positional_byday(self):
-        item = self._item('[ ] T A due:2026-08-03 repeat:"RRULE:FREQ=MONTHLY;BYDAY=1MO"')
+        item = self._item(
+            '[ ] T A due:2026-08-03 repeat:"RRULE:FREQ=MONTHLY;BYDAY=1MO"'
+        )
 
         _key, nxt, _rule = next_repeat_occurrence(item, "due", date(2026, 8, 3))
 
@@ -237,7 +260,9 @@ class ItemIntegrationTests(unittest.TestCase):
         self.assertEqual(0, nxt.weekday())
 
     def test_complete_materializes_end_of_month(self):
-        item = self._item('[ ] T A due:2026-07-31 repeat:"RRULE:FREQ=MONTHLY;BYMONTHDAY=-1"')
+        item = self._item(
+            '[ ] T A due:2026-07-31 repeat:"RRULE:FREQ=MONTHLY;BYMONTHDAY=-1"'
+        )
 
         _key, nxt, _rule = next_repeat_occurrence(item, "due", date(2026, 7, 31))
 
@@ -251,7 +276,9 @@ class ItemIntegrationTests(unittest.TestCase):
         self.assertEqual(date(2026, 7, 27), nxt.date())
 
     def test_until_stops_materialization(self):
-        item = self._item('[ ] T A due:2026-07-20 repeat:"RRULE:FREQ=WEEKLY;UNTIL=20260722"')
+        item = self._item(
+            '[ ] T A due:2026-07-20 repeat:"RRULE:FREQ=WEEKLY;UNTIL=20260722"'
+        )
 
         _key, nxt, _rule = next_repeat_occurrence(item, "due", date(2026, 7, 20))
 
@@ -262,7 +289,9 @@ class ItemIntegrationTests(unittest.TestCase):
             "[ ] E Board id:e1 from:2026-08-03T10:00 repeat:RRULE:FREQ=MONTHLY;BYDAY=1MO\n"
         )[0]
 
-        matches = item_time_matches(items[0], datetime(2026, 8, 1), datetime(2026, 11, 30))
+        matches = item_time_matches(
+            items[0], datetime(2026, 8, 1), datetime(2026, 11, 30)
+        )
 
         self.assertEqual(
             ["2026-08-03", "2026-09-07", "2026-10-05", "2026-11-02"],
@@ -274,17 +303,28 @@ class ItemIntegrationTests(unittest.TestCase):
             "[ ] E Payday id:e2 from:2026-08-31T09:00 repeat:RRULE:FREQ=MONTHLY;BYMONTHDAY=-1\n"
         )[0]
 
-        matches = item_time_matches(items[0], datetime(2026, 8, 1), datetime(2026, 11, 1))
+        matches = item_time_matches(
+            items[0], datetime(2026, 8, 1), datetime(2026, 11, 1)
+        )
 
-        self.assertEqual(["2026-08-31", "2026-09-30", "2026-10-31"], [m["start"][:10] for m in matches])
+        self.assertEqual(
+            ["2026-08-31", "2026-09-30", "2026-10-31"],
+            [m["start"][:10] for m in matches],
+        )
 
     def test_agenda_still_handles_plain_rules(self):
-        items = parse_text("[ ] E Weekly id:e0 from:2026-08-03T09:00 repeat:weekly\n")[0]
+        items = parse_text("[ ] E Weekly id:e0 from:2026-08-03T09:00 repeat:weekly\n")[
+            0
+        ]
 
-        matches = item_time_matches(items[0], datetime(2026, 8, 1), datetime(2026, 9, 1))
+        matches = item_time_matches(
+            items[0], datetime(2026, 8, 1), datetime(2026, 9, 1)
+        )
 
-        self.assertEqual(["2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31"],
-                         [m["start"][:10] for m in matches])
+        self.assertEqual(
+            ["2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31"],
+            [m["start"][:10] for m in matches],
+        )
 
     def test_agenda_records_still_build(self):
         items = parse_text(
@@ -301,7 +341,10 @@ def _run_cli(cwd, *args):
     env = dict(os.environ, PYTHONPATH=ROOT_DIR, PYTHONIOENCODING="utf-8")
     process = subprocess.Popen(
         [sys.executable, "-m", "lifetxt"] + list(args),
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=cwd,
+        env=env,
     )
     out, _err = process.communicate()
     return out.decode("utf-8", "replace").strip(), process.returncode
@@ -321,7 +364,13 @@ class RruleCommandTests(unittest.TestCase):
 
     def test_expands_a_rule_given_on_the_command_line(self):
         out, code = _run_cli(
-            self.tmp.name, "rrule", "RRULE:FREQ=WEEKLY;BYDAY=MO,WE", "--from", "2026-07-20", "--count", "3"
+            self.tmp.name,
+            "rrule",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,WE",
+            "--from",
+            "2026-07-20",
+            "--count",
+            "3",
         )
 
         self.assertEqual(0, code, out)
@@ -330,7 +379,9 @@ class RruleCommandTests(unittest.TestCase):
         self.assertIn("2026-07-22", out)
 
     def test_expands_an_items_repeat(self):
-        out, code = _run_cli(self.tmp.name, "rrule", "--path", "life.txt", "--id", "t1", "--count", "2")
+        out, code = _run_cli(
+            self.tmp.name, "rrule", "--path", "life.txt", "--id", "t1", "--count", "2"
+        )
 
         self.assertEqual(0, code, out)
         self.assertIn("2026-08-03", out)
@@ -340,7 +391,13 @@ class RruleCommandTests(unittest.TestCase):
         import json
 
         out, code = _run_cli(
-            self.tmp.name, "rrule", "RRULE:FREQ=DAILY;COUNT=2", "--from", "2026-07-20", "--format", "json"
+            self.tmp.name,
+            "rrule",
+            "RRULE:FREQ=DAILY;COUNT=2",
+            "--from",
+            "2026-07-20",
+            "--format",
+            "json",
         )
 
         payload = json.loads(out)
@@ -350,7 +407,16 @@ class RruleCommandTests(unittest.TestCase):
 
     def test_life_output_is_valid(self):
         out, code = _run_cli(
-            self.tmp.name, "rrule", "--path", "life.txt", "--id", "t2", "--count", "2", "--format", "life"
+            self.tmp.name,
+            "rrule",
+            "--path",
+            "life.txt",
+            "--id",
+            "t2",
+            "--count",
+            "2",
+            "--format",
+            "life",
         )
 
         self.assertEqual(0, code, out)
@@ -359,8 +425,15 @@ class RruleCommandTests(unittest.TestCase):
 
     def test_window_options(self):
         out, code = _run_cli(
-            self.tmp.name, "rrule", "daily", "--from", "2026-07-20",
-            "--after", "2026-07-23", "--before", "2026-07-25",
+            self.tmp.name,
+            "rrule",
+            "daily",
+            "--from",
+            "2026-07-20",
+            "--after",
+            "2026-07-23",
+            "--before",
+            "2026-07-25",
         )
 
         self.assertEqual(0, code, out)
@@ -382,7 +455,11 @@ class RruleCommandTests(unittest.TestCase):
 
     def test_unsupported_parts_are_warned_about(self):
         out, code = _run_cli(
-            self.tmp.name, "rrule", "RRULE:FREQ=WEEKLY;BYDAY=MO;BYSETPOS=1", "--from", "2026-07-20"
+            self.tmp.name,
+            "rrule",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO;BYSETPOS=1",
+            "--from",
+            "2026-07-20",
         )
 
         self.assertEqual(0, code)

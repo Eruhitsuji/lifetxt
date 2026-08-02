@@ -1,4 +1,5 @@
 """Version and sprint planning records for development tickets."""
+
 from __future__ import unicode_literals
 
 import copy
@@ -90,10 +91,21 @@ def _next_id(items, prefix):
     return "%s-%d" % (prefix, highest + 1)
 
 
-def build_version(title, project, identifier, state="open", due=None, release=None, description=None, parent=None):
+def build_version(
+    title,
+    project,
+    identifier,
+    state="open",
+    due=None,
+    release=None,
+    description=None,
+    parent=None,
+):
     state = str(state or "open")
     if state not in VERSION_STATES:
-        raise ValueError("Version state must be one of: %s." % ", ".join(VERSION_STATES))
+        raise ValueError(
+            "Version state must be one of: %s." % ", ".join(VERSION_STATES)
+        )
     details = OrderedDict(
         (
             ("record", [VERSION_MARKER]),
@@ -113,7 +125,17 @@ def build_version(title, project, identifier, state="open", due=None, release=No
     return Item("[N]", "N", str(title), details)
 
 
-def build_sprint(title, project, identifier, start, end, state="planned", goal=None, capacity=None, version=None):
+def build_sprint(
+    title,
+    project,
+    identifier,
+    start,
+    end,
+    state="planned",
+    goal=None,
+    capacity=None,
+    version=None,
+):
     state = str(state or "planned")
     if state not in SPRINT_STATES:
         raise ValueError("Sprint state must be one of: %s." % ", ".join(SPRINT_STATES))
@@ -214,7 +236,9 @@ def validate_planning(items, key="id"):
         sprints[identifier] = item
         version = str(_first(item, "version", ""))
         if version and version not in versions:
-            rows.append(_diag("TK050", "Sprint references missing version %r." % version, item))
+            rows.append(
+                _diag("TK050", "Sprint references missing version %r." % version, item)
+            )
     for item in items:
         if not is_ticket(item):
             continue
@@ -222,13 +246,32 @@ def validate_planning(items, key="id"):
         version = str(_first(item, "version", ""))
         sprint = str(_first(item, "sprint", ""))
         if version and version not in versions:
-            rows.append(_diag("TK051", "Ticket %s references missing version %r." % (ticket, version), item))
+            rows.append(
+                _diag(
+                    "TK051",
+                    "Ticket %s references missing version %r." % (ticket, version),
+                    item,
+                )
+            )
         if sprint and sprint not in sprints:
-            rows.append(_diag("TK052", "Ticket %s references missing sprint %r." % (ticket, sprint), item))
+            rows.append(
+                _diag(
+                    "TK052",
+                    "Ticket %s references missing sprint %r." % (ticket, sprint),
+                    item,
+                )
+            )
         if version and sprint and sprint in sprints:
             sprint_version = str(_first(sprints[sprint], "version", ""))
             if sprint_version and sprint_version != version:
-                rows.append(_diag("TK053", "Ticket %s version conflicts with sprint %s version." % (ticket, sprint), item))
+                rows.append(
+                    _diag(
+                        "TK053",
+                        "Ticket %s version conflicts with sprint %s version."
+                        % (ticket, sprint),
+                        item,
+                    )
+                )
     return rows
 
 
@@ -326,7 +369,9 @@ def planning_report(items, project=None, config=None, key="id"):
         if getattr(item, "status", None) in ("[ ]", "[/]", "[?]", "[>]")
         and not _values(item, "sprint")
     ]
-    versions.sort(key=lambda row: (row["release"] or row["due"] or "9999-12-31", row["id"] or ""))
+    versions.sort(
+        key=lambda row: (row["release"] or row["due"] or "9999-12-31", row["id"] or "")
+    )
     sprints.sort(key=lambda row: (row["start"] or "", row["id"] or ""))
     backlog.sort(key=lambda row: str(row["id"] or ""))
     return OrderedDict(

@@ -253,7 +253,9 @@ def filter_items(
             continue
         if text and text not in _item_search_text(item).lower():
             continue
-        if range_start is not None and not item_time_matches(item, range_start, range_end):
+        if range_start is not None and not item_time_matches(
+            item, range_start, range_end
+        ):
             continue
         filtered.append(item)
     return filtered
@@ -374,6 +376,7 @@ def format_agenda_table(records, width=None):
     if width is None:
         try:
             import shutil as _shutil
+
             width = _shutil.get_terminal_size((80, 24)).columns
         except Exception:
             width = 80
@@ -413,7 +416,9 @@ def format_agenda_table(records, width=None):
         widths.append(col_width)
 
     lines = []
-    lines.append(_format_table_row([heading for _key, heading in _TABLE_COLUMNS], widths))
+    lines.append(
+        _format_table_row([heading for _key, heading in _TABLE_COLUMNS], widths)
+    )
     lines.append(_format_table_row(["-" * w for w in widths], widths))
     for row in rows:
         lines.append(
@@ -510,7 +515,9 @@ def _add_detail_range_matches(
     for end_text in ends:
         end_span = _parse_date_or_datetime_span(end_text)
         if end_span is not None:
-            _add_match(matches, end_key, end_span[0], end_span[1], range_start, range_end)
+            _add_match(
+                matches, end_key, end_span[0], end_span[1], range_start, range_end
+            )
 
 
 def _add_point_key_matches(matches, item, range_start, range_end):
@@ -572,14 +579,19 @@ def next_repeat_occurrence(item, repeat_base, completion_date):
     rule = _repeat_rule(item, repeat_value)
     if rule is None:
         raise ValueError(
-            "Unrecognized repeat:%s value; cannot materialize the next occurrence." % repeat_value
+            "Unrecognized repeat:%s value; cannot materialize the next occurrence."
+            % repeat_value
         )
 
     repeat_base = str(repeat_base or "due").strip().lower()
     if repeat_base not in ("due", "done"):
         raise ValueError("repeat_base must be 'due' or 'done', got %r." % repeat_base)
 
-    anchor_key = "due" if item.details.get("due") else ("do" if item.details.get("do") else "due")
+    anchor_key = (
+        "due"
+        if item.details.get("due")
+        else ("do" if item.details.get("do") else "due")
+    )
 
     if repeat_base == "due":
         due_values = item.details.get(anchor_key)
@@ -590,7 +602,10 @@ def next_repeat_occurrence(item, repeat_base, completion_date):
             )
         anchor = parse_date_or_datetime(due_values[0], is_end=False)
         if anchor is None:
-            raise ValueError("Could not parse %s:%s for repeat calculation." % (anchor_key, due_values[0]))
+            raise ValueError(
+                "Could not parse %s:%s for repeat calculation."
+                % (anchor_key, due_values[0])
+            )
     else:
         anchor = datetime.combine(completion_date, time())
 
@@ -620,7 +635,9 @@ def _next_occurrence_after(item, anchor, rule):
     except RecurrenceError as exc:
         raise ValueError(str(exc))
     if expanded_rule is None or not (
-        expanded_rule["byday"] or expanded_rule["bymonthday"] or expanded_rule["bymonth"]
+        expanded_rule["byday"]
+        or expanded_rule["bymonthday"]
+        or expanded_rule["bymonth"]
     ):
         return _next_repeat_datetime(anchor, rule["repeat"], rule["interval"])
 
@@ -772,8 +789,18 @@ def _repeat_rule(item, repeat_value):
         [
             ("label", text),
             ("repeat", repeat_name),
-            ("interval", _positive_int_text(parts.get("INTERVAL"), _positive_int_detail(item, "interval", 1))),
-            ("count", _positive_int_text(parts.get("COUNT"), _positive_int_detail(item, "count", None))),
+            (
+                "interval",
+                _positive_int_text(
+                    parts.get("INTERVAL"), _positive_int_detail(item, "interval", 1)
+                ),
+            ),
+            (
+                "count",
+                _positive_int_text(
+                    parts.get("COUNT"), _positive_int_detail(item, "count", None)
+                ),
+            ),
             ("until", _parse_rrule_until(parts.get("UNTIL")) or _repeat_until(item)),
             ("byday", byday),
         ]
@@ -783,7 +810,7 @@ def _repeat_rule(item, repeat_value):
 def _parse_rrule_parts(value):
     text = str(value or "")
     if text.upper().startswith(_RRULE_PREFIX):
-        text = text[len(_RRULE_PREFIX):]
+        text = text[len(_RRULE_PREFIX) :]
     parts = OrderedDict()
     for raw_part in text.split(";"):
         if "=" not in raw_part:
@@ -826,9 +853,17 @@ def _parse_rrule_until(value):
             parsed_date = datetime.strptime(text, "%Y%m%d").date()
             return datetime.combine(parsed_date, time(23, 59, 59))
         if re.match(r"^\d{8}T\d{6}Z$", text):
-            return datetime.strptime(text[:-1] + "+0000", "%Y%m%dT%H%M%S%z").astimezone().replace(tzinfo=None)
+            return (
+                datetime.strptime(text[:-1] + "+0000", "%Y%m%dT%H%M%S%z")
+                .astimezone()
+                .replace(tzinfo=None)
+            )
         if re.match(r"^\d{8}T\d{6}[+-]\d{4}$", text):
-            return datetime.strptime(text, "%Y%m%dT%H%M%S%z").astimezone().replace(tzinfo=None)
+            return (
+                datetime.strptime(text, "%Y%m%dT%H%M%S%z")
+                .astimezone()
+                .replace(tzinfo=None)
+            )
         if re.match(r"^\d{8}T\d{6}$", text):
             return datetime.strptime(text, "%Y%m%dT%H%M%S")
     except ValueError:
@@ -1005,7 +1040,11 @@ def _repeat_anchor(item, range_start, range_end):
         on_dates = _item_on_dates(item)
         if not on_dates and _is_unbounded_range(range_start, range_end):
             return None
-        anchor_date = on_dates[0] if on_dates else _first_matching_date_for_time(range_start, at_time)
+        anchor_date = (
+            on_dates[0]
+            if on_dates
+            else _first_matching_date_for_time(range_start, at_time)
+        )
         point = datetime.combine(anchor_date, at_time)
         return "at", point, point
 
@@ -1023,7 +1062,9 @@ def _repeat_anchor(item, range_start, range_end):
     return None
 
 
-def _align_repeat_start(repeat_value, anchor_start, anchor_end, interval, range_start, count):
+def _align_repeat_start(
+    repeat_value, anchor_start, anchor_end, interval, range_start, count
+):
     occurrence_index = 1
     duration = anchor_end - anchor_start
     target = range_start - duration
@@ -1032,14 +1073,18 @@ def _align_repeat_start(repeat_value, anchor_start, anchor_end, interval, range_
 
     if repeat_value == "daily":
         step_seconds = timedelta(days=interval).total_seconds()
-        skipped = max(0, int((target - anchor_start).total_seconds() // step_seconds) - 1)
+        skipped = max(
+            0, int((target - anchor_start).total_seconds() // step_seconds) - 1
+        )
         if count is not None and skipped >= count:
             return anchor_start + timedelta(days=interval * skipped), skipped + 1
         return anchor_start + timedelta(days=interval * skipped), skipped + 1
 
     if repeat_value == "weekly":
         step_seconds = timedelta(weeks=interval).total_seconds()
-        skipped = max(0, int((target - anchor_start).total_seconds() // step_seconds) - 1)
+        skipped = max(
+            0, int((target - anchor_start).total_seconds() // step_seconds) - 1
+        )
         if count is not None and skipped >= count:
             return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
         return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
@@ -1118,7 +1163,9 @@ def _first_detail_value(item, key):
     return None
 
 
-def _add_match(matches, key, start, end, range_start, range_end, repeat=None, occurrence_index=None):
+def _add_match(
+    matches, key, start, end, range_start, range_end, repeat=None, occurrence_index=None
+):
     if start is None:
         return
     if _overlaps(start, end, range_start, range_end):
@@ -1190,7 +1237,9 @@ def _parse_date_span(value):
     parsed = parse_date(value)
     if parsed is None:
         return None
-    return datetime.combine(parsed, time(0, 0, 0)), datetime.combine(parsed, time(23, 59, 59))
+    return datetime.combine(parsed, time(0, 0, 0)), datetime.combine(
+        parsed, time(23, 59, 59)
+    )
 
 
 def _parse_datetime_value(value):
@@ -1438,7 +1487,15 @@ def _record_has_any_team(record, values, team_members=None):
 
 def _item_user_values(item):
     values = []
-    for key in ("user", "person", "owner", "assignee", "attendee", "sender", "recipient"):
+    for key in (
+        "user",
+        "person",
+        "owner",
+        "assignee",
+        "attendee",
+        "sender",
+        "recipient",
+    ):
         values.extend(item.details.get(key, []))
     if item.kind == "S" and not item.details.get("person"):
         values.append("self")
@@ -1448,7 +1505,15 @@ def _item_user_values(item):
 def _record_user_values(record):
     details = record.get("details", {})
     values = []
-    for key in ("user", "person", "owner", "assignee", "attendee", "sender", "recipient"):
+    for key in (
+        "user",
+        "person",
+        "owner",
+        "assignee",
+        "attendee",
+        "sender",
+        "recipient",
+    ):
         values.extend(details.get(key, []))
     if record.get("type") == "S" and not details.get("person"):
         values.append("self")

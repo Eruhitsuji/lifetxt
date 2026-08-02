@@ -11,7 +11,9 @@ import stat
 from collections import OrderedDict
 
 
-_FAULT_HANDLER = contextvars.ContextVar("lifetxt_transaction_fault_handler", default=None)
+_FAULT_HANDLER = contextvars.ContextVar(
+    "lifetxt_transaction_fault_handler", default=None
+)
 
 
 class TransactionPolicyError(RuntimeError):
@@ -40,7 +42,11 @@ def fault_point(point, **details):
 
 def policy_from_config(config=None):
     config = config or {}
-    raw = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    raw = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
     policy_file = raw.get("policy_file")
     if policy_file:
         absolute = os.path.abspath(os.path.expanduser(str(policy_file)))
@@ -48,14 +54,20 @@ def policy_from_config(config=None):
             try:
                 with open(absolute, "r", encoding="utf-8") as handle:
                     document = json.load(handle)
-                version = int(document.get("policy_version", 0)) if isinstance(document, dict) else 0
+                version = (
+                    int(document.get("policy_version", 0))
+                    if isinstance(document, dict)
+                    else 0
+                )
                 if version > 1:
                     raise TransactionPolicyError(
-                        "Transaction policy version %d is newer than supported version 1." % version
+                        "Transaction policy version %d is newer than supported version 1."
+                        % version
                     )
                 if version < 1:
                     raise TransactionPolicyError(
-                        "Transaction policy file requires migration to version 1: %s" % absolute
+                        "Transaction policy file requires migration to version 1: %s"
+                        % absolute
                     )
                 stored = document.get("policy")
                 if isinstance(stored, dict):
@@ -68,13 +80,30 @@ def policy_from_config(config=None):
                 )
     return OrderedDict(
         (
-            ("terminal_retention_days", _number(raw.get("terminal_retention_days"), 30.0, minimum=0.0)),
+            (
+                "terminal_retention_days",
+                _number(raw.get("terminal_retention_days"), 30.0, minimum=0.0),
+            ),
             ("max_transactions", _integer(raw.get("max_transactions"), 500, minimum=1)),
-            ("max_total_bytes", _integer(raw.get("max_total_bytes"), 256 * 1024 * 1024, minimum=1024)),
-            ("max_transaction_bytes", _integer(raw.get("max_transaction_bytes"), 64 * 1024 * 1024, minimum=1024)),
-            ("require_private_permissions", _boolean(raw.get("require_private_permissions"), True)),
+            (
+                "max_total_bytes",
+                _integer(raw.get("max_total_bytes"), 256 * 1024 * 1024, minimum=1024),
+            ),
+            (
+                "max_transaction_bytes",
+                _integer(
+                    raw.get("max_transaction_bytes"), 64 * 1024 * 1024, minimum=1024
+                ),
+            ),
+            (
+                "require_private_permissions",
+                _boolean(raw.get("require_private_permissions"), True),
+            ),
             ("allow_newer_read_only", _boolean(raw.get("allow_newer_read_only"), True)),
-            ("evidence_include_paths", _boolean(raw.get("evidence_include_paths"), False)),
+            (
+                "evidence_include_paths",
+                _boolean(raw.get("evidence_include_paths"), False),
+            ),
         )
     )
 
@@ -96,7 +125,12 @@ def journal_usage(root):
                 total += size
                 largest = max(largest, size)
     return OrderedDict(
-        (("path", absolute), ("transactions", count), ("total_bytes", total), ("largest_file_bytes", largest))
+        (
+            ("path", absolute),
+            ("transactions", count),
+            ("total_bytes", total),
+            ("largest_file_bytes", largest),
+        )
     )
 
 
@@ -191,7 +225,9 @@ def build_integrity_manifest(root):
                 )
             )
     manifest = OrderedDict((("version", 1), ("files", files)))
-    canonical = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    canonical = json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
     manifest["manifest_sha256"] = hashlib.sha256(canonical).hexdigest()
     return manifest
 
@@ -201,7 +237,9 @@ def write_integrity_manifest(root):
 
     manifest = build_integrity_manifest(root)
     path = os.path.join(os.path.abspath(root), "integrity-manifest.json")
-    atomic_write_text(path, json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+    atomic_write_text(
+        path, json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    )
     return path, manifest
 
 
@@ -213,7 +251,11 @@ def verify_integrity_manifest(root):
     observed = build_integrity_manifest(absolute)
     expected_files = expected.get("files") or []
     observed_files = observed.get("files") or []
-    ok = json.dumps(expected_files, ensure_ascii=False, sort_keys=True, separators=(",", ":")) == json.dumps(observed_files, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    ok = json.dumps(
+        expected_files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ) == json.dumps(
+        observed_files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return OrderedDict(
         (
             ("ok", ok),
@@ -229,7 +271,14 @@ def version_compatibility(record, supported_version):
     try:
         actual = int(record.get("schema_version"))
     except (TypeError, ValueError):
-        return OrderedDict((("state", "invalid"), ("actual", record.get("schema_version")), ("supported", supported_version), ("writable", False)))
+        return OrderedDict(
+            (
+                ("state", "invalid"),
+                ("actual", record.get("schema_version")),
+                ("supported", supported_version),
+                ("writable", False),
+            )
+        )
     if actual == int(supported_version):
         state = "current"
         writable = True
@@ -239,7 +288,14 @@ def version_compatibility(record, supported_version):
     else:
         state = "newer"
         writable = False
-    return OrderedDict((("state", state), ("actual", actual), ("supported", int(supported_version)), ("writable", writable)))
+    return OrderedDict(
+        (
+            ("state", state),
+            ("actual", actual),
+            ("supported", int(supported_version)),
+            ("writable", writable),
+        )
+    )
 
 
 def _integer(value, default, minimum=0):

@@ -68,7 +68,8 @@ def extended_file_diagnostics(path):
                         diagnostic(
                             "error",
                             "F114",
-                            "Invalid timezone directive %r: %s" % (value.strip(), error),
+                            "Invalid timezone directive %r: %s"
+                            % (value.strip(), error),
                             path,
                             line_no,
                             1,
@@ -129,7 +130,9 @@ def workspace_diagnostics(
 ):
     active_paths = _normalized_existing(paths)
     archive_paths = _normalized_existing(archive_paths)
-    all_paths = active_paths + [path for path in archive_paths if path not in active_paths]
+    all_paths = active_paths + [
+        path for path in archive_paths if path not in active_paths
+    ]
     reports = OrderedDict()
     rows = []
     items = []
@@ -151,7 +154,9 @@ def workspace_diagnostics(
                 diagnostic(
                     "error" if target.get("windows_drive_relative") else "warning",
                     "F120",
-                    "; ".join(target.get("messages") or ["Unsafe write target configuration."]),
+                    "; ".join(
+                        target.get("messages") or ["Unsafe write target configuration."]
+                    ),
                     write_path,
                     1,
                     1,
@@ -197,7 +202,8 @@ def _workspace_id_and_link_diagnostics(items, archive_paths):
                 diagnostic(
                     "error",
                     "F115",
-                    "Duplicate workspace ID %r at %s." % (item_id, ", ".join(locations)),
+                    "Duplicate workspace ID %r at %s."
+                    % (item_id, ", ".join(locations)),
                     owners[0][0],
                     owners[0][1].line or 1,
                     1,
@@ -359,13 +365,19 @@ def _attachment_diagnostics(items, config):
             for raw in item.details.get(key, []):
                 try:
                     stored_path, _digest = split_value(raw)
-                    state = attachment_state(source, stored_path, config=config, allow_symlink=True)
+                    state = attachment_state(
+                        source, stored_path, config=config, allow_symlink=True
+                    )
                 except (ValueError, AttachmentTransactionError) as exc:
                     rows.append(
                         diagnostic(
-                            "error", "F127",
-                            "Attachment path is outside the configured root or invalid: %s" % exc,
-                            source, item.line or 1, 1,
+                            "error",
+                            "F127",
+                            "Attachment path is outside the configured root or invalid: %s"
+                            % exc,
+                            source,
+                            item.line or 1,
+                            1,
                             "Move the attachment under attachments.root and update the stored relative path.",
                         )
                     )
@@ -373,18 +385,26 @@ def _attachment_diagnostics(items, config):
                 if state.get("is_symlink"):
                     rows.append(
                         diagnostic(
-                            "error", "F128",
-                            "Attachment reference resolves through a symlink: %s." % stored_path,
-                            source, item.line or 1, 1,
+                            "error",
+                            "F128",
+                            "Attachment reference resolves through a symlink: %s."
+                            % stored_path,
+                            source,
+                            item.line or 1,
+                            1,
                             "Replace the symlink with a regular confined file or adopt an explicit reviewed policy.",
                         )
                     )
                 if state.get("executable"):
                     rows.append(
                         diagnostic(
-                            "warning", "F129",
-                            "Attachment is executable or script-like: %s." % stored_path,
-                            source, item.line or 1, 1,
+                            "warning",
+                            "F129",
+                            "Attachment is executable or script-like: %s."
+                            % stored_path,
+                            source,
+                            item.line or 1,
+                            1,
                             "Store non-executable evidence by default; review before enabling executable attachments.",
                         )
                     )
@@ -406,9 +426,12 @@ def _backup_diagnostics(paths):
         except Exception as exc:
             rows.append(
                 diagnostic(
-                    "error", "F132",
+                    "error",
+                    "F132",
                     "Incomplete or corrupt recovery backup: %s" % exc,
-                    absolute, 1, 1,
+                    absolute,
+                    1,
+                    1,
                     "Do not discard the source journal; recreate and verify a complete backup manifest.",
                 )
             )
@@ -417,7 +440,10 @@ def _backup_diagnostics(paths):
 
 def _transaction_diagnostics(journal_dir, config=None):
     from .transaction_journal import (
-        TERMINAL_STATES, inspect_journal, journal_policy_report, list_journals,
+        TERMINAL_STATES,
+        inspect_journal,
+        journal_policy_report,
+        list_journals,
     )
 
     rows = []
@@ -427,9 +453,12 @@ def _transaction_diagnostics(journal_dir, config=None):
         code = "F134" if violation == "permissions" else "F131"
         rows.append(
             diagnostic(
-                "error", code,
+                "error",
+                code,
                 "Transaction journal policy violation: %s." % violation,
-                absolute_root, 1, 1,
+                absolute_root,
+                1,
+                1,
                 "Run safety transactions policy and archive or clean terminal evidence before new writes.",
             )
         )
@@ -442,9 +471,13 @@ def _transaction_diagnostics(journal_dir, config=None):
             if not os.path.exists(journal_path) and os.listdir(directory):
                 rows.append(
                     diagnostic(
-                        "error", "F133",
-                        "Transaction artifact directory has no journal.json: %s." % name,
-                        directory, 1, 1,
+                        "error",
+                        "F133",
+                        "Transaction artifact directory has no journal.json: %s."
+                        % name,
+                        directory,
+                        1,
+                        1,
                         "Preserve the directory as crash evidence; inspect artifacts before cleanup.",
                     )
                 )
@@ -485,15 +518,22 @@ def _transaction_diagnostics(journal_dir, config=None):
             compatibility = report.get("version_compatibility") or {}
             rows.append(
                 diagnostic(
-                    "error", "F130",
+                    "error",
+                    "F130",
                     "Unsupported transaction journal version %r; inspection is read-only."
                     % compatibility.get("actual"),
-                    path, 1, 1,
+                    path,
+                    1,
+                    1,
                     "Use a compatible lifetxt version or export evidence without attempting recovery.",
                 )
             )
             continue
-        diverged = [row["path"] for row in report.get("observed_targets", []) if row.get("relation") == "diverged"]
+        diverged = [
+            row["path"]
+            for row in report.get("observed_targets", [])
+            if row.get("relation") == "diverged"
+        ]
         if diverged:
             rows.append(
                 diagnostic(
@@ -512,7 +552,8 @@ def _transaction_diagnostics(journal_dir, config=None):
                 diagnostic(
                     "error",
                     "F125",
-                    "Interrupted or failed transaction compensation in state %s." % state,
+                    "Interrupted or failed transaction compensation in state %s."
+                    % state,
                     path,
                     1,
                     1,

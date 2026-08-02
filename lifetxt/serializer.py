@@ -129,7 +129,9 @@ def items_from_json_text(text):
     if isinstance(data, dict):
         data = [data]
     if not isinstance(data, list):
-        raise ValueError("JSON input must be an item object, an item array, or {items:[...]}.")
+        raise ValueError(
+            "JSON input must be an item object, an item array, or {items:[...]}."
+        )
     return [item_from_dict(entry, index + 1) for index, entry in enumerate(data)]
 
 

@@ -24,7 +24,14 @@ def install_schema_validation_v2():
                     ("ok", not require_validator),
                     ("validator_available", False),
                     ("registry_available", False),
-                    ("errors", ["Install jsonschema with referencing for the full release gate."] if require_validator else []),
+                    (
+                        "errors",
+                        [
+                            "Install jsonschema with referencing for the full release gate."
+                        ]
+                        if require_validator
+                        else [],
+                    ),
                 )
             )
         generated = release_policy.schema_bundle()
@@ -36,7 +43,10 @@ def install_schema_validation_v2():
             if not identifier:
                 errors.append("Generated %s has no $id." % name)
             elif identifier in identifiers:
-                errors.append("Duplicate generated $id %s in %s and %s." % (identifier, identifiers[identifier], name))
+                errors.append(
+                    "Duplicate generated $id %s in %s and %s."
+                    % (identifier, identifiers[identifier], name)
+                )
             else:
                 identifiers[identifier] = name
             try:
@@ -61,7 +71,10 @@ def install_schema_validation_v2():
         for name, schema in published.items():
             identifier = schema.get("$id")
             if identifier in published_identifiers:
-                errors.append("Duplicate published $id %s in %s and %s." % (identifier, published_identifiers[identifier], name))
+                errors.append(
+                    "Duplicate published $id %s in %s and %s."
+                    % (identifier, published_identifiers[identifier], name)
+                )
                 continue
             published_identifiers[identifier] = name
             try:
@@ -90,7 +103,10 @@ def install_schema_validation_v2():
                 ("draft", "2020-12"),
                 ("schema_count", len(generated)),
                 ("sample_count", len(samples)),
-                ("reference_resolution", "network-free referencing.Registry over published bundle"),
+                (
+                    "reference_resolution",
+                    "network-free referencing.Registry over published bundle",
+                ),
                 ("duplicate_id_count", len(identifiers) - len(set(identifiers))),
                 ("errors", errors),
             )

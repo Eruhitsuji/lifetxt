@@ -114,7 +114,11 @@ def _is_blocked(item, status_by_id):
     targets = item.details.get("depends_on") or []
     for target in targets:
         blocker = status_by_id.get(str(target))
-        if blocker is not None and blocker.status != DONE_STATUS and blocker.status != CANCELLED_STATUS:
+        if (
+            blocker is not None
+            and blocker.status != DONE_STATUS
+            and blocker.status != CANCELLED_STATUS
+        ):
             return True
     return False
 
@@ -154,12 +158,18 @@ def _place_item(proj, item, marker, status_by_id):
     if marker == "project":
         proj["has_record"] = True
         proj["state"] = _first(item, "state") or proj["state"]
-        proj["owner"] = _first(item, "owner") or _first(item, "assignee") or proj["owner"]
+        proj["owner"] = (
+            _first(item, "owner") or _first(item, "assignee") or proj["owner"]
+        )
         proj["area"] = _first(item, "area") or proj["area"]
         proj["visibility"] = _first(item, "visibility") or proj["visibility"]
         proj["due"] = _first(item, "due") or proj["due"]
         proj["start"] = _first(item, "do") or _first(item, "from") or proj["start"]
-        if item.status == CANCELLED_STATUS or _first(item, "state") in ("archived", "done", "closed"):
+        if item.status == CANCELLED_STATUS or _first(item, "state") in (
+            "archived",
+            "done",
+            "closed",
+        ):
             proj["archived"] = True
         proj["other"].append(_item_ref(item))
         return
@@ -241,7 +251,10 @@ def compute_progress(proj):
             ("total", total),
             ("percent", percent),
             ("formula", "done_tasks / non_cancelled_tasks * 100"),
-            ("undefined_reason", None if total else "no non-cancelled task or deadline items"),
+            (
+                "undefined_reason",
+                None if total else "no non-cancelled task or deadline items",
+            ),
         )
     )
 
@@ -298,7 +311,9 @@ def compute_health(proj, today=None):
     if today is None:
         limitations.append("overdue not evaluated: no reference date supplied")
     if not proj["has_record"] and not proj["has_registry"]:
-        limitations.append("no project record or registry entry; metadata inferred from tasks only")
+        limitations.append(
+            "no project record or registry entry; metadata inferred from tasks only"
+        )
 
     return OrderedDict(
         (
@@ -358,8 +373,10 @@ def _resolve_project(items, config, name, today):
     canonical = alias_map.get(name, name)
     proj = projects.get(canonical) or projects.get(name)
     if proj is None:
-        raise ValueError("Unknown project %r. Known: %s"
-                         % (name, ", ".join(projects.keys()) or "(none)"))
+        raise ValueError(
+            "Unknown project %r. Known: %s"
+            % (name, ", ".join(projects.keys()) or "(none)")
+        )
     return proj
 
 
@@ -409,7 +426,9 @@ def project_workload(items, config=None, name=None, today=None):
         assignee = row.get("assignee") or "(unassigned)"
         bucket = by_assignee.setdefault(
             assignee,
-            OrderedDict((("assignee", assignee), ("open", 0), ("done", 0), ("overdue", 0))),
+            OrderedDict(
+                (("assignee", assignee), ("open", 0), ("done", 0), ("overdue", 0))
+            ),
         )
         if row["done"]:
             bucket["done"] += 1
@@ -462,7 +481,10 @@ def portfolio(items, config=None, today=None, include_archived=False):
                     ("open_count", sum(1 for r in proj["tasks"] if r["open"])),
                     ("overdue_count", health["overdue_count"]),
                     ("blocked_count", health["blocked_count"]),
-                    ("milestone_open", sum(1 for m in proj["milestones"] if not m["done"])),
+                    (
+                        "milestone_open",
+                        sum(1 for m in proj["milestones"] if not m["done"]),
+                    ),
                     ("top_risk_severity", health["top_risk_severity"]),
                     ("health", health["label"]),
                     ("limitations", health["limitations"]),
@@ -479,7 +501,10 @@ def portfolio(items, config=None, today=None, include_archived=False):
                 OrderedDict(
                     (
                         ("progress", "done_tasks / non_cancelled_tasks * 100"),
-                        ("health", "green/yellow/red by risk, overdue, and blocked work"),
+                        (
+                            "health",
+                            "green/yellow/red by risk, overdue, and blocked work",
+                        ),
                     )
                 ),
             ),
@@ -493,6 +518,7 @@ def _health_rank(label):
 
 # --- Record line builders (for `project new` and standardized templates) ------
 
+
 def _slug(value):
     return "_".join(str(value).split())
 
@@ -502,8 +528,9 @@ def _detail(parts, key, value):
         parts.append("%s:%s" % (key, value))
 
 
-def build_project_record_line(name, owner=None, area=None, state="active",
-                              due=None, start=None, visibility=None):
+def build_project_record_line(
+    name, owner=None, area=None, state="active", due=None, start=None, visibility=None
+):
     parts = ["[N] N", _slug(name), "record:project", "project:%s" % name]
     _detail(parts, "state", state)
     _detail(parts, "owner", owner)

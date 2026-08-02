@@ -35,7 +35,7 @@ def _media_block(query):
             elif STYLE[position] == "}":
                 depth -= 1
                 if depth == 0:
-                    bodies.append(STYLE[index + 1:position])
+                    bodies.append(STYLE[index + 1 : position])
                     search_from = position
                     break
         else:
@@ -99,7 +99,11 @@ class LayoutTests(unittest.TestCase):
     def test_crowded_rows_scroll_instead_of_stacking(self):
         narrow = _media_block("@media (max-width: 680px)")
 
-        for selector in ("header > .toolbar", ".workspace-tabs", ".quick-add-bar, .filter-bar"):
+        for selector in (
+            "header > .toolbar",
+            ".workspace-tabs",
+            ".quick-add-bar, .filter-bar",
+        ):
             self.assertIn(selector, narrow, selector)
         self.assertIn("overflow-x: auto", narrow)
         self.assertIn("flex-wrap: nowrap", narrow)
@@ -127,7 +131,9 @@ class LayoutTests(unittest.TestCase):
     def test_content_clears_the_fixed_bottom_furniture(self):
         narrow = _media_block("@media (max-width: 680px)")
 
-        self.assertRegex(narrow, r"padding-bottom: calc\(5\.5rem \+ var\(--safe-bottom\)\)")
+        self.assertRegex(
+            narrow, r"padding-bottom: calc\(5\.5rem \+ var\(--safe-bottom\)\)"
+        )
 
 
 class ActionButtonTests(unittest.TestCase):
@@ -139,7 +145,9 @@ class ActionButtonTests(unittest.TestCase):
 
     def test_button_is_hidden_on_desktop_and_shown_on_phones(self):
         self.assertRegex(STYLE, r"\.mobile-fab \{[^}]*display: none;")
-        self.assertIn(".mobile-fab { display: block; }", _media_block("@media (max-width: 680px)"))
+        self.assertIn(
+            ".mobile-fab { display: block; }", _media_block("@media (max-width: 680px)")
+        )
 
     def test_button_is_hidden_in_kiosk_and_display_modes(self):
         self.assertIn(".kiosk-mode .mobile-fab", STYLE)
@@ -151,7 +159,9 @@ class ActionButtonTests(unittest.TestCase):
             self.assertIn("mobileAction('%s')" % action, HTML_PAGE, action)
 
     def test_command_action_opens_the_palette_in_command_mode(self):
-        match = re.search(r"function mobileAction\(what\) \{(.*?)\n    \}", SCRIPT, re.S)
+        match = re.search(
+            r"function mobileAction\(what\) \{(.*?)\n    \}", SCRIPT, re.S
+        )
         self.assertTrue(match, "mobileAction not found")
         body = match.group(1)
 
@@ -159,20 +169,23 @@ class ActionButtonTests(unittest.TestCase):
         self.assertIn('"/"', body)
 
     def test_menu_actions_call_functions_that_exist(self):
-        match = re.search(r"function mobileAction\(what\) \{(.*?)\n    \}", SCRIPT, re.S)
+        match = re.search(
+            r"function mobileAction\(what\) \{(.*?)\n    \}", SCRIPT, re.S
+        )
         body = match.group(1)
         # Exclude method calls such as document.getElementById; only bare
         # identifiers need to resolve to a function declared in the page.
         called = set(re.findall(r"(?<![.\w])([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", body))
         for name in called - {"if", "else", "return"}:
-            declared = (
-                re.search(r"\bfunction\s+%s\b" % re.escape(name), SCRIPT)
-                or re.search(r"\b(?:const|let|var)\s+%s\b" % re.escape(name), SCRIPT)
-            )
+            declared = re.search(
+                r"\bfunction\s+%s\b" % re.escape(name), SCRIPT
+            ) or re.search(r"\b(?:const|let|var)\s+%s\b" % re.escape(name), SCRIPT)
             self.assertTrue(declared, "mobileAction calls undefined %s" % name)
 
     def test_button_is_reachable_above_the_safe_area(self):
-        self.assertRegex(STYLE, r"\.mobile-fab \{[^}]*bottom: calc\(1rem \+ var\(--safe-bottom\)\)")
+        self.assertRegex(
+            STYLE, r"\.mobile-fab \{[^}]*bottom: calc\(1rem \+ var\(--safe-bottom\)\)"
+        )
 
 
 class RegressionTests(unittest.TestCase):

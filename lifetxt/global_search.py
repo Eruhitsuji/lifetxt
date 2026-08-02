@@ -56,7 +56,9 @@ def _search_items(items, term):
                         break
         if matched:
             name = item.details.get("id", [item.title])[0]
-            results.append(_result("item", str(name), matched, snippet, item.source, item.line))
+            results.append(
+                _result("item", str(name), matched, snippet, item.source, item.line)
+            )
     return results
 
 
@@ -68,7 +70,9 @@ def _search_projects(items, config, term):
         for field in ("name", "display_name", "owner", "area"):
             value = proj.get(field)
             if value and _match(term, value):
-                results.append(_result("project", proj["name"], field, "%s:%s" % (field, value)))
+                results.append(
+                    _result("project", proj["name"], field, "%s:%s" % (field, value))
+                )
                 break
     return results
 
@@ -124,8 +128,12 @@ def _search_proposals(config, term):
             line = proposal.get("operation", "")
         if _match(term, line) or _match(term, proposal.get("source", "")):
             results.append(
-                _result("proposal", proposal["id"], "proposal",
-                        "[%s] %s" % (proposal.get("status", "pending"), line))
+                _result(
+                    "proposal",
+                    proposal["id"],
+                    "proposal",
+                    "[%s] %s" % (proposal.get("status", "pending"), line),
+                )
             )
     return results
 

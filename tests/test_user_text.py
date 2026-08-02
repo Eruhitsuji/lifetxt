@@ -28,7 +28,9 @@ def _offenders(text):
         if index >= 0:
             snippet = " ".join(str(text).split())
             position = snippet.find(token)
-            found.append("%r near %r" % (token, snippet[max(0, position - 40):position + 40]))
+            found.append(
+                "%r near %r" % (token, snippet[max(0, position - 40) : position + 40])
+            )
     return found
 
 
@@ -83,7 +85,9 @@ class CliTextTests(unittest.TestCase):
         for name in ("bash", "zsh", "fish"):
             script = getattr(completion, "%s_completion" % name)()
 
-            self.assertNotIn("%(", script, "%s left an unsubstituted placeholder" % name)
+            self.assertNotIn(
+                "%(", script, "%s left an unsubstituted placeholder" % name
+            )
 
 
 class TuiTextTests(unittest.TestCase):

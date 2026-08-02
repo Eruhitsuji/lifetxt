@@ -1,4 +1,5 @@
 """Authenticated, deny-by-default Remote Safe Mode contracts."""
+
 from __future__ import unicode_literals
 
 import hashlib
@@ -72,32 +73,36 @@ def principal_registry(config):
             value = str(value).lower()
             if value in VISIBILITIES and value not in visibilities:
                 visibilities.append(value)
-        result[principal_id] = OrderedDict((
-            ("id", principal_id),
-            ("display_name", str(row.get("display_name") or principal_id)),
-            ("role", role),
-            ("scopes", sorted(scopes)),
-            ("projects", sorted(str(value) for value in row.get("projects") or [])),
-            ("groups", sorted(str(value) for value in row.get("groups") or [])),
-            ("visibilities", sorted(visibilities)),
-            ("disabled", bool(row.get("disabled"))),
-            ("token_env", row.get("token_env")),
-        ))
+        result[principal_id] = OrderedDict(
+            (
+                ("id", principal_id),
+                ("display_name", str(row.get("display_name") or principal_id)),
+                ("role", role),
+                ("scopes", sorted(scopes)),
+                ("projects", sorted(str(value) for value in row.get("projects") or [])),
+                ("groups", sorted(str(value) for value in row.get("groups") or [])),
+                ("visibilities", sorted(visibilities)),
+                ("disabled", bool(row.get("disabled"))),
+                ("token_env", row.get("token_env")),
+            )
+        )
     return result
 
 
 def public_principal(principal):
     principal = principal or {}
-    return OrderedDict((
-        ("id", principal.get("id")),
-        ("display_name", principal.get("display_name") or principal.get("id")),
-        ("role", principal.get("role")),
-        ("scopes", list(principal.get("scopes") or [])),
-        ("projects", list(principal.get("projects") or [])),
-        ("groups", list(principal.get("groups") or [])),
-        ("visibilities", list(principal.get("visibilities") or [])),
-        ("disabled", bool(principal.get("disabled"))),
-    ))
+    return OrderedDict(
+        (
+            ("id", principal.get("id")),
+            ("display_name", principal.get("display_name") or principal.get("id")),
+            ("role", principal.get("role")),
+            ("scopes", list(principal.get("scopes") or [])),
+            ("projects", list(principal.get("projects") or [])),
+            ("groups", list(principal.get("groups") or [])),
+            ("visibilities", list(principal.get("visibilities") or [])),
+            ("disabled", bool(principal.get("disabled"))),
+        )
+    )
 
 
 def _token_for(row):
@@ -151,16 +156,22 @@ def authenticate(headers, client_host, config):
     remote = _section(config)
     registry = principal_registry(config)
     headers = {str(key).lower(): str(value) for key, value in (headers or {}).items()}
-    proxy_header = str(remote.get("proxy_principal_header") or "X-Lifetxt-Principal").lower()
+    proxy_header = str(
+        remote.get("proxy_principal_header") or "X-Lifetxt-Principal"
+    ).lower()
     asserted = headers.get(proxy_header)
     if asserted and _trusted_peer(remote, client_host):
         row = registry.get(asserted)
         if row and not row["disabled"]:
             return row, "trusted-proxy"
-        raise RemoteAccessError("UNKNOWN_PRINCIPAL", "Trusted proxy asserted an unknown principal.", 401)
+        raise RemoteAccessError(
+            "UNKNOWN_PRINCIPAL", "Trusted proxy asserted an unknown principal.", 401
+        )
     authorization = headers.get("authorization", "")
     if not authorization.startswith("Bearer "):
-        raise RemoteAccessError("UNAUTHORIZED", "Authorization: Bearer TOKEN is required.", 401)
+        raise RemoteAccessError(
+            "UNAUTHORIZED", "Authorization: Bearer TOKEN is required.", 401
+        )
     return authenticate_token(authorization[7:], config)
 
 
@@ -192,7 +203,9 @@ def can_access(principal, project=None, visibility="shared", owner=None, groups=
 
 def _looks_path_key(key):
     lowered = str(key or "").lower()
-    return any(token in lowered for token in ("path", "source", "file", "directory", "root"))
+    return any(
+        token in lowered for token in ("path", "source", "file", "directory", "root")
+    )
 
 
 def redact_remote_value(value, key=None):
@@ -201,7 +214,14 @@ def redact_remote_value(value, key=None):
         result = OrderedDict()
         for child_key, child_value in value.items():
             lowered = str(child_key).lower()
-            if lowered in ("token", "secret", "password", "authorization", "cookie", "set-cookie"):
+            if lowered in (
+                "token",
+                "secret",
+                "password",
+                "authorization",
+                "cookie",
+                "set-cookie",
+            ):
                 result[child_key] = "<redacted>"
             else:
                 result[child_key] = redact_remote_value(child_value, child_key)
@@ -212,7 +232,10 @@ def redact_remote_value(value, key=None):
         expanded = os.path.expanduser(value)
         if os.path.isabs(expanded) or value.startswith(("file://", "\\\\")):
             return "<redacted>"
-        if re.search(r"(?:^|[\s:=])(?:[A-Za-z]:[\\/]|/(?:home|tmp|var|etc|opt|srv|Users|mnt|media)/|\\\\)", value):
+        if re.search(
+            r"(?:^|[\s:=])(?:[A-Za-z]:[\\/]|/(?:home|tmp|var|etc|opt|srv|Users|mnt|media)/|\\\\)",
+            value,
+        ):
             return "<redacted>"
         if _looks_path_key(key) and ("/" in value or "\\" in value):
             return "<redacted>"
@@ -236,7 +259,9 @@ def filter_records(records, principal):
 def require_exact_revision(headers, current):
     value = (headers or {}).get("if-match") or (headers or {}).get("If-Match")
     if not value:
-        raise RemoteAccessError("REVISION_REQUIRED", "If-Match exact revision is required.", 428)
+        raise RemoteAccessError(
+            "REVISION_REQUIRED", "If-Match exact revision is required.", 428
+        )
     value = str(value).strip().strip('"')
     if value != str(current):
         raise RemoteAccessError(
@@ -250,7 +275,9 @@ def require_exact_revision(headers, current):
 
 def require_https(headers, client_host, config, request_scheme=None):
     remote = _section(config)
-    forwarded = (headers or {}).get("x-forwarded-proto") or (headers or {}).get("X-Forwarded-Proto")
+    forwarded = (headers or {}).get("x-forwarded-proto") or (headers or {}).get(
+        "X-Forwarded-Proto"
+    )
     if forwarded and _trusted_peer(remote, client_host):
         proto = str(forwarded).split(",")[0].strip().lower()
     else:
@@ -300,7 +327,9 @@ class RateLimiter(object):
             while queue and queue[0] <= now - window:
                 queue.popleft()
             if len(queue) >= int(limit):
-                raise RemoteAccessError("RATE_LIMITED", "Remote request rate limit exceeded.", 429)
+                raise RemoteAccessError(
+                    "RATE_LIMITED", "Remote request rate limit exceeded.", 429
+                )
             queue.append(now)
 
 
@@ -309,23 +338,26 @@ def request_id(headers=None):
     return str(value or uuid.uuid4())[:128]
 
 
-def audit_event(principal, action, outcome, request_id_value, client_host=None, detail=None):
+def audit_event(
+    principal, action, outcome, request_id_value, client_host=None, detail=None
+):
     from .timezone_policy import utcnow
+
     public = public_principal(principal) if principal else None
-    return OrderedDict((
-        ("schema", "remote-audit-event-v1.schema.json"),
-        ("version", "1"),
-        ("at", utcnow().isoformat()),
-        ("request_id", request_id_value),
-        ("principal", public.get("id") if public else None),
-        ("role", public.get("role") if public else None),
-        ("action", str(action)),
-        ("outcome", outcome),
-        ("client", str(client_host or "")),
-        ("detail", redact_remote_value(dict(detail or {}))),
-    ))
-
-
+    return OrderedDict(
+        (
+            ("schema", "remote-audit-event-v1.schema.json"),
+            ("version", "1"),
+            ("at", utcnow().isoformat()),
+            ("request_id", request_id_value),
+            ("principal", public.get("id") if public else None),
+            ("role", public.get("role") if public else None),
+            ("action", str(action)),
+            ("outcome", outcome),
+            ("client", str(client_host or "")),
+            ("detail", redact_remote_value(dict(detail or {}))),
+        )
+    )
 
 
 def validate_remote_storage(config, paths=None, writable_path=None):
@@ -337,7 +369,9 @@ def validate_remote_storage(config, paths=None, writable_path=None):
     protected = []
     for raw in list(paths or []) + ([writable_path] if writable_path else []):
         if raw:
-            protected.append(os.path.realpath(os.path.abspath(os.path.expanduser(str(raw)))))
+            protected.append(
+                os.path.realpath(os.path.abspath(os.path.expanduser(str(raw))))
+            )
     if audit_real in protected:
         raise RemoteAccessError(
             "REMOTE_AUDIT_PATH_CONFLICT",
@@ -346,85 +380,131 @@ def validate_remote_storage(config, paths=None, writable_path=None):
         )
     return True
 
+
 def append_audit(config, event):
     remote = _section(config)
     path = remote.get("audit_log")
     if not path:
         return
     path = os.path.abspath(os.path.expanduser(str(path)))
-    line = json.dumps(redact_remote_value(event), ensure_ascii=False, separators=(",", ":")) + "\n"
+    line = (
+        json.dumps(
+            redact_remote_value(event), ensure_ascii=False, separators=(",", ":")
+        )
+        + "\n"
+    )
     limit = int(remote.get("audit_max_bytes") or 5 * 1024 * 1024)
     from .mutation import write_text
 
     def transform(current):
         value = current + line
         if len(value.encode("utf-8")) > limit:
-            value = value[-max(1, limit // 2):]
+            value = value[-max(1, limit // 2) :]
             cut = value.find("\n")
             if cut >= 0:
-                value = value[cut + 1:]
+                value = value[cut + 1 :]
         return value
 
-    write_text(path, transform=transform, operation="remote audit append", create=True, default_text="")
+    write_text(
+        path,
+        transform=transform,
+        operation="remote audit append",
+        create=True,
+        default_text="",
+    )
 
 
 def _capability_v1(config):
     remote = _section(config)
-    return OrderedDict((
-        ("schema", "remote-access-policy-v1.schema.json"),
-        ("contract_version", "1"),
-        ("enabled", enabled(config)),
-        ("browser_ui", bool(remote.get("browser_ui", False))),
-        ("authentication", ["bearer", "trusted-proxy"]),
-        ("roles", {key: sorted(value) for key, value in ROLES.items()}),
-        ("exact_revision_required", True),
-        ("https_required", True),
-        ("write_operations", ["ticket.transition", "ticket.comment", "ticket.change", "ticket.assign", "ticket.plan"]),
-        ("read_operations", ["capabilities", "session", "snapshot", "tickets", "projects", "audit"]),
-        ("remote_opener_execution", False),
-        ("local_paths_redacted", True),
-        ("protocol_min", REMOTE_PROTOCOL_MIN),
-        ("protocol_current", REMOTE_PROTOCOL_CURRENT),
-    ))
+    return OrderedDict(
+        (
+            ("schema", "remote-access-policy-v1.schema.json"),
+            ("contract_version", "1"),
+            ("enabled", enabled(config)),
+            ("browser_ui", bool(remote.get("browser_ui", False))),
+            ("authentication", ["bearer", "trusted-proxy"]),
+            ("roles", {key: sorted(value) for key, value in ROLES.items()}),
+            ("exact_revision_required", True),
+            ("https_required", True),
+            (
+                "write_operations",
+                [
+                    "ticket.transition",
+                    "ticket.comment",
+                    "ticket.change",
+                    "ticket.assign",
+                    "ticket.plan",
+                ],
+            ),
+            (
+                "read_operations",
+                ["capabilities", "session", "snapshot", "tickets", "projects", "audit"],
+            ),
+            ("remote_opener_execution", False),
+            ("local_paths_redacted", True),
+            ("protocol_min", REMOTE_PROTOCOL_MIN),
+            ("protocol_current", REMOTE_PROTOCOL_CURRENT),
+        )
+    )
 
 
 def _capability_v2(config):
     from .remote_backend import resource_catalog
+
     remote = _section(config)
-    payload = OrderedDict((
-        ("schema", "remote-capability-v2.schema.json"),
-        ("contract_version", "2"),
-        ("enabled", enabled(config)),
-        ("protocol", {
-            "minimum": REMOTE_PROTOCOL_MIN,
-            "current": REMOTE_PROTOCOL_CURRENT,
-            "default_without_header": REMOTE_PROTOCOL_MIN,
-            "request_header": REMOTE_VERSION_HEADER,
-        }),
-        ("authentication", ["bearer", "trusted-proxy", "browser-session"]),
-        ("roles", {key: sorted(value) for key, value in ROLES.items()}),
-        ("features", [
-            "browser-session", "csrf", "origin-check", "resource-catalog",
-            "capability-negotiation", "remote-diagnostics", "recursive-redaction",
-        ]),
-        ("resources", resource_catalog()),
-        ("browser_session", {
-            "enabled": bool(remote.get("browser_ui", False)),
-            "opaque_cookie": True,
-            "http_only": True,
-            "same_site": "strict",
-            "restart_invalidates_session": True,
-            "csrf_header": str(remote.get("csrf_header") or "X-CSRF-Token"),
-        }),
-        ("mutation_policy", {
-            "admission_only": True,
-            "exact_revision_required": True,
-            "authoritative_remote_writes_enabled": False,
-        }),
-        ("https_required", True),
-        ("local_paths_redacted", True),
-        ("remote_opener_execution", False),
-    ))
+    payload = OrderedDict(
+        (
+            ("schema", "remote-capability-v2.schema.json"),
+            ("contract_version", "2"),
+            ("enabled", enabled(config)),
+            (
+                "protocol",
+                {
+                    "minimum": REMOTE_PROTOCOL_MIN,
+                    "current": REMOTE_PROTOCOL_CURRENT,
+                    "default_without_header": REMOTE_PROTOCOL_MIN,
+                    "request_header": REMOTE_VERSION_HEADER,
+                },
+            ),
+            ("authentication", ["bearer", "trusted-proxy", "browser-session"]),
+            ("roles", {key: sorted(value) for key, value in ROLES.items()}),
+            (
+                "features",
+                [
+                    "browser-session",
+                    "csrf",
+                    "origin-check",
+                    "resource-catalog",
+                    "capability-negotiation",
+                    "remote-diagnostics",
+                    "recursive-redaction",
+                ],
+            ),
+            ("resources", resource_catalog()),
+            (
+                "browser_session",
+                {
+                    "enabled": bool(remote.get("browser_ui", False)),
+                    "opaque_cookie": True,
+                    "http_only": True,
+                    "same_site": "strict",
+                    "restart_invalidates_session": True,
+                    "csrf_header": str(remote.get("csrf_header") or "X-CSRF-Token"),
+                },
+            ),
+            (
+                "mutation_policy",
+                {
+                    "admission_only": True,
+                    "exact_revision_required": True,
+                    "authoritative_remote_writes_enabled": False,
+                },
+            ),
+            ("https_required", True),
+            ("local_paths_redacted", True),
+            ("remote_opener_execution", False),
+        )
+    )
     payload["capability_revision"] = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -449,10 +529,12 @@ def protocol_response_headers(config, protocol_version):
 
 
 def error_payload(exc, request_id_value=None):
-    payload = OrderedDict((
-        ("error", exc.code),
-        ("message", str(exc)),
-    ))
+    payload = OrderedDict(
+        (
+            ("error", exc.code),
+            ("message", str(exc)),
+        )
+    )
     if exc.detail:
         payload["detail"] = redact_remote_value(exc.detail)
     if request_id_value:

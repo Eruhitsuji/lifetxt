@@ -40,9 +40,8 @@ def utc_now_text(now=None):
 def metrics_path(config=None, writable_path=None):
     config = config or {}
     web = config.get("web") if isinstance(config.get("web"), dict) else {}
-    configured = (
-        os.environ.get("LIFETXT_REVISION_METRICS_PATH")
-        or web.get("revision_metrics_path")
+    configured = os.environ.get("LIFETXT_REVISION_METRICS_PATH") or web.get(
+        "revision_metrics_path"
     )
     if configured:
         return os.path.abspath(os.path.expanduser(str(configured)))
@@ -56,9 +55,7 @@ def revision_mode(config=None):
     config = config or {}
     web = config.get("web") if isinstance(config.get("web"), dict) else {}
     value = (
-        os.environ.get("LIFETXT_REVISION_MODE")
-        or web.get("revision_mode")
-        or "observe"
+        os.environ.get("LIFETXT_REVISION_MODE") or web.get("revision_mode") or "observe"
     )
     value = str(value).strip().lower()
     if value not in VALID_MODES:
@@ -133,7 +130,11 @@ def readiness(metrics, now=None):
     started = _parse_utc(metrics.get("observation_started_at"))
     elapsed = None
     if started is not None:
-        elapsed = max(0.0, (now_value.astimezone(datetime.timezone.utc) - started).total_seconds() / 86400.0)
+        elapsed = max(
+            0.0,
+            (now_value.astimezone(datetime.timezone.utc) - started).total_seconds()
+            / 86400.0,
+        )
     window = int(metrics.get("migration_window_days") or 0)
     zero_usage = int(metrics.get("legacy_fallback_total") or 0) == 0
     ready = bool(zero_usage and elapsed is not None and elapsed >= window)
@@ -225,7 +226,9 @@ class RevisionMetricsStore(object):
         def transform(current):
             previous = normalize_metrics(current, self.mode, self.window_days, now=now)
             value = initial_metrics(self.mode, self.window_days, now=now)
-            value["server_instance_id"] = previous.get("server_instance_id") or value["server_instance_id"]
+            value["server_instance_id"] = (
+                previous.get("server_instance_id") or value["server_instance_id"]
+            )
             value["last_reset_at"] = timestamp
             value["observation_started_at"] = timestamp
             value["last_persisted_at"] = timestamp
@@ -258,7 +261,9 @@ class RevisionMetricsStore(object):
             "last_persisted_at": report.get("last_persisted_at"),
             "ready_to_require_revisions": report.get("ready_to_require_revisions"),
         }
-        payload = json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        payload = (
+            json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        )
         from .atomic import atomic_write_text
 
         atomic_write_text(os.path.abspath(output_path), payload, encoding="utf-8")
@@ -267,14 +272,24 @@ class RevisionMetricsStore(object):
 
     def relocate(self, destination, expected_hash, delete_source=False):
         if expected_hash is None or str(expected_hash).strip() == "":
-            raise RevisionTelemetryError("Relocation requires the current metrics expected_hash.")
+            raise RevisionTelemetryError(
+                "Relocation requires the current metrics expected_hash."
+            )
         source_snapshot = read_text_snapshot(self.path, allow_missing=True)
         if source_snapshot.content_hash == MISSING_HASH:
-            raise RevisionTelemetryError("Revision metrics do not exist: %s" % self.path)
+            raise RevisionTelemetryError(
+                "Revision metrics do not exist: %s" % self.path
+            )
         destination = os.path.abspath(destination)
         if destination == self.path:
             report = self.snapshot()
-            report.update({"relocated": False, "source_path": self.path, "destination_path": destination})
+            report.update(
+                {
+                    "relocated": False,
+                    "source_path": self.path,
+                    "destination_path": destination,
+                }
+            )
             return report
         from .multi_target import apply_multi_target, bytes_plan, delete_plan
 
@@ -301,9 +316,13 @@ class RevisionMetricsStore(object):
         result = apply_multi_target(
             plans,
             operation="revision_telemetry.relocate",
-            journal_dir=os.path.join(os.path.dirname(self.path), ".lifetxt-transactions"),
+            journal_dir=os.path.join(
+                os.path.dirname(self.path), ".lifetxt-transactions"
+            ),
         )
-        relocated = RevisionMetricsStore(destination, mode=self.mode, window_days=self.window_days)
+        relocated = RevisionMetricsStore(
+            destination, mode=self.mode, window_days=self.window_days
+        )
         report = relocated.snapshot()
         report.update(
             {
@@ -316,8 +335,12 @@ class RevisionMetricsStore(object):
                 "metrics_revision": relocated.content_hash(),
             }
         )
-        if report.get("server_instance_id") != source_snapshot_json(source_snapshot).get("server_instance_id"):
-            raise RevisionTelemetryError("Relocated telemetry changed server_instance_id.")
+        if report.get("server_instance_id") != source_snapshot_json(
+            source_snapshot
+        ).get("server_instance_id"):
+            raise RevisionTelemetryError(
+                "Relocated telemetry changed server_instance_id."
+            )
         return report
 
     def content_hash(self):
@@ -326,6 +349,7 @@ class RevisionMetricsStore(object):
 
 def source_snapshot_bytes(snapshot):
     from .mutation import _encode_text
+
     return _encode_text(snapshot.text, encoding=snapshot.encoding, bom=snapshot.bom)
 
 

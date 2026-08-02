@@ -54,7 +54,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
 
     def test_atomic_text_compatibility_api_calls_shared_writer(self):
         path = self.path()
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             result = atomic.atomic_write_text(path, "one\n")
         self.assertIsInstance(result, MutationResult)
         self.assertEqual("one\n", read_text_snapshot(path).text)
@@ -64,7 +66,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
 
     def test_atomic_json_compatibility_api_calls_shared_writer(self):
         path = self.path("state.json")
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             result = atomic.atomic_write_json(path, {"count": 1})
         self.assertIsInstance(result, MutationResult)
         self.assertEqual({"count": 1}, json.loads(read_text_snapshot(path).text))
@@ -79,7 +83,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
     def test_fzf_direct_writer_is_replaced_by_shared_route(self):
         path = self.path()
         self.write(path, "[ ] T Task id:T-1\n")
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             fzf_write_text(path, "[x] T Task id:T-1\n")
         self.assertEqual("[x]", self.items(path)[0].status)
         routed.assert_called_once()
@@ -99,7 +105,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
                 }
             ],
         )
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             level, _message = tui_app._cmd_status(state, "done")
         self.assertEqual("success", level)
         self.assertEqual("[x]", self.items(path)[0].status)
@@ -110,7 +118,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
         path = self.path()
         self.write(path, "")
         state = _TuiState(path)
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             level, _message = tui_app._cmd_state(state, "busy Focus")
         self.assertEqual("success", level)
         item = self.items(path)[0]
@@ -121,7 +131,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
     def test_timer_item_update_routes_through_shared_layer(self):
         path = self.path()
         self.write(path, "[ ] T Task id:T-1\n")
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             timer.update_item_in_file(
                 path,
                 "T-1",
@@ -137,7 +149,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
     def test_web_notification_ack_routes_through_shared_layer(self):
         path = self.path()
         self.write(path, "[ ] M Ping id:M-1 sender:self recipient:self\n")
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             item = webapp.ack_message_in_file(
                 path,
                 "M-1",
@@ -151,7 +165,9 @@ class SharedSurfaceMutationRoutingTests(unittest.TestCase):
         path = self.path()
         self.write(path, "")
         context = McpContext(paths=[path], writable_path=path, config={})
-        with mock.patch("lifetxt.mutation.write_text", wraps=mutation.write_text) as routed:
+        with mock.patch(
+            "lifetxt.mutation.write_text", wraps=mutation.write_text
+        ) as routed:
             result = _tool_create_item(
                 {"type": "T", "title": "Created by MCP", "details": {}},
                 context,

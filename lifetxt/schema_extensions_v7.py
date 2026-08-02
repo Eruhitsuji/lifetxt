@@ -37,7 +37,10 @@ def schema_bundle_v7():
                         "habits": item_ref,
                         "messages": item_ref,
                         "captures": item_ref,
-                        "project_attention": {"type": "array", "items": {"type": "object"}},
+                        "project_attention": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        },
                         "safety": {"type": "object"},
                         "counts": counts,
                     },

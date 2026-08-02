@@ -101,7 +101,9 @@ class SemanticWriteSurfaceV4Tests(unittest.TestCase):
                     "changes": [{"id": "t1", "status": "[x]"}],
                 },
                 other: {
-                    "expected_revision": mutation.read_text_snapshot(other).content_hash,
+                    "expected_revision": mutation.read_text_snapshot(
+                        other
+                    ).content_hash,
                     "changes": [{"id": "t3", "status": "[/]"}],
                 },
             },

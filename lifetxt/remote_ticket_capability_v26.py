@@ -1,4 +1,5 @@
 """Publish conservative Remote ticket field metadata through capabilities."""
+
 from __future__ import unicode_literals
 
 
@@ -18,8 +19,12 @@ def install_remote_ticket_capability_v26():
         else:
             from . import remote_access
 
-            actual_protocol = protocol_version if protocol_version is not None else config
-            payload = original(remote_access.capability, original_or_config, actual_protocol)
+            actual_protocol = (
+                protocol_version if protocol_version is not None else config
+            )
+            payload = original(
+                remote_access.capability, original_or_config, actual_protocol
+            )
         if int(actual_protocol or 1) < 2:
             return payload
         policy = dict(payload.get("mutation_policy") or {})
@@ -37,6 +42,7 @@ def install_remote_ticket_capability_v26():
         payload["mutation_policy"] = policy
         import hashlib
         import json
+
         payload["capability_revision"] = hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()

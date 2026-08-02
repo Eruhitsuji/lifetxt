@@ -130,5 +130,7 @@ def area_show(items, config=None, name=None):
             "Unknown area %r. Known: %s" % (name, ", ".join(areas.keys()) or "(none)")
         )
     summary = area_summary(area)
-    summary["open_items"] = [ref for ref in area["items"] if ref["status"] in OPEN_STATUSES]
+    summary["open_items"] = [
+        ref for ref in area["items"] if ref["status"] in OPEN_STATUSES
+    ]
     return summary

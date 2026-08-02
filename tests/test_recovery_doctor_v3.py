@@ -20,7 +20,13 @@ class RecoveryDoctorV3Tests(unittest.TestCase):
 
     def make_committed(self):
         return apply_multi_target(
-            [text_plan(self.life, lambda _text: "[/] T Task id:t1\n", mutation.read_text_snapshot(self.life).content_hash)],
+            [
+                text_plan(
+                    self.life,
+                    lambda _text: "[/] T Task id:t1\n",
+                    mutation.read_text_snapshot(self.life).content_hash,
+                )
+            ],
             operation="doctor.test",
             journal_dir=self.journals,
         )
@@ -41,7 +47,9 @@ class RecoveryDoctorV3Tests(unittest.TestCase):
             json.dump(record, handle)
         report = doctor_report([self.life], journal_dir=self.journals)
         self.assertIn("transaction_recovery", report["hard_failures"])
-        self.assertIn("F124", [row["code"] for row in report["diagnostics"]["diagnostics"]])
+        self.assertIn(
+            "F124", [row["code"] for row in report["diagnostics"]["diagnostics"]]
+        )
 
     def test_diverged_target_adds_f126(self):
         result = self.make_committed()
@@ -59,7 +67,9 @@ class RecoveryDoctorV3Tests(unittest.TestCase):
     def test_corrupt_journal_adds_f123(self):
         directory = os.path.join(self.journals, "bad")
         os.makedirs(directory)
-        with open(os.path.join(directory, "journal.json"), "w", encoding="utf-8") as handle:
+        with open(
+            os.path.join(directory, "journal.json"), "w", encoding="utf-8"
+        ) as handle:
             handle.write("not json")
         report = workspace_diagnostics([self.life], journal_dir=self.journals)
         self.assertIn("F123", [row["code"] for row in report["diagnostics"]])

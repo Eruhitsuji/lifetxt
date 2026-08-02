@@ -22,11 +22,15 @@ class ValueSyntaxTests(unittest.TestCase):
         self.assertEqual(("./docs/spec.md", ""), A.split_value("./docs/spec.md"))
 
     def test_path_with_hash(self):
-        self.assertEqual(("./docs/spec.md", "1a2b3c"), A.split_value("./docs/spec.md#sha256=1a2b3c"))
+        self.assertEqual(
+            ("./docs/spec.md", "1a2b3c"), A.split_value("./docs/spec.md#sha256=1a2b3c")
+        )
 
     def test_last_marker_wins_so_paths_may_contain_hash_signs(self):
         # A "#" is legal in a filename on every platform.
-        self.assertEqual(("./a#b/c.md", "ff00"), A.split_value("./a#b/c.md#sha256=ff00"))
+        self.assertEqual(
+            ("./a#b/c.md", "ff00"), A.split_value("./a#b/c.md#sha256=ff00")
+        )
 
     def test_empty_hash_is_treated_as_absent(self):
         self.assertEqual(("./a.md", ""), A.split_value("./a.md#sha256="))
@@ -49,7 +53,7 @@ class ValueSyntaxTests(unittest.TestCase):
         self.assertEqual("./docs/spec.md", A.join_value("./docs/spec.md"))
 
     def test_attachment_values_parse_as_life_txt(self):
-        line = '[ ] T Review id:t1 file:./docs/spec.md#sha256=1a2b3c dir:./assets\n'
+        line = "[ ] T Review id:t1 file:./docs/spec.md#sha256=1a2b3c dir:./assets\n"
         items, diagnostics = parse_text(line)
 
         self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
@@ -103,7 +107,9 @@ class PathNormalizationTests(unittest.TestCase):
 
         self.assertEqual(os.path.normpath(os.path.join(base, "spec.md")), resolved)
         # Explicitly not the process working directory.
-        self.assertNotEqual(os.path.normpath(os.path.join(os.getcwd(), "spec.md")), resolved)
+        self.assertNotEqual(
+            os.path.normpath(os.path.join(os.getcwd(), "spec.md")), resolved
+        )
 
     def test_home_shortcut_expands_on_resolution(self):
         resolved = A.resolve_raw_path("~/notes/plan.md", "/somewhere/else")
@@ -130,13 +136,19 @@ class PortabilityNoteTests(unittest.TestCase):
         self.assertTrue(any("Backslash" in note for note in notes))
 
     def test_drive_letter_is_reported(self):
-        self.assertTrue(any("Drive letters" in n for n in A.portability_notes("C:/Users/me/a.md")))
+        self.assertTrue(
+            any("Drive letters" in n for n in A.portability_notes("C:/Users/me/a.md"))
+        )
 
     def test_unc_path_is_reported(self):
-        self.assertTrue(any("UNC" in n for n in A.portability_notes("//server/share/a.md")))
+        self.assertTrue(
+            any("UNC" in n for n in A.portability_notes("//server/share/a.md"))
+        )
 
     def test_posix_absolute_path_is_reported(self):
-        self.assertTrue(any("Absolute" in n for n in A.portability_notes("/etc/passwd")))
+        self.assertTrue(
+            any("Absolute" in n for n in A.portability_notes("/etc/passwd"))
+        )
 
     def test_relative_path_is_clean(self):
         self.assertEqual([], A.portability_notes("./docs/spec.md"))
@@ -145,7 +157,9 @@ class PortabilityNoteTests(unittest.TestCase):
         self.assertEqual([], A.portability_notes("~/notes/plan.md"))
 
     def test_trailing_dot_is_reported_for_windows(self):
-        self.assertTrue(any("Trailing" in n for n in A.portability_notes("./docs/spec.")))
+        self.assertTrue(
+            any("Trailing" in n for n in A.portability_notes("./docs/spec."))
+        )
 
 
 class HashingTests(unittest.TestCase):
@@ -310,7 +324,9 @@ class RecordTests(unittest.TestCase):
         with open(os.path.join(self.tmp, "docs", "spec.md"), "w") as handle:
             handle.write("changed\n")
 
-        record = self._records("[ ] T A file:./docs/spec.md#sha256=%s" % digest, verify=False)[0]
+        record = self._records(
+            "[ ] T A file:./docs/spec.md#sha256=%s" % digest, verify=False
+        )[0]
 
         self.assertEqual(A.STATUS_OK, record["status"])
         self.assertEqual("", record["actual_hash"])
@@ -392,7 +408,10 @@ class DiagnosticTests(unittest.TestCase):
         with open(os.path.join(self.tmp, "docs", "spec.md"), "w") as handle:
             handle.write("v2\n")
 
-        codes = [d.code for d in self._diagnostics("[ ] T A file:./docs/spec.md#sha256=%s" % digest)]
+        codes = [
+            d.code
+            for d in self._diagnostics("[ ] T A file:./docs/spec.md#sha256=%s" % digest)
+        ]
 
         self.assertIn("W402", codes)
 
@@ -411,7 +430,9 @@ class DiagnosticTests(unittest.TestCase):
     def test_clean_attachment_produces_no_diagnostics(self):
         digest = A.hash_file(os.path.join(self.tmp, "docs", "spec.md"))
 
-        diagnostics = self._diagnostics("[ ] T A file:./docs/spec.md#sha256=%s" % digest)
+        diagnostics = self._diagnostics(
+            "[ ] T A file:./docs/spec.md#sha256=%s" % digest
+        )
 
         self.assertEqual([], diagnostics)
 
@@ -422,7 +443,9 @@ class DiagnosticTests(unittest.TestCase):
 
         codes = [
             d.code
-            for d in self._diagnostics("[ ] T A file:./docs/spec.md#sha256=%s" % digest, verify=False)
+            for d in self._diagnostics(
+                "[ ] T A file:./docs/spec.md#sha256=%s" % digest, verify=False
+            )
         ]
 
         self.assertNotIn("W402", codes)
@@ -432,7 +455,10 @@ def _run_cli(cwd, *args):
     env = dict(os.environ, PYTHONPATH=ROOT_DIR, PYTHONIOENCODING="utf-8")
     process = subprocess.Popen(
         [sys.executable, "-m", "lifetxt"] + list(args),
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=cwd,
+        env=env,
     )
     out, _err = process.communicate()
     return out.decode("utf-8", "replace").strip(), process.returncode
@@ -514,7 +540,9 @@ class FilesCommandTests(unittest.TestCase):
         # The whole point of storing relative paths: the answer must not depend
         # on which directory the command was run from.
         from_here, _code = _run_cli(self.tmp, "files", "life.txt", "--format", "json")
-        from_elsewhere, _code = _run_cli(ROOT_DIR, "files", self.life, "--format", "json")
+        from_elsewhere, _code = _run_cli(
+            ROOT_DIR, "files", self.life, "--format", "json"
+        )
 
         here = json.loads(from_here)
         elsewhere = json.loads(from_elsewhere)
@@ -532,7 +560,9 @@ class FilesCommandTests(unittest.TestCase):
         self.assertEqual(1, payload["problems"])
 
     def test_id_filter(self):
-        out, _code = _run_cli(self.tmp, "files", "life.txt", "--id", "t2", "--format", "json")
+        out, _code = _run_cli(
+            self.tmp, "files", "life.txt", "--id", "t2", "--format", "json"
+        )
 
         payload = json.loads(out)
         self.assertEqual(1, payload["count"])

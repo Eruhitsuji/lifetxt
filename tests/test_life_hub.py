@@ -27,7 +27,9 @@ class CommandCenterTests(unittest.TestCase):
         self.items, _ = parse_text(SAMPLE)
 
     def cc(self, **kwargs):
-        return command_center(self.items, {"projects": {"web": {"default_area": "work"}}}, TODAY, **kwargs)
+        return command_center(
+            self.items, {"projects": {"web": {"default_area": "work"}}}, TODAY, **kwargs
+        )
 
     def test_overdue_due_today_and_upcoming_split(self):
         cc = self.cc()
@@ -76,7 +78,12 @@ class CommandCenterTests(unittest.TestCase):
 class AreaTests(unittest.TestCase):
     def setUp(self):
         self.items, _ = parse_text(SAMPLE)
-        self.config = {"projects": {"web": {"default_area": "work"}, "gym": {"default_area": "health"}}}
+        self.config = {
+            "projects": {
+                "web": {"default_area": "work"},
+                "gym": {"default_area": "health"},
+            }
+        }
 
     def test_area_list_groups_by_project_default(self):
         rows = {r["name"]: r for r in area_list(self.items, self.config)}

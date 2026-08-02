@@ -41,7 +41,24 @@ GOLDEN_CORPUS_PATH = os.path.join("tests", "golden", "roundtrip_cases.json")
 class _ChromeParser(HTMLParser):
     """Collect user-visible static chrome while excluding authored content."""
 
-    VOID = frozenset(("area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"))
+    VOID = frozenset(
+        (
+            "area",
+            "base",
+            "br",
+            "col",
+            "embed",
+            "hr",
+            "img",
+            "input",
+            "link",
+            "meta",
+            "param",
+            "source",
+            "track",
+            "wbr",
+        )
+    )
     ATTRIBUTES = frozenset(("title", "placeholder", "aria-label", "data-help"))
     SKIP_TAGS = frozenset(("script", "style", "textarea", "code", "pre"))
 
@@ -57,7 +74,9 @@ class _ChromeParser(HTMLParser):
         attrs = dict(attrs)
         classes = set(str(attrs.get("class") or "").split())
         skip = tag in self.SKIP_TAGS
-        record = "data-no-i18n" in attrs or bool(classes.intersection(_record_classes()))
+        record = "data-no-i18n" in attrs or bool(
+            classes.intersection(_record_classes())
+        )
         if skip:
             self.skip_depth += 1
         if record:
@@ -103,12 +122,31 @@ class _ChromeParser(HTMLParser):
 def _record_classes():
     return frozenset(
         (
-            "item", "item-title", "title", "meta", "source", "tl-entry",
-            "tl-title", "cal-entry", "cal-entry-title", "focus-row",
-            "focus-row-title", "focus-row-main", "focus-row-meta", "team-card",
-            "msg-row", "diagnostic", "dash-item", "kpi-value", "dash-row-title",
-            "person-status-title", "person-msg-title", "person-meta", "tl-card-title",
-            "tl-card-meta", "message-thread-meta",
+            "item",
+            "item-title",
+            "title",
+            "meta",
+            "source",
+            "tl-entry",
+            "tl-title",
+            "cal-entry",
+            "cal-entry-title",
+            "focus-row",
+            "focus-row-title",
+            "focus-row-main",
+            "focus-row-meta",
+            "team-card",
+            "msg-row",
+            "diagnostic",
+            "dash-item",
+            "kpi-value",
+            "dash-row-title",
+            "person-status-title",
+            "person-msg-title",
+            "person-meta",
+            "tl-card-title",
+            "tl-card-meta",
+            "message-thread-meta",
         )
     )
 
@@ -183,7 +221,7 @@ def _extract_braced(text, marker):
         elif char == "}":
             depth -= 1
             if depth == 0:
-                return text[brace:index + 1]
+                return text[brace : index + 1]
         index += 1
     raise ValueError("Unterminated object after %s." % marker)
 
@@ -234,6 +272,7 @@ def _translation_candidates(value):
 def translation_coverage_report(html=None):
     if html is None:
         from .webapp import HTML_PAGE
+
         html = HTML_PAGE
     try:
         keys = _dictionary_keys(html)
@@ -243,7 +282,9 @@ def translation_coverage_report(html=None):
         candidates = set(parser.strings) | dynamic
         missing = []
         for value in sorted(candidates):
-            if not any(candidate in keys for candidate in _translation_candidates(value)):
+            if not any(
+                candidate in keys for candidate in _translation_candidates(value)
+            ):
                 missing.append(value)
         return OrderedDict(
             (
@@ -288,7 +329,9 @@ def packaging_metadata_report(root):
     extras = project.get("optional-dependencies") or {}
     for name in ("web", "tui"):
         if not extras.get(name):
-            errors.append("project.optional-dependencies.%s is missing or empty." % name)
+            errors.append(
+                "project.optional-dependencies.%s is missing or empty." % name
+            )
     if not project.get("requires-python"):
         errors.append("project.requires-python is required.")
     if not project.get("license"):
@@ -321,7 +364,9 @@ def golden_policy_report(root):
     cases = corpus.get("cases") or []
     minimum = int(policy.get("minimum_cases") or 1)
     if len(cases) < minimum:
-        errors.append("Golden corpus has %d cases; policy requires %d." % (len(cases), minimum))
+        errors.append(
+            "Golden corpus has %d cases; policy requires %d." % (len(cases), minimum)
+        )
     names = [str(case.get("name") or "") for case in cases]
     if len(names) != len(set(names)) or not all(names):
         errors.append("Golden case names must be non-empty and unique.")
@@ -329,10 +374,15 @@ def golden_policy_report(root):
     for case in cases:
         missing = sorted(required - set(case))
         if missing:
-            errors.append("Golden case %r is missing %s." % (case.get("name"), ", ".join(missing)))
+            errors.append(
+                "Golden case %r is missing %s." % (case.get("name"), ", ".join(missing))
+            )
         canonical = str(case.get("canonical") or "")
         if canonicalize_text(canonical) != canonical:
-            errors.append("Golden case %r canonical output is not canonically normalized." % case.get("name"))
+            errors.append(
+                "Golden case %r canonical output is not canonically normalized."
+                % case.get("name")
+            )
     required_names = set(policy.get("required_cases") or [])
     absent = sorted(required_names - set(names))
     if absent:
@@ -358,7 +408,12 @@ def schema_validation_report(root, require_validator=True):
             (
                 ("ok", not require_validator),
                 ("validator_available", False),
-                ("errors", ["Install jsonschema for the full release gate."] if require_validator else []),
+                (
+                    "errors",
+                    ["Install jsonschema for the full release gate."]
+                    if require_validator
+                    else [],
+                ),
             )
         )
     generated = schema_bundle()
@@ -407,14 +462,26 @@ def _schema_samples():
         (
             (
                 "item-v1.schema.json",
-                {"status": "[ ]", "type": "T", "title": "Sample", "details": {"id": ["T-1"]}},
+                {
+                    "status": "[ ]",
+                    "type": "T",
+                    "title": "Sample",
+                    "details": {"id": ["T-1"]},
+                },
             ),
             (
                 "diagnostic-v1.schema.json",
                 {
-                    "severity": "warning", "code": "F101", "message": "Sample",
-                    "source": "life.txt", "line": 1, "column": 1,
-                    "span": {"start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 1}},
+                    "severity": "warning",
+                    "code": "F101",
+                    "message": "Sample",
+                    "source": "life.txt",
+                    "line": 1,
+                    "column": 1,
+                    "span": {
+                        "start": {"line": 1, "column": 1},
+                        "end": {"line": 1, "column": 1},
+                    },
                     "hint": "Fix it.",
                 },
             ),
@@ -422,8 +489,10 @@ def _schema_samples():
             (
                 "conflict-v1.schema.json",
                 {
-                    "error": "CONFLICT", "expected_revision": conflict.expected_hash,
-                    "current_revision": conflict.actual_hash, "current_item": None,
+                    "error": "CONFLICT",
+                    "expected_revision": conflict.expected_hash,
+                    "current_revision": conflict.actual_hash,
+                    "current_item": None,
                     "attempted_change": {"operation": conflict.operation},
                 },
             ),
@@ -436,19 +505,24 @@ def write_route_baseline_report(root):
     try:
         baseline = _load_json(baseline_path)
     except Exception as exc:
-        return OrderedDict((("ok", False), ("errors", [str(exc)]), ("new_findings", [])))
+        return OrderedDict(
+            (("ok", False), ("errors", [str(exc)]), ("new_findings", []))
+        )
     allowed = set()
     for row in baseline.get("allowed") or []:
-        allowed.add((str(row.get("path") or "").replace("\\", "/"), str(row.get("call") or "")))
+        allowed.add(
+            (str(row.get("path") or "").replace("\\", "/"), str(row.get("call") or ""))
+        )
     current = []
     for finding in audit_python_writes(root):
         relative = os.path.relpath(finding["path"], root).replace("\\", "/")
-        current.append({"path": relative, "line": finding["line"], "call": finding["call"]})
+        current.append(
+            {"path": relative, "line": finding["line"], "call": finding["call"]}
+        )
     new_findings = [row for row in current if (row["path"], row["call"]) not in allowed]
     current_pairs = set((row["path"], row["call"]) for row in current)
     stale = [
-        {"path": path, "call": call}
-        for path, call in sorted(allowed - current_pairs)
+        {"path": path, "call": call} for path, call in sorted(allowed - current_pairs)
     ]
     return OrderedDict(
         (
@@ -467,10 +541,13 @@ def release_manifest(root, paths=None, require_validator=True):
     reports["timezone_roundtrip"] = {"ok": bool(_timezone_probe())}
     reports["packaging_metadata"] = packaging_metadata_report(root)
     reports["golden_policy"] = golden_policy_report(root)
-    reports["schema_validation"] = schema_validation_report(root, require_validator=require_validator)
+    reports["schema_validation"] = schema_validation_report(
+        root, require_validator=require_validator
+    )
     reports["translation_coverage"] = translation_coverage_report()
     reports["write_route_baseline"] = write_route_baseline_report(root)
     from .clock_contract import clock_boundary_report
+
     reports["clock_boundary_audit"] = clock_boundary_report(root)
     for path in paths or []:
         try:
@@ -482,7 +559,15 @@ def release_manifest(root, paths=None, require_validator=True):
             ("release_policy_version", POLICY_VERSION),
             ("package", "lifetxt"),
             ("package_version", __version__),
-            ("versions", {"format": FORMAT_VERSION, "canon": CANON_VERSION, "schema": SCHEMA_VERSION, "capability": CAPABILITY_VERSION}),
+            (
+                "versions",
+                {
+                    "format": FORMAT_VERSION,
+                    "canon": CANON_VERSION,
+                    "schema": SCHEMA_VERSION,
+                    "capability": CAPABILITY_VERSION,
+                },
+            ),
             ("checks", reports),
         )
     )
@@ -496,7 +581,11 @@ def release_gate(root, paths=None, require_validator=True):
     manifest = release_manifest(root, paths=paths, require_validator=require_validator)
     checks = []
     for name, detail in manifest["checks"].items():
-        checks.append(OrderedDict((("name", name), ("ok", bool(detail.get("ok"))), ("detail", detail))))
+        checks.append(
+            OrderedDict(
+                (("name", name), ("ok", bool(detail.get("ok"))), ("detail", detail))
+            )
+        )
     return OrderedDict(
         (
             ("ok", manifest["ok"]),
@@ -509,8 +598,12 @@ def release_gate(root, paths=None, require_validator=True):
 
 
 def _manifest_fingerprint(manifest):
-    stable = OrderedDict((key, value) for key, value in manifest.items() if key != "fingerprint")
-    payload = json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    stable = OrderedDict(
+        (key, value) for key, value in manifest.items() if key != "fingerprint"
+    )
+    payload = json.dumps(
+        stable, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 

@@ -87,12 +87,19 @@ def _strip_prefix(ref):
     text = str(ref)
     for prefix in ("group:", "team:", "user:", "person:"):
         if text.startswith(prefix):
-            return prefix[:-1], text[len(prefix):]
+            return prefix[:-1], text[len(prefix) :]
     return None, text
 
 
-def expand_group(config, name, _seen=None, _directory=None, _aliases=None,
-                 _teams=None, diagnostics=None):
+def expand_group(
+    config,
+    name,
+    _seen=None,
+    _directory=None,
+    _aliases=None,
+    _teams=None,
+    diagnostics=None,
+):
     """Expand one group into an ordered, de-duplicated member list."""
     directory = _directory if _directory is not None else group_directory(config)
     aliases = _aliases if _aliases is not None else _alias_map(directory)
@@ -103,15 +110,25 @@ def expand_group(config, name, _seen=None, _directory=None, _aliases=None,
     canonical = aliases.get(name, name)
     if canonical not in directory:
         diagnostics.append(
-            diagnostic("error", "G001", "Unknown group %r." % name,
-                       "Define it under the groups config section.", name)
+            diagnostic(
+                "error",
+                "G001",
+                "Unknown group %r." % name,
+                "Define it under the groups config section.",
+                name,
+            )
         )
         return []
     if canonical in seen_groups:
         cycle = " -> ".join(seen_groups + [canonical])
         diagnostics.append(
-            diagnostic("error", "G002", "Group cycle detected: %s." % cycle,
-                       "Remove the self-reference from a group's members.", canonical)
+            diagnostic(
+                "error",
+                "G002",
+                "Group cycle detected: %s." % cycle,
+                "Remove the self-reference from a group's members.",
+                canonical,
+            )
         )
         return []
 
@@ -124,8 +141,13 @@ def expand_group(config, name, _seen=None, _directory=None, _aliases=None,
             continue
         if kind == "group" or (kind is None and aliases.get(bare, bare) in directory):
             nested = expand_group(
-                config, bare, seen_groups + [canonical], directory, aliases,
-                teams, diagnostics,
+                config,
+                bare,
+                seen_groups + [canonical],
+                directory,
+                aliases,
+                teams,
+                diagnostics,
             )
             _extend_unique(result, nested)
         elif kind == "team" or (kind is None and bare in teams):
@@ -159,11 +181,18 @@ def resolve_recipients(config, references):
     for ref in references:
         kind, bare = _strip_prefix(ref)
         if kind == "group" or (kind is None and aliases.get(bare, bare) in directory):
-            members = expand_group(config, bare, None, directory, aliases, teams, diagnostics)
+            members = expand_group(
+                config, bare, None, directory, aliases, teams, diagnostics
+            )
             if not members:
                 diagnostics.append(
-                    diagnostic("warning", "G003", "Group %r resolved to no recipients." % bare,
-                               "Check members and disabled_members.", ref)
+                    diagnostic(
+                        "warning",
+                        "G003",
+                        "Group %r resolved to no recipients." % bare,
+                        "Check members and disabled_members.",
+                        ref,
+                    )
                 )
             expansion[ref] = members
             _extend_unique(resolved, members)
@@ -194,12 +223,19 @@ def validate_groups(config):
     rows = []
     for name in directory:
         diagnostics = []
-        members = expand_group(config, name, None, directory, aliases, teams, diagnostics)
+        members = expand_group(
+            config, name, None, directory, aliases, teams, diagnostics
+        )
         rows.extend(diagnostics)
         if not members and not diagnostics:
             rows.append(
-                diagnostic("warning", "G003", "Group %r is empty." % name,
-                           "Add members or remove the group.", name)
+                diagnostic(
+                    "warning",
+                    "G003",
+                    "Group %r is empty." % name,
+                    "Add members or remove the group.",
+                    name,
+                )
             )
     return _dedupe(rows)
 
@@ -222,7 +258,9 @@ def group_summaries(config):
     summaries = []
     for name, group in directory.items():
         diagnostics = []
-        members = expand_group(config, name, None, directory, aliases, teams, diagnostics)
+        members = expand_group(
+            config, name, None, directory, aliases, teams, diagnostics
+        )
         summaries.append(
             OrderedDict(
                 (

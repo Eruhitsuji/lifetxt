@@ -18,7 +18,10 @@ class RevisionMigrationMetricsTests(unittest.TestCase):
         with open(self.path, "w", encoding="utf-8", newline="") as handle:
             handle.write("[ ] T Existing id:T-1\n")
         from fastapi.testclient import TestClient
-        self.client = TestClient(webapp.create_app(paths=[self.path], writable_path=self.path))
+
+        self.client = TestClient(
+            webapp.create_app(paths=[self.path], writable_path=self.path)
+        )
 
     def tearDown(self):
         self.temp_dir.cleanup()

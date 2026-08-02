@@ -28,17 +28,27 @@ class TransactionPolicyVersionError(TransactionPolicyError):
 def utc_now_text(now=None):
     if now is None:
         from .timezone_policy import utcnow
+
         value = utcnow()
     else:
         value = now
     if value.tzinfo is None:
         value = value.replace(tzinfo=datetime.timezone.utc)
-    return value.astimezone(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        value.astimezone(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def policy_path(journal_dir, config=None):
     config = config or {}
-    section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    section = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
     configured = section.get("policy_file")
     if configured:
         return os.path.abspath(os.path.expanduser(str(configured)))
@@ -47,7 +57,11 @@ def policy_path(journal_dir, config=None):
 
 def audit_path(journal_dir, config=None):
     config = config or {}
-    section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    section = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
     configured = section.get("admin_audit_file")
     if configured:
         return os.path.abspath(os.path.expanduser(str(configured)))
@@ -72,7 +86,9 @@ def validate_policy_document(document, allow_older=False):
     try:
         version = int(version)
     except (TypeError, ValueError):
-        raise TransactionPolicyVersionError("Transaction policy version must be an integer.")
+        raise TransactionPolicyVersionError(
+            "Transaction policy version must be an integer."
+        )
     if version > POLICY_VERSION:
         raise TransactionPolicyVersionError(
             "Transaction policy version %d is newer than supported version %d."
@@ -85,7 +101,9 @@ def validate_policy_document(document, allow_older=False):
         )
     raw = document.get("policy")
     if not isinstance(raw, dict):
-        raise TransactionPolicyError("Transaction policy document requires a policy object.")
+        raise TransactionPolicyError(
+            "Transaction policy document requires a policy object."
+        )
     normalized = policy_from_config({"transactions": raw})
     result = OrderedDict(
         (
@@ -110,7 +128,9 @@ def read_policy_document(path, allow_missing=False, allow_older=False):
             return None
         raise
     except (OSError, ValueError) as exc:
-        raise TransactionPolicyError("Cannot read transaction policy %s: %s" % (absolute, exc))
+        raise TransactionPolicyError(
+            "Cannot read transaction policy %s: %s" % (absolute, exc)
+        )
     return validate_policy_document(raw, allow_older=allow_older)
 
 
@@ -128,7 +148,9 @@ def migrate_policy_document(document, now=None, operator=None):
         )
     if version == POLICY_VERSION:
         return validate_policy_document(document)
-    raw_policy = document.get("policy") if isinstance(document.get("policy"), dict) else document
+    raw_policy = (
+        document.get("policy") if isinstance(document.get("policy"), dict) else document
+    )
     return OrderedDict(
         (
             ("policy_version", POLICY_VERSION),
@@ -140,12 +162,16 @@ def migrate_policy_document(document, now=None, operator=None):
     )
 
 
-def write_policy_document(path, document, expected_revision=None, operator=None, audit_file=None, now=None):
+def write_policy_document(
+    path, document, expected_revision=None, operator=None, audit_file=None, now=None
+):
     absolute = os.path.abspath(path)
     ensure_private_tree(os.path.dirname(absolute) or ".", require_private=True)
     normalized = validate_policy_document(document)
     normalized["updated_at_utc"] = utc_now_text(now)
-    normalized["updated_by"] = str(operator or normalized.get("updated_by") or "unknown")
+    normalized["updated_by"] = str(
+        operator or normalized.get("updated_by") or "unknown"
+    )
     result = mutate_json(
         absolute,
         lambda _current: normalized,
@@ -160,7 +186,11 @@ def write_policy_document(path, document, expected_revision=None, operator=None,
             audit_file,
             "policy.write",
             operator=operator,
-            details={"path": absolute, "before_revision": result.before_hash, "after_revision": result.after_hash},
+            details={
+                "path": absolute,
+                "before_revision": result.before_hash,
+                "after_revision": result.after_hash,
+            },
             now=now,
         )
     return OrderedDict(
@@ -174,17 +204,27 @@ def write_policy_document(path, document, expected_revision=None, operator=None,
     )
 
 
-def migrate_policy_file(path, expected_revision=None, operator=None, audit_file=None, now=None):
+def migrate_policy_file(
+    path, expected_revision=None, operator=None, audit_file=None, now=None
+):
     absolute = os.path.abspath(path)
     snapshot = read_text_snapshot(absolute, allow_missing=True)
     if expected_revision is not None and snapshot.content_hash != expected_revision:
         from .mutation import MutationConflict
-        raise MutationConflict(absolute, expected_revision, snapshot.content_hash, operation="transactions.policy.migrate")
+
+        raise MutationConflict(
+            absolute,
+            expected_revision,
+            snapshot.content_hash,
+            operation="transactions.policy.migrate",
+        )
     if snapshot.exists:
         try:
             current = json.loads(snapshot.text, object_pairs_hook=OrderedDict)
         except ValueError as exc:
-            raise TransactionPolicyError("Cannot parse transaction policy %s: %s" % (absolute, exc))
+            raise TransactionPolicyError(
+                "Cannot parse transaction policy %s: %s" % (absolute, exc)
+            )
     else:
         current = {}
     migrated = migrate_policy_document(current, now=now, operator=operator)
@@ -198,9 +238,19 @@ def migrate_policy_file(path, expected_revision=None, operator=None, audit_file=
     )
 
 
-def append_admin_audit(path, event, operator=None, details=None, max_events=DEFAULT_AUDIT_MAX_EVENTS, now=None, config=None):
+def append_admin_audit(
+    path,
+    event,
+    operator=None,
+    details=None,
+    max_events=DEFAULT_AUDIT_MAX_EVENTS,
+    now=None,
+    config=None,
+):
     absolute = os.path.abspath(path)
-    authorization = authorize_operator(config, operator, action="transaction audit append")
+    authorization = authorize_operator(
+        config, operator, action="transaction audit append"
+    )
     ensure_private_tree(os.path.dirname(absolute) or ".", require_private=True)
     limit = max(1, int(max_events))
     entry = OrderedDict(
@@ -228,7 +278,14 @@ def append_admin_audit(path, event, operator=None, details=None, max_events=DEFA
         default={"audit_version": 1, "events": []},
     )
     _make_private(absolute, directory=False)
-    return OrderedDict((("path", absolute), ("revision", result.after_hash), ("event_count", len(json.loads(result.snapshot.text).get("events") or [])), ("authorization", authorization)))
+    return OrderedDict(
+        (
+            ("path", absolute),
+            ("revision", result.after_hash),
+            ("event_count", len(json.loads(result.snapshot.text).get("events") or [])),
+            ("authorization", authorization),
+        )
+    )
 
 
 def preflight_report(journal_dir, config=None, create=False):
@@ -238,10 +295,14 @@ def preflight_report(journal_dir, config=None, create=False):
     warnings = []
     if create:
         try:
-            ensure_private_tree(root, require_private=policy["require_private_permissions"])
+            ensure_private_tree(
+                root, require_private=policy["require_private_permissions"]
+            )
         except Exception as exc:
             errors.append(str(exc))
-    permissions = permission_report(root, require_private=policy["require_private_permissions"])
+    permissions = permission_report(
+        root, require_private=policy["require_private_permissions"]
+    )
     if permissions.get("problems"):
         errors.extend(permissions["problems"])
     usage = journal_usage(root)
@@ -254,7 +315,15 @@ def preflight_report(journal_dir, config=None, create=False):
     elif usage["total_bytes"] >= int(policy["max_total_bytes"] * 0.8):
         warnings.append("journal bytes are at least 80% of max_total_bytes")
     ppath = policy_path(root, config=config)
-    policy_state = OrderedDict((("path", ppath), ("exists", os.path.exists(ppath)), ("revision", MISSING_HASH), ("version", None), ("state", "missing")))
+    policy_state = OrderedDict(
+        (
+            ("path", ppath),
+            ("exists", os.path.exists(ppath)),
+            ("revision", MISSING_HASH),
+            ("version", None),
+            ("state", "missing"),
+        )
+    )
     if os.path.exists(ppath):
         snapshot = read_text_snapshot(ppath)
         policy_state["revision"] = snapshot.content_hash
@@ -288,7 +357,14 @@ def preflight_report(journal_dir, config=None, create=False):
     )
 
 
-def rotate_archives(archive_dir, max_archives=100, max_total_bytes=1024 * 1024 * 1024, force=False, operator=None, audit_file=None):
+def rotate_archives(
+    archive_dir,
+    max_archives=100,
+    max_total_bytes=1024 * 1024 * 1024,
+    force=False,
+    operator=None,
+    audit_file=None,
+):
     root = os.path.abspath(archive_dir)
     rows = []
     if os.path.isdir(root):
@@ -300,7 +376,14 @@ def rotate_archives(archive_dir, max_archives=100, max_total_bytes=1024 * 1024 *
             if not os.path.isfile(manifest):
                 continue
             size = _tree_size(path)
-            rows.append({"path": path, "name": name, "size": size, "mtime": os.path.getmtime(path)})
+            rows.append(
+                {
+                    "path": path,
+                    "name": name,
+                    "size": size,
+                    "mtime": os.path.getmtime(path),
+                }
+            )
     rows.sort(key=lambda row: (row["mtime"], row["name"]))
     keep_count = max(0, int(max_archives))
     keep_bytes = max(0, int(max_total_bytes))
@@ -314,14 +397,36 @@ def rotate_archives(archive_dir, max_archives=100, max_total_bytes=1024 * 1024 *
         remaining -= 1
         total -= row["size"]
     if remove and not force:
-        return OrderedDict((("ok", False), ("archive_dir", root), ("requires_force", True), ("would_remove", remove), ("removed", [])))
+        return OrderedDict(
+            (
+                ("ok", False),
+                ("archive_dir", root),
+                ("requires_force", True),
+                ("would_remove", remove),
+                ("removed", []),
+            )
+        )
     removed = []
     for row in remove:
         shutil.rmtree(row["path"])
         removed.append(row)
     if audit_file and removed:
-        append_admin_audit(audit_file, "archive.rotate", operator=operator, details={"removed": [row["name"] for row in removed]})
-    return OrderedDict((("ok", True), ("archive_dir", root), ("requires_force", False), ("removed", removed), ("remaining_count", remaining), ("remaining_bytes", total)))
+        append_admin_audit(
+            audit_file,
+            "archive.rotate",
+            operator=operator,
+            details={"removed": [row["name"] for row in removed]},
+        )
+    return OrderedDict(
+        (
+            ("ok", True),
+            ("archive_dir", root),
+            ("requires_force", False),
+            ("removed", removed),
+            ("remaining_count", remaining),
+            ("remaining_bytes", total),
+        )
+    )
 
 
 def _tree_size(root):
@@ -345,17 +450,23 @@ def _make_private(path, directory=False):
 def authorize_operator(config, operator, action="transaction administration"):
     """Enforce the optional transaction-administration operator allow-list."""
     config = config or {}
-    section = config.get("transactions") if isinstance(config.get("transactions"), dict) else {}
+    section = (
+        config.get("transactions")
+        if isinstance(config.get("transactions"), dict)
+        else {}
+    )
     required = bool(section.get("require_operator_authorization"))
     allowed = [str(value) for value in (section.get("authorized_operators") or [])]
     identity = str(operator or "").strip()
-    report = OrderedDict((
-        ("required", required),
-        ("operator", identity or None),
-        ("authorized_operators", allowed),
-        ("action", str(action)),
-        ("authorized", (not required) or (bool(identity) and identity in allowed)),
-    ))
+    report = OrderedDict(
+        (
+            ("required", required),
+            ("operator", identity or None),
+            ("authorized_operators", allowed),
+            ("action", str(action)),
+            ("authorized", (not required) or (bool(identity) and identity in allowed)),
+        )
+    )
     if not report["authorized"]:
         raise TransactionPolicyError(
             "Operator %r is not authorized for %s." % (identity or None, action)

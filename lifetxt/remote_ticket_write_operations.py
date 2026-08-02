@@ -1,4 +1,5 @@
 """Single-file history-preserving operations for Remote ticket writes."""
+
 from __future__ import unicode_literals
 
 from collections import OrderedDict
@@ -242,7 +243,7 @@ def mutate_ticket(
             comment=payload.get("comment"),
             event_extra=extra,
             operation="remote.ticket.edit",
-            **common
+            **common,
         )
     elif operation == "comment":
         body = str(payload.get("body") or "").strip()
@@ -257,7 +258,7 @@ def mutate_ticket(
             comment=body,
             event_extra=extra,
             operation="remote.ticket.comment",
-            **common
+            **common,
         )
     elif operation == "log_time":
         duration = payload.get("duration")
@@ -293,7 +294,7 @@ def mutate_ticket(
                 "corrects": payload.get("corrects"),
             },
             operation="remote.ticket.log-time",
-            **common
+            **common,
         )
     elif operation == "transition":
         target = str(payload.get("target_status") or "").strip()
@@ -336,7 +337,7 @@ def mutate_ticket(
             comment=payload.get("comment"),
             event_extra=extra,
             operation="remote.ticket.transition",
-            **common
+            **common,
         )
         result["workflow"] = plan
     else:

@@ -507,6 +507,34 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-module-structure-decomposition
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/67
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/93
+      pull_request: null
+      changed_files_or_scope:
+        - Cover /api/git/pull execution success and failure paths using disposable local repositories
+        - Cover /api/git/push execution success and failure paths using a disposable local bare remote
+        - Cover the committing branch of /api/git/commit for success and git-command failure
+        - tests/test_web_routes_git.py
+      tests_or_evidence:
+        - tests/test_web_routes_git.py creates per-test fixture repositories and local bare remotes without network access
+        - tests/test_web_routes_git.py skips with a reason when git is unavailable or fixture setup is refused
+        - tests/test_web_routes_git.py asserts local-only remote URL wiring before exercising push and pull
+        - python -m unittest tests.test_web_routes_git -> Ran 17 tests, OK
+        - python -m unittest tests.test_traceability_gate -> Ran 10 tests, OK
+        - ruff format --check lifetxt tests scripts -> 246 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - python -W ignore::ResourceWarning -m unittest discover -> Ran 1804 tests, OK (skipped=14)
+      release_or_deployment: null
+      notes: >-
+        All three formerly guard-only execution bodies are covered. The push
+        and pull success paths use a local bare repository as origin; failure
+        paths intentionally omit a remote and assert the route reports git's
+        non-zero exit result instead of raising a transport error.
+      status: implemented
+
     - requirement_id: req-durable-transaction-recovery
       capability_id: cap-durable-transaction-recovery
       epic: P0 durable recovery / todo.md:59

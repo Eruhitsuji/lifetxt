@@ -1,6 +1,11 @@
 {
   "config_version": 1,
   "default_workspace": "personal",
+  "config": {
+    "write": {
+      "require_revision": false
+    }
+  },
   "workspaces": {
     "personal": {
       "sources": [

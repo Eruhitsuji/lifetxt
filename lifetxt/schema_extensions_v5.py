@@ -99,6 +99,19 @@ def schema_bundle_v5():
                         "default_workspace": {"type": "string"},
                         "paths": {"type": "array", "items": {"type": "string"}},
                         "write_file": {"type": "string"},
+                        "config": {
+                            "type": "object",
+                            "properties": {
+                                "write": {
+                                    "type": "object",
+                                    "properties": {
+                                        "require_revision": {"type": "boolean"},
+                                    },
+                                    "additionalProperties": True,
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
                         "workspaces": {
                             "type": "object",
                             "additionalProperties": workspace,
@@ -158,6 +171,7 @@ def schema_samples_v5():
                 {
                     "config_version": 1,
                     "default_workspace": "personal",
+                    "config": {"write": {"require_revision": False}},
                     "workspaces": {
                         "personal": {
                             "sources": [

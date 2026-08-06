@@ -10890,12 +10890,28 @@ def _config_without_runtime(config):
     return data
 
 
-def _write_config_file(path, data, expected_revision=None, dry_run=False):
+def _write_config_file(
+    path, data, expected_revision=None, dry_run=False, require_revision=False
+):
     from .config_writer import write_config
 
     return write_config(
-        path, data, expected_revision=expected_revision, dry_run=dry_run
+        path,
+        data,
+        expected_revision=expected_revision,
+        dry_run=dry_run,
+        require_revision=require_revision,
     )
+
+
+def _config_write_requires_revision(config):
+    config_section_value = config.get("config") if isinstance(config, dict) else None
+    config_section_value = (
+        config_section_value if isinstance(config_section_value, dict) else {}
+    )
+    write = config_section_value.get("write")
+    write = write if isinstance(write, dict) else {}
+    return _truthy_config(write.get("require_revision"))
 
 
 def _config_write_revision(args, config, target):
@@ -10922,12 +10938,18 @@ def _config_write_revision(args, config, target):
 
 def _commit_config(args, config, target, data):
     """Write configuration under compare-and-set. Returns ``(report, code)``."""
-    from .config_writer import StaleConfigRevision
+    from .config_writer import ConfigRevisionRequired, StaleConfigRevision
 
     try:
         report = _write_config_file(
-            target, data, _config_write_revision(args, config, target)
+            target,
+            data,
+            _config_write_revision(args, config, target),
+            require_revision=_config_write_requires_revision(config),
         )
+    except ConfigRevisionRequired as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return None, 1
     except StaleConfigRevision as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         if exc.retained:

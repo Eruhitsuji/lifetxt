@@ -21,6 +21,30 @@ def _object(name, title, required, properties, additional=False):
     }
 
 
+CONFIG_RECOVERY = {
+    "type": "object",
+    "required": ["path", "rejected_candidate_count", "rejected_candidates"],
+    "properties": {
+        "path": {"type": "string"},
+        "rejected_candidate_count": {"type": "integer", "minimum": 0},
+        "rejected_candidates": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["path", "severity", "message"],
+                "properties": {
+                    "path": {"type": "string"},
+                    "severity": {"const": "info"},
+                    "message": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    "additionalProperties": False,
+}
+
+
 def _recovery_schema_bundle():
     target = {
         "type": "object",
@@ -474,6 +498,7 @@ def extended_schema_bundle():
                             "type": "object",
                             "additionalProperties": {"type": "boolean"},
                         },
+                        "config": CONFIG_RECOVERY,
                     },
                     additional=False,
                 ),
@@ -702,6 +727,17 @@ def extended_schema_samples():
                         "cleanup": {},
                     },
                     "optional_dependencies": {},
+                    "config": {
+                        "path": "/tmp/.lifetxt.json",
+                        "rejected_candidate_count": 1,
+                        "rejected_candidates": [
+                            {
+                                "path": "/tmp/.lifetxt.json.rejected1",
+                                "severity": "info",
+                                "message": "Refused configuration write retained for manual review; review and delete when no longer needed.",
+                            }
+                        ],
+                    },
                 },
             ),
             (

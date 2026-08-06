@@ -3,6 +3,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "config": {
+      "additionalProperties": true,
+      "properties": {
+        "write": {
+          "additionalProperties": true,
+          "properties": {
+            "require_revision": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "config_version": {
       "minimum": 1,
       "type": "integer"

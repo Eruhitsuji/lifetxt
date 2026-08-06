@@ -77,6 +77,22 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "config",
+            _entry(
+                "object",
+                None,
+                "Configuration-file write policy.",
+            ),
+        ),
+        (
+            "config.write.require_revision",
+            _entry(
+                "boolean",
+                False,
+                "Require configuration writes to carry an expected revision instead of falling back to last-write-wins.",
+            ),
+        ),
+        (
             "workspaces",
             _entry(
                 "object",

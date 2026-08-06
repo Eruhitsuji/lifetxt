@@ -10,6 +10,11 @@ def config_template():
     data = OrderedDict()
     data["paths"] = ["life.txt", ".generated/google_calendar.life.txt"]
     data["write_file"] = "life.txt"
+    data["config"] = OrderedDict(
+        [
+            ("write", OrderedDict([("require_revision", False)])),
+        ]
+    )
     data["workspace"] = OrderedDict(
         [
             ("max_total_source_bytes", 67108864),

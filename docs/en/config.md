@@ -157,6 +157,25 @@ $ lifetxt config unset web.port
 Values are parsed as JSON when possible (so `8080` is a number and `"text"` a
 string), otherwise stored as a string.
 
+Configuration writes are compare-and-set by default when the command writes
+back to the file it loaded. The CLI reads the current file revision and passes
+it as the write precondition, so a concurrent edit is refused instead of being
+overwritten.
+
+Set `config.write.require_revision` when every configuration write must carry a
+revision precondition:
+
+```json
+{
+  "config": { "write": { "require_revision": true } }
+}
+```
+
+This does not change normal `lifetxt config set|unset|migrate` use against the
+loaded file, because those commands discover the revision automatically. It
+does refuse writes where no revision is available, such as writing to a
+different `--output` file without `--expected-revision`.
+
 ## Credentials
 
 Never store passwords or tokens directly in configuration. Reference an

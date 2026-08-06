@@ -511,7 +511,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/97
       changed_files_or_scope:
         - Add a required PR traceability gate for code-changing diffs
         - Record the explicit not-applicable exception shape and rejected alternatives

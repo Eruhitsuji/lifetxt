@@ -41,6 +41,30 @@ commands:
     values:
       - python -m pip install -e ".[dev]"
 
+  setup_spec_skills:
+    status: configured
+    description: >-
+      Install the cc-sdd agent skills. They are deliberately not committed: only
+      `.kiro/settings/` is tracked, because that defines what generated specs look
+      like, while `.claude/skills/`, `.agents/skills/`, and `.codex/agents/` are
+      per-executor install artifacts covered by the leading `.*` rule in
+      .gitignore. A fresh checkout therefore has no skills until this runs (#101,
+      #104).
+    why_the_restore_step: >-
+      cc-sdd rewrites CLAUDE.md and AGENTS.md, which are the adapter entry points
+      that import the standard. `--overwrite skip` protects them but also skips
+      every new file, so the install does nothing. Use `force` and restore the two
+      tracked adapters immediately afterwards. Omitting the restore silently
+      replaces them with a 50-line cc-sdd workflow document.
+    requires: Node 18 or newer. cc-sdd declares no `engines` field, so an older Node fails with an internal ESM loader error rather than a version message.
+    values:
+      - npx cc-sdd@latest --claude-skills --overwrite force
+      - npx cc-sdd@latest --codex-skills --overwrite force
+      - git checkout -- CLAUDE.md AGENTS.md
+    verify:
+      - git diff --quiet -- CLAUDE.md AGENTS.md
+      - git status --porcelain .kiro/settings
+
   format:
     status: configured
     values:

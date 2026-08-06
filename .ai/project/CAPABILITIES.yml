@@ -89,12 +89,19 @@ capabilities:
     implementation_locations:
       - lifetxt/config_writer.py
       - lifetxt/cli.py
+      - lifetxt/config_registry.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - docs/en/config.md
+      - docs/ja/config.md
     public_interfaces:
       - lifetxt.config_writer.write_config
       - lifetxt.config_writer.config_revision
       - lifetxt.config_writer.rejected_candidates
       - lifetxt config revision
       - lifetxt config set|unset|migrate --expected-revision
+      - config.write.require_revision
+      - lifetxt config explain config.write.require_revision
     tests_or_evidence:
       - tests/test_config_validation.py ConfigRevisionTests
       - 'the precondition must reach lifetxt.mutation.write_text so the comparison happens inside the lock; a check performed before the write is not sufficient'
@@ -102,15 +109,20 @@ capabilities:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/47
+      - https://github.com/Eruhitsuji/lifetxt/issues/90
+      - https://github.com/Eruhitsuji/lifetxt/issues/91
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/58
       - https://github.com/Eruhitsuji/lifetxt/pull/59
+      - https://github.com/Eruhitsuji/lifetxt/pull/98
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
-      Configuration-driven enforcement (a ticketing.write.require_revision equivalent) is
-      deliberately deferred: it needs a new configuration schema key. The write_config
-      require_revision parameter already exists for callers that must not fall back to
-      last-write-wins.
+      Configuration-driven enforcement is available through
+      config.write.require_revision, matching the ticketing.write.require_revision
+      shape. Normal CLI config set|unset|migrate writes to the loaded file still
+      discover and send the revision automatically; writes that cannot discover a
+      revision, such as writing to a different --output file without
+      --expected-revision, are refused when the setting is enabled.
     replacement:
       replaces: []
       replaced_by: null

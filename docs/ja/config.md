@@ -156,6 +156,23 @@ $ lifetxt config unset web.port
 値は可能なら JSON として解釈され（`8080` は数値、`"text"` は文字列）、
 解釈できない場合は文字列として保存されます。
 
+設定を書き戻すコマンドは、読み込んだファイルへ書く場合に compare-and-set を使います。
+CLI が現在のファイル revision を読み取り、書き込みの前提条件として渡すため、
+並行編集があれば上書きせずに拒否されます。
+
+すべての設定書き込みに revision 前提条件を必須にする場合は
+`config.write.require_revision` を設定します。
+
+```json
+{
+  "config": { "write": { "require_revision": true } }
+}
+```
+
+通常の `lifetxt config set|unset|migrate` で読み込んだファイルへ書く場合は、
+コマンドが revision を自動検出するため動作は変わりません。別の `--output`
+ファイルへ `--expected-revision` なしで書くなど、revision が無い書き込みは拒否されます。
+
 ## 認証情報
 
 パスワードやトークンを設定に直接書かないでください。代わりに環境変数名を参照します。

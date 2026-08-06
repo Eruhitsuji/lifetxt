@@ -210,6 +210,37 @@ traceability:
         - 'AI first-pass review found a check-then-write race, an unmanaged retained-candidate lifecycle, and a dead parameter; all three fixed before review of the head commit'
       release_or_deployment: null
       status: implemented
+
+    - requirement_id: req-config-concurrent-write-safety
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/90
+      pull_request: null
+      changed_files_or_scope:
+        - Surface retained rejected configuration candidates in doctor --workspace-safety
+        - Keep retained candidates informational recovery data, not hard failures
+        - lifetxt/doctor.py
+        - lifetxt/schema_extensions_v2.py
+        - dist/schemas/doctor-v1.schema.json
+        - tests/test_doctor_cli_v2.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_doctor_cli_v2.py covers absent candidates and retained candidates reported as info without failing the doctor report
+        - tests/test_doctor_cli_v2.py verifies only the bounded rejected1..3 candidates are reported
+        - python -m unittest tests.test_doctor_cli_v2 tests.test_schema_extensions_v2 -> Ran 13 tests, OK (skipped=3)
+        - python -m unittest tests.test_doctor_cli_v2 tests.test_schema_extensions_v2 tests.test_traceability_gate -> Ran 23 tests, OK (skipped=3)
+        - ruff format --check lifetxt tests scripts -> 246 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - python -W ignore::ResourceWarning -m unittest discover -> Ran 1798 tests, OK (skipped=14)
+      release_or_deployment: null
+      notes: >-
+        Retained rejected candidates are the caller's recoverable edit after a
+        refused configuration write. Doctor reports them with severity info and
+        does not include them in hard_failures. When no candidates exist, the
+        config recovery section is omitted so existing doctor output remains
+        unchanged.
+      status: implemented
     - requirement_id: req-workspace-source-integrity
       capability_id: cap-workspace-resolution-safety
       epic: P1 Configuration and Workspace Foundation

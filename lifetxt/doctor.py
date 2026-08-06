@@ -18,6 +18,30 @@ from .timezone_policy import policy_report
 from .workspace_diagnostics import workspace_diagnostics
 
 
+def _config_recovery_report(config):
+    from .config_writer import rejected_candidates
+
+    path = config.get("_path") if isinstance(config, dict) else None
+    retained = rejected_candidates(path)
+    if not retained:
+        return None
+    return {
+        "path": os.path.abspath(path) if path else "",
+        "rejected_candidate_count": len(retained),
+        "rejected_candidates": [
+            {
+                "path": candidate,
+                "severity": "info",
+                "message": (
+                    "Refused configuration write retained for manual review; "
+                    "review and delete when no longer needed."
+                ),
+            }
+            for candidate in retained
+        ],
+    }
+
+
 def doctor_report(
     paths,
     config=None,
@@ -148,7 +172,7 @@ def doctor_report(
         hard_failures.append("transaction_recovery")
     if not transaction_policy.get("ok"):
         hard_failures.append("transaction_policy")
-    return {
+    report = {
         "ok": not hard_failures,
         "hard_failures": hard_failures,
         "workspace": {
@@ -180,6 +204,10 @@ def doctor_report(
         },
         "optional_dependencies": dependencies,
     }
+    config_recovery = _config_recovery_report(config)
+    if config_recovery is not None:
+        report["config"] = config_recovery
+    return report
 
 
 def cleanup_stale_locks(records, stale_after=300.0, enabled=False, force=False):

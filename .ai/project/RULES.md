@@ -145,6 +145,37 @@ When a run does fail, record the interpreter version, the shell, whether
 modified while the run was in flight. Each of those has already changed the
 reading of a result at least once in this project.
 
+## Traceability Gate
+
+Code-changing pull requests are those whose diff changes `lifetxt/**` or
+`tests/**`. They must add a meaningful `.ai/project/TRACEABILITY.yml` update
+before merge.
+
+A meaningful traceability chain update adds non-empty `requirement_id`,
+`capability_id`, `task_issue`, `tests_or_evidence`, and `status` fields. On pull
+request CI, it must also add the current `pull_request` URL. Empty, comment-only,
+or formatting-only edits to `.ai/project/TRACEABILITY.yml` do not satisfy the
+gate.
+
+If traceability is not applicable, record an exception in
+`.ai/project/TRACEABILITY.yml` with `exception_type:
+traceability_not_applicable`, `task_issue`, `pull_request`, `scope`, `reason`,
+`approved_by`, and `status: accepted`.
+
+Enforcement is `tests.test_traceability_gate` inside the required release-gate CI
+job. CI compares the pull request diff with the base SHA and passes the current
+pull request URL to the test. Local runs compare feature branches with
+`origin/main` when that ref is available.
+
+Rejected alternatives:
+
+- PR template checkbox only, because a checked box cannot prove that the diff
+  contains a meaningful traceability update.
+- Workflow-only shell logic, because the policy is easier to test and review as
+  ordinary Python unittest code.
+- Suite-only enforcement, because the PR base SHA and current pull request URL
+  are CI context and should be passed explicitly by the workflow.
+
 ## Tracked Exceptions
 
 `.ai/project/COMMANDS.yml` may record a command as `tracked_exception` when no

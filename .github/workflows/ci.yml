@@ -111,11 +111,20 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Run traceability update gate
+        if: github.event_name == 'pull_request'
+        env:
+          LIFETXT_TRACEABILITY_GATE_BASE: ${{ github.event.pull_request.base.sha }}
+          LIFETXT_TRACEABILITY_GATE_PR_URL: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+        run: python -m unittest tests.test_traceability_gate
 
       - name: Run isolated release profile
         shell: bash

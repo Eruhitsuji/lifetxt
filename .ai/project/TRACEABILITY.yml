@@ -639,6 +639,22 @@ traceability:
         authoritative release-gate confirmation.
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/102
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/103
+      changed_files_or_scope:
+        - Tell Kiro that specifications live in the standard change packages
+        - .kiro/steering/development-standard.md
+      tests_or_evidence:
+        - 'every path and template file named in the new section verified to exist'
+        - 'the .ai/project/changes/README.md threshold is quoted, not paraphrased'
+        - 'steering file 34 -> 75 lines; still a pointer rather than a restatement of the standard'
+        - 'whether Kiro honours the instruction is unverified by design: running it is the experiment, and the result is recorded on #101'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

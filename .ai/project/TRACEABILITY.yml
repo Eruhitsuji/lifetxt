@@ -507,6 +507,38 @@ traceability:
         inspect/resume/compensate/abandon contract.
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: standard adoption / foundation setup
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/97
+      changed_files_or_scope:
+        - Add a required PR traceability gate for code-changing diffs
+        - Record the explicit not-applicable exception shape and rejected alternatives
+        - .github/workflows/ci.yml
+        - tests/test_traceability_gate.py
+        - .ai/project/RULES.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_traceability_gate.py exercises missing traceability, meaningful chain, cosmetic edit rejection, and not-applicable exception paths
+        - python -m unittest tests.test_traceability_gate -> Ran 10 tests, OK
+        - ruff format --check lifetxt tests scripts -> 246 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - python -W ignore::ResourceWarning -m unittest discover -> Ran 1796 tests, OK (skipped=14)
+      release_or_deployment: null
+      notes: >-
+        The gate runs in the required release-gate CI job for pull requests and
+        compares the PR diff to the base SHA. Local runs compare feature
+        branches with origin/main when that ref is available. The PR URL is
+        required in CI, so the traceability record must be updated with the
+        opened PR number before merge. Local Windows release-profile verification
+        found a pre-existing cp932 stdout failure, tracked by #95. One full
+        suite attempt also hit a transient Windows atomic-write PermissionError,
+        tracked by #96, then passed on rerun. Ubuntu CI is expected to be the
+        authoritative release-gate confirmation.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -12,6 +12,7 @@ from lifetxt.config_validation import (
     validation_report,
 )
 from lifetxt import mutation
+from lifetxt.config_registry import explain_key
 from lifetxt.config_writer import (
     MISSING_REVISION,
     ConfigRevisionRequired,
@@ -63,6 +64,28 @@ class ValidationTests(unittest.TestCase):
 
     def test_version_default(self):
         self.assertEqual(1, config_version({}))
+
+    def test_registry_describes_config_write_require_revision(self):
+        entry = explain_key("config.write.require_revision")
+        self.assertIsNotNone(entry)
+        self.assertEqual("boolean", entry["type"])
+        self.assertFalse(entry["default"])
+        self.assertFalse(entry["secret"])
+        self.assertFalse(entry["restart_required"])
+
+    def test_config_schema_declares_config_write_require_revision(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("Draft 2020-12 jsonschema validation not available")
+        from lifetxt.safety_foundation import schema_bundle
+
+        schema = schema_bundle()["config-v1.schema.json"]
+        validator = Draft202012Validator(schema)
+        valid = {"config": {"write": {"require_revision": True}}}
+        self.assertEqual([], [e.message for e in validator.iter_errors(valid)])
+        invalid = {"config": {"write": {"require_revision": "yes"}}}
+        self.assertTrue([e.message for e in validator.iter_errors(invalid)])
 
 
 class WriterTests(unittest.TestCase):
@@ -397,6 +420,16 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(CONFIG_SCHEMA_VERSION, migrated["config_version"])
         self.assertIn("w", migrated["workspaces"])
         self.assertNotIn("default", migrated["workspaces"])
+
+    def test_config_write_require_revision_survives_migration(self):
+        config = {
+            "paths": ["life.txt"],
+            "write_file": "life.txt",
+            "config": {"write": {"require_revision": True}},
+        }
+        migrated, changes = migrate_config(config)
+        self.assertTrue(changes)
+        self.assertTrue(migrated["config"]["write"]["require_revision"])
 
 
 if __name__ == "__main__":

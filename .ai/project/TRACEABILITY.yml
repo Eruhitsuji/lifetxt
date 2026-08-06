@@ -232,6 +232,7 @@ traceability:
         - ruff format --check lifetxt tests scripts -> 246 files already formatted
         - ruff check lifetxt tests scripts -> All checks passed
         - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - python -W ignore::ResourceWarning -m unittest discover -> Ran 1805 tests, OK (skipped=15)
         - python -W ignore::ResourceWarning -m unittest discover -> Ran 1798 tests, OK (skipped=14)
       release_or_deployment: null
       notes: >-
@@ -240,6 +241,46 @@ traceability:
         does not include them in hard_failures. When no candidates exist, the
         config recovery section is omitted so existing doctor output remains
         unchanged.
+      status: implemented
+
+    - requirement_id: req-config-concurrent-write-safety
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/91
+      pull_request: null
+      changed_files_or_scope:
+        - Add config.write.require_revision as the configuration-driven require_revision policy
+        - Wire config set|unset|migrate to write_config(require_revision=...) without changing the compare-and-set contract
+        - lifetxt/cli.py
+        - lifetxt/config.py
+        - lifetxt/config_registry.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - docs/en/config.md
+        - docs/ja/config.md
+        - examples/config/personal.lifetxt.json
+        - tests/test_config_validation.py
+        - tests/test_lifetxt.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_config_validation.py covers registry metadata, schema validation, and migration preservation for config.write.require_revision
+        - tests/test_lifetxt.py covers config explain, same-file automatic revision success, required-revision refusal for different --output without --expected-revision, and disabled legacy behaviour
+        - python -W ignore::ResourceWarning -m unittest tests.test_config_validation tests.test_lifetxt.LifeTxtConfigCliTests tests.test_workspace_foundation.ExampleConfigTests -> Ran 46 tests, OK (skipped=3)
+        - python -m unittest tests.test_traceability_gate -> Ran 10 tests, OK
+        - ruff format --check lifetxt tests scripts -> 246 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: >-
+        Release note: config.write.require_revision is a new optional
+        configuration key. Enabling it refuses configuration writes that cannot
+        supply an expected revision.
+      notes: >-
+        The config schema version remains 1. Older configs omit the key and keep
+        the existing last-write fallback where no revision can be discovered.
+        Migration preserves the key when present but does not add it
+        automatically, so downgrade to older clients is an unknown-field
+        tolerance issue rather than a destructive migration.
       status: implemented
     - requirement_id: req-workspace-source-integrity
       capability_id: cap-workspace-resolution-safety

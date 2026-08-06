@@ -678,7 +678,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/106
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/107
       changed_files_or_scope:
         - Correct the steering text that contradicted the installed cc-sdd layout
         - Record the specification precedence rule in RULES.md where every executor reads it

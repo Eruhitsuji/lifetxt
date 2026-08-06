@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 
 import io
 import os
+import shutil
 import sys
 import unittest
 
@@ -88,10 +89,15 @@ class GitRouteRegistrationTests(unittest.TestCase):
     """
 
     def setUp(self):
+        self._directories = []
         try:
             from fastapi.testclient import TestClient  # noqa: F401
         except Exception:
             self.skipTest("web extras unavailable, so routes cannot be exercised")
+
+    def tearDown(self):
+        for directory in getattr(self, "_directories", []):
+            shutil.rmtree(directory, ignore_errors=True)
 
     def build(self, config=None, loopback=False):
         import tempfile
@@ -101,6 +107,7 @@ class GitRouteRegistrationTests(unittest.TestCase):
         from lifetxt.webapp import create_app
 
         directory = tempfile.mkdtemp(prefix="lifetxt-git-routes-")
+        self._directories.append(directory)
         path = os.path.join(directory, "life.txt")
         with io.open(path, "w", encoding="utf-8") as handle:
             handle.write("[ ] T Sample\n")
@@ -112,32 +119,60 @@ class GitRouteRegistrationTests(unittest.TestCase):
         )
         return client, directory
 
-    def enabled_repo_client(self):
-        """A loopback client over a real repository with one commit."""
+    def _git(self, cwd, *args, skip_on_error=True):
         import subprocess
 
-        client, directory = self.build({"git": {"enable_api": True}}, loopback=True)
-        commands = (
-            ["git", "init", "-q"],
-            ["git", "add", "life.txt"],
-            [
-                "git",
-                "-c",
-                "user.email=t@example.invalid",
-                "-c",
-                "user.name=T",
-                "commit",
-                "-q",
-                "-m",
-                "seed",
-            ],
+        if shutil.which("git") is None:
+            self.skipTest("git executable unavailable")
+        result = subprocess.run(
+            ["git"] + list(args),
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
         )
-        for command in commands:
-            result = subprocess.run(
-                command, cwd=directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        if skip_on_error and result.returncode != 0:
+            self.skipTest(
+                "git fixture setup failed for %r: %s"
+                % (" ".join(["git"] + list(args)), result.stderr.strip())
             )
-            if result.returncode != 0:
-                self.skipTest("git is unavailable or refused %r" % (command,))
+        return result
+
+    def enabled_repo(self, remote=False):
+        """A loopback client over a disposable repository with one commit."""
+        import tempfile
+
+        client, directory = self.build({"git": {"enable_api": True}}, loopback=True)
+        self._git(directory, "init", "-q")
+        self._git(directory, "checkout", "-B", "lifetxt-test")
+        self._git(directory, "config", "user.email", "t@example.invalid")
+        self._git(directory, "config", "user.name", "T")
+        self._git(directory, "add", "life.txt")
+        self._git(directory, "commit", "-q", "-m", "seed")
+        remote_directory = None
+        if remote:
+            remote_directory = tempfile.mkdtemp(prefix="lifetxt-git-remote-")
+            self._directories.append(remote_directory)
+            self._git(remote_directory, "init", "--bare", "-q")
+            self._git(
+                remote_directory,
+                "symbolic-ref",
+                "HEAD",
+                "refs/heads/lifetxt-test",
+            )
+            self._git(directory, "remote", "add", "origin", remote_directory)
+            url = self._git(
+                directory, "remote", "get-url", "origin", skip_on_error=False
+            )
+            self.assertEqual(0, url.returncode)
+            self.assertEqual(
+                os.path.abspath(remote_directory), os.path.abspath(url.stdout.strip())
+            )
+            self._git(directory, "push", "-u", "origin", "HEAD")
+        return client, directory, remote_directory
+
+    def enabled_repo_client(self):
+        client, _directory, _remote = self.enabled_repo()
         return client
 
     def test_every_git_route_is_registered(self):
@@ -206,6 +241,79 @@ class GitRouteRegistrationTests(unittest.TestCase):
         response = client.post("/api/git/commit", json={})
         self.assertEqual(400, response.status_code)
         self.assertIn("message is required", response.json()["message"])
+
+    def test_commit_succeeds_for_a_dirty_writable_file(self):
+        client, directory, _remote = self.enabled_repo()
+        with io.open(
+            os.path.join(directory, "life.txt"), "a", encoding="utf-8"
+        ) as handle:
+            handle.write("[ ] T Committed_by_API\n")
+
+        response = client.post("/api/git/commit", json={"message": "api commit"})
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertTrue(payload["ok"], payload)
+        log = self._git(directory, "log", "--pretty=%s", "-1")
+        self.assertEqual("api commit", log.stdout.strip())
+
+    def test_commit_reports_git_failure_when_nothing_changed(self):
+        client = self.enabled_repo_client()
+
+        response = client.post("/api/git/commit", json={"message": "empty commit"})
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertNotEqual(0, payload["exit_code"])
+        self.assertIn("nothing", (payload["stdout"] + payload["stderr"]).lower())
+
+    def test_pull_succeeds_against_a_local_bare_remote(self):
+        client, _directory, remote = self.enabled_repo(remote=True)
+        self.assertIsNotNone(remote)
+
+        response = client.post("/api/git/pull")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertTrue(payload["ok"], payload)
+
+    def test_pull_reports_git_failure_without_a_remote(self):
+        client = self.enabled_repo_client()
+
+        response = client.post("/api/git/pull")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertNotEqual(0, payload["exit_code"])
+
+    def test_push_succeeds_against_a_local_bare_remote(self):
+        client, directory, remote = self.enabled_repo(remote=True)
+        with io.open(
+            os.path.join(directory, "life.txt"), "a", encoding="utf-8"
+        ) as handle:
+            handle.write("[ ] T Pushed_by_API\n")
+        commit = client.post("/api/git/commit", json={"message": "api push source"})
+        self.assertTrue(commit.json()["ok"], commit.json())
+
+        response = client.post("/api/git/push")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertTrue(payload["ok"], payload)
+        remote_count = self._git(remote, "rev-list", "--count", "HEAD")
+        self.assertEqual("2", remote_count.stdout.strip())
+
+    def test_push_reports_git_failure_without_a_remote(self):
+        client = self.enabled_repo_client()
+
+        response = client.post("/api/git/push")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertNotEqual(0, payload["exit_code"])
 
 
 if __name__ == "__main__":

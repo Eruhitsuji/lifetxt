@@ -30,6 +30,12 @@ class DoctorCliV2Tests(unittest.TestCase):
             code = entrypoint.main(argv)
         return code, stdout.getvalue(), stderr.getvalue()
 
+    def write_config(self):
+        config = os.path.join(self.temp_dir.name, ".lifetxt.json")
+        with open(config, "w", encoding="utf-8") as handle:
+            json.dump({"config_version": 1, "paths": [self.life]}, handle)
+        return config
+
     def test_parsers_register_doctor_revisions_and_timezone_policies(self):
         doctor = _build_parser("doctor").parse_args(
             [
@@ -84,6 +90,64 @@ class DoctorCliV2Tests(unittest.TestCase):
         self.assertIn("locks", report)
         self.assertIn("diagnostics", report)
         self.assertIn("optional_dependencies", report)
+
+    def test_doctor_omits_config_recovery_section_without_rejected_candidates(self):
+        config = self.write_config()
+        code, stdout, stderr = self.run_command(
+            [
+                "--config",
+                config,
+                "doctor",
+                "--workspace-safety",
+                self.life,
+                "--format",
+                "json",
+                "--pretty",
+            ]
+        )
+        self.assertEqual(0, code, stderr)
+        report = json.loads(stdout)
+        self.assertTrue(report["ok"], report)
+        self.assertNotIn("config", report)
+
+    def test_doctor_reports_rejected_config_candidates_as_info(self):
+        config = self.write_config()
+        for index in range(1, 5):
+            with open(
+                "%s.rejected%d" % (config, index), "w", encoding="utf-8"
+            ) as handle:
+                json.dump({"config_version": 1, "web": {"port": 8000 + index}}, handle)
+        code, stdout, stderr = self.run_command(
+            [
+                "--config",
+                config,
+                "doctor",
+                "--workspace-safety",
+                self.life,
+                "--format",
+                "json",
+                "--pretty",
+            ]
+        )
+        self.assertEqual(0, code, stderr)
+        report = json.loads(stdout)
+        self.assertTrue(report["ok"], report)
+        self.assertNotIn("config", report["hard_failures"])
+        recovery = report["config"]
+        self.assertEqual(os.path.abspath(config), recovery["path"])
+        self.assertEqual(3, recovery["rejected_candidate_count"])
+        paths = [row["path"] for row in recovery["rejected_candidates"]]
+        self.assertEqual(
+            [
+                os.path.abspath("%s.rejected%d" % (config, index))
+                for index in range(1, 4)
+            ],
+            paths,
+        )
+        self.assertNotIn(os.path.abspath(config + ".rejected4"), paths)
+        self.assertEqual(
+            {"info"}, {row["severity"] for row in recovery["rejected_candidates"]}
+        )
 
     def test_safety_revisions_show_and_revision_checked_reset(self):
         store = RevisionMetricsStore(self.metrics)

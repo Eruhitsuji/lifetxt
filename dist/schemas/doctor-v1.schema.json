@@ -3,6 +3,47 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "config": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "rejected_candidate_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rejected_candidates": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "severity": {
+                "const": "info"
+              }
+            },
+            "required": [
+              "path",
+              "severity",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "rejected_candidate_count",
+        "rejected_candidates"
+      ],
+      "type": "object"
+    },
     "diagnostics": {
       "$ref": "workspace-diagnostics-v1.schema.json"
     },

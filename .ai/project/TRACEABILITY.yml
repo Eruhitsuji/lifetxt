@@ -655,6 +655,25 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/104
+      pull_request: null
+      changed_files_or_scope:
+        - Install cc-sdd for Claude Code and Codex with the adapters protected
+        - .kiro/settings/ (16 template files, tracked)
+        - .claude/skills/ (33), .agents/skills/ (50), .codex/agents/ (1) installed but not tracked
+        - .ai/project/COMMANDS.yml
+      tests_or_evidence:
+        - 'CLAUDE.md and AGENTS.md sha256 recorded before install and compared after: byte-identical'
+        - 'only .kiro/ is re-included by .gitignore; .claude, .agents, .codex stay ignored, verified by probe files'
+        - '--overwrite skip protects the adapters but skips every new file too (0/50 and 1/68 written), so force plus git checkout is the working combination'
+        - 'tasks.md suppression turned out to be unnecessary: settings/templates is tracked, so what cc-sdd generates is defined by this repository'
+        - 'Node 12.18.3 could not run cc-sdd at all (ERR_UNSUPPORTED_ESM_URL_SCHEME); upgraded to 24.19.0'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

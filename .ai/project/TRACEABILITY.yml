@@ -674,6 +674,24 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/106
+      pull_request: null
+      changed_files_or_scope:
+        - Correct the steering text that contradicted the installed cc-sdd layout
+        - Record the specification precedence rule in RULES.md where every executor reads it
+        - .kiro/steering/development-standard.md
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'no statement matching "not into a", "only Kiro reads", or "Kiro spec" remains in either file'
+        - 'steering 75 -> 52 lines: the rule moved to RULES.md and steering points at it rather than restating it'
+        - 'the lapsed premise is recorded: cc-sdd ships the same skills to Claude Code and Codex, so the "only one tool reads it" reasoning in the #101 body no longer holds and must not be reinstated from that text alone'
+        - 'nothing automated can catch this class of drift; it appeared between #103 and #105 and was found by reading'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

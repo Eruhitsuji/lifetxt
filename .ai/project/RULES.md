@@ -306,3 +306,59 @@ each could be revisited. Moved from `todo.md` by #54.
 
 Counter-machine boundaries stay with the counter-machine specification and move
 in #51 Part 2.
+
+## Specifications
+
+Spec-driven development uses cc-sdd, installed for Claude Code and Codex by #104.
+Per #101:
+
+- **cc-sdd writes to `.kiro/specs/<feature>/`.** That is working material.
+- **`.ai/project/changes/<change-id>/` is the source of truth.** For non-trivial
+  work, and for anything at High or Regulated assurance, the spec is distilled
+  into a change package, which is what reviewers and the other executor read.
+- Distilling is a manual step, so the two can drift. **The change package wins.**
+
+`.ai/project/changes/README.md` sets the threshold for needing a package at all:
+non-trivial changes, High or Regulated assurance work, public API changes, data
+changes, migrations, operations changes, or any change where requirements,
+design, tasks, tests, and release evidence may drift. Below that threshold the
+issue and pull request carry the reasoning, and no package is created.
+
+The formats differ deliberately. cc-sdd emits Markdown; the change package uses
+`requirements.yml` and the other template files, because those feed the
+standard's traceability records.
+
+### Tasks are GitHub Issues
+
+A spec's task breakdown decides what issues to file. It is not itself a task
+list. `.ai/managed/core/TASK_MANAGEMENT.md` makes Issues the source of truth for
+actionable work, and `.ai/managed/core/INDEX.md` puts "no implementation without
+a reviewable task source" in the non-overridable baseline.
+
+`.kiro/settings/templates/specs/tasks.md` carries this rule, so it appears in
+generated output rather than only here.
+
+### A specification does not authorise implementation
+
+The gate for starting work is an issue meeting
+`.ai/managed/core/DEFINITION_OF_READY.md` and not labelled `status:inbox` or
+`status:blocked`. Approved requirements and a reviewed design are inputs to
+decomposition, not permission.
+
+### Why `.kiro/specs/` is acceptable now
+
+Issue #101 first chose Kiro and forbade a `.kiro/specs/` tree, reasoning that a
+specification directory **only one tool reads** would be an alternative source of
+truth outside the repository and GitHub, which
+`.ai/managed/core/AI_TOOL_COMPATIBILITY.md` forbids adapters from creating.
+
+cc-sdd removed that premise: it ships the same skills to Claude Code and Codex,
+so both executors read the same specs. What the rule protects is that
+`.kiro/specs/` must not become the *source of truth* — never the location itself.
+
+Recorded because the original reasoning is still readable in #101's body, and
+someone acting on it alone would reinstate a prohibition whose basis has gone.
+
+Revisit if spec-driven work returns to a single-tool arrangement, or if the
+distillation step is found to be skipped often enough that the change package
+stops reflecting the spec.

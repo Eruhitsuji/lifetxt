@@ -692,6 +692,41 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-atomic-replace-retry-shared-primitive
+      capability_id: cap-atomic-replace-retry
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/108
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/109
+      pull_request: null
+      changed_files_or_scope:
+        - Add a Windows-only bounded retry helper (replace_with_retry) for os.replace transient PermissionError, matching the existing transaction_journal.py policy exactly
+        - lifetxt/atomic.py
+        - tests/test_mutation.py
+      tests_or_evidence:
+        - 'tests.test_mutation.AtomicReplaceRetryTests: success without retry, retry-then-success, retry-budget exhaustion re-raises unchanged, non-Windows skips retry, non-PermissionError OSError is never retried'
+        - not yet wired into any caller; atomic_write_bytes still calls os.replace directly until #110
+        - python -m unittest tests.test_mutation -> Ran 21 tests, OK (skipped=1)
+      release_or_deployment: null
+      notes: >-
+        Distilled from the windows-atomic-replace-retry change package
+        (.ai/project/changes/windows-atomic-replace-retry/), produced under #108.
+        Completes req-atomic-replace-retry-policy-consistency together with the
+        wiring in #110.
+      status: implemented
+
+    - requirement_id: req-atomic-replace-retry-policy-consistency
+      capability_id: cap-atomic-replace-retry
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/108
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/109
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/atomic.py
+        - tests/test_mutation.py
+      tests_or_evidence:
+        - 'the retry policy (Windows-only, initial attempt plus 0.01/0.05/0.1/0.25s delays) is defined once as module-level constants, matching lifetxt/transaction_journal.py values without sharing code with it'
+        - python -m unittest tests.test_mutation -> Ran 21 tests, OK (skipped=1)
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

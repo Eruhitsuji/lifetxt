@@ -254,6 +254,71 @@ class MutationTests(unittest.TestCase):
         write_text(self.path, "updated\n")
         self.assertEqual(0o640, os.stat(self.path).st_mode & 0o777)
 
+    def test_atomic_write_bytes_recovers_from_transient_replace_permission_error(self):
+        real_replace = os.replace
+        attempts = []
+
+        def flaky_replace(source, destination):
+            attempts.append((source, destination))
+            if len(attempts) <= 2:
+                raise PermissionError(5, "simulated WinError 5")
+            real_replace(source, destination)
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=flaky_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            atomic.atomic_write_bytes(self.path, b"payload\n")
+
+        self.assertEqual(3, len(attempts))
+        self.assertEqual(2, sleep.call_count)
+        with open(self.path, "rb") as handle:
+            self.assertEqual(b"payload\n", handle.read())
+        self.assertEqual([], self._leftover_temp_files())
+
+    def test_atomic_write_bytes_propagates_permission_error_after_exhausting_retry(
+        self,
+    ):
+        self.write_raw(b"original\n")
+        attempts = []
+
+        def always_fail(source, destination):
+            attempts.append((source, destination))
+            raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=always_fail),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(PermissionError):
+                atomic.atomic_write_bytes(self.path, b"new\n")
+
+        self.assertEqual(3, len(attempts))
+        self.assertEqual(2, sleep.call_count)
+        with open(self.path, "rb") as handle:
+            self.assertEqual(b"original\n", handle.read())
+        self.assertEqual([], self._leftover_temp_files())
+
+    def _leftover_temp_files(self):
+        directory = os.path.dirname(os.path.abspath(self.path))
+        return [
+            name
+            for name in os.listdir(directory)
+            if name.startswith(".lifetxt-") and name.endswith(".tmp")
+        ]
+
     def test_lock_is_removed_when_transform_raises(self):
         self.write_raw(b"safe\n")
         with self.assertRaises(RuntimeError):

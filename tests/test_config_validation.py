@@ -3,7 +3,9 @@ import os
 import tempfile
 import unittest
 from collections import OrderedDict
+from unittest import mock
 
+from lifetxt import atomic
 from lifetxt.config_validation import (
     CONFIG_SCHEMA_VERSION,
     config_version,
@@ -230,6 +232,148 @@ class ConfigRevisionTests(unittest.TestCase):
                 )
         rejected = [n for n in os.listdir(self.temp.name) if ".rejected" in n]
         self.assertLessEqual(len(rejected), 2)
+
+    def test_backup_rotation_recovers_from_transient_replace_permission_error(self):
+        self.seed(port=1)
+        self.seed(port=2)  # creates .bak1 = port 1; no shift yet
+        real_replace = os.replace
+        attempts = []
+
+        def selective_replace(source, destination):
+            if str(destination).endswith(".bak2"):
+                attempts.append((source, destination))
+                if len(attempts) <= 2:
+                    raise PermissionError(5, "simulated WinError 5")
+            real_replace(source, destination)
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=selective_replace),
+            mock.patch.object(atomic.time, "sleep"),
+        ):
+            self.seed(port=3)  # triggers the .bak1 -> .bak2 shift
+
+        self.assertEqual(3, len(attempts))
+        with open(self.path + ".bak2", "r", encoding="utf-8") as handle:
+            self.assertEqual(1, json.load(handle)["web"]["port"])
+
+    def test_backup_rotation_retry_exhaustion_stays_silent(self):
+        self.seed(port=1)
+        self.seed(port=2)
+        real_replace = os.replace
+
+        def always_fail_bak2(source, destination):
+            if str(destination).endswith(".bak2"):
+                raise PermissionError(5, "simulated WinError 5")
+            real_replace(source, destination)
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=always_fail_bak2),
+            mock.patch.object(atomic.time, "sleep"),
+        ):
+            report = self.seed(port=3)  # must not raise
+
+        self.assertTrue(report["written"])
+        self.assertFalse(os.path.exists(self.path + ".bak2"))
+        with open(self.path + ".bak1", "r", encoding="utf-8") as handle:
+            self.assertEqual(2, json.load(handle)["web"]["port"])
+        with open(self.path, "r", encoding="utf-8") as handle:
+            self.assertEqual(3, json.load(handle)["web"]["port"])
+
+    def test_rejected_rotation_recovers_from_transient_replace_permission_error(self):
+        first = self.seed(port=1)
+        self.seed(port=2)
+        with self.assertRaises(StaleConfigRevision):
+            write_config(
+                self.path,
+                {"config_version": 1, "web": {"port": 101}},
+                expected_revision=first["revision"],
+            )  # creates .rejected1
+        real_replace = os.replace
+        attempts = []
+
+        def selective_replace(source, destination):
+            if str(destination).endswith(".rejected2"):
+                attempts.append((source, destination))
+                if len(attempts) <= 2:
+                    raise PermissionError(5, "simulated WinError 5")
+            real_replace(source, destination)
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=selective_replace),
+            mock.patch.object(atomic.time, "sleep"),
+        ):
+            with self.assertRaises(StaleConfigRevision):
+                write_config(
+                    self.path,
+                    {"config_version": 1, "web": {"port": 102}},
+                    expected_revision=first["revision"],
+                )  # triggers the .rejected1 -> .rejected2 shift
+
+        self.assertEqual(3, len(attempts))
+        with open(self.path + ".rejected2", "r", encoding="utf-8") as handle:
+            self.assertEqual(101, json.load(handle)["web"]["port"])
+        with open(self.path + ".rejected1", "r", encoding="utf-8") as handle:
+            self.assertEqual(102, json.load(handle)["web"]["port"])
+
+    def test_rejected_rotation_retry_exhaustion_stays_silent(self):
+        first = self.seed(port=1)
+        self.seed(port=2)
+        with self.assertRaises(StaleConfigRevision):
+            write_config(
+                self.path,
+                {"config_version": 1, "web": {"port": 101}},
+                expected_revision=first["revision"],
+            )
+        real_replace = os.replace
+
+        def always_fail_rejected2(source, destination):
+            if str(destination).endswith(".rejected2"):
+                raise PermissionError(5, "simulated WinError 5")
+            real_replace(source, destination)
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=always_fail_rejected2),
+            mock.patch.object(atomic.time, "sleep"),
+        ):
+            # The refusal itself (StaleConfigRevision) is the write's normal
+            # compare-and-set outcome, unrelated to the rotation replace
+            # failure. What this asserts is that candidate retention still
+            # completes silently despite the rotation shift being exhausted.
+            with self.assertRaises(StaleConfigRevision) as caught:
+                write_config(
+                    self.path,
+                    {"config_version": 1, "web": {"port": 102}},
+                    expected_revision=first["revision"],
+                )
+
+        self.assertTrue(caught.exception.retained)
+        self.assertFalse(os.path.exists(self.path + ".rejected2"))
+        with open(self.path + ".rejected1", "r", encoding="utf-8") as handle:
+            self.assertEqual(102, json.load(handle)["web"]["port"])
 
     def test_dry_run_predicts_the_revision_without_writing(self):
         first = self.seed()

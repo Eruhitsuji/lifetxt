@@ -42,18 +42,13 @@ verification:
       executed_at: '2026-08-07'
       status: passed
 
-  gaps:
-    - requirement_id: req-atomic-replace-retry-policy-consistency
-      status: not_verified
-      detail: >-
-        This requirement has no test behind it. The traceability entry claimed
-        "assertions on the exact retry-policy constants and bounded total wait" in
-        tests/test_mutation.py. AtomicReplaceRetryTests contains five behavioural
-        tests -- success, retry-then-success, budget exhaustion, non-retry platform,
-        non-PermissionError -- and asserts neither the constants nor a total-wait
-        bound. The claim was corrected when this package was closed out.
-      why_it_matters: >-
-        design.md accepted duplicating the retry policy in transaction_journal.py
-        rather than refactoring incident-hardened code, and recorded drift between
-        the two copies as the residual risk. Nothing detects that drift today.
-      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/116
+    - type: unit
+      command: python -m unittest tests.test_replace_retry_policy
+      requirement_ids:
+        - req-atomic-replace-retry-policy-consistency
+      result: 'Ran 3 tests -- OK; verified to fail when either copy of the policy is changed alone'
+      commit: b5017b2
+      executed_at: '2026-08-07'
+      status: passed
+
+  gaps: []

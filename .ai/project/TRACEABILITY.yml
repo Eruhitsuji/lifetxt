@@ -835,6 +835,24 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-atomic-replace-retry-policy-consistency
+      capability_id: cap-atomic-replace-retry
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/116
+      pull_request: null
+      changed_files_or_scope:
+        - Give the duplicated replace-retry policy a test so its two copies cannot drift
+        - tests/test_replace_retry_policy.py
+        - .ai/project/changes/windows-atomic-replace-retry/verification.yml
+        - .ai/project/changes/windows-atomic-replace-retry/traceability.yml
+      tests_or_evidence:
+        - 'tests/test_replace_retry_policy.py -> Ran 3 tests, OK'
+        - 'verified to fail when only atomic.py changes its delay tuple, with a message telling the reader not to resolve it by deleting one copy'
+        - 'asserts equality rather than the values, so a deliberate policy change stays a two-line edit'
+        - 'the windows-atomic-replace-retry package now has 0 gaps; its evidence describes a test that exists, which the close-out in #117 found was not previously true'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -752,7 +752,7 @@ traceability:
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
       changed_files_or_scope:
         - Wire atomic_write_bytes's replace step to the shared retry helper added in #109
         - lifetxt/atomic.py (atomic_write_bytes only)
@@ -765,14 +765,17 @@ traceability:
         Closes #96 together with req-config-rotation-replace-retry below: transient Windows
         os.replace failures are now retried across the shared commit primitive.
       notes: >-
-        Completes the requirement started in #109 (the helper itself, unwired).
+        Completes the requirement started in #109 (the helper itself, unwired). Code-reviewed
+        and merged in #112, whose base branch was task/109-atomic-replace-retry-helper rather
+        than main; #114 carries the same, already-reviewed commits into main and is recorded
+        here as the pull_request of record.
       status: implemented
 
     - requirement_id: req-config-rotation-replace-retry
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
       changed_files_or_scope:
         - Wire _rotate_backups and _retain_rejected's replace steps to the shared retry helper added in #109
         - lifetxt/config_writer.py
@@ -786,14 +789,16 @@ traceability:
       notes: >-
         No new observability introduced for rotation replace failures on exhaustion, per the
         requirements-clarification decision recorded in
-        .ai/project/changes/windows-atomic-replace-retry/decisions.md.
+        .ai/project/changes/windows-atomic-replace-retry/decisions.md. Code-reviewed and merged
+        in #112 (base task/109-atomic-replace-retry-helper, not main); #114 carries the same
+        commits into main and is recorded here as the pull_request of record.
       status: implemented
 
     - requirement_id: req-atomic-replace-retry-policy-consistency
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
       changed_files_or_scope:
         - lifetxt/atomic.py
         - lifetxt/config_writer.py
@@ -806,6 +811,10 @@ traceability:
         - ruff check lifetxt tests scripts -> All checks passed
         - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       release_or_deployment: null
+      notes: >-
+        Code-reviewed and merged in #112 (base task/109-atomic-replace-retry-helper, not main);
+        #114 carries the same commits into main and is recorded here as the pull_request of
+        record.
       status: implemented
 
 required_chain:

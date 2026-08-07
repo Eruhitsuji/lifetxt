@@ -17,6 +17,42 @@ import json
 import os
 import stat
 import tempfile
+import time
+
+#: Platforms where a transient PermissionError during os.replace is retried.
+#: Independently mirrors lifetxt.transaction_journal's constant of the same
+#: shape rather than sharing code with it; see the windows-atomic-replace-retry
+#: change package for why.
+_REPLACE_PERMISSION_RETRY_OS_NAMES = frozenset(("nt",))
+
+#: Delay in seconds before each retry, in order. Matches the bounded budget
+#: already established by lifetxt.transaction_journal (#86 / #94).
+_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS = (0.01, 0.05, 0.1, 0.25)
+
+
+def replace_with_retry(source, destination):
+    """Replace destination with source, retrying a transient Windows PermissionError.
+
+    On Windows, antivirus, an indexer, a backup agent, or cloud sync can hold a
+    transient handle on the destination path, making ``os.replace`` fail with
+    ``WinError 5`` for a few milliseconds. This retries only that specific,
+    transient condition: a bounded number of attempts with short delays
+    between them, on platforms in ``_REPLACE_PERMISSION_RETRY_OS_NAMES`` only.
+    Any other exception, or exhausting the retry budget, propagates unchanged.
+    """
+    retry_enabled = os.name in _REPLACE_PERMISSION_RETRY_OS_NAMES
+    retry_delays = (
+        tuple(_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS) if retry_enabled else ()
+    )
+    attempts = len(retry_delays) + 1
+    for attempt in range(attempts):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt >= len(retry_delays):
+                raise
+            time.sleep(float(retry_delays[attempt]))
 
 
 def atomic_write_text(path, text, encoding="utf-8", newline="\n"):

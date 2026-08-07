@@ -120,7 +120,8 @@ GET /api/remote/v1/diagnostics
 共通read backendは現在次のresourceを公開します。
 
 - `items`: text、type、project、open-only、limitで絞り込んだvisible item
-- `tickets`: project、status、assigneeで絞り込んだvisible ticket
+- `tickets`: project、status、assigneeで絞り込んだvisible ticket。上限付きのデフォルトpage sizeとcursor pagination付き（後述）
+- `ticket-detail`: `id`で指定した1件のvisible ticketの全detail（field、relation、incoming link、時間集計）。存在しないIDとvisibleでない既存IDは同一の`REMOTE_TICKET_NOT_FOUND`エラーを返す
 - `projects`:同じvisible item集合から生成したproject summary
 - `ticket-report`:共有ticket/project aggregation contract
 - `links`: ID、direction、relationで絞り込んだrelation record
@@ -135,6 +136,20 @@ GET /api/remote/v1/resources/tickets?project=web&status=review&limit=50
 Authorization: Bearer <token>
 X-Lifetxt-Remote-Version: 2
 ```
+
+### ticketsのpagination
+
+`limit`を指定しない`tickets`requestは、visible tickets全件ではなく最大200件を返します。明示的な`limit`は従来どおり動作し、既存の上限5000件はそのままです。responseの`data`には`next_cursor`（返却した最後のticketのID。このpageでvisible setの末尾に達した場合は`null`）と`has_more`が追加されます。`next_cursor`を`cursor`として次のrequestに渡すと、既存の決定的なID順で、そのIDより後のticketだけが返されます。
+
+複数requestにまたがってpaginationするclientは、任意で`since_revision`（以前のpageの`revision`値）を渡せます。前回以降にworkspaceが変化していた場合、異なるrevisionのpageを黙って混在させて返す代わりに`REMOTE_RESOURCE_REVISION_CHANGED`で失敗します。clientは最初のpageからpaginationをやり直してください。`since_revision`を省略した場合の挙動は今までと完全に同じです：各pageは自身の`revision`を独立して報告し、整合性checkは行われません。
+
+```http
+GET /api/remote/v1/resources/tickets?limit=50&cursor=TK-0050
+Authorization: Bearer <token>
+X-Lifetxt-Remote-Version: 2
+```
+
+このpagination契約は現時点で`tickets`のみに適用されます。他のresourceは上記のとおり、`limit`未指定時は無制限のままです。
 
 ## Dependency-free client
 

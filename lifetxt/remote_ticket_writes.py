@@ -69,6 +69,9 @@ def install_remote_ticket_writes():
 
         @app.post(ROUTE)
         def remote_ticket_mutation(request: Request, payload=Body(default={})):
+            principal = None
+            key = None
+            ticket_id_value = None
             try:
                 if int(getattr(request.state, "remote_protocol", 1)) < 2:
                     raise RemoteAccessError(
@@ -198,7 +201,14 @@ def install_remote_ticket_writes():
                     result,
                 )
             except Exception as exc:
-                raise as_remote_error(exc)
+                raise as_remote_error(
+                    exc,
+                    payload=payload,
+                    principal=principal,
+                    paths=app.state.paths,
+                    key=key,
+                    ticket_id_value=ticket_id_value,
+                )
 
         return app
 

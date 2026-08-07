@@ -883,6 +883,48 @@ traceability:
         a final human-approved merge into main.
       status: implemented
 
+    - requirement_id: req-remote-ticket-conflict-schema-conformance
+      capability_id: cap-remote-ticket-conflict-schema
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/122
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/123
+      changed_files_or_scope:
+        - Make as_remote_error() build a conflict-v1.schema.json-shaped detail for both mutation.MutationConflict and the aggregate If-Match precondition failure
+        - Add expected_revision to require_exact_revision()'s conflict detail so both conflict sources carry it
+        - Add permission-filtered current_item re-read (conflict_current_item)
+        - Update RemoteMutationConflict/mutate_ticket() to read the four fields from the server response without an extra round trip; remove the now-dead _bounded_comparison()
+        - lifetxt/remote_ticket_write_core.py
+        - lifetxt/remote_ticket_writes.py
+        - lifetxt/remote_client_writes.py
+        - lifetxt/remote_access.py
+        - tests/test_remote_ticket_write_core.py
+        - tests/test_remote_ticket_writes_v22.py
+        - tests/test_remote_client_writes_v23.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_ticket_write_core.py ConflictCurrentItemTests and AsRemoteErrorConflictTests
+        - tests/test_remote_ticket_writes_v22.py test_stale_revision_and_transaction_reuse_fail_closed (schema-conformance assertions against schema_bundle()["conflict-v1.schema.json"])
+        - tests/test_remote_client_writes_v23.py test_revision_conflict_presents_server_detail_without_extra_round_trip
+        - python -m unittest tests.test_remote_ticket_writes_v22 tests.test_remote_client_writes_v23 tests.test_remote_client_writes_compat_v25 tests.test_remote_ticket_write_core -> Ran 28 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1850 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        Behaviour change for release notes: the Remote ticket-mutation conflict detail's field
+        names changed (requested_revision -> expected_revision, comparison removed,
+        attempted_change/current_item added) on both the wire and the RemoteMutationConflict
+        client object.
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-conflict-schema/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, M-sized with
+        a written split-justification). Discovered mid-implementation that the existing
+        regression test exercised require_exact_revision's aggregate precondition, not
+        mutation.MutationConflict as the issue originally assumed -- both sources are now
+        covered. Part of the feature/dev-remote batch alongside #120.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

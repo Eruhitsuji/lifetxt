@@ -1077,7 +1077,7 @@ traceability:
       capability_id: cap-supported-platform-install
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/95
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/137
       changed_files_or_scope:
         - Fall back to a non-crashing write when the release-policy CLI's stdout cannot encode a manifest character (e.g. Windows cp932)
         - scripts/check_release_policy.py

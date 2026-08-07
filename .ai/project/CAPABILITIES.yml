@@ -294,6 +294,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/95
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/75
+      - https://github.com/Eruhitsuji/lifetxt/pull/137
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Linux CI cannot detect a regression here: the marker excludes tzdata there and the

@@ -176,6 +176,49 @@ Rejected alternatives:
 - Suite-only enforcement, because the PR base SHA and current pull request URL
   are CI context and should be passed explicitly by the workflow.
 
+## Change Package Close-out
+
+A change package must not still say the work is only proposed once that work has
+landed. `.ai/project/changes/README.md` requires closing or archiving a package
+after merge, and `ASSURANCE_LEVELS.md` expects retained evidence at High
+assurance -- the package is the artifact that carries it.
+
+Rules:
+
+- When a package's own `traceability.yml` reports landed work, `change.yml`
+  must not be `draft` or `proposed`.
+- No `verification.yml` entry may remain `planned`. Record the command, the
+  result, and the commit it ran on. **A plan is not evidence.**
+- A requirement with no test behind it is recorded as a gap with a `tracked_by`
+  issue, not omitted and not described as verified.
+
+Enforcement is `tests.test_change_package_closeout`, which runs in the ordinary
+suite. It is deliberately offline: whether a pull request merged is not knowable
+from the repository, so the check uses the package's own contradiction instead --
+traceability links claiming landed work while `change.yml` says otherwise. That
+state is self-inconsistent regardless of what GitHub reports.
+
+This rule exists because the first change package sat at `proposed` with all five
+verification entries reading `planned` after five merged pull requests, and
+nothing reported it. Closing a package was nobody's step (#117). The same shape
+had already occurred twice: #47 closed with its traceability criterion unmet, and
+#103's steering text became false the moment #105 merged.
+
+Closing out the first package also found a recorded evidence claim that did not
+exist: `req-atomic-replace-retry-policy-consistency` cited assertions on retry
+constants that no test makes. **Stale records and untrue records arrive by the
+same route** -- nobody re-reads them after the work is done.
+
+Rejected alternatives:
+
+- Extend the #88 traceability gate, because that gate reasons about a pull
+  request diff, while this is a repository-state invariant that holds
+  independently of any diff.
+- A rule with no mechanism, because that is what was already in
+  `.ai/project/changes/README.md` and it did not hold.
+- Querying GitHub for issue or pull request state, because the suite must run
+  offline and a check that needs a token is a check that gets skipped.
+
 ## Tracked Exceptions
 
 `.ai/project/COMMANDS.yml` may record a command as `tracked_exception` when no

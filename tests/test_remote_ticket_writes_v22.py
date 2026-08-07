@@ -16,6 +16,7 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
     def setUp(self):
         os.environ["REMOTE_EDITOR_V22"] = "editor-v22"
         os.environ["REMOTE_READER_V22"] = "reader-v22"
+        os.environ["REMOTE_OTHER_PROJECT_V22"] = "other-project-v22"
         self.temp = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp.name, "life.txt")
         with open(self.path, "w", encoding="utf-8") as handle:
@@ -42,6 +43,13 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
                         "projects": ["web"],
                         "visibilities": ["public", "shared"],
                     },
+                    {
+                        "id": "carol",
+                        "role": "editor",
+                        "token_env": "REMOTE_OTHER_PROJECT_V22",
+                        "projects": ["other"],
+                        "visibilities": ["public", "shared"],
+                    },
                 ],
                 "allow_loopback_http": True,
             },
@@ -62,11 +70,16 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
             "Authorization": "Bearer reader-v22",
             "X-Lifetxt-Remote-Version": "2",
         }
+        self.other_project_editor = {
+            "Authorization": "Bearer other-project-v22",
+            "X-Lifetxt-Remote-Version": "2",
+        }
 
     def tearDown(self):
         self.temp.cleanup()
         os.environ.pop("REMOTE_EDITOR_V22", None)
         os.environ.pop("REMOTE_READER_V22", None)
+        os.environ.pop("REMOTE_OTHER_PROJECT_V22", None)
 
     def revision(self):
         response = self.client.get("/api/remote/v1/snapshot", headers=self.editor)
@@ -210,6 +223,60 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
         )
         self.assertEqual(409, reused.status_code, reused.text)
         self.assertEqual("REMOTE_TRANSACTION_REUSED", reused.json()["error"])
+
+    def test_create_conflict_has_no_current_item_for_ticket_that_does_not_exist(self):
+        old_revision = self.revision()
+        first = self.mutate(
+            {
+                "operation": "comment",
+                "transaction_id": "TX-REMOTE-BUMP-1",
+                "ticket_id": "T-1",
+                "body": "Bump the aggregate revision",
+            },
+            revision=old_revision,
+        )
+        self.assertEqual(200, first.status_code, first.text)
+
+        stale_create = self.mutate(
+            {
+                "operation": "create",
+                "transaction_id": "TX-REMOTE-CREATE-CONFLICT-1",
+                "ticket_id": "T-NEW",
+                "subject": "Never created",
+                "project": "web",
+            },
+            revision=old_revision,
+        )
+        self.assertEqual(409, stale_create.status_code, stale_create.text)
+        detail = stale_create.json()["detail"]
+        self.assertEqual("create", detail["attempted_change"]["operation"])
+        self.assertIsNone(detail["current_item"])
+
+    def test_conflict_current_item_is_hidden_from_a_principal_without_access(self):
+        old_revision = self.revision()
+        first = self.mutate(
+            {
+                "operation": "comment",
+                "transaction_id": "TX-REMOTE-BUMP-2",
+                "ticket_id": "T-1",
+                "body": "Bump the aggregate revision",
+            },
+            revision=old_revision,
+        )
+        self.assertEqual(200, first.status_code, first.text)
+
+        stale = self.mutate(
+            {
+                "operation": "comment",
+                "transaction_id": "TX-REMOTE-OTHER-PROJECT-1",
+                "ticket_id": "T-1",
+                "body": "From a principal without web project access",
+            },
+            revision=old_revision,
+            headers=self.other_project_editor,
+        )
+        self.assertEqual(409, stale.status_code, stale.text)
+        self.assertIsNone(stale.json()["detail"]["current_item"])
 
     def test_permissions_configuration_and_source_scope_are_enforced(self):
         reader_revision = self.revision()

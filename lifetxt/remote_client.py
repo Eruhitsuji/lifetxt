@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .remote_access import (
+    REMOTE_CAPABILITY_REVISION_HEADER,
     REMOTE_PROTOCOL_CURRENT,
     REMOTE_PROTOCOL_MIN,
     REMOTE_VERSION_HEADER,
@@ -251,9 +252,8 @@ def test_connection(profile):
         "negotiated_protocol": int(
             session_headers.get("lifetxt_negotiated_protocol", requested)
         ),
-        "capability_revision": capability_headers.get(
-            "X-Lifetxt-Remote-Capability-Revision"
-        ),
+        "capability_revision": capability_headers.get(REMOTE_CAPABILITY_REVISION_HEADER)
+        or capability_headers.get(REMOTE_CAPABILITY_REVISION_HEADER.lower()),
         "capabilities": capabilities,
         "session": session,
     }

@@ -121,6 +121,7 @@ GET /api/remote/v1/diagnostics
 
 - `items`: text、type、project、open-only、limitで絞り込んだvisible item
 - `tickets`: project、status、assigneeで絞り込んだvisible ticket。上限付きのデフォルトpage sizeとcursor pagination付き（後述）
+- `ticket-detail`: `id`で指定した1件のvisible ticketの全detail（field、relation、incoming link、時間集計）。存在しないIDとvisibleでない既存IDは同一の`REMOTE_TICKET_NOT_FOUND`エラーを返す
 - `projects`:同じvisible item集合から生成したproject summary
 - `ticket-report`:共有ticket/project aggregation contract
 - `links`: ID、direction、relationで絞り込んだrelation record

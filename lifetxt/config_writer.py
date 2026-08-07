@@ -26,7 +26,7 @@ import shutil
 from collections import OrderedDict
 
 from . import mutation
-from .atomic import atomic_write_text
+from .atomic import atomic_write_text, replace_with_retry
 from .config_validation import is_supported_version, validate_config
 from .surface_runtime import normalize_revision
 
@@ -93,7 +93,7 @@ def _rotate_backups(path, max_backups):
             try:
                 if os.path.exists(newer):
                     os.remove(newer)
-                os.replace(older, newer)
+                replace_with_retry(older, newer)
             except OSError:
                 pass
     backup = "%s.bak1" % path
@@ -122,7 +122,7 @@ def _retain_rejected(path, text, max_rejected=DEFAULT_MAX_REJECTED):
             try:
                 if os.path.exists(newer):
                     os.remove(newer)
-                os.replace(older, newer)
+                replace_with_retry(older, newer)
             except OSError:
                 pass
     target = "%s.rejected1" % path

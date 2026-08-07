@@ -106,7 +106,7 @@ def atomic_write_bytes(path, data):
         os.fsync(handle.fileno())
         handle.close()
         _preserve_mode(path, temp_path)
-        os.replace(temp_path, path)
+        replace_with_retry(temp_path, path)
         _fsync_directory(directory)
     finally:
         if handle is not None and not handle.closed:

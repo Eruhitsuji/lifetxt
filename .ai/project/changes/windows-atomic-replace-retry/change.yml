@@ -1,0 +1,42 @@
+schema_version: 1
+
+change:
+  id: windows-atomic-replace-retry
+  title: Bounded retry for the two remaining unprotected os.replace call sites on Windows
+  status: proposed
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/108
+  related_pull_request: null
+  base_commit: b5c3256891bc10ea821bb1cdf3d843d6e61698b5
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a Windows-only bounded retry helper for os.replace transient PermissionError (WinError 5), reusing the exact policy already established in lifetxt/transaction_journal.py (#86 / #94).
+    - Wire the shared low-level atomic write commit primitive (lifetxt/atomic.py:73, atomic_write_bytes) to use the helper. On retry-budget exhaustion it propagates the error unchanged, same as today.
+    - Wire the configuration backup and rejected-candidate rotation (lifetxt/config_writer.py:96, lifetxt/config_writer.py:125) to use the same helper. On retry-budget exhaustion the existing except OSError pass keeps swallowing the failure silently, unchanged from today.
+    - Regression verification that all three protected call sites (the two new ones plus the untouched existing one) apply an identical bounded retry policy.
+  out_of_scope:
+    - Modifying lifetxt/transaction_journal.py's existing _replace_file() retry implementation (#86 / #94). Values are matched, code is not shared.
+    - Redesigning the retry attempt count or delay values (existing values are reused as-is).
+    - Adding any new observability (logging, doctor diagnostics, return values) for configuration rotation replace failures.
+    - Any non-Windows behavior change.
+    - Any os.replace call site other than the four already inventoried (three covered here, one already protected).
+  write_scope:
+    - lifetxt/atomic.py
+    - lifetxt/config_writer.py
+    - tests/test_mutation.py
+    - tests/test_config_validation.py
+  forbidden_scope:
+    - lifetxt/transaction_journal.py
+    - .ai/managed/**
+    - .kiro/settings/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation review (High assurance minimum: implementation + integration review, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge (data-durability layer: the shared commit primitive is used by nearly all writes in the project)
+  - Rollback plan confirmation before merge

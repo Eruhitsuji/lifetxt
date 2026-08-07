@@ -692,6 +692,27 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/108
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/113
+      changed_files_or_scope:
+        - Generate the first real cc-sdd spec (requirements, design, tasks, research) against #96 and the wider unprotected os.replace defect class
+        - Distill it into the first change package under .ai/project/changes/<change-id>/, filling all six template files
+        - Decompose into two GitHub Issues meeting Definition of Ready (#109, #110), each with its own scope contract, complexity score, and traceability
+        - .kiro/specs/windows-atomic-replace-retry/ (spec.json, requirements.md, design.md, research.md, tasks.md)
+        - .ai/project/changes/windows-atomic-replace-retry/ (change.yml, requirements.yml, design.md, traceability.yml, decisions.md, verification.yml)
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'cc-sdd spec phases (requirements/design/tasks) each passed their mechanical review gate plus an independent task-graph sanity review subagent, which found and the parent fixed one real defect: a Requirements Traceability table row in design.md that disagreed with the Components table for requirement 1.2'
+        - 'all four os.replace call sites accounted for: three covered by this change (#109, #110), one already protected by #86 / #94 and left untouched, matching the change package forbidden_scope'
+        - 'retry-budget-exhaustion behavior is specified per call site and fails loudly where data durability requires it: the shared commit primitive (req-atomic-replace-retry-shared-primitive) propagates the error unchanged; only the pre-existing best-effort backup/rejected rotation (req-config-rotation-replace-retry) stays silent, matching its existing except OSError pass behavior'
+        - 'kiro-impl was invoked and stopped itself before touching lifetxt/** on discovering #108s forbidden_scope; #109 / #110 were filed instead so the actual fix has its own Ready issues with lifetxt/** write scope'
+        - 'findings on what the cc-sdd arrangement got right or wrong, per #108 acceptance criterion 4, recorded as a comment on #101'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

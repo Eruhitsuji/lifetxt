@@ -165,6 +165,83 @@ class RemoteTicketsPaginationTests(unittest.TestCase):
         self.assertEqual(5, result["data"]["count"])
         self.assertEqual(5, len(result["data"]["tickets"]))
 
+    def test_limit_zero_reports_has_more_without_crashing(self):
+        result = read_resource(
+            "tickets", [self.path], self.config, self.principal, {"limit": 0}
+        )
+        self.assertEqual(0, result["data"]["count"])
+        self.assertEqual([], result["data"]["tickets"])
+        self.assertTrue(result["data"]["has_more"])
+        self.assertIsNone(result["data"]["next_cursor"])
+
+    def test_limit_zero_with_cursor_returns_the_same_cursor_unchanged(self):
+        first = read_resource(
+            "tickets", [self.path], self.config, self.principal, {"limit": 1}
+        )
+        cursor = first["data"]["next_cursor"]
+        stalled = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"limit": 0, "cursor": cursor},
+        )
+        self.assertEqual([], stalled["data"]["tickets"])
+        self.assertTrue(stalled["data"]["has_more"])
+        self.assertEqual(cursor, stalled["data"]["next_cursor"])
+
+    def test_cursor_not_matching_any_ticket_id_is_not_an_error(self):
+        # "AAA" sorts before every "TK-###" id, so this behaves like no cursor.
+        before_everything = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"cursor": "AAA", "limit": 5},
+        )
+        self.assertEqual(5, before_everything["data"]["count"])
+
+        # A cursor that sorts after every id (never matched by "> cursor")
+        # returns no rows without raising.
+        after_everything = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"cursor": "zzz-not-a-real-ticket-id", "limit": 5},
+        )
+        self.assertEqual(0, after_everything["data"]["count"])
+        self.assertFalse(after_everything["data"]["has_more"])
+
+    def test_cursor_combines_with_project_status_assignee_filters(self):
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Assigned_ticket record:ticket id:TK-ASSIGNED project:web "
+                "visibility:shared ticket_status:new assignee:alice\n"
+            )
+        first = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"assignee": "alice", "limit": 5},
+        )
+        self.assertEqual(
+            ["TK-ASSIGNED"], [row["id"] for row in first["data"]["tickets"]]
+        )
+        self.assertFalse(first["data"]["has_more"])
+
+        second = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"assignee": "alice", "cursor": "TK-000", "limit": 5},
+        )
+        self.assertEqual(
+            ["TK-ASSIGNED"], [row["id"] for row in second["data"]["tickets"]]
+        )
+
     def test_cursor_pagination_visits_every_ticket_exactly_once(self):
         seen = []
         cursor = None

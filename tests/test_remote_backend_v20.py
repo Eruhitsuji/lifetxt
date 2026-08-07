@@ -108,5 +108,163 @@ class RemoteReadBackendTests(unittest.TestCase):
         self.assertEqual("REMOTE_RESOURCE_UNKNOWN", caught.exception.code)
 
 
+class RemoteTicketsPaginationTests(unittest.TestCase):
+    TICKET_COUNT = 210
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, "life.txt")
+        lines = [
+            "[ ] T Ticket_%03d record:ticket id:TK-%03d project:web "
+            "visibility:shared ticket_status:new\n" % (index, index)
+            for index in range(self.TICKET_COUNT)
+        ]
+        lines.append(
+            "[ ] T Other_project_ticket record:ticket id:TK-OTHER project:other "
+            "visibility:shared ticket_status:new\n"
+        )
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.writelines(lines)
+        self.config = {
+            "remote": {
+                "enabled": True,
+                "principals": [
+                    {
+                        "id": "alice",
+                        "role": "reader",
+                        "projects": ["web"],
+                        "visibilities": ["public", "shared"],
+                    },
+                    {
+                        "id": "other-project-reader",
+                        "role": "reader",
+                        "projects": ["other"],
+                        "visibilities": ["public", "shared"],
+                    },
+                ],
+            }
+        }
+        self.principal = principal_registry(self.config)["alice"]
+        self.other_project_principal = principal_registry(self.config)[
+            "other-project-reader"
+        ]
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_omitting_limit_returns_bounded_default_page(self):
+        result = read_resource("tickets", [self.path], self.config, self.principal)
+        self.assertEqual(200, result["data"]["count"])
+        self.assertTrue(result["data"]["has_more"])
+        self.assertIsNotNone(result["data"]["next_cursor"])
+
+    def test_explicit_limit_within_range_is_unchanged(self):
+        result = read_resource(
+            "tickets", [self.path], self.config, self.principal, {"limit": 5}
+        )
+        self.assertEqual(5, result["data"]["count"])
+        self.assertEqual(5, len(result["data"]["tickets"]))
+
+    def test_cursor_pagination_visits_every_ticket_exactly_once(self):
+        seen = []
+        cursor = None
+        for _ in range(self.TICKET_COUNT + 5):
+            params = {"limit": 30}
+            if cursor:
+                params["cursor"] = cursor
+            page = read_resource(
+                "tickets", [self.path], self.config, self.principal, params
+            )["data"]
+            seen.extend(row["id"] for row in page["tickets"])
+            if not page["has_more"]:
+                self.assertIsNone(page["next_cursor"])
+                break
+            cursor = page["next_cursor"]
+        else:
+            self.fail("pagination did not terminate")
+        self.assertEqual(self.TICKET_COUNT, len(seen))
+        self.assertEqual(len(set(seen)), len(seen))
+        self.assertEqual(sorted(seen), seen)
+
+    def test_page_boundary_and_one_past_boundary(self):
+        exact = read_resource(
+            "tickets", [self.path], self.config, self.principal, {"limit": 10}
+        )["data"]
+        self.assertTrue(exact["has_more"])
+
+        one_short = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"limit": self.TICKET_COUNT - 1},
+        )["data"]
+        self.assertTrue(one_short["has_more"])
+        self.assertIsNotNone(one_short["next_cursor"])
+
+        exact_total = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"limit": self.TICKET_COUNT},
+        )["data"]
+        self.assertFalse(exact_total["has_more"])
+        self.assertIsNone(exact_total["next_cursor"])
+
+    def test_pagination_only_sees_visible_tickets(self):
+        result = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.other_project_principal,
+            {"limit": 5},
+        )
+        self.assertEqual(1, result["data"]["count"])
+        self.assertEqual("TK-OTHER", result["data"]["tickets"][0]["id"])
+        self.assertFalse(result["data"]["has_more"])
+
+    def test_since_revision_matching_current_behaves_like_omitted(self):
+        first = read_resource("tickets", [self.path], self.config, self.principal)
+        second = read_resource(
+            "tickets",
+            [self.path],
+            self.config,
+            self.principal,
+            {"since_revision": first["revision"]},
+        )
+        self.assertEqual(first["data"], second["data"])
+
+    def test_since_revision_stale_fails_with_distinct_error(self):
+        first = read_resource("tickets", [self.path], self.config, self.principal)
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Another_ticket record:ticket id:TK-NEW project:web "
+                "visibility:shared ticket_status:new\n"
+            )
+        with self.assertRaises(RemoteAccessError) as caught:
+            read_resource(
+                "tickets",
+                [self.path],
+                self.config,
+                self.principal,
+                {"since_revision": first["revision"]},
+            )
+        self.assertEqual("REMOTE_RESOURCE_REVISION_CHANGED", caught.exception.code)
+
+    def test_since_revision_only_applies_to_tickets_resource(self):
+        first = read_resource("items", [self.path], self.config, self.principal)
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Another_item id:I-NEW project:web visibility:shared\n")
+        second = read_resource(
+            "items",
+            [self.path],
+            self.config,
+            self.principal,
+            {"since_revision": first["revision"]},
+        )
+        self.assertNotEqual(first["revision"], second["revision"])
+
+
 if __name__ == "__main__":
     unittest.main()

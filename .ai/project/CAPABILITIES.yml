@@ -439,4 +439,45 @@ capabilities:
     replacement:
       replaces: []
       replaced_by: null
+
+  - id: cap-remote-compatibility-negotiation
+    name: Remote compatibility negotiation
+    summary: >-
+      Give Remote client operators explicit, actionable warnings when a specific published
+      contract domain they depend on is missing or under-versioned on the server, and when a
+      reverse proxy or cache has stripped or rewritten the capability-revision negotiation
+      header, instead of both cases silently reporting nothing.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-compatibility-domain-awareness
+    implementation_locations:
+      - lifetxt/remote_compatibility_v21.py
+      - tests/test_remote_compatibility_v21.py
+      - docs/en/remote-compatibility.md
+      - docs/ja/remote-compatibility.md
+    public_interfaces:
+      - lifetxt.remote_compatibility_v21.evaluate_compatibility
+    tests_or_evidence:
+      - tests/test_remote_compatibility_v21.py RemoteCompatibilityV21Tests and RemoteClientCompatibilityWrapperTests
+      - python -m unittest tests.test_remote_compatibility_v21 -> Ran 16 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1840 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/120
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/121
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Both new evaluate_compatibility() parameters (required_contracts,
+      capability_revision_header) are purely additive; the two-argument call form used by every
+      pre-existing caller is regression-tested to be byte-identical. The capability-revision
+      header/body comparison relies on the server already embedding the same computed value in
+      both places (lifetxt/remote_access.py protocol_response_headers / capability_revision) and
+      does not recompute the server's hash construction client-side.
+    replacement:
+      replaces: []
+      replaced_by: null
       deprecation_issue: null

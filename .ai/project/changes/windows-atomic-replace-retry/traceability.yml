@@ -17,7 +17,7 @@ links:
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/109
     pull_request: https://github.com/Eruhitsuji/lifetxt/pull/111
     tests_or_evidence:
-      - "NOT VERIFIED. This entry previously claimed assertions on the exact retry-policy constants and bounded total wait in tests/test_mutation.py. No such assertion exists: AtomicReplaceRetryTests covers behaviour only. Corrected during close-out; see verification.yml gaps and issue #116."
+      - "tests/test_replace_retry_policy.py ReplaceRetryPolicyConsistencyTests: asserts the retry platform set and delay tuple are equal across lifetxt.atomic and lifetxt.transaction_journal, and that both budgets are bounded. Added by #116 after close-out found the original claim described assertions that did not exist."
     release_or_deployment: null
     status: implemented
 

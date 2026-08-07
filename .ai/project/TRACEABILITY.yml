@@ -1018,6 +1018,32 @@ traceability:
         new capability.
       status: implemented
 
+    - requirement_id: req-remote-batch-integration
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/131
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/128
+      changed_files_or_scope:
+        - Record the feature/dev-remote batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_traceability_gate.RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known passing against origin/main with pull_request set to this PR's URL
+        - CI "Required release policy and clean wheel" job green on PR #128
+      release_or_deployment: >-
+        This entry documents PR #128 itself: feature/dev-remote (Issues #120, #122, #124, #126,
+        #129; PRs #121, #123, #125, #127, #130) merging into main.
+      notes: >-
+        The feature/dev-remote batch used an integration-branch pattern new to this repository:
+        each requirement above was implemented, reviewed, and merged into feature/dev-remote on
+        its own branch, recording its own sub-PR at merge time per the established single-PR
+        traceability pattern. tests.test_traceability_gate's required CI job passes the PR
+        actually under test to the gate and requires a pull_request value in the diff exactly
+        matching it -- on PR #128 none of the five entries above satisfy that, since they
+        correctly name the sub-PR that did the work, not #128, which did not exist yet when they
+        were written. This entry exists specifically to give PR #128 its own record rather than
+        misattribute the work above to a PR that did not implement it. See #131.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

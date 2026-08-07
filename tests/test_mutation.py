@@ -6,7 +6,9 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
+from lifetxt import atomic
 from lifetxt.mutation import (
     FileLock,
     LockTimeout,
@@ -260,6 +262,120 @@ class MutationTests(unittest.TestCase):
                 lambda text: (_ for _ in ()).throw(RuntimeError("boom")),
             )
         self.assertFalse(os.path.exists(self.path + ".lifetxt.lock"))
+
+
+class AtomicReplaceRetryTests(unittest.TestCase):
+    """Unit coverage for lifetxt.atomic.replace_with_retry (#109).
+
+    Not yet wired into any caller -- see #110. os.replace and time.sleep are
+    mocked throughout, and the OS-name constant is force-patched to make these
+    deterministic on any host platform, matching the technique already used by
+    tests.test_transaction_journal_v3 for the pattern this mirrors.
+    """
+
+    def test_succeeds_without_retry_when_no_failure_occurs(self):
+        calls = []
+
+        def fake_replace(source, destination):
+            calls.append((source, destination))
+
+        with (
+            mock.patch("lifetxt.atomic.os.replace", side_effect=fake_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            atomic.replace_with_retry("src", "dst")
+
+        self.assertEqual([("src", "dst")], calls)
+        sleep.assert_not_called()
+
+    def test_retries_transient_permission_error_until_success(self):
+        attempts = []
+
+        def fake_replace(source, destination):
+            attempts.append((source, destination))
+            if len(attempts) <= 2:
+                raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=fake_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            atomic.replace_with_retry("src", "dst")
+
+        self.assertEqual(3, len(attempts))
+        self.assertEqual(2, sleep.call_count)
+        sleep.assert_has_calls([mock.call(0.0), mock.call(0.0)])
+
+    def test_reraises_original_error_after_exhausting_retry_budget(self):
+        attempts = []
+        error = PermissionError(5, "simulated WinError 5")
+
+        def fake_replace(source, destination):
+            attempts.append((source, destination))
+            raise error
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS", (0.0, 0.0)
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=fake_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(PermissionError) as caught:
+                atomic.replace_with_retry("src", "dst")
+
+        self.assertIs(error, caught.exception)
+        self.assertEqual(3, len(attempts))
+        self.assertEqual(2, sleep.call_count)
+
+    def test_does_not_retry_on_a_non_retry_platform(self):
+        attempts = []
+
+        def fake_replace(source, destination):
+            attempts.append((source, destination))
+            raise PermissionError(5, "simulated WinError 5")
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset()
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=fake_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(PermissionError):
+                atomic.replace_with_retry("src", "dst")
+
+        self.assertEqual(1, len(attempts))
+        sleep.assert_not_called()
+
+    def test_does_not_retry_a_non_permission_oserror(self):
+        attempts = []
+
+        def fake_replace(source, destination):
+            attempts.append((source, destination))
+            raise FileNotFoundError(2, "simulated missing file")
+
+        with (
+            mock.patch.object(
+                atomic, "_REPLACE_PERMISSION_RETRY_OS_NAMES", frozenset((os.name,))
+            ),
+            mock.patch("lifetxt.atomic.os.replace", side_effect=fake_replace),
+            mock.patch.object(atomic.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(FileNotFoundError):
+                atomic.replace_with_retry("src", "dst")
+
+        self.assertEqual(1, len(attempts))
+        sleep.assert_not_called()
 
 
 if __name__ == "__main__":

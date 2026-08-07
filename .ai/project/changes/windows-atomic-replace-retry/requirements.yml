@@ -1,0 +1,57 @@
+schema_version: 1
+
+requirements:
+  - id: req-atomic-replace-retry-shared-primitive
+    kind: ADDED
+    statement: >-
+      On Windows, the shared low-level atomic write commit primitive
+      (lifetxt/atomic.py, atomic_write_bytes) retries a transient
+      access-denied error during file replacement using the same bounded
+      retry policy already established for the transaction journal, and
+      propagates the error unchanged if the retry budget is exhausted.
+    acceptance_criteria:
+      - "On Windows, a transient PermissionError during the shared commit primitive's file replace is retried (initial attempt plus up to 4 retries at 0.01/0.05/0.1/0.25s, matching lifetxt/transaction_journal.py's existing policy)."
+      - "A retry that succeeds within budget produces the same observable write outcome as a first-attempt success."
+      - "If the retry budget is exhausted, the same PermissionError is propagated to the caller unchanged from current (unprotected) behavior."
+      - "On non-Windows platforms, no retry is applied; behavior is unchanged from today."
+    constraints:
+      - Must not change atomic_write_bytes's public signature or its documented precondition/postcondition contract.
+      - Must not alter lifetxt/mutation.py's shared lock, conflict detection, or post-write verification contract.
+    owner: Eruhitsuji
+
+  - id: req-config-rotation-replace-retry
+    kind: ADDED
+    statement: >-
+      On Windows, the configuration backup (.bak) and rejected-candidate
+      (.rejectedN) rotation steps in lifetxt/config_writer.py retry a
+      transient access-denied error during file replacement using the same
+      bounded retry policy, and preserve their existing best-effort silent
+      behavior if the retry budget is exhausted.
+    acceptance_criteria:
+      - "On Windows, a transient PermissionError during backup generation rotation is retried using the same bounded policy as req-atomic-replace-retry-shared-primitive."
+      - "On Windows, a transient PermissionError during rejected-candidate generation rotation is retried using the same bounded policy."
+      - "If the retry budget is exhausted for either rotation step, the configuration write operation still completes without raising, exactly as the existing except OSError: pass behavior does today."
+      - "No new user-visible message, log entry, doctor diagnostic, or return-value change is introduced for a rotation replace failure, whether or not retries occurred."
+    constraints:
+      - Must not change the existing except OSError pass exception-handling shape around the rotation replace calls.
+      - Must not change config.write.require_revision or the compare-and-set (cap-config-safe-writes) contract.
+      - Must not change what lifetxt doctor --workspace-safety reports for retained rejected candidates (a separate, unrelated existing mechanism).
+    owner: Eruhitsuji
+
+  - id: req-atomic-replace-retry-policy-consistency
+    kind: ADDED
+    statement: >-
+      The bounded retry policy (attempt count, delay intervals, target
+      platform) is implemented once and applied identically to every
+      call site covered by req-atomic-replace-retry-shared-primitive and
+      req-config-rotation-replace-retry.
+    acceptance_criteria:
+      - "Every call site covered by this change uses the identical attempt count and delay intervals (initial attempt plus 0.01, 0.05, 0.1, 0.25 seconds, approximately 0.41 seconds total budget)."
+      - "The additional wall-clock time introduced by exhausting retry at any single covered call site does not exceed that fixed budget."
+      - "On non-Windows platforms, no covered call site applies retry or adds delay."
+    constraints:
+      - Must be implemented as a single shared function reused by both req-atomic-replace-retry-shared-primitive and req-config-rotation-replace-retry (not independently duplicated), to guarantee identical behavior by construction.
+      - Must not modify lifetxt/transaction_journal.py's independent existing implementation; values are matched by convention, not by shared code (see decisions.md).
+    owner: Eruhitsuji
+
+open_questions: []

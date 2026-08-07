@@ -19,29 +19,39 @@ _CONFLICT_CODES = {
 
 
 class RemoteMutationConflict(RuntimeError):
-    """Structured, non-retrying Remote mutation conflict."""
+    """Structured, non-retrying Remote mutation conflict.
+
+    expected_revision/current_revision/attempted_change/current_item are
+    sourced directly from the server's conflict-v1-shaped detail (see
+    dist/schemas/conflict-v1.schema.json) -- no additional request is made
+    to reconstruct them. automatic_retry and next_actions are additive,
+    client-only presentation, not part of that schema.
+    """
 
     def __init__(
         self,
         message,
         detail=None,
-        requested_revision=None,
+        expected_revision=None,
         current_revision=None,
-        comparison=None,
+        attempted_change=None,
+        current_item=None,
     ):
         super().__init__(message)
         self.detail = dict(detail or {})
-        self.requested_revision = requested_revision
+        self.expected_revision = expected_revision
         self.current_revision = current_revision
-        self.comparison = list(comparison or [])
+        self.attempted_change = dict(attempted_change or {})
+        self.current_item = current_item
 
     def as_dict(self):
         return {
             "error": "REMOTE_MUTATION_CONFLICT",
             "message": str(self),
-            "requested_revision": self.requested_revision,
+            "expected_revision": self.expected_revision,
             "current_revision": self.current_revision,
-            "comparison": self.comparison,
+            "attempted_change": self.attempted_change,
+            "current_item": self.current_item,
             "server_detail": self.detail,
             "automatic_retry": False,
             "next_actions": ["refresh", "abandon", "submit_new_transaction"],
@@ -139,33 +149,6 @@ def ticket_detail(profile, ticket_id, snapshot_value=None):
     raise KeyError("Remote ticket is not visible: %s" % wanted)
 
 
-def _bounded_comparison(payload, current, limit=20):
-    current = dict(current or {})
-    rows = []
-    ticket_id = payload.get("ticket_id")
-    if ticket_id is not None:
-        rows.append(
-            {
-                "field": "ticket_id",
-                "requested": ticket_id,
-                "current": _ticket_id(current) or None,
-            }
-        )
-    for key, requested in sorted((payload.get("set") or {}).items()):
-        rows.append({"field": key, "requested": requested, "current": current.get(key)})
-    if payload.get("target_status") is not None:
-        rows.append(
-            {
-                "field": "status",
-                "requested": payload.get("target_status"),
-                "current": current.get("status"),
-            }
-        )
-    for key in payload.get("unset") or []:
-        rows.append({"field": key, "requested": None, "current": current.get(key)})
-    return rows[:limit]
-
-
 def _runtime_detail(exc):
     try:
         value = json.loads(str(exc))
@@ -210,19 +193,14 @@ def mutate_ticket(
         detail = _runtime_detail(exc)
         if _error_code(detail) not in _CONFLICT_CODES:
             raise
-        after = snapshot(profile)
-        current = None
-        wanted = str(body.get("ticket_id") or "")
-        for row in after.get("tickets", []):
-            if _ticket_id(row) == wanted:
-                current = row
-                break
+        conflict = detail.get("detail") or {}
         raise RemoteMutationConflict(
             "Remote data changed before the mutation could be committed.",
             detail=detail,
-            requested_revision=current_revision,
-            current_revision=after.get("revision"),
-            comparison=_bounded_comparison(body, current),
+            expected_revision=conflict.get("expected_revision", current_revision),
+            current_revision=conflict.get("current_revision"),
+            attempted_change=conflict.get("attempted_change"),
+            current_item=conflict.get("current_item"),
         )
 
 

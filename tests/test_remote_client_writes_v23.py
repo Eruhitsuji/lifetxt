@@ -108,12 +108,31 @@ class RemoteClientWritesTests(unittest.TestCase):
 
     @mock.patch("lifetxt.remote_client_writes.request")
     @mock.patch("lifetxt.remote_client_writes.snapshot")
-    def test_revision_conflict_refreshes_without_retry(self, snapshot, request):
-        snapshot.side_effect = [
-            {"revision": "old", "tickets": [{"id": "T-1", "priority": "low"}]},
-            {"revision": "new", "tickets": [{"id": "T-1", "priority": "urgent"}]},
-        ]
-        request.side_effect = RuntimeError(json.dumps({"error": "REVISION_CONFLICT"}))
+    def test_revision_conflict_presents_server_detail_without_extra_round_trip(
+        self, snapshot, request
+    ):
+        snapshot.return_value = {
+            "revision": "old",
+            "tickets": [{"id": "T-1", "priority": "low"}],
+        }
+        request.side_effect = RuntimeError(
+            json.dumps(
+                {
+                    "error": "REVISION_CONFLICT",
+                    "message": "The authoritative revision changed.",
+                    "detail": {
+                        "error": "CONFLICT",
+                        "expected_revision": "old",
+                        "current_revision": "new",
+                        "attempted_change": {
+                            "operation": "edit",
+                            "set": {"priority": "high"},
+                        },
+                        "current_item": {"id": "T-1", "priority": "urgent"},
+                    },
+                }
+            )
+        )
         with self.assertRaises(RemoteMutationConflict) as caught:
             edit_ticket(
                 {"url": "https://example.test"},
@@ -122,12 +141,13 @@ class RemoteClientWritesTests(unittest.TestCase):
                 transaction_id="tx-conflict",
             )
         value = caught.exception.as_dict()
-        self.assertEqual(value["requested_revision"], "old")
+        self.assertEqual(value["expected_revision"], "old")
         self.assertEqual(value["current_revision"], "new")
+        self.assertEqual(value["attempted_change"]["set"], {"priority": "high"})
+        self.assertEqual(value["current_item"]["priority"], "urgent")
         self.assertFalse(value["automatic_retry"])
         self.assertEqual(request.call_count, 1)
-        self.assertEqual(value["comparison"][1]["current"], "urgent")
-        self.assertEqual(value["comparison"][1]["requested"], "high")
+        self.assertEqual(snapshot.call_count, 1)
 
     @mock.patch("lifetxt.remote_client_writes.snapshot")
     @mock.patch("lifetxt.remote_client_writes.remote_permissions")
@@ -183,7 +203,7 @@ class RemoteClientWritesTests(unittest.TestCase):
     def test_cli_conflict_returns_stable_exit_code(self, get_profile, edit):
         get_profile.return_value = {"url": "https://example.test"}
         edit.side_effect = RemoteMutationConflict(
-            "conflict", requested_revision="old", current_revision="new"
+            "conflict", expected_revision="old", current_revision="new"
         )
         args = mock.Mock(
             profile="home",

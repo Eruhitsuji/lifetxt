@@ -388,3 +388,55 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-atomic-replace-retry
+    name: Atomic replace retry
+    summary: >-
+      Retry a transient Windows os.replace PermissionError (WinError 5) with a single,
+      shared bounded policy across the shared atomic write commit primitive and the
+      configuration backup/rejected-candidate rotation, matching the pattern already
+      established for the transaction journal.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-atomic-replace-retry-shared-primitive
+      - req-config-rotation-replace-retry
+      - req-atomic-replace-retry-policy-consistency
+    implementation_locations:
+      - lifetxt/atomic.py
+      - lifetxt/config_writer.py
+    public_interfaces:
+      - lifetxt.atomic.replace_with_retry
+    tests_or_evidence:
+      - tests/test_mutation.py AtomicReplaceRetryTests -> unit coverage of replace_with_retry (success, retry-then-success, exhaustion, non-Windows skip, non-PermissionError no-retry)
+      - tests/test_mutation.py MutationTests atomic_write_bytes retry integration tests
+      - tests/test_config_validation.py ConfigRevisionTests backup/rejected rotation retry integration tests
+      - python -m unittest tests.test_mutation tests.test_config_validation -> Ran 74 tests, OK (skipped=2)
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1822 tests, OK (skipped=15)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts -> 246 files already formatted
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/96
+      - https://github.com/Eruhitsuji/lifetxt/issues/108
+      - https://github.com/Eruhitsuji/lifetxt/issues/109
+      - https://github.com/Eruhitsuji/lifetxt/issues/110
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/111
+      - https://github.com/Eruhitsuji/lifetxt/pull/112
+      - https://github.com/Eruhitsuji/lifetxt/pull/114
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `replace_with_retry` independently mirrors `cap-durable-transaction-recovery`'s
+      retry constants (Windows-only, initial attempt plus four retries at 0.01, 0.05,
+      0.1, and 0.25 seconds) rather than sharing code with it: `transaction_journal.py`
+      was explicitly out of boundary for this change (see
+      `.ai/project/changes/windows-atomic-replace-retry/decisions.md`). At the shared
+      commit primitive (`atomic_write_bytes`), exhausting the retry budget propagates
+      the original exception unchanged. At the configuration rotation call sites, the
+      existing best-effort `except OSError: pass` is unchanged, so exhaustion stays
+      silent there by design, not by omission.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

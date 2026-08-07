@@ -1,10 +1,34 @@
 import unittest
 from unittest import mock
 
-from lifetxt import remote_compatibility_v21
+from lifetxt import remote_client, remote_compatibility_v21
 from lifetxt.remote_access import capability
 from lifetxt.remote_compatibility_v21 import evaluate_compatibility
 from lifetxt.safety_foundation import schema_bundle
+
+_SAMPLE_CAPABILITIES = {
+    "contract_version": "2",
+    "protocol": {"minimum": 1, "current": 2},
+    "server": {"package": "lifetxt", "version": "test"},
+    "schema_bundle": {"document_count": 0, "revision": "0" * 64},
+    "optional_dependencies": {},
+    "compatibility": {},
+    "contracts": {
+        "ticket_workflow": {
+            "available": True,
+            "minimum": 1,
+            "current": 2,
+            "schemas": ["ticket-workflow-v2.schema.json"],
+        },
+        "attachment": {
+            "available": False,
+            "minimum": None,
+            "current": None,
+            "schemas": [],
+        },
+    },
+    "capability_revision": "expected-revision",
+}
 
 
 class RemoteCompatibilityV21Tests(unittest.TestCase):
@@ -74,6 +98,124 @@ class RemoteCompatibilityV21Tests(unittest.TestCase):
         ):
             self.assertIn(name, schema["required"])
             self.assertIn(name, schema["properties"])
+
+    def test_two_argument_call_is_unchanged_by_new_optional_parameters(self):
+        for capabilities in (
+            {"contract_version": "2", "protocol": {"minimum": 2, "current": 3}},
+            {"protocol": {"minimum": 3, "current": 4}},
+            _SAMPLE_CAPABILITIES,
+        ):
+            baseline = evaluate_compatibility(capabilities, 2)
+            self.assertNotIn("header_status", baseline)
+            self.assertEqual(baseline, evaluate_compatibility(dict(capabilities), 2))
+
+    def test_required_contracts_warns_on_missing_domain(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES, 2, required_contracts=["attachment"]
+        )
+        self.assertTrue(any("attachment" in warning for warning in value["warnings"]))
+
+    def test_required_contracts_silent_when_domain_satisfied(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES, 2, required_contracts=["ticket_workflow"]
+        )
+        self.assertEqual([], value["warnings"])
+
+    def test_required_contracts_rejects_unknown_domain(self):
+        with self.assertRaises(ValueError):
+            evaluate_compatibility(
+                _SAMPLE_CAPABILITIES, 2, required_contracts=["not_a_real_domain"]
+            )
+
+    def test_required_contracts_version_mapping_warns_on_shortfall(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES, 2, required_contracts={"ticket_workflow": 9}
+        )
+        self.assertTrue(
+            any(
+                "ticket_workflow" in warning and "9" in warning
+                for warning in value["warnings"]
+            )
+        )
+
+    def test_required_contracts_version_mapping_silent_when_met(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES, 2, required_contracts={"ticket_workflow": 2}
+        )
+        self.assertEqual([], value["warnings"])
+
+    def test_header_status_omitted_when_parameter_not_supplied(self):
+        value = evaluate_compatibility(_SAMPLE_CAPABILITIES, 2)
+        self.assertNotIn("header_status", value)
+
+    def test_header_status_missing_when_header_is_none(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES, 2, capability_revision_header=None
+        )
+        self.assertEqual("missing", value["header_status"])
+        self.assertTrue(value["warnings"])
+
+    def test_header_status_mismatch_when_header_disagrees_with_body(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES,
+            2,
+            capability_revision_header="a-different-revision",
+        )
+        self.assertEqual("mismatch", value["header_status"])
+        self.assertTrue(value["warnings"])
+
+    def test_header_status_consistent_when_header_matches_body(self):
+        value = evaluate_compatibility(
+            _SAMPLE_CAPABILITIES,
+            2,
+            capability_revision_header="expected-revision",
+        )
+        self.assertEqual("present-and-consistent", value["header_status"])
+        self.assertEqual([], value["warnings"])
+
+
+class RemoteClientCompatibilityWrapperTests(unittest.TestCase):
+    def setUp(self):
+        self._original_test_connection = remote_client.test_connection
+        self._had_marker = getattr(
+            remote_client, "_lifetxt_remote_compatibility_v21", False
+        )
+
+    def tearDown(self):
+        remote_client.test_connection = self._original_test_connection
+        if self._had_marker:
+            remote_client._lifetxt_remote_compatibility_v21 = True
+        else:
+            if hasattr(remote_client, "_lifetxt_remote_compatibility_v21"):
+                delattr(remote_client, "_lifetxt_remote_compatibility_v21")
+
+    def _install_stub(self, capability_revision):
+        remote_client._lifetxt_remote_compatibility_v21 = False
+
+        def stub_test_connection(profile):
+            return {
+                "ok": True,
+                "requested_protocol": 2,
+                "negotiated_protocol": 2,
+                "capability_revision": capability_revision,
+                "capabilities": _SAMPLE_CAPABILITIES,
+                "session": {},
+            }
+
+        remote_client.test_connection = stub_test_connection
+        remote_compatibility_v21.install_remote_client_compatibility_v21()
+
+    def test_wrapper_threads_mismatched_header_through_to_report(self):
+        self._install_stub("a-different-revision")
+        result = remote_client.test_connection({"url": "https://example.invalid"})
+        self.assertEqual("mismatch", result["compatibility"]["header_status"])
+
+    def test_wrapper_threads_consistent_header_through_to_report(self):
+        self._install_stub("expected-revision")
+        result = remote_client.test_connection({"url": "https://example.invalid"})
+        self.assertEqual(
+            "present-and-consistent", result["compatibility"]["header_status"]
+        )
 
 
 if __name__ == "__main__":

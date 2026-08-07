@@ -184,6 +184,30 @@ class RemoteTicketDetailTests(unittest.TestCase):
             read_resource("ticket-detail", [self.path], self.config, self.principal, {})
         self.assertEqual("REMOTE_TICKET_NOT_FOUND", caught.exception.code)
 
+    def test_ticket_with_no_relations_has_an_empty_relations_dict(self):
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Lonely_ticket record:ticket id:TK-3 project:web "
+                "visibility:shared ticket_status:new\n"
+            )
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-3"}
+        )
+        self.assertEqual({}, result["data"]["relations"])
+        self.assertEqual([], result["data"]["incoming_links"])
+
+    def test_non_ticket_item_sharing_a_ticket_id_is_not_returned(self):
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Not_a_ticket id:TK-1 project:web visibility:shared\n")
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-1"}
+        )
+        # The real ticket TK-1 is still returned, not the plain item with a
+        # colliding id -- ticket_view() only ever operates on the matched
+        # ticket item, and iter_tickets() excludes non-ticket items entirely.
+        self.assertEqual("TK-1", result["data"]["summary"]["id"])
+        self.assertEqual("high", result["data"]["fields"]["priority"])
+
 
 class RemoteTicketsPaginationTests(unittest.TestCase):
     TICKET_COUNT = 210

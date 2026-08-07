@@ -37,6 +37,8 @@ explicitly marked overridable and the project records an approved exception.
 - `KNOWLEDGE_MAINTENANCE.md`: keeping reusable knowledge current and promotable
 - `STANDARD_DISTRIBUTION.md`: `.ai/managed` and `.ai/project` model
 - `STANDARD_EVALUATION.md`: model-neutral evaluation scenarios for the standard
+- `RUNTIME_EVIDENCE.md`: local-first AI history archives, normalized events,
+  runtime findings, privacy, and reporting controls
 - `DEFINITION_OF_READY.md`: start conditions for AI-ready tasks
 - `DEFINITION_OF_DONE.md`: completion conditions
 
@@ -52,6 +54,8 @@ Downstream projects must not weaken these requirements:
 - no claim that checks passed unless they were executed
 - no merge when the latest review is stale
 - no AI bypass of protected branch rules or human-only approvals
+- no raw AI history, transcripts, local paths, secrets, or private URLs in
+  public issues or pull requests without explicit privacy approval
 - no data deletion, migration, release, rollback, or retirement without the
   required human authority
 
@@ -107,6 +111,13 @@ standards needed for the current task. `AGENTS.md`, `CLAUDE.md`, and
 Codex, Claude Code, Kiro, and future AI tools must use the same task contract,
 role names, quality viewpoints, and reporting shape. Tool-specific adapter
 files are only entry points; they must not define conflicting standards.
+
+## Runtime Evidence
+
+When a downstream project enables runtime evidence collection, AI development
+history must remain local-first by default. Findings must distinguish project
+execution problems from upstream standard gaps, use sanitized reports, and
+avoid raw transcript disclosure unless a human explicitly approves it.
 
 ## Project Adoption
 

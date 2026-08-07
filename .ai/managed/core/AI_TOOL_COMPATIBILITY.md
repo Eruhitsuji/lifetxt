@@ -106,6 +106,20 @@ Required report fields:
 - verification
 - risks and follow-up
 
+## Runtime Evidence Compatibility
+
+When a downstream project enables runtime evidence collection, supported AI
+tools should be evaluated through the same provider-neutral evidence model:
+
+- local provider history is collected into archive records
+- provider-specific data is normalized into common event kinds
+- deterministic checks use normalized events rather than tool-specific formats
+- semantic checks identify ambiguity, conflicting guidance, or workflow friction
+- findings use the common finding schema and sanitized reporting template
+
+Use `.ai/project/AI_HISTORY.yml` for downstream collection policy and
+`RUNTIME_EVIDENCE.md` for the common contract.
+
 ## Adding a New AI Tool
 
 To support a new AI tool:

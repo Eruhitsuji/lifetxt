@@ -133,3 +133,24 @@ rules:
     required_action: request_explicit_human_approval
     human_interaction_type: Decision Request
     overridable: false
+
+  - id: CTX-RUNTIME-001
+    title: Runtime AI evidence
+    documents:
+      - .ai/managed/core/RUNTIME_EVIDENCE.md
+      - .ai/project/AI_HISTORY.yml
+    load_when:
+      - ai_history_collection
+      - runtime_finding
+      - standard_feedback
+      - tool_compatibility_issue
+      - excessive_context
+      - workflow_friction
+    applies_to:
+      - Evidence
+      - Finding
+      - Standard Feedback
+    severity: required
+    required_action: collect_locally_analyze_safely_and_report_sanitized_findings
+    human_interaction_type: Decision Request
+    overridable: false

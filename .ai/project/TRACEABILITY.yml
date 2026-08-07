@@ -1070,10 +1070,8 @@ traceability:
         intentionally deferred: AI_HISTORY.yml's privacy_policy_owner and
         upstream_reporting_approver are placeholder values (the sole
         maintainer), not a reviewed privacy policy, and collection stays
-        disabled until that review happens. Status is proposed rather than
-        implemented pending PR review and merge; update pull_request and
-        status once that PR exists and lands.
-      status: proposed
+        disabled until that review happens.
+      status: implemented
 
 required_chain:
   - Requirement

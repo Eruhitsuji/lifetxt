@@ -44,6 +44,7 @@ class RemoteReadBackendTests(unittest.TestCase):
             [
                 "items",
                 "tickets",
+                "ticket-detail",
                 "projects",
                 "ticket-report",
                 "links",
@@ -106,6 +107,106 @@ class RemoteReadBackendTests(unittest.TestCase):
         with self.assertRaises(RemoteAccessError) as caught:
             read_resource("secrets", [self.path], self.config, self.principal)
         self.assertEqual("REMOTE_RESOURCE_UNKNOWN", caught.exception.code)
+
+
+class RemoteTicketDetailTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, "life.txt")
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Visible_ticket record:ticket id:TK-1 project:web "
+                "visibility:shared ticket_status:new priority:high "
+                "depends_on:TK-2 est:2h\n"
+                "[ ] T Hidden_ticket record:ticket id:TK-2 project:web "
+                "visibility:private owner:bob ticket_status:new\n"
+            )
+        self.config = {
+            "remote": {
+                "enabled": True,
+                "principals": [
+                    {
+                        "id": "alice",
+                        "role": "reader",
+                        "projects": ["web"],
+                        "visibilities": ["public", "shared"],
+                    }
+                ],
+            }
+        }
+        self.principal = principal_registry(self.config)["alice"]
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_visible_ticket_returns_full_detail(self):
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-1"}
+        )
+        detail = result["data"]
+        self.assertEqual("TK-1", detail["summary"]["id"])
+        self.assertEqual("high", detail["fields"]["priority"])
+        self.assertEqual("2h", detail["est"])
+
+    def test_relation_to_invisible_ticket_does_not_expose_it(self):
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-1"}
+        )
+        detail = result["data"]
+        # depends_on still names the ID (the relation field itself), but
+        # nothing about TK-2's own fields/title/priority ever appears.
+        self.assertIn("TK-2", detail["relations"].get("depends_on", []))
+        self.assertNotIn("Hidden_ticket", str(detail))
+
+    def test_nonexistent_and_invisible_ticket_ids_are_indistinguishable(self):
+        with self.assertRaises(RemoteAccessError) as missing:
+            read_resource(
+                "ticket-detail",
+                [self.path],
+                self.config,
+                self.principal,
+                {"id": "TK-DOES-NOT-EXIST"},
+            )
+        with self.assertRaises(RemoteAccessError) as hidden:
+            read_resource(
+                "ticket-detail",
+                [self.path],
+                self.config,
+                self.principal,
+                {"id": "TK-2"},
+            )
+        self.assertEqual("REMOTE_TICKET_NOT_FOUND", missing.exception.code)
+        self.assertEqual("REMOTE_TICKET_NOT_FOUND", hidden.exception.code)
+        self.assertEqual(missing.exception.status, hidden.exception.status)
+
+    def test_missing_id_parameter_is_not_found(self):
+        with self.assertRaises(RemoteAccessError) as caught:
+            read_resource("ticket-detail", [self.path], self.config, self.principal, {})
+        self.assertEqual("REMOTE_TICKET_NOT_FOUND", caught.exception.code)
+
+    def test_ticket_with_no_relations_has_an_empty_relations_dict(self):
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Lonely_ticket record:ticket id:TK-3 project:web "
+                "visibility:shared ticket_status:new\n"
+            )
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-3"}
+        )
+        self.assertEqual({}, result["data"]["relations"])
+        self.assertEqual([], result["data"]["incoming_links"])
+
+    def test_non_ticket_item_sharing_a_ticket_id_is_not_returned(self):
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Not_a_ticket id:TK-1 project:web visibility:shared\n")
+        result = read_resource(
+            "ticket-detail", [self.path], self.config, self.principal, {"id": "TK-1"}
+        )
+        # The real ticket TK-1 is still returned, not the plain item with a
+        # colliding id -- ticket_view() only ever operates on the matched
+        # ticket item, and iter_tickets() excludes non-ticket items entirely.
+        self.assertEqual("TK-1", result["data"]["summary"]["id"])
+        self.assertEqual("high", result["data"]["fields"]["priority"])
 
 
 class RemoteTicketsPaginationTests(unittest.TestCase):

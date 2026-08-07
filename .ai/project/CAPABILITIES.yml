@@ -578,3 +578,48 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-ticket-detail-view
+    name: Remote ticket-detail read resource
+    summary: >-
+      Expose one ticket's full detail (fields, relations, incoming links, time totals) as a
+      permission-aware Remote read resource, reusing tickets.ticket_view() unmodified. A
+      nonexistent ticket ID and an existing-but-invisible one produce the identical
+      REMOTE_TICKET_NOT_FOUND response, and relations never expose a ticket the principal cannot
+      otherwise see.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-ticket-detail-resource
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/resources/ticket-detail
+      - lifetxt.remote_backend.read_resource
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketDetailTests
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_surface_runtime -> Ran 43 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1870 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/126
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/127
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distinct from cap-remote-tickets-pagination (the tickets list resource's pagination) --
+      this capability is single-ticket detail, not a list, and does not touch pagination. Deferred
+      sibling read views (history, time-entry, version, sprint, dependency/watcher as their own
+      resources, attachment metadata) are explicitly not covered; history in particular has an
+      open question about whether ticket-event records reliably carry their own
+      project/visibility fields for _visible_items() to filter correctly, recorded as a gap for a
+      future task rather than resolved here.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

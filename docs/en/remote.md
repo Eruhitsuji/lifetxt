@@ -121,6 +121,7 @@ The shared read backend currently publishes:
 
 - `items`: visible items with text, type, project, open-only, and bounded-result filters;
 - `tickets`: visible tickets filtered by project, status, and assignee, with bounded default-size cursor pagination (see below);
+- `ticket-detail`: one visible ticket's full detail (fields, relations, incoming links, time totals), given its `id`; a nonexistent ID and an existing-but-invisible ID produce the identical `REMOTE_TICKET_NOT_FOUND` error;
 - `projects`: project summaries derived from the same visible item set;
 - `ticket-report`: the shared ticket/project aggregation contract;
 - `links`: relation records filtered by ID, direction, and relation;

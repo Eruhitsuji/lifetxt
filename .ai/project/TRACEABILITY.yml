@@ -964,6 +964,34 @@ traceability:
         indexing into the empty page.
       status: implemented
 
+    - requirement_id: req-remote-ticket-detail-resource
+      capability_id: cap-remote-ticket-detail-view
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/126
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/127
+      changed_files_or_scope:
+        - Add the ticket-detail resource builder, reusing tickets.ticket_view() unmodified
+        - Register it in _BUILDERS/RESOURCE_NAMES/resource_catalog()
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketDetailTests
+        - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_surface_runtime -> Ran 43 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1870 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-ticket-detail/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, S-sized).
+        Fourth and final task in the feature/dev-remote batch alongside #120, #122, and #124.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

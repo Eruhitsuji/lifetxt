@@ -37,7 +37,17 @@ def source_revision(paths):
 def resource_catalog():
     return [
         {"name": "items", "parameters": ["q", "project", "type", "open_only", "limit"]},
-        {"name": "tickets", "parameters": ["project", "status", "assignee", "limit"]},
+        {
+            "name": "tickets",
+            "parameters": [
+                "project",
+                "status",
+                "assignee",
+                "limit",
+                "cursor",
+                "since_revision",
+            ],
+        },
         {"name": "projects", "parameters": []},
         {"name": "ticket-report", "parameters": ["project", "stale_after_days"]},
         {"name": "links", "parameters": ["id", "direction", "relation", "limit"]},
@@ -185,6 +195,9 @@ def _resource_items(items, config, params):
     return {"count": len(filtered), "items": _item_rows(filtered, config)}
 
 
+_TICKETS_DEFAULT_PAGE_SIZE = 200
+
+
 def _resource_tickets(items, config, params):
     from .tickets import ticket_list
 
@@ -202,8 +215,34 @@ def _resource_tickets(items, config, params):
         ]
     if assignee:
         rows = [row for row in rows if str(row.get("assignee") or "") == str(assignee)]
-    rows = _limit(rows, params.get("limit"))
-    return {"count": len(rows), "tickets": redact_remote_value(rows)}
+    cursor = params.get("cursor")
+    if cursor:
+        cursor = str(cursor)
+        rows = [row for row in rows if str(row.get("id") or "") > cursor]
+    limit = _int(
+        params.get("limit"),
+        default=_TICKETS_DEFAULT_PAGE_SIZE,
+        minimum=0,
+        maximum=5000,
+        name="limit",
+    )
+    page = rows[:limit]
+    has_more = len(page) < len(rows)
+    if not has_more:
+        next_cursor = None
+    elif page:
+        next_cursor = str(page[-1].get("id") or "")
+    else:
+        # limit=0 (or another degenerate value) returned no rows even though
+        # more exist past the cursor; resuming means retrying from the same
+        # cursor, not advancing past data the caller never actually saw.
+        next_cursor = cursor or None
+    return {
+        "count": len(page),
+        "tickets": redact_remote_value(page),
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+    }
 
 
 def _ticket_report(items, config, params):
@@ -365,16 +404,28 @@ def read_resource(name, paths, config, principal, params=None):
         raise RemoteAccessError(
             "REMOTE_RESOURCE_UNKNOWN", "Unknown remote read resource: %s" % name, 404
         )
+    revision = source_revision(paths)
+    params = dict(params or {})
+    if name == "tickets":
+        since_revision = params.get("since_revision")
+        if since_revision and str(since_revision) != revision:
+            raise RemoteAccessError(
+                "REMOTE_RESOURCE_REVISION_CHANGED",
+                "The workspace changed since the requested page's revision; "
+                "restart pagination without since_revision.",
+                409,
+                {"since_revision": str(since_revision), "current_revision": revision},
+            )
     items, diagnostics = _read(paths, config)
     visible = _visible_items(items, principal)
-    data = _BUILDERS[name](visible, config or {}, dict(params or {}))
+    data = _BUILDERS[name](visible, config or {}, params)
     from .timezone_policy import utcnow
 
     return OrderedDict(
         (
             ("schema", "remote-read-response-v1.schema.json"),
             ("resource", name),
-            ("revision", source_revision(paths)),
+            ("revision", revision),
             ("generated_at", utcnow().isoformat()),
             ("data", redact_remote_value(data)),
             ("diagnostics", _diagnostics(diagnostics)),

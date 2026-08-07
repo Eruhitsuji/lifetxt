@@ -533,3 +533,48 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-tickets-pagination
+    name: Remote tickets bounded pagination
+    summary: >-
+      Bound the Remote tickets resource's default response size (200 tickets instead of every
+      visible ticket) and add cursor-based pagination over its existing deterministic ID sort,
+      plus an opt-in since_revision check that fails loudly instead of silently mixing pages
+      from different workspace revisions. Scoped to the tickets resource only.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-tickets-bounded-pagination
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - tests/test_remote_pagination.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/tickets
+      - GET /api/remote/v1/resources/tickets
+      - lifetxt.remote_backend.read_resource
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketsPaginationTests
+      - tests/test_remote_pagination.py RemoteTicketsPaginationRouteTests
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_remote_web_v20 tests.test_remote_web_v19 -> Ran 25 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1862 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/124
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/125
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered remote_backend.py before this change (confirmed by
+      search at implementation time). Every other resource builder in this module (items, links,
+      agenda, search, projects, status) is unchanged; they keep their existing unbounded-unless-
+      limit-is-given behavior. Extending cursor pagination to items would first need a
+      deterministic sort added to filter_items(), which this capability does not add.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

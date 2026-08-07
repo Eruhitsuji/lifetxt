@@ -853,6 +853,36 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-remote-compatibility-domain-awareness
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/120
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/121
+      changed_files_or_scope:
+        - Add required_contracts (domain presence/version warnings) and capability_revision_header (header-loss/mismatch detection) to evaluate_compatibility()
+        - Thread the fetched capability-revision header through install_remote_client_compatibility_v21()'s wrapper
+        - lifetxt/remote_compatibility_v21.py
+        - tests/test_remote_compatibility_v21.py
+        - docs/en/remote-compatibility.md
+        - docs/ja/remote-compatibility.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_compatibility_v21.py RemoteCompatibilityV21Tests and RemoteClientCompatibilityWrapperTests
+        - python -m unittest tests.test_remote_compatibility_v21 -> Ran 16 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1840 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-compat-negotiation/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, S-sized).
+        Part of the feature/dev-remote batch (Issues #120, and three more filed alongside it)
+        implemented on ai/claude/<issue>-<slug> branches merging into feature/dev-remote before
+        a final human-approved merge into main.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

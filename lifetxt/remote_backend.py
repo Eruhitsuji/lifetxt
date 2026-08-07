@@ -228,7 +228,15 @@ def _resource_tickets(items, config, params):
     )
     page = rows[:limit]
     has_more = len(page) < len(rows)
-    next_cursor = str(page[-1].get("id") or "") if has_more else None
+    if not has_more:
+        next_cursor = None
+    elif page:
+        next_cursor = str(page[-1].get("id") or "")
+    else:
+        # limit=0 (or another degenerate value) returned no rows even though
+        # more exist past the cursor; resuming means retrying from the same
+        # cursor, not advancing past data the caller never actually saw.
+        next_cursor = cursor or None
     return {
         "count": len(page),
         "tickets": redact_remote_value(page),

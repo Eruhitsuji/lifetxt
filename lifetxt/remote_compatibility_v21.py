@@ -188,8 +188,81 @@ def compatibility_manifest():
     )
 
 
-def evaluate_compatibility(capabilities, requested_protocol=None):
-    """Return a deterministic client/server compatibility report."""
+_UNSET = object()
+
+
+def _required_contract_warnings(contracts, required_contracts):
+    if isinstance(required_contracts, dict):
+        items = list(required_contracts.items())
+    else:
+        items = [(str(name), None) for name in required_contracts]
+    unknown = sorted(
+        {name for name, _minimum in items if name not in _CONTRACT_PATTERNS}
+    )
+    if unknown:
+        raise ValueError(
+            "Unknown required contract domain(s): %s. Valid domains: %s."
+            % (", ".join(unknown), ", ".join(sorted(_CONTRACT_PATTERNS)))
+        )
+    warnings = []
+    for name, minimum in items:
+        entry = contracts.get(name) if isinstance(contracts, dict) else None
+        if not entry or not entry.get("available"):
+            warnings.append(
+                "Required contract '%s' is not published by the server." % name
+            )
+            continue
+        current = entry.get("current")
+        if minimum is not None and (current is None or current < minimum):
+            warnings.append(
+                "Required contract '%s' is at version %s, below the required "
+                "minimum %s." % (name, current, minimum)
+            )
+    return warnings
+
+
+def _header_status(capabilities, capability_revision_header):
+    body_revision = capabilities.get("capability_revision")
+    if capability_revision_header is None:
+        return (
+            "missing",
+            "Capability-revision header is missing from the response; a proxy "
+            "may be stripping it.",
+        )
+    if body_revision is not None and capability_revision_header != body_revision:
+        return (
+            "mismatch",
+            "Capability-revision header does not match the response body; a "
+            "proxy may be rewriting or caching it.",
+        )
+    return "present-and-consistent", None
+
+
+def evaluate_compatibility(
+    capabilities,
+    requested_protocol=None,
+    required_contracts=None,
+    capability_revision_header=_UNSET,
+):
+    """Return a deterministic client/server compatibility report.
+
+    ``required_contracts`` and ``capability_revision_header`` are optional and
+    purely additive: omitting both reproduces the exact output of every caller
+    that predates this parameter pair.
+
+    ``required_contracts`` is either an iterable of contract-domain names (a
+    presence-only check) or a mapping of domain name to minimum required
+    version (a presence-and-version check). An unknown domain name raises
+    ``ValueError`` naming the valid domains.
+
+    ``capability_revision_header`` is the raw ``X-Lifetxt-Remote-Capability-
+    Revision`` header value the transport layer received, or ``None`` if the
+    header was absent. Passing ``None`` explicitly is not the same as omitting
+    the parameter: omitting it skips the header check entirely, while passing
+    ``None`` reports a missing header. When supplied, the result gains a
+    ``header_status`` key: ``"present-and-consistent"``, ``"missing"``, or
+    ``"mismatch"``.
+    """
     from .remote_access import REMOTE_PROTOCOL_CURRENT, REMOTE_PROTOCOL_MIN
 
     capabilities = dict(capabilities or {})
@@ -236,7 +309,20 @@ def evaluate_compatibility(capabilities, requested_protocol=None):
         warnings.append("Server supports a newer Remote protocol than this client.")
     if server_min > client_current:
         warnings.append("Server minimum Remote protocol is newer than this client.")
-    return OrderedDict(
+    if required_contracts:
+        warnings.extend(
+            _required_contract_warnings(
+                capabilities.get("contracts"), required_contracts
+            )
+        )
+    header_status = None
+    if capability_revision_header is not _UNSET:
+        header_status, header_warning = _header_status(
+            capabilities, capability_revision_header
+        )
+        if header_warning:
+            warnings.append(header_warning)
+    result = OrderedDict(
         (
             ("ok", bool(overlap and requested_supported)),
             (
@@ -252,6 +338,9 @@ def evaluate_compatibility(capabilities, requested_protocol=None):
             ("warnings", warnings),
         )
     )
+    if capability_revision_header is not _UNSET:
+        result["header_status"] = header_status
+    return result
 
 
 def install_remote_compatibility_v21():
@@ -286,7 +375,9 @@ def install_remote_client_compatibility_v21():
     def test_connection(profile):
         result = OrderedDict(original(profile))
         result["compatibility"] = evaluate_compatibility(
-            result.get("capabilities"), result.get("requested_protocol")
+            result.get("capabilities"),
+            result.get("requested_protocol"),
+            capability_revision_header=result.get("capability_revision"),
         )
         return result
 

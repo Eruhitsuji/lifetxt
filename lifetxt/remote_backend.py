@@ -10,6 +10,7 @@ from .remote_access import RemoteAccessError, redact_remote_value
 RESOURCE_NAMES = (
     "items",
     "tickets",
+    "ticket-detail",
     "projects",
     "ticket-report",
     "links",
@@ -48,6 +49,7 @@ def resource_catalog():
                 "since_revision",
             ],
         },
+        {"name": "ticket-detail", "parameters": ["id"]},
         {"name": "projects", "parameters": []},
         {"name": "ticket-report", "parameters": ["project", "stale_after_days"]},
         {"name": "links", "parameters": ["id", "direction", "relation", "limit"]},
@@ -245,6 +247,26 @@ def _resource_tickets(items, config, params):
     }
 
 
+def _resource_ticket_detail(items, config, params):
+    from .tickets import id_key, iter_tickets, ticket_id_of, ticket_view
+
+    key = id_key(config or {})
+    wanted = str(params.get("id") or "").strip()
+    ticket = None
+    if wanted:
+        for item in iter_tickets(items):
+            if str(ticket_id_of(item, key) or "") == wanted:
+                ticket = item
+                break
+    if ticket is None:
+        raise RemoteAccessError(
+            "REMOTE_TICKET_NOT_FOUND",
+            "Ticket %r was not found." % wanted,
+            404,
+        )
+    return redact_remote_value(ticket_view(ticket, config or {}, items=items, key=key))
+
+
 def _ticket_report(items, config, params):
     from .ticket_project_report import build_ticket_project_report
 
@@ -389,6 +411,7 @@ def _resource_search(items, config, params):
 _BUILDERS = {
     "items": _resource_items,
     "tickets": _resource_tickets,
+    "ticket-detail": _resource_ticket_detail,
     "projects": _resource_projects,
     "ticket-report": _ticket_report,
     "links": _resource_links,

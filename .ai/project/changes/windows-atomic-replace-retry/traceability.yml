@@ -17,7 +17,7 @@ links:
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/109
     pull_request: https://github.com/Eruhitsuji/lifetxt/pull/111
     tests_or_evidence:
-      - "tests/test_mutation.py: assertions on the exact retry-policy constants and bounded total wait"
+      - "NOT VERIFIED. This entry previously claimed assertions on the exact retry-policy constants and bounded total wait in tests/test_mutation.py. No such assertion exists: AtomicReplaceRetryTests covers behaviour only. Corrected during close-out; see verification.yml gaps and issue #116."
     release_or_deployment: null
     status: implemented
 

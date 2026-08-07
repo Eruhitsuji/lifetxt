@@ -817,6 +817,24 @@ traceability:
         record.
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/117
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/118
+      changed_files_or_scope:
+        - Close the first change package and make closing one enforceable
+        - .ai/project/changes/windows-atomic-replace-retry/
+        - tests/test_change_package_closeout.py
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'the five recorded verification commands were run rather than assumed: 1822 tests OK (skipped=15), AtomicReplaceRetryTests 5 OK, smoke OK 10 items, ruff check and format clean, all on 9fa485d'
+        - 'gate exercised both ways: passes on the closed package, fails with a named message when change.yml is put back to proposed'
+        - 'a recorded evidence claim was found to be untrue and corrected: req-atomic-replace-retry-policy-consistency cited assertions on retry constants that no test makes; recorded as a gap tracked by #116'
+        - 'the check is offline by design; merge state is not knowable from the repository, so it uses the package internal contradiction instead'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

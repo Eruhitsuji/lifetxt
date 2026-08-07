@@ -3,13 +3,17 @@ schema_version: 1
 change:
   id: windows-atomic-replace-retry
   title: Bounded retry for the two remaining unprotected os.replace call sites on Windows
-  status: proposed
+  status: implemented
   change_type: Bug
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/108
-  related_pull_request: null
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/111
+    - https://github.com/Eruhitsuji/lifetxt/pull/112
+    - https://github.com/Eruhitsuji/lifetxt/pull/114
+    - https://github.com/Eruhitsuji/lifetxt/pull/115
   base_commit: b5c3256891bc10ea821bb1cdf3d843d6e61698b5
   target_release: null
 

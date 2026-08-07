@@ -1,67 +1,59 @@
 schema_version: 1
 
 verification:
-  planned:
+  executed:
     - type: unit
       command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
       requirement_ids:
         - req-atomic-replace-retry-shared-primitive
         - req-atomic-replace-retry-policy-consistency
-      status: planned
-    - type: integration
-      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      result: 'Ran 1822 tests in 368.036s -- OK (skipped=15)'
+      commit: 9fa485d803128d9b1c7033ba2de833a135fdb31d
+      executed_at: '2026-08-07'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_mutation.AtomicReplaceRetryTests
       requirement_ids:
         - req-atomic-replace-retry-shared-primitive
-        - req-config-rotation-replace-retry
-        - req-atomic-replace-retry-policy-consistency
-      status: planned
+      result: 'Ran 5 tests -- OK'
+      commit: 9fa485d803128d9b1c7033ba2de833a135fdb31d
+      executed_at: '2026-08-07'
+      status: passed
     - type: smoke
       command: python -m lifetxt check examples/minimal_life.txt
       requirement_ids:
         - req-atomic-replace-retry-shared-primitive
-      status: planned
+      result: 'OK: 10 item(s), exit 0'
+      commit: 9fa485d803128d9b1c7033ba2de833a135fdb31d
+      executed_at: '2026-08-07'
+      status: passed
     - type: lint
       command: ruff check lifetxt tests scripts
       requirement_ids: []
-      status: planned
+      result: All checks passed!
+      commit: 9fa485d803128d9b1c7033ba2de833a135fdb31d
+      executed_at: '2026-08-07'
+      status: passed
     - type: format
       command: ruff format --check lifetxt tests scripts
       requirement_ids: []
-      status: planned
+      result: 246 files already formatted
+      commit: 9fa485d803128d9b1c7033ba2de833a135fdb31d
+      executed_at: '2026-08-07'
+      status: passed
 
-  executed: []
-
-review_ledger:
-  - reviewer: TODO
-    review_type: requirements
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-  - reviewer: TODO
-    review_type: design
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-  - reviewer: "@Eruhitsuji"
-    review_type: implementation
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-  - reviewer: "@Eruhitsuji"
-    review_type: integration
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-
-release_evidence:
-  migration_notes: null
-  rollback_plan: >-
-    No data migration or schema change. If the retry behavior causes an unexpected regression,
-    revert the wiring PR (#110) first; the helper added by #109 is inert unless called and can
-    remain. A full revert (both PRs) returns every call site to today's unprotected behavior,
-    identical to the current main branch.
-  operations_evidence: []
+  gaps:
+    - requirement_id: req-atomic-replace-retry-policy-consistency
+      status: not_verified
+      detail: >-
+        This requirement has no test behind it. The traceability entry claimed
+        "assertions on the exact retry-policy constants and bounded total wait" in
+        tests/test_mutation.py. AtomicReplaceRetryTests contains five behavioural
+        tests -- success, retry-then-success, budget exhaustion, non-retry platform,
+        non-PermissionError -- and asserts neither the constants nor a total-wait
+        bound. The claim was corrected when this package was closed out.
+      why_it_matters: >-
+        design.md accepted duplicating the retry policy in transaction_journal.py
+        rather than refactoring incident-hardened code, and recorded drift between
+        the two copies as the residual risk. Nothing detects that drift today.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/116

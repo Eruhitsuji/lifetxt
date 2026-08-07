@@ -439,6 +439,7 @@ capabilities:
     replacement:
       replaces: []
       replaced_by: null
+      deprecation_issue: null
 
   - id: cap-remote-compatibility-negotiation
     name: Remote compatibility negotiation

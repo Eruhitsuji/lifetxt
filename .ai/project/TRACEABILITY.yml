@@ -731,7 +731,7 @@ traceability:
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
       changed_files_or_scope:
         - Wire atomic_write_bytes's replace step to the shared retry helper added in #109
         - lifetxt/atomic.py (atomic_write_bytes only)
@@ -751,7 +751,7 @@ traceability:
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
       changed_files_or_scope:
         - Wire _rotate_backups and _retain_rejected's replace steps to the shared retry helper added in #109
         - lifetxt/config_writer.py
@@ -772,7 +772,7 @@ traceability:
       capability_id: cap-atomic-replace-retry
       epic: https://github.com/Eruhitsuji/lifetxt/issues/108
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/112
       changed_files_or_scope:
         - lifetxt/atomic.py
         - lifetxt/config_writer.py

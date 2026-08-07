@@ -218,5 +218,50 @@ class RemoteClientCompatibilityWrapperTests(unittest.TestCase):
         )
 
 
+class RemoteClientTestConnectionHeaderCasingTests(unittest.TestCase):
+    """remote_client.test_connection() must read the capability-revision header
+    under the casing request() actually returns from a real server (lowercase,
+    per http.client/urllib), not only the mixed-case header-name constant.
+    Regression test for the bug found by running against a live server: every
+    prior test stubbed capability_revision directly and never exercised this
+    lookup against realistic header casing, so the exact-case-only lookup
+    silently always missed and header_status could never report anything but
+    "missing".
+    """
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_lowercase_wire_header_is_still_read(self, req):
+        req.side_effect = [
+            (
+                dict(_SAMPLE_CAPABILITIES),
+                {"x-lifetxt-remote-capability-revision": "expected-revision"},
+            ),
+            ({"principal": {"id": "alice"}}, {}),
+        ]
+        result = remote_client.test_connection({"url": "https://example.invalid"})
+        self.assertEqual("expected-revision", result["capability_revision"])
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_exact_case_wire_header_is_still_read(self, req):
+        req.side_effect = [
+            (
+                dict(_SAMPLE_CAPABILITIES),
+                {"X-Lifetxt-Remote-Capability-Revision": "expected-revision"},
+            ),
+            ({"principal": {"id": "alice"}}, {}),
+        ]
+        result = remote_client.test_connection({"url": "https://example.invalid"})
+        self.assertEqual("expected-revision", result["capability_revision"])
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_missing_header_is_none_not_an_error(self, req):
+        req.side_effect = [
+            (dict(_SAMPLE_CAPABILITIES), {}),
+            ({"principal": {"id": "alice"}}, {}),
+        ]
+        result = remote_client.test_connection({"url": "https://example.invalid"})
+        self.assertIsNone(result["capability_revision"])
+
+
 if __name__ == "__main__":
     unittest.main()

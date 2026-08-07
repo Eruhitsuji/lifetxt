@@ -905,6 +905,7 @@ traceability:
       tests_or_evidence:
         - tests/test_remote_ticket_write_core.py ConflictCurrentItemTests and AsRemoteErrorConflictTests
         - tests/test_remote_ticket_writes_v22.py test_stale_revision_and_transaction_reuse_fail_closed (schema-conformance assertions against schema_bundle()["conflict-v1.schema.json"])
+        - tests/test_remote_ticket_writes_v22.py test_create_conflict_has_no_current_item_for_ticket_that_does_not_exist and test_conflict_current_item_is_hidden_from_a_principal_without_access (route-level create-conflict and permission-filtering coverage added after AI first-pass review found the unit-level tests alone did not cover these paths end to end)
         - tests/test_remote_client_writes_v23.py test_revision_conflict_presents_server_detail_without_extra_round_trip
         - python -m unittest tests.test_remote_ticket_writes_v22 tests.test_remote_client_writes_v23 tests.test_remote_client_writes_compat_v25 tests.test_remote_ticket_write_core -> Ran 28 tests, OK
         - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1850 tests, OK (skipped=11)'

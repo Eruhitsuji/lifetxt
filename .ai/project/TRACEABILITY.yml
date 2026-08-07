@@ -1048,7 +1048,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/132
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/133
       changed_files_or_scope:
         - Sync .ai/managed/core to upstream ai-development-standard commit 572b1b43f2e44a952fce3544c09f9415a697d8c1 (adds RUNTIME_EVIDENCE.md; additive updates to INDEX.md, AI_TOOL_COMPATIBILITY.md, SECURITY.md, STANDARD_EVALUATION.md)
         - Add .ai/project/AI_HISTORY.yml with runtime_evidence.enabled false (docs-only activation; collection scripts, schemas, evals, and the runtime-finding issue template deferred)

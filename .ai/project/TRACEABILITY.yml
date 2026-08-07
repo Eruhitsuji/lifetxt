@@ -992,6 +992,32 @@ traceability:
         Fourth and final task in the feature/dev-remote batch alongside #120, #122, and #124.
       status: implemented
 
+    - requirement_id: req-remote-compatibility-domain-awareness
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/129
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/130
+      changed_files_or_scope:
+        - Fix test_connection()'s exact-case capability-revision header lookup, matching the case-tolerant pattern _response_protocol() already uses in the same file
+        - lifetxt/remote_client.py
+        - tests/test_remote_compatibility_v21.py
+      tests_or_evidence:
+        - tests/test_remote_compatibility_v21.py RemoteClientTestConnectionHeaderCasingTests (confirmed to fail without the fix via git stash, pass with it)
+        - python -m unittest tests.test_remote_compatibility_v21 -> Ran 19 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1875 tests, OK (skipped=11)'
+        - 'live re-verification: real lifetxt serve process plus real lifetxt remote test CLI reported header_status "missing" before the fix and "present-and-consistent" after, against the identical setup'
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Found by running /verify against the just-merged feature/dev-remote batch: started a real
+        server and ran the real CLI client against it rather than trusting unit tests, which all
+        stubbed capability_revision directly or used hand-built exact-case header dicts and never
+        exercised the real lowercase header casing urllib/http.client actually returns. Bugfix
+        within the existing cap-remote-compatibility-negotiation capability (#120/PR #121), not a
+        new capability.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

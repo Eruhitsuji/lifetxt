@@ -748,6 +748,75 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-atomic-replace-retry-shared-primitive
+      capability_id: cap-atomic-replace-retry
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/108
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
+      changed_files_or_scope:
+        - Wire atomic_write_bytes's replace step to the shared retry helper added in #109
+        - lifetxt/atomic.py (atomic_write_bytes only)
+        - tests/test_mutation.py
+      tests_or_evidence:
+        - 'tests.test_mutation.MutationTests.test_atomic_write_bytes_recovers_from_transient_replace_permission_error: a transient failure that succeeds within budget produces the correct final write with no leftover temp file'
+        - 'tests.test_mutation.MutationTests.test_atomic_write_bytes_propagates_permission_error_after_exhausting_retry: exhausting the retry budget propagates the original PermissionError unchanged, leaves the file untouched, and cleans up the temp file'
+        - python -m unittest tests.test_mutation -> Ran 23 tests, OK (skipped=1)
+      release_or_deployment: >-
+        Closes #96 together with req-config-rotation-replace-retry below: transient Windows
+        os.replace failures are now retried across the shared commit primitive.
+      notes: >-
+        Completes the requirement started in #109 (the helper itself, unwired). Code-reviewed
+        and merged in #112, whose base branch was task/109-atomic-replace-retry-helper rather
+        than main; #114 carries the same, already-reviewed commits into main and is recorded
+        here as the pull_request of record.
+      status: implemented
+
+    - requirement_id: req-config-rotation-replace-retry
+      capability_id: cap-atomic-replace-retry
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/108
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
+      changed_files_or_scope:
+        - Wire _rotate_backups and _retain_rejected's replace steps to the shared retry helper added in #109
+        - lifetxt/config_writer.py
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - 'tests.test_config_validation.ConfigRevisionTests: backup rotation and rejected-candidate rotation each recover from a transient replace failure within budget'
+        - 'tests.test_config_validation.ConfigRevisionTests: backup rotation and rejected-candidate rotation each stay silent on retry-budget exhaustion (existing except OSError: pass unchanged), and the triggering configuration write still completes/reports its normal outcome'
+        - python -m unittest tests.test_config_validation -> Ran 41 tests, OK (skipped=1)
+      release_or_deployment: >-
+        Closes #96 together with req-atomic-replace-retry-shared-primitive above.
+      notes: >-
+        No new observability introduced for rotation replace failures on exhaustion, per the
+        requirements-clarification decision recorded in
+        .ai/project/changes/windows-atomic-replace-retry/decisions.md. Code-reviewed and merged
+        in #112 (base task/109-atomic-replace-retry-helper, not main); #114 carries the same
+        commits into main and is recorded here as the pull_request of record.
+      status: implemented
+
+    - requirement_id: req-atomic-replace-retry-policy-consistency
+      capability_id: cap-atomic-replace-retry
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/108
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/110
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/114
+      changed_files_or_scope:
+        - lifetxt/atomic.py
+        - lifetxt/config_writer.py
+        - tests/test_mutation.py
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - 'all three covered call sites (the shared commit primitive and both configuration rotation steps) delegate to the single replace_with_retry implementation added in #109, so the retry policy is identical by construction'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1822 tests, OK (skipped=15); 1816 before this issue, 6 new, no new skips'
+        - ruff format --check lifetxt tests scripts -> 246 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Code-reviewed and merged in #112 (base task/109-atomic-replace-retry-helper, not main);
+        #114 carries the same commits into main and is recorded here as the pull_request of
+        record.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

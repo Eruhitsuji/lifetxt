@@ -1,0 +1,61 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_check_release_policy_cli -v
+      requirement_ids:
+        - req-release-policy-cli-console-encoding-safety
+      result: "Ran 3 tests -- OK (utf-8 unchanged, cp932 falls back, cp932 leaves ASCII-safe text unchanged)"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: reproduction
+      command: >-
+        python -c script binding _write_stdout to a real
+        io.TextIOWrapper(io.BytesIO(), encoding="cp932") and writing the
+        exact U+21B5 character from the original incident report
+      requirement_ids:
+        - req-release-policy-cli-console-encoding-safety
+      result: "b'note \\u21b5 end\\r\\n' written, no exception raised (confirmed to raise UnicodeEncodeError before the fix)"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_check_release_policy_cli tests.test_release_policy
+      requirement_ids:
+        - req-release-policy-cli-console-encoding-safety
+      result: "Ran 14 tests -- OK"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids: []
+      result: "Ran 1878 tests in 488.345s -- OK (skipped=11)"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: []
+      result: "OK: 10 item(s)"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: "251 files already formatted"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: "All checks passed!"
+      commit: 146703f2075e1cb8d2f0e7f47665543cc0576fbf
+      executed_at: "2026-08-08"
+      status: passed
+
+  gaps: []

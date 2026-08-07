@@ -1,0 +1,15 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-release-policy-cli-console-encoding-safety
+    capability_id: cap-supported-platform-install
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/95
+    pull_request: null
+    tests_or_evidence:
+      - "tests/test_check_release_policy_cli.py: utf-8 stream unchanged, cp932 stream falls back without raising, cp932 stream leaves ASCII-safe text unchanged"
+      - "manual reproduction against a real io.TextIOWrapper bound to cp932 with the exact character from the incident report"
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

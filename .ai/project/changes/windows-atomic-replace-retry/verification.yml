@@ -1,0 +1,67 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-atomic-replace-retry-shared-primitive
+        - req-atomic-replace-retry-policy-consistency
+      status: planned
+    - type: integration
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-atomic-replace-retry-shared-primitive
+        - req-config-rotation-replace-retry
+        - req-atomic-replace-retry-policy-consistency
+      status: planned
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-atomic-replace-retry-shared-primitive
+      status: planned
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      status: planned
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      status: planned
+
+  executed: []
+
+review_ledger:
+  - reviewer: TODO
+    review_type: requirements
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: TODO
+    review_type: design
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: "@Eruhitsuji"
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: "@Eruhitsuji"
+    review_type: integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: null
+  rollback_plan: >-
+    No data migration or schema change. If the retry behavior causes an unexpected regression,
+    revert the wiring PR (#110) first; the helper added by #109 is inert unless called and can
+    remain. A full revert (both PRs) returns every call site to today's unprotected behavior,
+    identical to the current main branch.
+  operations_evidence: []

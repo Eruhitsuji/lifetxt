@@ -926,6 +926,41 @@ traceability:
         covered. Part of the feature/dev-remote batch alongside #120.
       status: implemented
 
+    - requirement_id: req-remote-tickets-bounded-pagination
+      capability_id: cap-remote-tickets-pagination
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/124
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/125
+      changed_files_or_scope:
+        - Default the tickets resource to a 200-ticket page when limit is omitted, via a direct _int() call rather than the shared _limit() helper
+        - Add cursor filtering (strictly-after, using ticket_list()'s existing deterministic ID sort) and next_cursor/has_more
+        - Add an opt-in since_revision consistency check to read_resource(), scoped to the tickets resource
+        - Advertise the two new parameters in resource_catalog()
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - tests/test_remote_pagination.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketsPaginationTests
+        - tests/test_remote_pagination.py RemoteTicketsPaginationRouteTests
+        - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_remote_web_v20 tests.test_remote_web_v19 -> Ran 25 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1862 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        Behaviour change for release notes: a tickets request that omits limit now returns a
+        bounded 200-ticket default page instead of every visible ticket.
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-pagination/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, M-sized with
+        a written split-justification). Part of the feature/dev-remote batch alongside #120 and
+        #122.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

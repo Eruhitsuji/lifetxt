@@ -440,3 +440,186 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-compatibility-negotiation
+    name: Remote compatibility negotiation
+    summary: >-
+      Give Remote client operators explicit, actionable warnings when a specific published
+      contract domain they depend on is missing or under-versioned on the server, and when a
+      reverse proxy or cache has stripped or rewritten the capability-revision negotiation
+      header, instead of both cases silently reporting nothing.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-compatibility-domain-awareness
+    implementation_locations:
+      - lifetxt/remote_compatibility_v21.py
+      - tests/test_remote_compatibility_v21.py
+      - docs/en/remote-compatibility.md
+      - docs/ja/remote-compatibility.md
+    public_interfaces:
+      - lifetxt.remote_compatibility_v21.evaluate_compatibility
+    tests_or_evidence:
+      - tests/test_remote_compatibility_v21.py RemoteCompatibilityV21Tests and RemoteClientCompatibilityWrapperTests
+      - python -m unittest tests.test_remote_compatibility_v21 -> Ran 16 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1840 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/120
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/121
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Both new evaluate_compatibility() parameters (required_contracts,
+      capability_revision_header) are purely additive; the two-argument call form used by every
+      pre-existing caller is regression-tested to be byte-identical. The capability-revision
+      header/body comparison relies on the server already embedding the same computed value in
+      both places (lifetxt/remote_access.py protocol_response_headers / capability_revision) and
+      does not recompute the server's hash construction client-side.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-ticket-conflict-schema
+    name: Remote ticket-mutation conflict schema conformance
+    summary: >-
+      Make a Remote ticket-mutation conflict's detail payload conform to conflict-v1.schema.json
+      (error, expected_revision, current_revision, attempted_change, permission-filtered
+      current_item) for both conflict sources -- the per-file mutation.MutationConflict and the
+      aggregate If-Match precondition failure -- and let the client present it from the failed
+      request alone, without an extra round trip.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-ticket-conflict-schema-conformance
+    implementation_locations:
+      - lifetxt/remote_ticket_write_core.py
+      - lifetxt/remote_ticket_writes.py
+      - lifetxt/remote_client_writes.py
+      - lifetxt/remote_access.py
+      - tests/test_remote_ticket_write_core.py
+      - tests/test_remote_ticket_writes_v22.py
+      - tests/test_remote_client_writes_v23.py
+    public_interfaces:
+      - lifetxt.remote_ticket_write_core.as_remote_error
+      - lifetxt.remote_ticket_write_core.conflict_current_item
+      - lifetxt.remote_client_writes.RemoteMutationConflict
+    tests_or_evidence:
+      - tests/test_remote_ticket_write_core.py ConflictCurrentItemTests and AsRemoteErrorConflictTests
+      - tests/test_remote_ticket_writes_v22.py test_stale_revision_and_transaction_reuse_fail_closed (schema-conformance assertions)
+      - tests/test_remote_client_writes_v23.py test_revision_conflict_presents_server_detail_without_extra_round_trip
+      - python -m unittest tests.test_remote_ticket_writes_v22 tests.test_remote_client_writes_v23 tests.test_remote_client_writes_compat_v25 tests.test_remote_ticket_write_core -> Ran 28 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1850 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/122
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/123
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered remote_ticket_write_core.py or remote_client_writes.py
+      before this change (confirmed by search at implementation time), so this is a new entry
+      rather than an extension. The other three pre-existing conflict producers that also emit
+      an "error": "CONFLICT" shape but add fields conflict-v1.schema.json does not allow
+      (lifetxt/webapp.py item/timer routes, lifetxt/remote_contracts_v6.py attachment conflicts,
+      lifetxt/safety_compat_v2.py) are unchanged by this capability; that non-conformance is
+      recorded here as a known gap for a future task, not fixed by this one.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-tickets-pagination
+    name: Remote tickets bounded pagination
+    summary: >-
+      Bound the Remote tickets resource's default response size (200 tickets instead of every
+      visible ticket) and add cursor-based pagination over its existing deterministic ID sort,
+      plus an opt-in since_revision check that fails loudly instead of silently mixing pages
+      from different workspace revisions. Scoped to the tickets resource only.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-tickets-bounded-pagination
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - tests/test_remote_pagination.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/tickets
+      - GET /api/remote/v1/resources/tickets
+      - lifetxt.remote_backend.read_resource
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketsPaginationTests
+      - tests/test_remote_pagination.py RemoteTicketsPaginationRouteTests
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_remote_web_v20 tests.test_remote_web_v19 -> Ran 25 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1862 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/124
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/125
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered remote_backend.py before this change (confirmed by
+      search at implementation time). Every other resource builder in this module (items, links,
+      agenda, search, projects, status) is unchanged; they keep their existing unbounded-unless-
+      limit-is-given behavior. Extending cursor pagination to items would first need a
+      deterministic sort added to filter_items(), which this capability does not add.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-ticket-detail-view
+    name: Remote ticket-detail read resource
+    summary: >-
+      Expose one ticket's full detail (fields, relations, incoming links, time totals) as a
+      permission-aware Remote read resource, reusing tickets.ticket_view() unmodified. A
+      nonexistent ticket ID and an existing-but-invisible one produce the identical
+      REMOTE_TICKET_NOT_FOUND response, and relations never expose a ticket the principal cannot
+      otherwise see.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-ticket-detail-resource
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/resources/ticket-detail
+      - lifetxt.remote_backend.read_resource
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketDetailTests
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_surface_runtime -> Ran 43 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1870 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/126
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/127
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distinct from cap-remote-tickets-pagination (the tickets list resource's pagination) --
+      this capability is single-ticket detail, not a list, and does not touch pagination. Deferred
+      sibling read views (history, time-entry, version, sprint, dependency/watcher as their own
+      resources, attachment metadata) are explicitly not covered; history in particular has an
+      open question about whether ticket-event records reliably carry their own
+      project/visibility fields for _visible_items() to filter correctly, recorded as a gap for a
+      future task rather than resolved here.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

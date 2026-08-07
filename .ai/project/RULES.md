@@ -176,6 +176,22 @@ Rejected alternatives:
 - Suite-only enforcement, because the PR base SHA and current pull request URL
   are CI context and should be passed explicitly by the workflow.
 
+### Multi-PR integration branches
+
+The gate assumes one PR per requirement by default: the entry a task adds when
+it merges is expected to already name the PR the gate is checking. A batch that
+lands through an integration branch (several task branches merging into one
+`feature/*` branch, then one final PR into `main`) breaks that assumption --
+every entry correctly names its own sub-PR, and none of them names the final
+PR, because that PR did not exist yet when they were written.
+
+Add one further chain entry when opening the integration-branch-to-`main` PR,
+recording that PR as its own step (`pull_request` set to the integration PR,
+not any sub-PR). Do not rewrite the sub-PR entries to point at the integration
+PR instead -- that would misattribute the work to a PR that did not implement
+it. See `.ai/project/TRACEABILITY.yml`'s `req-remote-batch-integration` entry
+for the pattern, and #131 for why it was needed.
+
 ## Change Package Close-out
 
 A change package must not still say the work is only proposed once that work has

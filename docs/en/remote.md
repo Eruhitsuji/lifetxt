@@ -120,7 +120,8 @@ GET /api/remote/v1/diagnostics
 The shared read backend currently publishes:
 
 - `items`: visible items with text, type, project, open-only, and bounded-result filters;
-- `tickets`: visible tickets filtered by project, status, and assignee;
+- `tickets`: visible tickets filtered by project, status, and assignee, with bounded default-size cursor pagination (see below);
+- `ticket-detail`: one visible ticket's full detail (fields, relations, incoming links, time totals), given its `id`; a nonexistent ID and an existing-but-invisible ID produce the identical `REMOTE_TICKET_NOT_FOUND` error;
 - `projects`: project summaries derived from the same visible item set;
 - `ticket-report`: the shared ticket/project aggregation contract;
 - `links`: relation records filtered by ID, direction, and relation;
@@ -137,6 +138,20 @@ GET /api/remote/v1/resources/tickets?project=web&status=review&limit=50
 Authorization: Bearer <token>
 X-Lifetxt-Remote-Version: 2
 ```
+
+### Tickets pagination
+
+A `tickets` request without `limit` returns at most 200 tickets rather than every visible ticket; an explicit `limit` still behaves as before, up to the existing cap of 5000. The response's `data` gains two fields: `next_cursor` (the last returned ticket's ID, or `null` when this page reached the end of the visible set) and `has_more`. Pass `next_cursor` back as `cursor` to continue: only tickets sorting strictly after that ID are returned, in the resource's existing deterministic ID order.
+
+A client paginating across several requests can optionally pass `since_revision` (the `revision` value from an earlier page). If the workspace changed since then, the request fails with `REMOTE_RESOURCE_REVISION_CHANGED` instead of silently returning a page mixed from a different revision; the client should restart pagination from the first page. Omitting `since_revision` preserves today's behavior exactly: each page independently reports its own `revision` with no consistency check.
+
+```http
+GET /api/remote/v1/resources/tickets?limit=50&cursor=TK-0050
+Authorization: Bearer <token>
+X-Lifetxt-Remote-Version: 2
+```
+
+This pagination contract currently applies only to `tickets`; every other resource above keeps its existing unbounded-unless-`limit`-is-given behavior.
 
 ## Dependency-free client
 

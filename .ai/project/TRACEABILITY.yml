@@ -853,6 +853,197 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-remote-compatibility-domain-awareness
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/120
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/121
+      changed_files_or_scope:
+        - Add required_contracts (domain presence/version warnings) and capability_revision_header (header-loss/mismatch detection) to evaluate_compatibility()
+        - Thread the fetched capability-revision header through install_remote_client_compatibility_v21()'s wrapper
+        - lifetxt/remote_compatibility_v21.py
+        - tests/test_remote_compatibility_v21.py
+        - docs/en/remote-compatibility.md
+        - docs/ja/remote-compatibility.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_compatibility_v21.py RemoteCompatibilityV21Tests and RemoteClientCompatibilityWrapperTests
+        - python -m unittest tests.test_remote_compatibility_v21 -> Ran 16 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1840 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-compat-negotiation/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, S-sized).
+        Part of the feature/dev-remote batch (Issues #120, and three more filed alongside it)
+        implemented on ai/claude/<issue>-<slug> branches merging into feature/dev-remote before
+        a final human-approved merge into main.
+      status: implemented
+
+    - requirement_id: req-remote-ticket-conflict-schema-conformance
+      capability_id: cap-remote-ticket-conflict-schema
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/122
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/123
+      changed_files_or_scope:
+        - Make as_remote_error() build a conflict-v1.schema.json-shaped detail for both mutation.MutationConflict and the aggregate If-Match precondition failure
+        - Add expected_revision to require_exact_revision()'s conflict detail so both conflict sources carry it
+        - Add permission-filtered current_item re-read (conflict_current_item)
+        - Update RemoteMutationConflict/mutate_ticket() to read the four fields from the server response without an extra round trip; remove the now-dead _bounded_comparison()
+        - lifetxt/remote_ticket_write_core.py
+        - lifetxt/remote_ticket_writes.py
+        - lifetxt/remote_client_writes.py
+        - lifetxt/remote_access.py
+        - tests/test_remote_ticket_write_core.py
+        - tests/test_remote_ticket_writes_v22.py
+        - tests/test_remote_client_writes_v23.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_ticket_write_core.py ConflictCurrentItemTests and AsRemoteErrorConflictTests
+        - tests/test_remote_ticket_writes_v22.py test_stale_revision_and_transaction_reuse_fail_closed (schema-conformance assertions against schema_bundle()["conflict-v1.schema.json"])
+        - tests/test_remote_ticket_writes_v22.py test_create_conflict_has_no_current_item_for_ticket_that_does_not_exist and test_conflict_current_item_is_hidden_from_a_principal_without_access (route-level create-conflict and permission-filtering coverage added after AI first-pass review found the unit-level tests alone did not cover these paths end to end)
+        - tests/test_remote_client_writes_v23.py test_revision_conflict_presents_server_detail_without_extra_round_trip
+        - python -m unittest tests.test_remote_ticket_writes_v22 tests.test_remote_client_writes_v23 tests.test_remote_client_writes_compat_v25 tests.test_remote_ticket_write_core -> Ran 28 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1850 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        Behaviour change for release notes: the Remote ticket-mutation conflict detail's field
+        names changed (requested_revision -> expected_revision, comparison removed,
+        attempted_change/current_item added) on both the wire and the RemoteMutationConflict
+        client object.
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-conflict-schema/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, M-sized with
+        a written split-justification). Discovered mid-implementation that the existing
+        regression test exercised require_exact_revision's aggregate precondition, not
+        mutation.MutationConflict as the issue originally assumed -- both sources are now
+        covered. Part of the feature/dev-remote batch alongside #120.
+      status: implemented
+
+    - requirement_id: req-remote-tickets-bounded-pagination
+      capability_id: cap-remote-tickets-pagination
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/124
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/125
+      changed_files_or_scope:
+        - Default the tickets resource to a 200-ticket page when limit is omitted, via a direct _int() call rather than the shared _limit() helper
+        - Add cursor filtering (strictly-after, using ticket_list()'s existing deterministic ID sort) and next_cursor/has_more
+        - Add an opt-in since_revision consistency check to read_resource(), scoped to the tickets resource
+        - Advertise the two new parameters in resource_catalog()
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - tests/test_remote_pagination.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketsPaginationTests (including limit=0, cursor-with-no-match, and cursor-combined-with-filters cases added after AI first-pass review found limit=0 crashed with an unhandled IndexError)
+        - tests/test_remote_pagination.py RemoteTicketsPaginationRouteTests
+        - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_remote_web_v20 tests.test_remote_web_v19 -> Ran 25 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1862 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        Behaviour change for release notes: a tickets request that omits limit now returns a
+        bounded 200-ticket default page instead of every visible ticket.
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-pagination/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, M-sized with
+        a written split-justification). Part of the feature/dev-remote batch alongside #120 and
+        #122. AI first-pass review of the initial PR found limit=0 crashed with an unhandled
+        IndexError (has_more computed true from an empty page, then indexing page[-1]); fixed by
+        returning the caller's own cursor unchanged (or null when none was supplied) instead of
+        indexing into the empty page.
+      status: implemented
+
+    - requirement_id: req-remote-ticket-detail-resource
+      capability_id: cap-remote-ticket-detail-view
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/126
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/127
+      changed_files_or_scope:
+        - Add the ticket-detail resource builder, reusing tickets.ticket_view() unmodified
+        - Register it in _BUILDERS/RESOURCE_NAMES/resource_catalog()
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketDetailTests
+        - python -m unittest tests.test_remote_backend_v20 tests.test_remote_pagination tests.test_surface_runtime -> Ran 43 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1870 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-ticket-detail/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard assurance, S-sized).
+        Fourth and final task in the feature/dev-remote batch alongside #120, #122, and #124.
+      status: implemented
+
+    - requirement_id: req-remote-compatibility-domain-awareness
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/129
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/130
+      changed_files_or_scope:
+        - Fix test_connection()'s exact-case capability-revision header lookup, matching the case-tolerant pattern _response_protocol() already uses in the same file
+        - lifetxt/remote_client.py
+        - tests/test_remote_compatibility_v21.py
+      tests_or_evidence:
+        - tests/test_remote_compatibility_v21.py RemoteClientTestConnectionHeaderCasingTests (confirmed to fail without the fix via git stash, pass with it)
+        - python -m unittest tests.test_remote_compatibility_v21 -> Ran 19 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1875 tests, OK (skipped=11)'
+        - 'live re-verification: real lifetxt serve process plus real lifetxt remote test CLI reported header_status "missing" before the fix and "present-and-consistent" after, against the identical setup'
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Found by running /verify against the just-merged feature/dev-remote batch: started a real
+        server and ran the real CLI client against it rather than trusting unit tests, which all
+        stubbed capability_revision directly or used hand-built exact-case header dicts and never
+        exercised the real lowercase header casing urllib/http.client actually returns. Bugfix
+        within the existing cap-remote-compatibility-negotiation capability (#120/PR #121), not a
+        new capability.
+      status: implemented
+
+    - requirement_id: req-remote-batch-integration
+      capability_id: cap-remote-compatibility-negotiation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/131
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/128
+      changed_files_or_scope:
+        - Record the feature/dev-remote batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_traceability_gate.RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known passing against origin/main with pull_request set to this PR's URL
+        - CI "Required release policy and clean wheel" job green on PR #128
+      release_or_deployment: >-
+        This entry documents PR #128 itself: feature/dev-remote (Issues #120, #122, #124, #126,
+        #129; PRs #121, #123, #125, #127, #130) merging into main.
+      notes: >-
+        The feature/dev-remote batch used an integration-branch pattern new to this repository:
+        each requirement above was implemented, reviewed, and merged into feature/dev-remote on
+        its own branch, recording its own sub-PR at merge time per the established single-PR
+        traceability pattern. tests.test_traceability_gate's required CI job passes the PR
+        actually under test to the gate and requires a pull_request value in the diff exactly
+        matching it -- on PR #128 none of the five entries above satisfy that, since they
+        correctly name the sub-PR that did the work, not #128, which did not exist yet when they
+        were written. This entry exists specifically to give PR #128 its own record rather than
+        misattribute the work above to a PR that did not implement it. See #131.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

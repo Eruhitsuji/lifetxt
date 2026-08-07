@@ -50,13 +50,18 @@ def enabled(config):
     return bool(remote_section(config).get("ticket_writes_enabled", False))
 
 
-def request_hash(operation, payload):
+def normalized_change(operation, payload):
     value = {
         str(key): item
         for key, item in (payload or {}).items()
         if key not in ("transaction_id", "dry_run")
     }
     value["operation"] = operation
+    return value
+
+
+def request_hash(operation, payload):
+    value = normalized_change(operation, payload)
     return hashlib.sha256(
         json.dumps(
             value,
@@ -235,16 +240,80 @@ def replay(path, paths, key, operation, ticket_id_value, txid, digest):
     )
 
 
-def as_remote_error(exc):
-    if isinstance(exc, RemoteAccessError):
-        return exc
-    if isinstance(exc, mutation.MutationConflict):
+def conflict_current_item(paths, key, ticket_id_value, principal):
+    """Return the current ticket dict if the principal can still see it, else None."""
+    if not ticket_id_value:
+        return None
+    path = find_ticket_file(paths, ticket_id_value, key=key)
+    if not path:
+        return None
+    snapshot = mutation.read_text_snapshot(path, allow_missing=True)
+    if not snapshot.text:
+        return None
+    items = _parse_items(snapshot.text, key)
+    ticket = _find_ticket(items, ticket_id_value, key)
+    if ticket is None:
+        return None
+    if not can_access(principal, **access_for_item(ticket)):
+        return None
+    return ticket.to_dict()
+
+
+def as_remote_error(
+    exc,
+    payload=None,
+    principal=None,
+    paths=None,
+    key=None,
+    ticket_id_value=None,
+):
+    """Dispatch exc to the Remote error the route should raise.
+
+    payload/principal/paths/key/ticket_id_value are only consulted for a
+    conflict: either mutation.MutationConflict (a per-file CAS failure
+    inside the mutation itself) or a RemoteAccessError coded
+    REVISION_CONFLICT (the earlier, more common aggregate If-Match
+    precondition from require_exact_revision). Every other branch is
+    unchanged. For a conflict, the detail is built to validate against
+    dist/schemas/conflict-v1.schema.json: error="CONFLICT",
+    expected_revision, current_revision, attempted_change (payload
+    normalized the same way request_hash() normalizes it), and
+    current_item (the current ticket's dict form if the principal can
+    still see it, else None). Omitted context degrades to an empty
+    attempted_change and a None current_item rather than raising.
+    """
+    is_mutation_conflict = isinstance(exc, mutation.MutationConflict)
+    is_precondition_conflict = (
+        isinstance(exc, RemoteAccessError) and exc.code == "REVISION_CONFLICT"
+    )
+    if is_mutation_conflict or is_precondition_conflict:
+        operation = str((payload or {}).get("operation") or "")
+        if is_mutation_conflict:
+            expected_revision = exc.expected_hash
+            current_revision = exc.actual_hash
+        else:
+            expected_revision = exc.detail.get("expected_revision")
+            current_revision = exc.detail.get("current_revision")
+        detail = OrderedDict(
+            (
+                ("error", "CONFLICT"),
+                ("expected_revision", expected_revision),
+                ("current_revision", current_revision),
+                ("attempted_change", normalized_change(operation, payload)),
+                (
+                    "current_item",
+                    conflict_current_item(paths, key, ticket_id_value, principal),
+                ),
+            )
+        )
         return RemoteAccessError(
             "REVISION_CONFLICT",
             "The authoritative revision changed.",
             409,
-            {"current_revision": exc.actual_hash},
+            detail,
         )
+    if isinstance(exc, RemoteAccessError):
+        return exc
     if isinstance(exc, ValueError):
         detail = (
             {"diagnostics": exc.args[0]}

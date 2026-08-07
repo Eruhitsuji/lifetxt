@@ -7,6 +7,7 @@ try:
 except Exception:
     TestClient = None
 
+from lifetxt.safety_foundation import schema_bundle
 from lifetxt.webapp import create_app
 
 
@@ -188,6 +189,16 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
         )
         self.assertEqual(409, stale.status_code, stale.text)
         self.assertEqual("REVISION_CONFLICT", stale.json()["error"])
+        detail = stale.json()["detail"]
+        schema = schema_bundle()["conflict-v1.schema.json"]
+        self.assertEqual(set(schema["properties"]), set(detail))
+        self.assertTrue(set(schema["required"]).issubset(detail))
+        self.assertEqual(schema["properties"]["error"]["const"], detail["error"])
+        self.assertEqual(old_revision, detail["expected_revision"])
+        self.assertIsInstance(detail["current_revision"], str)
+        self.assertEqual("comment", detail["attempted_change"]["operation"])
+        self.assertEqual("Second request", detail["attempted_change"]["body"])
+        self.assertEqual(["T-1"], detail["current_item"]["details"]["id"])
 
         reused = self.mutate(
             {

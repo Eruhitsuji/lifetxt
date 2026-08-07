@@ -268,7 +268,7 @@ def require_exact_revision(headers, current):
             "REVISION_CONFLICT",
             "The authoritative revision changed.",
             409,
-            {"current_revision": str(current)},
+            {"expected_revision": value, "current_revision": str(current)},
         )
     return value
 

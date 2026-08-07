@@ -1,0 +1,41 @@
+schema_version: 1
+
+runtime_evidence:
+  enabled: false
+
+  collection:
+    default_mode: metadata_only
+    providers:
+      - codex
+      - claude-code
+    project_matching: root_or_child
+    allow_text_fallback: false
+    max_file_bytes: 1048576
+    output_dir: .ai/runtime-evidence
+
+  privacy:
+    raw_content: omitted_by_default
+    redact_before_reporting: true
+    redact_patterns:
+      - secrets
+      - local_home_paths
+      - private_urls
+      - environment_values
+    public_upstream_issue_default: sanitized_summary_only
+
+  reporting:
+    automatic_downstream_reporting: false
+    automatic_upstream_reporting: false
+    require_human_approval: true
+    issue_marker: ADS-FINDING
+    deduplicate_by_fingerprint: true
+
+  retention:
+    raw_archive_days: null
+    metadata_archive_days: 30
+    deletion_owner: Eruhitsuji
+
+  human_approval:
+    privacy_policy_owner: Eruhitsuji
+    upstream_reporting_approver: Eruhitsuji
+    raw_archive_access_approvers: []

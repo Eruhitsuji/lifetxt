@@ -58,3 +58,15 @@ Use these viewpoints for design, implementation, and review:
 - Treat AI-generated shell commands, migrations, and workflow changes as
   security-sensitive until reviewed.
 - Require human review for security-sensitive changes before merge.
+
+## Runtime Evidence Security
+
+AI development history may contain source code, prompts, tool output, local
+paths, environment values, private URLs, and accidentally exposed secrets.
+
+- Keep runtime evidence collection local-first by default.
+- Do not attach raw AI transcripts or raw history archives to public issues.
+- Redact secrets, local paths, private URLs, and environment values before
+  sharing findings.
+- Require explicit human approval before enabling automatic upstream reporting.
+- Use sanitized findings and stable fingerprints for deduplication.

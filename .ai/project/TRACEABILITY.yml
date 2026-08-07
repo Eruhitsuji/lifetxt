@@ -1044,6 +1044,37 @@ traceability:
         misattribute the work above to a PR that did not implement it. See #131.
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/132
+      pull_request: null
+      changed_files_or_scope:
+        - Sync .ai/managed/core to upstream ai-development-standard commit 572b1b43f2e44a952fce3544c09f9415a697d8c1 (adds RUNTIME_EVIDENCE.md; additive updates to INDEX.md, AI_TOOL_COMPATIBILITY.md, SECURITY.md, STANDARD_EVALUATION.md)
+        - Add .ai/project/AI_HISTORY.yml with runtime_evidence.enabled false (docs-only activation; collection scripts, schemas, evals, and the runtime-finding issue template deferred)
+        - Add CTX-RUNTIME-001 to .ai/project/CONTEXT_INDEX.yml
+        - .ai/standard.lock.yml
+      tests_or_evidence:
+        - 'diff of each replaced .ai/managed/core/*.md against the upstream file at commit 572b1b43f2e44a952fce3544c09f9415a697d8c1 -> byte-identical'
+        - YAML parse of AI_HISTORY.yml, CONTEXT_INDEX.yml, TRACEABILITY.yml, standard.lock.yml
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        Upstream main was 2 commits ahead of the locked v0.1.0 tag with no new
+        tag cut yet (CHANGELOG.md still reads 0.1.0); adopted as a same-owner
+        sync per explicit instruction rather than waiting for a tag, per
+        .ai/managed/core/STANDARD_DISTRIBUTION.md's floating-branch caution
+        applying to ongoing tracking rather than a one-time pull. Runtime AI
+        Evidence Pipeline activation (collection scripts, schemas, eval
+        scenarios, and the runtime-finding issue template/label) is
+        intentionally deferred: AI_HISTORY.yml's privacy_policy_owner and
+        upstream_reporting_approver are placeholder values (the sole
+        maintainer), not a reviewed privacy policy, and collection stays
+        disabled until that review happens. Status is proposed rather than
+        implemented pending PR review and merge; update pull_request and
+        status once that PR exists and lands.
+      status: proposed
+
 required_chain:
   - Requirement
   - Capability

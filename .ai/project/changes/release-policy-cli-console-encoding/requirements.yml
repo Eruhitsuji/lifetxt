@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-release-policy-cli-console-encoding-safety
+    kind: ADDED
+    statement: >-
+      The release-policy CLI (scripts/check_release_policy.py) does not crash
+      when the process's stdout stream cannot encode a Unicode character
+      present in the release manifest, on any console codec, including
+      Windows cp932. UTF-8-capable terminals continue to see the manifest
+      exactly as before.
+    acceptance_criteria:
+      - "Given a stdout stream whose codec can encode every character in the manifest text (e.g. UTF-8), the CLI writes the manifest unchanged, byte-for-byte identical to current behavior."
+      - "Given a stdout stream whose codec cannot encode one or more characters in the manifest text (reproduced against a real io.TextIOWrapper bound to cp932), the CLI writes a backslash-escaped fallback for the unencodable characters instead of raising UnicodeEncodeError, and the command's exit code still reflects manifest['ok']."
+      - "The --output file write path is unaffected: it already opens with encoding=\"utf-8\" and keeps writing the exact original text."
+    constraints:
+      - Must not modify the manifest content produced by lifetxt.release_policy.release_manifest.
+      - Must not change the command's argument parsing, --output behavior, or exit-code contract.
+      - The fallback must only activate on an actual UnicodeEncodeError; it must not change output on any terminal that can already encode the text.
+    owner: Eruhitsuji
+
+open_questions: []

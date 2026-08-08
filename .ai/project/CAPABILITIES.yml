@@ -144,13 +144,17 @@ capabilities:
     summary: >-
       Detect self-referential symlink/junction cycles before workspace source expansion,
       refuse resolved source sets whose unique source files exceed the configured
-      total byte limit, and recognize ticket_event/time_entry as first-class source
-      roles for development-ticket history and time-tracking Notes.
+      total byte limit, recognize ticket_event/time_entry as first-class source roles
+      for development-ticket history and time-tracking Notes, and keep a broad set of
+      schema-valid example workspaces and resolution edge cases (Unicode paths, unknown
+      config keys, glob ordering, malformed configuration files) under regression
+      coverage.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-workspace-source-integrity
       - req-workspace-ticket-history-source-roles
+      - req-workspace-example-and-edge-case-coverage
     implementation_locations:
       - lifetxt/config.py
       - lifetxt/config_registry.py
@@ -160,6 +164,7 @@ capabilities:
       - docs/en/config.md
       - docs/ja/config.md
       - tests/test_workspace_foundation.py
+      - examples/config/
     public_interfaces:
       - workspace.max_total_source_bytes
       - lifetxt config explain workspace.max_total_source_bytes
@@ -171,16 +176,21 @@ capabilities:
       - tests/test_workspace_foundation.py WorkspaceResolutionTests cycle and source-size cases
       - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_ticket_event_and_time_entry_roles_resolve_without_warning, test_ticket_event_and_time_entry_roles_default_writable_and_visible
       - tests/test_workspace_foundation.py ExampleConfigTests.test_config_schema_accepts_ticket_event_and_time_entry_source_roles
-      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1940 tests, OK (skipped=12)'
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+      - tests/test_workspace_foundation.py LoadConfigMalformedFileTests
+      - tests/test_workspace_foundation.py ExampleConfigTests (remote.lifetxt.json, integration-references.lifetxt.json, software-ticket-workspace.lifetxt.json added to EXAMPLE_NAMES)
+      - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generated schema bundle still matches the checked-in dist/schemas files byte-for-byte after the enum change
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/48
       - https://github.com/Eruhitsuji/lifetxt/issues/144
+      - https://github.com/Eruhitsuji/lifetxt/issues/148
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/63
       - https://github.com/Eruhitsuji/lifetxt/pull/145
+      - https://github.com/Eruhitsuji/lifetxt/pull/149
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       ticket_event/time_entry default to writable and visible, identical to
@@ -197,6 +207,16 @@ capabilities:
       directly, is the value's source of truth -- editing the dist file
       alone would pass a naive review but fail
       tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents.
+      The three new example configurations use only real, already-implemented
+      configuration shapes: remote.lifetxt.json's remote.* section matches
+      docs/en/remote.md; software-ticket-workspace.lifetxt.json's
+      ticketing.custom_fields entries were verified against
+      lifetxt.ticket_custom_fields.custom_field_registry_report to avoid
+      colliding with reserved canonical/relation field names (the first
+      attempt used component/story_points, both reserved, caught before
+      commit). No fictitious "integrations" configuration section was
+      invented; integration-references.lifetxt.json instead demonstrates the
+      existing reference/generated roles for externally-synced content.
     replacement:
       replaces: []
       replaced_by: null

@@ -1,0 +1,26 @@
+{
+  "config_version": 1,
+  "default_workspace": "dev",
+  "workspaces": {
+    "dev": {
+      "sources": [
+        { "path": "life.txt", "role": "primary", "required": true },
+        {
+          "path": ".generated/github/*.life.txt",
+          "role": "reference",
+          "generated_by": "github-sync",
+          "writable": false,
+          "default_visible": false
+        },
+        {
+          "path": ".generated/ci/*.life.txt",
+          "role": "generated",
+          "generated_by": "ci-sync",
+          "writable": false
+        }
+      ],
+      "write_file": "life.txt"
+    }
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

@@ -390,6 +390,105 @@ class WorkspaceResolutionTests(unittest.TestCase):
         # Both workspaces resolve the same physical file -> reported as shared.
         self.assertTrue(report["shared_files"])
 
+    def test_unicode_source_path_resolves_and_reads(self):
+        self.write("日本語タスク.life.txt", "[ ] T 例えば\n")
+        config = self.config(
+            {"workspaces": {"w": {"sources": ["日本語タスク.life.txt"]}}}
+        )
+        resolution = resolve_workspace(config, "w")
+        self.assertTrue(resolution["ok"])
+        self.assertEqual(1, len(resolution["input_paths"]))
+        self.assertTrue(os.path.exists(resolution["input_paths"][0]))
+
+    def test_unknown_top_level_config_keys_do_not_break_resolution(self):
+        self.write("life.txt")
+        config = self.config(
+            {
+                "workspaces": {"w": {"sources": ["life.txt"]}},
+                "some_future_section": {"anything": True},
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        self.assertTrue(resolution["ok"])
+
+    def test_glob_order_is_deterministic_across_mixed_priority_sources(self):
+        self.write("b_glob/two.life.txt")
+        self.write("b_glob/one.life.txt")
+        self.write("a_literal.life.txt")
+        config = self.config(
+            {
+                "workspaces": {
+                    "w": {
+                        "sources": [
+                            {"path": "b_glob/*.life.txt", "priority": 50},
+                            {"path": "a_literal.life.txt", "priority": 50},
+                        ]
+                    }
+                }
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        names = [os.path.basename(p) for p in resolution["input_paths"]]
+        # Equal priority falls back to path-string ordering, so the literal
+        # source (path "a_literal.life.txt") sorts before the glob source
+        # (path "b_glob/*.life.txt"); within the glob, matches are sorted.
+        self.assertEqual(["a_literal.life.txt", "one.life.txt", "two.life.txt"], names)
+
+    def test_repeated_resolution_of_the_same_config_is_stable(self):
+        self.write("b_glob/two.life.txt")
+        self.write("b_glob/one.life.txt")
+        config = self.config({"workspaces": {"w": {"sources": ["b_glob/*.life.txt"]}}})
+        first = resolve_workspace(config, "w")["input_paths"]
+        second = resolve_workspace(config, "w")["input_paths"]
+        self.assertEqual(first, second)
+
+
+class LoadConfigMalformedFileTests(unittest.TestCase):
+    """Covers loading a broken/malformed configuration file (todo.md P1)."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+
+    def test_broken_json_config_reports_a_value_error_not_a_crash(self):
+        from lifetxt.config import load_config
+
+        path = os.path.join(self.temp.name, "broken.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("{ this is not valid json")
+        with self.assertRaises(ValueError):
+            load_config(path)
+
+    def test_non_object_json_config_reports_a_value_error(self):
+        from lifetxt.config import load_config
+
+        path = os.path.join(self.temp.name, "array.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("[1, 2, 3]")
+        with self.assertRaises(ValueError):
+            load_config(path)
+
+    def test_broken_json_config_produces_the_standard_cli_error_and_exit_code(self):
+        import contextlib
+        import io
+
+        # Goes through the real package entry point (python -m lifetxt), not
+        # lifetxt.cli.main directly: cli.main is monkey-patched in place the
+        # first time any test exercises the timezone-context installer, so
+        # calling it directly is order-dependent in a shared test process.
+        # entrypoint.main is what users actually invoke and stays consistent
+        # regardless of that patching.
+        from lifetxt import entrypoint
+
+        path = os.path.join(self.temp.name, "broken.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("{ this is not valid json")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = entrypoint.main(["--config", path, "check", "-"])
+        self.assertEqual(1, code)
+        self.assertIn("ERROR:", stderr.getvalue())
+
 
 class WorkspaceResolutionActiveTests(unittest.TestCase):
     """Covers the public predicate #142 moved out of lifetxt.cli."""
@@ -529,6 +628,9 @@ class ExampleConfigTests(unittest.TestCase):
         "team.lifetxt.json",
         "kiosk.lifetxt.json",
         "projects.lifetxt.json",
+        "remote.lifetxt.json",
+        "integration-references.lifetxt.json",
+        "software-ticket-workspace.lifetxt.json",
     )
 
     def test_examples_resolve_default_workspace(self):

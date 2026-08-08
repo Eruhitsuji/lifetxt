@@ -1264,7 +1264,7 @@ traceability:
       capability_id: cap-workspace-resolution-safety
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/144
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/145
       changed_files_or_scope:
         - Add ticket_event and time_entry to workspace.py's KNOWN_ROLES, purely additive (no membership in any read-only/hidden/non-write-target role set)
         - Update the role enum in lifetxt/schema_extensions_v5.py's generated source-schema fragment (both branches) and regenerate the checked-in dist/schemas/config-v1.schema.json to match

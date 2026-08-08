@@ -1380,7 +1380,7 @@ traceability:
       capability_id: cap-remote-ticket-history-privacy
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/150
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/151
       changed_files_or_scope:
         - Add a one-hop parent-visibility-inheritance rule to lifetxt/remote_backend.py's _access_for_item for record:ticket_event/record:time_entry Notes
         - Thread config into _visible_items so the id index used to resolve parent: honors the project's configured id_key

@@ -65,7 +65,7 @@ tools.
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
-| `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` |
+| `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, and `replaced_by:` |
 | `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true` |
 | `GET` | `/api/blockers` | Return the transitive blocker chain for `?id=ID` (levels 1..N, `depth` caps traversal, default 5) |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
@@ -280,7 +280,7 @@ The browser GUI supports:
   New record, Quick add, and the command palette; when filters hide all
   records, it offers Clear filters and New record.
 - Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
-  `blocks:`, and `related:`
+  `blocks:`, `related:`, `duplicate_of:`, and `replaced_by:`
 - Rendering sanitized Markdown title/body/note previews
 - Highlighting search matches in titles, details, and body/note previews
 - Creating new items in a centered record editor modal (`＋ New` or `n`) with

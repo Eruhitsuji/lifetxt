@@ -1189,3 +1189,114 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-next-actions-resource
+    name: Remote next-actions read resource
+    summary: >-
+      Expose lifetxt.nextaction's shared "what's actionable" definition (already
+      used by CLI next, TUI /next, and MCP get_next_actions) as a permission-aware
+      Remote Safe Mode read resource, so a remote client sharing one server does not
+      have to reimplement it against raw item/ticket data.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-next-actions-resource
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/resources/next
+      - lifetxt.remote_backend.read_resource (resource="next")
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteNextActionsResourceTests (5 tests)
+      - "an item blocked by a dependency the requesting principal cannot see is confirmed excluded, not promoted to actionable, matching cap-remote-ticket-history-privacy's established 'don't guess toward exposure' discipline"
+      - python -m unittest tests.test_remote_backend_v20 -> Ran 32 tests, OK
+      - python -m unittest tests.test_surface_runtime tests.test_remote_compatibility_v21 -> Ran 38 tests, OK (drift gates unaffected)
+      - python -m unittest discover -p "test_remote*.py" -> Ran 130 tests, OK
+      - "live: real lifetxt serve process, GET /api/remote/v1/resources/next with a real bearer token, returns only the actionable item; limit filtering and bound rejection both verified over real HTTP"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/169
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/170
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered a next-actions Remote resource before
+      this change. Reuses lifetxt.nextaction.next_action_items and the existing
+      _visible_items/_item_rows pipeline unmodified -- purely a new registration in
+      remote_backend.py's resource catalog, same shape as cap-remote-tickets-pagination
+      and cap-remote-ticket-detail-view. Distilled from a cc-sdd spec at
+      .kiro/specs/remote-next-actions-resource/. A companion capability-negotiation
+      task (publishing package/config-schema versions) was scoped in the same batch
+      but found, on empirical verification against a real capability() call, to
+      already be fully covered by cap-remote-compatibility-negotiation's
+      server.version/contracts.configuration fields -- closed without implementation
+      (see issue #168) rather than duplicating existing data under new field names.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-single-worker-guard
+    name: Remote Safe Mode single-worker deployment guard
+    summary: >-
+      Refuse to start Remote Safe Mode when the process detects a common
+      multi-worker deployment signal (WEB_CONCURRENCY > 1), since its rate limiter
+      and browser-session store are both process-local state with no shared
+      backend, with an explicit off-by-default operator override.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-single-worker-guard
+    implementation_locations:
+      - lifetxt/remote_sessions.py
+      - lifetxt/remote_web.py
+      - lifetxt/config_registry.py
+      - tests/test_remote_sessions_v20.py
+      - tests/test_remote_web_v20.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+      - .ai/project/changes/remote-single-worker-guard/
+      - .kiro/specs/remote-single-worker-guard/
+    public_interfaces:
+      - lifetxt.remote_sessions.validate_single_worker_deployment
+      - config key remote.allow_multi_worker
+      - lifetxt config explain remote.allow_multi_worker
+      - "error code: REMOTE_MULTI_WORKER_UNSUPPORTED"
+    tests_or_evidence:
+      - tests/test_remote_sessions_v20.py SingleWorkerGuardTests (5 tests)
+      - tests/test_remote_web_v20.py SingleWorkerGuardWiringTests (2 tests, exercising create_app() itself, not just the standalone function)
+      - python -m unittest discover -p "test_remote*.py" -> Ran 137 tests, OK
+      - "live: real lifetxt serve process with remote.enabled=true and WEB_CONCURRENCY=4 set refuses to start, naming the exact cause; starts normally without the signal; the guard itself does not raise when remote.allow_multi_worker=true is set"
+      - "found and confirmed, via live verification, that uvicorn's own Config independently reads WEB_CONCURRENCY and cannot honor it against an in-memory app object regardless of this guard -- reproduced with remote.enabled entirely absent to confirm it is pre-existing and unrelated; filed separately as #172, not silently absorbed into this change"
+      - lifetxt config explain remote.allow_multi_worker -> renders correctly
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts -> 255 files already formatted
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/171
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/173
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered deployment-topology safety for Remote
+      Safe Mode's process-local state before this change. Security/High assurance
+      per ASSURANCE_LEVELS.md's escalation rules (authentication/authorization-
+      adjacent); full change package at
+      .ai/project/changes/remote-single-worker-guard/ and cc-sdd spec at
+      .kiro/specs/remote-single-worker-guard/, both available for independent
+      review before merge to main, per repository owner instruction that this
+      category of item needed individual design confirmation. Detection is
+      explicitly documented as best-effort (the WEB_CONCURRENCY signal only, not
+      comprehensive multi-worker topology detection) rather than implied to be a
+      guarantee. Scoped to the "explicit single-worker enforcement" alternative
+      todo.md's own text offers, not the larger durable multi-worker backend
+      effort, which remains open for a future spec.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

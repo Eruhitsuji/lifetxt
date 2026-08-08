@@ -184,5 +184,49 @@ class RemoteWebV20Tests(unittest.TestCase):
         self.assertIn("Tokens are exchanged once", page.text)
 
 
+@unittest.skipIf(TestClient is None, "web extras unavailable")
+class SingleWorkerGuardWiringTests(unittest.TestCase):
+    """Covers #171: the guard fires through the real create_app(), not just
+    the standalone validate_single_worker_deployment function."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, "life.txt")
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.write("[ ] T Item id:I-1 project:web visibility:shared\n")
+        self.config = {
+            "remote": {"enabled": True, "allow_loopback_http": True},
+        }
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_create_app_raises_under_a_detected_multi_worker_deployment(self):
+        from lifetxt.remote_access import RemoteAccessError
+
+        os.environ["WEB_CONCURRENCY"] = "3"
+        try:
+            with self.assertRaises(RemoteAccessError) as caught:
+                create_app(
+                    paths=[self.path],
+                    writable_path=self.path,
+                    config=self.config,
+                    read_only=True,
+                )
+            self.assertEqual("REMOTE_MULTI_WORKER_UNSUPPORTED", caught.exception.code)
+        finally:
+            os.environ.pop("WEB_CONCURRENCY", None)
+
+    def test_create_app_succeeds_without_the_multi_worker_signal(self):
+        os.environ.pop("WEB_CONCURRENCY", None)
+        app = create_app(
+            paths=[self.path],
+            writable_path=self.path,
+            config=self.config,
+            read_only=True,
+        )
+        self.assertTrue(app.state.remote_enabled)
+
+
 if __name__ == "__main__":
     unittest.main()

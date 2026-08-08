@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: remote-single-worker-guard
+  title: Refuse to start Remote Safe Mode under a detected multi-worker deployment
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/171
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/173
+  base_commit: def6e708654b422e08b20b37807b8d8748f0f7fc
+  target_release: null
+
+scope:
+  in_scope:
+    - Add lifetxt.remote_sessions.validate_single_worker_deployment(config), which refuses to proceed when remote.enabled is true, the WEB_CONCURRENCY environment variable parses to an integer greater than 1, and remote.allow_multi_worker is not set.
+    - Wire the check into remote_web.py's create_app(), beside the existing validate_session_configuration call.
+    - Register remote.allow_multi_worker (boolean, default false) in config_registry.py.
+    - Document the process-local limitation, the WEB_CONCURRENCY signal, and the override in docs/en/remote.md and docs/ja/remote.md, stating plainly that detection is best-effort.
+    - Unit and integration tests covering every requirement branch (raise, override, disabled, absent/malformed signal, <=1 workers).
+  out_of_scope:
+    - Building a shared/durable rate-limit or session backend (a separate, larger, future spec per todo.md lines 72/157).
+    - Detecting every possible multi-worker deployment topology (Kubernetes replicas, multiple independent lifetxt serve processes behind a load balancer) -- out of reach for an in-process environment-variable check and not claimed to be covered.
+    - Any change to lifetxt serve's CLI surface (it already has no --workers flag and cannot express multi-worker deployment).
+    - Any change to RateLimiter or BrowserSessionStore's own implementations.
+  write_scope:
+    - lifetxt/remote_sessions.py
+    - lifetxt/remote_web.py
+    - lifetxt/config_registry.py
+    - tests/test_remote_compatibility_v21.py
+    - docs/en/remote.md
+    - docs/ja/remote.md
+  forbidden_scope:
+    - lifetxt/remote_access.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (authentication/authorization-adjacent startup behavior affects every Remote Safe Mode deployment)

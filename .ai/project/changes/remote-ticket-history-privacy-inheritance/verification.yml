@@ -7,7 +7,7 @@ verification:
       requirement_ids:
         - req-remote-ticket-history-privacy-inheritance
       result: 'Ran 27 tests -- OK (includes 3 new RemoteTicketHistoryPrivacyTests)'
-      commit: pending
+      commit: cac9cc39dd997222ca2c8dea4351b7bd54799cb7
       executed_at: '2026-08-08'
       status: passed
     - type: unit
@@ -15,21 +15,21 @@ verification:
       requirement_ids:
         - req-remote-ticket-history-privacy-inheritance
       result: 'Ran 125 tests -- OK'
-      commit: pending
+      commit: cac9cc39dd997222ca2c8dea4351b7bd54799cb7
       executed_at: '2026-08-08'
       status: passed
     - type: format
       command: ruff format --check lifetxt tests scripts
       requirement_ids: []
       result: 254 files already formatted
-      commit: pending
+      commit: cac9cc39dd997222ca2c8dea4351b7bd54799cb7
       executed_at: '2026-08-08'
       status: passed
     - type: lint
       command: ruff check lifetxt tests scripts
       requirement_ids: []
       result: All checks passed!
-      commit: pending
+      commit: cac9cc39dd997222ca2c8dea4351b7bd54799cb7
       executed_at: '2026-08-08'
       status: passed
 

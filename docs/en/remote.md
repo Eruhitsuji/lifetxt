@@ -12,6 +12,12 @@ Non-loopback access requires HTTPS. `remote.allow_loopback_http` exists only for
 
 The audit sink must not be the authoritative life.txt input or writable file. Remote startup fails when `remote.audit_log` aliases an authoritative source.
 
+### Single-worker deployment
+
+Remote Safe Mode's per-principal rate limiting and its opaque browser-session store are both process-local, in-memory state with no shared backend. `lifetxt serve` itself has no `--workers` flag and can only ever launch one process. If the ASGI application is instead launched directly by an external multi-worker manager (gunicorn, `uvicorn --workers N`, or a PaaS platform's default multi-worker mode), a request landing on a different worker than the one that authenticated or rate-limited it sees a different counter and a different session table -- silently weakening login throttling and producing inconsistent session behavior.
+
+When `remote.enabled` is true, the server refuses to start if it detects the `WEB_CONCURRENCY` environment variable (a de facto standard several platforms and process managers set for this purpose) set above `1`. This detection is best-effort: it does not cover every possible multi-worker deployment topology, and its absence is not a guarantee of a safe single-worker deployment. Set `remote.allow_multi_worker: true` to start anyway, accepting reduced throttling and session consistency across workers.
+
 ## Protocol negotiation
 
 Remote protocol version 1 remains the compatibility default when no version header is sent. New clients should request version 2:

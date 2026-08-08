@@ -12,6 +12,12 @@ loopback以外ではHTTPSが必須です。`remote.allow_loopback_http`はロー
 
 `remote.audit_log`はauthoritativeなlife.txt input／writable fileと同じpathにできません。同一pathの場合はRemote serverの起動を拒否します。
 
+### Single-worker deployment
+
+Remote Safe Modeのprincipal単位rate limitingとopaqueなbrowser sessionストアは、いずれもprocess-localなin-memory stateで、共有backendを持ちません。`lifetxt serve`自体には`--workers`optionがなく、単一processでしか起動できません。ASGI applicationを外部のmulti-worker manager（gunicorn、`uvicorn --workers N`、あるいはPaaSの既定multi-worker mode）から直接起動した場合、認証やrate limitを行ったworkerとは別のworkerがrequestを受け取ると、そのworkerは別のcounter・別のsession tableを参照することになり、login throttlingが静かに弱まり、session挙動も不整合になります。
+
+`remote.enabled`がtrueのとき、サーバーは`WEB_CONCURRENCY`環境変数（複数のplatform・process managerがこの目的で設定するde facto標準）が`1`を超えて検出された場合、起動を拒否します。この検出はbest-effortであり、すべてのmulti-worker deployment構成を網羅するものではなく、検出されないことがsingle-worker deploymentの保証にはなりません。`remote.allow_multi_worker: true`を設定すると、worker間でのthrottling・session整合性の低下を許容した上でそのまま起動します。
+
 ## Protocol negotiation
 
 version headerを送らない既存clientには、互換性のためRemote protocol version 1を使用します。新しいclientはversion 2を要求してください。

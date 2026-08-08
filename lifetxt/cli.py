@@ -924,6 +924,94 @@ def build_parser():
     )
     proj_add.set_defaults(func=command_project_add)
 
+    proj_archive = project_subparsers.add_parser(
+        "archive",
+        help="Move a project's done/canceled records to the workspace's archive source.",
+    )
+    proj_archive.add_argument("name", help="Project name.")
+    _add_input_paths(proj_archive)
+    proj_archive.add_argument(
+        "--dest",
+        help="Archive file to append items to. Defaults to the active workspace's "
+        "role: archive source.",
+    )
+    proj_archive.add_argument(
+        "--revision",
+        action="append",
+        default=[],
+        metavar="PATH=SHA256",
+        help="Expected revision for a source or destination path. Can be repeated.",
+    )
+    proj_archive.add_argument(
+        "--status",
+        action="append",
+        dest="statuses",
+        metavar="STATUS",
+        help=(
+            "Only archive items with this status. Can be repeated or comma-separated. "
+            "Defaults to done,canceled."
+        ),
+    )
+    proj_archive.add_argument(
+        "--before",
+        metavar="DATE",
+        help="Only archive items whose done: or updated: date is before DATE (YYYY-MM-DD).",
+    )
+    proj_archive.add_argument(
+        "--max-items",
+        type=int,
+        dest="max_items",
+        metavar="N",
+        help="Maximum number of items to archive.",
+    )
+    proj_archive.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="Show which items would be archived without writing any changes.",
+    )
+    proj_archive.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy items to the archive without removing them from the source file.",
+    )
+    proj_archive.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip the confirmation prompt.",
+    )
+    proj_archive.add_argument(
+        "--orphan-children",
+        dest="orphan_children",
+        choices=("block", "adopt", "promote"),
+        default="block",
+        help=(
+            "How to handle open children of archived parents: "
+            "block (default) refuses to archive, "
+            "adopt archives open children together (marking them [-]), "
+            "promote archives the parent only and removes parent: from orphaned children."
+        ),
+    )
+    proj_archive.add_argument(
+        "--preserve-structure",
+        action="store_true",
+        dest="preserve_structure",
+        help=(
+            "Copy comment lines and blank lines verbatim to both the archive file "
+            "and the source remainder so section headings remain intact."
+        ),
+    )
+    proj_archive.add_argument(
+        "--block-on-external-refs",
+        action="store_true",
+        dest="block_on_external_refs",
+        help=(
+            "Treat cross-file or intra-file references to archived items as errors "
+            "instead of warnings. Requires --dry-run or a live run to check."
+        ),
+    )
+    proj_archive.set_defaults(func=command_project_archive)
+
     portfolio_command = subparsers.add_parser(
         "portfolio", help="Compare projects by state, progress, risk, and workload."
     )
@@ -4822,6 +4910,14 @@ def command_archive(args):
     except ValueError as exc:
         raise ValueError("Invalid --status: %s" % exc)
 
+    project_filter = getattr(args, "project_filter", None)
+    if project_filter:
+        candidates = [
+            item
+            for item in candidates
+            if project_filter in item.details.get("project", [])
+        ]
+
     if before_date is not None:
         candidates = [
             item for item in candidates if _archive_item_date_before(item, before_date)
@@ -4881,6 +4977,24 @@ def command_archive(args):
                         already.add(id(child))
 
         # promote: archive parent only; children lose parent: in source (handled below)
+
+    if project_filter:
+        # Ticket history (record:ticket_event / record:time_entry Notes) has no
+        # "done"/"canceled" status of its own, so it never matches the status
+        # filter above; follow it unconditionally via parent: so a ticket's
+        # history moves with it instead of being left behind as a dangling log.
+        history_ids = {id(item) for item in candidates}
+        for item in all_items:
+            if id(item) in history_ids:
+                continue
+            markers = item.details.get("record", [])
+            if not markers or markers[0] not in ("ticket_event", "time_entry"):
+                continue
+            if any(
+                str(value) in candidate_ids for value in item.details.get("parent", [])
+            ):
+                candidates.append(item)
+                history_ids.add(id(item))
 
     multi_source = len(paths) > 1
     sys.stdout.write(
@@ -9696,6 +9810,74 @@ def command_project_add(args):
     else:
         line = build_meeting_line(args.project, args.title, on=args.on, at=args.at)
     return _emit_project_line(args, line)
+
+
+def command_project_archive(args):
+    """Move one project's records to the workspace's configured archive source.
+
+    Reuses ``command_archive``'s candidate filtering, external-reference
+    warnings, and transactional multi-file write unchanged; this only adds a
+    ``project:`` filter and workspace-based source/destination resolution so
+    the write target is never outside the resolved source manifest.
+    """
+    config = _config(args)
+    from .workspace import resolve_workspace, workspace_resolution_active
+
+    workspace_name = getattr(args, "workspace", None)
+    archive_paths = []
+    scan_paths = None
+    if workspace_resolution_active(config, workspace_name):
+        resolution = resolve_workspace(config, workspace_name)
+        archive_paths = resolution["archive_paths"]
+        # Never scan the archive destination itself as a source: it would
+        # self-include (command_archive rejects that) or, worse, be read
+        # before it exists.
+        archive_path_set = {os.path.normcase(path) for path in archive_paths}
+        scan_paths = [
+            path
+            for path in resolution["input_paths"]
+            if os.path.normcase(path) not in archive_path_set
+        ]
+
+    dest = getattr(args, "dest", None)
+    if not dest:
+        if not archive_paths:
+            raise ValueError(
+                "No archive-role workspace source is configured. Add a source "
+                "with role: archive to the active workspace, or pass --dest "
+                "explicitly."
+            )
+        dest = archive_paths[0]
+
+    explicit_paths = getattr(args, "paths", None)
+    if explicit_paths:
+        paths = _normalize_paths(explicit_paths, config, stdin_when_empty=False)
+    elif scan_paths:
+        paths = scan_paths
+    else:
+        paths = _normalize_paths(None, config, stdin_when_empty=False)
+    if not paths:
+        raise ValueError("No source files specified.")
+
+    archive_args = argparse.Namespace(
+        paths=paths,
+        dest=dest,
+        revision=getattr(args, "revision", None) or [],
+        statuses=getattr(args, "statuses", None),
+        before=getattr(args, "before", None),
+        max_items=getattr(args, "max_items", None),
+        dry_run=getattr(args, "dry_run", False),
+        copy=getattr(args, "copy", False),
+        yes=getattr(args, "yes", False),
+        orphan_children=getattr(args, "orphan_children", "block"),
+        preserve_structure=getattr(args, "preserve_structure", False),
+        block_on_external_refs=getattr(args, "block_on_external_refs", False),
+        project_filter=args.name,
+        config=getattr(args, "config", None),
+        config_data=config,
+        workspace=workspace_name,
+    )
+    return command_archive(archive_args)
 
 
 def _emit_project_line(args, line):

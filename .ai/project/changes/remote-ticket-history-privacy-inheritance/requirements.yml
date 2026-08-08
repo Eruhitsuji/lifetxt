@@ -1,0 +1,23 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-ticket-history-privacy-inheritance
+    kind: ADDED
+    statement: >-
+      A record:ticket_event or record:time_entry Note is evaluated for Remote
+      Safe Mode visibility using its parent ticket's project/visibility/owner/
+      groups when the parent reference resolves unambiguously, instead of the
+      Note's own (always-absent) visibility fields.
+    acceptance_criteria:
+      - "When a ticket has visibility:private (or any visibility a requesting principal cannot see), that ticket's record:ticket_event and record:time_entry Notes are excluded from every Remote Safe Mode resource built from the filtered item set (items, ticket-detail, ticket-report, search, and any future resource that reads the same filtered list)."
+      - "When a requesting principal can see the parent ticket, that ticket's event/time-entry history remains visible to the same principal (no regression)."
+      - "When a Note's parent: id does not resolve to exactly one item in the read item set (missing id, or an id shared by more than one item), the Note is evaluated using its own default access tuple (visibility=\"shared\", no owner) -- never guessing toward exposure and never guessing toward over-restriction."
+      - "A ticket's own visibility/owner/groups/project evaluation is unchanged by this requirement (only record:ticket_event/record:time_entry Notes gain the inheritance rule)."
+    constraints:
+      - Must not modify lifetxt.remote_access.can_access's permission-decision logic.
+      - Must not modify how lifetxt.ticket_activity.build_ticket_event / build_time_entry construct their Notes.
+      - Must resolve the parent id using the same configured id_key the rest of the read path uses (lifetxt.ids.id_key_from_config), not a hardcoded "id" key.
+      - Must be a single, non-recursive hop from history Note to parent ticket (a history Note's parent is documented to always be a ticket, never another history Note); must not recurse further even if a malformed file creates a chain, to bound worst-case cost.
+    owner: Eruhitsuji
+
+open_questions: []

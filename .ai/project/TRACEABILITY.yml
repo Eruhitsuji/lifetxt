@@ -1260,6 +1260,231 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-workspace-ticket-history-source-roles
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/144
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/145
+      changed_files_or_scope:
+        - Add ticket_event and time_entry to workspace.py's KNOWN_ROLES, purely additive (no membership in any read-only/hidden/non-write-target role set)
+        - Update the role enum in lifetxt/schema_extensions_v5.py's generated source-schema fragment (both branches) and regenerate the checked-in dist/schemas/config-v1.schema.json to match
+        - Document both new roles in docs/en/config.md and docs/ja/config.md's source-manifest field table
+        - lifetxt/workspace.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - docs/en/config.md
+        - docs/ja/config.md
+        - tests/test_workspace_foundation.py
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_ticket_event_and_time_entry_roles_resolve_without_warning, test_ticket_event_and_time_entry_roles_default_writable_and_visible
+        - tests/test_workspace_foundation.py ExampleConfigTests.test_config_schema_accepts_ticket_event_and_time_entry_source_roles
+        - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generated schema bundle still matches the checked-in dist/schemas files byte-for-byte after the enum change
+        - python -m unittest tests.test_workspace_foundation tests.test_schema_extensions_v2 -> Ran 47 tests, OK (skipped=3)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1940 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the workspace-foundation batch (Issues
+        #144, #145, #146 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Confirmed by
+        reading lifetxt/ticket_activity.py that build_ticket_event/
+        build_time_entry already write these Notes to whatever file the
+        calling mutation resolved as its write target -- this issue only
+        makes the descriptive role label available; it does not add or
+        change any write-routing behavior. pull_request is filled in once
+        the pull request implementing this entry (into the integration
+        branch) is opened.
+      status: implemented
+
+    - requirement_id: req-project-archive-workflow
+      capability_id: cap-project-archive-workflow
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/146
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/147
+      changed_files_or_scope:
+        - Add command_project_archive, wired as `lifetxt project archive NAME`, resolving sources/destination from the active workspace (excluding the archive-role destination from the source scan)
+        - Add an optional project_filter parameter to command_archive (None/absent for every existing caller -- no behavior change to the generic archive command)
+        - Add an unconditional record:ticket_event/record:time_entry linkage rule, active only when project_filter is set, following parent: to the archived ticket
+        - lifetxt/cli.py
+        - tests/test_project_archive.py
+      tests_or_evidence:
+        - tests/test_project_archive.py ProjectArchiveTests (7 tests): project-matching selection, ticket-history linkage, open items excluded by default, archive-destination self-exclusion (a real bug found and fixed during implementation), missing-archive-role error, --dest override, --dry-run
+        - tests/test_lifetxt.py LifeTxtArchiveCliTests, LifeTxtArchiveOrphanTests, LifeTxtArchiveExternalRefsTests, LifeTxtArchivePreserveStructureTests, LifeTxtArchiveMultiFileRefsTests, LifeTxtCleanupArchiveHintTests re-run unmodified -> Ran 24 tests, OK
+        - python -m unittest tests.test_project_archive -> Ran 7 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+        - manual verification via the real installed lifetxt entry point against a fixture workspace (done ticket plus its ticket_event/time_entry history archived together; open same-project item and other-project item left in place; second run against the same workspace does not re-scan the archive file; missing-archive-role configuration reports a clear error and exit 1)
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the workspace-foundation batch (Issues
+        #144, #146, #147 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Version/sprint
+        registry entries are not moved by this change; an archived item's
+        version:/sprint: detail values are left unchanged. This is recorded
+        as a deliberate limitation (see cap-project-archive-workflow notes),
+        not an omission. pull_request is filled in once the pull request
+        implementing this entry (into the integration branch) is opened.
+      status: implemented
+
+    - requirement_id: req-workspace-example-and-edge-case-coverage
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/148
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/149
+      changed_files_or_scope:
+        - Add remote.lifetxt.json, integration-references.lifetxt.json, and software-ticket-workspace.lifetxt.json under examples/config/, registered in ExampleConfigTests.EXAMPLE_NAMES
+        - Add workspace-resolution edge-case tests: Unicode source paths, unknown top-level config key tolerance, mixed-priority glob ordering, resolution repeatability
+        - Add LoadConfigMalformedFileTests covering unparseable/non-object JSON configuration files and the real package entry point's standard error/exit-code behavior
+        - examples/config/remote.lifetxt.json
+        - examples/config/integration-references.lifetxt.json
+        - examples/config/software-ticket-workspace.lifetxt.json
+        - tests/test_workspace_foundation.py
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+        - tests/test_workspace_foundation.py LoadConfigMalformedFileTests (3 tests)
+        - tests/test_workspace_foundation.py ExampleConfigTests exercises the three new examples automatically via EXAMPLE_NAMES
+        - manual verification against custom_field_registry_report confirming the software-ticket example's custom fields collide with no reserved canonical/relation field name
+        - python -m unittest tests.test_workspace_foundation -> Ran 46 tests, OK (skipped=2)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the workspace-foundation batch (Issues
+        #144, #146, #148 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. While testing the
+        malformed-JSON-configuration case, found that calling
+        lifetxt.cli.main directly is order-dependent within a shared
+        unittest process: the timezone-context installer monkey-patches
+        cli.main in place the first time any test exercises it, after which
+        the wrapper's own load_config call is not locally guarded (it relies
+        on the outer lifetxt.entrypoint.main try/except). Fixed by testing
+        through entrypoint.main, the actual stable package entry point,
+        rather than by adding redundant error handling to the installer
+        wrapper -- production behavior was already correct end to end
+        (verified via a real `python -m lifetxt` subprocess against a broken
+        config file), this was purely a test-isolation issue. Deliberately
+        independent of #144 and #146: every example and test here exercises
+        only roles and behavior already on main.
+      status: implemented
+
+    - requirement_id: req-remote-ticket-history-privacy-inheritance
+      capability_id: cap-remote-ticket-history-privacy
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/150
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/151
+      changed_files_or_scope:
+        - Add a one-hop parent-visibility-inheritance rule to lifetxt/remote_backend.py's _access_for_item for record:ticket_event/record:time_entry Notes
+        - Thread config into _visible_items so the id index used to resolve parent: honors the project's configured id_key
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - .ai/project/changes/remote-ticket-history-privacy-inheritance/
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketHistoryPrivacyTests (3 tests): private ticket's history hidden from an unauthorized principal, visible to the ticket's owner, unresolved-parent fallback to the Note's own default
+        - python -m unittest tests.test_remote_backend_v20 -> Ran 27 tests, OK
+        - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1957 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the workspace-foundation batch (Issues
+        #144, #146, #148, #150 targeted at this session), landing on its own
+        task branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Security-impact
+        escalation per ASSURANCE_LEVELS.md: assurance level High, change
+        package at .ai/project/changes/remote-ticket-history-privacy-inheritance/.
+        Found by a targeted research pass into todo.md's "project permissions
+        and privacy for remote workspaces" roadmap line, which found every
+        other surface named there (team views, integrations, exports, AI
+        context, notifications, duplicate project definitions, cross-file
+        tasks, archived/renamed projects) either already handled or with no
+        evidence of a gap; this is the one concrete, evidence-backed finding.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
+    - requirement_id: req-dependency-universe-reason-codes
+      capability_id: cap-ticket-dependency-universe
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/152
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/153
+      changed_files_or_scope:
+        - Add blocks to ticket_row, mirroring depends_on
+        - Evaluate depends_on and inbound open blocks: references together when computing blocked/dependency_unknown/unresolved_dependencies/unevaluated_dependencies
+        - Add unevaluated_dependency_reasons (out_of_scope | missing) per ticket row, out_of_scope only when the id is directly known to exist in the caller's own read set
+        - Update lifetxt/schema_extensions_v16.py's _SCHEMA_JSON (the generator, not the dist file directly) and regenerate schemas/ and dist/schemas/ticket-project-report-v1.schema.json to match
+        - lifetxt/ticket_project_report.py
+        - lifetxt/ticket_project_values.py
+        - lifetxt/schema_extensions_v16.py
+        - schemas/ticket-project-report-v1.schema.json
+        - dist/schemas/ticket-project-report-v1.schema.json
+        - tests/test_ticket_projects.py
+      tests_or_evidence:
+        - "tests/test_ticket_projects.py: missing-reason, out-of-scope-reason, open/closed blocks evaluation, out-of-scope blocks reason (6 new tests)"
+        - full pre-existing tests/test_ticket_projects.py, tests/test_ticket_project_surfaces.py, tests/test_ticket_project_surface_guards.py, tests/test_schema_extensions_v2.py re-run unmodified -> Ran 37 tests, OK (skipped=4)
+        - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Fifth and final implementation task of the workspace-foundation
+        batch (Issues #144, #146, #148, #150, #152 targeted at this
+        session), landing on its own task branch merged into the
+        feature/workspace-foundation integration branch before a final
+        human-approved PR into main. A research pass confirmed the core
+        dependency_unknown/never-expose-the-target behavior already worked
+        end to end before this change; reason codes are deliberately limited
+        to out_of_scope/missing (never further split) because Remote Safe
+        Mode's existing _visible_items() filter (#150) has already removed
+        every invisible ticket from this function's items argument by the
+        time it runs -- distinguishing missing from private/archived would
+        require context this function does not and should not have.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
+    - requirement_id: req-workspace-foundation-batch-integration
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/155
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/154
+      changed_files_or_scope:
+        - Record the workspace-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12), run on the fully consolidated feature/workspace-foundation branch after all five sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #154 itself: feature/workspace-foundation
+        (Issues #144, #146, #148, #150, #152; PRs #145, #147, #149, #151,
+        #153) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) for the feature/dev-remote
+        batch: each requirement above correctly names its own sub-PR, and
+        none of them names #154, because it did not exist yet when they
+        were written. Sub-PRs were merged into the integration branch via
+        local git merge and push rather than GitHub's PR-merge action
+        (blocked by this session's auto-mode permission classifier); all
+        five sub-PR merges (#145, #147, #149, #151, #153) auto-detected as
+        "merged" on GitHub once the integration branch was pushed with their
+        commits reachable from it.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

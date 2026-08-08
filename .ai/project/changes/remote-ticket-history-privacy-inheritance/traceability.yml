@@ -1,0 +1,16 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-remote-ticket-history-privacy-inheritance
+    capability_id: cap-remote-ticket-history-privacy
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/150
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/151
+    tests_or_evidence:
+      - "tests/test_remote_backend_v20.py RemoteTicketHistoryPrivacyTests: private ticket's event/time-entry history hidden from a principal without access, visible to the ticket's owner, and an unresolved parent: reference falls back to the Note's own default rather than being guessed either way"
+      - "full existing tests/test_remote_backend_v20.py suite (RemoteReadBackendTests, RemoteTicketDetailTests, RemoteTicketsPaginationTests) re-run unmodified -> Ran 27 tests, OK"
+      - "full test_remote*.py suite re-run unmodified -> Ran 125 tests, OK"
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

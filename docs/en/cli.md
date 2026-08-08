@@ -613,8 +613,10 @@ Options:
 | `--pretty` | Pretty-print JSON |
 
 `check` reports missing references (`W215`), self references (`W216`),
-`parent:` cycles (`W217`), ambiguous references (`W218`), and completed items
-whose `depends_on:` prerequisite is still open (`W224`).
+`parent:` cycles (`W217`), ambiguous references (`W218`), completed items
+whose `depends_on:` prerequisite is still open (`W224`), combined
+`depends_on:`/`blocks:` cycles (`W227`), `duplicate_of:` cycles (`W228`),
+and `replaced_by:` cycles (`W229`).
 For duration fields such as `est:` and `elapsed:`, `check` reports
 non-canonical but parseable values as `W222` and unrecognized values such as
 `elapsed:1d` as `W226`.

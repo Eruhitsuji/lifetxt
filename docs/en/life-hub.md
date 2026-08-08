@@ -49,7 +49,8 @@ MCP: `get_areas`.
 ## Backlinks
 
 `backlinks` answers "what points at this item?" — the incoming half of the link
-graph, grouped by relation (`parent`, `ref`, `depends_on`, `blocks`, `related`):
+graph, grouped by relation (`parent`, `ref`, `depends_on`, `blocks`, `related`,
+`duplicate_of`, `replaced_by`):
 
 ```console
 $ lifetxt backlinks T-1

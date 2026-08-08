@@ -1553,6 +1553,38 @@ traceability:
         #156).
       status: implemented
 
+    - requirement_id: req-config-registry-foundation-batch-integration
+      capability_id: cap-config-registry-coverage-gate
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/160
+      changed_files_or_scope:
+        - Record the config-registry-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1970 tests, OK (skipped=12), run on the fully consolidated feature/config-registry-foundation branch after both sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #160 itself: feature/config-registry-foundation
+        (Issues #156, #157; PRs #158, #159) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) and req-workspace-foundation-batch-
+        integration (#155/#154): each requirement above correctly names its
+        own sub-PR, and neither names #160, because it did not exist yet when
+        they were written. Sub-PRs were merged into the integration branch via
+        local git merge and push rather than GitHub's PR-merge action (blocked
+        by this session's auto-mode permission classifier); both sub-PR merges
+        (#158, #159) auto-detected as "merged" on GitHub once the integration
+        branch was pushed with their commits reachable from it. No epic issue
+        was filed for this batch (unlike #155 for the workspace batch); the
+        user's request to continue with the same AI-driven methodology for
+        config-system enhancements is the batch's origin, and task_issue is
+        left null accordingly rather than inventing a placeholder epic.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

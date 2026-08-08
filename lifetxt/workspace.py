@@ -146,6 +146,32 @@ def default_workspace_name(config):
     return "default"
 
 
+def workspace_resolution_active(config, workspace_name=None):
+    """True when a named workspace, explicit or configured default, applies.
+
+    An explicit ``workspace_name`` always activates resolution. Otherwise
+    resolution activates only when the configuration declares a non-empty
+    ``workspaces`` mapping or a ``default_workspace``; a legacy top-level
+    ``paths`` / ``write_file`` configuration is left untouched.
+    """
+    if workspace_name:
+        return True
+    if not isinstance(config, dict):
+        return False
+    return bool(config.get("workspaces") or config.get("default_workspace"))
+
+
+def active_workspace_name(config):
+    """Read back the workspace name resolution injected into ``config``.
+
+    Returns ``None`` when ``config`` is not a dict or no workspace was
+    resolved for it (legacy top-level ``paths`` / ``write_file``).
+    """
+    if not isinstance(config, dict):
+        return None
+    return config.get("_active_workspace") or None
+
+
 def normalize_source(entry, base_dir):
     """Normalize one raw source entry into a typed manifest record."""
     if isinstance(entry, str):

@@ -1207,6 +1207,59 @@ traceability:
         once the pull request implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-workspace-aware-cli-timezone-context
+      capability_id: cap-workspace-aware-timezone-context
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/142
+      pull_request: null
+      changed_files_or_scope:
+        - Add workspace_resolution_active and active_workspace_name public accessors to lifetxt/workspace.py; delegate cli.py's private predicate to the new public one
+        - Add cli_timezone_candidate_paths to lifetxt/timezone_policy.py as the shared, unit-tested candidate-file resolver
+        - Wire --workspace extraction and the new resolver into both lifetxt/runtime_safety_v2.py install_cli_timezone_context and its active lifetxt/safety_compat_v2.py replacement
+        - Show the active workspace name in lifetxt tui's curses header (lifetxt/tui_app.py) and the plain-text dashboard fallback (lifetxt/tui.py)
+        - lifetxt/workspace.py
+        - lifetxt/cli.py
+        - lifetxt/timezone_policy.py
+        - lifetxt/runtime_safety_v2.py
+        - lifetxt/safety_compat_v2.py
+        - lifetxt/tui_app.py
+        - lifetxt/tui.py
+        - tests/test_workspace_foundation.py
+        - tests/test_timezone_policy_v2.py
+        - tests/test_cli_timezone_context_v2.py
+        - tests/test_cui_extensions.py
+        - .kiro/specs/tui-workspace-timezone-context/
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceResolutionActiveTests, ActiveWorkspaceNameTests
+        - tests/test_timezone_policy_v2.py CliTimezoneCandidatePathsTests (legacy configuration unchanged, explicit workspace priority order, implicit default workspace, unknown workspace falls back instead of raising, existing-file positional argument precedence preserved)
+        - tests/test_cli_timezone_context_v2.py CliTimezoneContextWorkspaceIntegrationTests (the actually-installed bootstrap closure resolves a workspace-selected timezone: directive; legacy configurations unaffected; an unknown --workspace still produces the CLI's own "Unknown workspace" error and exit 1, not a crash)
+        - tests/test_cli_timezone_context_v2.py TuiAndNotifierInheritAmbientTimezoneContextTests (TUI /done now timestamp and notifier notification_records both reflect the ambient timezone_context with no separate TUI/notifier-side timezone code)
+        - tests/test_cui_extensions.py header regression tests for both the curses header and the plain dashboard header (workspace label shown when resolved, absent otherwise, matching prior output byte-for-byte)
+        - python -m unittest tests.test_cli_timezone_context_v2 tests.test_cui_extensions tests.test_timezone_policy_v2 tests.test_workspace_foundation -> Ran 210 tests, OK (skipped=3)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1937 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 253 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - manual verification via the real installed lifetxt entry point against fixture workspace/legacy configs, confirming Asia/Tokyo resolves from a workspace source's #!timezone: directive, a legacy configuration is unaffected, an unknown --workspace still errors with exit 1, and both TUI header renderers show workspace:<name> only when a workspace is active
+      release_or_deployment: null
+      notes: >-
+        No existing capability entry covered lifetxt/runtime_safety_v2.py's or
+        lifetxt/safety_compat_v2.py's timezone-context installer, or
+        lifetxt/tui_app.py / lifetxt/tui.py header rendering, before this
+        change. Distilled from a cc-sdd spec at
+        .kiro/specs/tui-workspace-timezone-context/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard
+        assurance, M-sized with a written split-justification in the issue --
+        the CLI-bootstrap fix and the TUI indicator are one coherent bug
+        report from todo.md P1 "Configuration and Workspace Foundation" and
+        are reviewed together rather than fragmented into two PRs for pieces
+        too small to stand alone). Web/MCP/Remote surface timezone context and
+        a per-workspace timezone configuration override are explicitly out of
+        scope and recorded as follow-up candidates, not gaps in this
+        capability. pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

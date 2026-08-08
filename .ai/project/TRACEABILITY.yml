@@ -1211,7 +1211,7 @@ traceability:
       capability_id: cap-workspace-aware-timezone-context
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/142
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/143
       changed_files_or_scope:
         - Add workspace_resolution_active and active_workspace_name public accessors to lifetxt/workspace.py; delegate cli.py's private predicate to the new public one
         - Add cli_timezone_candidate_paths to lifetxt/timezone_policy.py as the shared, unit-tested candidate-file resolver

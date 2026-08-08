@@ -181,6 +181,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/148
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/63
+      - https://github.com/Eruhitsuji/lifetxt/pull/149
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       The three new example configurations use only real, already-implemented

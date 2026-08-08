@@ -75,6 +75,61 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(entry["secret"])
         self.assertFalse(entry["restart_required"])
 
+    def test_registry_describes_new_ticketing_keys(self):
+        for dotted, expected_type, expected_default in (
+            (
+                "ticketing.trackers",
+                "array<string>",
+                ["bug", "feature", "task", "support"],
+            ),
+            (
+                "ticketing.priorities",
+                "array<string>",
+                ["low", "normal", "high", "urgent", "immediate"],
+            ),
+            (
+                "ticketing.severities",
+                "array<string>",
+                ["trivial", "minor", "major", "critical", "blocker"],
+            ),
+            ("ticketing.components", "array<string>", []),
+            ("ticketing.defaults.tracker", "string", "task"),
+            ("ticketing.defaults.priority", "string", "normal"),
+        ):
+            entry = explain_key(dotted)
+            self.assertIsNotNone(entry, dotted)
+            self.assertEqual(expected_type, entry["type"], dotted)
+            self.assertEqual(expected_default, entry["default"], dotted)
+
+    def test_ticketing_config_template_keys_are_all_registered(self):
+        """Every ticketing.* key config_template() defines must have registry metadata.
+
+        This is a coverage gate: it fails the moment a new ticketing setting
+        (custom fields, workflow, watchers, versions/sprints, ...) is added to
+        the template without also registering it, instead of letting the gap
+        grow silently the way it did for the six keys this test was added
+        alongside.
+        """
+        from lifetxt.config import config_template
+
+        def leaf_paths(mapping, prefix):
+            paths = []
+            for key, value in mapping.items():
+                dotted = "%s.%s" % (prefix, key)
+                if isinstance(value, dict):
+                    paths.extend(leaf_paths(value, dotted))
+                else:
+                    paths.append(dotted)
+            return paths
+
+        ticketing = config_template()["ticketing"]
+        missing = [
+            path
+            for path in leaf_paths(ticketing, "ticketing")
+            if explain_key(path) is None
+        ]
+        self.assertEqual([], missing)
+
     def test_config_schema_declares_config_write_require_revision(self):
         try:
             from jsonschema import Draft202012Validator
@@ -532,6 +587,108 @@ class ConfigRevisionTests(unittest.TestCase):
         found = rejected_candidates(self.path)
         self.assertEqual(1, len(found))
         self.assertTrue(found[0].endswith(".rejected1"))
+
+
+class ConfigWriteAuditTests(unittest.TestCase):
+    """Bounded recovery audit trail for configuration writes (#157)."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, ".lifetxt.json")
+        self.audit_log = os.path.join(self.temp.name, "config-write-audit.jsonl")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def read_audit_lines(self):
+        if not os.path.exists(self.audit_log):
+            return []
+        with open(self.audit_log, "r", encoding="utf-8") as handle:
+            return [json.loads(line) for line in handle if line.strip()]
+
+    def test_disabled_by_default_writes_no_audit_file(self):
+        write_config(self.path, {"config_version": 1, "web": {"port": 8000}})
+        self.assertFalse(os.path.exists(self.audit_log))
+
+    def test_accepted_write_is_recorded(self):
+        report = write_config(
+            self.path,
+            {"config_version": 1, "web": {"port": 8000}},
+            audit_log=self.audit_log,
+        )
+        lines = self.read_audit_lines()
+        self.assertEqual(1, len(lines))
+        self.assertEqual("accepted", lines[0]["outcome"])
+        self.assertEqual(report["revision"], lines[0]["after_revision"])
+        self.assertEqual(os.path.abspath(self.path), lines[0]["path"])
+
+    def test_rejected_write_is_recorded(self):
+        first = write_config(
+            self.path,
+            {"config_version": 1, "web": {"port": 8000}},
+            audit_log=self.audit_log,
+        )
+        write_config(
+            self.path, {"config_version": 1, "web": {"port": 9999}}
+        )  # concurrent writer, unaudited
+        with self.assertRaises(StaleConfigRevision):
+            write_config(
+                self.path,
+                {"config_version": 1, "web": {"port": 8100}},
+                expected_revision=first["revision"],
+                audit_log=self.audit_log,
+            )
+        lines = self.read_audit_lines()
+        self.assertEqual(2, len(lines))
+        self.assertEqual("rejected", lines[-1]["outcome"])
+        self.assertEqual(first["revision"], lines[-1]["expected_revision"])
+
+    def test_dry_run_is_not_audited(self):
+        write_config(
+            self.path,
+            {"config_version": 1, "web": {"port": 8000}},
+            dry_run=True,
+            audit_log=self.audit_log,
+        )
+        self.assertFalse(os.path.exists(self.audit_log))
+
+    def test_audit_record_never_contains_configuration_content(self):
+        data = {
+            "config_version": 1,
+            "notifications": {"email": {"smtp_pass_env": "LIFETXT_SMTP_PASS"}},
+            "web": {"title": "a very unusual marker string qzx7"},
+        }
+        write_config(self.path, data, audit_log=self.audit_log)
+        with open(self.audit_log, "r", encoding="utf-8") as handle:
+            raw = handle.read()
+        self.assertNotIn("qzx7", raw)
+        self.assertNotIn("smtp_pass_env", raw)
+        self.assertNotIn("LIFETXT_SMTP_PASS", raw)
+        lines = self.read_audit_lines()
+        self.assertEqual(
+            {
+                "at",
+                "path",
+                "outcome",
+                "expected_revision",
+                "before_revision",
+                "after_revision",
+            },
+            set(lines[0].keys()),
+        )
+
+    def test_audit_log_is_trimmed_to_max_bytes(self):
+        for index in range(50):
+            write_config(
+                self.path,
+                {"config_version": 1, "web": {"port": 8000 + index}},
+                audit_log=self.audit_log,
+                audit_max_bytes=2048,
+            )
+        self.assertLessEqual(os.path.getsize(self.audit_log), 2048)
+        lines = self.read_audit_lines()
+        self.assertGreater(len(lines), 0)
+        self.assertEqual("accepted", lines[-1]["outcome"])
 
 
 class MigrationTests(unittest.TestCase):

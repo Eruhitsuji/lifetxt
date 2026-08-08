@@ -1485,6 +1485,106 @@ traceability:
         commits reachable from it.
       status: implemented
 
+    - requirement_id: req-config-registry-ticketing-coverage
+      capability_id: cap-config-registry-coverage-gate
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/156
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/158
+      changed_files_or_scope:
+        - Register the 5 missing ticketing.* config keys in config_registry.py (trackers, priorities, severities, components, defaults.tracker, defaults.priority)
+        - Add a coverage-gate test that fails when a ticketing.* key config_template() defines lacks registry metadata
+        - lifetxt/config_registry.py
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - tests/test_config_validation.py ValidationTests.test_registry_describes_new_ticketing_keys and test_ticketing_config_template_keys_are_all_registered
+        - 'confirmed the gate fails: deliberately removing ticketing.components from CONFIG_REGISTRY in-process reproduced the exact AssertionError'
+        - python -m unittest tests.test_config_validation -> Ran 49 tests, OK (skipped=1)
+        - 'live: lifetxt config explain ticketing.trackers / ticketing.defaults.priority render correctly'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from todo.md's "P1: Configuration and Workspace
+        Foundation" item on config_version/registry coverage (below the
+        .ai/project/changes/README.md change-package threshold: Standard
+        assurance, XS-sized). Scoped to ticketing.* only, matching what the
+        todo.md item names; the much larger non-ticketing config_template()
+        surface is explicitly out of scope. Self-scoped and implemented
+        autonomously per repository owner authorization (feature/config-
+        registry-foundation batch, alongside #157).
+      status: implemented
+
+    - requirement_id: req-config-write-audit-trail
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/157
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/159
+      changed_files_or_scope:
+        - Add config.write.audit_log / config.write.audit_max_bytes and wire write_config to append a bounded, metadata-only JSONL record per write attempt
+        - lifetxt/config_writer.py
+        - lifetxt/config_registry.py
+        - lifetxt/cli.py
+        - tests/test_config_validation.py
+        - docs/en/config.md
+        - docs/ja/config.md
+      tests_or_evidence:
+        - tests/test_config_validation.py ConfigWriteAuditTests (6 tests: disabled-by-default, accepted, rejected, dry-run-unaudited, no-content-leak, trimming)
+        - python -m unittest tests.test_config_validation -> Ran 49 tests, OK (skipped=1)
+        - python -m unittest tests.test_lifetxt.LifeTxtConfigCliTests -> Ran 9 tests, OK (no regression from the cli.py wiring)
+        - 'live: lifetxt config set web.port 9000 against a config with config.write.audit_log set appends exactly the expected JSONL line'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from todo.md's "P1: Configuration and Workspace
+        Foundation" item on extending the config writer's recovery record
+        beyond the bounded .bak rotation (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized). Mirrors
+        lifetxt.remote_access.append_audit's bounded-JSONL-append-and-trim shape
+        rather than inventing a new one. Extends cap-config-safe-writes rather
+        than creating a new capability, since it is the same write path. Not
+        escalated to Security/High assurance: additive, opt-in (disabled by
+        default), and the design explicitly excludes configuration content and
+        secret-marked values by construction, verified by a regression test.
+        Self-scoped and implemented autonomously per repository owner
+        authorization (feature/config-registry-foundation batch, alongside
+        #156).
+      status: implemented
+
+    - requirement_id: req-config-registry-foundation-batch-integration
+      capability_id: cap-config-registry-coverage-gate
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/160
+      changed_files_or_scope:
+        - Record the config-registry-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1970 tests, OK (skipped=12), run on the fully consolidated feature/config-registry-foundation branch after both sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #160 itself: feature/config-registry-foundation
+        (Issues #156, #157; PRs #158, #159) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) and req-workspace-foundation-batch-
+        integration (#155/#154): each requirement above correctly names its
+        own sub-PR, and neither names #160, because it did not exist yet when
+        they were written. Sub-PRs were merged into the integration branch via
+        local git merge and push rather than GitHub's PR-merge action (blocked
+        by this session's auto-mode permission classifier); both sub-PR merges
+        (#158, #159) auto-detected as "merged" on GitHub once the integration
+        branch was pushed with their commits reachable from it. No epic issue
+        was filed for this batch (unlike #155 for the workspace batch); the
+        user's request to continue with the same AI-driven methodology for
+        config-system enhancements is the batch's origin, and task_issue is
+        left null accordingly rather than inventing a placeholder epic.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

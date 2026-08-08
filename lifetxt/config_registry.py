@@ -93,6 +93,24 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "config.write.audit_log",
+            _entry(
+                "string",
+                None,
+                "Bounded JSONL audit log path recording configuration write attempts "
+                "(accepted and rejected). Never contains configuration content or "
+                "values, only path/outcome/revision metadata; unset disables it.",
+            ),
+        ),
+        (
+            "config.write.audit_max_bytes",
+            _entry(
+                "integer",
+                5242880,
+                "Maximum bytes retained in the bounded configuration write audit log.",
+            ),
+        ),
+        (
             "workspaces",
             _entry(
                 "object",
@@ -571,6 +589,54 @@ CONFIG_REGISTRY = OrderedDict(
                 "array<string>",
                 [],
                 "Ticket fields that must be present; missing ones are reported as TK005 errors.",
+            ),
+        ),
+        (
+            "ticketing.trackers",
+            _entry(
+                "array<string>",
+                ["bug", "feature", "task", "support"],
+                "Allowed ticket tracker values.",
+            ),
+        ),
+        (
+            "ticketing.priorities",
+            _entry(
+                "array<string>",
+                ["low", "normal", "high", "urgent", "immediate"],
+                "Allowed ticket priority values, ordered low to high.",
+            ),
+        ),
+        (
+            "ticketing.severities",
+            _entry(
+                "array<string>",
+                ["trivial", "minor", "major", "critical", "blocker"],
+                "Allowed ticket severity values, ordered least to most severe.",
+            ),
+        ),
+        (
+            "ticketing.components",
+            _entry(
+                "array<string>",
+                [],
+                "Allowed ticket component values. Empty means no component restriction.",
+            ),
+        ),
+        (
+            "ticketing.defaults.tracker",
+            _entry(
+                "string",
+                "task",
+                "Tracker assumed for `ticket new` when none is given.",
+            ),
+        ),
+        (
+            "ticketing.defaults.priority",
+            _entry(
+                "string",
+                "normal",
+                "Priority assumed for `ticket new` when none is given.",
             ),
         ),
         (

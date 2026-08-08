@@ -23,10 +23,24 @@ from collections import OrderedDict
 
 WORKSPACE_MANIFEST_VERSION = 1
 
-# Roles describe how a source participates in the workspace. ``primary`` and
-# ``input`` are read/write candidates; the remaining roles are read-only or
-# machine-generated and are excluded from the default writable set.
-KNOWN_ROLES = ("primary", "input", "generated", "archive", "readonly", "reference")
+# Roles describe how a source participates in the workspace. ``primary``,
+# ``input``, ``ticket_event``, and ``time_entry`` are read/write candidates;
+# the remaining roles are read-only or machine-generated and are excluded
+# from the default writable set. ``ticket_event`` and ``time_entry`` behave
+# identically to ``primary`` today (writable and visible by default) -- they
+# exist so a source dedicated to development-ticket history/time-tracking
+# Notes can be labeled without triggering the unknown-role diagnostic, and so
+# later features (such as project archiving) have a stable name to key off.
+KNOWN_ROLES = (
+    "primary",
+    "input",
+    "generated",
+    "archive",
+    "readonly",
+    "reference",
+    "ticket_event",
+    "time_entry",
+)
 _READONLY_ROLES = ("generated", "archive", "readonly", "reference")
 _HIDDEN_BY_DEFAULT_ROLES = ("generated", "archive")
 _NON_WRITE_TARGET_ROLES = ("generated", "archive")

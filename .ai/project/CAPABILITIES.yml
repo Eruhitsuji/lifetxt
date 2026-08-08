@@ -142,13 +142,15 @@ capabilities:
   - id: cap-workspace-resolution-safety
     name: Workspace resolution safety
     summary: >-
-      Detect self-referential symlink/junction cycles before workspace source expansion
-      and refuse resolved source sets whose unique source files exceed the configured
-      total byte limit.
+      Detect self-referential symlink/junction cycles before workspace source expansion,
+      refuse resolved source sets whose unique source files exceed the configured
+      total byte limit, and recognize ticket_event/time_entry as first-class source
+      roles for development-ticket history and time-tracking Notes.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-workspace-source-integrity
+      - req-workspace-ticket-history-source-roles
     implementation_locations:
       - lifetxt/config.py
       - lifetxt/config_registry.py
@@ -163,15 +165,38 @@ capabilities:
       - lifetxt config explain workspace.max_total_source_bytes
       - lifetxt.workspace.resolve_workspace
       - lifetxt workspace validate
+      - workspace source role: ticket_event
+      - workspace source role: time_entry
     tests_or_evidence:
       - tests/test_workspace_foundation.py WorkspaceResolutionTests cycle and source-size cases
-      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
-      - python -m lifetxt check examples/minimal_life.txt
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_ticket_event_and_time_entry_roles_resolve_without_warning, test_ticket_event_and_time_entry_roles_default_writable_and_visible
+      - tests/test_workspace_foundation.py ExampleConfigTests.test_config_schema_accepts_ticket_event_and_time_entry_source_roles
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1940 tests, OK (skipped=12)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/48
+      - https://github.com/Eruhitsuji/lifetxt/issues/144
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/63
+      - https://github.com/Eruhitsuji/lifetxt/pull/145
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      ticket_event/time_entry default to writable and visible, identical to
+      primary -- confirmed by reading lifetxt/ticket_activity.py's
+      build_ticket_event/build_time_entry, which append these Notes to
+      whatever file the calling mutation already resolved as its write
+      target, and by confirming no code outside lifetxt/workspace.py reads a
+      resolved source's role today. The two new roles are purely additive:
+      no membership in _READONLY_ROLES, _HIDDEN_BY_DEFAULT_ROLES, or
+      _NON_WRITE_TARGET_ROLES. The config-v1.schema.json role enum is
+      generated from lifetxt/schema_extensions_v5.py's SOURCE_SCHEMA
+      fragment (reused for both the workspaces.*.sources and legacy paths
+      branches of the schema); the fragment, not the dist/schemas file
+      directly, is the value's source of truth -- editing the dist file
+      alone would pass a naive review but fail
+      tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents.
     replacement:
       replaces: []
       replaced_by: null

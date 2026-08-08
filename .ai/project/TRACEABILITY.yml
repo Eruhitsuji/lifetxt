@@ -1299,6 +1299,39 @@ traceability:
         branch) is opened.
       status: implemented
 
+    - requirement_id: req-project-archive-workflow
+      capability_id: cap-project-archive-workflow
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/146
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/147
+      changed_files_or_scope:
+        - Add command_project_archive, wired as `lifetxt project archive NAME`, resolving sources/destination from the active workspace (excluding the archive-role destination from the source scan)
+        - Add an optional project_filter parameter to command_archive (None/absent for every existing caller -- no behavior change to the generic archive command)
+        - Add an unconditional record:ticket_event/record:time_entry linkage rule, active only when project_filter is set, following parent: to the archived ticket
+        - lifetxt/cli.py
+        - tests/test_project_archive.py
+      tests_or_evidence:
+        - tests/test_project_archive.py ProjectArchiveTests (7 tests): project-matching selection, ticket-history linkage, open items excluded by default, archive-destination self-exclusion (a real bug found and fixed during implementation), missing-archive-role error, --dest override, --dry-run
+        - tests/test_lifetxt.py LifeTxtArchiveCliTests, LifeTxtArchiveOrphanTests, LifeTxtArchiveExternalRefsTests, LifeTxtArchivePreserveStructureTests, LifeTxtArchiveMultiFileRefsTests, LifeTxtCleanupArchiveHintTests re-run unmodified -> Ran 24 tests, OK
+        - python -m unittest tests.test_project_archive -> Ran 7 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+        - manual verification via the real installed lifetxt entry point against a fixture workspace (done ticket plus its ticket_event/time_entry history archived together; open same-project item and other-project item left in place; second run against the same workspace does not re-scan the archive file; missing-archive-role configuration reports a clear error and exit 1)
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the workspace-foundation batch (Issues
+        #144, #146, #147 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Version/sprint
+        registry entries are not moved by this change; an archived item's
+        version:/sprint: detail values are left unchanged. This is recorded
+        as a deliberate limitation (see cap-project-archive-workflow notes),
+        not an omission. pull_request is filled in once the pull request
+        implementing this entry (into the integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

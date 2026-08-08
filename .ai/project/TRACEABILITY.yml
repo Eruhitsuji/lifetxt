@@ -1260,6 +1260,50 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-workspace-example-and-edge-case-coverage
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/148
+      pull_request: null
+      changed_files_or_scope:
+        - Add remote.lifetxt.json, integration-references.lifetxt.json, and software-ticket-workspace.lifetxt.json under examples/config/, registered in ExampleConfigTests.EXAMPLE_NAMES
+        - Add workspace-resolution edge-case tests: Unicode source paths, unknown top-level config key tolerance, mixed-priority glob ordering, resolution repeatability
+        - Add LoadConfigMalformedFileTests covering unparseable/non-object JSON configuration files and the real package entry point's standard error/exit-code behavior
+        - examples/config/remote.lifetxt.json
+        - examples/config/integration-references.lifetxt.json
+        - examples/config/software-ticket-workspace.lifetxt.json
+        - tests/test_workspace_foundation.py
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+        - tests/test_workspace_foundation.py LoadConfigMalformedFileTests (3 tests)
+        - tests/test_workspace_foundation.py ExampleConfigTests exercises the three new examples automatically via EXAMPLE_NAMES
+        - manual verification against custom_field_registry_report confirming the software-ticket example's custom fields collide with no reserved canonical/relation field name
+        - python -m unittest tests.test_workspace_foundation -> Ran 46 tests, OK (skipped=2)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the workspace-foundation batch (Issues
+        #144, #146, #148 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. While testing the
+        malformed-JSON-configuration case, found that calling
+        lifetxt.cli.main directly is order-dependent within a shared
+        unittest process: the timezone-context installer monkey-patches
+        cli.main in place the first time any test exercises it, after which
+        the wrapper's own load_config call is not locally guarded (it relies
+        on the outer lifetxt.entrypoint.main try/except). Fixed by testing
+        through entrypoint.main, the actual stable package entry point,
+        rather than by adding redundant error handling to the installer
+        wrapper -- production behavior was already correct end to end
+        (verified via a real `python -m lifetxt` subprocess against a broken
+        config file), this was purely a test-isolation issue. Deliberately
+        independent of #144 and #146: every example and test here exercises
+        only roles and behavior already on main.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

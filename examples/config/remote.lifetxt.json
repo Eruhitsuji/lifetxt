@@ -1,0 +1,41 @@
+{
+  "config_version": 1,
+  "default_workspace": "shared",
+  "workspaces": {
+    "shared": {
+      "sources": [
+        { "path": "life.txt", "role": "primary", "required": true },
+        {
+          "path": "reference/*.life.txt",
+          "role": "reference",
+          "writable": false,
+          "default_visible": false
+        }
+      ],
+      "write_file": "life.txt"
+    }
+  },
+  "remote": {
+    "enabled": true,
+    "browser_ui": true,
+    "allow_loopback_http": false,
+    "rate_limit_per_minute": 120,
+    "audit_log": ".cache/lifetxt/remote-audit.jsonl",
+    "principals": [
+      {
+        "id": "alice",
+        "role": "editor",
+        "token_env": "LIFETXT_REMOTE_ALICE_TOKEN",
+        "projects": ["web"],
+        "visibilities": ["public", "shared", "team"]
+      },
+      {
+        "id": "bob",
+        "role": "reader",
+        "token_env": "LIFETXT_REMOTE_BOB_TOKEN",
+        "visibilities": ["public", "shared"]
+      }
+    ]
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

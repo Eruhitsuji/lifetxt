@@ -11,7 +11,9 @@ lifetxt next life.txt --format json
 lifetxt next life.txt --rank
 ```
 
-`next` selects open task records that are not deferred, someday/maybe, or blocked by an open dependency. Results are ordered by priority, due date, and age.
+`next` selects open Task, Deferred, Recurring, and Habit records that are not tagged `someday`, `maybe`, or `waiting`, and not blocked by an unfinished (or unresolvable) `depends_on` reference, using the same definition as the TUI `/next` view and the MCP `get_next_actions` tool. Blocking is resolved across every file passed to the command, so a dependency in another file still parks the item. Results are ordered by priority, due date, and age.
+
+Selection previously differed across CLI, TUI, and MCP (Task-only kind coverage, no someday/maybe/waiting exclusion, and file-local rather than workspace-wide blocking in the CLI). This was corrected so all three surfaces agree; a `next` invocation that already worked around the old behavior may now see a different item set.
 
 Add `--rank` to place overdue items first regardless of priority; ties still fall back to `next`'s normal priority, due date, and age ordering. Without `--rank`, output is unchanged.
 

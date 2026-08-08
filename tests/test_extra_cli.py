@@ -143,6 +143,58 @@ class ExtraCliTests(unittest.TestCase):
         rank_false_explicit = self.run_extra(["next", self.path, "--format", "json"])
         self.assertEqual(with_rank_flag_absent, rank_false_explicit)
 
+    def _write_convergence_fixture(self):
+        path = os.path.join(self.tempdir.name, "converge.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T Task id:c1\n"
+                "[ ] D Deferred id:c2\n"
+                "[ ] R Recurring id:c3\n"
+                "[ ] H Habit id:c4\n"
+                "[ ] E Event id:c5\n"
+                '[ ] T "Someday tagged" id:c6 tag:someday\n'
+                '[x] T "Dep done" id:c7\n'
+                '[ ] T "Freed by closed dep" id:c8 depends_on:c7\n'
+                '[ ] T "Dangling dep" id:c9 depends_on:does-not-exist\n'
+            )
+        return path
+
+    def test_next_now_includes_deferred_recurring_and_habit_kinds(self):
+        path = self._write_convergence_fixture()
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertIn('"id":"c2"', output)
+        self.assertIn('"id":"c3"', output)
+        self.assertIn('"id":"c4"', output)
+        self.assertNotIn('"id":"c5"', output)
+
+    def test_next_now_excludes_someday_tagged_items_with_open_status(self):
+        path = self._write_convergence_fixture()
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertNotIn('"id":"c6"', output)
+
+    def test_next_includes_item_once_its_dependency_is_closed(self):
+        path = self._write_convergence_fixture()
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertIn('"id":"c8"', output)
+
+    def test_next_still_excludes_item_with_a_dangling_dependency(self):
+        path = self._write_convergence_fixture()
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertNotIn('"id":"c9"', output)
+
+    def test_next_resolves_blocking_across_files(self):
+        blocker_path = os.path.join(self.tempdir.name, "blocker.txt")
+        blocked_path = os.path.join(self.tempdir.name, "blocked.txt")
+        with open(blocker_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Blocker id:x1\n")
+        with open(blocked_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Blocked id:x2 depends_on:x1\n")
+        output = self.run_extra(
+            ["next", blocker_path, blocked_path, "--format", "json"]
+        )
+        self.assertIn('"id":"x1"', output)
+        self.assertNotIn('"id":"x2"', output)
+
     def _write_rank_fixture(self):
         path = os.path.join(self.tempdir.name, "rank.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as handle:

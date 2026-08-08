@@ -978,3 +978,58 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-ticket-dependency-universe
+    name: Ticket dependency-universe reason disclosure
+    summary: >-
+      Disclose why a ticket-project report could not evaluate a dependency
+      (out_of_scope when the id is directly known to exist elsewhere in the
+      read set, missing for every other case) and evaluate the inverse
+      blocks: relation alongside depends_on, without ever distinguishing
+      missing from private/archived/workspace-rejected in a way that would
+      leak an invisible ticket's existence.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-dependency-universe-reason-codes
+    implementation_locations:
+      - lifetxt/ticket_project_report.py
+      - lifetxt/ticket_project_values.py
+      - lifetxt/schema_extensions_v16.py
+      - schemas/ticket-project-report-v1.schema.json
+      - dist/schemas/ticket-project-report-v1.schema.json
+      - tests/test_ticket_projects.py
+    public_interfaces:
+      - "ticket row field: blocks"
+      - "ticket row field: unevaluated_dependency_reasons"
+      - lifetxt.ticket_project_report.build_ticket_project_report
+    tests_or_evidence:
+      - "tests/test_ticket_projects.py: missing-reason, out-of-scope-reason, open/closed blocks evaluation, out-of-scope blocks reason (6 new tests)"
+      - full pre-existing tests/test_ticket_projects.py, tests/test_ticket_project_surfaces.py, tests/test_ticket_project_surface_guards.py, tests/test_schema_extensions_v2.py re-run unmodified -> Ran 37 tests, OK (skipped=4)
+      - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK (Remote Safe Mode ticket-report surface regression)
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/152
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/153
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      A research pass (recorded in #152) confirmed the core
+      dependency_unknown/never-expose-the-target's-body behavior already
+      worked end to end before this change; the only gaps were the missing
+      reason code and unevaluated blocks: relation. Reason codes are
+      deliberately limited to out_of_scope/missing (never further split into
+      private/archived/workspace-rejected) because, by the time this report
+      runs inside Remote Safe Mode, lifetxt.remote_backend._visible_items
+      has already stripped every ticket the requesting principal cannot see
+      out of the items argument (see cap-remote-ticket-history-privacy,
+      #150) -- out_of_scope is safe to disclose only because the id was
+      directly observed in the caller's own already-filtered read set, never
+      guessed from context the function does not have.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

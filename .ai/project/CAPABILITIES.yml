@@ -623,3 +623,48 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-next-priority-ranking
+    name: Next overdue-aware priority ranking
+    summary: >-
+      Provide an opt-in --rank flag on `next` that orders overdue items first
+      and otherwise falls back to next's existing priority/due/created/line
+      ordering unchanged, without altering next's default (no-flag) output or
+      which items it selects.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-next-rank-priority-ranking
+    implementation_locations:
+      - lifetxt/extra_common.py
+      - lifetxt/extra_cli.py
+      - lifetxt/extra_core.py
+      - docs/en/new-cli-workflows.md
+    public_interfaces:
+      - lifetxt next --rank
+    tests_or_evidence:
+      - tests/test_extra_cli.py RankKeyTests
+      - "tests/test_extra_cli.py: next --rank selects the same items as plain next, only reordered; overdue-first ordering verified with year-2000/2099 fixture dates so the test is not time-dependent; --rank composes with --format json/life, --limit, --user, --project, --context, and -o"
+      - "tests/test_extra_cli.py test_next_default_order_is_unchanged_without_rank: next without --rank is unaffected"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/139
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/next-agenda-priority-ranking/
+      (below the .ai/project/changes/README.md change-package threshold: Standard
+      assurance, S-sized). Deliberately does not introduce a general sort-strategy
+      abstraction -- one flag selects between the current fixed key and the new
+      ranked key, since only one alternate order is in scope. `agenda` ranking,
+      an `--explain`-style rationale output, and ticket-specific ranking factors
+      (severity, workflow status) are explicitly out of scope and recorded as
+      candidate follow-up specs, not gaps in this capability. A related,
+      pre-existing discrepancy between CLI `next` and the shared actionable-item
+      definition in lifetxt/nextaction.py (used by the TUI and MCP) was found
+      while scoping this work and is tracked separately as #138; this capability
+      ranks the item set `command_next` selects today, unchanged by that
+      discrepancy.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

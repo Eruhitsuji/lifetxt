@@ -1376,6 +1376,43 @@ traceability:
         only roles and behavior already on main.
       status: implemented
 
+    - requirement_id: req-remote-ticket-history-privacy-inheritance
+      capability_id: cap-remote-ticket-history-privacy
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/150
+      pull_request: null
+      changed_files_or_scope:
+        - Add a one-hop parent-visibility-inheritance rule to lifetxt/remote_backend.py's _access_for_item for record:ticket_event/record:time_entry Notes
+        - Thread config into _visible_items so the id index used to resolve parent: honors the project's configured id_key
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - .ai/project/changes/remote-ticket-history-privacy-inheritance/
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteTicketHistoryPrivacyTests (3 tests): private ticket's history hidden from an unauthorized principal, visible to the ticket's owner, unresolved-parent fallback to the Note's own default
+        - python -m unittest tests.test_remote_backend_v20 -> Ran 27 tests, OK
+        - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1957 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the workspace-foundation batch (Issues
+        #144, #146, #148, #150 targeted at this session), landing on its own
+        task branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Security-impact
+        escalation per ASSURANCE_LEVELS.md: assurance level High, change
+        package at .ai/project/changes/remote-ticket-history-privacy-inheritance/.
+        Found by a targeted research pass into todo.md's "project permissions
+        and privacy for remote workspaces" roadmap line, which found every
+        other surface named there (team views, integrations, exports, AI
+        context, notifications, duplicate project definitions, cross-file
+        tasks, archived/renamed projects) either already handled or with no
+        evidence of a gap; this is the one concrete, evidence-backed finding.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

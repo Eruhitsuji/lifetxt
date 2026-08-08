@@ -69,6 +69,8 @@ A related, pre-existing discrepancy was found while scoping this feature: the CL
 6. Where two items have equal overdue status and equal priority, the `next` command shall order them next by ascending due date, treating a missing due date as later than any present due date.
 7. Where two items have equal overdue status, priority, and due date, the `next` command shall order them next by ascending created date, treating a missing created date as later than any present created date.
 8. Where two items remain tied after every preceding criterion, the `next` command shall order them by ascending source line number, matching `next`'s current final tie-break.
+9. If `--rank` is given and a selected item has a `due` value that cannot be parsed as a date, the `next` command shall report an error identifying the item and its invalid `due` value, and shall not produce ranked output for that invocation.
+10. While `--rank` is not given, the `next` command shall tolerate an unparseable `due` value the same way it does today (treated as absent for sorting purposes), without reporting an error.
 
 ### Requirement 3: Ranked output works across existing `next` options
 

@@ -60,7 +60,7 @@ No data/storage, messaging, or infrastructure layers are affected.
 ### Modified Files
 - `lifetxt/extra_common.py` — add `_rank_key(item, today)`, a pure function returning the Requirement 2 tuple key. Placed beside the existing `_priority_key` (line 287) and `_date_value` (line 136) it composes.
 - `lifetxt/extra_cli.py` — add `parser.add_argument("--rank", action="store_true")` to the `next` subparser block (`lifetxt/extra_cli.py:67-77`), alongside the existing `--limit`/`--format`/`--pretty` arguments.
-- `lifetxt/extra_core.py` — in `command_next` (line 40), after building `selected` and before `if args.limit:`, branch the `selected.sort(key=...)` call on `args.rank`: `False`/absent keeps today's existing lambda unchanged; `True` calls `_rank_key` with `timezone_today()` bound once per invocation.
+- `lifetxt/extra_core.py` — in `command_next` (line 40), after building `selected` and before `if args.limit:`, branch the `selected.sort(key=...)` call on `args.rank`: `False`/absent keeps today's existing lambda unchanged; `True` first validates every selected item's `due` value (raising `ValueError`, `command_next`'s established error-reporting pattern, if any present `due` fails to parse — Requirement 2.9), then calls `_rank_key` with `timezone_today()` bound once per invocation.
 - `tests/test_extra_cli.py` — extend `ExtraCliTests` (existing harness at line 22, reusing the `SAMPLE` fixture and `run_extra` helper) with cases for `--rank` ordering and for default-output non-regression. Add focused unit tests for `_rank_key` itself (import from `lifetxt.extra_common`) covering each tie-break level from Requirement 2 directly, without going through the CLI.
 
 No new files are needed; this is a two-function, one-flag extension of an existing command.
@@ -70,7 +70,7 @@ No new files are needed; this is a two-function, one-flag extension of an existi
 | Component | Domain/Layer | Intent | Req Coverage | Key Dependencies (P0/P1) | Contracts |
 |-----------|---------------|--------|---------------|---------------------------|-----------|
 | `_rank_key` | Core logic (`extra_common.py`) | Compute the Requirement 2 sort tuple for one item | 2.1–2.8 | `_priority_key` (P0), `_date_value` (P0) | Service |
-| `command_next` `--rank` branch | CLI (`extra_core.py`) | Select the ranked vs. default sort key at invocation time | 1.1–1.4, 3.1–3.2 | `_rank_key` (P0), `timezone_today` (P0) | Service |
+| `command_next` `--rank` branch | CLI (`extra_core.py`) | Select the ranked vs. default sort key at invocation time; validate `due` values before ranking | 1.1–1.4, 2.9, 2.10, 3.1–3.2 | `_rank_key` (P0), `timezone_today` (P0), `_date_value` (P0) | Service |
 
 ### Core Logic
 
@@ -115,6 +115,14 @@ def _rank_key(item: Item, today: datetime.date) -> tuple:
 - Validation: unit tests exercise `_rank_key` directly for each Requirement 2 criterion (overdue-before-not-overdue, due-today-not-overdue, missing-due-not-overdue, tie-breaks cascading through priority → due → created → line) plus CLI-level tests confirming Requirement 1 (default output byte-identical without `--rank`) and Requirement 3 (composition with `--format`/`--limit`/`--user`/`--project`/`--context`/`-o`).
 - Risks: none identified beyond the Revalidation Triggers above; the function has no side effects and no new dependency.
 
+## Error Handling
+
+Found during interactive verification of the implementation (not anticipated in the original design pass): `_date_value` silently returns `None` for an unparseable `due` string, and the pre-existing default sort already tolerates that by treating it as "missing" (far future). Left as-is for `--rank`, this would silently rank a data-entry mistake (e.g. `due:not-a-date`) as if it had no due date at all — quietly wrong rather than loud, which conflicts with `.ai/project/RULES.md`'s "fail loudly when behavior is ambiguous or data may be lost" principle once ranking is what a user is relying on to surface urgent work.
+
+**Decision**: `command_next`'s `--rank` branch validates every selected item's `due` value *before* calling `_rank_key`, raising `ValueError` (the same error-reporting pattern already used elsewhere in `extra_core.py`, e.g. `command_open`'s attachment checks) naming the offending item and its raw `due` string when any present `due` fails to parse. `_rank_key` itself is unchanged and keeps its documented "never raises" invariant, because only items that already passed this check reach it.
+
+**Boundary**: This validation applies only to `--rank` mode (Requirement 2.9). `next` without `--rank` keeps tolerating an unparseable `due` exactly as it does today (Requirement 2.10) — `_date_value` itself, and every other caller of it (`command_next`'s default sort, `command_workload`, `command_someday`), are out of this spec's boundary and are not changed.
+
 ## Testing Strategy
 
 - **Unit Tests** (`tests/test_extra_cli.py`, new tests alongside `_rank_key` import):
@@ -127,3 +135,5 @@ def _rank_key(item: Item, today: datetime.date) -> tuple:
   6. `next --rank` on the existing `SAMPLE` fixture (extended with at least one overdue item) returns the same item set as plain `next`, only reordered — Requirement 1.3, 1.4.
   7. `next --rank --format json` and `next --rank --format life` reflect the same ranked order as `--format text` — Requirement 3.1.
   8. `next --rank --limit 1` / `--user` / `--project` / `--context` / `-o` each compose correctly with ranked ordering — Requirement 3.2.
+  9. `next --rank` against an item with an unparseable `due` value raises an error naming that item and its invalid value — Requirement 2.9.
+  10. `next` without `--rank` against the same unparseable-`due` item succeeds exactly as it does today — Requirement 2.10.

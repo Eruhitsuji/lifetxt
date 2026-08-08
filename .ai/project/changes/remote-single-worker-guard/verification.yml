@@ -1,0 +1,84 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_remote_sessions_v20
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'Ran 10 tests -- OK (includes 5 new SingleWorkerGuardTests)'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_remote_web_v20
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'Ran 8 tests -- OK (includes 2 new SingleWorkerGuardWiringTests exercising create_app() itself)'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_config_validation tests.test_remote_sessions_v20 tests.test_remote_web_v20 tests.test_remote_web_v19 tests.test_surface_runtime tests.test_remote_compatibility_v21
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'Ran 108 tests -- OK (skipped=1)'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: unit
+      command: python -m unittest discover -p "test_remote*.py"
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'Ran 137 tests -- OK'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: manual
+      command: 'lifetxt config explain remote.allow_multi_worker'
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'renders type=boolean, default=False, description, restart_required=True correctly'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: manual
+      command: 'real lifetxt serve process, remote.enabled=true, WEB_CONCURRENCY=4 set in environment, no override'
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'refuses to start with "ERROR: Remote Safe Mode''s rate limiting and browser-session store are process-local and unsafe under multiple worker processes (WEB_CONCURRENCY=4 detected)..." naming the exact cause'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: manual
+      command: 'real lifetxt serve process, remote.enabled=true, WEB_CONCURRENCY unset'
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'starts normally (Uvicorn running on http://127.0.0.1:18237)'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: manual
+      command: 'real lifetxt serve process, remote.enabled=true, remote.allow_multi_worker=true, WEB_CONCURRENCY=4'
+      requirement_ids:
+        - req-remote-single-worker-guard
+      result: 'the guard itself does not raise (no REMOTE_MULTI_WORKER_UNSUPPORTED error); app construction succeeds. A separate, pre-existing, unrelated uvicorn-level failure was found and confirmed to reproduce identically with remote.enabled entirely absent -- recorded in decisions.md and filed as follow-up #172, not part of this requirement'
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: 255 files already formatted
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: All checks passed!
+      commit: 7d1c8884342a7b9f27d1b030ab5d3683ef9a967c
+      executed_at: '2026-08-08'
+      status: passed
+
+  gaps: []

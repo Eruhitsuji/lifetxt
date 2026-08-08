@@ -10,8 +10,8 @@ change:
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/171
   related_pull_request:
-    - https://github.com/Eruhitsuji/lifetxt/pull/172
-  base_commit: TBD
+    - https://github.com/Eruhitsuji/lifetxt/pull/173
+  base_commit: def6e708654b422e08b20b37807b8d8748f0f7fc
   target_release: null
 
 scope:

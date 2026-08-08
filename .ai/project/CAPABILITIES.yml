@@ -86,6 +86,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-config-concurrent-write-safety
+      - req-config-workspace-write-excludes-injected-paths
     implementation_locations:
       - lifetxt/config_writer.py
       - lifetxt/cli.py
@@ -107,10 +108,13 @@ capabilities:
       - 'the precondition must reach lifetxt.mutation.write_text so the comparison happens inside the lock; a check performed before the write is not sufficient'
       - 'a refused write must leave the file byte-identical, retain the candidate, and not consume a backup generation'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      - "tests/test_lifetxt.py LifeTxtConfigCliTests: config set|unset|migrate against a named-workspace config no longer writes back resolved paths/write_file; a legacy top-level paths/write_file config is unaffected"
+      - "reproduced live via lifetxt.cli.main against a real workspace config: before the fix, config set defaults.person alice added absolute paths/write_file it never declared; after the fix it does not"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/47
       - https://github.com/Eruhitsuji/lifetxt/issues/90
       - https://github.com/Eruhitsuji/lifetxt/issues/91
+      - https://github.com/Eruhitsuji/lifetxt/issues/136
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/58
       - https://github.com/Eruhitsuji/lifetxt/pull/59
@@ -123,6 +127,12 @@ capabilities:
       discover and send the revision automatically; writes that cannot discover a
       revision, such as writing to a different --output file without
       --expected-revision, are refused when the setting is enabled.
+      _maybe_apply_workspace() (lifetxt/cli.py) injects resolved paths/write_file/
+      generated_paths into the loaded config for read-time convenience; it now
+      records exactly which keys it injected on args._workspace_injected_keys so
+      config set|unset|migrate can exclude them from the write, fixing #136
+      (found while investigating #89). Legacy top-level paths/write_file configs
+      never trigger workspace resolution, so they are unaffected.
     replacement:
       replaces: []
       replaced_by: null
@@ -682,6 +692,68 @@ capabilities:
       while scoping this work and is tracked separately as #138; this capability
       ranks the item set `command_next` selects today, unchanged by that
       discrepancy.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-next-actionable-convergence
+    name: Next actionable-item definition convergence
+    summary: >-
+      Keep CLI `next`, the TUI `/next` view, and the MCP `get_next_actions` tool
+      agreeing on what counts as an actionable next step: open/in-progress
+      status, kind coverage (Task/Deferred/Recurring/Habit), no someday/maybe/
+      waiting tag, and not blocked by an unfinished or unresolvable `depends_on`
+      reference, resolved across every file in scope.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-next-actionable-definition-convergence
+    implementation_locations:
+      - lifetxt/nextaction.py
+      - lifetxt/extra_core.py
+      - lifetxt/tui.py
+      - lifetxt/tui_app.py
+      - docs/en/new-cli-workflows.md
+    public_interfaces:
+      - lifetxt next
+      - TUI /next
+      - MCP get_next_actions
+      - lifetxt.nextaction.is_actionable
+      - lifetxt.nextaction.next_action_items
+      - lifetxt.nextaction.blocked_map
+    tests_or_evidence:
+      - tests/test_nextaction.py IsActionableTests, NextActionItemsTests, BlockedMapTests
+      - "tests/test_extra_cli.py: next now includes Deferred/Recurring/Habit kinds, excludes someday-tagged open items, includes an item once its closed dependency is resolved, still excludes a dangling depends_on reference, and resolves blocking across multiple files passed on one invocation"
+      - tests/test_cui_extensions.py (full suite, including the TUI /next blocked-row regression this convergence fixes) -> Ran 145 tests, OK
+      - tests/test_mcp_expansion.py (full suite) -> Ran 68 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1913 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - "manual verification via the real installed lifetxt console script: next against a fixture covering all convergence cases (T/D/R/H/E kinds, someday tag, closed and dangling dependencies) returns exactly the expected set"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/138
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered lifetxt/nextaction.py before this
+      issue. Fixed a real bug in is_actionable() discovered while converging:
+      it unconditionally excluded any item with a depends_on detail even once
+      resolved, previously masked because the TUI's dashboard_model never
+      actually computed a blocked value for any row (row.get("blocked") was
+      always falsy) -- the TUI's blocking exclusion had relied entirely on
+      that buggy line. Fixed both together: is_actionable now treats blocked
+      as the sole source of truth, and dashboard_model computes real blocking
+      via the new shared blocked_map(), which also adds a conservative check
+      for depends_on references that resolve to no known item (a related gap
+      found in lifetxt.links.dependency_blockers_by_item, which treats a
+      dangling reference as "no blocker"; that shared library function is
+      deliberately left unchanged since it is used beyond next-actions --
+      the conservative reading lives only in blocked_map). Sort order
+      (_priority_key-based) is intentionally not converged onto
+      nextaction.PRIORITY_ORDER; see cap-next-priority-ranking, which already
+      depends on _priority_key's current behavior.
     replacement:
       replaces: []
       replaced_by: null

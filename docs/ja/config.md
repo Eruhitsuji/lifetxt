@@ -90,7 +90,7 @@ $ lifetxt workspace validate --all
 | 項目             | 既定値           | 意味                                                 |
 | ---------------- | ---------------- | ---------------------------------------------------- |
 | `path`           | （必須）         | ファイル・ディレクトリ・グロブ                       |
-| `role`           | `primary`        | `primary`/`input`/`generated`/`archive`/`readonly`/`reference` |
+| `role`           | `primary`        | `primary`/`input`/`generated`/`archive`/`readonly`/`reference`/`ticket_event`/`time_entry` |
 | `required`       | `false`          | 必須ソースが無い場合はエラー                         |
 | `writable`       | ロール依存       | generated/archive/readonly/reference は読み取り専用  |
 | `default_visible`| ロール依存       | generated/archive は既定で非表示                     |

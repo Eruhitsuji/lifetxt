@@ -22,6 +22,8 @@ def _source_manifest_entry():
                     "archive",
                     "readonly",
                     "reference",
+                    "ticket_event",
+                    "time_entry",
                 ]
             },
             "required": {"type": "boolean"},

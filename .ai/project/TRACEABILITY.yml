@@ -1077,7 +1077,7 @@ traceability:
       capability_id: cap-next-priority-ranking
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/139
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/140
       changed_files_or_scope:
         - Add an opt-in --rank flag to next that orders overdue items first, falling back to next's existing priority/due/created/line ordering unchanged
         - lifetxt/extra_common.py

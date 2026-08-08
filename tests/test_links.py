@@ -74,5 +74,68 @@ class ReferenceKeysCoverageTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W215" for d in diagnostics))
 
 
+class ExtendedCycleDetectionTests(unittest.TestCase):
+    """Cycle detection beyond parent: (#162)."""
+
+    def test_parent_cycle_message_is_unchanged(self):
+        _items, diagnostics = parse_text(
+            "[ ] T First id:a parent:b\n[ ] T Second id:b parent:a\n"
+        )
+        matches = [d for d in diagnostics if d.code == "W217"]
+        self.assertEqual(1, len(matches))
+        self.assertEqual(
+            "Parent reference cycle detected: a -> b -> a.", matches[0].message
+        )
+
+    def test_depends_on_cycle_is_detected(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b depends_on:a\n"
+        _items, diagnostics = parse_text(text)
+        self.assertTrue(any(d.code == "W227" for d in diagnostics))
+
+    def test_mixed_depends_on_and_blocks_cycle_is_detected(self):
+        # a depends_on b (a waits on b); b blocks a (a waits on b, same edge) --
+        # add a second hop so the cycle is genuinely mixed: a depends_on b,
+        # c blocks a (a waits on c), and c depends_on a closes the loop.
+        text = (
+            "[ ] T A id:a depends_on:b\n"
+            "[ ] T B id:b\n"
+            "[ ] T C id:c depends_on:a blocks:b\n"
+        )
+        _items, diagnostics = parse_text(text)
+        # a -> b (depends_on), b -> c (c blocks b means b waits on c), c -> a (depends_on)
+        self.assertTrue(any(d.code == "W227" for d in diagnostics))
+
+    def test_non_cyclic_dependency_chain_has_no_cycle_warning(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b depends_on:c\n[ ] T C id:c\n"
+        _items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.code == "W227" for d in diagnostics))
+
+    def test_duplicate_of_cycle_is_detected(self):
+        text = "[ ] T A id:a duplicate_of:b\n[ ] T B id:b duplicate_of:a\n"
+        _items, diagnostics = parse_text(text)
+        self.assertTrue(any(d.code == "W228" for d in diagnostics))
+
+    def test_replaced_by_cycle_is_detected(self):
+        text = "[ ] T A id:a replaced_by:b\n[ ] T B id:b replaced_by:a\n"
+        _items, diagnostics = parse_text(text)
+        self.assertTrue(any(d.code == "W229" for d in diagnostics))
+
+    def test_duplicate_of_and_replaced_by_cycles_are_independent(self):
+        # A duplicate_of B, B replaced_by A -- not a cycle in either single
+        # relation, so neither W228 nor W229 should fire.
+        text = "[ ] T A id:a duplicate_of:b\n[ ] T B id:b replaced_by:a\n"
+        _items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.code == "W228" for d in diagnostics))
+        self.assertFalse(any(d.code == "W229" for d in diagnostics))
+
+    def test_new_cycle_codes_are_categorized_as_reference(self):
+        from lifetxt.diagnostic_contract import diagnostic_category
+        from lifetxt.model import Diagnostic
+
+        for code in ("W227", "W228", "W229"):
+            diagnostic = Diagnostic("warning", code, "x")
+            self.assertEqual("reference", diagnostic_category(diagnostic))
+
+
 if __name__ == "__main__":
     unittest.main()

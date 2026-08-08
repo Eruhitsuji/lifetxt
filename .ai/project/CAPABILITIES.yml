@@ -923,3 +923,58 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-ticket-history-privacy
+    name: Remote ticket-history privacy inheritance
+    summary: >-
+      Make record:ticket_event and record:time_entry Notes inherit their
+      parent ticket's project/visibility/owner/groups for Remote Safe Mode
+      permission filtering, since the Notes themselves never carry that
+      metadata, so a private or team-restricted ticket's history is not
+      exposed to a principal who cannot see the ticket.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-ticket-history-privacy-inheritance
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - .ai/project/changes/remote-ticket-history-privacy-inheritance/
+    public_interfaces:
+      - lifetxt.remote_backend._visible_items (config parameter)
+      - lifetxt.remote_backend._access_for_item (id_index parameter)
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketHistoryPrivacyTests (private history hidden from an unauthorized principal, visible to the ticket's owner, unresolved-parent fallback)
+      - python -m unittest tests.test_remote_backend_v20 -> Ran 27 tests, OK
+      - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1957 tests, OK (skipped=12)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/150
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/151
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security-impact escalation per ASSURANCE_LEVELS.md; assurance level
+      High, change package recorded at
+      .ai/project/changes/remote-ticket-history-privacy-inheritance/. The
+      inheritance is a single, non-recursive hop (a history Note's parent:
+      is documented to always be a ticket, never another history Note) and
+      only applies when the parent id resolves to exactly one item in the
+      read set -- an ambiguous or missing parent falls back to the Note's
+      own default tuple, reusing the same "don't guess" discipline already
+      established by lifetxt.links._unique_reference_target and
+      lifetxt.remote_ticket_write_core.conflict_current_item. A broader
+      research pass covered every surface named in the originating todo.md
+      roadmap line (team views, integrations, exports, AI context,
+      notifications, duplicate project definitions, cross-file tasks,
+      archived/renamed projects); all were found already handled, purely
+      descriptive, or unverified with no evidence of a gap, and are recorded
+      as unexamined follow-up candidates rather than folded into this
+      capability without evidence.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

@@ -646,6 +646,13 @@ capabilities:
       - tests/test_extra_cli.py RankKeyTests
       - "tests/test_extra_cli.py: next --rank selects the same items as plain next, only reordered; overdue-first ordering verified with year-2000/2099 fixture dates so the test is not time-dependent; --rank composes with --format json/life, --limit, --user, --project, --context, and -o"
       - "tests/test_extra_cli.py test_next_default_order_is_unchanged_without_rank: next without --rank is unaffected"
+      - "tests/test_extra_cli.py test_next_rank_reports_invalid_due_dates_instead_of_ranking_silently and test_next_without_rank_tolerates_invalid_due_dates: an unparseable due value makes --rank fail loudly naming the item, while plain next keeps tolerating it unchanged"
+      - "manual verification via the installed lifetxt console script: real terminal run of next --rank against a due:not-a-date fixture -> ERROR: next --rank cannot rank items with an invalid due date: b1 (due:not-a-date), exit 1; plain next on the same fixture -> exit 0, unaffected"
+      - python -m unittest tests.test_extra_cli -> Ran 21 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1886 tests, OK (skipped=11)'
+      - ruff format --check lifetxt tests scripts -> 250 files already formatted
+      - ruff check lifetxt tests scripts -> All checks passed
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/139
     related_pull_requests:

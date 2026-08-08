@@ -171,6 +171,25 @@ class ExtraCliTests(unittest.TestCase):
         ]
         self.assertEqual(positions, sorted(positions))
 
+    def test_next_rank_reports_invalid_due_dates_instead_of_ranking_silently(self):
+        path = os.path.join(self.tempdir.name, "invalid_due.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T Bad id:b1 priority:A due:not-a-date\n"
+                "[ ] T Good id:b2 priority:A due:2026-07-25\n"
+            )
+        with self.assertRaises(ValueError) as cm:
+            extra_cli.main(["next", path, "--rank"])
+        self.assertIn("b1", str(cm.exception))
+        self.assertIn("not-a-date", str(cm.exception))
+
+    def test_next_without_rank_tolerates_invalid_due_dates(self):
+        path = os.path.join(self.tempdir.name, "invalid_due.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Bad id:b1 priority:A due:not-a-date\n")
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertIn('"id":"b1"', output)
+
     def test_next_rank_selects_the_same_items_as_default(self):
         path = self._write_rank_fixture()
         default_output = self.run_extra(["next", path, "--format", "json"])

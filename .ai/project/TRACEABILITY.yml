@@ -1260,6 +1260,45 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-workspace-ticket-history-source-roles
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/144
+      pull_request: null
+      changed_files_or_scope:
+        - Add ticket_event and time_entry to workspace.py's KNOWN_ROLES, purely additive (no membership in any read-only/hidden/non-write-target role set)
+        - Update the role enum in lifetxt/schema_extensions_v5.py's generated source-schema fragment (both branches) and regenerate the checked-in dist/schemas/config-v1.schema.json to match
+        - Document both new roles in docs/en/config.md and docs/ja/config.md's source-manifest field table
+        - lifetxt/workspace.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - docs/en/config.md
+        - docs/ja/config.md
+        - tests/test_workspace_foundation.py
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_ticket_event_and_time_entry_roles_resolve_without_warning, test_ticket_event_and_time_entry_roles_default_writable_and_visible
+        - tests/test_workspace_foundation.py ExampleConfigTests.test_config_schema_accepts_ticket_event_and_time_entry_source_roles
+        - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generated schema bundle still matches the checked-in dist/schemas files byte-for-byte after the enum change
+        - python -m unittest tests.test_workspace_foundation tests.test_schema_extensions_v2 -> Ran 47 tests, OK (skipped=3)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1940 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the workspace-foundation batch (Issues
+        #144, #145, #146 targeted at this session), landing on its own task
+        branch merged into the feature/workspace-foundation integration
+        branch before a final human-approved PR into main. Confirmed by
+        reading lifetxt/ticket_activity.py that build_ticket_event/
+        build_time_entry already write these Notes to whatever file the
+        calling mutation resolved as its write target -- this issue only
+        makes the descriptive role label available; it does not add or
+        change any write-routing behavior. pull_request is filled in once
+        the pull request implementing this entry (into the integration
+        branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

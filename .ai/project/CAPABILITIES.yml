@@ -272,11 +272,13 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-clean-install-runtime
+      - req-release-policy-cli-console-encoding-safety
     implementation_locations:
       - pyproject.toml
       - lifetxt/safety_foundation.py
       - readme.md
       - .ai/project/RULES.md
+      - scripts/check_release_policy.py
     public_interfaces:
       - pyproject.toml project.dependencies
     tests_or_evidence:
@@ -285,16 +287,24 @@ capabilities:
       - 'when no timezone database is available, the message must name the remedy; an unknown zone name must not be reported as a missing database'
       - 'resolution must use only the declared source: tests/test_safety_foundation.py fails if an undeclared dateutil or pytz fallback is reintroduced'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1765 tests, OK (skipped=14)'
+      - 'tests/test_check_release_policy_cli.py: the release-policy CLI falls back instead of crashing when stdout cannot encode a manifest character (e.g. Windows cp932), verified against a real io.TextIOWrapper'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/73
       - https://github.com/Eruhitsuji/lifetxt/issues/76
+      - https://github.com/Eruhitsuji/lifetxt/issues/95
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/75
+      - https://github.com/Eruhitsuji/lifetxt/pull/137
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Linux CI cannot detect a regression here: the marker excludes tzdata there and the
       system database hides the defect, so removing the dependency would leave CI green
       while breaking clean Windows installs. Verification must be run on Windows.
+      The release-policy CLI console-encoding fallback (#95) is a distinct failure mode
+      on the same "supported platform must be able to run the recorded commands" theme
+      but is otherwise unrelated to the timezone dependency; see
+      .ai/project/changes/release-policy-cli-console-encoding/ for that change's own
+      requirements, design, and verification record.
     replacement:
       replaces: []
       replaced_by: null

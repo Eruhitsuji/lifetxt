@@ -1073,6 +1073,35 @@ traceability:
         disabled until that review happens.
       status: implemented
 
+    - requirement_id: req-release-policy-cli-console-encoding-safety
+      capability_id: cap-supported-platform-install
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/95
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/137
+      changed_files_or_scope:
+        - Fall back to a non-crashing write when the release-policy CLI's stdout cannot encode a manifest character (e.g. Windows cp932)
+        - scripts/check_release_policy.py
+        - tests/test_check_release_policy_cli.py
+        - .ai/project/changes/release-policy-cli-console-encoding/
+      tests_or_evidence:
+        - tests/test_check_release_policy_cli.py -> Ran 3 tests, OK
+        - 'reproduced against a real io.TextIOWrapper bound to cp932 with the exact U+21B5 character from the incident report: raises UnicodeEncodeError before the fix, writes without raising after'
+        - python -m unittest tests.test_check_release_policy_cli tests.test_release_policy -> Ran 14 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1878 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 251 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        #95 is filed as type:incident, whose issue template restricts assurance
+        level to High or Regulated; recorded here as High with a change package
+        at .ai/project/changes/release-policy-cli-console-encoding/ per
+        .ai/project/changes/README.md's threshold, rather than the AI
+        unilaterally downgrading assurance for what is otherwise a two-file fix.
+        pull_request is filled in once the pull request implementing this entry
+        is opened.
+      status: implemented
+
     - requirement_id: req-next-rank-priority-ranking
       capability_id: cap-next-priority-ranking
       epic: null

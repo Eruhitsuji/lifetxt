@@ -1,0 +1,36 @@
+schema_version: 1
+
+change:
+  id: release-policy-cli-console-encoding
+  title: Stop the release-policy CLI crashing when Windows stdout cannot encode manifest Unicode content
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/95
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/137
+  base_commit: dffc744761d1a0b6e36d3fd44276603197042567
+  target_release: null
+
+scope:
+  in_scope:
+    - "scripts/check_release_policy.py: fall back to a non-crashing write when the console's codec (e.g. cp932 on a default Windows console) cannot encode a character in the release manifest."
+    - Add regression coverage that reproduces the failure against a real io.TextIOWrapper bound to the cp932 codec, and confirms UTF-8 terminals are unaffected.
+  out_of_scope:
+    - Changing the manifest content itself (the Unicode characters it may contain, e.g. from Web UI translation strings, are legitimate and must not be stripped).
+    - Changing the --output file write path (already uses encoding="utf-8" and is unaffected).
+    - Any other script or CLI surface's stdout handling; the incident report and reproduction are specific to this one script.
+  write_scope:
+    - scripts/check_release_policy.py
+    - tests/test_check_release_policy_cli.py
+  forbidden_scope:
+    - lifetxt/release_policy.py
+    - lifetxt/web_assets.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation review (High assurance minimum: implementation review, per ASSURANCE_LEVELS.md; this is a single-file, single-behavior fix, so implementation and integration review are the same review)
+  - Merge Authority approval before merge

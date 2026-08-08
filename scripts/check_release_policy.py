@@ -60,8 +60,23 @@ def main(argv=None):
             os.makedirs(directory)
         with open(args.output, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
-    sys.stdout.write(text)
+    _write_stdout(sys.stdout, text)
     return 0 if manifest["ok"] else 1
+
+
+def _write_stdout(stream, text):
+    """Write text to stream, degrading gracefully on a narrow console codec.
+
+    The manifest embeds Web UI strings that a legacy console codec such as
+    cp932 cannot always encode. Falling back to backslash-escaped output
+    keeps the command from crashing there; UTF-8 terminals are unaffected
+    because the first write already succeeds for them.
+    """
+    try:
+        stream.write(text)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "ascii"
+        stream.write(text.encode(encoding, errors="backslashreplace").decode(encoding))
 
 
 if __name__ == "__main__":

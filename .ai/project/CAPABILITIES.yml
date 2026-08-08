@@ -1013,7 +1013,8 @@ capabilities:
       - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/152
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/153
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       A research pass (recorded in #152) confirmed the core

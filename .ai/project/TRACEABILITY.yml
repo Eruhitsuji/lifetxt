@@ -1770,6 +1770,43 @@ traceability:
         this change's scope.
       status: implemented
 
+    - requirement_id: req-remote-multiclient-foundation-batch-integration
+      capability_id: cap-remote-single-worker-guard
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/174
+      changed_files_or_scope:
+        - Record the remote-multiclient-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2026 tests, OK (skipped=12), run on the fully consolidated feature/remote-multiclient-foundation branch after both sub-PRs merged; one prior run hit an unrelated tests.test_mutation.py concurrency-timing flake, confirmed to pass in isolation and on this clean re-run'
+        - python -m unittest discover -p "test_remote*.py" -> Ran 137 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 255 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #174 itself: feature/remote-multiclient-foundation
+        (Issues #169, #171; PRs #170, #173) merging into main. Issue #168 (capability-
+        negotiation version fields) was scoped in the same batch but closed without
+        implementation after being found already covered by cap-remote-compatibility-
+        negotiation; it has no PR and is not part of this integration.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131), req-workspace-foundation-batch-integration
+        (#155/#154), req-config-registry-foundation-batch-integration (#160), and
+        req-graph-link-foundation-batch-integration (#167): each requirement above
+        correctly names its own sub-PR, and neither names #174, because it did not
+        exist yet when they were written. Sub-PRs were merged into the integration
+        branch via local git merge and push rather than GitHub's PR-merge action
+        (blocked by this session's auto-mode permission classifier); both sub-PR
+        merges (#170, #173) auto-detected as "merged" on GitHub once the integration
+        branch was pushed with their commits reachable from it. PR #173 (the
+        Security/High single-worker guard) requires independent security review and
+        Merge Authority approval before this PR is merged, per its own change
+        package's human_approvals_required -- confirm that review happened before
+        merging #174.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

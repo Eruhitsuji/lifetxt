@@ -53,15 +53,19 @@ def command_next(args, config_data):
         if args.context and args.context not in _values(item, "context"):
             continue
         selected.append(item)
-    far_future = datetime.date.max
-    selected.sort(
-        key=lambda item: (
-            _priority_key(_first(item, "priority")),
-            _date_value(_first(item, "due")) or far_future,
-            _date_value(_first(item, "created")) or far_future,
-            item.line or 0,
+    if args.rank:
+        today = timezone_today()
+        selected.sort(key=lambda item: _rank_key(item, today))
+    else:
+        far_future = datetime.date.max
+        selected.sort(
+            key=lambda item: (
+                _priority_key(_first(item, "priority")),
+                _date_value(_first(item, "due")) or far_future,
+                _date_value(_first(item, "created")) or far_future,
+                item.line or 0,
+            )
         )
-    )
     if args.limit:
         selected = selected[: args.limit]
     if args.format == "json":

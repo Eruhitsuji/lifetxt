@@ -117,6 +117,18 @@ class TicketProjectReportTests(unittest.TestCase):
         self.assertEqual(row["unevaluated_dependencies"], ["T-missing"])
         self.assertEqual(report["summary"]["dependency_unknown"], 1)
 
+    def test_missing_dependency_reason_is_missing_when_id_does_not_exist_anywhere(
+        self,
+    ):
+        report = build_ticket_project_report(
+            [ticket("Dependent", "T-2", depends_on="T-missing")],
+            reference_time=self.now,
+        )
+        row = report["tickets"][0]
+        self.assertEqual(
+            {"T-missing": "missing"}, row["unevaluated_dependency_reasons"]
+        )
+
     def test_project_filter_is_applied_before_dependency_evaluation(self):
         items = [
             ticket("Other dependency", "T-1", project="beta"),
@@ -132,6 +144,52 @@ class TicketProjectReportTests(unittest.TestCase):
             "Project filtering occurs before dependency evaluation",
             " ".join(report["caveats"]),
         )
+
+    def test_out_of_scope_dependency_reason_is_disclosed_when_id_exists_elsewhere(
+        self,
+    ):
+        items = [
+            ticket("Other dependency", "T-1", project="beta"),
+            ticket("Scoped ticket", "T-2", project="alpha", depends_on="T-1"),
+        ]
+        report = build_ticket_project_report(
+            items, reference_time=self.now, project="alpha"
+        )
+        row = report["tickets"][0]
+        self.assertEqual({"T-1": "out_of_scope"}, row["unevaluated_dependency_reasons"])
+
+    def test_open_blocks_reference_from_another_ticket_marks_target_blocked(self):
+        items = [
+            ticket("Blocker", "T-1", blocks="T-2"),
+            ticket("Target", "T-2"),
+        ]
+        report = build_ticket_project_report(items, reference_time=self.now)
+        target = next(row for row in report["tickets"] if row["id"] == "T-2")
+        self.assertTrue(target["blocked"])
+        self.assertEqual(["T-1"], target["unresolved_dependencies"])
+        self.assertFalse(target["dependency_unknown"])
+
+    def test_closed_blocks_reference_does_not_block(self):
+        items = [
+            ticket("Blocker", "T-1", blocks="T-2", ticket_status="closed"),
+            ticket("Target", "T-2"),
+        ]
+        report = build_ticket_project_report(items, reference_time=self.now)
+        target = next(row for row in report["tickets"] if row["id"] == "T-2")
+        self.assertFalse(target["blocked"])
+        self.assertFalse(target["dependency_unknown"])
+
+    def test_blocks_reference_from_out_of_scope_project_is_reported_with_reason(self):
+        items = [
+            ticket("Blocker", "T-1", project="beta", blocks="T-2"),
+            ticket("Target", "T-2", project="alpha"),
+        ]
+        report = build_ticket_project_report(
+            items, reference_time=self.now, project="alpha"
+        )
+        row = report["tickets"][0]
+        self.assertTrue(row["dependency_unknown"])
+        self.assertEqual({"T-1": "out_of_scope"}, row["unevaluated_dependency_reasons"])
 
     def test_estimate_elapsed_coverage_and_variance(self):
         items = [

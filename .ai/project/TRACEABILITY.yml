@@ -1413,6 +1413,48 @@ traceability:
         entry (into the integration branch) is opened.
       status: implemented
 
+    - requirement_id: req-dependency-universe-reason-codes
+      capability_id: cap-ticket-dependency-universe
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/152
+      pull_request: null
+      changed_files_or_scope:
+        - Add blocks to ticket_row, mirroring depends_on
+        - Evaluate depends_on and inbound open blocks: references together when computing blocked/dependency_unknown/unresolved_dependencies/unevaluated_dependencies
+        - Add unevaluated_dependency_reasons (out_of_scope | missing) per ticket row, out_of_scope only when the id is directly known to exist in the caller's own read set
+        - Update lifetxt/schema_extensions_v16.py's _SCHEMA_JSON (the generator, not the dist file directly) and regenerate schemas/ and dist/schemas/ticket-project-report-v1.schema.json to match
+        - lifetxt/ticket_project_report.py
+        - lifetxt/ticket_project_values.py
+        - lifetxt/schema_extensions_v16.py
+        - schemas/ticket-project-report-v1.schema.json
+        - dist/schemas/ticket-project-report-v1.schema.json
+        - tests/test_ticket_projects.py
+      tests_or_evidence:
+        - "tests/test_ticket_projects.py: missing-reason, out-of-scope-reason, open/closed blocks evaluation, out-of-scope blocks reason (6 new tests)"
+        - full pre-existing tests/test_ticket_projects.py, tests/test_ticket_project_surfaces.py, tests/test_ticket_project_surface_guards.py, tests/test_schema_extensions_v2.py re-run unmodified -> Ran 37 tests, OK (skipped=4)
+        - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Fifth and final implementation task of the workspace-foundation
+        batch (Issues #144, #146, #148, #150, #152 targeted at this
+        session), landing on its own task branch merged into the
+        feature/workspace-foundation integration branch before a final
+        human-approved PR into main. A research pass confirmed the core
+        dependency_unknown/never-expose-the-target behavior already worked
+        end to end before this change; reason codes are deliberately limited
+        to out_of_scope/missing (never further split) because Remote Safe
+        Mode's existing _visible_items() filter (#150) has already removed
+        every invisible ticket from this function's items argument by the
+        time it runs -- distinguishing missing from private/archived would
+        require context this function does not and should not have.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

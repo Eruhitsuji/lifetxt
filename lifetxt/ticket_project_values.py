@@ -260,6 +260,7 @@ def ticket_row(item: Any) -> Mapping[str, Any]:
         "estimate_hours": estimate,
         "elapsed_hours": elapsed,
         "depends_on": detail_values(item, "depends_on"),
+        "blocks": detail_values(item, "blocks"),
     }
 
 

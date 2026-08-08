@@ -1807,6 +1807,33 @@ traceability:
         merging #174.
       status: implemented
 
+    - requirement_id: req-serve-single-worker-default
+      capability_id: cap-serve-single-worker-default
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/172
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/175
+      changed_files_or_scope:
+        - Pass workers=1 explicitly to uvicorn.run in command_serve so a stray WEB_CONCURRENCY environment value cannot make uvicorn attempt multi-worker mode against an in-memory app object
+        - lifetxt/cli.py
+        - tests/test_serve_cli.py
+      tests_or_evidence:
+        - tests/test_serve_cli.py ServeSingleWorkerTests (2 tests)
+        - python -m unittest tests.test_serve_cli tests.test_remote_web_v20 tests.test_remote_sessions_v20 -> Ran 20 tests, OK
+        - 'live: real lifetxt serve process with WEB_CONCURRENCY=4 and remote.enabled absent now starts normally (previously crashed with exit code 3)'
+        - 'live: same, with remote.enabled=true, still correctly refuses via the #171 guard, confirming the two guards do not conflict'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Found while implementing #171 (Remote Safe Mode single-worker guard);
+        filed and fixed separately since reproducing the crash with remote.enabled
+        entirely absent confirmed it was pre-existing and unrelated to Remote Safe
+        Mode. Standard assurance, single-issue fix (below the
+        .ai/project/changes/README.md change-package threshold) -- no integration
+        branch used since this is one isolated change, not a batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

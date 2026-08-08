@@ -361,6 +361,7 @@ def is_next_action(row):
         row.get("status"),
         row.get("details") or {},
         blocked=bool(row.get("blocked")),
+        kind=row.get("type"),
     )
 
 

@@ -51,6 +51,7 @@ class RemoteReadBackendTests(unittest.TestCase):
                 "status",
                 "agenda",
                 "search",
+                "next",
             ],
             [row["name"] for row in resource_catalog()],
         )
@@ -520,6 +521,93 @@ class RemoteTicketsPaginationTests(unittest.TestCase):
             {"since_revision": first["revision"]},
         )
         self.assertNotEqual(first["revision"], second["revision"])
+
+
+class RemoteNextActionsResourceTests(unittest.TestCase):
+    """Covers #169: a permission-aware 'next actions' Remote resource."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, "life.txt")
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Actionable id:N-1 project:web visibility:shared assignee:alice\n"
+                "[?] T Someday id:N-2 project:web visibility:shared tag:someday\n"
+                "[x] T Done id:N-3 project:web visibility:shared\n"
+                "[ ] T Visible_blocker id:N-4 project:web visibility:shared\n"
+                "[ ] T Blocked_by_visible id:N-5 project:web visibility:shared "
+                "depends_on:N-4\n"
+                "[ ] T Private_blocker id:N-6 project:web visibility:private "
+                "owner:bob\n"
+                "[ ] T Blocked_by_invisible id:N-7 project:web visibility:shared "
+                "depends_on:N-6\n"
+                "[ ] T Other_project id:N-8 project:other visibility:shared\n"
+                "[ ] T Assigned_to_bob id:N-9 project:web visibility:shared "
+                "assignee:bob\n"
+            )
+        self.config = {
+            "remote": {
+                "enabled": True,
+                "principals": [
+                    {
+                        "id": "alice",
+                        "role": "reader",
+                        "projects": ["web"],
+                        "visibilities": ["public", "shared"],
+                    }
+                ],
+            }
+        }
+        self.principal = principal_registry(self.config)["alice"]
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _ids(self, params=None):
+        result = read_resource("next", [self.path], self.config, self.principal, params)
+        return [row.get("id") for row in result["data"]["items"]]
+
+    def test_only_actionable_items_are_returned(self):
+        ids = self._ids()
+        self.assertIn("N-1", ids)
+        self.assertNotIn("N-2", ids)  # someday-tagged
+        self.assertNotIn("N-3", ids)  # done
+        self.assertNotIn("N-5", ids)  # blocked by a visible open dependency
+        self.assertNotIn("N-8", ids)  # different project, invisible to alice
+
+    def test_item_blocked_by_an_invisible_dependency_is_still_excluded(self):
+        # N-6 (the blocker) is private and invisible to alice; the blocking
+        # relation must still be honored conservatively rather than treating
+        # an unresolvable-in-scope depends_on: as "no blocker".
+        ids = self._ids()
+        self.assertNotIn("N-6", ids)  # invisible to alice at all
+        self.assertNotIn("N-7", ids)  # must not be promoted to actionable
+
+    def test_project_and_assignee_filters(self):
+        ids = self._ids({"assignee": "alice"})
+        self.assertIn("N-1", ids)
+        self.assertNotIn("N-9", ids)
+        ids = self._ids({"project": "web"})
+        self.assertIn("N-1", ids)
+
+    def test_limit_bounds_are_enforced(self):
+        with self.assertRaises(RemoteAccessError) as caught:
+            read_resource(
+                "next", [self.path], self.config, self.principal, {"limit": "many"}
+            )
+        self.assertEqual("REMOTE_PARAMETER_INVALID", caught.exception.code)
+        with self.assertRaises(RemoteAccessError):
+            read_resource(
+                "next", [self.path], self.config, self.principal, {"limit": "-1"}
+            )
+        with self.assertRaises(RemoteAccessError):
+            read_resource(
+                "next", [self.path], self.config, self.principal, {"limit": "5000"}
+            )
+
+    def test_resource_appears_in_catalog(self):
+        entry = next(row for row in resource_catalog() if row["name"] == "next")
+        self.assertEqual(["project", "assignee", "limit"], entry["parameters"])
 
 
 if __name__ == "__main__":

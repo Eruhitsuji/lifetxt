@@ -127,7 +127,7 @@ client can decide what needs confirmation.
 | `get_workload` | Open, actionable, due-soon, overdue counts per assignee |
 | `get_graph` | Dependency graph nodes and edges |
 | `get_blockers` | What is blocking an item |
-| `list_links` | `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:` |
+| `list_links` | `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:` |
 | `get_status` | Presence records and which one is open |
 | `list_notifications` | Due message notifications |
 | `list_messages` | `M` records |

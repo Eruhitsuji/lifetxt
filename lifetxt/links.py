@@ -96,6 +96,17 @@ def reference_diagnostics(items, key="id", reference_keys=None):
                     )
 
     diagnostics.extend(_parent_cycle_diagnostics(items, index, key))
+    diagnostics.extend(_dependency_cycle_diagnostics(items, index, key))
+    diagnostics.extend(
+        _single_relation_cycle_diagnostics(
+            items, index, key, "duplicate_of", "W228", "duplicate_of"
+        )
+    )
+    diagnostics.extend(
+        _single_relation_cycle_diagnostics(
+            items, index, key, "replaced_by", "W229", "replaced_by"
+        )
+    )
     diagnostics.extend(_completed_dependency_diagnostics(items, index, key))
     return diagnostics
 
@@ -734,18 +745,18 @@ def _first_item_id(item, key):
     return _item_location(item)
 
 
-def _parent_cycle_diagnostics(items, index, key):
-    owners = {
-        value: matches[0] for value, matches in index.items() if len(matches) == 1
-    }
-    edges = {}
-    for value, item in owners.items():
-        edges[value] = [
-            str(parent)
-            for parent in item.details.get("parent", [])
-            if str(parent) in owners
-        ]
+def _owners_by_unique_id(index):
+    return {value: matches[0] for value, matches in index.items() if len(matches) == 1}
 
+
+def _cycle_diagnostics(edges, owners, code, message_fmt):
+    """Generic DFS cycle detector shared by every relation-cycle check.
+
+    ``edges`` maps a unique id to the ids it points at (already filtered to
+    other unique ids); ``owners`` maps those same ids back to their item, for
+    attributing the diagnostic. ``message_fmt`` receives the joined
+    ``"A -> B -> A"`` cycle path and returns the diagnostic message.
+    """
     diagnostics = []
     visiting = set()
     visited = set()
@@ -765,8 +776,8 @@ def _parent_cycle_diagnostics(items, index, key):
                 diagnostics.append(
                     Diagnostic(
                         "warning",
-                        "W217",
-                        "Parent reference cycle detected: %s." % " -> ".join(cycle),
+                        code,
+                        message_fmt(" -> ".join(cycle)),
                         item.line if item else None,
                         None,
                         getattr(item, "source", None) if item else None,
@@ -775,8 +786,8 @@ def _parent_cycle_diagnostics(items, index, key):
             return
         visiting.add(node)
         path.append(node)
-        for parent in edges.get(node, []):
-            visit(parent)
+        for target in edges.get(node, []):
+            visit(target)
         path.pop()
         visiting.remove(node)
         visited.add(node)
@@ -784,6 +795,70 @@ def _parent_cycle_diagnostics(items, index, key):
     for node in edges:
         visit(node)
     return diagnostics
+
+
+def _parent_cycle_diagnostics(items, index, key):
+    owners = _owners_by_unique_id(index)
+    edges = {}
+    for value, item in owners.items():
+        edges[value] = [
+            str(parent)
+            for parent in item.details.get("parent", [])
+            if str(parent) in owners
+        ]
+    return _cycle_diagnostics(
+        edges,
+        owners,
+        "W217",
+        lambda path: "Parent reference cycle detected: %s." % path,
+    )
+
+
+def _dependency_cycle_diagnostics(items, index, key):
+    """Cycle check over the combined depends_on/inverse-blocks graph.
+
+    Mirrors dependency_chain_records's own treatment of depends_on:ID and
+    inverse blocks:ID as the same user-facing "waiting on" relation: an edge
+    A -> B means "A is waiting on B" via either assertion. Only unique,
+    unambiguous ids participate, matching _parent_cycle_diagnostics.
+    """
+    owners = _owners_by_unique_id(index)
+    edges = {value: set() for value in owners}
+    for value, item in owners.items():
+        for target in item.details.get("depends_on", []):
+            target = str(target)
+            if target in owners:
+                edges[value].add(target)
+    for value, item in owners.items():
+        for target in item.details.get("blocks", []):
+            target = str(target)
+            if target in owners:
+                # item blocks target => target is waiting on item.
+                edges[target].add(value)
+    edges = {value: list(targets) for value, targets in edges.items()}
+    return _cycle_diagnostics(
+        edges,
+        owners,
+        "W227",
+        lambda path: "Dependency cycle detected (depends_on/blocks): %s." % path,
+    )
+
+
+def _single_relation_cycle_diagnostics(items, index, key, relation, code, label):
+    owners = _owners_by_unique_id(index)
+    edges = {}
+    for value, item in owners.items():
+        edges[value] = [
+            str(target)
+            for target in item.details.get(relation, [])
+            if str(target) in owners
+        ]
+    return _cycle_diagnostics(
+        edges,
+        owners,
+        code,
+        lambda path: "%s reference cycle detected: %s." % (label, path),
+    )
 
 
 def _normalize_direction(value):

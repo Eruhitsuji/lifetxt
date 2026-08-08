@@ -46,7 +46,7 @@ MCP: `get_areas`。
 ## 被参照リンク（backlinks）
 
 `backlinks` は「このアイテムを何が参照しているか」— リンクグラフの入力側 — を
-関係（`parent`・`ref`・`depends_on`・`blocks`・`related`）ごとに表示します。
+関係（`parent`・`ref`・`depends_on`・`blocks`・`related`・`duplicate_of`・`replaced_by`）ごとに表示します。
 
 ```console
 $ lifetxt backlinks T-1

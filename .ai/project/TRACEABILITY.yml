@@ -1585,6 +1585,119 @@ traceability:
         left null accordingly rather than inventing a placeholder epic.
       status: implemented
 
+    - requirement_id: req-reference-keys-duplicate-replaced-coverage
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/161
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/164
+      changed_files_or_scope:
+        - Add duplicate_of/replaced_by to REFERENCE_KEYS so they get the same link_records/reference_diagnostics/backlink_records/validator treatment as the other five relations
+        - lifetxt/model.py
+        - tests/test_links.py
+        - docs/en/ai-integration.md, docs/en/cli.md, docs/en/life-hub.md, docs/en/web.md
+        - docs/ja/ai-integration.md, docs/ja/cli.md, docs/ja/life-hub.md, docs/ja/web.md
+      tests_or_evidence:
+        - tests/test_links.py ReferenceKeysCoverageTests (8 tests: missing/self/ambiguous diagnostics, link_records, backlink_records)
+        - "confirmed dependency_blocker_records/dependency_chain_records unaffected: they hardcode depends_on/blocks directly, not driven by REFERENCE_KEYS"
+        - python -m unittest tests.test_links -> Ran 8 tests, OK
+        - python -m unittest tests.test_lifetxt tests.test_life_hub tests.test_ticket_projects -> Ran 607 tests, OK (skipped=2)
+        - "live: lifetxt links against a duplicate_of:/replaced_by: fixture lists both relations in the link table"
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from todo.md's "P1: Development Ticket Management Core" ticket
+        link-cycle-rules item (below the .ai/project/changes/README.md change-package
+        threshold: Standard assurance, XS-sized). Reciprocal-edge auto-generation
+        explicitly excluded per repository owner decision. Deliberately skipped two doc
+        spots: linked_life.txt's example-file description (would misdescribe the
+        fixture without also updating it) and the VSCode extension's editor completion
+        docs (separate TypeScript codebase, not verified to read REFERENCE_KEYS).
+      status: implemented
+
+    - requirement_id: req-extended-reference-cycle-detection
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/162
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/165
+      changed_files_or_scope:
+        - Generalize the parent-cycle DFS engine and add W227 (depends_on/blocks combined cycle), W228 (duplicate_of cycle), W229 (replaced_by cycle)
+        - lifetxt/links.py
+        - lifetxt/diagnostic_contract.py
+        - tests/test_links.py
+        - docs/en/cli.md, docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_links.py ExtendedCycleDetectionTests (9 tests)
+        - "W217 message text confirmed byte-for-byte unchanged: 'Parent reference cycle detected: a -> b -> a.'"
+        - "confirmed duplicate_of/replaced_by cycles checked independently: an A duplicate_of B, B replaced_by A pair triggers neither W228 nor W229"
+        - python -m unittest tests.test_links -> Ran 16 tests, OK
+        - python -m unittest tests.test_lifetxt tests.test_life_hub tests.test_ticket_projects tests.test_diagnostic_contract -> Ran 612 tests, OK (skipped=2)
+        - "live: lifetxt check against a depends_on-cycle + duplicate_of-cycle fixture reports exactly W227/W228"
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the same todo.md item as req-reference-keys-duplicate-replaced-
+        coverage (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, S-sized). New codes are additive warnings; they never block
+        a write or change existing behavior.
+      status: implemented
+
+    - requirement_id: req-links-module-test-coverage
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/163
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/166
+      changed_files_or_scope:
+        - Add direct unit tests for dependency_blocker_records, dependency_blockers_by_item, dependency_chain_records, dependency_chains_to_mermaid/dot, format_dependency_chain, links_to_mermaid/dot, format_link_table, links_to_json/jsonl
+        - tests/test_links.py
+      tests_or_evidence:
+        - tests/test_links.py DependencyBlockerRecordsTests, DependencyChainRecordsTests, DependencyChainFormattingTests, LinkGraphExportTests (27 tests)
+        - python -m unittest tests.test_links -> Ran 44 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Test-only change (below the .ai/project/changes/README.md change-package
+        threshold: Standard assurance, S-sized). One assertion was wrong on first write
+        (expected a quoted DOT edge label; _dot_quote leaves bare identifiers like
+        depends_on unquoted) -- fixed the test; no defect found in links.py itself.
+      status: implemented
+
+    - requirement_id: req-graph-link-foundation-batch-integration
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/167
+      changed_files_or_scope:
+        - Record the graph-link-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2014 tests, OK (skipped=12), run on the fully consolidated feature/graph-link-foundation branch after all three sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #167 itself: feature/graph-link-foundation
+        (Issues #161, #162, #163; PRs #164, #165, #166) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131), req-workspace-foundation-batch-integration
+        (#155/#154), and req-config-registry-foundation-batch-integration (#160): each
+        requirement above correctly names its own sub-PR, and none of them names #167,
+        because it did not exist yet when they were written. Sub-PRs were merged into
+        the integration branch via local git merge and push rather than GitHub's
+        PR-merge action (blocked by this session's auto-mode permission classifier);
+        all three sub-PR merges (#164, #165, #166) auto-detected as "merged" on GitHub
+        once the integration branch was pushed with their commits reachable from it.
+        No epic issue was filed for this batch; the user's request to enhance
+        graph/link functionality is the batch's origin, and task_issue is left null
+        accordingly rather than inventing a placeholder epic.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

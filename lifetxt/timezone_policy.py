@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 import contextlib
 import contextvars
 import datetime
+import os
 import re
 
 from .safety_foundation import _timezone_for_name, resolve_timezone_policy
@@ -61,6 +62,38 @@ def resolve_timezone_name(config=None, text="", cli_timezone=None):
             % (report.get("timezone"), report.get("source"), report.get("error"))
         )
     return report["timezone"]
+
+
+def cli_timezone_candidate_paths(argv, config, workspace_name=None):
+    """Ordered candidate files for the CLI's file-level timezone directive.
+
+    Mirrors the workspace resolution ``lifetxt/cli.py`` applies to read/write
+    paths: files named directly on the command line come first, then the
+    active workspace's resolved input files (priority-ordered) when
+    workspace resolution is active, otherwise the legacy top-level ``paths``
+    configuration unchanged. An unresolvable ``workspace_name`` falls back to
+    the legacy candidate list rather than raising -- the authoritative
+    "unknown workspace" error is left to the wrapped command's own
+    ``_maybe_apply_workspace``, which runs immediately afterward.
+    """
+    from .config import config_paths
+    from .workspace import resolve_workspace, workspace_resolution_active
+
+    candidates = [
+        value
+        for value in argv
+        if value and not value.startswith("-") and os.path.exists(value)
+    ]
+    if workspace_resolution_active(config, workspace_name):
+        try:
+            resolution = resolve_workspace(config, workspace_name or None)
+        except ValueError:
+            resolution = None
+        if resolution is not None:
+            candidates.extend(resolution["input_paths"])
+            return candidates
+    candidates.extend(config_paths(config) or [])
+    return candidates
 
 
 def timezone_info(name=None):

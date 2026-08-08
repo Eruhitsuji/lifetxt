@@ -5,12 +5,14 @@ import unittest
 from collections import OrderedDict
 
 from lifetxt.workspace import (
+    active_workspace_name,
     default_workspace_name,
     iter_workspace_definitions,
     normalize_source,
     resolve_workspace,
     source_reason,
     workspace_doctor,
+    workspace_resolution_active,
     workspace_summaries,
 )
 from lifetxt.config_layers import (
@@ -355,6 +357,45 @@ class WorkspaceResolutionTests(unittest.TestCase):
         self.assertEqual("a", report["default_workspace"])
         # Both workspaces resolve the same physical file -> reported as shared.
         self.assertTrue(report["shared_files"])
+
+
+class WorkspaceResolutionActiveTests(unittest.TestCase):
+    """Covers the public predicate #142 moved out of lifetxt.cli."""
+
+    def test_inactive_for_legacy_paths_configuration(self):
+        config = OrderedDict({"paths": ["life.txt"]})
+        self.assertFalse(workspace_resolution_active(config))
+
+    def test_inactive_for_non_dict_configuration_with_no_explicit_name(self):
+        self.assertFalse(workspace_resolution_active(None))
+
+    def test_active_when_workspaces_section_present(self):
+        config = OrderedDict({"workspaces": {"work": {"sources": ["a.txt"]}}})
+        self.assertTrue(workspace_resolution_active(config))
+
+    def test_active_when_default_workspace_set(self):
+        config = OrderedDict({"default_workspace": "work"})
+        self.assertTrue(workspace_resolution_active(config))
+
+    def test_active_for_explicit_workspace_name_regardless_of_config(self):
+        self.assertTrue(workspace_resolution_active({}, "work"))
+        self.assertTrue(workspace_resolution_active(None, "work"))
+
+
+class ActiveWorkspaceNameTests(unittest.TestCase):
+    """Covers the public accessor #142 introduced for TUI header display."""
+
+    def test_returns_none_for_non_dict(self):
+        self.assertIsNone(active_workspace_name(None))
+        self.assertIsNone(active_workspace_name("not-a-dict"))
+
+    def test_returns_none_when_key_absent(self):
+        self.assertIsNone(active_workspace_name({}))
+        self.assertIsNone(active_workspace_name({"paths": ["life.txt"]}))
+
+    def test_returns_injected_workspace_name(self):
+        config = {"_active_workspace": "work"}
+        self.assertEqual("work", active_workspace_name(config))
 
 
 class ConfigLayerTests(unittest.TestCase):

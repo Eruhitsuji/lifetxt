@@ -958,6 +958,8 @@ def render_help(options=None):
 
 
 def render_modern_header(model, options, args, project_filter=None, search_query=""):
+    from .workspace import active_workspace_name
+
     summary = model.get("summary", {})
     path_count = len(
         [path for path in getattr(args, "paths", []) or [] if path and path != "-"]
@@ -970,8 +972,14 @@ def render_modern_header(model, options, args, project_filter=None, search_query
     ]
     active_filter = project_filter or "-"
     active_search = search_query or "-"
+    header_line = (
+        "lifetxt TUI  |  modern terminal workspace  |  [q]uit  [/]search  [r]eload"
+    )
+    workspace_name = active_workspace_name(getattr(args, "config_data", None) or {})
+    if workspace_name:
+        header_line += "  |  workspace:%s" % workspace_name
     lines = [
-        "lifetxt TUI  |  modern terminal workspace  |  [q]uit  [/]search  [r]eload",
+        header_line,
         "=" * 72,
         "Cards: " + "  ".join(cards),
         "Views: "

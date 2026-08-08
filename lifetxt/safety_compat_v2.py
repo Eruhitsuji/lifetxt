@@ -23,9 +23,13 @@ def _patch_cli_timezone_installer():
     from . import runtime_safety_v2
 
     def install_cli_timezone_context(cli_module):
-        from .config import config_paths, load_config
+        from .config import load_config
         from .safety_foundation import read_text_exact
-        from .timezone_policy import resolve_timezone_name, timezone_context
+        from .timezone_policy import (
+            cli_timezone_candidate_paths,
+            resolve_timezone_name,
+            timezone_context,
+        )
 
         current = cli_module.main
         if getattr(current, "_lifetxt_timezone_context_v2", False):
@@ -34,17 +38,18 @@ def _patch_cli_timezone_installer():
         def main(argv=None):
             raw = list(argv or [])
             config_path = None
+            workspace_name = None
             for index, value in enumerate(raw):
                 if value == "--config" and index + 1 < len(raw):
                     config_path = raw[index + 1]
                 elif value.startswith("--config="):
                     config_path = value.split("=", 1)[1]
+                elif value == "--workspace" and index + 1 < len(raw):
+                    workspace_name = raw[index + 1]
+                elif value.startswith("--workspace="):
+                    workspace_name = value.split("=", 1)[1]
             config = load_config(config_path) or {}
-            candidates = []
-            for value in raw:
-                if value and not value.startswith("-") and os.path.exists(value):
-                    candidates.append(value)
-            candidates.extend(config_paths(config) or [])
+            candidates = cli_timezone_candidate_paths(raw, config, workspace_name)
             text = ""
             for path in candidates:
                 if path and path != "-" and os.path.exists(path):

@@ -745,6 +745,31 @@ class TuiTests(unittest.TestCase):
         self.assertIn("* [ ] T Write_Report", output)
         self.assertIn("INSPECTOR", output)
 
+    def test_render_dashboard_shows_active_workspace_name_when_resolved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Write_Report id:t1\n")
+            output = tui.render_dashboard(
+                argparse.Namespace(
+                    paths=[path], config_data={"_active_workspace": "work"}
+                ),
+                focus="tasks",
+            )
+
+        self.assertIn("workspace:work", output)
+
+    def test_render_dashboard_omits_workspace_label_without_resolved_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Write_Report id:t1\n")
+            output = tui.render_dashboard(
+                argparse.Namespace(paths=[path], config_data={}), focus="tasks"
+            )
+
+        self.assertNotIn("workspace:", output)
+
     def test_render_dashboard_help(self):
         output = tui.render_dashboard(argparse.Namespace(paths=[]), help_visible=True)
 
@@ -1775,16 +1800,31 @@ class WorkspaceFrameTests(unittest.TestCase):
     def _state(
         self,
         text="[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n",
+        config_data=None,
     ):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
-        args = argparse.Namespace(paths=[path], config_data={})
+        args = argparse.Namespace(paths=[path], config_data=config_data or {})
         state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
         state.reload()
         return state
+
+    def test_header_shows_active_workspace_name_when_resolved(self):
+        state = self._state(config_data={"_active_workspace": "work"})
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
+
+        self.assertIn("workspace:work", text)
+
+    def test_header_omits_workspace_label_without_resolved_workspace(self):
+        state = self._state(config_data={})
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 92, 30))
+
+        self.assertNotIn("workspace:", text)
 
     def test_frame_has_exact_height_and_never_exceeds_width(self):
         state = self._state()

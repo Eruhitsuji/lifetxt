@@ -5,7 +5,7 @@ agree on what counts as actionable, otherwise the same file yields three
 different answers. The predicate lives here so there is exactly one definition.
 """
 
-from .links import dependency_blockers_by_item
+from .links import build_id_index, dependency_blockers_by_item
 
 
 #: Statuses that can still be worked on. `[?]` (someday/maybe) is deliberately
@@ -41,7 +41,11 @@ def is_actionable(status, details=None, blocked=False, kind=None):
     """Core predicate, expressed on plain fields so any record shape can use it.
 
     A next action is open or in progress, not blocked by an unfinished
-    dependency, and not parked behind a someday/waiting tag.
+    dependency, and not parked behind a someday/waiting tag. Whether a
+    ``depends_on`` reference is still unfinished is the caller's
+    responsibility (see ``dependency_blockers_by_item``) and is expressed
+    entirely through ``blocked``; an item is not excluded merely for having a
+    ``depends_on`` detail once that dependency is resolved.
     """
     if status not in ACTIONABLE_STATUSES:
         return False
@@ -50,13 +54,36 @@ def is_actionable(status, details=None, blocked=False, kind=None):
     if kind is not None and kind not in ACTIONABLE_KINDS:
         return False
     details = details or {}
-    if details.get("depends_on"):
-        return False
     tags = [str(value).lstrip("#").lower() for value in details.get("tag") or []]
     for parked in PARKED_TAGS:
         if parked in tags:
             return False
     return True
+
+
+def blocked_map(items, key="id"):
+    """Blocked status for every item, keyed by ``id(item)``.
+
+    Combines ``dependency_blockers_by_item``'s workspace-wide unresolved-
+    dependency detection with a conservative reading of ``depends_on``
+    references that do not resolve to any known item in this set:
+    ``dependency_blockers_by_item`` treats an unresolvable reference (typo,
+    deleted target) as "no blocker" because it can't tell that apart from a
+    reference it simply isn't responsible for, but a next-action consumer
+    should not present an item with a dangling reference as ready to work on.
+    """
+    blockers = dependency_blockers_by_item(items, key=key)
+    index = build_id_index(items, key)
+    blocked = {}
+    for item in items:
+        if blockers.get(id(item)):
+            blocked[id(item)] = True
+            continue
+        for dependency in item.details.get("depends_on") or []:
+            if str(dependency) not in index:
+                blocked[id(item)] = True
+                break
+    return blocked
 
 
 def next_action_items(items, key="id", limit=None, project=None, assignee=None):
@@ -65,7 +92,7 @@ def next_action_items(items, key="id", limit=None, project=None, assignee=None):
     Blocking is resolved against the whole item set, so a dependency in another
     file still parks the item.
     """
-    blockers = dependency_blockers_by_item(items, key=key)
+    blockers = blocked_map(items, key=key)
     actionable = []
     for item in items:
         if not is_actionable(

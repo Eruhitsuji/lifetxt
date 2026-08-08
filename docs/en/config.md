@@ -89,7 +89,7 @@ Each entry in `sources` is a path string or an object. The object form supports:
 | Field            | Default          | Meaning                                            |
 | ---------------- | ---------------- | -------------------------------------------------- |
 | `path`           | (required)       | File, directory, or glob.                          |
-| `role`           | `primary`        | `primary`, `input`, `generated`, `archive`, `readonly`, `reference`. |
+| `role`           | `primary`        | `primary`, `input`, `generated`, `archive`, `readonly`, `reference`, `ticket_event`, `time_entry`. |
 | `required`       | `false`          | Missing required sources are an error.             |
 | `writable`       | role-dependent   | Read-only for generated/archive/readonly/reference. |
 | `default_visible`| role-dependent   | Hidden by default for generated/archive.           |

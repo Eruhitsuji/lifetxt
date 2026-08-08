@@ -1,0 +1,29 @@
+{
+  "config_version": 1,
+  "default_workspace": "product",
+  "workspaces": {
+    "product": {
+      "sources": [
+        { "path": "tickets.life.txt", "role": "primary", "required": true },
+        { "path": "backlog.life.txt", "role": "input", "priority": 10 },
+        {
+          "path": "archive/tickets/**/*.life.txt",
+          "role": "archive",
+          "default_visible": false
+        }
+      ],
+      "write_file": "tickets.life.txt"
+    }
+  },
+  "ticketing": {
+    "id_prefix": "TCK",
+    "custom_fields": {
+      "component_area": { "type": "string" },
+      "estimate_points": { "type": "number" }
+    }
+  },
+  "projects": {
+    "core": { "display_name": "Core Platform", "default_area": "engineering" }
+  },
+  "defaults": { "person": "self", "timezone": "Asia/Tokyo" }
+}

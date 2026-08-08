@@ -104,7 +104,7 @@ _SCHEMA_JSON = r"""{
     },
     "ticket": {
       "type": "object",
-      "required": ["id", "title", "project", "status", "tracker", "priority", "severity", "assignee", "reporter", "component", "due", "updated", "estimate_hours", "elapsed_hours", "depends_on", "terminal", "blocked", "dependency_unknown", "unresolved_dependencies", "unevaluated_dependencies", "overdue", "unassigned", "high_severity", "stale", "variance_hours"],
+      "required": ["id", "title", "project", "status", "tracker", "priority", "severity", "assignee", "reporter", "component", "due", "updated", "estimate_hours", "elapsed_hours", "depends_on", "blocks", "terminal", "blocked", "dependency_unknown", "unresolved_dependencies", "unevaluated_dependencies", "unevaluated_dependency_reasons", "overdue", "unassigned", "high_severity", "stale", "variance_hours"],
       "properties": {
         "id": {"type": "string"},
         "title": {"type": "string"},
@@ -121,11 +121,16 @@ _SCHEMA_JSON = r"""{
         "estimate_hours": {"$ref": "#/$defs/nullableNumber"},
         "elapsed_hours": {"$ref": "#/$defs/nullableNumber"},
         "depends_on": {"type": "array", "items": {"type": "string"}},
+        "blocks": {"type": "array", "items": {"type": "string"}},
         "terminal": {"type": "boolean"},
         "blocked": {"type": "boolean"},
         "dependency_unknown": {"type": "boolean"},
         "unresolved_dependencies": {"type": "array", "items": {"type": "string"}},
         "unevaluated_dependencies": {"type": "array", "items": {"type": "string"}},
+        "unevaluated_dependency_reasons": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "enum": ["missing", "out_of_scope"]}
+        },
         "overdue": {"type": "boolean"},
         "unassigned": {"type": "boolean"},
         "high_severity": {"type": "boolean"},

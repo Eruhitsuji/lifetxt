@@ -10,6 +10,7 @@ from .ticket_project_values import (
     DEFAULT_TERMINAL_STATUSES,
     REPORT_SCHEMA,
     STATUS_ORDER,
+    detail_values,
     due_time,
     is_ticket,
     last_activity,
@@ -53,11 +54,31 @@ def build_ticket_project_report(
     now = reference_time(reference_time_value)
     terminal = set(normalize_status(value) for value in terminal_statuses)
     severe = set(str(value).strip().lower() for value in high_severities)
-    selected = [item for item in items if is_ticket(item)]
+    all_tickets = [item for item in items if is_ticket(item)]
+    selected = all_tickets
     if project is not None:
         selected = [item for item in selected if ticket_project(item) == project]
 
+    # Ids visible anywhere in the read set (before project filtering), used
+    # only to distinguish "in a different in-scope project" from "missing" --
+    # never to expose the other ticket's own fields. Callers that must not
+    # disclose a ticket's existence (e.g. Remote Safe Mode) already filter
+    # invisible tickets out of `items` before calling this function, so this
+    # set never contains anything the caller could not already see.
+    all_ticket_ids = set(ticket_id(item) for item in all_tickets if ticket_id(item))
     by_id = dict((ticket_id(item), item) for item in selected if ticket_id(item))
+
+    # Reverse index of open `blocks:` references, built from the full read
+    # set: `blocks:` is declared on the blocker, pointing at the ticket it
+    # blocks, so evaluating a ticket's own blockers requires scanning every
+    # ticket's outgoing `blocks:`, not just the ticket's own details.
+    blockers_by_target = {}  # type: MutableMapping[str, List[Any]]
+    for item in all_tickets:
+        if ticket_status(item) in terminal:
+            continue
+        for target_id in detail_values(item, "blocks"):
+            blockers_by_target.setdefault(str(target_id), []).append(item)
+
     all_rows = []  # type: List[Dict[str, Any]]
     projects = {}  # type: MutableMapping[str, List[Dict[str, Any]]]
     attention = OrderedDict(
@@ -75,13 +96,31 @@ def build_ticket_project_report(
         row = dict(ticket_row(item))
         is_open = row["status"] not in terminal
         open_dependencies, unknown_dependencies = [], []
+        unknown_reasons = OrderedDict()  # type: MutableMapping[str, str]
         if is_open:
             for dependency_id in row["depends_on"]:
                 dependency = by_id.get(dependency_id)
                 if dependency is None:
                     unknown_dependencies.append(dependency_id)
+                    unknown_reasons[dependency_id] = (
+                        "out_of_scope" if dependency_id in all_ticket_ids else "missing"
+                    )
                 elif ticket_status(dependency) not in terminal:
                     open_dependencies.append(dependency_id)
+            row_id = row["id"]
+            for blocker in blockers_by_target.get(row_id, []) if row_id else []:
+                blocker_id = ticket_id(blocker)
+                if not blocker_id:
+                    continue
+                known_blocker = by_id.get(blocker_id)
+                if known_blocker is not None:
+                    if blocker_id not in open_dependencies:
+                        open_dependencies.append(blocker_id)
+                elif blocker_id not in unknown_dependencies:
+                    # Found by scanning the full read set, so its existence
+                    # is already known -- always out_of_scope, never missing.
+                    unknown_dependencies.append(blocker_id)
+                    unknown_reasons[blocker_id] = "out_of_scope"
         row.update(
             {
                 "terminal": not is_open,
@@ -90,6 +129,7 @@ def build_ticket_project_report(
                 ),
                 "dependency_unknown": bool(is_open and unknown_dependencies),
                 "unresolved_dependencies": open_dependencies,
+                "unevaluated_dependency_reasons": unknown_reasons,
                 "unevaluated_dependencies": unknown_dependencies,
             }
         )
@@ -190,14 +230,14 @@ def build_ticket_project_report(
     caveats = [
         "Tickets without project are grouped under (unassigned-project).",
         "Missing timestamps are not classified as stale.",
-        "Dependencies absent from the selected report are marked dependency_unknown; their state is not guessed.",
+        "Dependencies absent from the selected report are marked dependency_unknown; their state is not guessed. unevaluated_dependency_reasons discloses out_of_scope only when the id is directly known to exist in the read set (a different in-scope project, or an open blocks: reference); every other case -- genuinely missing, private, archived outside scope, or rejected by workspace resolution -- is reported as missing without distinguishing which, since distinguishing further would disclose the referenced ticket's existence.",
         "Date-only due values remain current through that UTC calendar date; aware datetimes use their explicit offset.",
         "Estimate and elapsed totals include only parseable values; coverage counts are reported separately.",
         "Ticket-count progress does not model subtasks, effort, scope growth, or delivery probability.",
     ]
     if project is not None:
         caveats.append(
-            "Project filtering occurs before dependency evaluation, so cross-project dependencies may be dependency_unknown."
+            "Project filtering occurs before dependency evaluation, so cross-project dependencies may be dependency_unknown (reported with reason out_of_scope)."
         )
     summary = {
         "total": total,
@@ -231,7 +271,7 @@ def build_ticket_project_report(
             "progress_percent": "terminal ticket count / total ticket count * 100; count-based, not a forecast",
             "overdue": "open ticket due at/before reference_time; date-only values expire at next UTC midnight",
             "blocked": "open ticket blocked by status or an open dependency present in scope",
-            "dependency_unknown": "open ticket with a depends_on id absent from selected report scope",
+            "dependency_unknown": "open ticket with a depends_on id, or an open blocks: reference naming it, absent from selected report scope",
             "unassigned": "open ticket without assignee",
             "high_severity": "open ticket whose severity is in configured high_severities",
             "stale": "open ticket whose latest available activity timestamp is older than stale_after_days",

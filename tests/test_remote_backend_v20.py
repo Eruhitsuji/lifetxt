@@ -209,6 +209,84 @@ class RemoteTicketDetailTests(unittest.TestCase):
         self.assertEqual("high", result["data"]["fields"]["priority"])
 
 
+class RemoteTicketHistoryPrivacyTests(unittest.TestCase):
+    """Covers #150: ticket_event/time_entry history inherits its parent
+    ticket's visibility instead of always falling back to the default."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp.name, "life.txt")
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.write(
+                "[ ] T Shared_ticket record:ticket id:TK-1 project:web "
+                "visibility:shared ticket_status:new\n"
+                "[N] N Shared_event record:ticket_event id:EV-1 parent:TK-1 "
+                "event:created author:local at:2026-01-01T00:00:00Z "
+                "sequence:1 transaction:tx1 ticket_revision:1\n"
+                "[ ] T Private_ticket record:ticket id:TK-2 project:web "
+                "visibility:private owner:bob ticket_status:new\n"
+                "[N] N Private_event record:ticket_event id:EV-2 parent:TK-2 "
+                "event:created author:bob at:2026-01-01T00:00:00Z "
+                "sequence:1 transaction:tx2 ticket_revision:1\n"
+                "[N] N Private_time record:time_entry id:TIME-2 parent:TK-2 "
+                "user:bob activity:development on:2026-01-01 elapsed:1h "
+                "sequence:1 event_id:EV-2 created_at:2026-01-01T00:00:00Z\n"
+                "[N] N Orphan_event record:ticket_event id:EV-3 "
+                "parent:TK-DOES-NOT-EXIST event:created author:local "
+                "at:2026-01-01T00:00:00Z sequence:1 transaction:tx3 "
+                "ticket_revision:1\n"
+            )
+        self.config = {
+            "remote": {
+                "enabled": True,
+                "principals": [
+                    {
+                        "id": "alice",
+                        "role": "reader",
+                        "projects": ["web"],
+                        "visibilities": ["public", "shared"],
+                    },
+                    {
+                        "id": "bob",
+                        "role": "reader",
+                        "projects": ["web"],
+                        "visibilities": ["public", "shared"],
+                    },
+                ],
+            }
+        }
+        self.alice = principal_registry(self.config)["alice"]
+        self.bob = principal_registry(self.config)["bob"]
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_private_tickets_history_is_hidden_from_a_principal_without_access(self):
+        result = read_resource("items", [self.path], self.config, self.alice)
+        ids = [row.get("id") for row in result["data"]["items"]]
+        self.assertIn("TK-1", ids)
+        self.assertIn("EV-1", ids)
+        self.assertNotIn("TK-2", ids)
+        self.assertNotIn("EV-2", ids)
+        self.assertNotIn("TIME-2", ids)
+
+    def test_private_tickets_history_is_visible_to_its_owner(self):
+        result = read_resource("items", [self.path], self.config, self.bob)
+        ids = [row.get("id") for row in result["data"]["items"]]
+        self.assertIn("TK-2", ids)
+        self.assertIn("EV-2", ids)
+        self.assertIn("TIME-2", ids)
+
+    def test_unresolved_parent_falls_back_to_the_notes_own_default(self):
+        # EV-3's parent: does not exist; it must not be silently dropped
+        # (guessing toward over-restriction) nor crash -- it falls back to
+        # its own default tuple (visibility="shared"), so a reader with
+        # plain "shared" access still sees it.
+        result = read_resource("items", [self.path], self.config, self.alice)
+        ids = [row.get("id") for row in result["data"]["items"]]
+        self.assertIn("EV-3", ids)
+
+
 class RemoteTicketsPaginationTests(unittest.TestCase):
     TICKET_COUNT = 210
 

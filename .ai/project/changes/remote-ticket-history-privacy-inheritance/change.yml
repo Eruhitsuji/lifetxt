@@ -1,0 +1,42 @@
+schema_version: 1
+
+change:
+  id: remote-ticket-history-privacy-inheritance
+  title: Ticket event/time-entry history inherits its parent ticket's Remote visibility
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/150
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/151
+  base_commit: 00b402a564a3b786301211911f1772c6c71d5ef8
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a one-hop (non-recursive) parent-visibility-inheritance rule to lifetxt/remote_backend.py's _access_for_item, so a record:ticket_event / record:time_entry Note is checked against its parent ticket's project/visibility/owner/groups instead of its own (always-absent) fields.
+    - Thread config into _visible_items (already available at its one call site, read_resource) so the id index used to resolve parent: can honor the project's configured id_key.
+    - Fall back to the Note's own default access tuple when the parent: reference does not resolve to exactly one item (missing id or duplicated id) -- never guess toward exposure.
+    - Integration tests through the real read_resource(...) entry point: private-ticket history hidden from an unauthorized principal, visible to an authorized one, unresolved-parent fallback, and no regression for a ticket's own visibility handling.
+  out_of_scope:
+    - Team views, integrations, exports, AI context, and notification-surface privacy (no evidence of a matching leak; recorded as unexamined, not verified-safe).
+    - Duplicate record:project definitions / missing-registry diagnostics (a data-quality gap, not a privacy leak).
+    - Project-level (as opposed to item-level) visibility enforcement; record:project's own visibility field remains descriptive metadata only.
+    - Cross-file task handling and project rename/alias tracking beyond what lifetxt/projects.py already does.
+    - Any change to lifetxt/remote_access.py's can_access permission logic itself, or to how record:ticket_event/record:time_entry Notes are constructed in lifetxt/ticket_activity.py.
+  write_scope:
+    - lifetxt/remote_backend.py
+    - tests/test_remote_backend_v20.py
+  forbidden_scope:
+    - lifetxt/remote_access.py
+    - lifetxt/ticket_activity.py
+    - lifetxt/projects.py
+    - lifetxt/links.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (permission-filtering path affects every Remote Safe Mode consumer)

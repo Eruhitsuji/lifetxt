@@ -142,13 +142,19 @@ capabilities:
   - id: cap-workspace-resolution-safety
     name: Workspace resolution safety
     summary: >-
-      Detect self-referential symlink/junction cycles before workspace source expansion
-      and refuse resolved source sets whose unique source files exceed the configured
-      total byte limit.
+      Detect self-referential symlink/junction cycles before workspace source expansion,
+      refuse resolved source sets whose unique source files exceed the configured
+      total byte limit, recognize ticket_event/time_entry as first-class source roles
+      for development-ticket history and time-tracking Notes, and keep a broad set of
+      schema-valid example workspaces and resolution edge cases (Unicode paths, unknown
+      config keys, glob ordering, malformed configuration files) under regression
+      coverage.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-workspace-source-integrity
+      - req-workspace-ticket-history-source-roles
+      - req-workspace-example-and-edge-case-coverage
     implementation_locations:
       - lifetxt/config.py
       - lifetxt/config_registry.py
@@ -158,20 +164,59 @@ capabilities:
       - docs/en/config.md
       - docs/ja/config.md
       - tests/test_workspace_foundation.py
+      - examples/config/
     public_interfaces:
       - workspace.max_total_source_bytes
       - lifetxt config explain workspace.max_total_source_bytes
       - lifetxt.workspace.resolve_workspace
       - lifetxt workspace validate
+      - workspace source role: ticket_event
+      - workspace source role: time_entry
     tests_or_evidence:
       - tests/test_workspace_foundation.py WorkspaceResolutionTests cycle and source-size cases
-      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
-      - python -m lifetxt check examples/minimal_life.txt
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_ticket_event_and_time_entry_roles_resolve_without_warning, test_ticket_event_and_time_entry_roles_default_writable_and_visible
+      - tests/test_workspace_foundation.py ExampleConfigTests.test_config_schema_accepts_ticket_event_and_time_entry_source_roles
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+      - tests/test_workspace_foundation.py LoadConfigMalformedFileTests
+      - tests/test_workspace_foundation.py ExampleConfigTests (remote.lifetxt.json, integration-references.lifetxt.json, software-ticket-workspace.lifetxt.json added to EXAMPLE_NAMES)
+      - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generated schema bundle still matches the checked-in dist/schemas files byte-for-byte after the enum change
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/48
+      - https://github.com/Eruhitsuji/lifetxt/issues/144
+      - https://github.com/Eruhitsuji/lifetxt/issues/148
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/63
+      - https://github.com/Eruhitsuji/lifetxt/pull/145
+      - https://github.com/Eruhitsuji/lifetxt/pull/149
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      ticket_event/time_entry default to writable and visible, identical to
+      primary -- confirmed by reading lifetxt/ticket_activity.py's
+      build_ticket_event/build_time_entry, which append these Notes to
+      whatever file the calling mutation already resolved as its write
+      target, and by confirming no code outside lifetxt/workspace.py reads a
+      resolved source's role today. The two new roles are purely additive:
+      no membership in _READONLY_ROLES, _HIDDEN_BY_DEFAULT_ROLES, or
+      _NON_WRITE_TARGET_ROLES. The config-v1.schema.json role enum is
+      generated from lifetxt/schema_extensions_v5.py's SOURCE_SCHEMA
+      fragment (reused for both the workspaces.*.sources and legacy paths
+      branches of the schema); the fragment, not the dist/schemas file
+      directly, is the value's source of truth -- editing the dist file
+      alone would pass a naive review but fail
+      tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents.
+      The three new example configurations use only real, already-implemented
+      configuration shapes: remote.lifetxt.json's remote.* section matches
+      docs/en/remote.md; software-ticket-workspace.lifetxt.json's
+      ticketing.custom_fields entries were verified against
+      lifetxt.ticket_custom_fields.custom_field_registry_report to avoid
+      colliding with reserved canonical/relation field names (the first
+      attempt used component/story_points, both reserved, caught before
+      commit). No fictitious "integrations" configuration section was
+      invented; integration-references.lifetxt.json instead demonstrates the
+      existing reference/generated roles for externally-synced content.
     replacement:
       replaces: []
       replaced_by: null
@@ -816,6 +861,174 @@ capabilities:
       resolved from the correct candidate files. Web/MCP/Remote surface
       timezone context is explicitly out of scope and recorded as a follow-up
       candidate, not a gap in this capability.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-project-archive-workflow
+    name: Project archive workflow
+    summary: >-
+      Move a project's done/canceled records to the active workspace's
+      configured archive source through the existing atomic multi-file
+      archive/transaction engine, carrying development-ticket history
+      (record:ticket_event / record:time_entry) along with its archived
+      parent ticket.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-project-archive-workflow
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_project_archive.py
+    public_interfaces:
+      - lifetxt project archive NAME
+      - lifetxt.cli.command_project_archive
+      - lifetxt.cli.command_archive (project_filter parameter)
+    tests_or_evidence:
+      - tests/test_project_archive.py ProjectArchiveTests (7 tests)
+      - tests/test_lifetxt.py LifeTxtArchiveCliTests, LifeTxtArchiveOrphanTests, LifeTxtArchiveExternalRefsTests, LifeTxtArchivePreserveStructureTests, LifeTxtArchiveMultiFileRefsTests, LifeTxtCleanupArchiveHintTests re-run unmodified -> Ran 24 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - manual verification via the real installed lifetxt entry point against a fixture workspace, confirming project-matching selection, ticket-history linkage, the archive-destination self-exclusion fix, and the missing-archive-role error path
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/146
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/147
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      command_project_archive is a thin adapter over the existing
+      command_archive engine: it resolves the active workspace's input files
+      (excluding the resolved archive-role file itself, a real self-inclusion
+      bug found and fixed during implementation) as sources and the
+      workspace's role: archive source as the destination, then delegates to
+      command_archive with a new project_filter argument. project_filter
+      defaults to None/absent for every pre-existing caller of
+      command_archive, so the change is fully backward compatible -- verified
+      by re-running the complete pre-existing archive test suite unmodified.
+      Ticket history is followed via the same parent: key
+      build_ticket_event/build_time_entry already write (confirmed by
+      reading lifetxt/ticket_activity.py), unconditionally, since it carries
+      no done/canceled status of its own and would otherwise never match the
+      archive command's status filter. Version/sprint registry entries are
+      not moved or otherwise touched by this capability; an archived item's
+      version:/sprint: detail values are left as-is. This is a recorded
+      limitation, not a silently dropped requirement -- todo.md's mention of
+      version/sprint handling is addressed by "leave the reference intact,
+      do not move the registry entry," not by registry relocation, which
+      would require a separate, more invasive capability.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-ticket-history-privacy
+    name: Remote ticket-history privacy inheritance
+    summary: >-
+      Make record:ticket_event and record:time_entry Notes inherit their
+      parent ticket's project/visibility/owner/groups for Remote Safe Mode
+      permission filtering, since the Notes themselves never carry that
+      metadata, so a private or team-restricted ticket's history is not
+      exposed to a principal who cannot see the ticket.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-ticket-history-privacy-inheritance
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - tests/test_remote_backend_v20.py
+      - .ai/project/changes/remote-ticket-history-privacy-inheritance/
+    public_interfaces:
+      - lifetxt.remote_backend._visible_items (config parameter)
+      - lifetxt.remote_backend._access_for_item (id_index parameter)
+    tests_or_evidence:
+      - tests/test_remote_backend_v20.py RemoteTicketHistoryPrivacyTests (private history hidden from an unauthorized principal, visible to the ticket's owner, unresolved-parent fallback)
+      - python -m unittest tests.test_remote_backend_v20 -> Ran 27 tests, OK
+      - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1957 tests, OK (skipped=12)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/150
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/151
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security-impact escalation per ASSURANCE_LEVELS.md; assurance level
+      High, change package recorded at
+      .ai/project/changes/remote-ticket-history-privacy-inheritance/. The
+      inheritance is a single, non-recursive hop (a history Note's parent:
+      is documented to always be a ticket, never another history Note) and
+      only applies when the parent id resolves to exactly one item in the
+      read set -- an ambiguous or missing parent falls back to the Note's
+      own default tuple, reusing the same "don't guess" discipline already
+      established by lifetxt.links._unique_reference_target and
+      lifetxt.remote_ticket_write_core.conflict_current_item. A broader
+      research pass covered every surface named in the originating todo.md
+      roadmap line (team views, integrations, exports, AI context,
+      notifications, duplicate project definitions, cross-file tasks,
+      archived/renamed projects); all were found already handled, purely
+      descriptive, or unverified with no evidence of a gap, and are recorded
+      as unexamined follow-up candidates rather than folded into this
+      capability without evidence.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-ticket-dependency-universe
+    name: Ticket dependency-universe reason disclosure
+    summary: >-
+      Disclose why a ticket-project report could not evaluate a dependency
+      (out_of_scope when the id is directly known to exist elsewhere in the
+      read set, missing for every other case) and evaluate the inverse
+      blocks: relation alongside depends_on, without ever distinguishing
+      missing from private/archived/workspace-rejected in a way that would
+      leak an invisible ticket's existence.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-dependency-universe-reason-codes
+    implementation_locations:
+      - lifetxt/ticket_project_report.py
+      - lifetxt/ticket_project_values.py
+      - lifetxt/schema_extensions_v16.py
+      - schemas/ticket-project-report-v1.schema.json
+      - dist/schemas/ticket-project-report-v1.schema.json
+      - tests/test_ticket_projects.py
+    public_interfaces:
+      - "ticket row field: blocks"
+      - "ticket row field: unevaluated_dependency_reasons"
+      - lifetxt.ticket_project_report.build_ticket_project_report
+    tests_or_evidence:
+      - "tests/test_ticket_projects.py: missing-reason, out-of-scope-reason, open/closed blocks evaluation, out-of-scope blocks reason (6 new tests)"
+      - full pre-existing tests/test_ticket_projects.py, tests/test_ticket_project_surfaces.py, tests/test_ticket_project_surface_guards.py, tests/test_schema_extensions_v2.py re-run unmodified -> Ran 37 tests, OK (skipped=4)
+      - python -m unittest discover -p "test_remote*.py" -> Ran 125 tests, OK (Remote Safe Mode ticket-report surface regression)
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/152
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/153
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      A research pass (recorded in #152) confirmed the core
+      dependency_unknown/never-expose-the-target's-body behavior already
+      worked end to end before this change; the only gaps were the missing
+      reason code and unevaluated blocks: relation. Reason codes are
+      deliberately limited to out_of_scope/missing (never further split into
+      private/archived/workspace-rejected) because, by the time this report
+      runs inside Remote Safe Mode, lifetxt.remote_backend._visible_items
+      has already stripped every ticket the requesting principal cannot see
+      out of the items argument (see cap-remote-ticket-history-privacy,
+      #150) -- out_of_scope is safe to disclose only because the id was
+      directly observed in the caller's own already-filtered read set, never
+      guessed from context the function does not have.
     replacement:
       replaces: []
       replaced_by: null

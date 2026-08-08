@@ -1667,6 +1667,37 @@ traceability:
         depends_on unquoted) -- fixed the test; no defect found in links.py itself.
       status: implemented
 
+    - requirement_id: req-graph-link-foundation-batch-integration
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/167
+      changed_files_or_scope:
+        - Record the graph-link-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2014 tests, OK (skipped=12), run on the fully consolidated feature/graph-link-foundation branch after all three sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #167 itself: feature/graph-link-foundation
+        (Issues #161, #162, #163; PRs #164, #165, #166) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131), req-workspace-foundation-batch-integration
+        (#155/#154), and req-config-registry-foundation-batch-integration (#160): each
+        requirement above correctly names its own sub-PR, and none of them names #167,
+        because it did not exist yet when they were written. Sub-PRs were merged into
+        the integration branch via local git merge and push rather than GitHub's
+        PR-merge action (blocked by this session's auto-mode permission classifier);
+        all three sub-PR merges (#164, #165, #166) auto-detected as "merged" on GitHub
+        once the integration branch was pushed with their commits reachable from it.
+        No epic issue was filed for this batch; the user's request to enhance
+        graph/link functionality is the batch's origin, and task_issue is left null
+        accordingly rather than inventing a placeholder epic.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

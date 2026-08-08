@@ -142,13 +142,16 @@ capabilities:
   - id: cap-workspace-resolution-safety
     name: Workspace resolution safety
     summary: >-
-      Detect self-referential symlink/junction cycles before workspace source expansion
-      and refuse resolved source sets whose unique source files exceed the configured
-      total byte limit.
+      Detect self-referential symlink/junction cycles before workspace source expansion,
+      refuse resolved source sets whose unique source files exceed the configured
+      total byte limit, and keep a broad set of schema-valid example workspaces and
+      resolution edge cases (Unicode paths, unknown config keys, glob ordering,
+      malformed configuration files) under regression coverage.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-workspace-source-integrity
+      - req-workspace-example-and-edge-case-coverage
     implementation_locations:
       - lifetxt/config.py
       - lifetxt/config_registry.py
@@ -158,6 +161,7 @@ capabilities:
       - docs/en/config.md
       - docs/ja/config.md
       - tests/test_workspace_foundation.py
+      - examples/config/
     public_interfaces:
       - workspace.max_total_source_bytes
       - lifetxt config explain workspace.max_total_source_bytes
@@ -165,13 +169,30 @@ capabilities:
       - lifetxt workspace validate
     tests_or_evidence:
       - tests/test_workspace_foundation.py WorkspaceResolutionTests cycle and source-size cases
-      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
-      - python -m lifetxt check examples/minimal_life.txt
+      - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+      - tests/test_workspace_foundation.py LoadConfigMalformedFileTests
+      - tests/test_workspace_foundation.py ExampleConfigTests (remote.lifetxt.json, integration-references.lifetxt.json, software-ticket-workspace.lifetxt.json added to EXAMPLE_NAMES)
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/48
+      - https://github.com/Eruhitsuji/lifetxt/issues/148
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/63
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      The three new example configurations use only real, already-implemented
+      configuration shapes: remote.lifetxt.json's remote.* section matches
+      docs/en/remote.md; software-ticket-workspace.lifetxt.json's
+      ticketing.custom_fields entries were verified against
+      lifetxt.ticket_custom_fields.custom_field_registry_report to avoid
+      colliding with reserved canonical/relation field names (the first
+      attempt used component/story_points, both reserved, caught before
+      commit). No fictitious "integrations" configuration section was
+      invented; integration-references.lifetxt.json instead demonstrates the
+      existing reference/generated roles for externally-synced content.
     replacement:
       replaces: []
       replaced_by: null

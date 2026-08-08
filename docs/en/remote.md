@@ -127,7 +127,8 @@ The shared read backend currently publishes:
 - `links`: relation records filtered by ID, direction, and relation;
 - `status`: latest visible status records;
 - `agenda`: visible records in a bounded time range;
-- `search`: safe search over visible items, projects, and people.
+- `search`: safe search over visible items, projects, and people;
+- `next`: actionable items from the same shared definition `lifetxt next`, the TUI `/next` view, and the MCP `get_next_actions` tool use, filtered by `project`, `assignee`, and a bounded `limit` (default unbounded, maximum 1000); an item blocked by a dependency the principal cannot see stays excluded rather than being promoted to actionable.
 
 Unknown resources and unsupported parameters fail closed. All resources use the same principal filtering and source revision. Diagnostics contain aggregate severity/code counts and operational checks, not record text, source paths, or parser messages.
 

@@ -1109,3 +1109,83 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-graph-link-foundation
+    name: Shared reference/link graph foundation
+    summary: >-
+      Register duplicate_of/replaced_by as first-class reference-graph relations
+      alongside parent/ref/depends_on/blocks/related, detect reference cycles beyond
+      parent: (combined depends_on:/blocks:, and independently for duplicate_of: and
+      replaced_by:), and keep the dependency-chain/graph-export functions under direct
+      unit-test coverage.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-reference-keys-duplicate-replaced-coverage
+      - req-extended-reference-cycle-detection
+      - req-links-module-test-coverage
+    implementation_locations:
+      - lifetxt/model.py
+      - lifetxt/links.py
+      - lifetxt/diagnostic_contract.py
+      - lifetxt/validator.py
+      - tests/test_links.py
+      - docs/en/ai-integration.md
+      - docs/en/cli.md
+      - docs/en/life-hub.md
+      - docs/en/web.md
+      - docs/ja/ai-integration.md
+      - docs/ja/cli.md
+      - docs/ja/life-hub.md
+      - docs/ja/web.md
+    public_interfaces:
+      - lifetxt.model.REFERENCE_KEYS
+      - lifetxt.links.link_records
+      - lifetxt.links.reference_diagnostics
+      - lifetxt.links.backlink_records
+      - lifetxt links (duplicate_of:/replaced_by: rows)
+      - "diagnostic code: W227 (depends_on/blocks cycle)"
+      - "diagnostic code: W228 (duplicate_of cycle)"
+      - "diagnostic code: W229 (replaced_by cycle)"
+    tests_or_evidence:
+      - tests/test_links.py ReferenceKeysCoverageTests (8 tests)
+      - tests/test_links.py ExtendedCycleDetectionTests (9 tests)
+      - tests/test_links.py DependencyBlockerRecordsTests, DependencyChainRecordsTests, DependencyChainFormattingTests, LinkGraphExportTests (27 tests)
+      - "W217's parent-cycle message text confirmed byte-for-byte unchanged after generalizing its DFS engine: 'Parent reference cycle detected: a -> b -> a.'"
+      - "confirmed duplicate_of/replaced_by cycles are checked independently: an A duplicate_of B, B replaced_by A pair triggers neither W228 nor W229"
+      - "dependency_blocker_records/dependency_chain_records confirmed unaffected by the REFERENCE_KEYS change, since they hardcode depends_on/blocks directly rather than reading REFERENCE_KEYS"
+      - python -m unittest tests.test_links -> Ran 44 tests, OK
+      - python -m unittest tests.test_lifetxt tests.test_life_hub tests.test_ticket_projects tests.test_diagnostic_contract -> Ran 612 tests, OK (skipped=2)
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2014 tests, OK (skipped=12) other than the traceability-gate entry this PR itself completes'
+      - "live: lifetxt links against a duplicate_of:/replaced_by: fixture lists both relations in the link table"
+      - "live: lifetxt check against a depends_on-cycle + duplicate_of-cycle fixture reports exactly W227/W228"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/161
+      - https://github.com/Eruhitsuji/lifetxt/issues/162
+      - https://github.com/Eruhitsuji/lifetxt/issues/163
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/164
+      - https://github.com/Eruhitsuji/lifetxt/pull/165
+      - https://github.com/Eruhitsuji/lifetxt/pull/166
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered lifetxt/links.py before this change. Reciprocal-
+      edge auto-generation (writing replaces: when replaced_by: is set, etc.) is
+      explicitly out of scope per repository owner decision: duplicate_of/replaced_by
+      keep the same non-mirrored, independent-assertion design depends_on/blocks already
+      documents in links.py -- writing one side never auto-writes the other. Cycle
+      detection is deliberately kept separate per relation (W227 covers depends_on/blocks
+      combined since dependency_chain_records already treats them as one user-facing
+      "waiting on" concept; W228/W229 each cover only their own relation) rather than
+      merged into one generic code, matching the existing precedent of W217 being
+      parent:-only. Distilled directly from three GitHub Issues (below the
+      .ai/project/changes/README.md change-package threshold: Standard assurance,
+      XS/S-sized each), self-scoped and implemented autonomously per repository owner
+      authorization (feature/graph-link-foundation batch).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

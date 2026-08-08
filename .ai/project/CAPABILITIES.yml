@@ -1300,3 +1300,52 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-serve-single-worker-default
+    name: serve command pins single-worker uvicorn regardless of environment
+    summary: >-
+      Make `lifetxt serve` always launch uvicorn with workers=1, so a stray
+      WEB_CONCURRENCY environment variable (inherited from an unrelated
+      multi-worker process manager) cannot make uvicorn's own environment-derived
+      worker count collide with serve's single-process, in-memory-app-object
+      design and crash with a confusing, lifetxt-unaware warning.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-serve-single-worker-default
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_serve_cli.py
+    public_interfaces:
+      - lifetxt serve
+    tests_or_evidence:
+      - tests/test_serve_cli.py ServeSingleWorkerTests (2 tests: WEB_CONCURRENCY set and unset, both assert uvicorn.run is called with workers=1)
+      - python -m unittest tests.test_serve_cli -> Ran 2 tests, OK
+      - 'live: real lifetxt serve process with WEB_CONCURRENCY=4 and remote.enabled absent now starts normally (previously crashed with "You must pass the application as an import string..." and exit code 3)'
+      - 'live: real lifetxt serve process with WEB_CONCURRENCY=4 and remote.enabled=true still correctly refuses to start via cap-remote-single-worker-guard, confirming the two guards do not conflict'
+      - python -m unittest tests.test_serve_cli tests.test_remote_web_v20 tests.test_remote_sessions_v20 -> Ran 20 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/172
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Found while implementing cap-remote-single-worker-guard (#171): confirmed
+      pre-existing and unrelated to Remote Safe Mode by reproducing the crash with
+      remote.enabled entirely absent. uvicorn.config.Config independently reads
+      WEB_CONCURRENCY (uvicorn/config.py) and sets its own workers count from it
+      regardless of caller intent; since serve passes an in-memory app object
+      rather than an import string, uvicorn cannot fan the app out to worker
+      subprocesses this way and fails. Passing workers=1 explicitly to
+      uvicorn.run prevents the environment variable from ever being consulted for
+      this purpose -- serve has no --workers flag and is single-process by
+      design, so no capability is lost. Standard assurance (CLI usability fix,
+      no security angle): confirmed no security-relevant behavior change since
+      cap-remote-single-worker-guard's own check runs earlier, inside create_app(),
+      and is unaffected by this later uvicorn.run() call.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

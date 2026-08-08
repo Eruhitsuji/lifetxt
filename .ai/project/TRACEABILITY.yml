@@ -1264,7 +1264,7 @@ traceability:
       capability_id: cap-project-archive-workflow
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/146
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/147
       changed_files_or_scope:
         - Add command_project_archive, wired as `lifetxt project archive NAME`, resolving sources/destination from the active workspace (excluding the archive-role destination from the source scan)
         - Add an optional project_filter parameter to command_archive (None/absent for every existing caller -- no behavior change to the generic archive command)

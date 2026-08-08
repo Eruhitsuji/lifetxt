@@ -11082,7 +11082,13 @@ def _config_without_runtime(config, injected_keys=None):
 
 
 def _write_config_file(
-    path, data, expected_revision=None, dry_run=False, require_revision=False
+    path,
+    data,
+    expected_revision=None,
+    dry_run=False,
+    require_revision=False,
+    audit_log=None,
+    audit_max_bytes=None,
 ):
     from .config_writer import write_config
 
@@ -11092,17 +11098,27 @@ def _write_config_file(
         expected_revision=expected_revision,
         dry_run=dry_run,
         require_revision=require_revision,
+        audit_log=audit_log,
+        audit_max_bytes=audit_max_bytes,
     )
 
 
-def _config_write_requires_revision(config):
+def _config_write_section(config):
     config_section_value = config.get("config") if isinstance(config, dict) else None
     config_section_value = (
         config_section_value if isinstance(config_section_value, dict) else {}
     )
     write = config_section_value.get("write")
-    write = write if isinstance(write, dict) else {}
-    return _truthy_config(write.get("require_revision"))
+    return write if isinstance(write, dict) else {}
+
+
+def _config_write_requires_revision(config):
+    return _truthy_config(_config_write_section(config).get("require_revision"))
+
+
+def _config_write_audit_settings(config):
+    write = _config_write_section(config)
+    return write.get("audit_log"), write.get("audit_max_bytes")
 
 
 def _config_write_revision(args, config, target):
@@ -11131,12 +11147,15 @@ def _commit_config(args, config, target, data):
     """Write configuration under compare-and-set. Returns ``(report, code)``."""
     from .config_writer import ConfigRevisionRequired, StaleConfigRevision
 
+    audit_log, audit_max_bytes = _config_write_audit_settings(config)
     try:
         report = _write_config_file(
             target,
             data,
             _config_write_revision(args, config, target),
             require_revision=_config_write_requires_revision(config),
+            audit_log=audit_log,
+            audit_max_bytes=audit_max_bytes,
         )
     except ConfigRevisionRequired as exc:
         sys.stderr.write("ERROR: %s\n" % exc)

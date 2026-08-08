@@ -93,6 +93,24 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "config.write.audit_log",
+            _entry(
+                "string",
+                None,
+                "Bounded JSONL audit log path recording configuration write attempts "
+                "(accepted and rejected). Never contains configuration content or "
+                "values, only path/outcome/revision metadata; unset disables it.",
+            ),
+        ),
+        (
+            "config.write.audit_max_bytes",
+            _entry(
+                "integer",
+                5242880,
+                "Maximum bytes retained in the bounded configuration write audit log.",
+            ),
+        ),
+        (
             "workspaces",
             _entry(
                 "object",

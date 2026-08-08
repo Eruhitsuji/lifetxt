@@ -55,6 +55,7 @@ class ConfigRevisionRequired(ConfigWriteError):
 
 DEFAULT_MAX_BACKUPS = 3
 DEFAULT_MAX_REJECTED = 3
+DEFAULT_AUDIT_MAX_BYTES = 5242880
 
 #: Revision reported for a configuration file that does not exist yet, so a
 #: first write can still be expressed as a compare-and-set.
@@ -161,6 +162,66 @@ def _stale_message(expected, current):
     )
 
 
+def _write_audit_event(path, outcome, expected, before, after):
+    """Build one audit record for a configuration write attempt.
+
+    Deliberately carries only path/outcome/revision metadata -- never the
+    configuration text or any key value -- so it cannot become a secondary
+    leak path for a secret-marked setting. This is the durable record that
+    survives once a ``.bak``/``.rejected`` rotation slot is overwritten.
+    """
+    from .timezone_policy import utcnow
+
+    return OrderedDict(
+        (
+            ("at", utcnow().isoformat()),
+            ("path", os.path.abspath(path)),
+            ("outcome", outcome),
+            ("expected_revision", expected),
+            ("before_revision", before),
+            ("after_revision", after),
+        )
+    )
+
+
+def _append_write_audit(audit_log, audit_max_bytes, event):
+    """Append ``event`` to the bounded JSONL audit log at ``audit_log``.
+
+    Mirrors :func:`lifetxt.remote_access.append_audit`'s bounded-JSONL-with-
+    trim shape: appends one line, then trims from the oldest end once the
+    file exceeds ``audit_max_bytes``. A failure here must never block the
+    configuration write it is recording, so filesystem errors are swallowed.
+    """
+    if not audit_log:
+        return
+    path = os.path.abspath(os.path.expanduser(str(audit_log)))
+    line = json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
+    limit = int(audit_max_bytes or DEFAULT_AUDIT_MAX_BYTES)
+
+    def transform(current):
+        value = current + line
+        if len(value.encode("utf-8")) > limit:
+            value = value[-max(1, limit // 2) :]
+            cut = value.find("\n")
+            if cut >= 0:
+                value = value[cut + 1 :]
+        return value
+
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        mutation.write_text(
+            path,
+            transform=transform,
+            operation="config.write.audit",
+            create=True,
+            default_text="",
+        )
+    except OSError:
+        pass
+
+
 def write_config(
     path,
     data,
@@ -171,6 +232,8 @@ def write_config(
     require_revision=False,
     dry_run=False,
     max_rejected=DEFAULT_MAX_REJECTED,
+    audit_log=None,
+    audit_max_bytes=None,
 ):
     """Validate and atomically write ``data`` to ``path``.
 
@@ -190,6 +253,13 @@ def write_config(
     ``dry_run`` validates and reports the revision the write would produce
     without touching the filesystem. Its revision check is necessarily advisory:
     nothing is written, so nothing is locked.
+
+    ``audit_log``, when set, receives one bounded JSONL record per write
+    attempt reaching the compare-and-set stage (accepted or refused as stale),
+    trimmed to ``audit_max_bytes``. Unlike the ``.bak``/``.rejected`` rotation,
+    this record survives once a rotation slot is overwritten -- but it is
+    metadata only (path, outcome, revisions), never configuration content.
+    ``dry_run`` writes are advisory and are not audited.
 
     Returns a report describing the write. Raises ``ConfigWriteError`` (or its
     ``StaleConfigRevision`` / ``ConfigRevisionRequired`` subclasses) when the
@@ -270,6 +340,13 @@ def write_config(
         # Validation ran first on purpose: an invalid document is refused as
         # invalid rather than retained as a recoverable candidate.
         retained = _retain_rejected(path, text, max_rejected)
+        _append_write_audit(
+            audit_log,
+            audit_max_bytes,
+            _write_audit_event(
+                path, "rejected", exc.expected_hash, exc.actual_hash, None
+            ),
+        )
         raise StaleConfigRevision(
             _stale_message(exc.expected_hash, exc.actual_hash),
             expected=exc.expected_hash,
@@ -280,4 +357,11 @@ def write_config(
     report["backup"] = os.path.abspath(backup["path"]) if backup["path"] else None
     report["before_revision"] = result.before_hash
     report["revision"] = result.after_hash
+    _append_write_audit(
+        audit_log,
+        audit_max_bytes,
+        _write_audit_event(
+            path, "accepted", expected, result.before_hash, result.after_hash
+        ),
+    )
     return report

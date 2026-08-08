@@ -412,6 +412,18 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "remote.allow_multi_worker",
+            _entry(
+                "boolean",
+                False,
+                "Acknowledge that Remote Safe Mode's rate limiting and browser-session "
+                "store are process-local and start anyway under a detected "
+                "multi-worker deployment (WEB_CONCURRENCY > 1). Reduces throttling "
+                "and session consistency across workers.",
+                restart_required=True,
+            ),
+        ),
+        (
             "remote.enabled",
             _entry(
                 "boolean",

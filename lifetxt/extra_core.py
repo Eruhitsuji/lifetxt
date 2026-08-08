@@ -53,15 +53,32 @@ def command_next(args, config_data):
         if args.context and args.context not in _values(item, "context"):
             continue
         selected.append(item)
-    far_future = datetime.date.max
-    selected.sort(
-        key=lambda item: (
-            _priority_key(_first(item, "priority")),
-            _date_value(_first(item, "due")) or far_future,
-            _date_value(_first(item, "created")) or far_future,
-            item.line or 0,
+    if args.rank:
+        invalid_due = [
+            item
+            for item in selected
+            if _first(item, "due") and _date_value(_first(item, "due")) is None
+        ]
+        if invalid_due:
+            raise ValueError(
+                "next --rank cannot rank items with an invalid due date: %s"
+                % ", ".join(
+                    "%s (due:%s)" % (_item_id(item) or item.title, _first(item, "due"))
+                    for item in invalid_due
+                )
+            )
+        today = timezone_today()
+        selected.sort(key=lambda item: _rank_key(item, today))
+    else:
+        far_future = datetime.date.max
+        selected.sort(
+            key=lambda item: (
+                _priority_key(_first(item, "priority")),
+                _date_value(_first(item, "due")) or far_future,
+                _date_value(_first(item, "created")) or far_future,
+                item.line or 0,
+            )
         )
-    )
     if args.limit:
         selected = selected[: args.limit]
     if args.format == "json":

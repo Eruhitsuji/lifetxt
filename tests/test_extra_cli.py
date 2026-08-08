@@ -8,6 +8,8 @@ import unittest
 from lifetxt import config
 from lifetxt import entrypoint
 from lifetxt import extra_cli
+from lifetxt.extra_common import _rank_key
+from lifetxt.model import Item
 
 
 SAMPLE = """[ ] T \"日本語 task\" id:t1 priority:A due:2026-07-20 project:alpha assignee:leo created:2026-07-01 elapsed:1h30m file:docs/readme.txt
@@ -17,6 +19,68 @@ SAMPLE = """[ ] T \"日本語 task\" id:t1 priority:A due:2026-07-20 project:alp
 [/] T Today id:t5 do:2026-07-20 assignee:leo project:beta
 [ ] E Meeting id:e1 from:2026-07-20T10:00+09:00 to:2026-07-20T11:00+09:00 loc:Room
 """
+
+
+class RankKeyTests(unittest.TestCase):
+    """Direct unit coverage for _rank_key, without going through the CLI."""
+
+    TODAY = datetime.date(2026, 7, 20)
+
+    def _item(self, priority=None, due=None, created=None, line=1):
+        details = {}
+        if priority is not None:
+            details["priority"] = priority
+        if due is not None:
+            details["due"] = due
+        if created is not None:
+            details["created"] = created
+        return Item(status="[ ]", kind="T", title="t", details=details, line=line)
+
+    def test_overdue_item_ranks_ahead_of_higher_priority_not_yet_due_item(self):
+        overdue = self._item(priority="C", due="2026-07-01")
+        not_due_yet = self._item(priority="A", due="2026-08-01")
+        keys = sorted(
+            [not_due_yet, overdue], key=lambda item: _rank_key(item, self.TODAY)
+        )
+        self.assertIs(keys[0], overdue)
+        self.assertIs(keys[1], not_due_yet)
+
+    def test_item_due_today_is_not_overdue(self):
+        due_today = self._item(due="2026-07-20")
+        due_tomorrow = self._item(due="2026-07-21")
+        self.assertEqual(_rank_key(due_today, self.TODAY)[0], 1)
+        self.assertEqual(_rank_key(due_tomorrow, self.TODAY)[0], 1)
+        keys = sorted(
+            [due_tomorrow, due_today], key=lambda item: _rank_key(item, self.TODAY)
+        )
+        self.assertIs(keys[0], due_today)
+        self.assertIs(keys[1], due_tomorrow)
+
+    def test_item_with_no_due_date_is_not_overdue_and_sorts_after_present_due(self):
+        no_due = self._item(priority="A")
+        has_due = self._item(priority="A", due="2026-07-25")
+        self.assertEqual(_rank_key(no_due, self.TODAY)[0], 1)
+        keys = sorted([no_due, has_due], key=lambda item: _rank_key(item, self.TODAY))
+        self.assertIs(keys[0], has_due)
+        self.assertIs(keys[1], no_due)
+
+    def test_ties_break_by_created_then_line(self):
+        earlier_created = self._item(
+            priority="A", due="2026-07-01", created="2026-06-01", line=10
+        )
+        later_created = self._item(
+            priority="A", due="2026-07-01", created="2026-06-15", line=5
+        )
+        same_everything_later_line = self._item(
+            priority="A", due="2026-07-01", created="2026-06-01", line=20
+        )
+        keys = sorted(
+            [later_created, same_everything_later_line, earlier_created],
+            key=lambda item: _rank_key(item, self.TODAY),
+        )
+        self.assertIs(keys[0], earlier_created)
+        self.assertIs(keys[1], same_everything_later_line)
+        self.assertIs(keys[2], later_created)
 
 
 class ExtraCliTests(unittest.TestCase):
@@ -66,6 +130,119 @@ class ExtraCliTests(unittest.TestCase):
         self.assertIn('"id":"t5"', output)
         self.assertNotIn('"id":"t2"', output)
         self.assertNotIn('"id":"t4"', output)
+
+    def test_next_default_order_is_unchanged_without_rank(self):
+        with_rank_flag_absent = self.run_extra(["next", self.path, "--format", "json"])
+        # Priority A (t1) sorts ahead of blank priority (t5) under next's
+        # existing default key; --rank must not be required to see this, and
+        # must not change it when omitted.
+        self.assertLess(
+            with_rank_flag_absent.index('"id":"t1"'),
+            with_rank_flag_absent.index('"id":"t5"'),
+        )
+        rank_false_explicit = self.run_extra(["next", self.path, "--format", "json"])
+        self.assertEqual(with_rank_flag_absent, rank_false_explicit)
+
+    def _write_rank_fixture(self):
+        path = os.path.join(self.tempdir.name, "rank.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T Overdue id:r1 priority:C due:2000-01-01 created:2026-01-01 "
+                "project:alpha assignee:leo context:office\n"
+                "[ ] T NotDueYet id:r2 priority:A due:2099-01-01 created:2026-01-01 "
+                "project:alpha assignee:leo context:office\n"
+                "[ ] T NoDue id:r3 priority:A created:2026-01-01 "
+                "project:beta assignee:sam context:home\n"
+            )
+        return path
+
+    def test_next_rank_orders_overdue_items_first(self):
+        path = self._write_rank_fixture()
+        default_output = self.run_extra(["next", path, "--format", "json"])
+        self.assertEqual(
+            [default_output.index('"id":"%s"' % item) for item in ("r2", "r3", "r1")],
+            sorted(
+                default_output.index('"id":"%s"' % item) for item in ("r2", "r3", "r1")
+            ),
+        )
+        ranked_output = self.run_extra(["next", path, "--rank", "--format", "json"])
+        positions = [
+            ranked_output.index('"id":"%s"' % item) for item in ("r1", "r2", "r3")
+        ]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_next_rank_reports_invalid_due_dates_instead_of_ranking_silently(self):
+        path = os.path.join(self.tempdir.name, "invalid_due.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T Bad id:b1 priority:A due:not-a-date\n"
+                "[ ] T Good id:b2 priority:A due:2026-07-25\n"
+            )
+        with self.assertRaises(ValueError) as cm:
+            extra_cli.main(["next", path, "--rank"])
+        self.assertIn("b1", str(cm.exception))
+        self.assertIn("not-a-date", str(cm.exception))
+
+    def test_next_without_rank_tolerates_invalid_due_dates(self):
+        path = os.path.join(self.tempdir.name, "invalid_due.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Bad id:b1 priority:A due:not-a-date\n")
+        output = self.run_extra(["next", path, "--format", "json"])
+        self.assertIn('"id":"b1"', output)
+
+    def test_next_rank_selects_the_same_items_as_default(self):
+        path = self._write_rank_fixture()
+        default_output = self.run_extra(["next", path, "--format", "json"])
+        ranked_output = self.run_extra(["next", path, "--rank", "--format", "json"])
+        default_ids = {"r1", "r2", "r3"} & {
+            item for item in ("r1", "r2", "r3") if '"id":"%s"' % item in default_output
+        }
+        ranked_ids = {"r1", "r2", "r3"} & {
+            item for item in ("r1", "r2", "r3") if '"id":"%s"' % item in ranked_output
+        }
+        self.assertEqual(default_ids, ranked_ids)
+        self.assertEqual(default_ids, {"r1", "r2", "r3"})
+
+    def test_next_rank_applies_across_formats(self):
+        path = self._write_rank_fixture()
+        json_output = self.run_extra(["next", path, "--rank", "--format", "json"])
+        life_output = self.run_extra(["next", path, "--rank", "--format", "life"])
+        self.assertLess(json_output.index('"id":"r1"'), json_output.index('"id":"r2"'))
+        self.assertLess(life_output.index("id:r1"), life_output.index("id:r2"))
+        self.assertLess(life_output.index("id:r2"), life_output.index("id:r3"))
+
+    def test_next_rank_composes_with_existing_options(self):
+        path = self._write_rank_fixture()
+        limited = self.run_extra(
+            ["next", path, "--rank", "--limit", "1", "--format", "json"]
+        )
+        self.assertIn('"id":"r1"', limited)
+        self.assertNotIn('"id":"r2"', limited)
+
+        by_project = self.run_extra(
+            ["next", path, "--rank", "--project", "beta", "--format", "json"]
+        )
+        self.assertIn('"id":"r3"', by_project)
+        self.assertNotIn('"id":"r1"', by_project)
+
+        by_user = self.run_extra(
+            ["next", path, "--rank", "--user", "sam", "--format", "json"]
+        )
+        self.assertIn('"id":"r3"', by_user)
+        self.assertNotIn('"id":"r1"', by_user)
+
+        by_context = self.run_extra(
+            ["next", path, "--rank", "--context", "home", "--format", "json"]
+        )
+        self.assertIn('"id":"r3"', by_context)
+        self.assertNotIn('"id":"r1"', by_context)
+
+        with tempfile.TemporaryDirectory() as outdir:
+            out_path = os.path.join(outdir, "ranked.json")
+            self.run_extra(["next", path, "--rank", "--format", "json", "-o", out_path])
+            with open(out_path, encoding="utf-8") as handle:
+                written = handle.read()
+            self.assertIn('"id":"r1"', written)
 
     def test_show_and_count_support_cjk_titles(self):
         output = self.run_extra(["show", "t1", self.path])

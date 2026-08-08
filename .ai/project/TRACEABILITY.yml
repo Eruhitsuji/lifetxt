@@ -1102,6 +1102,46 @@ traceability:
         is opened.
       status: implemented
 
+    - requirement_id: req-next-rank-priority-ranking
+      capability_id: cap-next-priority-ranking
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/139
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/140
+      changed_files_or_scope:
+        - Add an opt-in --rank flag to next that orders overdue items first, falling back to next's existing priority/due/created/line ordering unchanged
+        - lifetxt/extra_common.py
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_core.py
+        - tests/test_extra_cli.py
+        - docs/en/new-cli-workflows.md
+        - .kiro/specs/next-agenda-priority-ranking/
+      tests_or_evidence:
+        - tests/test_extra_cli.py RankKeyTests -> Ran 4 tests, OK
+        - tests/test_extra_cli.py (next --rank ordering, same-item-set, format parity, option composition, default-output non-regression, invalid-due-date error and tolerance) -> Ran 21 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1886 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 250 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+        - "manual verification via the real installed lifetxt console script (not import-and-call), /verify skill run against PR #140 -- next/next --rank against overdue/not-due/no-due/blocked/done fixtures, --rank combined with --limit/--format json/doubled flag, and a due-today boundary case against the actual system date, all captured from real terminal output"
+        - "manual reproduction of the invalid-due-date fix via the same console script -- next --rank against due:not-a-date produces 'ERROR: next --rank cannot rank items with an invalid due date: e1 (due:not-a-date)', exit 1; plain next on the same fixture exits 0, unaffected"
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/next-agenda-priority-ranking/
+        (requirements, design, research, and a sanity-reviewed task plan; below
+        the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, S-sized). Requirements 2.9/2.10 (fail loudly on an unparseable
+        due value under --rank; tolerate it unchanged without --rank) and their
+        design/tests were added after initial implementation, in response to a
+        /verify finding that malformed due dates silently degraded to "no due
+        date" -- consistent with cap-* other than not being anticipated in the
+        original design pass; recorded in design.md's Error Handling section
+        rather than treated as a late scope change outside this capability.
+        Ranking test dates use year 2000/2099 fixtures
+        rather than dates relative to the current run date, so the tests remain
+        correct regardless of when they run. pull_request is filled in once the
+        pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

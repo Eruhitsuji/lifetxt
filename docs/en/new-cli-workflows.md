@@ -8,9 +8,14 @@ This guide covers the workflow commands added in the 2026-07-20 roadmap implemen
 lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10
 lifetxt next life.txt --format json
+lifetxt next life.txt --rank
 ```
 
 `next` selects open task records that are not deferred, someday/maybe, or blocked by an open dependency. Results are ordered by priority, due date, and age.
+
+Add `--rank` to place overdue items first regardless of priority; ties still fall back to `next`'s normal priority, due date, and age ordering. Without `--rank`, output is unchanged.
+
+`--rank` requires every selected item's `due` value to be a valid date; an item with an unparseable `due` (for example `due:not-a-date`) makes `next --rank` fail with an error naming the item instead of silently ranking it as if it had no due date. `next` without `--rank` is unaffected and keeps tolerating an unparseable `due` as it always has.
 
 ## Inspect and edit one item
 

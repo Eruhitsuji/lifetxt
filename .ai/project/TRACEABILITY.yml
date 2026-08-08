@@ -1146,7 +1146,7 @@ traceability:
       capability_id: cap-config-safe-writes
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/136
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/141
       changed_files_or_scope:
         - Stop config set|unset|migrate from writing back workspace-resolved paths/write_file/generated_paths that were never declared in the file
         - lifetxt/cli.py
@@ -1170,7 +1170,7 @@ traceability:
       capability_id: cap-next-actionable-convergence
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/138
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/141
       changed_files_or_scope:
         - Converge CLI next and TUI /next onto the shared nextaction.py actionable-item definition; fix a real bug in is_actionable() and the TUI's missing blocked computation found while converging
         - lifetxt/nextaction.py

@@ -119,6 +119,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/58
       - https://github.com/Eruhitsuji/lifetxt/pull/59
       - https://github.com/Eruhitsuji/lifetxt/pull/98
+      - https://github.com/Eruhitsuji/lifetxt/pull/141
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Configuration-driven enforcement is available through
@@ -734,7 +735,8 @@ capabilities:
       - "manual verification via the real installed lifetxt console script: next against a fixture covering all convergence cases (T/D/R/H/E kinds, someday tag, closed and dangling dependencies) returns exactly the expected set"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/138
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/141
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered lifetxt/nextaction.py before this

@@ -28,6 +28,7 @@ from .tui import (
     row_project,
     tui_options,
 )
+from .workspace import active_workspace_name
 
 
 WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next",)
@@ -419,6 +420,9 @@ class WorkspaceState(object):
     def __init__(self, args, glyphs=None):
         self.args = args
         self.options = tui_options(args)
+        self.active_workspace = active_workspace_name(
+            getattr(args, "config_data", None) or {}
+        )
         self.glyphs = glyphs or glyph_set(self.options.get("glyphs", "auto"))
         self.keymap = self.options.get("keymap", "prompt")
         self.mode = "input" if self.keymap == "prompt" else "nav"
@@ -1894,7 +1898,10 @@ def _build_header(state, width):
     counts = state.counts
     inner = width - 2
 
-    title = " lifetxt %s workspace" % glyphs["dot"]
+    tagline = " %s workspace" % glyphs["dot"]
+    if getattr(state, "active_workspace", None):
+        tagline += " %s workspace:%s" % (glyphs["dot"], state.active_workspace)
+    title = " lifetxt" + tagline
     summary = "%d task %s %d agenda %s %d status " % (
         counts.get("tasks", 0),
         glyphs["dot"],
@@ -1907,7 +1914,7 @@ def _build_header(state, width):
     middle = [
         (glyphs["v"], "chrome"),
         (" lifetxt", "brand"),
-        (" %s workspace" % glyphs["dot"], "tagline"),
+        (tagline, "tagline"),
         (" " * gap, "default"),
         (summary, "counter"),
         (glyphs["v"], "chrome"),

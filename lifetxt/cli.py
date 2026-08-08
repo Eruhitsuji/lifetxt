@@ -11870,11 +11870,9 @@ def _config(args):
 
 
 def _workspace_resolution_active(config, workspace_name):
-    if workspace_name:
-        return True
-    if not isinstance(config, dict):
-        return False
-    return bool(config.get("workspaces") or config.get("default_workspace"))
+    from .workspace import workspace_resolution_active
+
+    return workspace_resolution_active(config, workspace_name)
 
 
 def _maybe_apply_workspace(args):

@@ -1,10 +1,14 @@
 import datetime
+import os
+import tempfile
 import unittest
+from collections import OrderedDict
 
 from lifetxt import timeutil
 from lifetxt.timezone_policy import (
     TimezonePolicyError,
     classify_wall_time,
+    cli_timezone_candidate_paths,
     comparison_datetime,
     convert_datetime,
     date_boundaries,
@@ -107,6 +111,84 @@ class TimezonePolicyV2Tests(unittest.TestCase):
         self.assertIn("aware_values", report)
         self.assertIn("time_only_values", report)
         self.assertIn("output", report["sample"])
+
+
+class CliTimezoneCandidatePathsTests(unittest.TestCase):
+    """Covers #142: the workspace-aware candidate-file resolver used by the
+    CLI's timezone-context bootstrap."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = self.temp.name
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def write(self, name, text="[ ] T Task\n"):
+        path = os.path.join(self.root, name)
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        return path
+
+    def config(self, extra):
+        data = OrderedDict(extra)
+        data["_path"] = os.path.join(self.root, ".lifetxt.json")
+        return data
+
+    def test_legacy_configuration_uses_config_paths_unchanged(self):
+        legacy = self.write("legacy.life.txt")
+        config = self.config({"paths": [legacy]})
+        candidates = cli_timezone_candidate_paths([], config)
+        self.assertEqual([legacy], candidates)
+
+    def test_explicit_workspace_uses_its_priority_ordered_input_paths(self):
+        low = self.write("low.life.txt")
+        high = self.write("high.life.txt")
+        config = self.config(
+            {
+                "workspaces": {
+                    "work": {
+                        "sources": [
+                            {"path": low, "priority": 200},
+                            {"path": high, "priority": 10},
+                        ]
+                    }
+                }
+            }
+        )
+        candidates = cli_timezone_candidate_paths([], config, "work")
+        self.assertEqual([high, low], candidates)
+
+    def test_implicit_default_workspace_is_used_when_no_explicit_name_given(self):
+        target = self.write("default.life.txt")
+        config = self.config(
+            {
+                "default_workspace": "work",
+                "workspaces": {"work": {"sources": [target]}},
+            }
+        )
+        candidates = cli_timezone_candidate_paths([], config, None)
+        self.assertEqual([target], candidates)
+
+    def test_unknown_workspace_name_falls_back_to_legacy_candidates_instead_of_raising(
+        self,
+    ):
+        legacy = self.write("legacy.life.txt")
+        config = self.config(
+            {
+                "paths": [legacy],
+                "workspaces": {"work": {"sources": [self.write("work.life.txt")]}},
+            }
+        )
+        candidates = cli_timezone_candidate_paths([], config, "does-not-exist")
+        self.assertEqual([legacy], candidates)
+
+    def test_existing_file_positional_argument_still_takes_precedence(self):
+        explicit = self.write("explicit.life.txt")
+        workspace_file = self.write("work.life.txt")
+        config = self.config({"workspaces": {"work": {"sources": [workspace_file]}}})
+        candidates = cli_timezone_candidate_paths([explicit], config, "work")
+        self.assertEqual([explicit, workspace_file], candidates)
 
 
 if __name__ == "__main__":

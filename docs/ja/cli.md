@@ -591,7 +591,7 @@ python -m lifetxt links life.txt --chain task_report --format json --pretty
 | `--format text|json|jsonl|mermaid|dot` | 出力形式。`--chain` は `text`、`json`、`jsonl` に対応 |
 | `--pretty` | JSON を整形して出力 |
 
-`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`) も報告します。
+`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`)、`depends_on:`/`blocks:` の複合 cycle (`W227`)、`duplicate_of:` cycle (`W228`)、`replaced_by:` cycle (`W229`) も報告します。
 
 依存関係の動作:
 

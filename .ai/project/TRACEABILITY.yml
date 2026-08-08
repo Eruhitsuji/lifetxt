@@ -1264,7 +1264,7 @@ traceability:
       capability_id: cap-workspace-resolution-safety
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/148
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/149
       changed_files_or_scope:
         - Add remote.lifetxt.json, integration-references.lifetxt.json, and software-ticket-workspace.lifetxt.json under examples/config/, registered in ExampleConfigTests.EXAMPLE_NAMES
         - Add workspace-resolution edge-case tests: Unicode source paths, unknown top-level config key tolerance, mixed-priority glob ordering, resolution repeatability

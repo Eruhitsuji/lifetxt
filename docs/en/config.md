@@ -176,6 +176,26 @@ loaded file, because those commands discover the revision automatically. It
 does refuse writes where no revision is available, such as writing to a
 different `--output` file without `--expected-revision`.
 
+Set `config.write.audit_log` to keep a durable, bounded record of configuration
+write attempts beyond what the bounded `.bak`/`.rejected` rotation retains:
+
+```json
+{
+  "config": {
+    "write": {
+      "audit_log": ".cache/lifetxt/config-write-audit.jsonl",
+      "audit_max_bytes": 5242880
+    }
+  }
+}
+```
+
+Each accepted or refused write appends one line recording only the timestamp,
+path, outcome, and revisions involved -- never configuration content or key
+values, so it cannot leak a secret-referencing setting. The file is trimmed
+from the oldest end once it exceeds `audit_max_bytes`. Leaving `audit_log`
+unset disables the trail entirely.
+
 ## Credentials
 
 Never store passwords or tokens directly in configuration. Reference an

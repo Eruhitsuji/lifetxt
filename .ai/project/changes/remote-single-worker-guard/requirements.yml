@@ -1,0 +1,26 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-single-worker-guard
+    kind: ADDED
+    statement: >-
+      When Remote Safe Mode is enabled and the process detects a common
+      multi-worker deployment signal (WEB_CONCURRENCY > 1) without an explicit
+      operator override, the application factory refuses to construct the app
+      and raises an error identifying the cause, instead of silently running
+      with per-worker-divergent rate limiting and browser-session state.
+    acceptance_criteria:
+      - "When remote.enabled is true and WEB_CONCURRENCY parses to an integer greater than 1, create_app() raises RemoteAccessError with code REMOTE_MULTI_WORKER_UNSUPPORTED."
+      - "When remote.allow_multi_worker is set to true, the same condition does not raise."
+      - "When remote.enabled is false, the check never raises regardless of WEB_CONCURRENCY."
+      - "When WEB_CONCURRENCY is absent, empty, non-numeric, or parses to 1 or less, the check does not raise (fails open on an absent or malformed signal, not closed by treating unknown as unsafe)."
+      - "remote.allow_multi_worker defaults to false/absent, so the guard is active for every existing deployment without a migration."
+      - "docs/en/remote.md and docs/ja/remote.md name the process-local components (RateLimiter, BrowserSessionStore), the WEB_CONCURRENCY signal, the override key, and state plainly that detection is best-effort and does not cover every multi-worker topology."
+    constraints:
+      - Must not modify lifetxt.remote_access.RateLimiter or lifetxt.remote_sessions.BrowserSessionStore's own implementations.
+      - Must not add or require a --workers flag on lifetxt serve's CLI.
+      - Must read WEB_CONCURRENCY as a trusted value (per this project's established rule that environment variables and CLI flags are trusted inputs), with no attempt to validate or sanitize its source.
+      - Must not claim comprehensive multi-worker detection in code comments, error messages, or documentation -- the check covers one common, detectable signal only.
+    owner: Eruhitsuji
+
+open_questions: []

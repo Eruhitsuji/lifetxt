@@ -40,6 +40,7 @@ from .remote_sessions import (
     require_origin,
     session_payload,
     validate_session_configuration,
+    validate_single_worker_deployment,
 )
 
 _INSTALLED = False
@@ -132,6 +133,7 @@ def install_remote_web():
         app.state.remote_enabled = bool(_remote(app.state.config).get("enabled"))
         if app.state.remote_enabled:
             validate_session_configuration(app.state.config)
+            validate_single_worker_deployment(app.state.config)
             validate_remote_storage(app.state.config, app.state.paths, writable_path)
         app.state.remote_session_store = BrowserSessionStore()
         principal_limiter = RateLimiter()

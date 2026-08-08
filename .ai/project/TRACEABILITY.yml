@@ -1485,6 +1485,74 @@ traceability:
         commits reachable from it.
       status: implemented
 
+    - requirement_id: req-config-registry-ticketing-coverage
+      capability_id: cap-config-registry-coverage-gate
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/156
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/158
+      changed_files_or_scope:
+        - Register the 5 missing ticketing.* config keys in config_registry.py (trackers, priorities, severities, components, defaults.tracker, defaults.priority)
+        - Add a coverage-gate test that fails when a ticketing.* key config_template() defines lacks registry metadata
+        - lifetxt/config_registry.py
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - tests/test_config_validation.py ValidationTests.test_registry_describes_new_ticketing_keys and test_ticketing_config_template_keys_are_all_registered
+        - 'confirmed the gate fails: deliberately removing ticketing.components from CONFIG_REGISTRY in-process reproduced the exact AssertionError'
+        - python -m unittest tests.test_config_validation -> Ran 49 tests, OK (skipped=1)
+        - 'live: lifetxt config explain ticketing.trackers / ticketing.defaults.priority render correctly'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from todo.md's "P1: Configuration and Workspace
+        Foundation" item on config_version/registry coverage (below the
+        .ai/project/changes/README.md change-package threshold: Standard
+        assurance, XS-sized). Scoped to ticketing.* only, matching what the
+        todo.md item names; the much larger non-ticketing config_template()
+        surface is explicitly out of scope. Self-scoped and implemented
+        autonomously per repository owner authorization (feature/config-
+        registry-foundation batch, alongside #157).
+      status: implemented
+
+    - requirement_id: req-config-write-audit-trail
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/157
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/159
+      changed_files_or_scope:
+        - Add config.write.audit_log / config.write.audit_max_bytes and wire write_config to append a bounded, metadata-only JSONL record per write attempt
+        - lifetxt/config_writer.py
+        - lifetxt/config_registry.py
+        - lifetxt/cli.py
+        - tests/test_config_validation.py
+        - docs/en/config.md
+        - docs/ja/config.md
+      tests_or_evidence:
+        - tests/test_config_validation.py ConfigWriteAuditTests (6 tests: disabled-by-default, accepted, rejected, dry-run-unaudited, no-content-leak, trimming)
+        - python -m unittest tests.test_config_validation -> Ran 49 tests, OK (skipped=1)
+        - python -m unittest tests.test_lifetxt.LifeTxtConfigCliTests -> Ran 9 tests, OK (no regression from the cli.py wiring)
+        - 'live: lifetxt config set web.port 9000 against a config with config.write.audit_log set appends exactly the expected JSONL line'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from todo.md's "P1: Configuration and Workspace
+        Foundation" item on extending the config writer's recovery record
+        beyond the bounded .bak rotation (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized). Mirrors
+        lifetxt.remote_access.append_audit's bounded-JSONL-append-and-trim shape
+        rather than inventing a new one. Extends cap-config-safe-writes rather
+        than creating a new capability, since it is the same write path. Not
+        escalated to Security/High assurance: additive, opt-in (disabled by
+        default), and the design explicitly excludes configuration content and
+        secret-marked values by construction, verified by a regression test.
+        Self-scoped and implemented autonomously per repository owner
+        authorization (feature/config-registry-foundation batch, alongside
+        #156).
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -820,3 +820,60 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-project-archive-workflow
+    name: Project archive workflow
+    summary: >-
+      Move a project's done/canceled records to the active workspace's
+      configured archive source through the existing atomic multi-file
+      archive/transaction engine, carrying development-ticket history
+      (record:ticket_event / record:time_entry) along with its archived
+      parent ticket.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-project-archive-workflow
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_project_archive.py
+    public_interfaces:
+      - lifetxt project archive NAME
+      - lifetxt.cli.command_project_archive
+      - lifetxt.cli.command_archive (project_filter parameter)
+    tests_or_evidence:
+      - tests/test_project_archive.py ProjectArchiveTests (7 tests)
+      - tests/test_lifetxt.py LifeTxtArchiveCliTests, LifeTxtArchiveOrphanTests, LifeTxtArchiveExternalRefsTests, LifeTxtArchivePreserveStructureTests, LifeTxtArchiveMultiFileRefsTests, LifeTxtCleanupArchiveHintTests re-run unmodified -> Ran 24 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1944 tests, OK (skipped=11)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - manual verification via the real installed lifetxt entry point against a fixture workspace, confirming project-matching selection, ticket-history linkage, the archive-destination self-exclusion fix, and the missing-archive-role error path
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/146
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      command_project_archive is a thin adapter over the existing
+      command_archive engine: it resolves the active workspace's input files
+      (excluding the resolved archive-role file itself, a real self-inclusion
+      bug found and fixed during implementation) as sources and the
+      workspace's role: archive source as the destination, then delegates to
+      command_archive with a new project_filter argument. project_filter
+      defaults to None/absent for every pre-existing caller of
+      command_archive, so the change is fully backward compatible -- verified
+      by re-running the complete pre-existing archive test suite unmodified.
+      Ticket history is followed via the same parent: key
+      build_ticket_event/build_time_entry already write (confirmed by
+      reading lifetxt/ticket_activity.py), unconditionally, since it carries
+      no done/canceled status of its own and would otherwise never match the
+      archive command's status filter. Version/sprint registry entries are
+      not moved or otherwise touched by this capability; an archived item's
+      version:/sprint: detail values are left as-is. This is a recorded
+      limitation, not a silently dropped requirement -- todo.md's mention of
+      version/sprint handling is addressed by "leave the reference intact,
+      do not move the registry entry," not by registry relocation, which
+      would require a separate, more invasive capability.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

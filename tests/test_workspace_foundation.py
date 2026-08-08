@@ -224,6 +224,38 @@ class WorkspaceResolutionTests(unittest.TestCase):
         self.assertTrue(record["default_visible"])
         self.assertEqual(100, record["priority"])
 
+    def test_ticket_event_and_time_entry_roles_resolve_without_warning(self):
+        self.write("events.life.txt")
+        self.write("time.life.txt")
+        config = self.config(
+            {
+                "workspaces": {
+                    "w": {
+                        "sources": [
+                            {"path": "events.life.txt", "role": "ticket_event"},
+                            {"path": "time.life.txt", "role": "time_entry"},
+                        ]
+                    }
+                }
+            }
+        )
+        resolution = resolve_workspace(config, "w")
+        codes = {row["code"] for row in resolution["diagnostics"]}
+        self.assertNotIn("WS005", codes)
+        self.assertTrue(resolution["ok"])
+
+    def test_ticket_event_and_time_entry_roles_default_writable_and_visible(self):
+        events = normalize_source(
+            {"path": "events.life.txt", "role": "ticket_event"}, self.root
+        )
+        time_entries = normalize_source(
+            {"path": "time.life.txt", "role": "time_entry"}, self.root
+        )
+        self.assertTrue(events["writable"])
+        self.assertTrue(events["default_visible"])
+        self.assertTrue(time_entries["writable"])
+        self.assertTrue(time_entries["default_visible"])
+
     def test_generated_write_target_is_error(self):
         self.write("gen.life.txt")
         config = self.config(
@@ -545,6 +577,24 @@ class ExampleConfigTests(unittest.TestCase):
         invalid = {"workspace": {"max_total_source_bytes": 0}}
         messages = [e.message for e in validator.iter_errors(invalid)]
         self.assertTrue(messages)
+
+    def test_config_schema_accepts_ticket_event_and_time_entry_source_roles(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("Draft 2020-12 jsonschema validation not available")
+        from lifetxt.safety_foundation import schema_bundle
+
+        schema = schema_bundle()["config-v1.schema.json"]
+        validator = Draft202012Validator(schema)
+        for role in ("ticket_event", "time_entry"):
+            valid = {
+                "workspaces": {
+                    "work": {"sources": [{"path": "events.life.txt", "role": role}]}
+                }
+            }
+            errors = [e.message for e in validator.iter_errors(valid)]
+            self.assertEqual([], errors, role)
 
 
 if __name__ == "__main__":

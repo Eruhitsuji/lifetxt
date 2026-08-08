@@ -1,9 +1,21 @@
+import json
 import unittest
 
 from lifetxt.parser import parse_text
 from lifetxt.links import (
     backlink_records,
+    dependency_blocker_records,
+    dependency_blockers_by_item,
+    dependency_chain_records,
+    dependency_chains_to_dot,
+    dependency_chains_to_mermaid,
+    format_dependency_chain,
+    format_link_table,
     link_records,
+    links_to_dot,
+    links_to_json,
+    links_to_jsonl,
+    links_to_mermaid,
     reference_diagnostics,
 )
 
@@ -135,6 +147,227 @@ class ExtendedCycleDetectionTests(unittest.TestCase):
         for code in ("W227", "W228", "W229"):
             diagnostic = Diagnostic("warning", code, "x")
             self.assertEqual("reference", diagnostic_category(diagnostic))
+
+
+class DependencyBlockerRecordsTests(unittest.TestCase):
+    """dependency_blocker_records / dependency_blockers_by_item (#163)."""
+
+    def test_open_depends_on_open_produces_a_blocker_record(self):
+        text = "[ ] T Setup id:setup\n[ ] T Work id:work depends_on:setup\n"
+        items, _diagnostics = parse_text(text)
+        records = dependency_blocker_records(items)
+        self.assertEqual(1, len(records))
+        record = records[0]
+        self.assertEqual("depends_on", record["relation"])
+        self.assertEqual("work", record["blocked_id"])
+        self.assertEqual("setup", record["blocker_id"])
+
+    def test_depends_on_a_done_item_produces_no_blocker_record(self):
+        text = "[x] T Setup id:setup\n[ ] T Work id:work depends_on:setup\n"
+        items, _diagnostics = parse_text(text)
+        self.assertEqual([], dependency_blocker_records(items))
+
+    def test_done_item_depends_on_open_item_produces_no_blocker_record(self):
+        # dependency_blocker_records only reports open+open pairs; the done-
+        # but-still-blocked case is a separate diagnostic (W224), not this API.
+        text = "[ ] T Setup id:setup\n[x] T Work id:work depends_on:setup\n"
+        items, _diagnostics = parse_text(text)
+        self.assertEqual([], dependency_blocker_records(items))
+
+    def test_open_blocks_open_produces_a_blocker_record_with_reversed_roles(self):
+        text = "[ ] T Gate id:gate blocks:work\n[ ] T Work id:work\n"
+        items, _diagnostics = parse_text(text)
+        records = dependency_blocker_records(items)
+        self.assertEqual(1, len(records))
+        record = records[0]
+        self.assertEqual("blocks", record["relation"])
+        self.assertEqual("work", record["blocked_id"])
+        self.assertEqual("gate", record["blocker_id"])
+
+    def test_missing_and_ambiguous_targets_are_skipped_without_raising(self):
+        text = (
+            "[ ] T Work id:work depends_on:nope\n"
+            "[ ] T Dup id:dup\n"
+            "[ ] T Dup2 id:dup\n"
+            "[ ] T Other id:other depends_on:dup\n"
+        )
+        items, _diagnostics = parse_text(text)
+        # Must not raise; both references are unresolvable (missing / ambiguous).
+        self.assertEqual([], dependency_blocker_records(items))
+
+    def test_dependency_blockers_by_item_groups_by_blocked_item(self):
+        text = (
+            "[ ] T Setup id:setup\n"
+            "[ ] T Gate id:gate\n"
+            "[ ] T Work id:work depends_on:setup depends_on:gate\n"
+        )
+        items, _diagnostics = parse_text(text)
+        grouped = dependency_blockers_by_item(items)
+        self.assertEqual(1, len(grouped))
+        (blockers,) = grouped.values()
+        self.assertEqual({"setup", "gate"}, {b["id"] for b in blockers})
+
+
+class DependencyChainRecordsTests(unittest.TestCase):
+    """dependency_chain_records (#163)."""
+
+    def test_root_id_resolves_to_a_single_node_tree(self):
+        text = "[ ] T Setup id:setup\n[ ] T Work id:work depends_on:setup\n"
+        items, _diagnostics = parse_text(text)
+        chains = dependency_chain_records(items, root_id="work")
+        self.assertEqual(1, len(chains))
+        root = chains[0]
+        self.assertEqual("work", root["id"])
+        self.assertEqual(1, len(root["deps"]))
+        self.assertEqual("setup", root["deps"][0]["id"])
+
+    def test_missing_root_id_returns_a_missing_placeholder(self):
+        items, _diagnostics = parse_text("[ ] T Work id:work\n")
+        chains = dependency_chain_records(items, root_id="nope")
+        self.assertEqual(1, len(chains))
+        self.assertEqual("missing", chains[0]["reference_status"])
+
+    def test_ambiguous_root_id_returns_an_ambiguous_placeholder(self):
+        text = "[ ] T A id:dup\n[ ] T B id:dup\n"
+        items, _diagnostics = parse_text(text)
+        chains = dependency_chain_records(items, root_id="dup")
+        self.assertEqual(1, len(chains))
+        self.assertEqual("ambiguous", chains[0]["reference_status"])
+
+    def test_blocked_only_excludes_items_without_an_open_direct_blocker(self):
+        text = (
+            "[ ] T Setup id:setup\n"
+            "[x] T Done_Setup id:done_setup\n"
+            "[ ] T Blocked id:blocked depends_on:setup\n"
+            "[ ] T Unblocked id:unblocked depends_on:done_setup\n"
+        )
+        items, _diagnostics = parse_text(text)
+        chains = dependency_chain_records(items, blocked_only=True)
+        ids = {chain["id"] for chain in chains}
+        self.assertIn("blocked", ids)
+        self.assertNotIn("unblocked", ids)
+
+    def test_max_depth_truncates_and_marks_truncated(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b depends_on:c\n[ ] T C id:c\n"
+        items, _diagnostics = parse_text(text)
+        chains = dependency_chain_records(items, root_id="a", max_depth=1)
+        root = chains[0]
+        self.assertEqual(1, len(root["deps"]))
+        b_node = root["deps"][0]
+        self.assertEqual([], b_node["deps"])
+        self.assertTrue(b_node.get("truncated"))
+
+    def test_cycle_is_flagged_without_infinite_recursion(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b depends_on:a\n"
+        items, _diagnostics = parse_text(text)
+        chains = dependency_chain_records(items, root_id="a")
+        root = chains[0]
+        b_node = root["deps"][0]
+        a_again = b_node["deps"][0]
+        self.assertTrue(a_again.get("cycle"))
+        self.assertEqual([], a_again["deps"])
+
+    def test_missing_dependency_target_is_a_placeholder_node(self):
+        items, _diagnostics = parse_text("[ ] T Work id:work depends_on:nope\n")
+        chains = dependency_chain_records(items, root_id="work")
+        dep = chains[0]["deps"][0]
+        self.assertEqual("missing", dep["reference_status"])
+        self.assertEqual("nope", dep["id"])
+
+
+class DependencyChainFormattingTests(unittest.TestCase):
+    """format_dependency_chain / dependency_chains_to_mermaid/dot (#163)."""
+
+    def _chain(self):
+        text = "[ ] T Setup id:setup\n[x] T Work id:work depends_on:setup\n"
+        items, _diagnostics = parse_text(text)
+        return dependency_chain_records(items, root_id="work")
+
+    def test_format_dependency_chain_indents_and_shows_relation(self):
+        text = format_dependency_chain(self._chain())
+        lines = text.splitlines()
+        self.assertEqual(2, len(lines))
+        self.assertTrue(lines[0].startswith("work "))
+        self.assertTrue(lines[1].startswith("  setup"))
+        self.assertIn("(depends_on)", lines[1])
+
+    def test_format_dependency_chain_empty_input(self):
+        self.assertEqual("No dependency chains found.\n", format_dependency_chain([]))
+
+    def test_dependency_chains_to_mermaid_includes_nodes_and_edge(self):
+        text = dependency_chains_to_mermaid(self._chain())
+        self.assertTrue(text.startswith("graph LR"))
+        self.assertIn("work", text)
+        self.assertIn("setup", text)
+        self.assertIn("-- depends_on -->", text)
+
+    def test_dependency_chains_to_mermaid_empty_input(self):
+        text = dependency_chains_to_mermaid([])
+        self.assertEqual("graph LR\n", text)
+
+    def test_dependency_chains_to_dot_includes_nodes_and_edge(self):
+        text = dependency_chains_to_dot(self._chain())
+        self.assertTrue(text.startswith("digraph deps {"))
+        self.assertIn("->", text)
+        self.assertIn("[label=depends_on]", text)
+
+    def test_dependency_chains_to_dot_empty_input(self):
+        text = dependency_chains_to_dot([])
+        self.assertEqual("digraph deps {\n}\n", text)
+
+
+class LinkGraphExportTests(unittest.TestCase):
+    """links_to_mermaid/dot/json/jsonl, format_link_table (#163)."""
+
+    def _records(self):
+        text = "[ ] T Root id:root\n[x] T Child id:child parent:root\n"
+        items, _diagnostics = parse_text(text)
+        return link_records(items, relations=["parent"])
+
+    def test_format_link_table_has_header_and_row(self):
+        text = format_link_table(self._records())
+        lines = text.splitlines()
+        self.assertIn("relation", lines[0])
+        self.assertTrue(any("parent" in line for line in lines[1:]))
+
+    def test_format_link_table_empty_input(self):
+        self.assertEqual("No links found.\n", format_link_table([]))
+
+    def test_links_to_mermaid_includes_nodes_and_done_class(self):
+        text = links_to_mermaid(self._records())
+        self.assertTrue(text.startswith("graph LR"))
+        self.assertIn("root", text)
+        self.assertIn("child", text)
+        self.assertIn(":::done", text)
+        self.assertIn("classDef done", text)
+
+    def test_links_to_mermaid_empty_input(self):
+        self.assertEqual("graph LR\n", links_to_mermaid([]))
+
+    def test_links_to_dot_includes_nodes_and_style(self):
+        text = links_to_dot(self._records())
+        self.assertTrue(text.startswith("digraph links {"))
+        self.assertIn("style=dashed", text)
+
+    def test_links_to_dot_empty_input(self):
+        self.assertEqual("digraph links {\n}\n", links_to_dot([]))
+
+    def test_links_to_json_round_trips(self):
+        records = self._records()
+        parsed = json.loads(links_to_json(records))
+        self.assertEqual(records, parsed)
+
+    def test_links_to_json_pretty_is_indented(self):
+        pretty = links_to_json(self._records(), pretty=True)
+        self.assertIn("\n", pretty)
+        self.assertEqual(json.loads(pretty), json.loads(links_to_json(self._records())))
+
+    def test_links_to_jsonl_one_record_per_line(self):
+        records = self._records()
+        lines = links_to_jsonl(records).splitlines()
+        self.assertEqual(len(records), len(lines))
+        for line, record in zip(lines, records):
+            self.assertEqual(record, json.loads(line))
 
 
 if __name__ == "__main__":

@@ -4673,7 +4673,17 @@ def command_serve(args):
     app = create_app(
         paths=paths, writable_path=writable_path, config=config, read_only=read_only
     )
-    uvicorn.run(app, host=host, port=port)
+    # uvicorn.Config independently reads WEB_CONCURRENCY from the environment
+    # and sets its own workers count from it, regardless of caller intent
+    # (uvicorn/config.py). serve has no --workers flag and passes an
+    # in-memory app object rather than an import string, which uvicorn
+    # cannot fan out to worker subprocesses -- left alone, a stray
+    # WEB_CONCURRENCY > 1 (e.g. inherited from an unrelated gunicorn
+    # environment) makes uvicorn refuse to start with a warning that names
+    # neither lifetxt nor WEB_CONCURRENCY as the cause. serve is
+    # single-process by design, so pin workers=1 explicitly rather than
+    # let the environment decide.
+    uvicorn.run(app, host=host, port=port, workers=1)
     return 0
 
 

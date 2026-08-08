@@ -574,6 +574,54 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "ticketing.trackers",
+            _entry(
+                "array<string>",
+                ["bug", "feature", "task", "support"],
+                "Allowed ticket tracker values.",
+            ),
+        ),
+        (
+            "ticketing.priorities",
+            _entry(
+                "array<string>",
+                ["low", "normal", "high", "urgent", "immediate"],
+                "Allowed ticket priority values, ordered low to high.",
+            ),
+        ),
+        (
+            "ticketing.severities",
+            _entry(
+                "array<string>",
+                ["trivial", "minor", "major", "critical", "blocker"],
+                "Allowed ticket severity values, ordered least to most severe.",
+            ),
+        ),
+        (
+            "ticketing.components",
+            _entry(
+                "array<string>",
+                [],
+                "Allowed ticket component values. Empty means no component restriction.",
+            ),
+        ),
+        (
+            "ticketing.defaults.tracker",
+            _entry(
+                "string",
+                "task",
+                "Tracker assumed for `ticket new` when none is given.",
+            ),
+        ),
+        (
+            "ticketing.defaults.priority",
+            _entry(
+                "string",
+                "normal",
+                "Priority assumed for `ticket new` when none is given.",
+            ),
+        ),
+        (
             "inbox.proposals_file",
             _entry(
                 "string",

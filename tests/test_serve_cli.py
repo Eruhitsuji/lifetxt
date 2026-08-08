@@ -4,7 +4,13 @@ import tempfile
 import unittest
 from unittest import mock
 
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
 
+
+@unittest.skipIf(uvicorn is None, "web extras unavailable")
 class ServeSingleWorkerTests(unittest.TestCase):
     """Covers #172: WEB_CONCURRENCY must not make `serve` crash or multi-worker."""
 

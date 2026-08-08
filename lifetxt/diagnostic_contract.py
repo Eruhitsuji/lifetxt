@@ -40,7 +40,7 @@ def diagnostic_category(diagnostic):
         return "recurrence"
     if code in ("W213", "W214"):
         return "id"
-    if code in ("W215", "W216", "W217", "W218"):
+    if code in ("W215", "W216", "W217", "W218", "W227", "W228", "W229"):
         return "reference"
     if code in ("W101", "W102", "W103", "W104", "W224"):
         return "workflow"

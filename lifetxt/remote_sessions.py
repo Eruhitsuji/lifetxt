@@ -8,6 +8,7 @@ cookie, response, profile, or audit detail.
 from __future__ import unicode_literals
 
 import hmac
+import os
 import re
 import secrets
 import threading
@@ -54,6 +55,46 @@ def csrf_header(config):
 
 def browser_enabled(config):
     return bool(_remote(config).get("enabled") and _remote(config).get("browser_ui"))
+
+
+def validate_single_worker_deployment(config):
+    """Refuse to start Remote Safe Mode under a detected multi-worker deployment.
+
+    ``RateLimiter`` and ``BrowserSessionStore`` are both plain in-process state
+    (see their own implementations): a request landing on a different worker
+    than the one that authenticated or rate-limited it sees a different
+    counter and a different session table. ``lifetxt serve`` itself has no
+    ``--workers`` flag and can only launch a single process; this only fires
+    when the ASGI app is launched directly by an external multi-worker
+    manager (gunicorn, ``uvicorn --workers N``, a PaaS platform's default
+    multi-worker mode).
+
+    Detection is necessarily best-effort: ``WEB_CONCURRENCY`` is a de facto
+    standard several platforms/process managers set for this purpose, but its
+    absence does not prove a single-worker deployment.
+    """
+    remote = _remote(config)
+    if not remote.get("enabled"):
+        return
+    if remote.get("allow_multi_worker"):
+        return
+    raw = os.environ.get("WEB_CONCURRENCY")
+    if not raw:
+        return
+    try:
+        workers = int(raw)
+    except (TypeError, ValueError):
+        return
+    if workers > 1:
+        raise RemoteAccessError(
+            "REMOTE_MULTI_WORKER_UNSUPPORTED",
+            "Remote Safe Mode's rate limiting and browser-session store are "
+            "process-local and unsafe under multiple worker processes "
+            "(WEB_CONCURRENCY=%s detected). Run a single worker, or set "
+            "remote.allow_multi_worker=true to start anyway with reduced "
+            "throttling and session consistency." % raw,
+            500,
+        )
 
 
 def validate_session_configuration(config):

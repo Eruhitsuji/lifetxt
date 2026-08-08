@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest import mock
 
 from lifetxt.remote_access import RemoteAccessError
 from lifetxt.remote_sessions import (
@@ -7,6 +9,7 @@ from lifetxt.remote_sessions import (
     require_csrf,
     session_payload,
     validate_session_configuration,
+    validate_single_worker_deployment,
 )
 
 
@@ -133,6 +136,46 @@ class RemoteBrowserSessionTests(unittest.TestCase):
             validate_session_configuration(
                 self.config(allowed_origins=["https://example.test/path"])
             )
+
+
+class SingleWorkerGuardTests(unittest.TestCase):
+    """Covers #171: refuse to start under a detected multi-worker deployment."""
+
+    def config(self, **remote):
+        value = {"enabled": True}
+        value.update(remote)
+        return {"remote": value}
+
+    def test_multi_worker_signal_raises(self):
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "4"}):
+            with self.assertRaises(RemoteAccessError) as caught:
+                validate_single_worker_deployment(self.config())
+        self.assertEqual("REMOTE_MULTI_WORKER_UNSUPPORTED", caught.exception.code)
+
+    def test_override_suppresses_the_raise(self):
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "4"}):
+            validate_single_worker_deployment(
+                self.config(allow_multi_worker=True)
+            )  # must not raise
+
+    def test_disabled_remote_never_raises(self):
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "4"}):
+            validate_single_worker_deployment(self.config(enabled=False))  # no raise
+
+    def test_absent_or_malformed_signal_does_not_raise(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("WEB_CONCURRENCY", None)
+            validate_single_worker_deployment(self.config())  # absent: no raise
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": ""}):
+            validate_single_worker_deployment(self.config())  # empty: no raise
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "not-a-number"}):
+            validate_single_worker_deployment(self.config())  # non-numeric: no raise
+
+    def test_single_worker_signal_does_not_raise(self):
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "1"}):
+            validate_single_worker_deployment(self.config())  # no raise
+        with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "0"}):
+            validate_single_worker_deployment(self.config())  # no raise
 
 
 if __name__ == "__main__":

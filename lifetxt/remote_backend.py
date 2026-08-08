@@ -17,6 +17,7 @@ RESOURCE_NAMES = (
     "status",
     "agenda",
     "search",
+    "next",
 )
 
 
@@ -56,6 +57,7 @@ def resource_catalog():
         {"name": "status", "parameters": ["person", "active_only"]},
         {"name": "agenda", "parameters": ["after", "before", "limit"]},
         {"name": "search", "parameters": ["q", "types", "limit"]},
+        {"name": "next", "parameters": ["project", "assignee", "limit"]},
     ]
 
 
@@ -437,6 +439,24 @@ def _resource_search(items, config, params):
     return redact_remote_value({"term": term, "total": total, "groups": groups})
 
 
+def _resource_next(items, config, params):
+    from .nextaction import next_action_items
+    from .ids import id_key_from_config
+
+    key = id_key_from_config(config or {})
+    limit = _int(
+        params.get("limit"), default=None, minimum=0, maximum=1000, name="limit"
+    )
+    rows = next_action_items(
+        items,
+        key=key,
+        limit=limit,
+        project=params.get("project"),
+        assignee=params.get("assignee"),
+    )
+    return {"count": len(rows), "items": _item_rows(rows, config)}
+
+
 _BUILDERS = {
     "items": _resource_items,
     "tickets": _resource_tickets,
@@ -447,6 +467,7 @@ _BUILDERS = {
     "status": _resource_status,
     "agenda": _resource_agenda,
     "search": _resource_search,
+    "next": _resource_next,
 }
 
 

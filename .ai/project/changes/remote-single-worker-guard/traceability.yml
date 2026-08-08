@@ -1,0 +1,19 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-remote-single-worker-guard
+    capability_id: cap-remote-single-worker-guard
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/171
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/173
+    tests_or_evidence:
+      - "tests/test_remote_sessions_v20.py SingleWorkerGuardTests: multi-worker signal raises, override suppresses it, disabled remote never raises, absent/malformed signal does not raise, <=1 workers does not raise"
+      - "tests/test_remote_web_v20.py SingleWorkerGuardWiringTests: create_app() itself raises under the same conditions and succeeds without the signal"
+      - python -m unittest discover -p "test_remote*.py" -> Ran 137 tests, OK
+      - 'live: real lifetxt serve process refuses to start under WEB_CONCURRENCY=4 with no override, naming the exact cause; starts normally without the signal'
+      - ruff format --check lifetxt tests scripts -> 255 files already formatted
+      - ruff check lifetxt tests scripts -> All checks passed
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

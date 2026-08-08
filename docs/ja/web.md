@@ -64,7 +64,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |
 | `PUT` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を更新 |
 | `DELETE` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を削除 |
-| `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の ID link を表示 |
+| `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` の ID link を表示 |
 | `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true` |
 | `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
 | `GET` | `/api/messages` | type `M` message item を一覧表示。message filter 指定可能 |
@@ -220,7 +220,7 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 - record detail modal からの Message thread 返信
 - Help / Git / Undo history / record detail / record editor の keyboard-trapped modal
 - fuzzy command palette(action、view 切替、最近開いた record)
-- `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` の Graph 表示
+- `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` の Graph 表示
 - sanitized Markdown title / body / note preview の描画
 - title、detail、body/note preview の検索語 highlight
 - 中央の record editor modal での item 作成(`＋ New` または `n`)。New ボタンと
@@ -621,7 +621,7 @@ Snooze duration は `notifications.snooze_default` で指定できます。
 
 ## Link API Details
 
-`GET /api/links` は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` の ID 参照を一覧表示します。
+`GET /api/links` は `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` の ID 参照を一覧表示します。
 
 ```sh
 curl "http://127.0.0.1:8000/api/links"

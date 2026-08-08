@@ -271,7 +271,7 @@ life.txt の detail は file 内では `key:value` です。`key=value` は `ass
 
 ### 2.y Cross-file input set
 
-1 回の command で読み込まれたファイル群は、ID check と reference 解決では 1 つの logical input set として扱われます。`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` は、同時に読み込まれた任意のファイル内の ID を参照できます。cross-file reference を解決したい場合は、関連ファイルをすべて path / glob / config paths で渡してください。
+1 回の command で読み込まれたファイル群は、ID check と reference 解決では 1 つの logical input set として扱われます。`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` は、同時に読み込まれた任意のファイル内の ID を参照できます。cross-file reference を解決したい場合は、関連ファイルをすべて path / glob / config paths で渡してください。
 
 ## 2.7 省略記法
 
@@ -569,7 +569,7 @@ python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 
 ### 3.2 `links`
 
-`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` など、item ID を指す関係を表示します。
+`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` など、item ID を指す関係を表示します。
 
 ```sh
 python -m lifetxt links [path ...]
@@ -591,7 +591,7 @@ python -m lifetxt links life.txt --chain task_report --format json --pretty
 | `--format text|json|jsonl|mermaid|dot` | 出力形式。`--chain` は `text`、`json`、`jsonl` に対応 |
 | `--pretty` | JSON を整形して出力 |
 
-`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`) も報告します。
+`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`)、`depends_on:`/`blocks:` の複合 cycle (`W227`)、`duplicate_of:` cycle (`W228`)、`replaced_by:` cycle (`W229`) も報告します。
 
 依存関係の動作:
 

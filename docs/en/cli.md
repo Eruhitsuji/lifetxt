@@ -184,8 +184,9 @@ When input comes from files, diagnostics include the source path before the line
 and column number. Stdin-only diagnostics omit the source path.
 
 All files loaded by one command form one logical input set for ID checks and
-references. `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:` can
-point to IDs in any loaded file. Commands such as `check`, `links`, `ids`,
+references. `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`,
+`duplicate_of:`, and `replaced_by:` can point to IDs in any loaded file.
+Commands such as `check`, `links`, `ids`,
 `to-json`, and `to-jsonl` use this same input set, so pass every related file
 or configure shared paths when you want cross-file references to resolve.
 
@@ -587,7 +588,8 @@ python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 ### 3.2 `links`
 
 Inspect relationships that point to item IDs. The command understands
-`parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:`.
+`parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`,
+and `replaced_by:`.
 
 ```sh
 python -m lifetxt links [path ...]
@@ -611,8 +613,10 @@ Options:
 | `--pretty` | Pretty-print JSON |
 
 `check` reports missing references (`W215`), self references (`W216`),
-`parent:` cycles (`W217`), ambiguous references (`W218`), and completed items
-whose `depends_on:` prerequisite is still open (`W224`).
+`parent:` cycles (`W217`), ambiguous references (`W218`), completed items
+whose `depends_on:` prerequisite is still open (`W224`), combined
+`depends_on:`/`blocks:` cycles (`W227`), `duplicate_of:` cycles (`W228`),
+and `replaced_by:` cycles (`W229`).
 For duration fields such as `est:` and `elapsed:`, `check` reports
 non-canonical but parseable values as `W222` and unrecognized values such as
 `elapsed:1d` as `W226`.

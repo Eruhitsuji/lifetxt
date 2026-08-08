@@ -125,7 +125,7 @@ client は確認が必要かどうかを判断できます。
 | `get_workload` | assignee ごとの open / actionable / due-soon / overdue 件数 |
 | `get_graph` | 依存グラフの node と edge |
 | `get_blockers` | item を blocking しているもの |
-| `list_links` | `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` |
+| `list_links` | `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` |
 | `get_status` | presence record と、現在 open なもの |
 | `list_notifications` | 期限が来た message 通知 |
 | `list_messages` | `M` record |

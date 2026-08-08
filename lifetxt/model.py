@@ -123,7 +123,15 @@ KNOWN_KEYS = (
     "dir",
 )
 
-REFERENCE_KEYS = ("parent", "ref", "depends_on", "blocks", "related")
+REFERENCE_KEYS = (
+    "parent",
+    "ref",
+    "depends_on",
+    "blocks",
+    "related",
+    "duplicate_of",
+    "replaced_by",
+)
 #: Keys whose value is a filesystem path, optionally with a #sha256= fragment.
 ATTACHMENT_KEYS = ("file", "dir")
 DURATION_KEYS = ("est", "elapsed")

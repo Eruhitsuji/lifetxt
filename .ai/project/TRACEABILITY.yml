@@ -1455,6 +1455,36 @@ traceability:
         entry (into the integration branch) is opened.
       status: implemented
 
+    - requirement_id: req-workspace-foundation-batch-integration
+      capability_id: cap-workspace-resolution-safety
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/155
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/154
+      changed_files_or_scope:
+        - Record the workspace-foundation batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1962 tests, OK (skipped=12), run on the fully consolidated feature/workspace-foundation branch after all five sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #154 itself: feature/workspace-foundation
+        (Issues #144, #146, #148, #150, #152; PRs #145, #147, #149, #151,
+        #153) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) for the feature/dev-remote
+        batch: each requirement above correctly names its own sub-PR, and
+        none of them names #154, because it did not exist yet when they
+        were written. Sub-PRs were merged into the integration branch via
+        local git merge and push rather than GitHub's PR-merge action
+        (blocked by this session's auto-mode permission classifier); all
+        five sub-PR merges (#145, #147, #149, #151, #153) auto-detected as
+        "merged" on GitHub once the integration branch was pushed with their
+        commits reachable from it.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

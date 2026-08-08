@@ -75,6 +75,61 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(entry["secret"])
         self.assertFalse(entry["restart_required"])
 
+    def test_registry_describes_new_ticketing_keys(self):
+        for dotted, expected_type, expected_default in (
+            (
+                "ticketing.trackers",
+                "array<string>",
+                ["bug", "feature", "task", "support"],
+            ),
+            (
+                "ticketing.priorities",
+                "array<string>",
+                ["low", "normal", "high", "urgent", "immediate"],
+            ),
+            (
+                "ticketing.severities",
+                "array<string>",
+                ["trivial", "minor", "major", "critical", "blocker"],
+            ),
+            ("ticketing.components", "array<string>", []),
+            ("ticketing.defaults.tracker", "string", "task"),
+            ("ticketing.defaults.priority", "string", "normal"),
+        ):
+            entry = explain_key(dotted)
+            self.assertIsNotNone(entry, dotted)
+            self.assertEqual(expected_type, entry["type"], dotted)
+            self.assertEqual(expected_default, entry["default"], dotted)
+
+    def test_ticketing_config_template_keys_are_all_registered(self):
+        """Every ticketing.* key config_template() defines must have registry metadata.
+
+        This is a coverage gate: it fails the moment a new ticketing setting
+        (custom fields, workflow, watchers, versions/sprints, ...) is added to
+        the template without also registering it, instead of letting the gap
+        grow silently the way it did for the six keys this test was added
+        alongside.
+        """
+        from lifetxt.config import config_template
+
+        def leaf_paths(mapping, prefix):
+            paths = []
+            for key, value in mapping.items():
+                dotted = "%s.%s" % (prefix, key)
+                if isinstance(value, dict):
+                    paths.extend(leaf_paths(value, dotted))
+                else:
+                    paths.append(dotted)
+            return paths
+
+        ticketing = config_template()["ticketing"]
+        missing = [
+            path
+            for path in leaf_paths(ticketing, "ticketing")
+            if explain_key(path) is None
+        ]
+        self.assertEqual([], missing)
+
     def test_config_schema_declares_config_write_require_revision(self):
         try:
             from jsonschema import Draft202012Validator

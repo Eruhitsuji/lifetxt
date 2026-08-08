@@ -6,6 +6,7 @@ import unicodedata
 from .agenda import agenda_records, filter_items, parse_agenda_range
 from .config import config_section
 from .ids import id_key_from_config
+from .nextaction import ACTIONABLE_KINDS, blocked_map
 from .parser import parse_text
 from .serializer import item_to_line
 from .status_summary import latest_status_records
@@ -1022,8 +1023,9 @@ def dashboard_model(args, project_filter=None, search_query="", limit=None):
     limit = options["limit"] if limit is None else max(1, int(limit))
     items = load_items(args.paths)
     project_values = [project_filter] if project_filter else None
+    blockers = blocked_map(items)
     task_items = filter_items(
-        items, open_only=True, kinds=["T"], projects=project_values
+        items, open_only=True, kinds=list(ACTIONABLE_KINDS), projects=project_values
     )
     start, end = parse_agenda_range(
         around_text="now", window_text=options["agenda_window"]
@@ -1037,7 +1039,11 @@ def dashboard_model(args, project_filter=None, search_query="", limit=None):
         ]
     statuses = latest_status_records(items, active_only=True)
     task_rows = _filter_rows(
-        [_task_row(item, options["id_key"]) for item in task_items], search_query
+        [
+            _task_row(item, options["id_key"], blocked=bool(blockers.get(id(item))))
+            for item in task_items
+        ],
+        search_query,
     )
     agenda_rows = _filter_rows(
         [_agenda_row(record, options["id_key"]) for record in agenda], search_query
@@ -1282,7 +1288,7 @@ def row_project(row):
     return None
 
 
-def _task_row(item, id_key):
+def _task_row(item, id_key, blocked=False):
     item_id = item.details.get(id_key, [""])[0] if item.details.get(id_key) else ""
     bits = [item.status, item.kind, item.title]
     if item_id:
@@ -1301,6 +1307,7 @@ def _task_row(item, id_key):
         "details": item.details,
         "text": item_to_line(item),
         "label": " ".join(bits),
+        "blocked": blocked,
     }
 
 

@@ -29,6 +29,7 @@ from .config import (
     load_config,
 )
 from .model import Item
+from .nextaction import blocked_map, is_actionable
 from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
@@ -39,12 +40,15 @@ from .extra_common import *
 
 def command_next(args, config_data):
     items = _load_items(args.paths, config_data)
-    id_map = dict((_item_id(item), item) for item in items if _item_id(item))
+    blockers = blocked_map(items)
     selected = []
     for item in items:
-        if item.kind != "T" or item.status not in OPEN_STATUSES:
-            continue
-        if _blocked(item, id_map):
+        if not is_actionable(
+            item.status,
+            item.details,
+            blocked=bool(blockers.get(id(item))),
+            kind=item.kind,
+        ):
             continue
         if args.user and not _filter_user(item, args.user):
             continue

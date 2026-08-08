@@ -9275,7 +9275,9 @@ def command_config_set(args):
         raise ValueError(
             "No config file to write. Run config init first or pass --output."
         )
-    data = _config_without_runtime(config)
+    data = _config_without_runtime(
+        config, getattr(args, "_workspace_injected_keys", None)
+    )
     try:
         value = json.loads(args.value)
     except (ValueError, TypeError):
@@ -9298,7 +9300,9 @@ def command_config_unset(args):
         raise ValueError(
             "No config file to write. Run config init first or pass --output."
         )
-    data = _config_without_runtime(config)
+    data = _config_without_runtime(
+        config, getattr(args, "_workspace_injected_keys", None)
+    )
     if not unset_dotted(data, args.path):
         sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
         return 1
@@ -9349,7 +9353,10 @@ def command_config_migrate(args):
     from .config_migration import migrate_config
 
     config = _config(args)
-    migrated, changes = migrate_config(config)
+    source = _config_without_runtime(
+        config, getattr(args, "_workspace_injected_keys", None)
+    )
+    migrated, changes = migrate_config(source)
     if not changes:
         write_text(None, "Configuration is already current; no changes.\n")
         return 0
@@ -10881,10 +10888,12 @@ def command_config_explain(args):
     return 0
 
 
-def _config_without_runtime(config):
+def _config_without_runtime(config, injected_keys=None):
     data = OrderedDict()
     for key, value in (config or {}).items():
         if key in ("_path", "_active_workspace"):
+            continue
+        if injected_keys and key in injected_keys:
             continue
         data[key] = value
     return data
@@ -11876,6 +11885,12 @@ def _maybe_apply_workspace(args):
     ``--workspace`` or the config declares ``workspaces`` / ``default_workspace``.
     Downstream ``config_paths`` / ``config_write_file`` then transparently see
     the resolved sources without every command needing to change.
+
+    The keys this function actually overwrites or adds are recorded on
+    ``args._workspace_injected_keys`` so a later configuration *write* (
+    ``config set|unset|migrate``) can exclude them: they are resolution
+    output, not user-declared content, and must never be persisted back to
+    the file (#136).
     """
     config = getattr(args, "config_data", None)
     workspace_name = getattr(args, "workspace", None)
@@ -11884,12 +11899,17 @@ def _maybe_apply_workspace(args):
     from .workspace import resolve_workspace
 
     resolution = resolve_workspace(config, workspace_name or None)
+    injected_keys = set()
     config["paths"] = list(resolution["input_paths"])
+    injected_keys.add("paths")
     if resolution["write_file"]:
         config["write_file"] = resolution["write_file"]
-    if resolution["generated_paths"]:
-        config.setdefault("generated_paths", list(resolution["generated_paths"]))
+        injected_keys.add("write_file")
+    if resolution["generated_paths"] and "generated_paths" not in config:
+        config["generated_paths"] = list(resolution["generated_paths"])
+        injected_keys.add("generated_paths")
     config["_active_workspace"] = resolution["name"]
+    args._workspace_injected_keys = injected_keys
 
 
 def _config_generated_paths(config):

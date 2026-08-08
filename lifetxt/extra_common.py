@@ -78,6 +78,7 @@ __all__ = [
     "_table",
     "_blocked",
     "_priority_key",
+    "_rank_key",
     "_item_record",
     "_filter_user",
     "_emit",
@@ -294,6 +295,27 @@ def _priority_key(value):
         return (1, int(text), text)
     except ValueError:
         return (2, 0, text)
+
+
+def _rank_key(item, today):
+    """Overdue-aware sort key for `next --rank`.
+
+    Overdue (due date earlier than `today`) sorts first; ties fall back to
+    next's existing default ordering (priority, due, created, line) via
+    _priority_key/_date_value unchanged, so ranked and default output only
+    ever differ by the leading overdue bucket.
+    """
+    far_future = datetime.date.max
+    due = _date_value(_first(item, "due"))
+    created = _date_value(_first(item, "created"))
+    is_overdue = 0 if due is not None and due < today else 1
+    return (
+        is_overdue,
+        _priority_key(_first(item, "priority")),
+        due or far_future,
+        created or far_future,
+        item.line or 0,
+    )
 
 
 def _item_record(item):

@@ -75,6 +75,13 @@ def _build_parser(command):
         )
         parser.add_argument("--pretty", action="store_true")
         parser.add_argument("-o", "--output")
+        parser.add_argument(
+            "--rank",
+            action="store_true",
+            help="Order overdue items first, then next's existing "
+            "priority/due/created ordering. Selection is unchanged; only "
+            "the order differs from the default.",
+        )
     elif command == "show":
         parser.add_argument("id")
         parser.add_argument("paths", nargs="*")

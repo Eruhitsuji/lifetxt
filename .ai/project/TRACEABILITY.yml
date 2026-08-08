@@ -1698,6 +1698,78 @@ traceability:
         accordingly rather than inventing a placeholder epic.
       status: implemented
 
+    - requirement_id: req-remote-next-actions-resource
+      capability_id: cap-remote-next-actions-resource
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/169
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/170
+      changed_files_or_scope:
+        - Add a permission-aware next resource reusing lifetxt.nextaction.next_action_items unmodified against the existing permission-filtered item set
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py RemoteNextActionsResourceTests (5 tests)
+        - python -m unittest tests.test_remote_backend_v20 -> Ran 32 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_remote_compatibility_v21 -> Ran 38 tests, OK
+        - python -m unittest discover -p "test_remote*.py" -> Ran 130 tests, OK
+        - 'live: real lifetxt serve process, GET /api/remote/v1/resources/next with a real bearer token, correct actionable-item filtering over real HTTP'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/remote-next-actions-resource/
+        (below the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, S-sized). Self-scoped from a research pass into "one server,
+        multiple clients view/edit" enhancements for a trusted-LAN deployment,
+        confirmed with the repository owner via AskUserQuestion before starting.
+        A sibling item in the same research pass (capability-negotiation version
+        fields) was found, on empirical verification, to already be fully
+        implemented by cap-remote-compatibility-negotiation and was closed without
+        code changes rather than duplicated -- see issue #168.
+      status: implemented
+
+    - requirement_id: req-remote-single-worker-guard
+      capability_id: cap-remote-single-worker-guard
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/171
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/173
+      changed_files_or_scope:
+        - Refuse to start Remote Safe Mode under a detected multi-worker deployment (WEB_CONCURRENCY > 1), with an explicit off-by-default operator override
+        - lifetxt/remote_sessions.py
+        - lifetxt/remote_web.py
+        - lifetxt/config_registry.py
+        - tests/test_remote_sessions_v20.py
+        - tests/test_remote_web_v20.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/remote-single-worker-guard/
+      tests_or_evidence:
+        - tests/test_remote_sessions_v20.py SingleWorkerGuardTests (5 tests)
+        - tests/test_remote_web_v20.py SingleWorkerGuardWiringTests (2 tests, through create_app() itself)
+        - python -m unittest discover -p "test_remote*.py" -> Ran 137 tests, OK
+        - 'live: real lifetxt serve process refuses to start under WEB_CONCURRENCY=4 with no override, naming the exact cause; starts normally without the signal; the guard does not raise with remote.allow_multi_worker=true'
+        - lifetxt config explain remote.allow_multi_worker -> renders correctly
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts -> 255 files already formatted
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Security/High assurance per ASSURANCE_LEVELS.md's escalation rules
+        (authentication/authorization-adjacent). Full change package at
+        .ai/project/changes/remote-single-worker-guard/ and cc-sdd spec at
+        .kiro/specs/remote-single-worker-guard/, both distilled per the repository
+        owner's explicit request that session/auth hardening in this batch needed
+        individual design confirmation before implementation. Live verification
+        found a pre-existing, unrelated uvicorn behavior (Config reads
+        WEB_CONCURRENCY independently and cannot honor it against an in-memory app
+        object) -- confirmed unrelated to this change by reproducing it with
+        remote.enabled absent, and filed separately as #172 rather than folded into
+        this change's scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

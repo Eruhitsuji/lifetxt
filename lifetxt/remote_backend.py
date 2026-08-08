@@ -76,8 +76,10 @@ def _list(details, *keys):
     return values
 
 
-def _access_for_item(item):
-    details = getattr(item, "details", {}) or {}
+_HISTORY_RECORD_KINDS = ("ticket_event", "time_entry")
+
+
+def _access_tuple(details):
     return {
         "project": _first(details, "project"),
         "visibility": _first(details, "visibility") or "shared",
@@ -86,10 +88,37 @@ def _access_for_item(item):
     }
 
 
-def _visible_items(items, principal):
+def _access_for_item(item, id_index=None):
+    """Return the access tuple used for a Remote Safe Mode permission check.
+
+    A ticket_event/time_entry Note carries no visibility/owner of its own
+    (confirmed by reading lifetxt.ticket_activity.build_ticket_event /
+    build_time_entry), so without this it always fell back to the default
+    ("shared", no owner) regardless of its parent ticket's privacy. It
+    inherits the parent's tuple instead, one hop only, and only when parent:
+    resolves to exactly one item in the read set -- an ambiguous or missing
+    parent falls back to the Note's own default rather than guessing.
+    """
+    details = getattr(item, "details", {}) or {}
+    if id_index is not None and _first(details, "record") in _HISTORY_RECORD_KINDS:
+        parent_id = _first(details, "parent")
+        matches = id_index.get(str(parent_id)) if parent_id else None
+        if matches and len(matches) == 1:
+            return _access_tuple(getattr(matches[0], "details", {}) or {})
+    return _access_tuple(details)
+
+
+def _visible_items(items, principal, config=None):
+    from .ids import id_key_from_config
+    from .links import build_id_index
     from .remote_access import can_access
 
-    return [item for item in items if can_access(principal, **_access_for_item(item))]
+    id_index = build_id_index(items, key=id_key_from_config(config or {}))
+    return [
+        item
+        for item in items
+        if can_access(principal, **_access_for_item(item, id_index))
+    ]
 
 
 def _read(paths, config):
@@ -440,7 +469,7 @@ def read_resource(name, paths, config, principal, params=None):
                 {"since_revision": str(since_revision), "current_revision": revision},
             )
     items, diagnostics = _read(paths, config)
-    visible = _visible_items(items, principal)
+    visible = _visible_items(items, principal, config)
     data = _BUILDERS[name](visible, config or {}, params)
     from .timezone_policy import utcnow
 

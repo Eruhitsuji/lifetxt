@@ -1142,6 +1142,71 @@ traceability:
         pull request implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-config-workspace-write-excludes-injected-paths
+      capability_id: cap-config-safe-writes
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/136
+      pull_request: null
+      changed_files_or_scope:
+        - Stop config set|unset|migrate from writing back workspace-resolved paths/write_file/generated_paths that were never declared in the file
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtConfigCliTests.test_config_set_on_workspace_config_does_not_bake_in_resolved_paths, test_config_unset_on_workspace_config_does_not_bake_in_resolved_paths, test_config_migrate_on_workspace_config_does_not_bake_in_resolved_paths, test_config_set_on_legacy_paths_config_is_unaffected"
+        - python -m unittest tests.test_lifetxt.LifeTxtConfigCliTests -> Ran 9 tests, OK
+        - python -m unittest tests.test_config_validation tests.test_workspace_foundation -> Ran 72 tests, OK (skipped=3)
+        - "manual reproduction via lifetxt.cli.main against a real named-workspace config: before the fix, config set defaults.person alice added absolute paths/write_file keys never declared in the file; after the fix it does not, and config migrate on the same config no longer adds them either"
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS-sized). Found while
+        investigating #89; recorded as an extension of cap-config-safe-writes
+        rather than a new capability, since it is the same configuration write
+        path. pull_request is filled in once the pull request implementing this
+        entry is opened.
+      status: implemented
+
+    - requirement_id: req-next-actionable-definition-convergence
+      capability_id: cap-next-actionable-convergence
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/138
+      pull_request: null
+      changed_files_or_scope:
+        - Converge CLI next and TUI /next onto the shared nextaction.py actionable-item definition; fix a real bug in is_actionable() and the TUI's missing blocked computation found while converging
+        - lifetxt/nextaction.py
+        - lifetxt/extra_core.py
+        - lifetxt/tui.py
+        - lifetxt/tui_app.py
+        - tests/test_nextaction.py
+        - tests/test_extra_cli.py
+        - docs/en/new-cli-workflows.md
+      tests_or_evidence:
+        - tests/test_nextaction.py -> Ran 15 tests, OK
+        - "tests/test_extra_cli.py: kind coverage (D/R/H included), someday-tag exclusion, closed-dependency inclusion, dangling-dependency exclusion, cross-file blocking"
+        - tests/test_cui_extensions.py -> Ran 145 tests, OK (including the previously-failing TUI /next blocked-row regression this fixes)
+        - tests/test_mcp_expansion.py -> Ran 68 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1913 tests, OK (skipped=11)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+        - "manual verification via the real installed lifetxt console script against a fixture covering every convergence case (T/D/R/H/E kinds, someday tag, closed dependency, dangling dependency)"
+      release_or_deployment: >-
+        Behaviour change for release notes: next and /next default output now
+        include Deferred/Recurring/Habit kinds, exclude someday/maybe/waiting-
+        tagged items, resolve blocking across files, and no longer exclude an
+        item solely for having a depends_on detail once that dependency is
+        closed.
+      notes: >-
+        Distilled directly from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, M-sized with a written
+        split-justification in the issue -- the is_actionable fix, the TUI
+        blocked-wiring fix, and the CLI convergence are one coherent change;
+        shipping any subset alone either propagates the original bug or
+        introduces a new regression). Sort order (_priority_key) intentionally
+        not converged; see cap-next-priority-ranking. pull_request is filled in
+        once the pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

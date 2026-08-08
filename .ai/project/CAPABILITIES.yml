@@ -648,7 +648,8 @@ capabilities:
       - "tests/test_extra_cli.py test_next_default_order_is_unchanged_without_rank: next without --rank is unaffected"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/139
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/140
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/next-agenda-priority-ranking/

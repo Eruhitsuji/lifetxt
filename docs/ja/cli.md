@@ -2176,12 +2176,16 @@ python -m lifetxt doctor
 optional dependency の不足は `WARN` であり、終了コードには影響しません。
 機械可読な出力には `--format json` を使用してください。
 
-`update-check` は実行中の version と、この project の最新の GitHub Release
-(未公開なら最新の tag) を比較します。
+`update-check` は実行中の version と、repository の最新の GitHub Release
+(未公開なら最新の tag) を比較します。既定の repository はこの project 自身
+(`Eruhitsuji/lifetxt`) です。fork では `update.repository`
+([config.md](config.md#update-check) 参照) を設定するか `--repo` を渡して、
+upstream ではなく fork 自身の release と比較してください。
 
 ```sh
 python -m lifetxt update-check
 python -m lifetxt update-check --format json
+python -m lifetxt update-check --repo your-github-username/your-fork
 ```
 
 公開 GitHub API への読み取り専用リクエストのみを行い、何もインストール・

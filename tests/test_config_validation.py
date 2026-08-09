@@ -75,6 +75,14 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(entry["secret"])
         self.assertFalse(entry["restart_required"])
 
+    def test_registry_describes_update_repository(self):
+        entry = explain_key("update.repository")
+        self.assertIsNotNone(entry)
+        self.assertEqual("string", entry["type"])
+        self.assertEqual("Eruhitsuji/lifetxt", entry["default"])
+        self.assertFalse(entry["secret"])
+        self.assertFalse(entry["restart_required"])
+
     def test_registry_describes_new_ticketing_keys(self):
         for dotted, expected_type, expected_default in (
             (
@@ -142,6 +150,20 @@ class ValidationTests(unittest.TestCase):
         valid = {"config": {"write": {"require_revision": True}}}
         self.assertEqual([], [e.message for e in validator.iter_errors(valid)])
         invalid = {"config": {"write": {"require_revision": "yes"}}}
+        self.assertTrue([e.message for e in validator.iter_errors(invalid)])
+
+    def test_config_schema_declares_update_repository(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("Draft 2020-12 jsonschema validation not available")
+        from lifetxt.safety_foundation import schema_bundle
+
+        schema = schema_bundle()["config-v1.schema.json"]
+        validator = Draft202012Validator(schema)
+        valid = {"update": {"repository": "someone/their-fork"}}
+        self.assertEqual([], [e.message for e in validator.iter_errors(valid)])
+        invalid = {"update": {"repository": 12345}}
         self.assertTrue([e.message for e in validator.iter_errors(invalid)])
 
 

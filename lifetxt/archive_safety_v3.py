@@ -2,35 +2,27 @@
 
 The incident root cause is intentionally not claimed here. This compatibility
 layer addresses concrete safety gaps found during investigation while keeping
-generic ``archive`` behavior backward compatible.
+generic ``archive`` behavior backward compatible. The patch is scoped to one
+stable entrypoint invocation so direct legacy CLI callers never inherit state
+from another command or test.
 """
 
 from __future__ import unicode_literals
 
 import argparse
+import contextlib
 import os
 
 
-_INSTALLED = False
-
-
-def install_archive_safety_v3():
-    """Install stricter checks only around ``project archive`` execution."""
-    global _INSTALLED
-    if _INSTALLED:
-        return
-
-    from . import cli as cli_module
-
+@contextlib.contextmanager
+def archive_safety_context(cli_module):
+    """Temporarily install stricter checks for one ``cli.main`` invocation."""
     original_project_archive = cli_module.command_project_archive
-    if getattr(original_project_archive, "_lifetxt_archive_safety_v3", False):
-        _INSTALLED = True
-        return
+    original_build_parser = cli_module.build_parser
 
     def command_project_archive(args):
         # The legacy project command delegates to module-global command_archive.
-        # Patch that dependency only for this call, then always restore it. This
-        # keeps generic archive and direct cli callers on their historical contract.
+        # Guard only that dependency for this one project-archive operation.
         original_archive = cli_module.command_archive
 
         def guarded_archive(archive_args):
@@ -43,10 +35,31 @@ def install_archive_safety_v3():
         finally:
             cli_module.command_archive = original_archive
 
-    command_project_archive._lifetxt_archive_safety_v3 = True
+    def build_parser():
+        parser = original_build_parser()
+        project = _subparser(parser, "project")
+        archive = _subparser(project, "archive") if project is not None else None
+        if archive is not None:
+            for action in archive._actions:
+                if "--revision" in getattr(action, "option_strings", ()):
+                    action.help = (
+                        "Expected revision for a scanned source or destination as "
+                        "PATH=SHA256. Required for every scanned source and the "
+                        "destination on live project archive; dry-run prints the "
+                        "exact set. Use <missing> for an absent destination."
+                    )
+                    break
+        return parser
+
     cli_module.command_project_archive = command_project_archive
-    _patch_archive_help(cli_module)
-    _INSTALLED = True
+    cli_module.build_parser = build_parser
+    try:
+        yield
+    finally:
+        if cli_module.command_project_archive is command_project_archive:
+            cli_module.command_project_archive = original_project_archive
+        if cli_module.build_parser is build_parser:
+            cli_module.build_parser = original_build_parser
 
 
 def _config_relative_path(path, config):
@@ -146,8 +159,6 @@ def _archive_preflight(cli_module, args):
     if destination_snapshot is not None:
         known_snapshots[destination] = destination_snapshot
 
-    # A supplied revision is a claim about the preview/write precondition. Do
-    # not silently ignore an unrelated path or stale value, even on dry-run.
     for path, expected in revisions.items():
         snapshot = known_snapshots.get(path)
         if snapshot is None:
@@ -158,8 +169,6 @@ def _archive_preflight(cli_module, args):
         if str(expected) != str(snapshot.content_hash):
             raise _revision_mismatch(path, expected, snapshot.content_hash)
 
-    # The active write target is the authoritative workspace source. An empty
-    # value here is an incident signal, not a safe no-match result.
     write_file = cli_module.config_write_file(config)
     if write_file:
         write_path = _config_relative_path(write_file, config)
@@ -202,32 +211,6 @@ def _print_project_revision_set(source_snapshots, destination, destination_snaps
         sys.stdout.write(
             "  --revision %s=%s\n" % (destination, destination_snapshot.content_hash)
         )
-
-
-def _patch_archive_help(cli_module):
-    """Explain the stricter project-archive revision contract in ``--help``."""
-    original = cli_module.build_parser
-    if getattr(original, "_lifetxt_archive_help_v3", False):
-        return
-
-    def build_parser():
-        parser = original()
-        project = _subparser(parser, "project")
-        archive = _subparser(project, "archive") if project is not None else None
-        if archive is not None:
-            for action in archive._actions:
-                if "--revision" in getattr(action, "option_strings", ()):
-                    action.help = (
-                        "Expected revision for a scanned source or destination as "
-                        "PATH=SHA256. Required for every scanned source and the "
-                        "destination on live project archive; dry-run prints the "
-                        "exact set. Use <missing> for an absent destination."
-                    )
-                    break
-        return parser
-
-    build_parser._lifetxt_archive_help_v3 = True
-    cli_module.build_parser = build_parser
 
 
 def _subparser(parser, name):

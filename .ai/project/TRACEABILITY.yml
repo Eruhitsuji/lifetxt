@@ -2830,7 +2830,7 @@ traceability:
       capability_id: cap-desktop-app-companion-shell
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
       changed_files_or_scope:
         - Implement find_backend() trying lifetxt, python -m lifetxt, python3 -m lifetxt, py -m lifetxt in order
         - desktop/src-tauri/src/main.rs
@@ -2845,7 +2845,7 @@ traceability:
       capability_id: cap-desktop-app-companion-shell
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
       changed_files_or_scope:
         - Implement reserve_port() (bind 127.0.0.1:0, read back the OS-assigned port, drop the listener) and spawn_server() (lifetxt serve --host 127.0.0.1 --port <port>, no path argument)
         - desktop/src-tauri/src/main.rs
@@ -2863,7 +2863,7 @@ traceability:
       capability_id: cap-desktop-app-companion-shell
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
       changed_files_or_scope:
         - Implement wait_for_health() (poll GET /api/health every 200ms up to a 15s bound) and window navigation via window.location.replace on success, or an error-state eval on timeout
         - desktop/src-tauri/src/main.rs
@@ -2878,7 +2878,7 @@ traceability:
       capability_id: cap-desktop-app-companion-shell
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
       changed_files_or_scope:
         - Manage the spawned Child in Tauri state; kill it on WindowEvent::CloseRequested and RunEvent::ExitRequested
         - desktop/src-tauri/src/main.rs
@@ -2896,8 +2896,7 @@ traceability:
         Object, which this slice does not use. Sole item of the
         desktop-app-companion-shell feature; below the
         .ai/project/changes/README.md change-package threshold (Standard
-        assurance). pull_request is filled in once the pull request
-        implementing this entry is opened.
+        assurance).
       status: implemented
 
 required_chain:

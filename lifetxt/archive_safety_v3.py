@@ -1,67 +1,52 @@
-"""Archive preflight hardening after the production zero-byte incident (#183).
+"""Project-archive preflight hardening after the production zero-byte incident (#183).
 
 The incident root cause is intentionally not claimed here. This compatibility
-layer addresses concrete archive safety gaps observed while investigating it:
-
-* revision arguments were parsed only after the dry-run return, so an invalid or
-  empty revision token could appear to have passed a safety preview;
-* archive source parser errors were collected and ignored before candidate
-  selection;
-* live ``project archive`` could proceed without an explicit revision set; and
-* an unexpectedly empty active write source was indistinguishable from a
-  legitimate no-match result.
-
-Generic ``archive`` keeps its historical optional-revision behavior. Project
-archive is deliberately stricter because it is a workspace-aware destructive
-multi-target operation whose selection depends on every scanned source.
-
-The legacy CLI module is patched only for the duration of one stable entrypoint
-invocation, then restored in ``finally``. This avoids leaking compatibility
-state into direct ``lifetxt.cli`` callers or other tests in the same process.
+layer addresses concrete safety gaps found during investigation while keeping
+generic ``archive`` behavior backward compatible.
 """
 
 from __future__ import unicode_literals
 
 import argparse
-import contextlib
 import os
 
 
-@contextlib.contextmanager
-def archive_safety_context(cli_module):
-    """Temporarily install archive safety around one legacy CLI invocation."""
-    original_archive = cli_module.command_archive
-    original_build_parser = cli_module.build_parser
+_INSTALLED = False
 
-    def command_archive(args):
-        _archive_preflight(cli_module, args)
-        return original_archive(args)
 
-    def build_parser():
-        parser = original_build_parser()
-        project = _subparser(parser, "project")
-        archive = _subparser(project, "archive") if project is not None else None
-        if archive is not None:
-            for action in archive._actions:
-                if "--revision" in getattr(action, "option_strings", ()):
-                    action.help = (
-                        "Expected revision for a scanned source or destination as "
-                        "PATH=SHA256. Required for every scanned source and the "
-                        "destination on live project archive; dry-run prints the "
-                        "exact set. Use <missing> for an absent destination."
-                    )
-                    break
-        return parser
+def install_archive_safety_v3():
+    """Install stricter checks only around ``project archive`` execution."""
+    global _INSTALLED
+    if _INSTALLED:
+        return
 
-    cli_module.command_archive = command_archive
-    cli_module.build_parser = build_parser
-    try:
-        yield
-    finally:
-        if cli_module.command_archive is command_archive:
+    from . import cli as cli_module
+
+    original_project_archive = cli_module.command_project_archive
+    if getattr(original_project_archive, "_lifetxt_archive_safety_v3", False):
+        _INSTALLED = True
+        return
+
+    def command_project_archive(args):
+        # The legacy project command delegates to module-global command_archive.
+        # Patch that dependency only for this call, then always restore it. This
+        # keeps generic archive and direct cli callers on their historical contract.
+        original_archive = cli_module.command_archive
+
+        def guarded_archive(archive_args):
+            _archive_preflight(cli_module, archive_args)
+            return original_archive(archive_args)
+
+        cli_module.command_archive = guarded_archive
+        try:
+            return original_project_archive(args)
+        finally:
             cli_module.command_archive = original_archive
-        if cli_module.build_parser is build_parser:
-            cli_module.build_parser = original_build_parser
+
+    command_project_archive._lifetxt_archive_safety_v3 = True
+    cli_module.command_project_archive = command_project_archive
+    _patch_archive_help(cli_module)
+    _INSTALLED = True
 
 
 def _config_relative_path(path, config):
@@ -69,11 +54,7 @@ def _config_relative_path(path, config):
     if os.path.isabs(expanded):
         return os.path.abspath(expanded)
     config_path = config.get("_path") if isinstance(config, dict) else None
-    base = (
-        os.path.dirname(os.path.abspath(config_path))
-        if config_path
-        else os.getcwd()
-    )
+    base = os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
     return os.path.abspath(os.path.join(base, expanded))
 
 
@@ -137,12 +118,11 @@ def _archive_preflight(cli_module, args):
     if not paths:
         return
 
-    project_filter = getattr(args, "project_filter", None)
-    project_archive = bool(project_filter)
     dry_run = bool(getattr(args, "dry_run", False))
 
-    # Parse revision tokens before *any* dry-run return. This is intentionally
-    # earlier than command_archive's historical parsing point.
+    # Parse revision tokens before command_archive's historical dry-run return.
+    # An empty or malformed PATH= token must fail instead of looking like a
+    # successful safety preview.
     revisions = cli_module._path_revision_map(getattr(args, "revision", None))
 
     source_snapshots = {}
@@ -167,7 +147,7 @@ def _archive_preflight(cli_module, args):
         known_snapshots[destination] = destination_snapshot
 
     # A supplied revision is a claim about the preview/write precondition. Do
-    # not silently ignore typos or stale values, even on dry-run.
+    # not silently ignore an unrelated path or stale value, even on dry-run.
     for path, expected in revisions.items():
         snapshot = known_snapshots.get(path)
         if snapshot is None:
@@ -178,11 +158,8 @@ def _archive_preflight(cli_module, args):
         if str(expected) != str(snapshot.content_hash):
             raise _revision_mismatch(path, expected, snapshot.content_hash)
 
-    if not project_archive:
-        return
-
     # The active write target is the authoritative workspace source. An empty
-    # value here is an incident signal, not a safe 'nothing to archive' result.
+    # value here is an incident signal, not a safe no-match result.
     write_file = cli_module.config_write_file(config)
     if write_file:
         write_path = _config_relative_path(write_file, config)
@@ -223,15 +200,40 @@ def _print_project_revision_set(source_snapshots, destination, destination_snaps
         )
     if destination and destination_snapshot is not None:
         sys.stdout.write(
-            "  --revision %s=%s\n"
-            % (destination, destination_snapshot.content_hash)
+            "  --revision %s=%s\n" % (destination, destination_snapshot.content_hash)
         )
+
+
+def _patch_archive_help(cli_module):
+    """Explain the stricter project-archive revision contract in ``--help``."""
+    original = cli_module.build_parser
+    if getattr(original, "_lifetxt_archive_help_v3", False):
+        return
+
+    def build_parser():
+        parser = original()
+        project = _subparser(parser, "project")
+        archive = _subparser(project, "archive") if project is not None else None
+        if archive is not None:
+            for action in archive._actions:
+                if "--revision" in getattr(action, "option_strings", ()):
+                    action.help = (
+                        "Expected revision for a scanned source or destination as "
+                        "PATH=SHA256. Required for every scanned source and the "
+                        "destination on live project archive; dry-run prints the "
+                        "exact set. Use <missing> for an absent destination."
+                    )
+                    break
+        return parser
+
+    build_parser._lifetxt_archive_help_v3 = True
+    cli_module.build_parser = build_parser
 
 
 def _subparser(parser, name):
     if parser is None:
         return None
-    for action in getattr(parser, "_actions", ()):  # pragma: no branch - tiny loop
+    for action in getattr(parser, "_actions", ()):
         if isinstance(action, argparse._SubParsersAction):
             return action.choices.get(name)
     return None

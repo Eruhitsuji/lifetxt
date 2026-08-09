@@ -779,6 +779,16 @@ HTML_PAGE = r"""<!doctype html>
     .modal table { width: 100%; border-collapse: collapse; font-size: .88rem; }
     .modal td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
     .modal td:first-child { color: var(--muted); width: 7rem; white-space: nowrap; }
+    .help-command-search { width: 100%; margin: 0 0 .6rem; }
+    .help-command-list { display: grid; gap: .05rem; max-height: 40vh; overflow-y: auto; }
+    .help-command-row { padding: .35rem .1rem; border-bottom: 1px solid var(--line); font-size: .85rem; }
+    .help-command-row .help-command-usage { font-weight: 600; }
+    .help-command-row .help-command-summary { color: var(--muted); display: block; margin-top: .1rem; }
+    .help-command-row .help-command-badge {
+      display: inline-block; margin-left: .4rem; padding: 0 .35rem; border-radius: .3rem;
+      font-size: .68rem; background: var(--soft); color: var(--muted);
+    }
+    .help-command-empty { color: var(--muted); font-size: .85rem; padding: .4rem .1rem; }
     .notif-permission { display: flex; align-items: center; gap: .4rem; font-size: .82rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
     .notif-perm-granted { color: var(--ok); }
     .notif-perm-denied  { color: var(--danger); }
@@ -2611,6 +2621,11 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
+      <h3 style="margin-top:1.25rem">Commands</h3>
+      <p class="modal-hint">Search the same slash-command set as the TUI's <code>/help</code>.</p>
+      <input id="help-command-search" class="help-command-search" type="text"
+        placeholder="Search commands (name, alias, or summary)…" oninput="renderHelpModalCommands()">
+      <div id="help-command-list" class="help-command-list" data-no-i18n></div>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
     </div>
   </div>
@@ -2774,6 +2789,11 @@ HTML_PAGE = r"""<!doctype html>
         "Copy Markdown": "Markdownをコピー",
         "Copy Line Number": "行番号をコピー",
         "Keyboard shortcuts": "キーボードショートカット",
+        "Commands": "コマンド",
+        "Search the same slash-command set as the TUI's /help.": "TUIの /help と同じスラッシュコマンド一覧を検索できます。",
+        "Search commands (name, alias, or summary)…": "コマンドを検索(名前・エイリアス・概要)…",
+        "No command matches. Try a different search.": "一致するコマンドがありません。別のキーワードで検索してください。",
+        "TUI only": "TUI専用",
         "Command palette (actions + jump to item)": "コマンドパレット(操作 + アイテムへ移動)",
         "Close modal / palette / blur input": "モーダル/パレットを閉じる・入力を解除",
         "Create a new record or select an editable row.": "レコードを新規作成するか、編集可能な行を選択してください。",
@@ -6100,8 +6120,31 @@ HTML_PAGE = r"""<!doctype html>
         `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text)}</td></tr>`
       ).join("");
     }
+    async function renderHelpModalCommands() {
+      const list = document.getElementById("help-command-list");
+      if (!list) return;
+      if (!COMMAND_CATALOG.length) await loadCommandCatalog();
+      const typed = document.getElementById("help-command-search")?.value || "";
+      const matches = matchingCommands(typed);
+      if (!matches.length) {
+        list.innerHTML = `<div class="help-command-empty">No command matches. Try a different search.</div>`;
+        return;
+      }
+      list.innerHTML = matches.map(command => {
+        const usage = "/" + command.name + (command.usage ? " " + command.usage : "");
+        const alias = command.alias ? ` (/${command.alias})` : "";
+        const badge = command.web ? "" : `<span class="help-command-badge">TUI only</span>`;
+        return `<div class="help-command-row">` +
+          `<span class="help-command-usage">${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
+          `<span class="help-command-summary">${escapeHtml(command.summary || "")}</span>` +
+          `</div>`;
+      }).join("");
+    }
     function openHelpModal() {
       renderHelpModalShortcuts();
+      const search = document.getElementById("help-command-search");
+      if (search) search.value = "";
+      renderHelpModalCommands();
       openManagedModal(document.getElementById("help-modal"), "button");
     }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }

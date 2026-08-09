@@ -2826,6 +2826,80 @@ traceability:
         POSIX host access unavailable in this Windows environment.
       status: implemented
 
+    - requirement_id: req-desktop-app-backend-locator
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: null
+      changed_files_or_scope:
+        - Implement find_backend() trying lifetxt, python -m lifetxt, python3 -m lifetxt, py -m lifetxt in order
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: launched with the venv on PATH -- lifetxt candidate resolved and was spawned correctly'
+        - 'live: launched with a PATH containing no lifetxt install (System32 only) -- all four candidates correctly failed; window-region screenshot confirmed the exact designed error message naming all four'
+      release_or_deployment: null
+      notes: See cap-desktop-app-companion-shell's notes for full scoping rationale.
+      status: implemented
+
+    - requirement_id: req-desktop-app-server-spawn
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: null
+      changed_files_or_scope:
+        - Implement reserve_port() (bind 127.0.0.1:0, read back the OS-assigned port, drop the listener) and spawn_server() (lifetxt serve --host 127.0.0.1 --port <port>, no path argument)
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: Get-CimInstance confirmed the real spawned child process command line was exactly "lifetxt" serve --host 127.0.0.1 --port <reserved-port>, parented by the app process'
+        - 'live: curl against that exact reserved port''s /api/health returned 200 with ok:true, confirming the port passed to spawn matched the one actually bound'
+      release_or_deployment: null
+      notes: >-
+        No life.txt path argument is passed, so the spawned server uses
+        lifetxt's own existing config-driven default path resolution
+        unchanged (Requirement 2.2); no Python file was modified.
+      status: implemented
+
+    - requirement_id: req-desktop-app-health-poll-navigation
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: null
+      changed_files_or_scope:
+        - Implement wait_for_health() (poll GET /api/health every 200ms up to a 15s bound) and window navigation via window.location.replace on success, or an error-state eval on timeout
+        - desktop/src-tauri/src/main.rs
+        - desktop/src-tauri/dist/index.html
+      tests_or_evidence:
+        - 'live: window-region screenshot confirmed the window navigated away from the static loading placeholder to the real served lifetxt Web UI (Items view, life.txt title, dashboard tabs) once /api/health responded'
+      release_or_deployment: null
+      notes: See cap-desktop-app-companion-shell's notes for full scoping rationale.
+      status: implemented
+
+    - requirement_id: req-desktop-app-process-lifecycle
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: null
+      changed_files_or_scope:
+        - Manage the spawned Child in Tauri state; kill it on WindowEvent::CloseRequested and RunEvent::ExitRequested
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: graceful close via taskkill /PID (no /F -- the same WM_CLOSE path clicking the window''s X button takes) confirmed both the app process and the spawned lifetxt.exe child exit'
+        - 'live: after graceful close, curl against the previously-reserved port returned connection-refused (exit 7), confirming the port was released, not left bound'
+        - 'live: both checks repeated against the built --release executable with the same result'
+      release_or_deployment: null
+      notes: >-
+        Verified for the graceful-exit path only, per this capability's
+        recorded, documented limitation: a hard kill (Task Manager "End
+        task", taskkill /F, a crash) bypasses Tauri's exit/close event
+        hooks entirely, since Windows does not tie a forcibly-terminated
+        process's children to its own lifetime without an explicit Job
+        Object, which this slice does not use. Sole item of the
+        desktop-app-companion-shell feature; below the
+        .ai/project/changes/README.md change-package threshold (Standard
+        assurance). pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

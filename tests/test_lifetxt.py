@@ -6188,6 +6188,35 @@ class LifeTxtDoctorCliTests(unittest.TestCase):
             self.assertIn("check", records[0])
             self.assertIn("message", records[0])
 
+    def test_doctor_reports_version_os_and_disk_space(self):
+        from lifetxt import __version__
+
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file)
+            normalized = normalize_newlines(stdout)
+            self.assertIn(__version__, normalized)
+            self.assertIn("system", normalized)
+            self.assertIn("disk", normalized)
+
+    def test_doctor_and_workspace_safety_share_the_same_dependency_set(self):
+        from lifetxt.doctor import OPTIONAL_DEPENDENCY_NAMES, optional_dependency_report
+
+        self.assertEqual(
+            set(OPTIONAL_DEPENDENCY_NAMES), set(optional_dependency_report())
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file, "--format", "json")
+            records = json.loads(stdout)
+            checked = {row["check"] for row in records}
+            for name in OPTIONAL_DEPENDENCY_NAMES:
+                self.assertIn(name, checked)
+
     def test_doctor_fail_on_syntax_error(self):
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")

@@ -190,9 +190,17 @@ def _extract_config_arg(argv):
 
 
 def build_parser():
+    from . import __version__
+
     parser = argparse.ArgumentParser(
         prog="python -m lifetxt",
         description="Parser, validator, converter, and input helper for life.txt.",
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version="lifetxt %s" % __version__,
     )
     parser.add_argument(
         "--config",

@@ -482,7 +482,7 @@ def _timezone_for_args(args, config_data):
     )
 
 
-def main(argv=None, config_path=None):
+def main(argv=None, config_path=None, workspace_name=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         raise ValueError("An extended command is required.")
@@ -490,7 +490,7 @@ def main(argv=None, config_path=None):
     parser = _build_parser(command)
     args = parser.parse_args(argv[1:])
     _require_subcommand(command, parser, args)
-    config_data = _load_config(config_path)
+    config_data = _load_config(config_path, workspace_name=workspace_name)
     timezone_name = _timezone_for_args(args, config_data)
     with timezone_context(timezone_name):
         return _dispatch(command, args, config_data, config_path)

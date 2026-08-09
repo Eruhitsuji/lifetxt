@@ -61,6 +61,7 @@ python -m lifetxt health [path ...]
 python -m lifetxt review [path ...]
 python -m lifetxt who [path ...]
 python -m lifetxt search PATTERN [path ...]
+python -m lifetxt find TERM [path ...]
 python -m lifetxt snapshot [path ...]
 python -m lifetxt lint [path ...]
 python -m lifetxt diff FILE_A FILE_B
@@ -127,7 +128,8 @@ python -m lifetxt template list
 | `health` | Operational sanity checks: stale tasks, missed habits, upcoming deadlines |
 | `review` | Human-readable period summary: completed tasks, habits, mood, elapsed time |
 | `who` | Team presence summary: latest active `S` item per person |
-| `search` | Search items by substring or regex match in title or field values |
+| `search` | Search items by substring, regex, or `--fuzzy` typo-tolerant match in title or field values |
+| `find` | Search across items, projects, people, groups, areas, and proposals; supports `--fuzzy` |
 | `snapshot` | Copy a life.txt file to a timestamped snapshot for backups |
 | `lint` | Check life.txt for style issues: key-name typos, tag casing, duplicate keys |
 | `diff` | Semantic diff between two life.txt files |
@@ -143,6 +145,22 @@ python -m lifetxt template list
 | `share` | Export a self-contained HTML or Markdown report (filter + review + chart) |
 | `digest` | Send a `review` summary to Slack, email, or a local file |
 | `template` | List and apply reusable named item templates |
+
+### 1.1 Fuzzy Search
+
+`search` and `find` match exact substrings by default. Add `--fuzzy` to also
+match a field within a small typo/edit distance of the pattern -- useful when
+you mistype or slightly misremember a word. Fuzzy matching is opt-in and
+compares Unicode-normalized text (so full-width and half-width Japanese
+variants, and Latin case differences, do not matter); an exact substring
+match always ranks ahead of an approximate-only one. `--fuzzy` cannot be
+combined with `search --regex`, since a compiled regex has no similarity
+score to compare.
+
+```sh
+python -m lifetxt search "stast" --fuzzy life.txt   # matches a title containing "stats"
+python -m lifetxt find "stast" life.txt --fuzzy      # same tolerance across items, projects, people, groups, areas, proposals
+```
 
 ## 2. Common Conventions
 

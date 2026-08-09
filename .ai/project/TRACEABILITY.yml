@@ -2692,6 +2692,98 @@ traceability:
         pull request implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-fuzzy-search-shared-primitive
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/fuzzy_search.py: NFKC+casefold normalization, exact-substring-first similarity scoring, bounded token-level Levenshtein fallback
+        - lifetxt/fuzzy_search.py
+        - tests/test_fuzzy_search.py
+        - .kiro/specs/fuzzy-search-first-slice/requirements.md
+        - .kiro/specs/fuzzy-search-first-slice/design.md
+      tests_or_evidence:
+        - tests/test_fuzzy_search.py NormalizationTests, SimilarityTests, FuzzyContainsTests, IsExactMatchTests -> Ran 20 tests, OK
+        - python -m unittest tests.test_fuzzy_search -> Ran 25 tests, OK
+      release_or_deployment: null
+      notes: See cap-fuzzy-search-first-slice's notes for full scoping rationale.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-cli-search
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add search --fuzzy, rejected in combination with --regex; wire filter_items(fuzzy=...) for the underlying text filter
+        - lifetxt/cli.py
+        - lifetxt/agenda.py
+        - tests/test_lifetxt.py
+        - tests/test_fuzzy_search.py
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtSearchCommandStdinInputTests (3 new fuzzy tests) and tests/test_fuzzy_search.py FilterItemsFuzzyIntegrationTests
+        - 'live: real installed lifetxt console script -- search PATTERN --fuzzy matches a typo, plain search does not, search --fuzzy --regex is rejected with a named error'
+      release_or_deployment: null
+      notes: >-
+        Found and fixed a pre-existing, unrelated defect while adding this
+        coverage: tests/test_lifetxt.py had two colliding top-level
+        LifeTxtSearchCommandTests classes; see cap-fuzzy-search-first-slice's
+        notes.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-cli-find
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add find --fuzzy; thread fuzzy through global_search() and each of its six entity searchers, with exact-before-approximate ranking under fuzzy=True
+        - lifetxt/cli.py
+        - lifetxt/global_search.py
+        - tests/test_global_search.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_global_search.py GlobalSearchFuzzyTests (5 tests) and the full pre-existing GlobalSearchTests/GlobalSearchProposalTests suite re-run unmodified
+        - tests/test_lifetxt.py LifeTxtFindCommandTests (new -- find had no prior CLI-level test coverage at all)
+        - 'live: real installed lifetxt console script -- find TERM PATH --fuzzy matches a typo across entity types, plain find does not'
+      release_or_deployment: null
+      notes: See cap-fuzzy-search-first-slice's notes for the ranking-scope decision.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-web-items-api
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add fuzzy=true query parameter to GET /api/items, threaded into the existing filter_items(text=...) call
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter
+        - 'live: real lifetxt serve process, GET /api/items?q=sttats (0 results) vs GET /api/items?q=sttats&fuzzy=true (1 result)'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Sixth item of the quality-and-i18n-fixes batch, and the batch's
+        largest single item; distilled directly with the repository owner's
+        approval of a scoped first slice (shared primitive plus CLI
+        search/find plus Web /api/items) before implementation, given
+        issue #221's own full horizontal-review scope had no fixed task
+        size. TUI, MCP, and Remote search surfaces recorded as explicit
+        follow-up candidates in cap-fuzzy-search-first-slice rather than
+        silently dropped. pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

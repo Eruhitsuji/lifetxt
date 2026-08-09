@@ -161,6 +161,18 @@ class CommandTokenProtectionTests(unittest.TestCase):
         self.assertIn('<span class="help-command-summary">', body)
 
 
+class DynamicLabelTranslationTests(unittest.TestCase):
+    def test_notif_button_label_is_translated_at_construction(self):
+        # "Notifications ✕" is not a dictionary key and the suffix-peel rule
+        # only strips a trailing "(...)", so a bare-literal assignment would
+        # stay English forever even with a "Notifications" dictionary entry;
+        # the runtime label must be built through t() instead.
+        body = PAGE[PAGE.index("function updateNotifBtnLabel") :]
+        body = body[: body.index("\n    }")]
+        self.assertIn('t("Notifications") + indicator', body)
+        self.assertNotIn('"Notifications" + indicator', body)
+
+
 class ObserverWiringTests(unittest.TestCase):
     def test_observer_starts_once_at_init(self):
         # It was previously only re-armed from inside its own callback, so it

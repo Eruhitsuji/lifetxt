@@ -1894,3 +1894,59 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-i18n-dynamic-content-fidelity
+    name: Web UI i18n fidelity for dynamically generated content
+    summary: >-
+      Keep runtime-generated and dynamically-updated Web UI chrome correctly
+      localized in Japanese, beyond what the generic translateTree() walker
+      and static dictionary lookups cover by construction: labels built by
+      string concatenation that never exactly equal a dictionary key, and
+      contextual help text sourced from data-help/CONTROL_HELP, which the
+      translation walker's text-node/attribute passes do not reach at all.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-i18n-dynamic-label-translation
+      - req-web-i18n-contextual-help-translation
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_web_i18n.py
+    public_interfaces:
+      - Web UI Notifications button (#notif-btn)
+      - Web UI contextual help tooltip (data-help, CONTROL_HELP, showUiHelp)
+    tests_or_evidence:
+      - tests/test_web_i18n.py DynamicLabelTranslationTests -> updateNotifBtnLabel() builds its label through t("Notifications") rather than a bare literal, so a compound "Notifications ✕" assignment can never bypass the dictionary again
+      - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/223
+      - https://github.com/Eruhitsuji/lifetxt/issues/224
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered the i18n translation runtime
+      itself (lifetxt/web_assets.py's t()/translateTree()/UI_STRINGS
+      machinery) as its own concern before this change -- prior i18n work
+      (cap-web-help-command-reference's #222 fix, and the original dictionary/
+      pattern/observer implementation) extended whichever feature capability
+      happened to own the affected surface. This entry exists for the class
+      of defect where the runtime bypasses the dictionary entirely (a
+      compound string that structurally cannot match, or a code path the
+      walker never visits), which is generic to the i18n runtime rather than
+      any one feature. #223 (Standard assurance): updateNotifBtnLabel()
+      concatenated a bare "Notifications" literal with a permission
+      indicator character before assignment, producing "Notifications ✕",
+      which is not a dictionary key and does not fit the suffix-peel rule
+      (parenthetical only) -- fixed by translating at construction time via
+      t(). #224 (contextual hover/focus help) is a second, distinct gap in
+      the same runtime: data-help attribute values are read directly by
+      showUiHelp() without ever passing through t() or I18N_ATTRIBUTES,
+      since "data-help" is not in that list; see this entry's own #224
+      evidence for that fix. Audited every other `"<Word>" + dynamicPart`
+      textContent assignment in the file for the same defect class; the only
+      other match (`Git` panel title with a parenthetical commit count) is a
+      proper noun with no dictionary entry and is not itself a bug.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

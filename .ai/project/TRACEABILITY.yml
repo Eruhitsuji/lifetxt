@@ -2376,6 +2376,34 @@ traceability:
         follow-up round to the cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-doctor-update-status-integration
+      capability_id: cap-doctor-unification
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/211
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/212
+      changed_files_or_scope:
+        - Add an opt-in --check-update flag to doctor, reusing update-check's resolution helpers
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/doctor-update-status-integration/
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtDoctorCliTests: test_doctor_omits_update_row_without_the_flag, test_doctor_check_update_reports_up_to_date, test_doctor_check_update_warns_when_update_available, test_doctor_check_update_network_failure_warns_not_fails, test_doctor_check_update_reports_no_release_found"
+        - python -m unittest tests.test_lifetxt.LifeTxtDoctorCliTests tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime -> Ran 62 tests, OK
+        - "live: doctor --check-update against this project's own repository correctly reports OK/no releases found; doctor --check-update --repo torvalds/linux correctly reports WARN naming the real latest tag"
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/doctor-update-status-integration/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, XS/S-sized, read-only opt-in addition). Second item
+        of a second small follow-up round to the cli-web-multiday-enhancements
+        batch, connecting cap-doctor-unification and cap-cli-update-check per
+        repository owner request.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

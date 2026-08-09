@@ -3025,6 +3025,78 @@ HTML_PAGE = r"""<!doctype html>
         "Notifications: not yet requested": "通知: 未許可",
         "Open notifications / enable browser alerts": "通知を開く / ブラウザ通知を有効化",
         "No elapsed time recorded.": "経過時間の記録はありません。",
+
+        // Contextual help (data-help / CONTROL_HELP / VIEW_HELP), shown on
+        // hover or keyboard focus via showUiHelp().
+        "Toggle light and dark theme. Add ?theme=light or ?theme=dark to force a wall-display theme.":
+          "ライト/ダークテーマを切り替えます。?theme=light または ?theme=dark を付けると壁掛け表示用のテーマを固定できます。",
+        "High-contrast mode increases borders and text contrast for low-visibility displays.":
+          "ハイコントラストモードは、見えにくい画面向けに枠線と文字のコントラストを強めます。",
+        "Reduced motion disables most transitions and animation-heavy feedback.":
+          "アニメーション低減は、ほとんどの遷移効果や動きの多い演出を無効にします。",
+        "Compact density hides long body previews and fits more records on small screens.":
+          "コンパクト表示は本文の長いプレビューを隠し、小さい画面により多くのレコードを表示します。",
+        "Use browser fullscreen for kiosk or display boards. Press f to toggle.":
+          "キオスクやディスプレイボード向けにブラウザの全画面表示を使います。f キーで切り替え。",
+        "Open notification records and optionally request browser notification permission.":
+          "通知レコードを開きます。必要に応じてブラウザ通知の許可もリクエストします。",
+        "Reload the active view from disk/API without changing filters. Press r as a shortcut.":
+          "フィルタを変更せずに現在のビューをディスク/APIから再読み込みします。ショートカットは r。",
+        "Switch Status between active records only and latest status per person.":
+          "ステータス表示を「進行中のレコードのみ」と「人ごとの最新ステータス」で切り替えます。",
+        "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.":
+          "予定のブロックフィルタを順に切り替えます: すべて、ブロック中のみ、ブロック中を隠す。",
+        "Download the current Items result as CSV, JSON, or Markdown.":
+          "現在のアイテム結果を CSV、JSON、または Markdown でダウンロードします。",
+        "Group the Items list without changing the source file.":
+          "元ファイルを変更せずにアイテム一覧をグループ化します。",
+        "Sort visible Items by line, time, title, type, status, or source.":
+          "表示中のアイテムを行番号・時刻・タイトル・種類・ステータス・ソースで並べ替えます。",
+        "Choose ascending or descending sort order.": "並べ替え順を昇順または降順から選びます。",
+        "Limit the number of visible Items. Leave empty for all matching records.":
+          "表示するアイテム数を制限します。空欄にすると条件に一致する全レコードを表示します。",
+        "Search title, raw line, and detail values. Shortcut: /.":
+          "タイトル・生の行・詳細値を検索します。ショートカット: /。",
+        "Dashboard: overview KPI tiles, attention list, completions, and project progress.":
+          "ダッシュボード: KPIタイル、要注意リスト、完了状況、プロジェクトの進捗を一覧表示します。",
+        "Items: searchable record list with filters, grouping, edit modal, bulk actions, and exports.":
+          "アイテム: フィルタ・グループ化・編集モーダル・一括操作・書き出しに対応した検索可能なレコード一覧です。",
+        "Agenda: date-range list for due, do, at, from/to, on, and notify_at records.":
+          "予定: due・do・at・from/to・on・notify_at を持つレコードの期間別一覧です。",
+        "Timeline: chronological board for today, next 24 hours, or week with an updated now line.":
+          "タイムライン: 今日・今後24時間・週単位で見られる、現在時刻ラインが更新される時系列ボードです。",
+        "Calendar: month/week grid of dated records; click a day for Agenda or an entry for details.":
+          "カレンダー: 日付付きレコードを月/週で表示するグリッドです。日付をクリックすると予定、エントリをクリックすると詳細が開きます。",
+        "Focus: reduced-noise list of overdue, due-today, and in-progress work.":
+          "フォーカス: 期限超過・本日期限・進行中の作業だけに絞った、雑音の少ない一覧です。",
+        "Review: weekly/monthly/custom period summary with Markdown copy.":
+          "レビュー: 週次/月次/任意期間のまとめをMarkdownとしてコピーできます。",
+        "Messages: type M records, sender/recipient filters, and notification-oriented conversations.":
+          "メッセージ: 種類 M のレコード、送信者/宛先フィルタ、通知志向の会話を扱います。",
+        "Team: presence, workload, and recent messages grouped by person.":
+          "チーム: 在席状況・作業量・最近のメッセージを人ごとにまとめて表示します。",
+        "Status: latest or active presence records for each person.":
+          "ステータス: 各メンバーの最新または進行中の在席レコードです。",
+        "Notifications: due messages/reminders, acknowledge, snooze, and browser alert controls.":
+          "通知: 期限が来たメッセージ/リマインダー、確認・スヌーズ・ブラウザ通知の操作です。",
+        "Stats: charts, heatmaps, and type/status breakdowns.":
+          "統計: グラフ、ヒートマップ、種類/ステータス別の内訳です。",
+        "Graph: id, parent, ref, depends_on, blocks, and related links.":
+          "グラフ: id・parent・ref・depends_on・blocks および related のリンクです。",
+        "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.":
+          "表示: 編集操作を隠した閲覧専用の壁掛けモードです。戻る、または「表示を終了」で抜けられます。",
+        "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.":
+          "キオスク: 時計・自動更新・任意の kiosk_filter・自動スクロールを備えた常時表示ボードです。",
+        "Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard.":
+          "life.txt のレコードを作成します。ステータス・種類・タイトル・詳細キーを指定できます。キーボードから開くには n。",
+        "Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.":
+          "ワークフローの状態: [ ] 未着手, [/] 進行中, [x] 完了, [-] キャンセル, [>] 先送り, [?] 保留, [N] メモ。",
+        "Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.":
+          "レコードの種類: T タスク, E イベント, D 締切, R リマインダー, H 習慣, N メモ, S 在席ステータス, M メッセージ, J 日誌。",
+        "Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.":
+          "人が読みやすい短いレコード文です。タイトルに空白を含む場合は、生の life.txt では引用符で囲ってください。",
+        "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.":
+          "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。",
       },
     };
 
@@ -5034,26 +5106,32 @@ HTML_PAGE = r"""<!doctype html>
       // several repeat occurrences visible in one grid) must appear on
       // every matched day, not just the first -- each `on:` value or repeat
       // occurrence produces its own entry in record.matches with its own
-      // `start`. Falls back to the single-day fields when matches is absent
-      // (e.g. a plain due:/do: record with no matches array at all).
+      // `start`. matches is the authoritative per-day collection and is
+      // checked first: agenda_records() always derives occurrence_start
+      // from matches[0] (it is a single-value convenience field, never an
+      // independent source), so preferring it here silently collapsed any
+      // record with more than one match -- including ordinary multi-day
+      // on: spans and multi-occurrence repeats -- down to just its first
+      // day. occurrence_start/record.when remain fallbacks for a record
+      // shape with no matches array at all (e.g. a plain due:/do: record).
+      const matches = record.matches || [];
+      if (matches.length) {
+        const seen = new Set();
+        const placements = [];
+        for (const match of matches) {
+          const when = match.start || "";
+          const day = String(when).slice(0, 10);
+          if (!day || seen.has(day)) continue;
+          seen.add(day);
+          placements.push({day, when});
+        }
+        if (placements.length) return placements;
+      }
       if (record.occurrence_start) {
         return [{day: String(record.occurrence_start).slice(0, 10), when: record.occurrence_start}];
       }
-      const matches = record.matches || [];
-      if (!matches.length) {
-        const raw = record.when || "";
-        return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
-      }
-      const seen = new Set();
-      const placements = [];
-      for (const match of matches) {
-        const when = match.start || "";
-        const day = String(when).slice(0, 10);
-        if (!day || seen.has(day)) continue;
-        seen.add(day);
-        placements.push({day, when});
-      }
-      return placements;
+      const raw = record.when || "";
+      return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
     }
     function _calEntryHtml(record, dayWhen, dayIndex, dayTotal) {
       const type = record.type || "N";
@@ -6022,9 +6100,14 @@ HTML_PAGE = r"""<!doctype html>
         }
         const row = document.createElement("div");
         row.className = "cmdk-row" + (i === _cmdkIndex ? " focus" : "");
+        // The label and hint are literal command syntax ("/stats", "/s"), not
+        // prose; data-no-i18n keeps the generic translator from peeling the
+        // "/" and rewriting the bare command name as if it were a UI label.
         row.innerHTML = `<span class="cmdk-kind">${escapeHtml(entry.kind)}</span>` +
-          `<span>${escapeHtml(entry.label)}</span>` +
-          `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary || entry.hint)}</span>`;
+          `<span data-no-i18n>${escapeHtml(entry.label)}</span>` +
+          (entry.summary
+            ? `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary)}</span>`
+            : `<span style="margin-left:auto;color:var(--muted);font-size:.78rem" data-no-i18n>${escapeHtml(entry.hint)}</span>`);
         row.addEventListener("click", () => { closeCmdk(); entry.run(); });
         list.appendChild(row);
       });
@@ -6157,7 +6240,8 @@ HTML_PAGE = r"""<!doctype html>
         const alias = command.alias ? ` (/${command.alias})` : "";
         const badge = command.web ? "" : `<span class="help-command-badge">TUI only</span>`;
         return `<div class="help-command-row${i === _helpCmdIndex ? " focus" : ""}">` +
-          `<span class="help-command-usage">${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
+          // Literal command syntax, not prose -- see the cmdk-row comment above.
+          `<span class="help-command-usage" data-no-i18n>${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
           `<span class="help-command-summary">${escapeHtml(command.summary || "")}</span>` +
           `</div>`;
       }).join("");
@@ -6226,7 +6310,11 @@ HTML_PAGE = r"""<!doctype html>
       const tooltip = document.getElementById("ui-help-tooltip");
       const text = anchor?.dataset?.help || "";
       if (!tooltip || !text) return;
-      tooltip.textContent = text;
+      // dataset.help is the canonical English source and is never mutated;
+      // translating here at display time means a later language change
+      // (or a target text without a dictionary entry yet) never needs the
+      // source string rewritten.
+      tooltip.textContent = t(text);
       tooltip.setAttribute("aria-hidden", "false");
       tooltip.classList.add("visible");
       window.requestAnimationFrame(() => positionUiHelpTooltip(anchor, tooltip));
@@ -7473,7 +7561,11 @@ HTML_PAGE = r"""<!doctype html>
       if (!btn) return;
       const perm = ("Notification" in window) ? Notification.permission : "unsupported";
       const indicator = perm === "granted" ? " ●" : perm === "denied" ? " ✕" : " ○";
-      btn.textContent = "Notifications" + indicator;
+      // "Notifications ✕" is not itself a dictionary key and the suffix-peel
+      // rule only handles a trailing "(...)", so a compound assignment would
+      // stay English forever even with a "Notifications" dictionary entry;
+      // translate the label at construction time instead.
+      btn.textContent = t("Notifications") + indicator;
     }
 
     async function triggerRefresh() {

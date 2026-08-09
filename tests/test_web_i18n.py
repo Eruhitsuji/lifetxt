@@ -76,6 +76,52 @@ class DictionaryTests(unittest.TestCase):
     def test_dictionary_is_large_enough_to_be_useful(self):
         self.assertGreater(len(self.dictionary), 250)
 
+    def test_dictionary_covers_contextual_help_strings(self):
+        # CONTROL_HELP, VIEW_HELP, and the inline data-help attributes are
+        # read verbatim by showUiHelp(); each one needs its own dictionary
+        # entry or the tooltip silently stays English.
+        for text in (
+            # CONTROL_HELP
+            "Toggle light and dark theme. Add ?theme=light or ?theme=dark to force a wall-display theme.",
+            "High-contrast mode increases borders and text contrast for low-visibility displays.",
+            "Reduced motion disables most transitions and animation-heavy feedback.",
+            "Compact density hides long body previews and fits more records on small screens.",
+            "Use browser fullscreen for kiosk or display boards. Press f to toggle.",
+            "Open notification records and optionally request browser notification permission.",
+            "Reload the active view from disk/API without changing filters. Press r as a shortcut.",
+            "Switch Status between active records only and latest status per person.",
+            "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.",
+            "Download the current Items result as CSV, JSON, or Markdown.",
+            "Group the Items list without changing the source file.",
+            "Sort visible Items by line, time, title, type, status, or source.",
+            "Choose ascending or descending sort order.",
+            "Limit the number of visible Items. Leave empty for all matching records.",
+            "Search title, raw line, and detail values. Shortcut: /.",
+            # VIEW_HELP
+            "Dashboard: overview KPI tiles, attention list, completions, and project progress.",
+            "Items: searchable record list with filters, grouping, edit modal, bulk actions, and exports.",
+            "Agenda: date-range list for due, do, at, from/to, on, and notify_at records.",
+            "Timeline: chronological board for today, next 24 hours, or week with an updated now line.",
+            "Calendar: month/week grid of dated records; click a day for Agenda or an entry for details.",
+            "Focus: reduced-noise list of overdue, due-today, and in-progress work.",
+            "Review: weekly/monthly/custom period summary with Markdown copy.",
+            "Messages: type M records, sender/recipient filters, and notification-oriented conversations.",
+            "Team: presence, workload, and recent messages grouped by person.",
+            "Status: latest or active presence records for each person.",
+            "Notifications: due messages/reminders, acknowledge, snooze, and browser alert controls.",
+            "Stats: charts, heatmaps, and type/status breakdowns.",
+            "Graph: id, parent, ref, depends_on, blocks, and related links.",
+            "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.",
+            "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.",
+            # Inline data-help attributes
+            "Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard.",
+            "Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.",
+            "Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.",
+            "Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.",
+            "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.",
+        ):
+            self.assertIn(text, self.dictionary)
+
 
 class PatternTests(unittest.TestCase):
     def test_patterns_exist_for_labels_that_embed_values(self):
@@ -130,6 +176,77 @@ class RecordProtectionTests(unittest.TestCase):
 
     def test_walker_consults_the_record_class_list(self):
         self.assertIn("I18N_RECORD_CLASSES.some", PAGE)
+
+
+class CommandTokenProtectionTests(unittest.TestCase):
+    # Slash-command names are executable syntax, not prose: the generic
+    # translator peels a leading "/" as punctuation and can then match the
+    # bare word "stats" in the dictionary, rendering "/stats" as "/統計".
+    # These spans must opt out with data-no-i18n rather than rely on the
+    # word "stats" never appearing in the dictionary.
+
+    def test_command_palette_label_and_alias_are_protected(self):
+        body = PAGE[PAGE.index("function renderCmdkCommands") :]
+        body = body[: body.index("function openCmdk")]
+        self.assertIn("<span data-no-i18n>${escapeHtml(entry.label)}</span>", body)
+        self.assertIn(
+            'style="margin-left:auto;color:var(--muted);font-size:.78rem" data-no-i18n>${escapeHtml(entry.hint)}',
+            body,
+        )
+        # The summary branch is ordinary prose and must stay translatable.
+        self.assertIn(
+            'style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary)}',
+            body,
+        )
+
+    def test_help_modal_command_usage_is_protected(self):
+        body = PAGE[PAGE.index("async function renderHelpModalCommands") :]
+        body = body[: body.index("function _runHelpModalCommand")]
+        self.assertIn('<span class="help-command-usage" data-no-i18n>', body)
+        # The summary column is ordinary prose and must stay translatable.
+        self.assertIn('<span class="help-command-summary">', body)
+
+
+class DynamicLabelTranslationTests(unittest.TestCase):
+    def test_notif_button_label_is_translated_at_construction(self):
+        # "Notifications ✕" is not a dictionary key and the suffix-peel rule
+        # only strips a trailing "(...)", so a bare-literal assignment would
+        # stay English forever even with a "Notifications" dictionary entry;
+        # the runtime label must be built through t() instead.
+        body = PAGE[PAGE.index("function updateNotifBtnLabel") :]
+        body = body[: body.index("\n    }")]
+        self.assertIn('t("Notifications") + indicator', body)
+        self.assertNotIn('"Notifications" + indicator', body)
+
+
+class ContextualHelpTranslationTests(unittest.TestCase):
+    def setUp(self):
+        self.dictionary = _ja_dictionary()
+
+    def test_show_ui_help_translates_at_display_time(self):
+        # data-help is read directly by showUiHelp() and was never routed
+        # through I18N_ATTRIBUTES or t(), so a hover/focus tooltip stayed
+        # English regardless of language.
+        body = PAGE[PAGE.index("function showUiHelp") :]
+        body = body[: body.index("\n    }")]
+        self.assertIn("tooltip.textContent = t(text);", body)
+
+    def test_every_data_help_source_string_has_a_translation(self):
+        # Structural check over the actual served markup/JS, independent of
+        # the hardcoded list in DictionaryTests: every data-help="..." value
+        # and every CONTROL_HELP/VIEW_HELP value must be a dictionary key.
+        inline = re.findall(r'data-help="((?:[^"\\]|\\.)*)"', PAGE)
+        self.assertGreaterEqual(len(inline), 5)
+        control_block = PAGE[PAGE.index("const CONTROL_HELP") :]
+        control_block = control_block[: control_block.index("\n    };")]
+        view_block = PAGE[PAGE.index("const VIEW_HELP") :]
+        view_block = view_block[: view_block.index("\n    };")]
+        control_and_view = re.findall(
+            r'"((?:[^"\\]|\\.)*)",\n', control_block + "\n" + view_block
+        )
+        self.assertGreaterEqual(len(control_and_view), 25)
+        for text in inline + control_and_view:
+            self.assertIn(text, self.dictionary, text)
 
 
 class ObserverWiringTests(unittest.TestCase):

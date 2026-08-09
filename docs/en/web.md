@@ -440,6 +440,7 @@ Supported parameters:
 | `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
 | `kind=E` or `type=E` | Filter by life.txt type |
 | `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
+| `fuzzy=true` | Also match `text`/`q` within a small typo/edit distance, not only an exact substring; opt-in, Unicode-normalized |
 | `open_only=true` or `open=true` | Show unfinished workflow items only |
 | `status=todo` | Filter by status or status alias |
 | `project=VALUE`, `tag=VALUE`, `tag_all=VALUE`, `exclude_tag=VALUE` | Filter by tags and projects |

@@ -60,17 +60,38 @@ capabilities:
       - 'the guard must read the baseline from pyproject.toml and raise when it cannot be parsed, so a reshuffle cannot disarm it'
       - 'the guard module must stay in syntax the rejected interpreters can import, or its message degrades into the import error it exists to explain'
       - 'a failing or flaky run must be reportable with complete output: unit_test_captured retains it in .test-output.log so a truncating display cannot destroy the evidence'
+      - 'the dev extra must declare httpx2, and the documented full-suite install command (pip install -e ".[web,dev]") must run every Web-dependent test without a manual pip install httpx2 step'
+      - 'a skip guard gating a Web test on find_spec("httpx") must also accept find_spec("httpx2"), or a clean [web,dev] environment silently skips tests it should run'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/36
       - https://github.com/Eruhitsuji/lifetxt/issues/41
       - https://github.com/Eruhitsuji/lifetxt/issues/44
       - https://github.com/Eruhitsuji/lifetxt/issues/72
       - https://github.com/Eruhitsuji/lifetxt/issues/78
+      - https://github.com/Eruhitsuji/lifetxt/issues/219
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/38
       - https://github.com/Eruhitsuji/lifetxt/pull/42
       - https://github.com/Eruhitsuji/lifetxt/pull/71
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #219 found that a clean pip install -e '.[web,tui]' environment (the
+      documented extras, no manual extras) fails 7 Web tests with
+      starlette.testclient's RuntimeError, because neither httpx nor its
+      successor httpx2 was declared anywhere; CI and run_ci_like.py only
+      passed because they separately hardcoded a bare httpx install outside
+      of any declared extra. httpx2 is now declared in the dev extra (the
+      correct home per this capability's own "test/dev-oriented, not
+      runtime" scope), CI/run_ci_like.py/readme.md were updated to install
+      it from there instead of a hardcoded httpx, and doctor.py's
+      OPTIONAL_DEPENDENCY_NAMES plus docs/en|ja/cli.md's checked-package
+      table were updated from httpx to httpx2 to match. Five test files
+      (test_revision_migration_metrics.py, test_revision_telemetry_v2.py,
+      test_schema_extensions_v2.py, test_surface_runtime.py,
+      test_timer_public_revisions_v3.py) had skip guards checking only
+      find_spec("httpx"), which would have silently skipped their Web tests
+      in the newly-clean [web,dev] environment; fixed to accept either
+      package, since starlette.testclient itself accepts either.
     replacement:
       replaces: []
       replaced_by: null
@@ -1557,9 +1578,15 @@ capabilities:
       - 'manual: a real Node.js run confirming a 3-day record produces "1/3"/"2/3"/"3/3" badges in chronological order, and a single-day record renders no badge'
       - 'live: real lifetxt serve process with a 3-day on:/on:/on: fixture, served page confirmed to contain the cal-entry-span markup'
       - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 26 tests, OK (no translation-coverage regression)
+      - tests/test_lifetxt.py test_calendar_places_a_record_on_every_day_even_with_occurrence_start -> asserts matches is checked before occurrence_start in the served page source
+      - 'live: real lifetxt serve process against the exact #220 reproduction fixture (10-day Google Calendar on: import), GET /api/agenda confirmed occurrence_start=matches[0].start while matches carries all 10 real day entries'
+      - 'manual: a real Node.js run of the extracted, fixed _calRecordDayPlacements against that exact real API payload -> 10/10 placements (was 1 before the fix); single-day and occurrence_start-only-no-matches fallback cases re-verified unaffected'
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2110 tests, OK (skipped=13)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/194
       - https://github.com/Eruhitsuji/lifetxt/issues/213
+      - https://github.com/Eruhitsuji/lifetxt/issues/220
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/195
       - https://github.com/Eruhitsuji/lifetxt/pull/214
@@ -1576,6 +1603,28 @@ capabilities:
       "day X of Y" badge to each multi-day placement, distilled from a cc-sdd spec
       at .kiro/specs/calendar-multiday-span-badge/ -- a lighter alternative to a
       connecting spanning-bar redesign, which remains explicitly out of scope.
+      #220 (Standard assurance) fixed a genuine gap #194's own fixture never
+      exercised: agenda_records() always derives occurrence_start from
+      matches[0], so a real multi-day on: import (or any record with more
+      than one match) carries both fields at once, and
+      _calRecordDayPlacements checked occurrence_start first -- silently
+      collapsing every such record back to one day, the exact #194
+      regression, reintroduced through a field the original fixture left
+      unset. Fixed by preferring matches whenever present; occurrence_start
+      and record.when remain fallbacks only for a record shape with no
+      matches array at all. Confirmed generic across record kinds (no
+      Event/Google-Calendar-specific branching). A horizontal re-check of
+      Timeline and the Agenda list (both explicitly named in #220's audit
+      list) found a related but distinct limitation -- both render exactly
+      one row per record via matches[0], never expanding to one row per
+      in-window match -- filed separately as #229 rather than fixed here,
+      since it needs a product decision (is one row per record the intended
+      flat-list design, or should these mirror Calendar's per-occurrence
+      grid now) that #220's own reproduction and acceptance criteria did not
+      settle. This is a narrower re-finding than #194's original "Timeline
+      exhibits no equivalent defect" claim above: that check was about
+      in-window record *selection*, not about how many rows one selected
+      record with several in-window matches produces, which #229 is about.
     replacement:
       replaces: []
       replaced_by: null
@@ -1663,10 +1712,13 @@ capabilities:
       - "tests/test_lifetxt.py test_help_modal_supports_keyboard_navigation"
       - 'manual: a real Node.js run of _helpCmdMoveFocus/_runHelpModalCommand confirming forward/backward wraparound, no-op on an empty list, Enter closing the modal and calling runWebCommand for the highlighted entry, and an invalid index being a no-op'
       - 'live: real lifetxt serve process, served page confirmed to contain the new functions'
+      - tests/test_web_i18n.py CommandTokenProtectionTests -> command palette label/hint and help modal usage span both carry data-no-i18n; adjacent summary/prose spans stay translatable
+      - 'live: real lifetxt serve process, served page confirmed to contain both new data-no-i18n markers verbatim'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/198
       - https://github.com/Eruhitsuji/lifetxt/issues/204
       - https://github.com/Eruhitsuji/lifetxt/issues/215
+      - https://github.com/Eruhitsuji/lifetxt/issues/222
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/199
       - https://github.com/Eruhitsuji/lifetxt/pull/205
@@ -1686,6 +1738,14 @@ capabilities:
       distilled from a cc-sdd spec at
       .kiro/specs/help-modal-keyboard-navigation/ -- also added the
       previously-missing row click handlers, and no new user-visible text.
+      #222 (Standard assurance) fixed the same class of over-translation
+      #204/#205 fixed, this time in the command palette and help modal's
+      own command-token spans rather than release_policy.py's manifest
+      parser: the generic translator peeled "/stats"'s leading punctuation
+      and matched the bare dictionary key "stats", rendering "/統計". Fixed
+      with data-no-i18n on the token spans rather than special-casing the
+      word "stats", per repository owner instruction to prefer a semantic
+      opt-out; part of the quality-and-i18n-fixes batch alongside #223/#224.
     replacement:
       replaces: []
       replaced_by: null
@@ -1858,6 +1918,160 @@ capabilities:
       to the dry-run and --yes success output, distilled from a cc-sdd spec
       at .kiro/specs/update-dry-run-commit-preview/ -- read-only additions
       only (git log/rev-list), no change to any safety rail.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-web-i18n-dynamic-content-fidelity
+    name: Web UI i18n fidelity for dynamically generated content
+    summary: >-
+      Keep runtime-generated and dynamically-updated Web UI chrome correctly
+      localized in Japanese, beyond what the generic translateTree() walker
+      and static dictionary lookups cover by construction: labels built by
+      string concatenation that never exactly equal a dictionary key, and
+      contextual help text sourced from data-help/CONTROL_HELP, which the
+      translation walker's text-node/attribute passes do not reach at all.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-i18n-dynamic-label-translation
+      - req-web-i18n-contextual-help-translation
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_web_i18n.py
+    public_interfaces:
+      - Web UI Notifications button (#notif-btn)
+      - Web UI contextual help tooltip (data-help, CONTROL_HELP, showUiHelp)
+    tests_or_evidence:
+      - tests/test_web_i18n.py DynamicLabelTranslationTests -> updateNotifBtnLabel() builds its label through t("Notifications") rather than a bare literal, so a compound "Notifications ✕" assignment can never bypass the dictionary again
+      - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
+      - tests/test_web_i18n.py ContextualHelpTranslationTests -> showUiHelp() translates dataset.help through t() at display time; every data-help/CONTROL_HELP/VIEW_HELP source string (structurally extracted from the served page, 35 total: 5 inline + 15 CONTROL_HELP + 15 VIEW_HELP) has a dictionary entry
+      - tests/test_web_i18n.py DictionaryTests.test_dictionary_covers_contextual_help_strings -> the same 35 strings, checked as an explicit hardcoded list independent of the structural extraction
+      - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+      - 'live: real lifetxt serve process; served page confirmed to contain both tooltip.textContent = t(text); and the new Japanese contextual-help strings verbatim'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/223
+      - https://github.com/Eruhitsuji/lifetxt/issues/224
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered the i18n translation runtime
+      itself (lifetxt/web_assets.py's t()/translateTree()/UI_STRINGS
+      machinery) as its own concern before this change -- prior i18n work
+      (cap-web-help-command-reference's #222 fix, and the original dictionary/
+      pattern/observer implementation) extended whichever feature capability
+      happened to own the affected surface. This entry exists for the class
+      of defect where the runtime bypasses the dictionary entirely (a
+      compound string that structurally cannot match, or a code path the
+      walker never visits), which is generic to the i18n runtime rather than
+      any one feature. #223 (Standard assurance): updateNotifBtnLabel()
+      concatenated a bare "Notifications" literal with a permission
+      indicator character before assignment, producing "Notifications ✕",
+      which is not a dictionary key and does not fit the suffix-peel rule
+      (parenthetical only) -- fixed by translating at construction time via
+      t(). #224 (contextual hover/focus help) is a second, distinct gap in
+      the same runtime: data-help attribute values are read directly by
+      showUiHelp() without ever passing through t() or I18N_ATTRIBUTES,
+      since "data-help" is not in that list; see this entry's own #224
+      evidence for that fix. Audited every other `"<Word>" + dynamicPart`
+      textContent assignment in the file for the same defect class; the only
+      other match (`Git` panel title with a parenthetical commit count) is a
+      proper noun with no dictionary entry and is not itself a bug.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-fuzzy-search-first-slice
+    name: Typo-tolerant fuzzy search (first slice)
+    summary: >-
+      One shared, dependency-free, deterministic fuzzy-matching primitive
+      (NFKC + casefold normalization, exact-substring always ranked above
+      any approximate-only match, bounded token-level Levenshtein fallback),
+      wired as an explicit opt-in behind CLI `search --fuzzy`, CLI
+      `find --fuzzy`, and the Web `/api/items?fuzzy=true` query parameter.
+      Existing exact-substring behavior is unchanged unless the opt-in is
+      given. TUI, MCP `global_search`, and Remote read-only search
+      surfaces are explicitly out of scope for this slice.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-fuzzy-search-shared-primitive
+      - req-fuzzy-search-cli-search
+      - req-fuzzy-search-cli-find
+      - req-fuzzy-search-web-items-api
+    implementation_locations:
+      - lifetxt/fuzzy_search.py
+      - lifetxt/cli.py
+      - lifetxt/global_search.py
+      - lifetxt/agenda.py
+      - lifetxt/webapp.py
+      - tests/test_fuzzy_search.py
+      - tests/test_global_search.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/en/web.md
+      - docs/ja/web.md
+      - .kiro/specs/fuzzy-search-first-slice/
+    public_interfaces:
+      - lifetxt.fuzzy_search.similarity
+      - lifetxt.fuzzy_search.fuzzy_contains
+      - lifetxt.fuzzy_search.is_exact_match
+      - lifetxt.fuzzy_search.normalize_text
+      - lifetxt search --fuzzy
+      - lifetxt find --fuzzy
+      - GET /api/items?fuzzy=true
+      - lifetxt.agenda.filter_items (fuzzy parameter)
+      - lifetxt.global_search.global_search (fuzzy parameter)
+    tests_or_evidence:
+      - tests/test_fuzzy_search.py NormalizationTests, SimilarityTests, FuzzyContainsTests, IsExactMatchTests, FilterItemsFuzzyIntegrationTests (25 tests: normalization, exact-outranks-fuzzy, short-query bound, determinism, bounded cost, filter_items integration)
+      - tests/test_global_search.py GlobalSearchFuzzyTests (5 tests: opt-in default, typo match, exact-before-approximate ranking, determinism, explicit-false parity)
+      - tests/test_lifetxt.py LifeTxtSearchCommandStdinInputTests fuzzy tests, LifeTxtFindCommandTests, LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter
+      - python -m unittest tests.test_fuzzy_search tests.test_global_search tests.test_lifetxt.LifeTxtSearchCommandStdinInputTests tests.test_lifetxt.LifeTxtSearchCommandTests tests.test_lifetxt.LifeTxtFindCommandTests tests.test_lifetxt.LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter -> Ran 63 tests, OK
+      - 'live: real installed lifetxt console script -- search PATTERN --fuzzy (typo matches, non-fuzzy does not), search --fuzzy --regex (rejected), find TERM PATH --fuzzy (typo matches, non-fuzzy does not, correct usage order confirmed against the real argparse positional definition)'
+      - 'live: real lifetxt serve process, GET /api/items?q=sttats (0 results) vs GET /api/items?q=sttats&fuzzy=true (1 result) against a real typo fixture'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/221
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Scoped via AskUserQuestion with the repository owner before starting,
+      given issue #221's own horizontal-review list spans CLI/TUI/Web/MCP/
+      Remote with no fixed task size (Task Decomposition Standard: an
+      undecomposed L/XL cannot be Ready). Distilled into a lightweight
+      requirements.md/design.md at
+      .kiro/specs/fuzzy-search-first-slice/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard
+      assurance -- read-only search behavior, opt-in, no data or write-path
+      impact). TUI search, MCP global_search, and Remote read-only search
+      resources are recorded here as explicit follow-up candidates for a
+      future slice, not silently dropped: each would reuse
+      lifetxt.fuzzy_search directly (TUI's own separate row-filter fuzzy
+      helper in tui_app.py is a different, pre-existing, simpler concept --
+      client-side keystroke filtering of already-loaded rows -- and is
+      unrelated to this primitive). filter_items()'s fuzzy parameter is a
+      pure pass/fail predicate preserving existing document order (no
+      ranking added there or to /api/items, whose sort=/order= parameters
+      are the existing, independent ordering contract); only
+      global_search()'s per-entity-type result lists gained exact-first
+      ranking, since that is the one in-scope surface already returning a
+      "results" list rather than a document-order filter. A real,
+      pre-existing defect was found and fixed while adding CLI test
+      coverage: tests/test_lifetxt.py had two top-level classes both named
+      LifeTxtSearchCommandTests; Python silently keeps only the last
+      binding, so the first one's 6 test methods were never collected by
+      unittest discover. Renamed to
+      LifeTxtSearchCommandStdinInputTests (distinct fixture style: stdin
+      input vs. the surviving class's explicit temp-file path), restoring
+      that lost coverage; confirmed no other duplicate top-level class name
+      exists anywhere in tests/ before or after.
     replacement:
       replaces: []
       replaced_by: null

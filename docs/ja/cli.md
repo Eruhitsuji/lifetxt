@@ -62,6 +62,7 @@ python -m lifetxt health [path ...]
 python -m lifetxt review [path ...]
 python -m lifetxt who [path ...]
 python -m lifetxt search PATTERN [path ...]
+python -m lifetxt find TERM [path ...]
 python -m lifetxt snapshot [path ...]
 python -m lifetxt lint [path ...]
 python -m lifetxt diff FILE_A FILE_B
@@ -128,7 +129,8 @@ python -m lifetxt template list
 | `health` | 停滞した task、未実施の habit、迫った deadline などの健全性チェック |
 | `review` | 完了 task、habit、mood、elapsed time の期間サマリーを表示 |
 | `who` | 各 person の最新 `S` item によるチーム presence サマリー |
-| `search` | title や field 値の部分一致・正規表現で item を検索 |
+| `search` | title や field 値の部分一致・正規表現・`--fuzzy`（typo 許容）で item を検索 |
+| `find` | item、project、person、group、area、proposal を横断検索。`--fuzzy` 対応 |
 | `snapshot` | life.txt file をタイムスタンプ付きで point-in-time backup |
 | `lint` | key 名の typo、tag の大小文字、重複 key など style を検査 |
 | `diff` | 2つの life.txt file の意味的な差分を表示 |
@@ -144,6 +146,20 @@ python -m lifetxt template list
 | `share` | filter + review + chart をまとめた自己完結型 HTML/Markdown report を出力 |
 | `digest` | `review` のサマリーを Slack、email、または local file へ送信 |
 | `template` | 再利用可能な named item template を list / apply |
+
+### 1.1 あいまい検索 (Fuzzy Search)
+
+`search` と `find` は既定で完全な部分一致のみを対象とする。`--fuzzy` を付けると、
+pattern から一定の編集距離（typo や打ち間違い）以内の field も対象になる。あいまい
+検索は opt-in であり、比較前に Unicode 正規化を行うため（全角・半角の日本語や
+Latin 文字の大小文字差は無視される）、完全一致は常に近似一致より上位に表示され
+る。`search --regex` と `--fuzzy` は併用できない。正規表現には類似度スコアという
+概念がないため。
+
+```sh
+python -m lifetxt search "stast" --fuzzy life.txt   # "stats" を含む title にも一致
+python -m lifetxt find "stast" life.txt --fuzzy      # item / project / person / group / area / proposal 全体で同様の許容
+```
 
 ## 2. 共通仕様
 
@@ -2168,7 +2184,7 @@ python -m lifetxt doctor
 | `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
 | `disk` | life.txt file のある volume の空き容量 (100 MiB 未満で WARN) |
 | `fzf`, `peco` | optional selector tool が `PATH` にあるか (無ければ WARN) |
-| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
+| `fastapi`, `uvicorn`, `httpx2`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
 | `check` | life.txt file を解析し error/warning 件数を報告 |
 | `ids` | `id:` が無い item を報告 |
 

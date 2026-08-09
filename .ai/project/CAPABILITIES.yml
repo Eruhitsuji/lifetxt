@@ -1612,3 +1612,46 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-help-command-reference
+    name: Web UI help modal command reference
+    summary: >-
+      Add a searchable slash-command reference to the Web UI's help modal
+      (opened via `?`), matching the TUI's `/help [query]`. Reuses the
+      existing `COMMAND_CATALOG`/`matchingCommands()` the Ctrl+K command
+      palette already uses, so the help modal cannot disagree with the
+      palette about what a command means. Previously the help modal only
+      showed keyboard shortcuts; the searchable command catalog existed only
+      inside the command palette, which a user pressing `?` for help had no
+      reason to already know existed.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-help-command-reference
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - Web UI help modal (? shortcut)
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference, confirmed via git stash to fail on the prior code
+      - 'manual: a real Node.js run of the extracted renderHelpModalCommands/matchingCommands/fuzzyMatch source against 4 cases (unfiltered listing, filtering by query, TUI-only badge scoping, empty-state message) -- all passed'
+      - 'live: real lifetxt serve process, GET /api/commands confirms the real 31-command catalog shape (mix of web:true/false); GET / confirms the served page contains the new markup'
+      - python -m unittest tests.test_lifetxt tests.test_web_i18n tests.test_surface_runtime -> Ran 610 tests, OK (skipped=1)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/198
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/199
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/web-help-command-reference/
+      (below the .ai/project/changes/README.md change-package threshold:
+      Standard assurance, S/M-sized). Seventh implementation task of the
+      cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

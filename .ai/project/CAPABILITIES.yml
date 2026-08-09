@@ -1918,6 +1918,11 @@ capabilities:
     tests_or_evidence:
       - tests/test_web_i18n.py DynamicLabelTranslationTests -> updateNotifBtnLabel() builds its label through t("Notifications") rather than a bare literal, so a compound "Notifications ✕" assignment can never bypass the dictionary again
       - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
+      - tests/test_web_i18n.py ContextualHelpTranslationTests -> showUiHelp() translates dataset.help through t() at display time; every data-help/CONTROL_HELP/VIEW_HELP source string (structurally extracted from the served page, 35 total: 5 inline + 15 CONTROL_HELP + 15 VIEW_HELP) has a dictionary entry
+      - tests/test_web_i18n.py DictionaryTests.test_dictionary_covers_contextual_help_strings -> the same 35 strings, checked as an explicit hardcoded list independent of the structural extraction
+      - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+      - 'live: real lifetxt serve process; served page confirmed to contain both tooltip.textContent = t(text); and the new Japanese contextual-help strings verbatim'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/223
       - https://github.com/Eruhitsuji/lifetxt/issues/224

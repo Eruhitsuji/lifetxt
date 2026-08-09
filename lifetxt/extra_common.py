@@ -31,6 +31,7 @@ from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
 from .timeutil import parse_elapsed
+from .workspace import resolve_workspace, workspace_resolution_active
 
 OPEN_STATUSES = ("[ ]", "[/]")
 CLOSED_STATUSES = ("[x]", "[-]", "[>]")
@@ -156,8 +157,27 @@ def _latest_date(
     return result
 
 
-def _load_config(config_path):
-    return load_config(config_path)
+def _load_config(config_path, workspace_name=None):
+    """Load config and inject the active workspace's resolved runtime paths.
+
+    Extended commands historically loaded the JSON document directly, bypassing
+    the legacy CLI's named-workspace resolution.  Keep legacy top-level
+    ``paths`` / ``write_file`` behavior unchanged, but when a configured default
+    workspace or explicit workspace applies, expose the same resolved
+    ``paths``/``write_file`` runtime view that ordinary CLI commands receive.
+    """
+    config_data = load_config(config_path)
+    if not workspace_resolution_active(config_data, workspace_name):
+        return config_data
+
+    resolution = resolve_workspace(config_data, workspace_name)
+    config_data["paths"] = list(resolution["input_paths"])
+    if resolution["write_file"]:
+        config_data["write_file"] = resolution["write_file"]
+    if resolution["generated_paths"] and "generated_paths" not in config_data:
+        config_data["generated_paths"] = list(resolution["generated_paths"])
+    config_data["_active_workspace"] = resolution["name"]
+    return config_data
 
 
 def _resolved_input_paths(paths, config_data, default="life.txt"):

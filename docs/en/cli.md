@@ -2531,9 +2531,15 @@ python -m lifetxt update --repo your-github-username/your-fork --yes
 ```
 
 Without `--yes`, `update` fetches (read-only against your git remote) and
-reports what *would* change -- current commit, target commit, and the ref it
-resolved to -- without touching your working tree. `--yes` is required to
-actually apply it. Safety rails, all fail loudly rather than guessing:
+reports what *would* change -- current commit, target commit, the ref it
+resolved to, and (in text output) up to 20 pending commits one-line-each,
+newest first, with a count of any remaining ones -- without touching your
+working tree. `--yes` is required to actually apply it. `--format json`
+includes the same preview as a `commits` array and a `commit_count`
+integer. Looking up the commit list never blocks the update itself: if it
+fails for any reason, `update` still reports the pending fast-forward with
+an empty commit list rather than erroring out. Safety rails, all fail
+loudly rather than guessing:
 
 - Refuses when the running install is not inside a git working tree.
 - Refuses when the working tree has any uncommitted change, tracked or

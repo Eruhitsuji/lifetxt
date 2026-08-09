@@ -2211,8 +2211,12 @@ python -m lifetxt update --repo your-github-username/your-fork --yes
 
 `--yes` を付けない場合、`update` は (git remote に対して読み取り専用の)
 fetch のみ行い、実際に何が変わるか — 現在の commit・目標の commit・解決
-された ref — を working tree に触れずに報告します。実際に適用するには
-`--yes` が必須です。安全策 (すべて推測ではなく明確な失敗として現れます):
+された ref、そして (text 出力では) 適用予定の commit を最新から最大20件、
+1行ずつ表示し、残りがあれば件数も報告します — を working tree に触れずに
+報告します。実際に適用するには `--yes` が必須です。`--format json` では
+同じ内容が `commits` 配列と `commit_count` として含まれます。commit 一覧
+の取得に失敗しても update 自体は止まりません — その場合は空の一覧のまま
+fast-forward の予定を報告します。安全策 (すべて推測ではなく明確な失敗として現れます):
 
 - 実行中の install が git working tree の中に無い場合は拒否します。
 - working tree に (tracked / untracked を問わず) 未コミットの変更が

@@ -1256,7 +1256,7 @@ traceability:
         too small to stand alone). Web/MCP/Remote surface timezone context and
         a per-workspace timezone configuration override are explicitly out of
         scope and recorded as follow-up candidates, not gaps in this
-        capability. pull_request is filled in once the pull request
+        capability. pull_request is filled in once the pull_request
         implementing this entry is opened.
       status: implemented
 
@@ -1295,7 +1295,7 @@ traceability:
         calling mutation resolved as its write target -- this issue only
         makes the descriptive role label available; it does not add or
         change any write-routing behavior. pull_request is filled in once
-        the pull request implementing this entry (into the integration
+        the pull_request implementing this entry (into the integration
         branch) is opened.
       status: implemented
 
@@ -1328,7 +1328,7 @@ traceability:
         registry entries are not moved by this change; an archived item's
         version:/sprint: detail values are left unchanged. This is recorded
         as a deliberate limitation (see cap-project-archive-workflow notes),
-        not an omission. pull_request is filled in once the pull request
+        not an omission. pull_request is filled in once the pull_request
         implementing this entry (into the integration branch) is opened.
       status: implemented
 
@@ -1409,7 +1409,7 @@ traceability:
         context, notifications, duplicate project definitions, cross-file
         tasks, archived/renamed projects) either already handled or with no
         evidence of a gap; this is the one concrete, evidence-backed finding.
-        pull_request is filled in once the pull request implementing this
+        pull_request is filled in once the pull_request implementing this
         entry (into the integration branch) is opened.
       status: implemented
 
@@ -1451,7 +1451,7 @@ traceability:
         every invisible ticket from this function's items argument by the
         time it runs -- distinguishing missing from private/archived would
         require context this function does not and should not have.
-        pull_request is filled in once the pull request implementing this
+        pull_request is filled in once the pull_request implementing this
         entry (into the integration branch) is opened.
       status: implemented
 
@@ -1832,6 +1832,44 @@ traceability:
         Mode. Standard assurance, single-issue fix (below the
         .ai/project/changes/README.md change-package threshold) -- no integration
         branch used since this is one isolated change, not a batch.
+      status: implemented
+
+    - requirement_id: req-extended-cli-workspace-resolution
+      capability_id: cap-workspace-resolution-safety
+      epic: P1 Configuration and Workspace Foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/176
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/177
+      changed_files_or_scope:
+        - Make compatibility-preserving extended CLI commands resolve the configured default workspace before falling back to the literal life.txt default
+        - Carry global --workspace / --workspace= through lifetxt.entrypoint into lifetxt.extra_cli
+        - Preserve explicit positional paths as command-level overrides and preserve legacy top-level paths/write_file behavior
+        - lifetxt/entrypoint.py
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_common.py
+        - tests/test_extended_workspace_resolution.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_extended_workspace_resolution.py covers config-relative default workspace resolution from an unrelated cwd, explicit workspace selection in both flag forms, explicit-path override, and legacy top-level config preservation
+        - python -m unittest tests.test_extended_workspace_resolution
+        - python -m unittest tests.test_extra_cli tests.test_extended_workspace_resolution
+        - python -m lifetxt check examples/minimal_life.txt
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts
+        - GitHub Actions required CI on PR #177
+        - 'real deployment reproduction before the fix: lifetxt --config /srv/lifetxt/.lifetxt.json next failed with Errno 2 for cwd-relative life.txt, while passing the workspace-resolved absolute source paths explicitly succeeded'
+      release_or_deployment: >-
+        Behaviour fix: extended commands such as `lifetxt next` now use named
+        workspace sources when no explicit positional input paths are supplied.
+      notes: >-
+        Found during a real Ubuntu deployment migration from top-level paths/write_file
+        to a named `personal` workspace. The extended compatibility dispatcher bypassed
+        the ordinary CLI's workspace runtime injection, so `_resolved_input_paths()`
+        silently reached its historical literal `life.txt` fallback. The fix is shared
+        in the extended CLI config-loading path rather than special-casing `next`, carries
+        explicit `--workspace` selection through the entrypoint, keeps explicit command
+        paths highest priority, and leaves non-workspace legacy configurations unchanged.
+        The roadmap follow-up consolidates global invocation-context resolution so the two
+        dispatch paths cannot drift again.
       status: implemented
 
 required_chain:

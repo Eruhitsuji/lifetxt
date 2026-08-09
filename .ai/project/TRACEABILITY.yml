@@ -1872,6 +1872,59 @@ traceability:
         dispatch paths cannot drift again.
       status: implemented
 
+    - requirement_id: req-record-owned-validation-and-project-auto-id
+      capability_id: cap-project-ticket-record-consistency
+      epic: P1 Project and Portfolio Management / Development Ticket Management Core
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/178
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/180
+      changed_files_or_scope:
+        - Recognize documented first-party Project/Ticket record metadata in generic validation without suppressing arbitrary custom-key warnings
+        - Keep Project/Risk/Issue lifecycle state semantics separate from presence-state validation
+        - Apply configured automatic IDs to Project-generated records
+        - lifetxt/safety_compat_v2.py
+        - tests/test_generated_record_capture_compat.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_generated_record_capture_compat.py covers Project/Ticket false-warning removal, unknown custom metadata preservation, presence-state validation, and Project auto-ID creation
+        - GitHub Actions Python 3.10/3.11/3.12 and no-Web matrix on PR #180
+        - 'real deployment reproduction: project new produced W106/W207 and one missing ID; ticket new scratch output was accepted by ticket validate/list/show/next but generic check emitted four W106 warnings'
+      release_or_deployment: >-
+        Behaviour fix: first-party Project/Ticket metadata no longer produces
+        generic custom/presence-state warnings, and Project-generated records receive
+        IDs automatically when ids.auto is enabled.
+      notes: >-
+        The current fix recognizes the first-party record kinds involved in the
+        observed Project/Ticket workflows while preserving unknown custom metadata.
+        todo.md tracks consolidation into one authoritative record metadata registry
+        for all first-party record kinds so compatibility patches do not become the
+        long-term source of truth.
+      status: implemented
+
+    - requirement_id: req-quick-reference-validation-context
+      capability_id: cap-workspace-resolution-safety
+      epic: P1 Configuration and Workspace Foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/179
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/180
+      changed_files_or_scope:
+        - Validate quick-capture reference warnings against the active workspace and concrete append destination ID universe
+        - Preserve W215 when a reference target is genuinely missing
+        - Preserve syntax/value validation and append semantics
+        - lifetxt/safety_compat_v2.py
+        - tests/test_generated_record_capture_compat.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_generated_record_capture_compat.py covers resolved named-workspace depends_on references and truly missing references from an unrelated cwd
+        - GitHub Actions Python 3.10/3.11/3.12 and no-Web matrix on PR #180
+        - 'real deployment reproduction: quick --depends_on lifetxt_setup_workflow emitted W215 before append, while links immediately resolved the resulting relation as status=ok'
+      release_or_deployment: >-
+        Behaviour fix: quick capture no longer reports a false W215 for references
+        that already exist in the resolved workspace/destination context.
+      notes: >-
+        The follow-up CLI invocation-context consolidation in todo.md should eventually
+        provide this ID universe through one shared resolver rather than through a
+        compatibility-layer capture wrapper.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

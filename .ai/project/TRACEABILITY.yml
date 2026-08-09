@@ -2620,6 +2620,45 @@ traceability:
         is filled in once the pull request implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-web-i18n-contextual-help-translation
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/224
+      pull_request: null
+      changed_files_or_scope:
+        - Translate data-help tooltip text through t() at display time in showUiHelp(), keeping dataset.help as the untouched English source
+        - Add Japanese dictionary entries for all 35 contextual-help strings (5 inline data-help, 15 CONTROL_HELP, 15 VIEW_HELP)
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py ContextualHelpTranslationTests (2 tests: showUiHelp translates via t(); every data-help/CONTROL_HELP/VIEW_HELP source string structurally extracted from the served page has a dictionary entry)
+        - tests/test_web_i18n.py DictionaryTests.test_dictionary_covers_contextual_help_strings (the same 35 strings as an explicit hardcoded list)
+        - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain tooltip.textContent = t(text); and representative Japanese contextual-help strings (dark-btn help, editor Workflow-state help) verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2109 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized: one code
+        change plus 35 new dictionary entries). Extends
+        cap-web-i18n-dynamic-content-fidelity, created alongside #223 in
+        this same batch. Chose translate-at-display-time (t(text) inside
+        showUiHelp()) over mutating dataset.help, matching the issue's own
+        stated preference and this file's established pattern for
+        JavaScript-built strings -- dataset.help stays the single English
+        source of truth, so switching language never needs it rewritten and
+        a later-bound or asynchronously-created help target is translated
+        correctly the first time it is shown, with no separate wiring.
+        aria-describedby, positioning, and hover/focus/blur behavior are
+        unchanged. Fourth item of the quality-and-i18n-fixes batch.
+        pull_request is filled in once the pull request implementing this
+        entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

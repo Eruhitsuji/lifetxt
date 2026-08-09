@@ -49,6 +49,15 @@
       },
       "type": "object"
     },
+    "update": {
+      "additionalProperties": true,
+      "properties": {
+        "repository": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "workspace": {
       "additionalProperties": true,
       "properties": {

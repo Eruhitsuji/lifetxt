@@ -2499,12 +2499,16 @@ are `WARN` and do not affect the exit code. Use `--format json` for
 machine-readable output.
 
 `update-check` compares the running version against the latest published
-GitHub Release for this project, falling back to the latest tag when no
-Release has been published:
+GitHub Release for a repository, falling back to the latest tag when no
+Release has been published. The default repository is this project's own
+(`Eruhitsuji/lifetxt`); a fork should set `update.repository` (see
+[config.md](config.md#update-checks)) or pass `--repo` so checks compare
+against the fork's own releases instead of upstream:
 
 ```sh
 python -m lifetxt update-check
 python -m lifetxt update-check --format json
+python -m lifetxt update-check --repo your-github-username/your-fork
 ```
 
 It makes a read-only request to the public GitHub API and never installs or

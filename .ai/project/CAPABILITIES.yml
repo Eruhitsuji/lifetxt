@@ -1703,3 +1703,58 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-cli-update-check-configurable-repo
+    name: Configurable update-check repository
+    summary: >-
+      Make `lifetxt update-check` compare against a configurable GitHub
+      repository (`update.repository` config key, `--repo OWNER/NAME` flag)
+      instead of always the hardcoded `Eruhitsuji/lifetxt`, so a fork's
+      users are not misled by comparisons against an unrelated upstream
+      repository.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-update-check-configurable-repo
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/config_registry.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - tests/test_lifetxt.py
+      - tests/test_config_validation.py
+    public_interfaces:
+      - update.repository
+      - lifetxt update-check --repo OWNER/NAME
+      - lifetxt.cli._resolve_update_check_repo
+      - lifetxt config explain update.repository
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtUpdateCheckCliTests: test_repo_flag_overrides_the_built_in_default, test_configured_repository_is_used_when_no_flag_is_given, test_repo_flag_takes_precedence_over_configured_repository, test_no_flag_or_config_falls_back_to_the_built_in_default, test_invalid_repo_format_fails_loudly (plus the 8 pre-existing tests re-run unmodified)"
+      - tests/test_config_validation.py test_registry_describes_update_repository, test_config_schema_declares_update_repository
+      - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generator and mirrored dist/schemas/config-v1.schema.json match byte-for-byte after the update section addition
+      - python -m unittest tests.test_lifetxt tests.test_config_validation tests.test_schema_extensions_v2 tests.test_workspace_foundation -> Ran 693 tests, OK (skipped=9)
+      - "live: --repo torvalds/linux against the real GitHub API reports torvalds/linux's real latest tag; an equivalent update.repository config value produces the identical result; lifetxt config explain update.repository reports the registered metadata; no-flag/no-config case unchanged (Eruhitsuji/lifetxt, still no releases/tags)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/202
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/203
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at
+      .kiro/specs/cli-update-check-configurable-repo/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard
+      assurance, XS/S-sized, additive read-only configuration). Direct
+      follow-up to cap-cli-update-check (#200/#201), found via user feedback
+      immediately after that PR merged into this batch's integration branch.
+      Ninth implementation task of the cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

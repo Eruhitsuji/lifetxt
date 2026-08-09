@@ -196,6 +196,22 @@ values, so it cannot leak a secret-referencing setting. The file is trimmed
 from the oldest end once it exceeds `audit_max_bytes`. Leaving `audit_log`
 unset disables the trail entirely.
 
+## Update checks
+
+`lifetxt update-check` compares the running version against the latest
+GitHub Release (or tag, if no Release is published) for a repository. The
+default is this project's own repository, but a fork should point checks at
+itself instead of silently comparing against upstream:
+
+```json
+{
+  "update": { "repository": "your-github-username/your-fork" }
+}
+```
+
+The `--repo OWNER/NAME` flag overrides this for a single invocation without
+changing the stored default.
+
 ## Credentials
 
 Never store passwords or tokens directly in configuration. Reference an

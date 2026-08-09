@@ -75,11 +75,15 @@ def _patch_doctor_dispatch():
     if getattr(original, "_lifetxt_doctor_dispatch_v2", False):
         return
 
-    def main(argv=None, config_path=None):
+    def main(argv=None, config_path=None, workspace_name=None):
         raw = list(argv or [])
         if raw and raw[0] == "doctor" and "--workspace-safety" not in raw:
             raw.insert(1, "--workspace-safety")
-        return original(raw, config_path=config_path)
+        return original(
+            raw,
+            config_path=config_path,
+            workspace_name=workspace_name,
+        )
 
     main._lifetxt_doctor_dispatch_v2 = True
     extra_cli.main = main

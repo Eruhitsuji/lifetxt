@@ -7479,7 +7479,11 @@ HTML_PAGE = r"""<!doctype html>
       if (!btn) return;
       const perm = ("Notification" in window) ? Notification.permission : "unsupported";
       const indicator = perm === "granted" ? " ●" : perm === "denied" ? " ✕" : " ○";
-      btn.textContent = "Notifications" + indicator;
+      // "Notifications ✕" is not itself a dictionary key and the suffix-peel
+      // rule only handles a trailing "(...)", so a compound assignment would
+      // stay English forever even with a "Notifications" dictionary entry;
+      // translate the label at construction time instead.
+      btn.textContent = t("Notifications") + indicator;
     }
 
     async function triggerRefresh() {

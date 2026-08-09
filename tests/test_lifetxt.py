@@ -4205,6 +4205,35 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
             "shown.map((entry) => _calEntryHtml(entry.record, entry.when))", html
         )
 
+    def test_help_modal_has_a_searchable_command_reference(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # Before this feature, the help modal (opened via ?) only ever showed
+        # keyboard shortcuts -- there was no way to browse or search the
+        # slash-command catalog without already knowing Ctrl+K existed.
+        self.assertIn('id="help-command-search"', html)
+        self.assertIn('id="help-command-list"', html)
+        self.assertIn("function renderHelpModalCommands", html)
+        start = html.index("function renderHelpModalCommands")
+        end = html.index("function openHelpModal")
+        body = html[start:end]
+        # Reuses the shared catalog and matcher rather than reimplementing
+        # filtering, so it can never disagree with the command palette or
+        # /api/commands about what a command means.
+        self.assertIn("matchingCommands(typed)", body)
+        self.assertIn("loadCommandCatalog()", body)
+        self.assertIn("TUI only", body)
+        open_start = html.index("function openHelpModal")
+        open_end = html.index("function closeHelpModal")
+        open_body = html[open_start:open_end]
+        self.assertIn("renderHelpModalCommands()", open_body)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 

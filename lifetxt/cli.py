@@ -2639,6 +2639,25 @@ def build_parser():
     )
     doctor_cmd.set_defaults(func=command_doctor)
 
+    update_check_cmd = subparsers.add_parser(
+        "update-check",
+        help="Check GitHub for a newer lifetxt release or tag (read-only).",
+    )
+    update_check_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    update_check_cmd.add_argument(
+        "--timeout",
+        type=int,
+        default=10,
+        metavar="SECONDS",
+        help="Network timeout for the GitHub API request.",
+    )
+    update_check_cmd.set_defaults(func=command_update_check)
+
     assign_cmd = subparsers.add_parser(
         "assign",
         help="Change the assignee: on an existing item.",
@@ -6616,6 +6635,150 @@ _EXTRAS_GROUP_BY_DEPENDENCY = {
     "textual": "tui",
     "watchdog": "tui",
 }
+
+
+#: Repository queried by `lifetxt update-check` and `lifetxt update`.
+_UPDATE_CHECK_REPO = "Eruhitsuji/lifetxt"
+
+
+def _parse_simple_version(text):
+    """Parse a dotted numeric version into a comparable tuple.
+
+    Accepts an optional leading "v" (GitHub tag convention) and ignores any
+    pre-release or build-metadata suffix after the dotted numeric prefix
+    (e.g. "v1.2.3-rc1" -> (1, 2, 3)). This is an informational "is this
+    newer" comparison, not a strict PEP 440 or semver parser. Returns None
+    when no leading dotted-numeric prefix can be found.
+    """
+    import re
+
+    text = str(text or "").strip()
+    if text[:1] in ("v", "V"):
+        text = text[1:]
+    match = re.match(r"^(\d+(?:\.\d+)*)", text)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _github_api_get(url, timeout):
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "lifetxt-update-check",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    return urlopen(request, timeout=timeout)
+
+
+def _github_latest_release_or_tag(repo, timeout=10):
+    """Find the latest published release, falling back to the newest tag.
+
+    Returns (version_text, kind, url) where kind is "release" or "tag", or
+    (None, None, None) when the repository has no releases or tags at all.
+    Raises ValueError on a network or API failure so the caller fails loudly
+    rather than silently reporting "up to date".
+    """
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/releases/latest" % repo, timeout
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        version = payload.get("tag_name") or payload.get("name")
+        return version, "release", payload.get("html_url", "")
+    except HTTPError as exc:
+        if exc.code != 404:
+            raise ValueError("GitHub release lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub release lookup failed: %s." % exc.reason)
+
+    # No published release. Fall back to the most recently created tag.
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/tags" % repo, timeout
+        ) as response:
+            tags = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise ValueError("GitHub tag lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub tag lookup failed: %s." % exc.reason)
+    if not tags:
+        return None, None, None
+    name = tags[0].get("name")
+    return name, "tag", "https://github.com/%s/releases/tag/%s" % (repo, name)
+
+
+def command_update_check(args):
+    """Report whether a newer lifetxt release or tag exists on GitHub.
+
+    Read-only: makes one or two GET requests to the public GitHub API and
+    never writes anything or installs anything. lifetxt has no PyPI
+    distribution, so "the latest release" means the latest GitHub Release,
+    falling back to the latest tag when no Release has been published.
+    """
+    from . import __version__
+
+    current = _parse_simple_version(__version__)
+    if current is None:
+        raise ValueError(
+            "Cannot parse the running lifetxt version %r as a dotted version."
+            % __version__
+        )
+
+    timeout = getattr(args, "timeout", 10)
+    latest_text, kind, url = _github_latest_release_or_tag(
+        _UPDATE_CHECK_REPO, timeout=timeout
+    )
+
+    result = OrderedDict(
+        [
+            ("current_version", __version__),
+            ("repository", _UPDATE_CHECK_REPO),
+            ("latest_version", latest_text),
+            ("kind", kind),
+            ("url", url or None),
+        ]
+    )
+
+    if latest_text is None:
+        result["status"] = "no_release_found"
+        message = (
+            "No published releases or tags found for %s; nothing to compare "
+            "against." % _UPDATE_CHECK_REPO
+        )
+    else:
+        latest = _parse_simple_version(latest_text)
+        if latest is None:
+            result["status"] = "unparseable"
+            message = (
+                "Found %s %s but could not parse it as a version. Compare "
+                "manually at %s" % (kind, latest_text, url)
+            )
+        elif latest > current:
+            result["status"] = "update_available"
+            message = "Update available: running %s, latest %s is %s. %s" % (
+                __version__,
+                kind,
+                latest_text,
+                url,
+            )
+        elif latest < current:
+            result["status"] = "ahead_of_latest"
+            message = "Running %s, ahead of the latest published %s %s." % (
+                __version__,
+                kind,
+                latest_text,
+            )
+        else:
+            result["status"] = "up_to_date"
+            message = "Up to date: %s." % __version__
+
+    if getattr(args, "format", "text") == "json":
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, message + "\n")
+    return 0
 
 
 def command_doctor(args):

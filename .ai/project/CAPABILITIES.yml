@@ -1684,10 +1684,13 @@ capabilities:
       - "tests/test_lifetxt.py test_help_modal_supports_keyboard_navigation"
       - 'manual: a real Node.js run of _helpCmdMoveFocus/_runHelpModalCommand confirming forward/backward wraparound, no-op on an empty list, Enter closing the modal and calling runWebCommand for the highlighted entry, and an invalid index being a no-op'
       - 'live: real lifetxt serve process, served page confirmed to contain the new functions'
+      - tests/test_web_i18n.py CommandTokenProtectionTests -> command palette label/hint and help modal usage span both carry data-no-i18n; adjacent summary/prose spans stay translatable
+      - 'live: real lifetxt serve process, served page confirmed to contain both new data-no-i18n markers verbatim'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/198
       - https://github.com/Eruhitsuji/lifetxt/issues/204
       - https://github.com/Eruhitsuji/lifetxt/issues/215
+      - https://github.com/Eruhitsuji/lifetxt/issues/222
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/199
       - https://github.com/Eruhitsuji/lifetxt/pull/205
@@ -1707,6 +1710,14 @@ capabilities:
       distilled from a cc-sdd spec at
       .kiro/specs/help-modal-keyboard-navigation/ -- also added the
       previously-missing row click handlers, and no new user-visible text.
+      #222 (Standard assurance) fixed the same class of over-translation
+      #204/#205 fixed, this time in the command palette and help modal's
+      own command-token spans rather than release_policy.py's manifest
+      parser: the generic translator peeled "/stats"'s leading punctuation
+      and matched the bare dictionary key "stats", rendering "/統計". Fixed
+      with data-no-i18n on the token spans rather than special-casing the
+      word "stats", per repository owner instruction to prefer a semantic
+      opt-out; part of the quality-and-i18n-fixes batch alongside #223/#224.
     replacement:
       replaces: []
       replaced_by: null

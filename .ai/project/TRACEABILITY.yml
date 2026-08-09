@@ -2547,6 +2547,45 @@ traceability:
         request implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-web-i18n-command-token-protection
+      capability_id: cap-web-help-command-reference
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/222
+      pull_request: null
+      changed_files_or_scope:
+        - Mark the command palette's slash-command label/alias spans and the help modal's command-usage span data-no-i18n
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py CommandTokenProtectionTests (2 tests: command palette label/hint protected while summary prose stays translatable; help modal usage span protected while summary column stays translatable)
+        - python -m unittest tests.test_web_i18n -> Ran 17 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain both new data-no-i18n markers verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2105 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). Extends
+        cap-web-help-command-reference (the help modal's command catalog),
+        the closest existing capability, rather than creating a new one,
+        since the command palette itself has no dedicated capability entry
+        of its own. Horizontal review confirmed the only two DOM sites that
+        render a bare command token as its own text node are the command
+        palette row and the help modal usage span (both fixed here);
+        unknown-command/terminal-only/not-wired-up toast messages
+        (showToast) were audited and found already safe by construction --
+        each is a single text node holding a full sentence, and
+        translateString's exact-match-after-peeling logic only replaces
+        text when the ENTIRE peeled remainder equals a dictionary key, which
+        a multi-word sentence never does, so no corruption is possible there
+        without a code change. Second item of the quality-and-i18n-fixes
+        batch. pull_request is filled in once the pull request implementing
+        this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

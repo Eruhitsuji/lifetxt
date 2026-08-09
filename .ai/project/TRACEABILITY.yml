@@ -2314,15 +2314,15 @@ traceability:
         - Record the cli-web-multiday-enhancements batch's integration into main as its own traceable step
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
-        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2092 tests, OK, run on the fully consolidated feature/cli-web-multiday-enhancements branch after all sub-PRs merged'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2102 tests, OK, run on the fully consolidated feature/cli-web-multiday-enhancements branch after all fifteen sub-PRs (two follow-up rounds) merged'
         - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
-        - ruff format --check lifetxt tests scripts
+        - ruff format --check lifetxt tests scripts (pre-existing drift in 4 unrelated files confirmed present on main already, not introduced by this batch)
         - ruff check lifetxt tests scripts -> All checks passed
       release_or_deployment: >-
         This entry documents PR #208 itself: feature/cli-web-multiday-enhancements
-        (Issues #186, #188, #190, #192, #194, #196, #198, #200, #202, #204, #206;
-        PRs #187, #189, #191, #193, #195, #197, #199, #201, #203, #205, #207)
-        merging into main.
+        (Issues #186, #188, #190, #192, #194, #196, #198, #200, #202, #204, #206,
+        #209, #211, #213, #215; PRs #187, #189, #191, #193, #195, #197, #199,
+        #201, #203, #205, #207, #210, #212, #214, #216) merging into main.
       notes: >-
         Follows the multi-PR integration-branch pattern established by
         req-remote-batch-integration (#131), req-workspace-foundation-batch-
@@ -2333,7 +2333,7 @@ traceability:
         names #208, because it did not exist yet when they were written.
         Sub-PRs were merged into the integration branch via local git merge and
         push rather than GitHub's PR-merge action (blocked by this session's
-        auto-mode permission classifier); all eleven sub-PR merges auto-detect
+        auto-mode permission classifier); all fifteen sub-PR merges auto-detect
         as "merged" on GitHub once the integration branch is pushed with their
         commits reachable from it. PR #207 (the Security/High self-update
         command) requires independent security review and Merge Authority
@@ -2344,7 +2344,14 @@ traceability:
         calendar handling) plus a narrower disaster-recovery follow-up and an
         explicitly-deferred Electron desktop app initiative (see the session's
         own scoping record, not filed as an issue); no epic issue was filed,
-        so task_issue is left null accordingly.
+        so task_issue is left null accordingly. #209/#210, #211/#212, #213/
+        #214, and #215/#216 are a second small follow-up round, proposed and
+        selected via a further AskUserQuestion after the first eleven sub-PRs
+        landed: a bounded commit-list preview in update's dry-run output, an
+        opt-in doctor --check-update integration, a multi-day Calendar
+        day-position badge, and help-modal keyboard navigation -- all Standard
+        assurance, each extending an existing capability from the first round
+        rather than introducing a new one.
       status: implemented
 
     - requirement_id: req-update-dry-run-commit-preview

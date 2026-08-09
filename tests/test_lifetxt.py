@@ -6531,6 +6531,13 @@ class LifeTxtUpdateCommandCliTests(unittest.TestCase):
                 return _FakeGitResult(stdout=state["current"] + "\n")
             if tail == ["rev-parse", "FETCH_HEAD"]:
                 return _FakeGitResult(stdout=state["target"] + "\n")
+            if tail[:1] == ["log"]:
+                lines = state.get(
+                    "log_lines", ["bbb222 Second commit", "ccc333 First commit"]
+                )
+                return _FakeGitResult(stdout="\n".join(lines) + "\n" if lines else "")
+            if tail[:1] == ["rev-list"]:
+                return _FakeGitResult(stdout=str(state.get("rev_list_count", 2)) + "\n")
             if tail[:1] == ["merge"]:
                 if state.get("merge_fails"):
                     return _FakeGitResult(
@@ -6568,6 +6575,74 @@ class LifeTxtUpdateCommandCliTests(unittest.TestCase):
         payload = json.loads(stdout)
         self.assertEqual("up_to_date", payload["status"])
         self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+        self.assertNotIn("commits", payload)
+
+    def test_dry_run_lists_the_pending_commits(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3",
+            responses_overrides={
+                "log_lines": ["bbb222 Second commit", "ccc333 First commit"],
+                "rev_list_count": 2,
+            },
+        )
+        payload = json.loads(stdout)
+        self.assertEqual(2, payload["commit_count"])
+        self.assertEqual(
+            ["bbb222 Second commit", "ccc333 First commit"], payload["commits"]
+        )
+        self.assertTrue(any(c[1:2] == ["log"] for c in calls))
+
+    def test_dry_run_truncates_a_long_commit_list_with_a_count(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3",
+            format="text",
+            responses_overrides={
+                "log_lines": ["h%d commit %d" % (i, i) for i in range(20)],
+                "rev_list_count": 137,
+            },
+        )
+        self.assertIn("... and 117 more", stdout)
+
+    def test_commit_log_failure_does_not_block_the_dry_run(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="json",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                return _FakeGitResult(stdout="main\n")
+            if tail[:1] == ["fetch"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["rev-parse", "HEAD"]:
+                return _FakeGitResult(stdout="aaa111\n")
+            if tail == ["rev-parse", "FETCH_HEAD"]:
+                return _FakeGitResult(stdout="bbb222\n")
+            if tail[:1] == ["log"] or tail[:1] == ["rev-list"]:
+                return _FakeGitResult(returncode=128, stderr="fatal: bad range")
+            raise AssertionError("Unexpected git invocation: %s" % cmd)
+
+        buffer = io.StringIO()
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("sys.stdout", buffer):
+                code = cli.command_update(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(0, code)
+        self.assertEqual("update_available_dry_run", payload["status"])
+        self.assertEqual([], payload["commits"])
+        self.assertEqual(0, payload["commit_count"])
 
     def test_dirty_working_tree_is_refused(self):
         from lifetxt import cli

@@ -29,8 +29,8 @@ jobs:
 
       - name: Install package and optional Web test dependencies
         run: |
-          python -m pip install -e .
-          python -m pip install -r requirements-web.txt httpx
+          python -m pip install -e ".[dev]"
+          python -m pip install -r requirements-web.txt
 
       - name: Compile Python files
         run: python -m compileall lifetxt tests scripts
@@ -77,7 +77,7 @@ jobs:
         run: |
           python - <<'PY'
           import importlib.util
-          for name in ("fastapi", "uvicorn", "httpx"):
+          for name in ("fastapi", "uvicorn", "httpx", "httpx2"):
               if importlib.util.find_spec(name) is not None:
                   raise SystemExit("optional dependency unexpectedly installed: " + name)
           PY

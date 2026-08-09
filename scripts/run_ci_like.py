@@ -49,9 +49,10 @@ def _install_profile_dependencies(python, root, profile, include_web):
     _run([python, "-m", "pip", "install", "-e", "."], cwd=root)
     if include_web:
         _run(
-            [python, "-m", "pip", "install", "-r", "requirements-web.txt", "httpx"],
+            [python, "-m", "pip", "install", "-r", "requirements-web.txt"],
             cwd=root,
         )
+        _run([python, "-m", "pip", "install", "-e", ".[dev]"], cwd=root)
     if profile == "release":
         _run(
             [

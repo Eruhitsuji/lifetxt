@@ -1247,6 +1247,10 @@ HTML_PAGE = r"""<!doctype html>
     .cal-entry.cal-overdue { background: var(--danger-soft); }
     .cal-entry.cal-due-soon { background: var(--warn-soft); }
     .cal-entry-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .cal-entry-span {
+      flex: 0 0 auto; font-size: .6rem; color: var(--muted); background: var(--soft);
+      border-radius: .3rem; padding: 0 .3rem; margin-left: auto;
+    }
     .cal-entry-dot { flex: 0 0 auto; width: .5rem; height: .5rem; border-radius: 50%; }
     .cal-entry-dot.t-T { background: #4092d2; } .cal-entry-dot.t-E { background: #be5cd6; }
     .cal-entry-dot.t-D { background: #e05a5a; } .cal-entry-dot.t-R { background: #e0a03c; }
@@ -3041,6 +3045,7 @@ HTML_PAGE = r"""<!doctype html>
         [/^(\d+)d ago$/, "$1 日前"],
         [/^(\d+) days$/, "$1 日間"],
         [/^occ #(\d+)$/, "第 $1 回"],
+        [/^Day (\d+) of (\d+)$/, "$2日間中 $1日目"],
       ],
     };
 
@@ -5049,7 +5054,7 @@ HTML_PAGE = r"""<!doctype html>
       }
       return placements;
     }
-    function _calEntryHtml(record, dayWhen) {
+    function _calEntryHtml(record, dayWhen, dayIndex, dayTotal) {
       const type = record.type || "N";
       const when = String(dayWhen || record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
       const timed = when.length > 10;
@@ -5059,11 +5064,17 @@ HTML_PAGE = r"""<!doctype html>
       const occ = (record.occurrence_start || record.repeat_rule) ? " ↻" : "";
       const blocked = record.blocked ? " ⚡" : "";
       const title = `${time}${record.title}${occ}${blocked}`;
+      // A multi-day span (dayTotal > 1) gets a small "day X of Y" badge so
+      // the otherwise-independent cells read as one continuous event
+      // rather than several unrelated same-title entries.
+      const spanBadge = dayTotal > 1
+        ? `<span class="cal-entry-span" title="Day ${dayIndex} of ${dayTotal}">${dayIndex}/${dayTotal}</span>`
+        : "";
       return `<div class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
         (clickable ? ` onclick="event.stopPropagation();openItemByLine(${record.line})"` : "") +
         ` title="${escapeHtml((record.status ? record.status + " " : "") + when + " · " + record.title)}">` +
         `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
-        `<span class="cal-entry-title">${escapeHtml(title)}</span></div>`;
+        `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</div>`;
     }
     async function loadCalendar() {
       const node = document.getElementById("calendar");
@@ -5088,10 +5099,16 @@ HTML_PAGE = r"""<!doctype html>
       const records = data.records || [];
       const byDay = new Map();
       for (const record of records) {
-        for (const placement of _calRecordDayPlacements(record)) {
+        const placements = _calRecordDayPlacements(record);
+        placements.forEach((placement, i) => {
           if (!byDay.has(placement.day)) byDay.set(placement.day, []);
-          byDay.get(placement.day).push({record, when: placement.when});
-        }
+          byDay.get(placement.day).push({
+            record,
+            when: placement.when,
+            dayIndex: i + 1,
+            dayTotal: placements.length,
+          });
+        });
       }
       for (const list of byDay.values()) {
         list.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
@@ -5127,7 +5144,7 @@ HTML_PAGE = r"""<!doctype html>
         cell += `<div class="cal-daynum"><a class="cal-daylink" onclick="calOpenDay('${dayStr}')" title="Open ${escapeHtml(dayStr)} in Agenda">${day.getDate()}</a>`;
         cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
         cell += `</div><div class="cal-entries">`;
-        cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when)).join("");
+        cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal)).join("");
         if (overflow > 0) {
           cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">+${overflow} more</button>`;
         } else if (expanded && entries.length > CAL_CELL_LIMIT) {

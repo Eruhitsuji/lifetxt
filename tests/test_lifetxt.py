@@ -4205,8 +4205,28 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         # The rendering call site must pass each entry's own day-specific
         # `when`, not fall back to always reading matches[0] again.
         self.assertIn(
-            "shown.map((entry) => _calEntryHtml(entry.record, entry.when))", html
+            "shown.map((entry) => "
+            "_calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal))",
+            html,
         )
+
+    def test_calendar_shows_a_day_span_badge_on_multiday_records_only(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # A single-day record must never render a "day X of Y" badge; it
+        # only makes sense once a record spans more than one cell.
+        self.assertIn("cal-entry-span", html)
+        start = html.index("function _calEntryHtml")
+        end = html.index("async function loadCalendar")
+        body = html[start:end]
+        self.assertIn("dayTotal > 1", body)
+        self.assertIn("dayIndex", body)
 
     def test_help_modal_has_a_searchable_command_reference(self):
         try:

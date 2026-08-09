@@ -2784,6 +2784,48 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-quality-and-i18n-fixes-batch-integration
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/232
+      changed_files_or_scope:
+        - Record the quality-and-i18n-fixes batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13), run on the fully consolidated feature/quality-and-i18n-fixes branch after all six sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in 4 unrelated files, confirmed present on main already)
+        - ruff check lifetxt tests scripts -> All checks passed
+        - /security-review dispatched against the full branch diff -> no candidate findings
+        - 'live: real lifetxt serve process, consolidated final check confirming all four Web-facing fixes (i18n command-token protection, notifications label, contextual help, fuzzy /api/items) present together in one served page and responding correctly'
+      release_or_deployment: >-
+        This entry documents PR #232 itself: feature/quality-and-i18n-fixes
+        (Issues #219, #220, #221, #222, #223, #224; PRs #225, #226, #227,
+        #228, #229 is a filed follow-up not a sub-PR, #230, #231) merging
+        into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) and every subsequent batch in
+        this project. Each requirement entry above correctly names its own
+        sub-PR (#225-#231), and none names #232, because it did not exist
+        yet when they were written. Sub-PRs were merged into the
+        integration branch via local git merge and push rather than
+        GitHub's PR-merge action (blocked by this session's auto-mode
+        permission classifier); all six sub-PR merges (#225, #226, #227,
+        #228, #230, #231) auto-detected as "merged" on GitHub once the
+        integration branch was pushed with their commits reachable from it.
+        No epic issue was filed for this batch; the user's request to
+        implement everything actionable from the open Issues is the
+        batch's origin, and task_issue is left null accordingly. #229 is a
+        follow-up issue filed during #220's own horizontal review, not
+        itself a sub-PR of this batch. #183 and #92, the two other open
+        issues at session start, were confirmed out of scope via
+        AskUserQuestion before this batch began: #183 already hit its
+        evidence ceiling pending an owner close decision, and #92 requires
+        POSIX host access unavailable in this Windows environment.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

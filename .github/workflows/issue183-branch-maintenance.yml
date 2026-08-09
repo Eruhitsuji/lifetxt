@@ -1,16 +1,16 @@
 name: Issue 183 branch maintenance
 
 on:
-  push:
-    branches:
-      - agent/183-project-archive-zero-byte-safety
+  pull_request:
+    branches: [main]
+    types: [synchronize]
 
 permissions:
   contents: write
 
 jobs:
   patch-roadmap-and-traceability:
-    if: github.event.head_commit.message == 'Run issue183 branch maintenance'
+    if: github.head_ref == 'agent/183-project-archive-zero-byte-safety'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +31,6 @@ jobs:
 
           todo_path = Path('todo.md')
           todo = todo_path.read_text(encoding='utf-8')
-
           old_header = 'Last updated: 2026-08-09 (updated x128)'
           new_header = 'Last updated: 2026-08-09 (updated x129)'
           if todo.count(old_header) != 1:

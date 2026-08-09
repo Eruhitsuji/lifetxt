@@ -2468,6 +2468,34 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-update-ancestor-target-detection
+      capability_id: cap-lifetxt-self-update
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/217
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/218
+      changed_files_or_scope:
+        - Fix lifetxt update falsely reporting an update when the resolved target is behind (an ancestor of) the current commit
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/update-ancestor-target-detection/
+      tests_or_evidence:
+        - tests/test_lifetxt.py test_target_behind_current_reports_up_to_date_not_a_false_update
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests -> Ran 19 tests, OK
+        - "live: found during this batch's own final /verify pass -- update --ref main against a real checkout already ahead of main incorrectly reported an available update; reproduced and confirmed fixed against a disposable clone (local tag at an ancestor commit, fetched via a local-path remote); the normal forward-update case re-verified unaffected"
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/update-ancestor-target-detection/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, XS-sized, read-only correctness fix). Adds no new
+        mutating git call to cap-lifetxt-self-update's already-Security/High-
+        reviewed command_update -- only git merge-base --is-ancestor, which
+        reads the object graph and mutates nothing. Found and fixed during
+        this same batch's final /verify pass, before the final PR (#208) was
+        proposed for merge.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

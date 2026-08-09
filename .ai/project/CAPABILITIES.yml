@@ -1830,11 +1830,15 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
+      - "tests/test_lifetxt.py test_target_behind_current_reports_up_to_date_not_a_false_update"
+      - "live: found and fixed a real false-positive -- update --ref main against a checkout already ahead of main incorrectly reported an available update; reproduced and confirmed fixed against a disposable clone using a local-path remote and a tag pointing at an ancestor commit"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/206
+      - https://github.com/Eruhitsuji/lifetxt/issues/217
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/207
       - https://github.com/Eruhitsuji/lifetxt/pull/210
+      - https://github.com/Eruhitsuji/lifetxt/pull/218
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/lifetxt-self-update/ plus a
@@ -1843,7 +1847,12 @@ capabilities:
       destructive-operation-adjacent and previously-unresolved-design-
       decision risk factors). Reuses cap-cli-update-check's target-resolution
       helpers unmodified. Eleventh implementation task of the
-      cli-web-multiday-enhancements batch. Requires independent security
+      cli-web-multiday-enhancements batch. #217/#218 (Standard assurance) is a
+      read-only correctness fix found during this batch's own final /verify
+      pass, distilled from a cc-sdd spec at
+      .kiro/specs/update-ancestor-target-detection/ -- generalizes the
+      up-to-date check from exact commit equality to ancestry via `git
+      merge-base --is-ancestor`, adding no new mutating git call. Requires independent security
       review and Merge Authority approval before merge to main. #209/#210
       (Standard assurance) added a bounded, fail-open pending-commit preview
       to the dry-run and --yes success output, distilled from a cc-sdd spec

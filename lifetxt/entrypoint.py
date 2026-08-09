@@ -48,6 +48,7 @@ _DOCTOR_SAFETY_FLAGS = frozenset(
 def _extract_config_arg(argv):
     raw = list(sys.argv[1:] if argv is None else argv)
     config_path = None
+    workspace_name = None
     cleaned = []
     index = 0
     while index < len(raw):
@@ -62,9 +63,19 @@ def _extract_config_arg(argv):
             config_path = value.split("=", 1)[1]
             index += 1
             continue
+        if value == "--workspace":
+            if index + 1 >= len(raw):
+                raise ValueError("--workspace requires a name.")
+            workspace_name = raw[index + 1]
+            index += 2
+            continue
+        if value.startswith("--workspace="):
+            workspace_name = value.split("=", 1)[1]
+            index += 1
+            continue
         cleaned.append(value)
         index += 1
-    return raw, cleaned, config_path
+    return raw, cleaned, config_path, workspace_name
 
 
 def _install_config_template_extension():
@@ -178,7 +189,7 @@ def _uses_workspace_safety_doctor(argv):
 
 def main(argv=None):
     try:
-        raw, cleaned, config_path = _extract_config_arg(argv)
+        raw, cleaned, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -200,29 +211,51 @@ def main(argv=None):
                 )
                 from .extra_cli import main as extra_main
 
-                return extra_main(transformed, config_path=config_path)
+                return extra_main(
+                    transformed,
+                    config_path=config_path,
+                    workspace_name=workspace_name,
+                )
         if command == "review":
             if "--someday" in cleaned:
                 from .extra_cli import main as extra_main
 
-                return extra_main(cleaned, config_path=config_path)
+                return extra_main(
+                    cleaned,
+                    config_path=config_path,
+                    workspace_name=workspace_name,
+                )
             transformed = _review_selector_args(cleaned)
             if transformed != cleaned:
                 if config_path:
                     transformed.extend(("--config", config_path))
+                if workspace_name:
+                    transformed.extend(("--workspace", workspace_name))
                 return _legacy_main(transformed)
         if command == "files" and "--open" in cleaned:
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         if command == "who" and "--workload" in cleaned:
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         if command == "quick" and "--journal" in cleaned:
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         if command == "completion" and (
             "powershell" in cleaned
             or (
@@ -233,15 +266,27 @@ def main(argv=None):
         ):
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         if command == "doctor" and _uses_workspace_safety_doctor(cleaned[1:]):
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         if command in _EXTRA_COMMANDS:
             from .extra_cli import main as extra_main
 
-            return extra_main(cleaned, config_path=config_path)
+            return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
         return _legacy_main(raw)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)

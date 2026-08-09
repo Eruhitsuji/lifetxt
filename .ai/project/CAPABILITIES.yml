@@ -2119,7 +2119,8 @@ capabilities:
       - ruff check lifetxt tests scripts -> All checks passed (desktop/ is outside ruff's target paths, as intended)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/233
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/234
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Scoped via AskUserQuestion with the repository owner before starting

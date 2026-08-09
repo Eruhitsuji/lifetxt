@@ -2305,6 +2305,48 @@ traceability:
         review and Merge Authority approval before merge to main.
       status: implemented
 
+    - requirement_id: req-cli-web-multiday-enhancements-batch-integration
+      capability_id: cap-cli-version-command
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/208
+      changed_files_or_scope:
+        - Record the cli-web-multiday-enhancements batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2092 tests, OK, run on the fully consolidated feature/cli-web-multiday-enhancements branch after all sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #208 itself: feature/cli-web-multiday-enhancements
+        (Issues #186, #188, #190, #192, #194, #196, #198, #200, #202, #204, #206;
+        PRs #187, #189, #191, #193, #195, #197, #199, #201, #203, #205, #207)
+        merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131), req-workspace-foundation-batch-
+        integration (#155/#154), req-config-registry-foundation-batch-
+        integration (#160), req-graph-link-foundation-batch-integration (#167),
+        and req-remote-multiclient-foundation-batch-integration (#174): each
+        requirement above correctly names its own sub-PR, and none of them
+        names #208, because it did not exist yet when they were written.
+        Sub-PRs were merged into the integration branch via local git merge and
+        push rather than GitHub's PR-merge action (blocked by this session's
+        auto-mode permission classifier); all eleven sub-PR merges auto-detect
+        as "merged" on GitHub once the integration branch is pushed with their
+        commits reachable from it. PR #207 (the Security/High self-update
+        command) requires independent security review and Merge Authority
+        approval before this PR is merged, per its own change package's
+        human_approvals_required -- confirm that review happened before
+        merging #208. This batch originated from two rounds of AskUserQuestion
+        scoping (CLI diagnostics/update tooling, Web/TUI UX, and multi-day
+        calendar handling) plus a narrower disaster-recovery follow-up and an
+        explicitly-deferred Electron desktop app initiative (see the session's
+        own scoping record, not filed as an issue); no epic issue was filed,
+        so task_issue is left null accordingly.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

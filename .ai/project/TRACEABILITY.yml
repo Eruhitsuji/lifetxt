@@ -2271,6 +2271,40 @@ traceability:
         Tenth implementation task of the cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-lifetxt-self-update
+      capability_id: cap-lifetxt-self-update
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/206
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/207
+      changed_files_or_scope:
+        - Add lifetxt update, a safety-railed git-based self-update command
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/lifetxt-self-update/
+        - .ai/project/changes/lifetxt-self-update/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtUpdateCommandCliTests (15 tests, subprocess.run mocked)
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 29 tests, OK
+        - 'live: real disposable clone, dry run/--yes/second-run/dirty-tree/detached-HEAD all verified against real git state'
+        - 'live: found and fixed a real UnicodeDecodeError crash decoding git output on a real Windows ja-JP-locale directory tree'
+        - 'live: real installed lifetxt CLI refused correctly against this dev checkout mid-edit'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/lifetxt-self-update/ plus
+        a full change package at .ai/project/changes/lifetxt-self-update/.
+        Security/High assurance. Explicitly flagged not-recommended during
+        batch scoping and implemented anyway per repository owner
+        instruction, with every safety rail as the condition of that
+        acceptance; see decisions.md. Eleventh implementation task of the
+        cli-web-multiday-enhancements batch. Requires independent security
+        review and Merge Authority approval before merge to main.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

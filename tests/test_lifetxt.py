@@ -4228,6 +4228,33 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertIn("dayTotal > 1", body)
         self.assertIn("dayIndex", body)
 
+    def test_calendar_places_a_record_on_every_day_even_with_occurrence_start(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # agenda_records() always derives occurrence_start from matches[0],
+        # so a real multi-day on: import (or any record with more than one
+        # match) carries both fields at once. Checking occurrence_start
+        # before matches collapsed every such record back down to a single
+        # day -- the #194/#195 regression, reintroduced through a field
+        # that fixture never populated.
+        start = html.index("function _calRecordDayPlacements")
+        end = html.index("function _calEntryHtml")
+        body = html[start:end]
+        matches_index = body.index("const matches = record.matches")
+        occurrence_index = body.index("if (record.occurrence_start) {")
+        self.assertLess(
+            matches_index,
+            occurrence_index,
+            "matches must be checked before occurrence_start, since agenda_records() "
+            "always derives occurrence_start from matches[0]",
+        )
+
     def test_help_modal_has_a_searchable_command_reference(self):
         try:
             from fastapi.testclient import TestClient

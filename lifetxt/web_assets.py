@@ -5106,26 +5106,32 @@ HTML_PAGE = r"""<!doctype html>
       // several repeat occurrences visible in one grid) must appear on
       // every matched day, not just the first -- each `on:` value or repeat
       // occurrence produces its own entry in record.matches with its own
-      // `start`. Falls back to the single-day fields when matches is absent
-      // (e.g. a plain due:/do: record with no matches array at all).
+      // `start`. matches is the authoritative per-day collection and is
+      // checked first: agenda_records() always derives occurrence_start
+      // from matches[0] (it is a single-value convenience field, never an
+      // independent source), so preferring it here silently collapsed any
+      // record with more than one match -- including ordinary multi-day
+      // on: spans and multi-occurrence repeats -- down to just its first
+      // day. occurrence_start/record.when remain fallbacks for a record
+      // shape with no matches array at all (e.g. a plain due:/do: record).
+      const matches = record.matches || [];
+      if (matches.length) {
+        const seen = new Set();
+        const placements = [];
+        for (const match of matches) {
+          const when = match.start || "";
+          const day = String(when).slice(0, 10);
+          if (!day || seen.has(day)) continue;
+          seen.add(day);
+          placements.push({day, when});
+        }
+        if (placements.length) return placements;
+      }
       if (record.occurrence_start) {
         return [{day: String(record.occurrence_start).slice(0, 10), when: record.occurrence_start}];
       }
-      const matches = record.matches || [];
-      if (!matches.length) {
-        const raw = record.when || "";
-        return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
-      }
-      const seen = new Set();
-      const placements = [];
-      for (const match of matches) {
-        const when = match.start || "";
-        const day = String(when).slice(0, 10);
-        if (!day || seen.has(day)) continue;
-        seen.add(day);
-        placements.push({day, when});
-      }
-      return placements;
+      const raw = record.when || "";
+      return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
     }
     function _calEntryHtml(record, dayWhen, dayIndex, dayTotal) {
       const type = record.type || "N";

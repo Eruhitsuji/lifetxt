@@ -2659,6 +2659,39 @@ traceability:
         entry is opened.
       status: implemented
 
+    - requirement_id: req-calendar-occurrence-start-precedence
+      capability_id: cap-calendar-multiday-placement
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/220
+      pull_request: null
+      changed_files_or_scope:
+        - Prefer record.matches (the authoritative per-day collection) over occurrence_start in _calRecordDayPlacements, since agenda_records() always derives occurrence_start from matches[0]
+        - File #229 to track a related, distinct Timeline/Agenda limitation found during the same horizontal review, deliberately not fixed here
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_lifetxt.py test_calendar_places_a_record_on_every_day_even_with_occurrence_start
+        - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_day_even_with_occurrence_start tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_matched_day tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_shows_a_day_span_badge_on_multiday_records_only -> Ran 3 tests, OK
+        - 'live: real lifetxt serve process against the exact #220 reproduction fixture; GET /api/agenda confirmed the real payload shape (occurrence_start=matches[0].start, matches carrying all 10 real day entries) that makes the bug reproducible'
+        - 'manual: a real Node.js run of the extracted, fixed _calRecordDayPlacements against that exact real API payload -> 10/10 placements, was 1/10 before the fix; single-day and occurrence_start-only-no-matches fallback cases re-verified unaffected'
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2110 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized bug fix).
+        Extends cap-calendar-multiday-placement; see that entry's notes for
+        the full account of why this is a #194 regression reintroduced
+        through a field the original fixture never populated, and why the
+        Timeline/Agenda finding from this same horizontal review was split
+        into #229 instead of fixed here. Fifth item of the
+        quality-and-i18n-fixes batch. pull_request is filled in once the
+        pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

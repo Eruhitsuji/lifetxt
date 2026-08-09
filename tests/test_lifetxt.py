@@ -4180,6 +4180,31 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         # bypassing the configured value entirely.
         self.assertNotIn('"60"', body)
 
+    def test_calendar_places_a_record_on_every_matched_day(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # The old bug (_calRecordDay) only ever placed a record on
+        # matches[0]'s day; every other on:/repeat match was silently
+        # dropped from the calendar grid. Confirm the replacement iterates
+        # every match instead of reading only the first.
+        self.assertIn("function _calRecordDayPlacements", html)
+        self.assertNotIn("function _calRecordDay(", html)
+        start = html.index("function _calRecordDayPlacements")
+        end = html.index("function _calEntryHtml")
+        body = html[start:end]
+        self.assertIn("for (const match of matches)", body)
+        # The rendering call site must pass each entry's own day-specific
+        # `when`, not fall back to always reading matches[0] again.
+        self.assertIn(
+            "shown.map((entry) => _calEntryHtml(entry.record, entry.when))", html
+        )
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 

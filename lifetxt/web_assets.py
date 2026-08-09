@@ -5003,14 +5003,35 @@ HTML_PAGE = r"""<!doctype html>
       applyUrlToControls();
       loadAgenda();
     }
-    function _calRecordDay(record) {
-      const primary = (record.matches || [])[0] || {};
-      const raw = record.occurrence_start || primary.start || record.when || "";
-      return String(raw).slice(0, 10);
+    function _calRecordDayPlacements(record) {
+      // A record with more than one match (a multi-day all-day span, or
+      // several repeat occurrences visible in one grid) must appear on
+      // every matched day, not just the first -- each `on:` value or repeat
+      // occurrence produces its own entry in record.matches with its own
+      // `start`. Falls back to the single-day fields when matches is absent
+      // (e.g. a plain due:/do: record with no matches array at all).
+      if (record.occurrence_start) {
+        return [{day: String(record.occurrence_start).slice(0, 10), when: record.occurrence_start}];
+      }
+      const matches = record.matches || [];
+      if (!matches.length) {
+        const raw = record.when || "";
+        return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
+      }
+      const seen = new Set();
+      const placements = [];
+      for (const match of matches) {
+        const when = match.start || "";
+        const day = String(when).slice(0, 10);
+        if (!day || seen.has(day)) continue;
+        seen.add(day);
+        placements.push({day, when});
+      }
+      return placements;
     }
-    function _calEntryHtml(record) {
+    function _calEntryHtml(record, dayWhen) {
       const type = record.type || "N";
-      const when = String(record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
+      const when = String(dayWhen || record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
       const timed = when.length > 10;
       const time = timed ? when.slice(11, 16) + " " : "";
       const dueCls = agendaDueSoonClass(record);
@@ -5047,10 +5068,10 @@ HTML_PAGE = r"""<!doctype html>
       const records = data.records || [];
       const byDay = new Map();
       for (const record of records) {
-        const day = _calRecordDay(record);
-        if (!day) continue;
-        if (!byDay.has(day)) byDay.set(day, []);
-        byDay.get(day).push(record);
+        for (const placement of _calRecordDayPlacements(record)) {
+          if (!byDay.has(placement.day)) byDay.set(placement.day, []);
+          byDay.get(placement.day).push({record, when: placement.when});
+        }
       }
       for (const list of byDay.values()) {
         list.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
@@ -5086,7 +5107,7 @@ HTML_PAGE = r"""<!doctype html>
         cell += `<div class="cal-daynum"><a class="cal-daylink" onclick="calOpenDay('${dayStr}')" title="Open ${escapeHtml(dayStr)} in Agenda">${day.getDate()}</a>`;
         cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
         cell += `</div><div class="cal-entries">`;
-        cell += shown.map(_calEntryHtml).join("");
+        cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when)).join("");
         if (overflow > 0) {
           cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">+${overflow} more</button>`;
         } else if (expanded && entries.length > CAL_CELL_LIMIT) {

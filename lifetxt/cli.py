@@ -6605,7 +6605,25 @@ def command_init(args):
     return 0
 
 
+#: Optional dependencies not covered by a pyproject.toml extras group; the
+#: plain-`pip install PKG` hint is the accurate one for these.
+_STANDALONE_OPTIONAL_DEPENDENCY_HINT = "pip install %s"
+#: Optional dependencies covered by an extras group -- installing the group
+#: is the documented, correct way to get them, not `pip install PKG` alone.
+_EXTRAS_GROUP_BY_DEPENDENCY = {
+    "fastapi": "web",
+    "uvicorn": "web",
+    "textual": "tui",
+    "watchdog": "tui",
+}
+
+
 def command_doctor(args):
+    import platform
+
+    from . import __version__
+    from .doctor import optional_dependency_report
+
     checks = []
     any_fail = [False]
 
@@ -6619,6 +6637,17 @@ def command_doctor(args):
         add_check("OK", "python", "Python %d.%d" % (major, minor))
     else:
         add_check("FAIL", "python", "Python %d.%d (3.10+ required)" % (major, minor))
+    add_check(
+        "OK",
+        "system",
+        "lifetxt %s, Python %s, %s %s"
+        % (
+            __version__,
+            platform.python_version(),
+            platform.system() or "unknown OS",
+            platform.release() or "",
+        ),
+    )
 
     config = _config(args)
     arg_paths = getattr(args, "paths", None) or []
@@ -6643,18 +6672,43 @@ def command_doctor(args):
 
     import shutil
 
+    disk_check_dir = os.path.dirname(os.path.abspath(life_paths[0])) or os.getcwd()
+    try:
+        free_bytes = shutil.disk_usage(disk_check_dir).free
+    except OSError as exc:
+        add_check("WARN", "disk", "Could not check free space: %s" % exc)
+    else:
+        free_mib = free_bytes / (1024.0 * 1024.0)
+        # 100 MiB is a conservative floor: transaction journals, atomic-write
+        # temp files, and config backups all need real headroom to avoid a
+        # mid-write failure, not just enough for the life.txt file itself.
+        if free_bytes < 100 * 1024 * 1024:
+            add_check(
+                "WARN",
+                "disk",
+                "%.1f MiB free on %s (below the 100 MiB safety floor)"
+                % (free_mib, disk_check_dir),
+            )
+        else:
+            add_check("OK", "disk", "%.1f MiB free on %s" % (free_mib, disk_check_dir))
+
     for tool in ("fzf", "peco"):
         if shutil.which(tool):
             add_check("OK", tool, "Found in PATH")
         else:
             add_check("WARN", tool, "Not found (optional)")
 
-    for pkg in ("textual", "watchdog", "matplotlib", "cryptography"):
-        try:
-            __import__(pkg)
+    for pkg, installed in optional_dependency_report().items():
+        if installed:
             add_check("OK", pkg, "Installed")
-        except ImportError:
-            add_check("WARN", pkg, "Not installed (optional) -- pip install %s" % pkg)
+            continue
+        group = _EXTRAS_GROUP_BY_DEPENDENCY.get(pkg)
+        hint = (
+            'pip install -e ".[%s]"' % group
+            if group
+            else _STANDALONE_OPTIONAL_DEPENDENCY_HINT % pkg
+        )
+        add_check("WARN", pkg, "Not installed (optional) -- %s" % hint)
 
     existing_paths = [p for p in life_paths if os.path.exists(p)]
     if existing_paths:

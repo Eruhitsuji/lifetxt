@@ -1532,8 +1532,8 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | command | 用途 |
 | --- | --- |
 | `/done [now]` | task 系の row を完了して `done:` を記録。`now` で時刻も記録 |
-| `/state STATE [TITLE]` | 直前の status を閉じて presence を記録。`/state end` で閉じる |
-| `/now` | 現在 open な presence status を表示 |
+| `/state STATE [TITLE] \| end` | 直前の status を閉じて presence を記録。`/state end` で閉じる |
+| `/now [PERSON]` | 現在 open な presence status を表示 |
 | `/status open\|active\|done\|dropped` | CLI と同じ alias で status を設定 |
 | `/set KEY VALUE` | detail を設定。値を省略すると key を削除 |
 | `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |

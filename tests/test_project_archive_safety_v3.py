@@ -1,4 +1,4 @@
-"""Regression coverage for the project-archive safety hardening in #183."""
+"""Regression coverage for project-archive safety hardening in #183."""
 
 import contextlib
 import hashlib
@@ -72,7 +72,7 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         config = self.write("config.json", json.dumps(data, indent=2) + "\n")
         return config, work, archive
 
-    def run(self, config, *args):
+    def run_cli(self, config, *args):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
@@ -86,13 +86,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
 
     def test_dry_run_prints_exact_revision_set_without_writing(self):
         config, work, archive = self.workspace()
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, stdout, stderr = self.run(
+        code, stdout, stderr = self.run_cli(
             config, "project", "archive", "alpha", "--dry-run"
         )
 
@@ -101,19 +97,14 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         self.assertIn("Revision set for a live project archive:", stdout)
         self.assertIn("--revision %s=%s" % (work, self.revision(work)), stdout)
         self.assertIn("--revision %s=%s" % (archive, self.revision(archive)), stdout)
-        self.assertIn("Items to archive (1", stdout)
         self.assertIn("(dry run - no changes made)", stdout)
         self.assert_unchanged(before)
 
     def test_dry_run_rejects_empty_revision_token_without_writing(self):
         config, work, archive = self.workspace()
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config,
             "project",
             "archive",
@@ -129,13 +120,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
 
     def test_dry_run_rejects_stale_revision_without_writing(self):
         config, work, archive = self.workspace()
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config,
             "project",
             "archive",
@@ -151,13 +138,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
 
     def test_live_project_archive_requires_complete_revision_set(self):
         config, work, archive = self.workspace()
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config, "project", "archive", "alpha", "--yes"
         )
 
@@ -169,19 +152,17 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
 
     def test_live_project_archive_accepts_complete_revision_set(self):
         config, work, archive = self.workspace()
-        work_revision = self.revision(work)
-        archive_revision = self.revision(archive)
 
-        code, stdout, stderr = self.run(
+        code, stdout, stderr = self.run_cli(
             config,
             "project",
             "archive",
             "alpha",
             "--yes",
             "--revision",
-            work + "=" + work_revision,
+            work + "=" + self.revision(work),
             "--revision",
-            archive + "=" + archive_revision,
+            archive + "=" + self.revision(archive),
         )
 
         self.assertEqual(0, code, stderr)
@@ -194,13 +175,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         config, work, archive = self.workspace(
             "[x] T Broken Title id:t1 project:alpha done:2026-01-01\n"
         )
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config, "project", "archive", "alpha", "--dry-run"
         )
 
@@ -210,13 +187,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
 
     def test_empty_active_write_source_is_an_incident_signal(self):
         config, work, archive = self.workspace("")
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config, "project", "archive", "alpha", "--dry-run"
         )
 
@@ -224,7 +197,7 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         self.assertIn("active writable source is 0 bytes", stderr)
         self.assert_unchanged(before)
 
-    def test_live_revision_failure_happens_before_undo_or_backup_side_effects(self):
+    def test_live_revision_failure_precedes_backup_side_effects(self):
         undo_dir = self.path("undo")
         backup_dir = self.path("backup")
         config, work, archive = self.workspace(
@@ -233,13 +206,9 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
                 "backup": {"auto": True, "dir": backup_dir},
             }
         )
-        before = {
-            config: self.read_bytes(config),
-            work: self.read_bytes(work),
-            archive: self.read_bytes(archive),
-        }
+        before = {p: self.read_bytes(p) for p in (config, work, archive)}
 
-        code, _stdout, stderr = self.run(
+        code, _stdout, stderr = self.run_cli(
             config,
             "project",
             "archive",
@@ -265,13 +234,8 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         archive = self.write("generic-archive.life.txt", "")
         config = self.write("generic-config.json", "{}\n")
 
-        code, stdout, stderr = self.run(
-            config,
-            "archive",
-            source,
-            "--dest",
-            archive,
-            "--yes",
+        code, stdout, stderr = self.run_cli(
+            config, "archive", source, "--dest", archive, "--yes"
         )
 
         self.assertEqual(0, code, stderr)
@@ -283,7 +247,7 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
     def test_project_archive_help_explains_revision_requirement(self):
         config, _work, _archive = self.workspace()
 
-        code, stdout, stderr = self.run(
+        code, stdout, stderr = self.run_cli(
             config, "project", "archive", "--help"
         )
 

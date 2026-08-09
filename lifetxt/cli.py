@@ -2656,6 +2656,15 @@ def build_parser():
         metavar="SECONDS",
         help="Network timeout for the GitHub API request.",
     )
+    update_check_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "GitHub repository to check, e.g. a fork's own owner/name. "
+            "Overrides the update.repository config key and the built-in "
+            "default (Eruhitsuji/lifetxt)."
+        ),
+    )
     update_check_cmd.set_defaults(func=command_update_check)
 
     assign_cmd = subparsers.add_parser(
@@ -6709,6 +6718,27 @@ def _github_latest_release_or_tag(repo, timeout=10):
     return name, "tag", "https://github.com/%s/releases/tag/%s" % (repo, name)
 
 
+def _resolve_update_check_repo(args, config):
+    """Resolve which GitHub repository to check: --repo, then config, then the built-in default.
+
+    A fork should never be silently pointed at the upstream project's
+    releases: `_UPDATE_CHECK_REPO` is only the last-resort fallback, not the
+    only option. `--repo` (a one-off override) takes precedence over
+    `update.repository` (a persistent, per-install default).
+    """
+    import re
+
+    explicit = getattr(args, "repo", None)
+    configured = config_section(config, "update").get("repository")
+    repo = str(explicit or configured or _UPDATE_CHECK_REPO).strip()
+    if not re.match(r"^[^/\s]+/[^/\s]+$", repo):
+        raise ValueError(
+            "Invalid repository %r; expected OWNER/NAME (e.g. Eruhitsuji/lifetxt)."
+            % repo
+        )
+    return repo
+
+
 def command_update_check(args):
     """Report whether a newer lifetxt release or tag exists on GitHub.
 
@@ -6726,15 +6756,14 @@ def command_update_check(args):
             % __version__
         )
 
+    repo = _resolve_update_check_repo(args, _config(args))
     timeout = getattr(args, "timeout", 10)
-    latest_text, kind, url = _github_latest_release_or_tag(
-        _UPDATE_CHECK_REPO, timeout=timeout
-    )
+    latest_text, kind, url = _github_latest_release_or_tag(repo, timeout=timeout)
 
     result = OrderedDict(
         [
             ("current_version", __version__),
-            ("repository", _UPDATE_CHECK_REPO),
+            ("repository", repo),
             ("latest_version", latest_text),
             ("kind", kind),
             ("url", url or None),
@@ -6745,7 +6774,7 @@ def command_update_check(args):
         result["status"] = "no_release_found"
         message = (
             "No published releases or tags found for %s; nothing to compare "
-            "against." % _UPDATE_CHECK_REPO
+            "against." % repo
         )
     else:
         latest = _parse_simple_version(latest_text)

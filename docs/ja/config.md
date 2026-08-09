@@ -193,6 +193,22 @@ revision のみを 1 行記録します。設定内容やキーの値は一切�
 `audit_max_bytes` を超えると古い側から切り詰められます。`audit_log` を
 未設定のままにすると、この記録は無効のままです。
 
+## update check
+
+`lifetxt update-check` は実行中の version を、repository の最新 GitHub
+Release (未公開なら最新 tag) と比較します。既定値はこの project 自身の
+repository ですが、fork では upstream ではなく自分自身の repository と
+比較すべきです。
+
+```json
+{
+  "update": { "repository": "your-github-username/your-fork" }
+}
+```
+
+`--repo OWNER/NAME` flag を使うと、保存された既定値を変えずに1回だけ
+上書きできます。
+
 ## 認証情報
 
 パスワードやトークンを設定に直接書かないでください。代わりに環境変数名を参照します。

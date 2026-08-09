@@ -1,6 +1,6 @@
 """Archive preflight hardening after the production zero-byte incident (#183).
 
-The incident root cause is intentionally not claimed here.  This compatibility
+The incident root cause is intentionally not claimed here. This compatibility
 layer addresses concrete archive safety gaps observed while investigating it:
 
 * revision arguments were parsed only after the dry-run return, so an invalid or
@@ -11,41 +11,57 @@ layer addresses concrete archive safety gaps observed while investigating it:
 * an unexpectedly empty active write source was indistinguishable from a
   legitimate no-match result.
 
-Generic ``archive`` keeps its historical optional-revision behavior.  Project
+Generic ``archive`` keeps its historical optional-revision behavior. Project
 archive is deliberately stricter because it is a workspace-aware destructive
 multi-target operation whose selection depends on every scanned source.
+
+The legacy CLI module is patched only for the duration of one stable entrypoint
+invocation, then restored in ``finally``. This avoids leaking compatibility
+state into direct ``lifetxt.cli`` callers or other tests in the same process.
 """
 
 from __future__ import unicode_literals
 
 import argparse
+import contextlib
 import os
 
 
-_INSTALLED = False
-
-
-def install_archive_safety_v3():
-    """Install archive preflight checks onto the legacy CLI module."""
-    global _INSTALLED
-    if _INSTALLED:
-        return
-
-    from . import cli as cli_module
-
+@contextlib.contextmanager
+def archive_safety_context(cli_module):
+    """Temporarily install archive safety around one legacy CLI invocation."""
     original_archive = cli_module.command_archive
-    if getattr(original_archive, "_lifetxt_archive_safety_v3", False):
-        _INSTALLED = True
-        return
+    original_build_parser = cli_module.build_parser
 
     def command_archive(args):
         _archive_preflight(cli_module, args)
         return original_archive(args)
 
-    command_archive._lifetxt_archive_safety_v3 = True
+    def build_parser():
+        parser = original_build_parser()
+        project = _subparser(parser, "project")
+        archive = _subparser(project, "archive") if project is not None else None
+        if archive is not None:
+            for action in archive._actions:
+                if "--revision" in getattr(action, "option_strings", ()):
+                    action.help = (
+                        "Expected revision for a scanned source or destination as "
+                        "PATH=SHA256. Required for every scanned source and the "
+                        "destination on live project archive; dry-run prints the "
+                        "exact set. Use <missing> for an absent destination."
+                    )
+                    break
+        return parser
+
     cli_module.command_archive = command_archive
-    _patch_archive_help(cli_module)
-    _INSTALLED = True
+    cli_module.build_parser = build_parser
+    try:
+        yield
+    finally:
+        if cli_module.command_archive is command_archive:
+            cli_module.command_archive = original_archive
+        if cli_module.build_parser is build_parser:
+            cli_module.build_parser = original_build_parser
 
 
 def _config_relative_path(path, config):
@@ -88,7 +104,7 @@ def _snapshot_and_validate(cli_module, path, config, allow_missing=False):
     snapshot = read_text_snapshot(path, allow_missing=allow_missing)
     if not snapshot.exists:
         return snapshot
-    items, diagnostics = cli_module.parse_text(
+    _items, diagnostics = cli_module.parse_text(
         snapshot.text,
         id_key=cli_module.id_key_from_config(config),
         check_ids=False,
@@ -100,10 +116,6 @@ def _snapshot_and_validate(cli_module, path, config, allow_missing=False):
             "Refusing archive because %s has parser error(s): %s"
             % (snapshot.path, _diagnostic_summary(errors))
         )
-    # Keep the parse alive in this preflight even though candidate selection is
-    # still delegated to command_archive.  This makes the validation boundary
-    # explicit and prevents accidental removal as an apparently-unused call.
-    del items
     return snapshot
 
 
@@ -129,7 +141,7 @@ def _archive_preflight(cli_module, args):
     project_archive = bool(project_filter)
     dry_run = bool(getattr(args, "dry_run", False))
 
-    # Parse revision tokens before *any* dry-run return.  This is intentionally
+    # Parse revision tokens before *any* dry-run return. This is intentionally
     # earlier than command_archive's historical parsing point.
     revisions = cli_module._path_revision_map(getattr(args, "revision", None))
 
@@ -154,7 +166,7 @@ def _archive_preflight(cli_module, args):
     if destination_snapshot is not None:
         known_snapshots[destination] = destination_snapshot
 
-    # A supplied revision is a claim about the preview/write precondition.  Do
+    # A supplied revision is a claim about the preview/write precondition. Do
     # not silently ignore typos or stale values, even on dry-run.
     for path, expected in revisions.items():
         snapshot = known_snapshots.get(path)
@@ -169,7 +181,7 @@ def _archive_preflight(cli_module, args):
     if not project_archive:
         return
 
-    # The active write target is the authoritative workspace source.  An empty
+    # The active write target is the authoritative workspace source. An empty
     # value here is an incident signal, not a safe 'nothing to archive' result.
     write_file = cli_module.config_write_file(config)
     if write_file:
@@ -214,32 +226,6 @@ def _print_project_revision_set(source_snapshots, destination, destination_snaps
             "  --revision %s=%s\n"
             % (destination, destination_snapshot.content_hash)
         )
-
-
-def _patch_archive_help(cli_module):
-    """Explain the stricter project-archive revision contract in --help."""
-    original = cli_module.build_parser
-    if getattr(original, "_lifetxt_archive_help_v3", False):
-        return
-
-    def build_parser():
-        parser = original()
-        project = _subparser(parser, "project")
-        archive = _subparser(project, "archive") if project is not None else None
-        if archive is not None:
-            for action in archive._actions:
-                if "--revision" in getattr(action, "option_strings", ()):
-                    action.help = (
-                        "Expected revision for a scanned source or destination as "
-                        "PATH=SHA256. Required for every scanned source and the "
-                        "destination on live project archive; dry-run prints the "
-                        "exact set. Use <missing> for an absent destination."
-                    )
-                    break
-        return parser
-
-    build_parser._lifetxt_archive_help_v3 = True
-    cli_module.build_parser = build_parser
 
 
 def _subparser(parser, name):

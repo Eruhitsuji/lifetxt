@@ -2484,10 +2484,12 @@ its built-in default.
 | Check | What it verifies |
 |---|---|
 | `python` | Python 3.10+ (fails below 3.10) |
+| `system` | lifetxt version, full Python version, and OS/platform (informational) |
 | `life.txt` | The configured or default life.txt file exists and is readable |
 | `config` | `.lifetxt.json` (or `--config` path) exists (warns if missing) |
+| `disk` | Free space on the volume holding the life.txt file (warns below 100 MiB) |
 | `fzf`, `peco` | Optional selector tools found in `PATH` (warns if missing) |
-| `textual`, `watchdog`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing) |
+| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing); the same set `doctor --workspace-safety` checks |
 | `check` | Parses the life.txt file(s) and reports error/warning counts |
 | `ids` | Reports items missing an `id:` detail |
 
@@ -2495,6 +2497,22 @@ its built-in default.
 too old, or the file is missing/unreadable); missing optional dependencies
 are `WARN` and do not affect the exit code. Use `--format json` for
 machine-readable output.
+
+`update-check` compares the running version against the latest published
+GitHub Release for this project, falling back to the latest tag when no
+Release has been published:
+
+```sh
+python -m lifetxt update-check
+python -m lifetxt update-check --format json
+```
+
+It makes a read-only request to the public GitHub API and never installs or
+modifies anything. Reported `status` values: `up_to_date`, `update_available`,
+`ahead_of_latest` (running newer than the latest published version),
+`no_release_found` (the repository has no Releases or tags yet), and
+`unparseable` (a release/tag name that could not be read as a version). Use
+`--timeout SECONDS` to change the network timeout (default `10`).
 
 ## 17. `encrypt` and `decrypt`
 

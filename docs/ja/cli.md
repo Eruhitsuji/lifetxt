@@ -2162,10 +2162,12 @@ python -m lifetxt doctor
 | Check | 検査内容 |
 |---|---|
 | `python` | Python 3.10+ (未満は FAIL) |
+| `system` | lifetxt version、Python の詳細 version、OS/platform (情報表示) |
 | `life.txt` | 設定または既定の life.txt file が存在し読み取り可能か |
 | `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
+| `disk` | life.txt file のある volume の空き容量 (100 MiB 未満で WARN) |
 | `fzf`, `peco` | optional selector tool が `PATH` にあるか (無ければ WARN) |
-| `textual`, `watchdog`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN) |
+| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
 | `check` | life.txt file を解析し error/warning 件数を報告 |
 | `ids` | `id:` が無い item を報告 |
 
@@ -2173,6 +2175,22 @@ python -m lifetxt doctor
 (Python version が古い、または file が存在しない/読み取れない場合)。
 optional dependency の不足は `WARN` であり、終了コードには影響しません。
 機械可読な出力には `--format json` を使用してください。
+
+`update-check` は実行中の version と、この project の最新の GitHub Release
+(未公開なら最新の tag) を比較します。
+
+```sh
+python -m lifetxt update-check
+python -m lifetxt update-check --format json
+```
+
+公開 GitHub API への読み取り専用リクエストのみを行い、何もインストール・
+変更しません。`status` の値: `up_to_date`、`update_available`、
+`ahead_of_latest` (実行中の version が最新公開 version より新しい)、
+`no_release_found` (repository にまだ Release も tag も無い)、
+`unparseable` (release/tag 名を version として解釈できなかった)。
+network timeout を変更するには `--timeout SECONDS` を使用します
+(既定値 `10`)。
 
 ## 17. `encrypt` と `decrypt`
 

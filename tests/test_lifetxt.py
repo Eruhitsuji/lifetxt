@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import os
@@ -7,6 +8,8 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest import mock
+from urllib.error import HTTPError, URLError
 
 from lifetxt.diagnostic_contract import diagnostics_to_output
 from lifetxt.parser import parse_text
@@ -6280,6 +6283,121 @@ class LifeTxtDoctorCliTests(unittest.TestCase):
             normalized = normalize_newlines(stdout)
             self.assertEqual(1, code)
             self.assertIn("[XX]", normalized)
+
+
+class _FakeGithubResponse(object):
+    def __init__(self, payload, status=200):
+        self._payload = payload
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps(self._payload).encode("utf-8")
+
+
+def _run_update_check(format_="text", timeout=10):
+    from lifetxt import cli
+
+    args = argparse.Namespace(format=format_, timeout=timeout)
+    buffer = io.StringIO()
+    with mock.patch("sys.stdout", buffer):
+        code = cli.command_update_check(args)
+    return buffer.getvalue(), code
+
+
+class LifeTxtUpdateCheckCliTests(unittest.TestCase):
+    def test_version_parser_handles_v_prefix_and_suffix(self):
+        from lifetxt.cli import _parse_simple_version
+
+        self.assertEqual((1, 2, 3), _parse_simple_version("v1.2.3"))
+        self.assertEqual((1, 2, 3), _parse_simple_version("1.2.3-rc1"))
+        self.assertEqual((0, 1, 0), _parse_simple_version("0.1.0"))
+        self.assertIsNone(_parse_simple_version("not-a-version"))
+        self.assertIsNone(_parse_simple_version(""))
+
+    def test_reports_no_release_found_when_repository_has_neither(self):
+        from lifetxt import cli
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            stdout, code = _run_update_check()
+        self.assertEqual(0, code)
+        self.assertIn("No published releases or tags found", stdout)
+
+    def test_reports_update_available_from_a_release(self):
+        from lifetxt import __version__, cli
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.return_value = _FakeGithubResponse(
+                {
+                    "tag_name": "v99.0.0",
+                    "html_url": "https://example.test/releases/v99.0.0",
+                }
+            )
+            stdout, code = _run_update_check(format_="json")
+        self.assertEqual(0, code)
+        payload = json.loads(stdout)
+        self.assertEqual(__version__, payload["current_version"])
+        self.assertEqual("v99.0.0", payload["latest_version"])
+        self.assertEqual("release", payload["kind"])
+        self.assertEqual("update_available", payload["status"])
+        opener.assert_called_once()
+
+    def test_falls_back_to_latest_tag_when_no_release_is_published(self):
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([{"name": "v0.0.1"}]),
+            ]
+            stdout, code = _run_update_check(format_="json")
+        self.assertEqual(0, code)
+        payload = json.loads(stdout)
+        self.assertEqual("v0.0.1", payload["latest_version"])
+        self.assertEqual("tag", payload["kind"])
+        # 0.0.1 is older than the running 0.1.0 baseline.
+        self.assertEqual("ahead_of_latest", payload["status"])
+
+    def test_reports_up_to_date_when_versions_match(self):
+        from lifetxt import __version__
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.return_value = _FakeGithubResponse({"tag_name": __version__})
+            stdout, code = _run_update_check(format_="json")
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+
+    def test_non_404_http_error_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="text", timeout=10)
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = HTTPError("url", 500, "Server Error", {}, None)
+            with self.assertRaises(ValueError):
+                cli.command_update_check(args)
+
+    def test_network_error_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="text", timeout=10)
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = URLError("no network")
+            with self.assertRaises(ValueError):
+                cli.command_update_check(args)
+
+    def test_update_check_is_wired_into_the_real_cli(self):
+        from lifetxt import cli
+
+        parser = cli.build_parser()
+        args = parser.parse_args(["update-check", "--format", "json"])
+        self.assertIs(cli.command_update_check, args.func)
 
 
 class LifeTxtAssignCliTests(unittest.TestCase):

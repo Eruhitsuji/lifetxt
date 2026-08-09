@@ -6470,6 +6470,262 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
             cli._resolve_update_check_repo(args, {})
 
 
+class _FakeGitResult(object):
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class LifeTxtUpdateCommandCliTests(unittest.TestCase):
+    """command_update, exercised with subprocess.run mocked.
+
+    Live, unmocked end-to-end verification (dry run, real --yes fast-forward,
+    dirty-tree refusal, detached-HEAD refusal, and the argument-injection
+    guard) was performed separately against a real disposable clone of this
+    repository; see the PR description / traceability record. These tests
+    cover branch logic and failure modes that would be slow or destructive
+    to reproduce against a real checkout on every run.
+    """
+
+    def _run(self, responses_overrides=None, **arg_overrides):
+        from lifetxt import cli
+
+        calls = []
+        # rev-parse is called twice with different subcommands (--show-toplevel,
+        # then HEAD and FETCH_HEAD); use a stateful dispatcher keyed by the
+        # full argv tail instead of just the first subcommand where needed.
+        args = argparse.Namespace(
+            yes=False,
+            ref=None,
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="json",
+            config_data={},
+        )
+        for key, value in arg_overrides.items():
+            setattr(args, key, value)
+
+        state = {"current": "aaa111", "target": "bbb222"}
+        state.update(responses_overrides or {})
+
+        def run(cmd, **kwargs):
+            calls.append(cmd)
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout=state.get("status_output", ""))
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                if state.get("detached"):
+                    return _FakeGitResult(returncode=1)
+                return _FakeGitResult(stdout="main\n")
+            if tail[:1] == ["fetch"]:
+                if state.get("fetch_fails"):
+                    return _FakeGitResult(
+                        returncode=1, stderr="couldn't find remote ref"
+                    )
+                return _FakeGitResult(stdout="")
+            if tail == ["rev-parse", "HEAD"]:
+                return _FakeGitResult(stdout=state["current"] + "\n")
+            if tail == ["rev-parse", "FETCH_HEAD"]:
+                return _FakeGitResult(stdout=state["target"] + "\n")
+            if tail[:1] == ["merge"]:
+                if state.get("merge_fails"):
+                    return _FakeGitResult(
+                        returncode=1, stderr="not possible to fast-forward"
+                    )
+                return _FakeGitResult(stdout="")
+            raise AssertionError("Unexpected git invocation: %s" % cmd)
+
+        buffer = io.StringIO()
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("sys.stdout", buffer):
+                code = cli.command_update(args)
+        return buffer.getvalue(), code, calls
+
+    def test_dry_run_reports_available_update_without_merging(self):
+        stdout, code, calls = self._run(ref="v1.2.3")
+        payload = json.loads(stdout)
+        self.assertEqual(0, code)
+        self.assertEqual("update_available_dry_run", payload["status"])
+        self.assertEqual("aaa111", payload["current_commit"])
+        self.assertEqual("bbb222", payload["target_commit"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+
+    def test_yes_flag_performs_the_fast_forward_merge(self):
+        stdout, code, calls = self._run(ref="v1.2.3", yes=True)
+        payload = json.loads(stdout)
+        self.assertEqual(0, code)
+        self.assertEqual("updated", payload["status"])
+        self.assertTrue(any(c[1:2] == ["merge"] for c in calls))
+
+    def test_already_up_to_date_does_not_fetch_or_merge_state_further(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3", yes=True, responses_overrides={"target": "aaa111"}
+        )
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+
+    def test_dirty_working_tree_is_refused(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout=" M dirty_file.py\n")
+            raise AssertionError("Should not proceed past the dirty check: %s" % cmd)
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("uncommitted changes", str(ctx.exception))
+
+    def test_detached_head_is_refused(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", responses_overrides={"detached": True})
+        self.assertIn("detached HEAD", str(ctx.exception))
+
+    def test_non_git_install_is_refused(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            return _FakeGitResult(returncode=128, stderr="not a git repository")
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("git-based install", str(ctx.exception))
+
+    def test_fetch_failure_fails_loudly(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", responses_overrides={"fetch_fails": True})
+        self.assertIn("git fetch", str(ctx.exception))
+
+    def test_merge_failure_fails_loudly(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", yes=True, responses_overrides={"merge_fails": True})
+        self.assertIn("fast-forward", str(ctx.exception))
+
+    def test_git_not_found_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+        with mock.patch("subprocess.run", side_effect=FileNotFoundError()):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("requires git", str(ctx.exception))
+
+    def test_git_timeout_fails_loudly(self):
+        import subprocess
+
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+        with mock.patch(
+            "subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="git", timeout=10),
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("timed out", str(ctx.exception))
+
+    def test_option_like_ref_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._run(ref="--upload-pack=evil")
+
+    def test_option_like_remote_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._run(ref="v1.2.3", remote="--evil")
+
+    def test_no_ref_and_no_release_found_does_nothing(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref=None,
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                return _FakeGitResult(stdout="main\n")
+            raise AssertionError("Should not reach git fetch: %s" % cmd)
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = [
+                    HTTPError("url", 404, "Not Found", {}, None),
+                    _FakeGithubResponse([]),
+                ]
+                buffer = io.StringIO()
+                with mock.patch("sys.stdout", buffer):
+                    code = cli.command_update(args)
+        self.assertEqual(0, code)
+        self.assertIn("nothing to", buffer.getvalue())
+
+    def test_explicit_ref_skips_the_github_api_entirely(self):
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            self._run(ref="v1.2.3")
+            opener.assert_not_called()
+
+    def test_update_is_wired_into_the_real_cli(self):
+        from lifetxt import cli
+
+        parser = cli.build_parser()
+        args = parser.parse_args(["update", "--format", "json"])
+        self.assertIs(cli.command_update, args.func)
+
+
 class LifeTxtAssignCliTests(unittest.TestCase):
     def test_assign_updates_assignee_by_id(self):
         with tempfile.TemporaryDirectory() as tmp:

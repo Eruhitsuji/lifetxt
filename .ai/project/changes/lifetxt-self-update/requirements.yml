@@ -1,0 +1,35 @@
+schema_version: 1
+
+requirements:
+  - id: req-lifetxt-self-update
+    kind: ADDED
+    statement: >-
+      lifetxt update fast-forwards the running install's git checkout to a
+      newer commit, defaulting to a read-only dry run and requiring explicit
+      confirmation for any real change, refusing outright on anything other
+      than a clean git working tree on a real branch, and never running any
+      code beyond git fetch/merge --ff-only.
+    acceptance_criteria:
+      - "When the running install is not inside a git working tree, command_update raises ValueError and makes no change."
+      - "When `git status --porcelain` reports any tracked or untracked change, command_update raises ValueError before any fetch and makes no change."
+      - "When HEAD is detached, command_update raises ValueError before any fetch and makes no change."
+      - "command_update never invokes git reset, git rebase, a force push, or any command other than rev-parse, status, symbolic-ref, fetch, and merge --ff-only."
+      - "command_update never invokes pip, a build backend, or any code from the fetched commit."
+      - "Without --yes, command_update fetches and reports current/target commits and status update_available_dry_run without merging."
+      - "With --yes and a successful merge, command_update reports status updated and instructs the operator to reinstall dependencies manually if needed."
+      - "When the current commit already equals the resolved target, command_update reports status up_to_date and performs no fetch-dependent branching regardless of --yes."
+      - "Without --ref, command_update resolves the target using the same _resolve_update_check_repo/_github_latest_release_or_tag logic update-check uses."
+      - "With --ref, command_update uses it directly without calling the GitHub API."
+      - "When neither --ref nor any release/tag is found, command_update reports that there is nothing to update to and exits 0 with no change."
+      - "The actual git fetch always targets the local remote's own configured URL (origin by default, or --remote); --repo/update.repository only selects the ref name requested from the GitHub API."
+      - "A ref or remote value beginning with '-' is rejected before being passed to any git subprocess call."
+      - "A missing git executable, a git subprocess timeout, or any other git subprocess failure raises a clear ValueError rather than crashing or reporting silent success."
+      - "git subprocess output is decoded as UTF-8 with errors='replace', not the platform locale codec, so a non-ASCII byte in git's output cannot crash the command."
+    constraints:
+      - Must not modify lifetxt/atomic.py, lifetxt/mutation.py, or lifetxt/transaction_journal.py.
+      - Must not introduce any package-manager-based update path; lifetxt has no PyPI distribution.
+      - Must not automatically run pip install or any other build/setup code after a successful update.
+      - Must reuse _resolve_update_check_repo and _github_latest_release_or_tag from the cli-update-check change unmodified.
+    owner: Eruhitsuji
+
+open_questions: []

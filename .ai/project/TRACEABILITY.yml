@@ -1925,6 +1925,34 @@ traceability:
         compatibility-layer capture wrapper.
       status: implemented
 
+    - requirement_id: req-ticket-workflow-generic-validation-parity
+      capability_id: cap-project-ticket-record-consistency
+      epic: P1 Development Ticket Management Core / Ticket Workflow, History, Planning, and Time Tracking
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/181
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/182
+      changed_files_or_scope:
+        - Recognize lifetxt-generated ticket_event and time_entry metadata in generic validation without suppressing arbitrary custom-key warnings
+        - Synchronize audit-safe Ticket workflow completion metadata with coarse `[x]` status
+        - Preserve the first completion date across resolved -> closed and remove done: when reopening
+        - lifetxt/safety_compat_v2.py
+        - tests/test_generated_record_capture_compat.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_generated_record_capture_compat.py covers first-party ticket-event/time-entry generic validation, unknown custom metadata preservation, timezone-aware done date assignment, resolved-to-closed date preservation, and reopen cleanup
+        - GitHub Actions Python 3.10/3.11/3.12 and no-Web matrix on PR #182
+        - 'real deployment reproduction: four valid audit-safe transitions produced validate-history ok=true and 280/280 IDs, but generic check emitted W103 on the closed Ticket and W106 for generated ticket_event fields'
+      release_or_deployment: >-
+        Behaviour fix: audit-safe Ticket workflow transitions now keep done:
+        aligned with completed coarse status, while first-party Ticket history
+        records no longer produce generic custom-field warnings.
+      notes: >-
+        Found during the first real production new -> in_progress -> review ->
+        resolved -> closed workflow. This extends the interim first-party
+        metadata compatibility layer introduced by #178/#180; todo.md keeps the
+        authoritative record:<kind> registry as the long-term replacement for
+        duplicated compatibility key lists.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

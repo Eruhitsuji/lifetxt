@@ -6399,6 +6399,76 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
         args = parser.parse_args(["update-check", "--format", "json"])
         self.assertIs(cli.command_update_check, args.func)
 
+    def test_repo_flag_overrides_the_built_in_default(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="json", timeout=10, repo="someone/their-fork")
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("someone/their-fork", payload["repository"])
+        called_url = opener.call_args_list[0][0][0].full_url
+        self.assertIn("someone/their-fork", called_url)
+
+    def test_configured_repository_is_used_when_no_flag_is_given(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            format="json",
+            timeout=10,
+            repo=None,
+            config_data={"update": {"repository": "forked-owner/lifetxt"}},
+        )
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("forked-owner/lifetxt", payload["repository"])
+
+    def test_repo_flag_takes_precedence_over_configured_repository(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            format="json",
+            timeout=10,
+            repo="cli-owner/repo",
+            config_data={"update": {"repository": "configured-owner/repo"}},
+        )
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("cli-owner/repo", payload["repository"])
+
+    def test_no_flag_or_config_falls_back_to_the_built_in_default(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(repo=None, config_data={})
+        self.assertEqual("Eruhitsuji/lifetxt", cli._resolve_update_check_repo(args, {}))
+
+    def test_invalid_repo_format_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(repo="not-a-valid-repo-format")
+        with self.assertRaises(ValueError):
+            cli._resolve_update_check_repo(args, {})
+
 
 class LifeTxtAssignCliTests(unittest.TestCase):
     def test_assign_updates_assignee_by_id(self):

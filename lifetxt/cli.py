@@ -6911,6 +6911,43 @@ def _lifetxt_install_root():
     return os.path.dirname(os.path.dirname(os.path.abspath(lifetxt.__file__)))
 
 
+#: Maximum commits listed in update's dry-run preview. Bounded so a large
+#: gap (e.g. --ref pointing far ahead) still prints a short, readable
+#: summary rather than flooding the terminal.
+_UPDATE_LOG_PREVIEW_LIMIT = 20
+
+
+def _git_commit_summary(
+    repo_root, current, target, timeout, limit=_UPDATE_LOG_PREVIEW_LIMIT
+):
+    """List commits between current and target, newest first, capped at limit.
+
+    Returns (commits, total_count). commits is a list of "hash subject"
+    strings for at most limit commits; total_count is the true number of
+    commits in the range (from git rev-list --count), so the caller can
+    report "and N more" when the list was truncated. Returns ([], 0) on any
+    git failure rather than raising -- this is a preview, not a safety
+    check, and must never block update on a log lookup that failed.
+    """
+    range_spec = "%s..%s" % (current, target)
+    log = _run_git_for_update(
+        ["log", "--oneline", "--max-count=%d" % limit, range_spec],
+        cwd=repo_root,
+        timeout=timeout,
+    )
+    if log.returncode != 0:
+        return [], 0
+    commits = [line for line in log.stdout.splitlines() if line.strip()]
+    count = _run_git_for_update(
+        ["rev-list", "--count", range_spec], cwd=repo_root, timeout=timeout
+    )
+    try:
+        total = int(count.stdout.strip()) if count.returncode == 0 else len(commits)
+    except ValueError:
+        total = len(commits)
+    return commits, total
+
+
 def command_update(args):
     """Fast-forward the running lifetxt install's git checkout.
 
@@ -7034,13 +7071,24 @@ def command_update(args):
         )
         return 0
 
+    commits, commit_count = _git_commit_summary(repo_root, current, target, timeout)
+    result["commits"] = commits
+    result["commit_count"] = commit_count
+
+    def _commit_lines():
+        lines = ["  %s" % line for line in commits]
+        if commit_count > len(commits):
+            lines.append("  ... and %d more" % (commit_count - len(commits)))
+        return lines
+
     if not getattr(args, "yes", False):
-        emit(
-            "update_available_dry_run",
+        message_lines = [
             "Update available on %s: %s -> %s (fetched %s from %s). Dry "
             "run: no changes made. Re-run with --yes to fast-forward."
-            % (branch_name, current[:12], target[:12], ref, remote),
-        )
+            % (branch_name, current[:12], target[:12], ref, remote)
+        ]
+        message_lines.extend(_commit_lines())
+        emit("update_available_dry_run", "\n".join(message_lines))
         return 0
 
     merge = _run_git_for_update(
@@ -7052,12 +7100,13 @@ def command_update(args):
             % (merge.stderr.strip() or merge.stdout.strip())
         )
 
-    emit(
-        "updated",
+    message_lines = [
         "Updated %s: %s -> %s. Dependencies may have changed -- run "
         'pip install -e "." (or the extras you use) to pick them up.'
-        % (branch_name, current[:12], target[:12]),
-    )
+        % (branch_name, current[:12], target[:12])
+    ]
+    message_lines.extend(_commit_lines())
+    emit("updated", "\n".join(message_lines))
     return 0
 
 

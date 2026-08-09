@@ -249,6 +249,21 @@ def _patch_capture_commands(cli_module):
     """Align Project/quick capture with auto-ID and workspace reference context."""
     if getattr(cli_module, "_lifetxt_capture_validation_v2", False):
         return
+    required = (
+        "_emit_project_line",
+        "_project_write_target",
+        "_config",
+        "config_paths",
+        "config_write_file",
+        "read_text",
+        "parse_text",
+        "command_quick",
+    )
+    # The timezone bootstrap tests intentionally pass a minimal module-like
+    # object containing only main(). Capture compatibility is specific to the
+    # real legacy CLI and must not broaden that installer's public contract.
+    if not all(hasattr(cli_module, name) for name in required):
+        return
 
     from .ids import (
         auto_ids_enabled,

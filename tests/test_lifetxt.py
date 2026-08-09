@@ -4163,6 +4163,23 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertIn("function loadCalendar", html)
         self.assertIn('data-view="calendar"', html)
 
+    def test_display_mode_auto_refresh_honors_configured_interval(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        start = html.index("function configureAutoRefresh")
+        end = html.index("function configureNotificationPolling")
+        body = html[start:end]
+        self.assertIn("appConfig?.web?.display_refresh", body)
+        # The old bug hardcoded "60" as the only Display/Kiosk fallback,
+        # bypassing the configured value entirely.
+        self.assertNotIn('"60"', body)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 

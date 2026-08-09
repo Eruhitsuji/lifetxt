@@ -781,7 +781,8 @@ HTML_PAGE = r"""<!doctype html>
     .modal td:first-child { color: var(--muted); width: 7rem; white-space: nowrap; }
     .help-command-search { width: 100%; margin: 0 0 .6rem; }
     .help-command-list { display: grid; gap: .05rem; max-height: 40vh; overflow-y: auto; }
-    .help-command-row { padding: .35rem .1rem; border-bottom: 1px solid var(--line); font-size: .85rem; }
+    .help-command-row { padding: .35rem .1rem; border-bottom: 1px solid var(--line); font-size: .85rem; cursor: pointer; }
+    .help-command-row.focus, .help-command-row:hover { background: var(--soft); }
     .help-command-row .help-command-usage { font-weight: 600; }
     .help-command-row .help-command-summary { color: var(--muted); display: block; margin-top: .1rem; }
     .help-command-row .help-command-badge {
@@ -6137,34 +6138,68 @@ HTML_PAGE = r"""<!doctype html>
         `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text)}</td></tr>`
       ).join("");
     }
+    let _helpCmdEntries = [];
+    let _helpCmdIndex = 0;
     async function renderHelpModalCommands() {
       const list = document.getElementById("help-command-list");
       if (!list) return;
       if (!COMMAND_CATALOG.length) await loadCommandCatalog();
       const typed = document.getElementById("help-command-search")?.value || "";
       const matches = matchingCommands(typed);
+      _helpCmdEntries = matches;
+      _helpCmdIndex = matches.length ? 0 : -1;
       if (!matches.length) {
         list.innerHTML = `<div class="help-command-empty">No command matches. Try a different search.</div>`;
         return;
       }
-      list.innerHTML = matches.map(command => {
+      list.innerHTML = matches.map((command, i) => {
         const usage = "/" + command.name + (command.usage ? " " + command.usage : "");
         const alias = command.alias ? ` (/${command.alias})` : "";
         const badge = command.web ? "" : `<span class="help-command-badge">TUI only</span>`;
-        return `<div class="help-command-row">` +
+        return `<div class="help-command-row${i === _helpCmdIndex ? " focus" : ""}">` +
           `<span class="help-command-usage">${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
           `<span class="help-command-summary">${escapeHtml(command.summary || "")}</span>` +
           `</div>`;
       }).join("");
+      Array.from(list.children).forEach((row, i) => {
+        row.addEventListener("click", () => _runHelpModalCommand(i));
+      });
+    }
+    function _runHelpModalCommand(index) {
+      const command = _helpCmdEntries[index];
+      if (!command) return;
+      // Matches the command palette's own behavior: close first, then let
+      // runWebCommand's existing "/x is terminal-only" toast explain a
+      // TUI-only pick rather than silently doing nothing.
+      closeHelpModal();
+      runWebCommand("/" + command.name);
+    }
+    function _helpCmdMoveFocus(delta) {
+      if (!_helpCmdEntries.length) return;
+      _helpCmdIndex = (_helpCmdIndex + delta + _helpCmdEntries.length) % _helpCmdEntries.length;
+      const rows = document.querySelectorAll("#help-command-list .help-command-row");
+      rows.forEach((row, i) => row.classList.toggle("focus", i === _helpCmdIndex));
+      if (rows[_helpCmdIndex]) rows[_helpCmdIndex].scrollIntoView({block: "nearest"});
     }
     function openHelpModal() {
       renderHelpModalShortcuts();
       const search = document.getElementById("help-command-search");
       if (search) search.value = "";
       renderHelpModalCommands();
-      openManagedModal(document.getElementById("help-modal"), "button");
+      // Focus the search box (not the first button) so arrow-key/Enter
+      // command navigation works immediately without an extra click.
+      openManagedModal(document.getElementById("help-modal"), "#help-command-search");
     }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
+    document.addEventListener("DOMContentLoaded", () => {
+      const search = document.getElementById("help-command-search");
+      if (!search) return;
+      search.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") { e.preventDefault(); _helpCmdMoveFocus(1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); _helpCmdMoveFocus(-1); }
+        else if (e.key === "Enter") { e.preventDefault(); _runHelpModalCommand(_helpCmdIndex); }
+      });
+    });
 
     // ── Contextual hover/focus help ────────────────────────────────
     function clampNumber(value, min, max) {

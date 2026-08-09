@@ -132,6 +132,35 @@ class RecordProtectionTests(unittest.TestCase):
         self.assertIn("I18N_RECORD_CLASSES.some", PAGE)
 
 
+class CommandTokenProtectionTests(unittest.TestCase):
+    # Slash-command names are executable syntax, not prose: the generic
+    # translator peels a leading "/" as punctuation and can then match the
+    # bare word "stats" in the dictionary, rendering "/stats" as "/統計".
+    # These spans must opt out with data-no-i18n rather than rely on the
+    # word "stats" never appearing in the dictionary.
+
+    def test_command_palette_label_and_alias_are_protected(self):
+        body = PAGE[PAGE.index("function renderCmdkCommands") :]
+        body = body[: body.index("function openCmdk")]
+        self.assertIn("<span data-no-i18n>${escapeHtml(entry.label)}</span>", body)
+        self.assertIn(
+            'style="margin-left:auto;color:var(--muted);font-size:.78rem" data-no-i18n>${escapeHtml(entry.hint)}',
+            body,
+        )
+        # The summary branch is ordinary prose and must stay translatable.
+        self.assertIn(
+            'style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary)}',
+            body,
+        )
+
+    def test_help_modal_command_usage_is_protected(self):
+        body = PAGE[PAGE.index("async function renderHelpModalCommands") :]
+        body = body[: body.index("function _runHelpModalCommand")]
+        self.assertIn('<span class="help-command-usage" data-no-i18n>', body)
+        # The summary column is ordinary prose and must stay translatable.
+        self.assertIn('<span class="help-command-summary">', body)
+
+
 class ObserverWiringTests(unittest.TestCase):
     def test_observer_starts_once_at_init(self):
         # It was previously only re-armed from inside its own callback, so it

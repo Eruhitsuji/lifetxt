@@ -1499,10 +1499,15 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
+      - "tests/test_lifetxt.py LifeTxtDoctorCliTests.test_doctor_omits_update_row_without_the_flag, test_doctor_check_update_reports_up_to_date, test_doctor_check_update_warns_when_update_available, test_doctor_check_update_network_failure_warns_not_fails, test_doctor_check_update_reports_no_release_found"
+      - python -m unittest tests.test_lifetxt.LifeTxtDoctorCliTests tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime -> Ran 62 tests, OK
+      - "live: doctor --check-update against this project's own repository (no releases yet) correctly reports OK/no releases found; doctor --check-update --repo torvalds/linux correctly reports WARN naming the real latest tag"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/192
+      - https://github.com/Eruhitsuji/lifetxt/issues/211
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/193
+      - https://github.com/Eruhitsuji/lifetxt/pull/212
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/doctor-unification/ (below the
@@ -1513,7 +1518,10 @@ capabilities:
       optional_dependencies field already used additionalProperties: {"type":
       "boolean"}, so widening the checked dependency set required no schema
       change. Fourth implementation task of the cli-web-multiday-enhancements
-      batch.
+      batch. #211/#212 (Standard assurance) added an opt-in --check-update flag
+      reusing cap-cli-update-check's resolution helpers unmodified, distilled
+      from a cc-sdd spec at .kiro/specs/doctor-update-status-integration/ --
+      off by default, fail-open on any check failure, no exit-code impact.
     replacement:
       replaces: []
       replaced_by: null

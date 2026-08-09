@@ -2125,6 +2125,35 @@ traceability:
         implementation task of the cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-replace-retry-policy-dedup
+      capability_id: cap-replace-retry-policy-dedup
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/196
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/197
+      changed_files_or_scope:
+        - Import the shared replace-retry policy constants into transaction_journal.py instead of redefining them
+        - lifetxt/atomic.py
+        - lifetxt/transaction_journal.py
+        - tests/test_replace_retry_policy.py
+        - .kiro/specs/replace-retry-policy-dedup/
+      tests_or_evidence:
+        - tests/test_replace_retry_policy.py ReplaceRetryPolicyConsistencyTests (unchanged assertions, now structurally guaranteed)
+        - tests/test_transaction_journal_v3.py, tests/test_fault_matrix_v6.py, tests/test_fault_drill_v5.py re-run unmodified -> all pass
+        - python -m unittest tests.test_transaction_journal_v3 tests.test_replace_retry_policy tests.test_fault_matrix_v6 tests.test_fault_drill_v5 tests.test_mutation tests.test_transaction_policy_v4 tests.test_config_validation -> Ran 99 tests, OK (skipped=3)
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/replace-retry-policy-dedup/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, S-sized, zero behavior change). Completes the
+        follow-up windows-atomic-replace-retry's decisions.md explicitly
+        deferred; the retry loop itself (fault_point()-instrumented) remains
+        deliberately unmigrated. Sixth implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

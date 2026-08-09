@@ -2667,6 +2667,59 @@ def build_parser():
     )
     update_check_cmd.set_defaults(func=command_update_check)
 
+    update_cmd = subparsers.add_parser(
+        "update",
+        help=(
+            "Fast-forward the running lifetxt git install to a newer "
+            "release, tag, or ref. Requires git; dry-run by default."
+        ),
+    )
+    update_cmd.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Actually fast-forward the working tree. Without this, update "
+            "only fetches and reports what would happen."
+        ),
+    )
+    update_cmd.add_argument(
+        "--ref",
+        metavar="REF",
+        help=(
+            "Git ref (tag, branch, or commit) to update to. Defaults to "
+            "the latest published GitHub release or tag."
+        ),
+    )
+    update_cmd.add_argument(
+        "--remote",
+        metavar="NAME",
+        help="Local git remote to fetch from. Defaults to 'origin'.",
+    )
+    update_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "GitHub repository to look up the latest release/tag from "
+            "(read-only; does not change which git remote is fetched). "
+            "Overrides the update.repository config key and the built-in "
+            "default (Eruhitsuji/lifetxt)."
+        ),
+    )
+    update_cmd.add_argument(
+        "--timeout",
+        type=int,
+        default=10,
+        metavar="SECONDS",
+        help="Timeout for the GitHub API request and each git subprocess.",
+    )
+    update_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    update_cmd.set_defaults(func=command_update)
+
     assign_cmd = subparsers.add_parser(
         "assign",
         help="Change the assignee: on an existing item.",
@@ -6807,6 +6860,204 @@ def command_update_check(args):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     else:
         write_text(None, message + "\n")
+    return 0
+
+
+#: Argument-injection defense: a git ref/remote beginning with "-" could be
+#: misread as a command-line option by git itself (e.g. a tag literally
+#: named "--upload-pack=..."). Neither a real branch nor a real remote name
+#: legitimately starts with "-", so refusing this is not a functional
+#: restriction.
+def _reject_option_like_git_arg(value, label):
+    if str(value or "").startswith("-"):
+        raise ValueError(
+            "Refusing %s %r: it looks like a command-line option, not a "
+            "name." % (label, value)
+        )
+    return value
+
+
+def _run_git_for_update(args_list, cwd, timeout):
+    import subprocess
+
+    try:
+        return subprocess.run(
+            ["git"] + list(args_list),
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            # Decode explicitly as UTF-8 rather than the platform locale
+            # codec (e.g. cp932 on ja-JP Windows): git's own output is not
+            # guaranteed to be representable in that codec, and letting the
+            # default decoder raise mid-read would crash this command on a
+            # path or ref it never gets to evaluate. errors="replace" keeps
+            # this diagnostic-only -- the exact bytes are never parsed for
+            # control flow, only shown to the user or embedded in an error.
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        raise ValueError("git executable not found; `lifetxt update` requires git.")
+    except subprocess.TimeoutExpired:
+        raise ValueError("git %s timed out after %ss." % (" ".join(args_list), timeout))
+    except OSError as exc:
+        raise ValueError("Failed to run git %s: %s" % (" ".join(args_list), exc))
+
+
+def _lifetxt_install_root():
+    import lifetxt
+
+    return os.path.dirname(os.path.dirname(os.path.abspath(lifetxt.__file__)))
+
+
+def command_update(args):
+    """Fast-forward the running lifetxt install's git checkout.
+
+    Security/High: this is the only lifetxt command that mutates the git
+    working tree the running install lives in, and the project has no PyPI
+    distribution, so this is git-based rather than a package-manager update.
+
+    Safety rails, all fail-loud (raise ValueError, never silent):
+      - Refuses when the install is not inside a git working tree.
+      - Refuses when the working tree has any uncommitted change (tracked or
+        untracked) -- `git status --porcelain` must be empty.
+      - Refuses when HEAD is detached (must be on a real branch).
+      - Only ever runs `git fetch` (which touches only remote-tracking refs
+        and the object database, not the working tree or current branch)
+        and `git merge --ff-only` (which refuses anything that is not a
+        clean fast-forward, and never rewrites history). Never resets,
+        rebases, or force-pushes.
+      - Defaults to a dry run: fetches and reports what would happen without
+        merging. Only `--yes` performs the merge.
+      - Never runs `pip install` or any other build/setup code after
+        updating -- picking up dependency changes is left to the operator,
+        printed as an explicit follow-up instruction instead of executed.
+
+    The --repo/update.repository resolution (shared with `update-check`)
+    only chooses which ref *name* to ask for; the actual git operations
+    always go through the local `origin` (or --remote)'s already-configured,
+    user-trusted URL, never a URL derived from --repo.
+    """
+    timeout = getattr(args, "timeout", 10)
+    install_root = _lifetxt_install_root()
+
+    toplevel = _run_git_for_update(
+        ["rev-parse", "--show-toplevel"], cwd=install_root, timeout=timeout
+    )
+    if toplevel.returncode != 0:
+        raise ValueError(
+            "`lifetxt update` requires a git-based install. The running "
+            "install at %s does not appear to be inside a git working "
+            "tree." % install_root
+        )
+    repo_root = toplevel.stdout.strip()
+
+    status = _run_git_for_update(
+        ["status", "--porcelain"], cwd=repo_root, timeout=timeout
+    )
+    if status.returncode != 0:
+        raise ValueError(
+            "git status failed: %s" % (status.stderr.strip() or status.stdout.strip())
+        )
+    if status.stdout.strip():
+        raise ValueError(
+            "Refusing to update: %s has uncommitted changes. Commit, stash, "
+            "or discard them first." % repo_root
+        )
+
+    branch = _run_git_for_update(
+        ["symbolic-ref", "-q", "--short", "HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if branch.returncode != 0:
+        raise ValueError(
+            "Refusing to update: %s is not on a branch (detached HEAD). "
+            "Check out a branch first." % repo_root
+        )
+    branch_name = branch.stdout.strip()
+
+    remote = _reject_option_like_git_arg(
+        getattr(args, "remote", None) or "origin", "remote"
+    )
+    ref = getattr(args, "ref", None)
+    if not ref:
+        repo = _resolve_update_check_repo(args, _config(args))
+        latest_text, _kind, _url = _github_latest_release_or_tag(repo, timeout=timeout)
+        if latest_text is None:
+            write_text(
+                None,
+                "No published releases or tags found for %s; nothing to "
+                "update to. Pass --ref to update to a specific branch or "
+                "commit.\n" % repo,
+            )
+            return 0
+        ref = latest_text
+    _reject_option_like_git_arg(ref, "ref")
+
+    fetch = _run_git_for_update(["fetch", remote, ref], cwd=repo_root, timeout=timeout)
+    if fetch.returncode != 0:
+        raise ValueError(
+            "git fetch %s %s failed: %s"
+            % (remote, ref, fetch.stderr.strip() or fetch.stdout.strip())
+        )
+
+    current = _run_git_for_update(
+        ["rev-parse", "HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+    target = _run_git_for_update(
+        ["rev-parse", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+
+    result = OrderedDict(
+        [
+            ("install_root", repo_root),
+            ("branch", branch_name),
+            ("remote", remote),
+            ("ref", ref),
+            ("current_commit", current),
+            ("target_commit", target),
+        ]
+    )
+    fmt = getattr(args, "format", "text")
+
+    def emit(status_key, message):
+        result["status"] = status_key
+        if fmt == "json":
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, message + "\n")
+
+    if current == target:
+        emit(
+            "up_to_date",
+            "Already up to date on %s (%s)." % (branch_name, current[:12]),
+        )
+        return 0
+
+    if not getattr(args, "yes", False):
+        emit(
+            "update_available_dry_run",
+            "Update available on %s: %s -> %s (fetched %s from %s). Dry "
+            "run: no changes made. Re-run with --yes to fast-forward."
+            % (branch_name, current[:12], target[:12], ref, remote),
+        )
+        return 0
+
+    merge = _run_git_for_update(
+        ["merge", "--ff-only", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if merge.returncode != 0:
+        raise ValueError(
+            "git merge --ff-only failed (not a fast-forward): %s"
+            % (merge.stderr.strip() or merge.stdout.strip())
+        )
+
+    emit(
+        "updated",
+        "Updated %s: %s -> %s. Dependencies may have changed -- run "
+        'pip install -e "." (or the extras you use) to pick them up.'
+        % (branch_name, current[:12], target[:12]),
+    )
     return 0
 
 

@@ -2196,6 +2196,45 @@ python -m lifetxt update-check --repo your-github-username/your-fork
 network timeout を変更するには `--timeout SECONDS` を使用します
 (既定値 `10`)。
 
+`update` は実行中の install 自身の git checkout を fast-forward します。
+lifetxt には PyPI 配布が無いため、更新は git で行います。**lifetxt が
+git clone からインストールされている場合のみ動作します**
+(`python -m pip install -e .`、公式に案内されているインストール方法)。
+既定では dry-run です。
+
+```sh
+python -m lifetxt update
+python -m lifetxt update --yes
+python -m lifetxt update --ref main --yes
+python -m lifetxt update --repo your-github-username/your-fork --yes
+```
+
+`--yes` を付けない場合、`update` は (git remote に対して読み取り専用の)
+fetch のみ行い、実際に何が変わるか — 現在の commit・目標の commit・解決
+された ref — を working tree に触れずに報告します。実際に適用するには
+`--yes` が必須です。安全策 (すべて推測ではなく明確な失敗として現れます):
+
+- 実行中の install が git working tree の中に無い場合は拒否します。
+- working tree に (tracked / untracked を問わず) 未コミットの変更が
+  1つでもある場合は拒否します (`git status --porcelain` が空である
+  必要があります)。まずコミット・stash・破棄してください。
+- `HEAD` が detached の場合は拒否します。先に branch を checkout して
+  ください。
+- 実行するのは `git fetch` と `git merge --ff-only` のみです。reset・
+  rebase・force-push・履歴の書き換えは一切行いません。fast-forward
+  できない場合は強制せず拒否します。
+- 更新後に `pip install` などの build 手順を自動実行することはありません。
+  依存関係が変わっていた場合は `pip install -e .` (または使用している
+  extras) を自分で再実行してください -- 変更を適用した際は `update` が
+  その旨を案内します。
+
+`--ref` を指定しない場合、`update` は `update-check` と同じ方法で
+target を解決します (最新公開 Release、無ければ tag。`--repo`/
+`update.repository` はこの照会先の repository のみを変更します)。
+実際の `git fetch` は常に既存のローカル git remote (既定は `origin`、
+`--remote NAME` で変更可) を通じて行われます — `--repo` は問い合わせる
+ref の名前を選ぶだけで、fetch 元の URL を変えることはありません。
+
 ## 17. `encrypt` と `decrypt`
 
 標準ライブラリのみを使った field 単位の暗号化 (journal の body、message の

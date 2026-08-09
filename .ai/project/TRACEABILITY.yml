@@ -2314,15 +2314,17 @@ traceability:
         - Record the cli-web-multiday-enhancements batch's integration into main as its own traceable step
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
-        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2102 tests, OK, run on the fully consolidated feature/cli-web-multiday-enhancements branch after all fifteen sub-PRs (two follow-up rounds) merged'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2103 tests, OK, run on the fully consolidated feature/cli-web-multiday-enhancements branch after all sixteen sub-PRs (two follow-up rounds plus one fix found during this batch''s own final /verify pass) merged'
         - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
         - ruff format --check lifetxt tests scripts (pre-existing drift in 4 unrelated files confirmed present on main already, not introduced by this batch)
         - ruff check lifetxt tests scripts -> All checks passed
+        - tests.test_traceability_gate and tests.test_change_package_closeout both pass against this branch
       release_or_deployment: >-
         This entry documents PR #208 itself: feature/cli-web-multiday-enhancements
         (Issues #186, #188, #190, #192, #194, #196, #198, #200, #202, #204, #206,
-        #209, #211, #213, #215; PRs #187, #189, #191, #193, #195, #197, #199,
-        #201, #203, #205, #207, #210, #212, #214, #216) merging into main.
+        #209, #211, #213, #215, #217; PRs #187, #189, #191, #193, #195, #197,
+        #199, #201, #203, #205, #207, #210, #212, #214, #216, #218) merging
+        into main.
       notes: >-
         Follows the multi-PR integration-branch pattern established by
         req-remote-batch-integration (#131), req-workspace-foundation-batch-
@@ -2333,7 +2335,7 @@ traceability:
         names #208, because it did not exist yet when they were written.
         Sub-PRs were merged into the integration branch via local git merge and
         push rather than GitHub's PR-merge action (blocked by this session's
-        auto-mode permission classifier); all fifteen sub-PR merges auto-detect
+        auto-mode permission classifier); all sixteen sub-PR merges auto-detect
         as "merged" on GitHub once the integration branch is pushed with their
         commits reachable from it. PR #207 (the Security/High self-update
         command) requires independent security review and Merge Authority
@@ -2351,7 +2353,12 @@ traceability:
         opt-in doctor --check-update integration, a multi-day Calendar
         day-position badge, and help-modal keyboard navigation -- all Standard
         assurance, each extending an existing capability from the first round
-        rather than introducing a new one.
+        rather than introducing a new one. #217/#218 is a read-only correctness
+        fix (update falsely reporting an available update when the resolved
+        target was actually behind, not ahead, of the current commit) found
+        during this same batch's own final /verify pass, before this PR was
+        proposed for merge -- also extending cap-lifetxt-self-update, adding
+        no new mutating git call.
       status: implemented
 
     - requirement_id: req-update-dry-run-commit-preview

@@ -2154,6 +2154,32 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-web-help-command-reference
+      capability_id: cap-web-help-command-reference
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/198
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/199
+      changed_files_or_scope:
+        - Add a searchable command reference to the Web UI's help modal, reusing the existing command catalog and matcher
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/web-help-command-reference/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference, confirmed via git stash to fail on the prior code
+        - 'manual: a real Node.js run of the extracted function source against 4 cases (unfiltered listing, filtering, TUI-only badge, empty state) -- all passed'
+        - 'live: real lifetxt serve process, GET /api/commands confirms the real 31-command catalog shape; GET / confirms the served page contains the new markup'
+        - python -m unittest tests.test_lifetxt tests.test_web_i18n tests.test_surface_runtime -> Ran 610 tests, OK (skipped=1)
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/web-help-command-reference/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, S/M-sized). Seventh implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

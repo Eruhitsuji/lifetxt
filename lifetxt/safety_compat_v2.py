@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import contextvars
 import os
 import re
+from collections import OrderedDict
 
 
 _INSTALLED = False
@@ -83,6 +84,52 @@ _RECORD_OWNED_KEYS = {
             "replaced_by",
         )
     ),
+    "ticket_event": frozenset(
+        (
+            "record",
+            "id",
+            "parent",
+            "event",
+            "author",
+            "at",
+            "sequence",
+            "transaction",
+            "ticket_revision",
+            "project",
+            "tracker",
+            "from_status",
+            "to_status",
+            "change",
+            "body",
+            "provider",
+            "ref",
+            "role",
+            "watcher",
+            "activity",
+            "assignee",
+            "version",
+            "sprint",
+        )
+    ),
+    "time_entry": frozenset(
+        (
+            "record",
+            "id",
+            "parent",
+            "user",
+            "activity",
+            "on",
+            "elapsed",
+            "sequence",
+            "event_id",
+            "created_at",
+            "project",
+            "body",
+            "source",
+            "timer_ref",
+            "corrects",
+        )
+    ),
 }
 _RECORD_LIFECYCLE_STATE_MARKERS = frozenset(("project", "risk", "issue"))
 _W106_KEY_RE = re.compile(r"^Detail key '([^']+)' is custom for type ")
@@ -93,6 +140,7 @@ def install_safety_compat_v2():
     if _INSTALLED:
         return
     _patch_record_owned_validation()
+    _patch_ticket_workflow_completion_metadata()
     _patch_cli_timezone_installer()
     _patch_doctor_dispatch()
     _patch_revision_conflict_output()
@@ -147,6 +195,79 @@ def _patch_record_owned_validation():
     validator.validate_item = validate_item
     # parser.py imports validate_item by value, so update its binding too.
     parser.validate_item = validate_item
+
+
+def _ticket_completion_date(at):
+    """Return the completion date in the active timezone for one event timestamp."""
+    from .ticket_activity import _utc_text
+    from .timezone_policy import interpret_datetime
+
+    timestamp = _utc_text(at)
+    return timestamp, interpret_datetime(timestamp).date().isoformat()
+
+
+def _patch_ticket_workflow_completion_metadata():
+    """Keep audit-safe ticket transitions aligned with generic done: semantics."""
+    from . import mutation, ticket_workflow
+    from .ticket_activity_mutation import _find_ticket, _parse_items
+
+    original = ticket_workflow.apply_ticket_activity
+    if getattr(original, "_lifetxt_completion_metadata_v2", False):
+        return
+
+    def apply_ticket_activity(
+        path,
+        ticket_id,
+        event_type,
+        author,
+        expected_revision,
+        config=None,
+        key="id",
+        detail_updates=None,
+        status=None,
+        comment=None,
+        at=None,
+        event_extra=None,
+        time_entry=None,
+        transaction_id=None,
+        dry_run=False,
+        operation=None,
+    ):
+        updates = detail_updates
+        effective_at = at
+        if status is not None:
+            snapshot = mutation.read_text_snapshot(path, allow_missing=False)
+            current = _find_ticket(_parse_items(snapshot.text, key), ticket_id, key)
+            current_status = str(getattr(current, "status", ""))
+            target_status = str(status)
+            if current_status != "[x]" and target_status == "[x]":
+                effective_at, completion_date = _ticket_completion_date(at)
+                updates = OrderedDict(detail_updates or {})
+                updates["done"] = completion_date
+            elif current_status == "[x]" and target_status != "[x]":
+                updates = OrderedDict(detail_updates or {})
+                updates["done"] = None
+        return original(
+            path,
+            ticket_id,
+            event_type,
+            author,
+            expected_revision,
+            config=config,
+            key=key,
+            detail_updates=updates,
+            status=status,
+            comment=comment,
+            at=effective_at,
+            event_extra=event_extra,
+            time_entry=time_entry,
+            transaction_id=transaction_id,
+            dry_run=dry_run,
+            operation=operation,
+        )
+
+    apply_ticket_activity._lifetxt_completion_metadata_v2 = True
+    ticket_workflow.apply_ticket_activity = apply_ticket_activity
 
 
 def _patch_cli_timezone_installer():

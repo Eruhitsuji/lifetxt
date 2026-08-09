@@ -6667,6 +6667,10 @@ class LifeTxtUpdateCommandCliTests(unittest.TestCase):
                 return _FakeGitResult(stdout="\n".join(lines) + "\n" if lines else "")
             if tail[:1] == ["rev-list"]:
                 return _FakeGitResult(stdout=str(state.get("rev_list_count", 2)) + "\n")
+            if tail[:2] == ["merge-base", "--is-ancestor"]:
+                return _FakeGitResult(
+                    returncode=0 if state.get("target_is_ancestor") else 1
+                )
             if tail[:1] == ["merge"]:
                 if state.get("merge_fails"):
                     return _FakeGitResult(
@@ -6705,6 +6709,23 @@ class LifeTxtUpdateCommandCliTests(unittest.TestCase):
         self.assertEqual("up_to_date", payload["status"])
         self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
         self.assertNotIn("commits", payload)
+
+    def test_target_behind_current_reports_up_to_date_not_a_false_update(self):
+        # A --ref (or a stale/older release/tag) resolving to a commit
+        # already merged into the current branch is just as much nothing-
+        # to-update as an exact match -- confirmed live against a real repo
+        # where update --ref main falsely reported "update available" when
+        # main was actually an ancestor of the current (further-along)
+        # branch, before this fix.
+        stdout, code, calls = self._run(
+            ref="main",
+            yes=True,
+            responses_overrides={"target_is_ancestor": True},
+        )
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+        self.assertTrue(any(c[1:3] == ["merge-base", "--is-ancestor"] for c in calls))
 
     def test_dry_run_lists_the_pending_commits(self):
         stdout, code, calls = self._run(
@@ -6759,6 +6780,8 @@ class LifeTxtUpdateCommandCliTests(unittest.TestCase):
                 return _FakeGitResult(stdout="aaa111\n")
             if tail == ["rev-parse", "FETCH_HEAD"]:
                 return _FakeGitResult(stdout="bbb222\n")
+            if tail[:2] == ["merge-base", "--is-ancestor"]:
+                return _FakeGitResult(returncode=1)
             if tail[:1] == ["log"] or tail[:1] == ["rev-list"]:
                 return _FakeGitResult(returncode=128, stderr="fatal: bad range")
             raise AssertionError("Unexpected git invocation: %s" % cmd)

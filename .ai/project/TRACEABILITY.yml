@@ -1256,7 +1256,7 @@ traceability:
         too small to stand alone). Web/MCP/Remote surface timezone context and
         a per-workspace timezone configuration override are explicitly out of
         scope and recorded as follow-up candidates, not gaps in this
-        capability. pull_request is filled in once the pull_request
+        capability. pull_request is filled in once the pull request
         implementing this entry is opened.
       status: implemented
 
@@ -1295,7 +1295,7 @@ traceability:
         calling mutation resolved as its write target -- this issue only
         makes the descriptive role label available; it does not add or
         change any write-routing behavior. pull_request is filled in once
-        the pull_request implementing this entry (into the integration
+        the pull request implementing this entry (into the integration
         branch) is opened.
       status: implemented
 
@@ -1328,7 +1328,7 @@ traceability:
         registry entries are not moved by this change; an archived item's
         version:/sprint: detail values are left unchanged. This is recorded
         as a deliberate limitation (see cap-project-archive-workflow notes),
-        not an omission. pull_request is filled in once the pull_request
+        not an omission. pull_request is filled in once the pull request
         implementing this entry (into the integration branch) is opened.
       status: implemented
 
@@ -1409,7 +1409,7 @@ traceability:
         context, notifications, duplicate project definitions, cross-file
         tasks, archived/renamed projects) either already handled or with no
         evidence of a gap; this is the one concrete, evidence-backed finding.
-        pull_request is filled in once the pull_request implementing this
+        pull_request is filled in once the pull request implementing this
         entry (into the integration branch) is opened.
       status: implemented
 
@@ -1451,7 +1451,7 @@ traceability:
         every invisible ticket from this function's items argument by the
         time it runs -- distinguishing missing from private/archived would
         require context this function does not and should not have.
-        pull_request is filled in once the pull_request implementing this
+        pull_request is filled in once the pull request implementing this
         entry (into the integration branch) is opened.
       status: implemented
 

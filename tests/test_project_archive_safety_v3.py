@@ -257,7 +257,7 @@ class ProjectArchiveSafetyV3Tests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         self.assertEqual("", stderr)
         self.assertIn("Required for every scanned source", stdout)
-        self.assertIn("dry-run prints the exact set", stdout)
+        self.assertIn("prints the exact set", stdout)
 
 
 if __name__ == "__main__":

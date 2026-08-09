@@ -88,6 +88,40 @@ class GlobalSearchTests(unittest.TestCase):
         self.assertEqual(result["total"], len(rows))
 
 
+class GlobalSearchFuzzyTests(unittest.TestCase):
+    def setUp(self):
+        self.items, _ = parse_text(SAMPLE)
+
+    def search(self, term, **kw):
+        return global_search.global_search(self.items, CONFIG, term, **kw)
+
+    def test_default_behavior_is_unaffected_by_a_typo(self):
+        # "Desgin" is a transposed typo for "Design" (T1's title).
+        self.assertEqual(0, self.search("Desgin")["total"])
+
+    def test_fuzzy_true_matches_a_typo(self):
+        result = self.search("Desgin", fuzzy=True)
+        names = [r["name"] for r in result["groups"].get("item", [])]
+        self.assertIn("T1", names)
+
+    def test_fuzzy_true_ranks_exact_matches_before_approximate_ones(self):
+        # T1's title is an exact substring match for "design"; T2's is only
+        # a near miss (a deleted letter) and must be ranked after it.
+        items, diagnostics = parse_text("[ ] T Design id:T1\n[ ] T Desgn id:T2\n")
+        self.assertEqual([], diagnostics)
+        result = global_search.global_search(items, CONFIG, "design", fuzzy=True)
+        names = [r["name"] for r in result["groups"]["item"]]
+        self.assertEqual(["T1", "T2"], names)
+
+    def test_fuzzy_true_is_deterministic(self):
+        first = self.search("Desgin", fuzzy=True)
+        second = self.search("Desgin", fuzzy=True)
+        self.assertEqual(first, second)
+
+    def test_fuzzy_defaults_to_false(self):
+        self.assertEqual(self.search("Desgin"), self.search("Desgin", fuzzy=False))
+
+
 class GlobalSearchProposalTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

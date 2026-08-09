@@ -322,6 +322,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         recipient=None,
         text=None,
         q=None,
+        fuzzy=False,
         after=None,
         before=None,
         sort="line",
@@ -356,6 +357,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             team_members=config_team_members(app.state.config),
             team_aliases=config_team_aliases(app.state.config),
             tag_aliases=config_tag_aliases(app.state.config),
+            fuzzy=_bool_query(fuzzy),
         )
         if blocked_flag:
             key = id_key_from_config(app.state.config)

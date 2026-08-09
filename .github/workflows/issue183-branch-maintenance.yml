@@ -1,0 +1,172 @@
+name: Issue 183 branch maintenance
+
+on:
+  push:
+    branches:
+      - agent/183-project-archive-zero-byte-safety
+
+permissions:
+  contents: write
+
+jobs:
+  patch-roadmap-and-traceability:
+    if: github.event.head_commit.message == 'Run issue183 branch maintenance'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/183-project-archive-zero-byte-safety
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Update roadmap and traceability without rewriting unrelated content
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          todo_path = Path('todo.md')
+          todo = todo_path.read_text(encoding='utf-8')
+
+          old_header = 'Last updated: 2026-08-09 (updated x128)'
+          new_header = 'Last updated: 2026-08-09 (updated x129)'
+          if todo.count(old_header) != 1:
+              raise SystemExit('unexpected todo.md update header')
+          todo = todo.replace(old_header, new_header, 1)
+
+          feature_marker = 'Feature-track order after the current P0 foundation:\n\n'
+          if todo.count(feature_marker) != 1:
+              raise SystemExit('feature-track marker not unique')
+          before, rest = todo.split(feature_marker, 1)
+          feature_body, after = rest.split('\n\n---', 1)
+          numbered = re.sub(
+              r'(?m)^(\d+)\. ',
+              lambda match: '%d. ' % (int(match.group(1)) + 1),
+              feature_body,
+          )
+          incident_priority = (
+              '1. Finish the #183 production project-archive zero-byte incident '
+              'investigation and re-enable gate. Preserve the recovered incident '
+              'evidence, identify and reproduce the process or failure boundary '
+              'that truncated the primary/configuration files, prove archive '
+              'preflight and journal behavior under isolated crash/filesystem '
+              'faults, and require reviewed real-deployment evidence before '
+              '`project archive` is unblocked in production.\n'
+          )
+          todo = before + feature_marker + incident_priority + numbered + '\n\n---' + after
+
+          p0_marker = '## P0: Release Safety and Correctness\n\n'
+          if todo.count(p0_marker) != 1:
+              raise SystemExit('P0 marker not unique')
+          incident_item = (
+              '- [ ] Complete the #183 project-archive incident root-cause and '
+              'production re-enable investigation. Production was recovered '
+              'byte-for-byte after the 2026-08-09 zero-byte event, and the local '
+              'project-archive path is being hardened so dry-run validates supplied '
+              'revision tokens, live project archive requires an exact revision for '
+              'every scanned source plus the destination, parser errors fail before '
+              'write-side work, and a zero-byte active writable source is treated '
+              'as an incident signal. Next reproduce the actual truncation mechanism '
+              'in an isolated workspace; add process/writer attribution around '
+              'authoritative replacements and backup creation; exercise config-load '
+              'failure, empty/truncated source, stale revision, external-reference '
+              'failure, disk-full, permission, abrupt-exit, backup-copy, journal '
+              'prepare/commit/compensation, and restore boundaries; verify no rejected '
+              'or dry-run path changes source, destination, config, backup, undo, or '
+              'transaction evidence; and run the final candidate against a disposable '
+              'deployment before production is unblocked. As a follow-up feature, '
+              'define a versioned `archive-plan-v1` artifact containing the exact '
+              'source/destination revisions, selected IDs, reference effects, '
+              'generated recovery/journal location, and writer/process provenance so '
+              'operators can persist, review, and later apply the same plan rather '
+              'than copying revision flags from terminal output. Keep generic '
+              '`archive` backward compatibility separate from the stricter '
+              'workspace-aware Project archive contract.\n'
+          )
+          todo = todo.replace(p0_marker, p0_marker + incident_item, 1)
+          todo_path.write_text(todo, encoding='utf-8', newline='\n')
+
+          trace_path = Path('.ai/project/TRACEABILITY.yml')
+          trace = trace_path.read_text(encoding='utf-8')
+          insertion_marker = '\nrequired_chain:\n'
+          if trace.count(insertion_marker) != 1:
+              raise SystemExit('traceability insertion marker not unique')
+          if 'requirement_id: req-project-archive-zero-byte-safety' in trace:
+              raise SystemExit('traceability entry already exists')
+          chain = '''
+
+    - requirement_id: req-project-archive-zero-byte-safety
+      capability_id: cap-project-archive-workflow
+      epic: P0 Release Safety and Correctness / P1 Project and Portfolio Management
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/183
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/184
+      changed_files_or_scope:
+        - Add a read-only archive preflight layer that validates revision syntax and supplied revision values before dry-run or write-side backup work
+        - Require complete scanned-source plus destination revision sets for live project archive while preserving generic archive's optional-revision compatibility
+        - Reject parser-error sources/destinations and zero-byte active writable Project sources before candidate execution
+        - Print the exact live revision set from project archive dry-run and document the requirement in CLI help
+        - lifetxt/archive_safety_v3.py
+        - lifetxt/entrypoint.py
+        - tests/test_project_archive_safety_v3.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_project_archive_safety_v3.py covers dry-run immutability, empty/stale revision rejection, complete live revision requirements, successful exact-revision archive, parser-error refusal, zero-byte primary refusal, pre-backup stale-revision refusal, generic archive compatibility, and help text
+        - 'production recovery evidence: reconstructed primary matched the lost final SHA-256 af6c74885dae416d1706f3ecd38f53d874163a9e9476b02a87b6eb11b94e4f2a byte-for-byte; restored workspace check returned OK: 281 item(s), 281/281 IDs, ticket history ok=true with five events, and Web/Calendar services healthy'
+        - GitHub Actions Python 3.10/3.11/3.12 plus no-Web matrix on PR #184
+      release_or_deployment: >-
+        Safety behavior change: live `project archive` now requires explicit exact
+        revisions for every scanned source and the destination; dry-run prints the
+        required set. Generic `archive` keeps its previous optional-revision behavior.
+        Production project archive remains blocked until #183's root-cause and
+        disposable-deployment re-enable criteria are completed.
+      notes: >-
+        The 2026-08-09 zero-byte truncation mechanism is not established by this
+        change. Code inspection confirms the historical dry-run returned before
+        `_pre_write_backup()` and multi-target commit, and `read_text_snapshot()` is
+        read-only. The concrete defect fixed here is that dry-run previously returned
+        before parsing/validating supplied revision tokens, allowing an empty
+        `PATH=` revision to look like a successful safety preview. The remaining
+        root-cause investigation stays open in #183 and todo.md instead of being
+        mislabeled as resolved by defensive archive hardening.
+      status: implemented
+'''
+          trace = trace.replace(insertion_marker, chain + insertion_marker, 1)
+          trace_path.write_text(trace, encoding='utf-8', newline='\n')
+          PY
+
+      - name: Validate mechanical edits
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          todo = Path('todo.md').read_text(encoding='utf-8')
+          assert 'Last updated: 2026-08-09 (updated x129)' in todo
+          assert '#183 project-archive incident root-cause' in todo
+          yaml.safe_load(Path('.ai/project/TRACEABILITY.yml').read_text(encoding='utf-8'))
+          print('roadmap + traceability: OK')
+          PY
+          git diff --check
+
+      - name: Commit branch metadata updates
+        shell: bash
+        run: |
+          git config user.name 'OpenAI agent'
+          git config user.email 'openai-agent@users.noreply.github.com'
+          git add todo.md .ai/project/TRACEABILITY.yml
+          git commit -m 'Update roadmap and traceability for archive safety (#183) [skip ci]'
+          git push origin HEAD:agent/183-project-archive-zero-byte-safety
+
+      - name: Remove accidental temporary refs
+        shell: bash
+        continue-on-error: true
+        run: |
+          git push origin --delete \
+            agent/183-project-archive-zero-byte-safety-temp \
+            agent/183-project-archive-zero-byte-safety-copy \
+            DO-NOT-USE

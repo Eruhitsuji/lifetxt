@@ -2637,6 +2637,31 @@ def build_parser():
     doctor_cmd.add_argument(
         "--pretty", action="store_true", help="Pretty-print JSON output."
     )
+    doctor_cmd.add_argument(
+        "--check-update",
+        action="store_true",
+        help=(
+            "Also check GitHub for a newer lifetxt release or tag "
+            "(read-only network request; adds an 'update' row). Off by "
+            "default so plain doctor never requires network access."
+        ),
+    )
+    doctor_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "Repository --check-update queries. Overrides the "
+            "update.repository config key and the built-in default "
+            "(Eruhitsuji/lifetxt). Ignored without --check-update."
+        ),
+    )
+    doctor_cmd.add_argument(
+        "--update-timeout",
+        type=int,
+        default=5,
+        metavar="SECONDS",
+        help="Network timeout for --check-update (default 5).",
+    )
     doctor_cmd.set_defaults(func=command_doctor)
 
     update_check_cmd = subparsers.add_parser(
@@ -7142,6 +7167,45 @@ def command_doctor(args):
     )
 
     config = _config(args)
+
+    if getattr(args, "check_update", False):
+        # Off by default: plain `doctor` must never require network access.
+        # A failure here is reported as WARN, never FAIL -- it says nothing
+        # about the health of the local install.
+        try:
+            update_repo = _resolve_update_check_repo(args, config)
+            latest_text, kind, _url = _github_latest_release_or_tag(
+                update_repo, timeout=getattr(args, "update_timeout", 5)
+            )
+        except ValueError as exc:
+            add_check("WARN", "update", "Could not check for updates: %s" % exc)
+        else:
+            if latest_text is None:
+                add_check(
+                    "OK",
+                    "update",
+                    "No published releases or tags found for %s" % update_repo,
+                )
+            else:
+                latest = _parse_simple_version(latest_text)
+                current_version = _parse_simple_version(__version__)
+                if latest is None or current_version is None:
+                    add_check(
+                        "OK",
+                        "update",
+                        "Found %s %s but could not parse it as a version"
+                        % (kind, latest_text),
+                    )
+                elif latest > current_version:
+                    add_check(
+                        "WARN",
+                        "update",
+                        "Update available: %s -> %s -- run: lifetxt update"
+                        % (__version__, latest_text),
+                    )
+                else:
+                    add_check("OK", "update", "Up to date: %s" % __version__)
+
     arg_paths = getattr(args, "paths", None) or []
     life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
         "life.txt"

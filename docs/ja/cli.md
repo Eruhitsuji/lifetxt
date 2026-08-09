@@ -2163,6 +2163,7 @@ python -m lifetxt doctor
 |---|---|
 | `python` | Python 3.10+ (未満は FAIL) |
 | `system` | lifetxt version、Python の詳細 version、OS/platform (情報表示) |
+| `update` | `--check-update` 使用時のみ: 新しい GitHub release/tag があるか (あれば WARN、check 自体の失敗も WARN) |
 | `life.txt` | 設定または既定の life.txt file が存在し読み取り可能か |
 | `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
 | `disk` | life.txt file のある volume の空き容量 (100 MiB 未満で WARN) |
@@ -2175,6 +2176,21 @@ python -m lifetxt doctor
 (Python version が古い、または file が存在しない/読み取れない場合)。
 optional dependency の不足は `WARN` であり、終了コードには影響しません。
 機械可読な出力には `--format json` を使用してください。
+
+`--check-update` を付けると `update-check` と同じロジックを使う `update` 行
+が追加されます (既定では無効なので、通常の `doctor` は network access を
+必要としません)。
+
+```sh
+python -m lifetxt doctor --check-update
+python -m lifetxt doctor --check-update --repo your-github-username/your-fork
+```
+
+新しい release/tag があっても、optional dependency 不足と同様に `WARN`
+であり `doctor` の終了コードには影響しません。check 中の network / API
+の失敗も `doctor` 全体を失敗させず `WARN` (`Could not check for updates:
+...`) として報告されます。`--update-timeout SECONDS` (既定 `5`) でこの
+check の上限時間を設定できます。
 
 `update-check` は実行中の version と、repository の最新の GitHub Release
 (未公開なら最新の tag) を比較します。既定の repository はこの project 自身

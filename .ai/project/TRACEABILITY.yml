@@ -102,7 +102,7 @@ traceability:
       tests_or_evidence:
         - 'ruff format --check lifetxt tests scripts -> 240 files already formatted'
         - ruff check lifetxt tests scripts
-        - YAML project records parse successfully
+        - YAML parse of edited project records
         - Ruff 0.16.1 parsed pyproject.toml while running the configured lint selection
         - python -m lifetxt check examples/minimal_life.txt
       release_or_deployment: null

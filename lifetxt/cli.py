@@ -7089,7 +7089,21 @@ def command_update(args):
         else:
             write_text(None, message + "\n")
 
-    if current == target:
+    # Equal commits are the common no-op-fetch case (cheap to check without a
+    # subprocess call). A --ref (or a stale/older release/tag) can also
+    # resolve to a commit that is already an ancestor of HEAD -- "behind",
+    # not "ahead" -- which is just as much nothing-to-update as being equal;
+    # merge-base --is-ancestor covers both without assuming target is newer.
+    already_merged = current == target
+    if not already_merged:
+        ancestor_check = _run_git_for_update(
+            ["merge-base", "--is-ancestor", target, current],
+            cwd=repo_root,
+            timeout=timeout,
+        )
+        already_merged = ancestor_check.returncode == 0
+
+    if already_merged:
         emit(
             "up_to_date",
             "Already up to date on %s (%s)." % (branch_name, current[:12]),

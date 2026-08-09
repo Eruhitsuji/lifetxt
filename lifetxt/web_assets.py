@@ -779,6 +779,17 @@ HTML_PAGE = r"""<!doctype html>
     .modal table { width: 100%; border-collapse: collapse; font-size: .88rem; }
     .modal td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
     .modal td:first-child { color: var(--muted); width: 7rem; white-space: nowrap; }
+    .help-command-search { width: 100%; margin: 0 0 .6rem; }
+    .help-command-list { display: grid; gap: .05rem; max-height: 40vh; overflow-y: auto; }
+    .help-command-row { padding: .35rem .1rem; border-bottom: 1px solid var(--line); font-size: .85rem; cursor: pointer; }
+    .help-command-row.focus, .help-command-row:hover { background: var(--soft); }
+    .help-command-row .help-command-usage { font-weight: 600; }
+    .help-command-row .help-command-summary { color: var(--muted); display: block; margin-top: .1rem; }
+    .help-command-row .help-command-badge {
+      display: inline-block; margin-left: .4rem; padding: 0 .35rem; border-radius: .3rem;
+      font-size: .68rem; background: var(--soft); color: var(--muted);
+    }
+    .help-command-empty { color: var(--muted); font-size: .85rem; padding: .4rem .1rem; }
     .notif-permission { display: flex; align-items: center; gap: .4rem; font-size: .82rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
     .notif-perm-granted { color: var(--ok); }
     .notif-perm-denied  { color: var(--danger); }
@@ -1237,6 +1248,10 @@ HTML_PAGE = r"""<!doctype html>
     .cal-entry.cal-overdue { background: var(--danger-soft); }
     .cal-entry.cal-due-soon { background: var(--warn-soft); }
     .cal-entry-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .cal-entry-span {
+      flex: 0 0 auto; font-size: .6rem; color: var(--muted); background: var(--soft);
+      border-radius: .3rem; padding: 0 .3rem; margin-left: auto;
+    }
     .cal-entry-dot { flex: 0 0 auto; width: .5rem; height: .5rem; border-radius: 50%; }
     .cal-entry-dot.t-T { background: #4092d2; } .cal-entry-dot.t-E { background: #be5cd6; }
     .cal-entry-dot.t-D { background: #e05a5a; } .cal-entry-dot.t-R { background: #e0a03c; }
@@ -2611,6 +2626,11 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
+      <h3 style="margin-top:1.25rem">Commands</h3>
+      <p class="modal-hint">Search the same slash-command set as the TUI's /help command.</p>
+      <input id="help-command-search" class="help-command-search" type="text"
+        placeholder="Search commands (name, alias, or summary)…" oninput="renderHelpModalCommands()">
+      <div id="help-command-list" class="help-command-list" data-no-i18n></div>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
     </div>
   </div>
@@ -2774,6 +2794,11 @@ HTML_PAGE = r"""<!doctype html>
         "Copy Markdown": "Markdownをコピー",
         "Copy Line Number": "行番号をコピー",
         "Keyboard shortcuts": "キーボードショートカット",
+        "Commands": "コマンド",
+        "Search the same slash-command set as the TUI's /help command.": "TUIの /help と同じスラッシュコマンド一覧を検索できます。",
+        "Search commands (name, alias, or summary)…": "コマンドを検索(名前・エイリアス・概要)…",
+        "No command matches. Try a different search.": "一致するコマンドがありません。別のキーワードで検索してください。",
+        "TUI only": "TUI専用",
         "Command palette (actions + jump to item)": "コマンドパレット(操作 + アイテムへ移動)",
         "Close modal / palette / blur input": "モーダル/パレットを閉じる・入力を解除",
         "Create a new record or select an editable row.": "レコードを新規作成するか、編集可能な行を選択してください。",
@@ -3021,6 +3046,7 @@ HTML_PAGE = r"""<!doctype html>
         [/^(\d+)d ago$/, "$1 日前"],
         [/^(\d+) days$/, "$1 日間"],
         [/^occ #(\d+)$/, "第 $1 回"],
+        [/^Day (\d+) of (\d+)$/, "$2日間中 $1日目"],
       ],
     };
 
@@ -3730,7 +3756,8 @@ HTML_PAGE = r"""<!doctype html>
     }
     function configureAutoRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
-      const seconds = Number(firstParam(query(), ["refresh"], (isDisplayMode() || isKioskMode()) ? "60" : ""));
+      const displayFallback = String(appConfig?.web?.display_refresh || 60);
+      const seconds = Number(firstParam(query(), ["refresh"], (isDisplayMode() || isKioskMode()) ? displayFallback : ""));
       if (Number.isFinite(seconds) && seconds > 0) {
         refreshTimer = setInterval(refreshAll, seconds * 1000);
       }
@@ -5002,14 +5029,35 @@ HTML_PAGE = r"""<!doctype html>
       applyUrlToControls();
       loadAgenda();
     }
-    function _calRecordDay(record) {
-      const primary = (record.matches || [])[0] || {};
-      const raw = record.occurrence_start || primary.start || record.when || "";
-      return String(raw).slice(0, 10);
+    function _calRecordDayPlacements(record) {
+      // A record with more than one match (a multi-day all-day span, or
+      // several repeat occurrences visible in one grid) must appear on
+      // every matched day, not just the first -- each `on:` value or repeat
+      // occurrence produces its own entry in record.matches with its own
+      // `start`. Falls back to the single-day fields when matches is absent
+      // (e.g. a plain due:/do: record with no matches array at all).
+      if (record.occurrence_start) {
+        return [{day: String(record.occurrence_start).slice(0, 10), when: record.occurrence_start}];
+      }
+      const matches = record.matches || [];
+      if (!matches.length) {
+        const raw = record.when || "";
+        return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
+      }
+      const seen = new Set();
+      const placements = [];
+      for (const match of matches) {
+        const when = match.start || "";
+        const day = String(when).slice(0, 10);
+        if (!day || seen.has(day)) continue;
+        seen.add(day);
+        placements.push({day, when});
+      }
+      return placements;
     }
-    function _calEntryHtml(record) {
+    function _calEntryHtml(record, dayWhen, dayIndex, dayTotal) {
       const type = record.type || "N";
-      const when = String(record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
+      const when = String(dayWhen || record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
       const timed = when.length > 10;
       const time = timed ? when.slice(11, 16) + " " : "";
       const dueCls = agendaDueSoonClass(record);
@@ -5017,11 +5065,17 @@ HTML_PAGE = r"""<!doctype html>
       const occ = (record.occurrence_start || record.repeat_rule) ? " ↻" : "";
       const blocked = record.blocked ? " ⚡" : "";
       const title = `${time}${record.title}${occ}${blocked}`;
+      // A multi-day span (dayTotal > 1) gets a small "day X of Y" badge so
+      // the otherwise-independent cells read as one continuous event
+      // rather than several unrelated same-title entries.
+      const spanBadge = dayTotal > 1
+        ? `<span class="cal-entry-span" title="Day ${dayIndex} of ${dayTotal}">${dayIndex}/${dayTotal}</span>`
+        : "";
       return `<div class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
         (clickable ? ` onclick="event.stopPropagation();openItemByLine(${record.line})"` : "") +
         ` title="${escapeHtml((record.status ? record.status + " " : "") + when + " · " + record.title)}">` +
         `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
-        `<span class="cal-entry-title">${escapeHtml(title)}</span></div>`;
+        `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</div>`;
     }
     async function loadCalendar() {
       const node = document.getElementById("calendar");
@@ -5046,10 +5100,16 @@ HTML_PAGE = r"""<!doctype html>
       const records = data.records || [];
       const byDay = new Map();
       for (const record of records) {
-        const day = _calRecordDay(record);
-        if (!day) continue;
-        if (!byDay.has(day)) byDay.set(day, []);
-        byDay.get(day).push(record);
+        const placements = _calRecordDayPlacements(record);
+        placements.forEach((placement, i) => {
+          if (!byDay.has(placement.day)) byDay.set(placement.day, []);
+          byDay.get(placement.day).push({
+            record,
+            when: placement.when,
+            dayIndex: i + 1,
+            dayTotal: placements.length,
+          });
+        });
       }
       for (const list of byDay.values()) {
         list.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
@@ -5085,7 +5145,7 @@ HTML_PAGE = r"""<!doctype html>
         cell += `<div class="cal-daynum"><a class="cal-daylink" onclick="calOpenDay('${dayStr}')" title="Open ${escapeHtml(dayStr)} in Agenda">${day.getDate()}</a>`;
         cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
         cell += `</div><div class="cal-entries">`;
-        cell += shown.map(_calEntryHtml).join("");
+        cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal)).join("");
         if (overflow > 0) {
           cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">+${overflow} more</button>`;
         } else if (expanded && entries.length > CAL_CELL_LIMIT) {
@@ -6078,11 +6138,68 @@ HTML_PAGE = r"""<!doctype html>
         `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text)}</td></tr>`
       ).join("");
     }
+    let _helpCmdEntries = [];
+    let _helpCmdIndex = 0;
+    async function renderHelpModalCommands() {
+      const list = document.getElementById("help-command-list");
+      if (!list) return;
+      if (!COMMAND_CATALOG.length) await loadCommandCatalog();
+      const typed = document.getElementById("help-command-search")?.value || "";
+      const matches = matchingCommands(typed);
+      _helpCmdEntries = matches;
+      _helpCmdIndex = matches.length ? 0 : -1;
+      if (!matches.length) {
+        list.innerHTML = `<div class="help-command-empty">No command matches. Try a different search.</div>`;
+        return;
+      }
+      list.innerHTML = matches.map((command, i) => {
+        const usage = "/" + command.name + (command.usage ? " " + command.usage : "");
+        const alias = command.alias ? ` (/${command.alias})` : "";
+        const badge = command.web ? "" : `<span class="help-command-badge">TUI only</span>`;
+        return `<div class="help-command-row${i === _helpCmdIndex ? " focus" : ""}">` +
+          `<span class="help-command-usage">${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
+          `<span class="help-command-summary">${escapeHtml(command.summary || "")}</span>` +
+          `</div>`;
+      }).join("");
+      Array.from(list.children).forEach((row, i) => {
+        row.addEventListener("click", () => _runHelpModalCommand(i));
+      });
+    }
+    function _runHelpModalCommand(index) {
+      const command = _helpCmdEntries[index];
+      if (!command) return;
+      // Matches the command palette's own behavior: close first, then let
+      // runWebCommand's existing "/x is terminal-only" toast explain a
+      // TUI-only pick rather than silently doing nothing.
+      closeHelpModal();
+      runWebCommand("/" + command.name);
+    }
+    function _helpCmdMoveFocus(delta) {
+      if (!_helpCmdEntries.length) return;
+      _helpCmdIndex = (_helpCmdIndex + delta + _helpCmdEntries.length) % _helpCmdEntries.length;
+      const rows = document.querySelectorAll("#help-command-list .help-command-row");
+      rows.forEach((row, i) => row.classList.toggle("focus", i === _helpCmdIndex));
+      if (rows[_helpCmdIndex]) rows[_helpCmdIndex].scrollIntoView({block: "nearest"});
+    }
     function openHelpModal() {
       renderHelpModalShortcuts();
-      openManagedModal(document.getElementById("help-modal"), "button");
+      const search = document.getElementById("help-command-search");
+      if (search) search.value = "";
+      renderHelpModalCommands();
+      // Focus the search box (not the first button) so arrow-key/Enter
+      // command navigation works immediately without an extra click.
+      openManagedModal(document.getElementById("help-modal"), "#help-command-search");
     }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
+    document.addEventListener("DOMContentLoaded", () => {
+      const search = document.getElementById("help-command-search");
+      if (!search) return;
+      search.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") { e.preventDefault(); _helpCmdMoveFocus(1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); _helpCmdMoveFocus(-1); }
+        else if (e.key === "Enter") { e.preventDefault(); _runHelpModalCommand(_helpCmdIndex); }
+      });
+    });
 
     // ── Contextual hover/focus help ────────────────────────────────
     function clampNumber(value, min, max) {

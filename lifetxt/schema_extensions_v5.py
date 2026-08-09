@@ -128,6 +128,13 @@ def schema_bundle_v5():
                             },
                             "additionalProperties": True,
                         },
+                        "update": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {"type": "string"},
+                            },
+                            "additionalProperties": True,
+                        },
                         "profiles": {
                             "type": "object",
                             "additionalProperties": {"type": "object"},
@@ -187,6 +194,7 @@ def schema_samples_v5():
                         }
                     },
                     "workspace": {"max_total_source_bytes": 67108864},
+                    "update": {"repository": "Eruhitsuji/lifetxt"},
                     "defaults": {"person": "self", "timezone": "Asia/Tokyo"},
                 },
             ),

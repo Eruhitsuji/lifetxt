@@ -190,9 +190,17 @@ def _extract_config_arg(argv):
 
 
 def build_parser():
+    from . import __version__
+
     parser = argparse.ArgumentParser(
         prog="python -m lifetxt",
         description="Parser, validator, converter, and input helper for life.txt.",
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version="lifetxt %s" % __version__,
     )
     parser.add_argument(
         "--config",
@@ -2629,7 +2637,113 @@ def build_parser():
     doctor_cmd.add_argument(
         "--pretty", action="store_true", help="Pretty-print JSON output."
     )
+    doctor_cmd.add_argument(
+        "--check-update",
+        action="store_true",
+        help=(
+            "Also check GitHub for a newer lifetxt release or tag "
+            "(read-only network request; adds an 'update' row). Off by "
+            "default so plain doctor never requires network access."
+        ),
+    )
+    doctor_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "Repository --check-update queries. Overrides the "
+            "update.repository config key and the built-in default "
+            "(Eruhitsuji/lifetxt). Ignored without --check-update."
+        ),
+    )
+    doctor_cmd.add_argument(
+        "--update-timeout",
+        type=int,
+        default=5,
+        metavar="SECONDS",
+        help="Network timeout for --check-update (default 5).",
+    )
     doctor_cmd.set_defaults(func=command_doctor)
+
+    update_check_cmd = subparsers.add_parser(
+        "update-check",
+        help="Check GitHub for a newer lifetxt release or tag (read-only).",
+    )
+    update_check_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    update_check_cmd.add_argument(
+        "--timeout",
+        type=int,
+        default=10,
+        metavar="SECONDS",
+        help="Network timeout for the GitHub API request.",
+    )
+    update_check_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "GitHub repository to check, e.g. a fork's own owner/name. "
+            "Overrides the update.repository config key and the built-in "
+            "default (Eruhitsuji/lifetxt)."
+        ),
+    )
+    update_check_cmd.set_defaults(func=command_update_check)
+
+    update_cmd = subparsers.add_parser(
+        "update",
+        help=(
+            "Fast-forward the running lifetxt git install to a newer "
+            "release, tag, or ref. Requires git; dry-run by default."
+        ),
+    )
+    update_cmd.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Actually fast-forward the working tree. Without this, update "
+            "only fetches and reports what would happen."
+        ),
+    )
+    update_cmd.add_argument(
+        "--ref",
+        metavar="REF",
+        help=(
+            "Git ref (tag, branch, or commit) to update to. Defaults to "
+            "the latest published GitHub release or tag."
+        ),
+    )
+    update_cmd.add_argument(
+        "--remote",
+        metavar="NAME",
+        help="Local git remote to fetch from. Defaults to 'origin'.",
+    )
+    update_cmd.add_argument(
+        "--repo",
+        metavar="OWNER/NAME",
+        help=(
+            "GitHub repository to look up the latest release/tag from "
+            "(read-only; does not change which git remote is fetched). "
+            "Overrides the update.repository config key and the built-in "
+            "default (Eruhitsuji/lifetxt)."
+        ),
+    )
+    update_cmd.add_argument(
+        "--timeout",
+        type=int,
+        default=10,
+        metavar="SECONDS",
+        help="Timeout for the GitHub API request and each git subprocess.",
+    )
+    update_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    update_cmd.set_defaults(func=command_update)
 
     assign_cmd = subparsers.add_parser(
         "assign",
@@ -6597,7 +6711,450 @@ def command_init(args):
     return 0
 
 
+#: Optional dependencies not covered by a pyproject.toml extras group; the
+#: plain-`pip install PKG` hint is the accurate one for these.
+_STANDALONE_OPTIONAL_DEPENDENCY_HINT = "pip install %s"
+#: Optional dependencies covered by an extras group -- installing the group
+#: is the documented, correct way to get them, not `pip install PKG` alone.
+_EXTRAS_GROUP_BY_DEPENDENCY = {
+    "fastapi": "web",
+    "uvicorn": "web",
+    "textual": "tui",
+    "watchdog": "tui",
+}
+
+
+#: Repository queried by `lifetxt update-check` and `lifetxt update`.
+_UPDATE_CHECK_REPO = "Eruhitsuji/lifetxt"
+
+
+def _parse_simple_version(text):
+    """Parse a dotted numeric version into a comparable tuple.
+
+    Accepts an optional leading "v" (GitHub tag convention) and ignores any
+    pre-release or build-metadata suffix after the dotted numeric prefix
+    (e.g. "v1.2.3-rc1" -> (1, 2, 3)). This is an informational "is this
+    newer" comparison, not a strict PEP 440 or semver parser. Returns None
+    when no leading dotted-numeric prefix can be found.
+    """
+    import re
+
+    text = str(text or "").strip()
+    if text[:1] in ("v", "V"):
+        text = text[1:]
+    match = re.match(r"^(\d+(?:\.\d+)*)", text)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _github_api_get(url, timeout):
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "lifetxt-update-check",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    return urlopen(request, timeout=timeout)
+
+
+def _github_latest_release_or_tag(repo, timeout=10):
+    """Find the latest published release, falling back to the newest tag.
+
+    Returns (version_text, kind, url) where kind is "release" or "tag", or
+    (None, None, None) when the repository has no releases or tags at all.
+    Raises ValueError on a network or API failure so the caller fails loudly
+    rather than silently reporting "up to date".
+    """
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/releases/latest" % repo, timeout
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        version = payload.get("tag_name") or payload.get("name")
+        return version, "release", payload.get("html_url", "")
+    except HTTPError as exc:
+        if exc.code != 404:
+            raise ValueError("GitHub release lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub release lookup failed: %s." % exc.reason)
+
+    # No published release. Fall back to the most recently created tag.
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/tags" % repo, timeout
+        ) as response:
+            tags = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise ValueError("GitHub tag lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub tag lookup failed: %s." % exc.reason)
+    if not tags:
+        return None, None, None
+    name = tags[0].get("name")
+    return name, "tag", "https://github.com/%s/releases/tag/%s" % (repo, name)
+
+
+def _resolve_update_check_repo(args, config):
+    """Resolve which GitHub repository to check: --repo, then config, then the built-in default.
+
+    A fork should never be silently pointed at the upstream project's
+    releases: `_UPDATE_CHECK_REPO` is only the last-resort fallback, not the
+    only option. `--repo` (a one-off override) takes precedence over
+    `update.repository` (a persistent, per-install default).
+    """
+    import re
+
+    explicit = getattr(args, "repo", None)
+    configured = config_section(config, "update").get("repository")
+    repo = str(explicit or configured or _UPDATE_CHECK_REPO).strip()
+    if not re.match(r"^[^/\s]+/[^/\s]+$", repo):
+        raise ValueError(
+            "Invalid repository %r; expected OWNER/NAME (e.g. Eruhitsuji/lifetxt)."
+            % repo
+        )
+    return repo
+
+
+def command_update_check(args):
+    """Report whether a newer lifetxt release or tag exists on GitHub.
+
+    Read-only: makes one or two GET requests to the public GitHub API and
+    never writes anything or installs anything. lifetxt has no PyPI
+    distribution, so "the latest release" means the latest GitHub Release,
+    falling back to the latest tag when no Release has been published.
+    """
+    from . import __version__
+
+    current = _parse_simple_version(__version__)
+    if current is None:
+        raise ValueError(
+            "Cannot parse the running lifetxt version %r as a dotted version."
+            % __version__
+        )
+
+    repo = _resolve_update_check_repo(args, _config(args))
+    timeout = getattr(args, "timeout", 10)
+    latest_text, kind, url = _github_latest_release_or_tag(repo, timeout=timeout)
+
+    result = OrderedDict(
+        [
+            ("current_version", __version__),
+            ("repository", repo),
+            ("latest_version", latest_text),
+            ("kind", kind),
+            ("url", url or None),
+        ]
+    )
+
+    if latest_text is None:
+        result["status"] = "no_release_found"
+        message = (
+            "No published releases or tags found for %s; nothing to compare "
+            "against." % repo
+        )
+    else:
+        latest = _parse_simple_version(latest_text)
+        if latest is None:
+            result["status"] = "unparseable"
+            message = (
+                "Found %s %s but could not parse it as a version. Compare "
+                "manually at %s" % (kind, latest_text, url)
+            )
+        elif latest > current:
+            result["status"] = "update_available"
+            message = "Update available: running %s, latest %s is %s. %s" % (
+                __version__,
+                kind,
+                latest_text,
+                url,
+            )
+        elif latest < current:
+            result["status"] = "ahead_of_latest"
+            message = "Running %s, ahead of the latest published %s %s." % (
+                __version__,
+                kind,
+                latest_text,
+            )
+        else:
+            result["status"] = "up_to_date"
+            message = "Up to date: %s." % __version__
+
+    if getattr(args, "format", "text") == "json":
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, message + "\n")
+    return 0
+
+
+#: Argument-injection defense: a git ref/remote beginning with "-" could be
+#: misread as a command-line option by git itself (e.g. a tag literally
+#: named "--upload-pack=..."). Neither a real branch nor a real remote name
+#: legitimately starts with "-", so refusing this is not a functional
+#: restriction.
+def _reject_option_like_git_arg(value, label):
+    if str(value or "").startswith("-"):
+        raise ValueError(
+            "Refusing %s %r: it looks like a command-line option, not a "
+            "name." % (label, value)
+        )
+    return value
+
+
+def _run_git_for_update(args_list, cwd, timeout):
+    import subprocess
+
+    try:
+        return subprocess.run(
+            ["git"] + list(args_list),
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            # Decode explicitly as UTF-8 rather than the platform locale
+            # codec (e.g. cp932 on ja-JP Windows): git's own output is not
+            # guaranteed to be representable in that codec, and letting the
+            # default decoder raise mid-read would crash this command on a
+            # path or ref it never gets to evaluate. errors="replace" keeps
+            # this diagnostic-only -- the exact bytes are never parsed for
+            # control flow, only shown to the user or embedded in an error.
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        raise ValueError("git executable not found; `lifetxt update` requires git.")
+    except subprocess.TimeoutExpired:
+        raise ValueError("git %s timed out after %ss." % (" ".join(args_list), timeout))
+    except OSError as exc:
+        raise ValueError("Failed to run git %s: %s" % (" ".join(args_list), exc))
+
+
+def _lifetxt_install_root():
+    import lifetxt
+
+    return os.path.dirname(os.path.dirname(os.path.abspath(lifetxt.__file__)))
+
+
+#: Maximum commits listed in update's dry-run preview. Bounded so a large
+#: gap (e.g. --ref pointing far ahead) still prints a short, readable
+#: summary rather than flooding the terminal.
+_UPDATE_LOG_PREVIEW_LIMIT = 20
+
+
+def _git_commit_summary(
+    repo_root, current, target, timeout, limit=_UPDATE_LOG_PREVIEW_LIMIT
+):
+    """List commits between current and target, newest first, capped at limit.
+
+    Returns (commits, total_count). commits is a list of "hash subject"
+    strings for at most limit commits; total_count is the true number of
+    commits in the range (from git rev-list --count), so the caller can
+    report "and N more" when the list was truncated. Returns ([], 0) on any
+    git failure rather than raising -- this is a preview, not a safety
+    check, and must never block update on a log lookup that failed.
+    """
+    range_spec = "%s..%s" % (current, target)
+    log = _run_git_for_update(
+        ["log", "--oneline", "--max-count=%d" % limit, range_spec],
+        cwd=repo_root,
+        timeout=timeout,
+    )
+    if log.returncode != 0:
+        return [], 0
+    commits = [line for line in log.stdout.splitlines() if line.strip()]
+    count = _run_git_for_update(
+        ["rev-list", "--count", range_spec], cwd=repo_root, timeout=timeout
+    )
+    try:
+        total = int(count.stdout.strip()) if count.returncode == 0 else len(commits)
+    except ValueError:
+        total = len(commits)
+    return commits, total
+
+
+def command_update(args):
+    """Fast-forward the running lifetxt install's git checkout.
+
+    Security/High: this is the only lifetxt command that mutates the git
+    working tree the running install lives in, and the project has no PyPI
+    distribution, so this is git-based rather than a package-manager update.
+
+    Safety rails, all fail-loud (raise ValueError, never silent):
+      - Refuses when the install is not inside a git working tree.
+      - Refuses when the working tree has any uncommitted change (tracked or
+        untracked) -- `git status --porcelain` must be empty.
+      - Refuses when HEAD is detached (must be on a real branch).
+      - Only ever runs `git fetch` (which touches only remote-tracking refs
+        and the object database, not the working tree or current branch)
+        and `git merge --ff-only` (which refuses anything that is not a
+        clean fast-forward, and never rewrites history). Never resets,
+        rebases, or force-pushes.
+      - Defaults to a dry run: fetches and reports what would happen without
+        merging. Only `--yes` performs the merge.
+      - Never runs `pip install` or any other build/setup code after
+        updating -- picking up dependency changes is left to the operator,
+        printed as an explicit follow-up instruction instead of executed.
+
+    The --repo/update.repository resolution (shared with `update-check`)
+    only chooses which ref *name* to ask for; the actual git operations
+    always go through the local `origin` (or --remote)'s already-configured,
+    user-trusted URL, never a URL derived from --repo.
+    """
+    timeout = getattr(args, "timeout", 10)
+    install_root = _lifetxt_install_root()
+
+    toplevel = _run_git_for_update(
+        ["rev-parse", "--show-toplevel"], cwd=install_root, timeout=timeout
+    )
+    if toplevel.returncode != 0:
+        raise ValueError(
+            "`lifetxt update` requires a git-based install. The running "
+            "install at %s does not appear to be inside a git working "
+            "tree." % install_root
+        )
+    repo_root = toplevel.stdout.strip()
+
+    status = _run_git_for_update(
+        ["status", "--porcelain"], cwd=repo_root, timeout=timeout
+    )
+    if status.returncode != 0:
+        raise ValueError(
+            "git status failed: %s" % (status.stderr.strip() or status.stdout.strip())
+        )
+    if status.stdout.strip():
+        raise ValueError(
+            "Refusing to update: %s has uncommitted changes. Commit, stash, "
+            "or discard them first." % repo_root
+        )
+
+    branch = _run_git_for_update(
+        ["symbolic-ref", "-q", "--short", "HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if branch.returncode != 0:
+        raise ValueError(
+            "Refusing to update: %s is not on a branch (detached HEAD). "
+            "Check out a branch first." % repo_root
+        )
+    branch_name = branch.stdout.strip()
+
+    remote = _reject_option_like_git_arg(
+        getattr(args, "remote", None) or "origin", "remote"
+    )
+    ref = getattr(args, "ref", None)
+    if not ref:
+        repo = _resolve_update_check_repo(args, _config(args))
+        latest_text, _kind, _url = _github_latest_release_or_tag(repo, timeout=timeout)
+        if latest_text is None:
+            write_text(
+                None,
+                "No published releases or tags found for %s; nothing to "
+                "update to. Pass --ref to update to a specific branch or "
+                "commit.\n" % repo,
+            )
+            return 0
+        ref = latest_text
+    _reject_option_like_git_arg(ref, "ref")
+
+    fetch = _run_git_for_update(["fetch", remote, ref], cwd=repo_root, timeout=timeout)
+    if fetch.returncode != 0:
+        raise ValueError(
+            "git fetch %s %s failed: %s"
+            % (remote, ref, fetch.stderr.strip() or fetch.stdout.strip())
+        )
+
+    current = _run_git_for_update(
+        ["rev-parse", "HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+    target = _run_git_for_update(
+        ["rev-parse", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+
+    result = OrderedDict(
+        [
+            ("install_root", repo_root),
+            ("branch", branch_name),
+            ("remote", remote),
+            ("ref", ref),
+            ("current_commit", current),
+            ("target_commit", target),
+        ]
+    )
+    fmt = getattr(args, "format", "text")
+
+    def emit(status_key, message):
+        result["status"] = status_key
+        if fmt == "json":
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, message + "\n")
+
+    # Equal commits are the common no-op-fetch case (cheap to check without a
+    # subprocess call). A --ref (or a stale/older release/tag) can also
+    # resolve to a commit that is already an ancestor of HEAD -- "behind",
+    # not "ahead" -- which is just as much nothing-to-update as being equal;
+    # merge-base --is-ancestor covers both without assuming target is newer.
+    already_merged = current == target
+    if not already_merged:
+        ancestor_check = _run_git_for_update(
+            ["merge-base", "--is-ancestor", target, current],
+            cwd=repo_root,
+            timeout=timeout,
+        )
+        already_merged = ancestor_check.returncode == 0
+
+    if already_merged:
+        emit(
+            "up_to_date",
+            "Already up to date on %s (%s)." % (branch_name, current[:12]),
+        )
+        return 0
+
+    commits, commit_count = _git_commit_summary(repo_root, current, target, timeout)
+    result["commits"] = commits
+    result["commit_count"] = commit_count
+
+    def _commit_lines():
+        lines = ["  %s" % line for line in commits]
+        if commit_count > len(commits):
+            lines.append("  ... and %d more" % (commit_count - len(commits)))
+        return lines
+
+    if not getattr(args, "yes", False):
+        message_lines = [
+            "Update available on %s: %s -> %s (fetched %s from %s). Dry "
+            "run: no changes made. Re-run with --yes to fast-forward."
+            % (branch_name, current[:12], target[:12], ref, remote)
+        ]
+        message_lines.extend(_commit_lines())
+        emit("update_available_dry_run", "\n".join(message_lines))
+        return 0
+
+    merge = _run_git_for_update(
+        ["merge", "--ff-only", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if merge.returncode != 0:
+        raise ValueError(
+            "git merge --ff-only failed (not a fast-forward): %s"
+            % (merge.stderr.strip() or merge.stdout.strip())
+        )
+
+    message_lines = [
+        "Updated %s: %s -> %s. Dependencies may have changed -- run "
+        'pip install -e "." (or the extras you use) to pick them up.'
+        % (branch_name, current[:12], target[:12])
+    ]
+    message_lines.extend(_commit_lines())
+    emit("updated", "\n".join(message_lines))
+    return 0
+
+
 def command_doctor(args):
+    import platform
+
+    from . import __version__
+    from .doctor import optional_dependency_report
+
     checks = []
     any_fail = [False]
 
@@ -6611,8 +7168,58 @@ def command_doctor(args):
         add_check("OK", "python", "Python %d.%d" % (major, minor))
     else:
         add_check("FAIL", "python", "Python %d.%d (3.10+ required)" % (major, minor))
+    add_check(
+        "OK",
+        "system",
+        "lifetxt %s, Python %s, %s %s"
+        % (
+            __version__,
+            platform.python_version(),
+            platform.system() or "unknown OS",
+            platform.release() or "",
+        ),
+    )
 
     config = _config(args)
+
+    if getattr(args, "check_update", False):
+        # Off by default: plain `doctor` must never require network access.
+        # A failure here is reported as WARN, never FAIL -- it says nothing
+        # about the health of the local install.
+        try:
+            update_repo = _resolve_update_check_repo(args, config)
+            latest_text, kind, _url = _github_latest_release_or_tag(
+                update_repo, timeout=getattr(args, "update_timeout", 5)
+            )
+        except ValueError as exc:
+            add_check("WARN", "update", "Could not check for updates: %s" % exc)
+        else:
+            if latest_text is None:
+                add_check(
+                    "OK",
+                    "update",
+                    "No published releases or tags found for %s" % update_repo,
+                )
+            else:
+                latest = _parse_simple_version(latest_text)
+                current_version = _parse_simple_version(__version__)
+                if latest is None or current_version is None:
+                    add_check(
+                        "OK",
+                        "update",
+                        "Found %s %s but could not parse it as a version"
+                        % (kind, latest_text),
+                    )
+                elif latest > current_version:
+                    add_check(
+                        "WARN",
+                        "update",
+                        "Update available: %s -> %s -- run: lifetxt update"
+                        % (__version__, latest_text),
+                    )
+                else:
+                    add_check("OK", "update", "Up to date: %s" % __version__)
+
     arg_paths = getattr(args, "paths", None) or []
     life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
         "life.txt"
@@ -6635,18 +7242,43 @@ def command_doctor(args):
 
     import shutil
 
+    disk_check_dir = os.path.dirname(os.path.abspath(life_paths[0])) or os.getcwd()
+    try:
+        free_bytes = shutil.disk_usage(disk_check_dir).free
+    except OSError as exc:
+        add_check("WARN", "disk", "Could not check free space: %s" % exc)
+    else:
+        free_mib = free_bytes / (1024.0 * 1024.0)
+        # 100 MiB is a conservative floor: transaction journals, atomic-write
+        # temp files, and config backups all need real headroom to avoid a
+        # mid-write failure, not just enough for the life.txt file itself.
+        if free_bytes < 100 * 1024 * 1024:
+            add_check(
+                "WARN",
+                "disk",
+                "%.1f MiB free on %s (below the 100 MiB safety floor)"
+                % (free_mib, disk_check_dir),
+            )
+        else:
+            add_check("OK", "disk", "%.1f MiB free on %s" % (free_mib, disk_check_dir))
+
     for tool in ("fzf", "peco"):
         if shutil.which(tool):
             add_check("OK", tool, "Found in PATH")
         else:
             add_check("WARN", tool, "Not found (optional)")
 
-    for pkg in ("textual", "watchdog", "matplotlib", "cryptography"):
-        try:
-            __import__(pkg)
+    for pkg, installed in optional_dependency_report().items():
+        if installed:
             add_check("OK", pkg, "Installed")
-        except ImportError:
-            add_check("WARN", pkg, "Not installed (optional) -- pip install %s" % pkg)
+            continue
+        group = _EXTRAS_GROUP_BY_DEPENDENCY.get(pkg)
+        hint = (
+            'pip install -e ".[%s]"' % group
+            if group
+            else _STANDALONE_OPTIONAL_DEPENDENCY_HINT % pkg
+        )
+        add_check("WARN", pkg, "Not installed (optional) -- %s" % hint)
 
     existing_paths = [p for p in life_paths if os.path.exists(p)]
     if existing_paths:

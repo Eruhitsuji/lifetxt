@@ -261,6 +261,23 @@ def cleanup_stale_locks(records, stale_after=300.0, enabled=False, force=False):
     }
 
 
+#: Single source of truth for optional-dependency presence, shared by both
+#: `lifetxt doctor` and `lifetxt doctor --workspace-safety` so the two
+#: surfaces cannot report a different package set for the same install.
+OPTIONAL_DEPENDENCY_NAMES = (
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "textual",
+    "watchdog",
+    "jsonschema",
+    "matplotlib",
+    "cryptography",
+)
+
+
 def optional_dependency_report():
-    names = ("fastapi", "uvicorn", "httpx", "textual", "watchdog", "jsonschema")
-    return dict((name, importlib.util.find_spec(name) is not None) for name in names)
+    return dict(
+        (name, importlib.util.find_spec(name) is not None)
+        for name in OPTIONAL_DEPENDENCY_NAMES
+    )

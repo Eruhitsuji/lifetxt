@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import os
@@ -7,6 +8,8 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest import mock
+from urllib.error import HTTPError, URLError
 
 from lifetxt.diagnostic_contract import diagnostics_to_output
 from lifetxt.parser import parse_text
@@ -4163,6 +4166,124 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertIn("function loadCalendar", html)
         self.assertIn('data-view="calendar"', html)
 
+    def test_display_mode_auto_refresh_honors_configured_interval(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        start = html.index("function configureAutoRefresh")
+        end = html.index("function configureNotificationPolling")
+        body = html[start:end]
+        self.assertIn("appConfig?.web?.display_refresh", body)
+        # The old bug hardcoded "60" as the only Display/Kiosk fallback,
+        # bypassing the configured value entirely.
+        self.assertNotIn('"60"', body)
+
+    def test_calendar_places_a_record_on_every_matched_day(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # The old bug (_calRecordDay) only ever placed a record on
+        # matches[0]'s day; every other on:/repeat match was silently
+        # dropped from the calendar grid. Confirm the replacement iterates
+        # every match instead of reading only the first.
+        self.assertIn("function _calRecordDayPlacements", html)
+        self.assertNotIn("function _calRecordDay(", html)
+        start = html.index("function _calRecordDayPlacements")
+        end = html.index("function _calEntryHtml")
+        body = html[start:end]
+        self.assertIn("for (const match of matches)", body)
+        # The rendering call site must pass each entry's own day-specific
+        # `when`, not fall back to always reading matches[0] again.
+        self.assertIn(
+            "shown.map((entry) => "
+            "_calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal))",
+            html,
+        )
+
+    def test_calendar_shows_a_day_span_badge_on_multiday_records_only(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # A single-day record must never render a "day X of Y" badge; it
+        # only makes sense once a record spans more than one cell.
+        self.assertIn("cal-entry-span", html)
+        start = html.index("function _calEntryHtml")
+        end = html.index("async function loadCalendar")
+        body = html[start:end]
+        self.assertIn("dayTotal > 1", body)
+        self.assertIn("dayIndex", body)
+
+    def test_help_modal_has_a_searchable_command_reference(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # Before this feature, the help modal (opened via ?) only ever showed
+        # keyboard shortcuts -- there was no way to browse or search the
+        # slash-command catalog without already knowing Ctrl+K existed.
+        self.assertIn('id="help-command-search"', html)
+        self.assertIn('id="help-command-list"', html)
+        self.assertIn("function renderHelpModalCommands", html)
+        start = html.index("function renderHelpModalCommands")
+        end = html.index("function openHelpModal")
+        body = html[start:end]
+        # Reuses the shared catalog and matcher rather than reimplementing
+        # filtering, so it can never disagree with the command palette or
+        # /api/commands about what a command means.
+        self.assertIn("matchingCommands(typed)", body)
+        self.assertIn("loadCommandCatalog()", body)
+        self.assertIn("TUI only", body)
+        open_start = html.index("function openHelpModal")
+        open_end = html.index("function closeHelpModal")
+        open_body = html[open_start:open_end]
+        self.assertIn("renderHelpModalCommands()", open_body)
+
+    def test_help_modal_supports_keyboard_navigation(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # Up/down arrow selection plus Enter-to-run, matching the Ctrl+K
+        # command palette's existing keyboard UX (_cmdkMoveFocus).
+        self.assertIn("function _helpCmdMoveFocus", html)
+        self.assertIn("function _runHelpModalCommand", html)
+        self.assertIn('search.addEventListener("keydown"', html)
+        start = html.index('search.addEventListener("keydown"')
+        end = html.index("});", start)
+        body = html[start:end]
+        self.assertIn("ArrowDown", body)
+        self.assertIn("ArrowUp", body)
+        self.assertIn("Enter", body)
+        # Opening the modal must focus the search box (not the first button)
+        # so arrow-key navigation works without an extra click.
+        open_start = html.index("function openHelpModal")
+        open_end = html.index("function closeHelpModal")
+        open_body = html[open_start:open_end]
+        self.assertIn('"#help-command-search"', open_body)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 
@@ -5530,6 +5651,18 @@ class LifeTxtWebAppTests(unittest.TestCase):
             [item.title for item in webapp.limit_items(items, "bad")],
         )
 
+    def test_version_flag_prints_version_and_exits_zero(self):
+        from lifetxt import __version__
+
+        stdout, stderr, code = run_cli("--version")
+        self.assertEqual(0, code)
+        self.assertIn(__version__, stdout)
+        self.assertEqual("", stderr)
+
+        stdout, stderr, code = run_cli("-V")
+        self.assertEqual(0, code)
+        self.assertIn(__version__, stdout)
+
     def test_serve_help_does_not_require_web_dependencies(self):
         stdout, stderr, code = run_cli("serve", "--help")
 
@@ -6159,6 +6292,35 @@ class LifeTxtDoctorCliTests(unittest.TestCase):
             self.assertIn("check", records[0])
             self.assertIn("message", records[0])
 
+    def test_doctor_reports_version_os_and_disk_space(self):
+        from lifetxt import __version__
+
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file)
+            normalized = normalize_newlines(stdout)
+            self.assertIn(__version__, normalized)
+            self.assertIn("system", normalized)
+            self.assertIn("disk", normalized)
+
+    def test_doctor_and_workspace_safety_share_the_same_dependency_set(self):
+        from lifetxt.doctor import OPTIONAL_DEPENDENCY_NAMES, optional_dependency_report
+
+        self.assertEqual(
+            set(OPTIONAL_DEPENDENCY_NAMES), set(optional_dependency_report())
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file, "--format", "json")
+            records = json.loads(stdout)
+            checked = {row["check"] for row in records}
+            for name in OPTIONAL_DEPENDENCY_NAMES:
+                self.assertIn(name, checked)
+
     def test_doctor_fail_on_syntax_error(self):
         with tempfile.TemporaryDirectory() as tmp:
             life_file = os.path.join(tmp, "life.txt")
@@ -6168,6 +6330,627 @@ class LifeTxtDoctorCliTests(unittest.TestCase):
             normalized = normalize_newlines(stdout)
             self.assertEqual(1, code)
             self.assertIn("[XX]", normalized)
+
+    def test_doctor_omits_update_row_without_the_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file, "--format", "json")
+            records = json.loads(stdout)
+            self.assertNotIn("update", {row["check"] for row in records})
+
+    def _run_doctor_with_update(self, life_file, **extra_args):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            paths=[life_file],
+            format="json",
+            pretty=False,
+            check_update=True,
+            repo=None,
+            update_timeout=5,
+            config_data={},
+        )
+        for key, value in extra_args.items():
+            setattr(args, key, value)
+        buffer = io.StringIO()
+        with mock.patch("sys.stdout", buffer):
+            code = cli.command_doctor(args)
+        rows = {row["check"]: row for row in json.loads(buffer.getvalue())}
+        return rows, code
+
+    def test_doctor_check_update_reports_up_to_date(self):
+        from lifetxt import __version__
+
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.return_value = _FakeGithubResponse({"tag_name": __version__})
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("OK", rows["update"]["status"])
+        self.assertIn("Up to date", rows["update"]["message"])
+
+    def test_doctor_check_update_warns_when_update_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.return_value = _FakeGithubResponse({"tag_name": "v99.0.0"})
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("WARN", rows["update"]["status"])
+        self.assertIn("v99.0.0", rows["update"]["message"])
+        # Missing optional dependencies also produce WARN; an update being
+        # available must not itself flip doctor's overall exit code to fail.
+        self.assertEqual(0, code)
+
+    def test_doctor_check_update_network_failure_warns_not_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = URLError("no network")
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("WARN", rows["update"]["status"])
+        self.assertIn("Could not check for updates", rows["update"]["message"])
+        self.assertEqual(0, code)
+
+    def test_doctor_check_update_reports_no_release_found(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = [
+                    HTTPError("url", 404, "Not Found", {}, None),
+                    _FakeGithubResponse([]),
+                ]
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("OK", rows["update"]["status"])
+        self.assertIn("No published releases", rows["update"]["message"])
+
+
+class _FakeGithubResponse(object):
+    def __init__(self, payload, status=200):
+        self._payload = payload
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps(self._payload).encode("utf-8")
+
+
+def _run_update_check(format_="text", timeout=10):
+    from lifetxt import cli
+
+    args = argparse.Namespace(format=format_, timeout=timeout)
+    buffer = io.StringIO()
+    with mock.patch("sys.stdout", buffer):
+        code = cli.command_update_check(args)
+    return buffer.getvalue(), code
+
+
+class LifeTxtUpdateCheckCliTests(unittest.TestCase):
+    def test_version_parser_handles_v_prefix_and_suffix(self):
+        from lifetxt.cli import _parse_simple_version
+
+        self.assertEqual((1, 2, 3), _parse_simple_version("v1.2.3"))
+        self.assertEqual((1, 2, 3), _parse_simple_version("1.2.3-rc1"))
+        self.assertEqual((0, 1, 0), _parse_simple_version("0.1.0"))
+        self.assertIsNone(_parse_simple_version("not-a-version"))
+        self.assertIsNone(_parse_simple_version(""))
+
+    def test_reports_no_release_found_when_repository_has_neither(self):
+        from lifetxt import cli
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            stdout, code = _run_update_check()
+        self.assertEqual(0, code)
+        self.assertIn("No published releases or tags found", stdout)
+
+    def test_reports_update_available_from_a_release(self):
+        from lifetxt import __version__, cli
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.return_value = _FakeGithubResponse(
+                {
+                    "tag_name": "v99.0.0",
+                    "html_url": "https://example.test/releases/v99.0.0",
+                }
+            )
+            stdout, code = _run_update_check(format_="json")
+        self.assertEqual(0, code)
+        payload = json.loads(stdout)
+        self.assertEqual(__version__, payload["current_version"])
+        self.assertEqual("v99.0.0", payload["latest_version"])
+        self.assertEqual("release", payload["kind"])
+        self.assertEqual("update_available", payload["status"])
+        opener.assert_called_once()
+
+    def test_falls_back_to_latest_tag_when_no_release_is_published(self):
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([{"name": "v0.0.1"}]),
+            ]
+            stdout, code = _run_update_check(format_="json")
+        self.assertEqual(0, code)
+        payload = json.loads(stdout)
+        self.assertEqual("v0.0.1", payload["latest_version"])
+        self.assertEqual("tag", payload["kind"])
+        # 0.0.1 is older than the running 0.1.0 baseline.
+        self.assertEqual("ahead_of_latest", payload["status"])
+
+    def test_reports_up_to_date_when_versions_match(self):
+        from lifetxt import __version__
+
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.return_value = _FakeGithubResponse({"tag_name": __version__})
+            stdout, code = _run_update_check(format_="json")
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+
+    def test_non_404_http_error_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="text", timeout=10)
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = HTTPError("url", 500, "Server Error", {}, None)
+            with self.assertRaises(ValueError):
+                cli.command_update_check(args)
+
+    def test_network_error_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="text", timeout=10)
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = URLError("no network")
+            with self.assertRaises(ValueError):
+                cli.command_update_check(args)
+
+    def test_update_check_is_wired_into_the_real_cli(self):
+        from lifetxt import cli
+
+        parser = cli.build_parser()
+        args = parser.parse_args(["update-check", "--format", "json"])
+        self.assertIs(cli.command_update_check, args.func)
+
+    def test_repo_flag_overrides_the_built_in_default(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(format="json", timeout=10, repo="someone/their-fork")
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("someone/their-fork", payload["repository"])
+        called_url = opener.call_args_list[0][0][0].full_url
+        self.assertIn("someone/their-fork", called_url)
+
+    def test_configured_repository_is_used_when_no_flag_is_given(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            format="json",
+            timeout=10,
+            repo=None,
+            config_data={"update": {"repository": "forked-owner/lifetxt"}},
+        )
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("forked-owner/lifetxt", payload["repository"])
+
+    def test_repo_flag_takes_precedence_over_configured_repository(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            format="json",
+            timeout=10,
+            repo="cli-owner/repo",
+            config_data={"update": {"repository": "configured-owner/repo"}},
+        )
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            opener.side_effect = [
+                HTTPError("url", 404, "Not Found", {}, None),
+                _FakeGithubResponse([]),
+            ]
+            buffer = io.StringIO()
+            with mock.patch("sys.stdout", buffer):
+                cli.command_update_check(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual("cli-owner/repo", payload["repository"])
+
+    def test_no_flag_or_config_falls_back_to_the_built_in_default(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(repo=None, config_data={})
+        self.assertEqual("Eruhitsuji/lifetxt", cli._resolve_update_check_repo(args, {}))
+
+    def test_invalid_repo_format_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(repo="not-a-valid-repo-format")
+        with self.assertRaises(ValueError):
+            cli._resolve_update_check_repo(args, {})
+
+
+class _FakeGitResult(object):
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class LifeTxtUpdateCommandCliTests(unittest.TestCase):
+    """command_update, exercised with subprocess.run mocked.
+
+    Live, unmocked end-to-end verification (dry run, real --yes fast-forward,
+    dirty-tree refusal, detached-HEAD refusal, and the argument-injection
+    guard) was performed separately against a real disposable clone of this
+    repository; see the PR description / traceability record. These tests
+    cover branch logic and failure modes that would be slow or destructive
+    to reproduce against a real checkout on every run.
+    """
+
+    def _run(self, responses_overrides=None, **arg_overrides):
+        from lifetxt import cli
+
+        calls = []
+        # rev-parse is called twice with different subcommands (--show-toplevel,
+        # then HEAD and FETCH_HEAD); use a stateful dispatcher keyed by the
+        # full argv tail instead of just the first subcommand where needed.
+        args = argparse.Namespace(
+            yes=False,
+            ref=None,
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="json",
+            config_data={},
+        )
+        for key, value in arg_overrides.items():
+            setattr(args, key, value)
+
+        state = {"current": "aaa111", "target": "bbb222"}
+        state.update(responses_overrides or {})
+
+        def run(cmd, **kwargs):
+            calls.append(cmd)
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout=state.get("status_output", ""))
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                if state.get("detached"):
+                    return _FakeGitResult(returncode=1)
+                return _FakeGitResult(stdout="main\n")
+            if tail[:1] == ["fetch"]:
+                if state.get("fetch_fails"):
+                    return _FakeGitResult(
+                        returncode=1, stderr="couldn't find remote ref"
+                    )
+                return _FakeGitResult(stdout="")
+            if tail == ["rev-parse", "HEAD"]:
+                return _FakeGitResult(stdout=state["current"] + "\n")
+            if tail == ["rev-parse", "FETCH_HEAD"]:
+                return _FakeGitResult(stdout=state["target"] + "\n")
+            if tail[:1] == ["log"]:
+                lines = state.get(
+                    "log_lines", ["bbb222 Second commit", "ccc333 First commit"]
+                )
+                return _FakeGitResult(stdout="\n".join(lines) + "\n" if lines else "")
+            if tail[:1] == ["rev-list"]:
+                return _FakeGitResult(stdout=str(state.get("rev_list_count", 2)) + "\n")
+            if tail[:2] == ["merge-base", "--is-ancestor"]:
+                return _FakeGitResult(
+                    returncode=0 if state.get("target_is_ancestor") else 1
+                )
+            if tail[:1] == ["merge"]:
+                if state.get("merge_fails"):
+                    return _FakeGitResult(
+                        returncode=1, stderr="not possible to fast-forward"
+                    )
+                return _FakeGitResult(stdout="")
+            raise AssertionError("Unexpected git invocation: %s" % cmd)
+
+        buffer = io.StringIO()
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("sys.stdout", buffer):
+                code = cli.command_update(args)
+        return buffer.getvalue(), code, calls
+
+    def test_dry_run_reports_available_update_without_merging(self):
+        stdout, code, calls = self._run(ref="v1.2.3")
+        payload = json.loads(stdout)
+        self.assertEqual(0, code)
+        self.assertEqual("update_available_dry_run", payload["status"])
+        self.assertEqual("aaa111", payload["current_commit"])
+        self.assertEqual("bbb222", payload["target_commit"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+
+    def test_yes_flag_performs_the_fast_forward_merge(self):
+        stdout, code, calls = self._run(ref="v1.2.3", yes=True)
+        payload = json.loads(stdout)
+        self.assertEqual(0, code)
+        self.assertEqual("updated", payload["status"])
+        self.assertTrue(any(c[1:2] == ["merge"] for c in calls))
+
+    def test_already_up_to_date_does_not_fetch_or_merge_state_further(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3", yes=True, responses_overrides={"target": "aaa111"}
+        )
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+        self.assertNotIn("commits", payload)
+
+    def test_target_behind_current_reports_up_to_date_not_a_false_update(self):
+        # A --ref (or a stale/older release/tag) resolving to a commit
+        # already merged into the current branch is just as much nothing-
+        # to-update as an exact match -- confirmed live against a real repo
+        # where update --ref main falsely reported "update available" when
+        # main was actually an ancestor of the current (further-along)
+        # branch, before this fix.
+        stdout, code, calls = self._run(
+            ref="main",
+            yes=True,
+            responses_overrides={"target_is_ancestor": True},
+        )
+        payload = json.loads(stdout)
+        self.assertEqual("up_to_date", payload["status"])
+        self.assertFalse(any(c[1:2] == ["merge"] for c in calls))
+        self.assertTrue(any(c[1:3] == ["merge-base", "--is-ancestor"] for c in calls))
+
+    def test_dry_run_lists_the_pending_commits(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3",
+            responses_overrides={
+                "log_lines": ["bbb222 Second commit", "ccc333 First commit"],
+                "rev_list_count": 2,
+            },
+        )
+        payload = json.loads(stdout)
+        self.assertEqual(2, payload["commit_count"])
+        self.assertEqual(
+            ["bbb222 Second commit", "ccc333 First commit"], payload["commits"]
+        )
+        self.assertTrue(any(c[1:2] == ["log"] for c in calls))
+
+    def test_dry_run_truncates_a_long_commit_list_with_a_count(self):
+        stdout, code, calls = self._run(
+            ref="v1.2.3",
+            format="text",
+            responses_overrides={
+                "log_lines": ["h%d commit %d" % (i, i) for i in range(20)],
+                "rev_list_count": 137,
+            },
+        )
+        self.assertIn("... and 117 more", stdout)
+
+    def test_commit_log_failure_does_not_block_the_dry_run(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="json",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                return _FakeGitResult(stdout="main\n")
+            if tail[:1] == ["fetch"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["rev-parse", "HEAD"]:
+                return _FakeGitResult(stdout="aaa111\n")
+            if tail == ["rev-parse", "FETCH_HEAD"]:
+                return _FakeGitResult(stdout="bbb222\n")
+            if tail[:2] == ["merge-base", "--is-ancestor"]:
+                return _FakeGitResult(returncode=1)
+            if tail[:1] == ["log"] or tail[:1] == ["rev-list"]:
+                return _FakeGitResult(returncode=128, stderr="fatal: bad range")
+            raise AssertionError("Unexpected git invocation: %s" % cmd)
+
+        buffer = io.StringIO()
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("sys.stdout", buffer):
+                code = cli.command_update(args)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(0, code)
+        self.assertEqual("update_available_dry_run", payload["status"])
+        self.assertEqual([], payload["commits"])
+        self.assertEqual(0, payload["commit_count"])
+
+    def test_dirty_working_tree_is_refused(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout=" M dirty_file.py\n")
+            raise AssertionError("Should not proceed past the dirty check: %s" % cmd)
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("uncommitted changes", str(ctx.exception))
+
+    def test_detached_head_is_refused(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", responses_overrides={"detached": True})
+        self.assertIn("detached HEAD", str(ctx.exception))
+
+    def test_non_git_install_is_refused(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            return _FakeGitResult(returncode=128, stderr="not a git repository")
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("git-based install", str(ctx.exception))
+
+    def test_fetch_failure_fails_loudly(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", responses_overrides={"fetch_fails": True})
+        self.assertIn("git fetch", str(ctx.exception))
+
+    def test_merge_failure_fails_loudly(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run(ref="v1.2.3", yes=True, responses_overrides={"merge_fails": True})
+        self.assertIn("fast-forward", str(ctx.exception))
+
+    def test_git_not_found_fails_loudly(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+        with mock.patch("subprocess.run", side_effect=FileNotFoundError()):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("requires git", str(ctx.exception))
+
+    def test_git_timeout_fails_loudly(self):
+        import subprocess
+
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref="v1.2.3",
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+        with mock.patch(
+            "subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="git", timeout=10),
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                cli.command_update(args)
+        self.assertIn("timed out", str(ctx.exception))
+
+    def test_option_like_ref_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._run(ref="--upload-pack=evil")
+
+    def test_option_like_remote_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._run(ref="v1.2.3", remote="--evil")
+
+    def test_no_ref_and_no_release_found_does_nothing(self):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            yes=False,
+            ref=None,
+            remote=None,
+            repo=None,
+            timeout=10,
+            format="text",
+            config_data={},
+        )
+
+        def run(cmd, **kwargs):
+            tail = cmd[1:]
+            if tail == ["rev-parse", "--show-toplevel"]:
+                return _FakeGitResult(stdout="C:/fake/repo\n")
+            if tail == ["status", "--porcelain"]:
+                return _FakeGitResult(stdout="")
+            if tail == ["symbolic-ref", "-q", "--short", "HEAD"]:
+                return _FakeGitResult(stdout="main\n")
+            raise AssertionError("Should not reach git fetch: %s" % cmd)
+
+        with mock.patch("subprocess.run", side_effect=run):
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = [
+                    HTTPError("url", 404, "Not Found", {}, None),
+                    _FakeGithubResponse([]),
+                ]
+                buffer = io.StringIO()
+                with mock.patch("sys.stdout", buffer):
+                    code = cli.command_update(args)
+        self.assertEqual(0, code)
+        self.assertIn("nothing to", buffer.getvalue())
+
+    def test_explicit_ref_skips_the_github_api_entirely(self):
+        with mock.patch("lifetxt.cli.urlopen") as opener:
+            self._run(ref="v1.2.3")
+            opener.assert_not_called()
+
+    def test_update_is_wired_into_the_real_cli(self):
+        from lifetxt import cli
+
+        parser = cli.build_parser()
+        args = parser.parse_args(["update", "--format", "json"])
+        self.assertIs(cli.command_update, args.func)
 
 
 class LifeTxtAssignCliTests(unittest.TestCase):

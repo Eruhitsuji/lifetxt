@@ -1,0 +1,100 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'Ran 15 tests -- OK'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'Ran 29 tests -- OK'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'real disposable git clone of Eruhitsuji/lifetxt, checked out at commit f688d34 on a real branch; ran the actual command_update logic (install root pointed at the clone) with --ref main, no --yes'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'reported status update_available_dry_run, current_commit f688d34..., target_commit 156dc25...; working tree unchanged'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'same clone, same command with --yes'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'reported status updated; git log confirmed HEAD moved to 156dc25...; working tree clean afterward'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'same clone, run a third time with --yes after already updating'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'reported status up_to_date; no fetch-dependent branch taken further'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'same clone, with an uncommitted change (git status --porcelain non-empty)'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'raised ValueError: "Refusing to update: ... has uncommitted changes. Commit, stash, or discard them first." No git fetch attempted.'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'same clone, checked out with git checkout --detach HEAD'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'raised ValueError: "Refusing to update: ... is not on a branch (detached HEAD). Check out a branch first."'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'real lifetxt CLI (python -m lifetxt update) run directly against this dev checkout while it had in-progress uncommitted changes'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'ERROR: Refusing to update: E:/project/lifetxt has uncommitted changes. Commit, stash, or discard them first. -- exit 1'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: '_reject_option_like_git_arg("--upload-pack=evil", "ref") called directly; and command_update against a directory with no ancestor .git (initial attempt accidentally selected a real git repo, corrected and re-verified)'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'Refusing ref ''--upload-pack=evil'': it looks like a command-line option, not a name. Non-git-install refusal separately confirmed against a directory outside any git working tree.'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: manual
+      command: 'discovered during the non-git-install verification above: git status --porcelain crashed with UnicodeDecodeError (cp932) decoding output from a real Windows ja-JP-locale directory tree'
+      requirement_ids:
+        - req-lifetxt-self-update
+      result: 'root-caused to subprocess.run defaulting to the platform locale codec; fixed by passing encoding="utf-8", errors="replace" explicitly; re-ran the same reproduction and confirmed no crash, correct refusal message instead'
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: 256 files already formatted
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: All checks passed!
+      commit: a99a1ddb23108ab2879522748c1158927662655a
+      executed_at: '2026-08-09'
+      status: passed
+
+  gaps: []

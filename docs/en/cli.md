@@ -1794,8 +1794,8 @@ row when nothing is marked.
 | Command | Purpose |
 | --- | --- |
 | `/done [now]` | Mark task-like rows done and record `done:`; `now` adds the time |
-| `/state STATE [TITLE]` | Record presence, closing the previous status; `/state end` closes it |
-| `/now` | Show the current open presence status |
+| `/state STATE [TITLE] \| end` | Record presence, closing the previous status; `/state end` closes it |
+| `/now [PERSON]` | Show the current open presence status |
 | `/status open\|active\|done\|dropped` | Set a status, using the same aliases as the CLI |
 | `/set KEY VALUE` | Set a detail; an empty value removes the key |
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
@@ -2484,10 +2484,13 @@ its built-in default.
 | Check | What it verifies |
 |---|---|
 | `python` | Python 3.10+ (fails below 3.10) |
+| `system` | lifetxt version, full Python version, and OS/platform (informational) |
+| `update` | Only with `--check-update`: whether a newer GitHub release/tag exists (warns if so, or if the check itself fails) |
 | `life.txt` | The configured or default life.txt file exists and is readable |
 | `config` | `.lifetxt.json` (or `--config` path) exists (warns if missing) |
+| `disk` | Free space on the volume holding the life.txt file (warns below 100 MiB) |
 | `fzf`, `peco` | Optional selector tools found in `PATH` (warns if missing) |
-| `textual`, `watchdog`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing) |
+| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing); the same set `doctor --workspace-safety` checks |
 | `check` | Parses the life.txt file(s) and reports error/warning counts |
 | `ids` | Reports items missing an `id:` detail |
 
@@ -2495,6 +2498,83 @@ its built-in default.
 too old, or the file is missing/unreadable); missing optional dependencies
 are `WARN` and do not affect the exit code. Use `--format json` for
 machine-readable output.
+
+Pass `--check-update` to add an `update` row reusing `update-check`'s own
+logic (see below) -- off by default, so plain `doctor` never requires
+network access:
+
+```sh
+python -m lifetxt doctor --check-update
+python -m lifetxt doctor --check-update --repo your-github-username/your-fork
+```
+
+A newer release/tag being available reports `WARN`, matching the missing-
+optional-dependency checks -- it never fails `doctor`'s exit code. A network
+or API failure while checking also reports `WARN` (`Could not check for
+updates: ...`) rather than failing `doctor` outright; `--update-timeout
+SECONDS` (default `5`) bounds how long that check can take.
+
+`update-check` compares the running version against the latest published
+GitHub Release for a repository, falling back to the latest tag when no
+Release has been published. The default repository is this project's own
+(`Eruhitsuji/lifetxt`); a fork should set `update.repository` (see
+[config.md](config.md#update-checks)) or pass `--repo` so checks compare
+against the fork's own releases instead of upstream:
+
+```sh
+python -m lifetxt update-check
+python -m lifetxt update-check --format json
+python -m lifetxt update-check --repo your-github-username/your-fork
+```
+
+It makes a read-only request to the public GitHub API and never installs or
+modifies anything. Reported `status` values: `up_to_date`, `update_available`,
+`ahead_of_latest` (running newer than the latest published version),
+`no_release_found` (the repository has no Releases or tags yet), and
+`unparseable` (a release/tag name that could not be read as a version). Use
+`--timeout SECONDS` to change the network timeout (default `10`).
+
+`update` fast-forwards the running install's own git checkout -- lifetxt has
+no PyPI distribution, so updating means git, and it **only ever works when
+lifetxt was installed from a git clone** (`python -m pip install -e .`, the
+documented install method). It is dry-run by default:
+
+```sh
+python -m lifetxt update
+python -m lifetxt update --yes
+python -m lifetxt update --ref main --yes
+python -m lifetxt update --repo your-github-username/your-fork --yes
+```
+
+Without `--yes`, `update` fetches (read-only against your git remote) and
+reports what *would* change -- current commit, target commit, the ref it
+resolved to, and (in text output) up to 20 pending commits one-line-each,
+newest first, with a count of any remaining ones -- without touching your
+working tree. `--yes` is required to actually apply it. `--format json`
+includes the same preview as a `commits` array and a `commit_count`
+integer. Looking up the commit list never blocks the update itself: if it
+fails for any reason, `update` still reports the pending fast-forward with
+an empty commit list rather than erroring out. Safety rails, all fail
+loudly rather than guessing:
+
+- Refuses when the running install is not inside a git working tree.
+- Refuses when the working tree has any uncommitted change, tracked or
+  untracked (`git status --porcelain` must be empty) -- commit, stash, or
+  discard first.
+- Refuses when `HEAD` is detached -- check out a branch first.
+- Only ever runs `git fetch` and `git merge --ff-only`. Never resets,
+  rebases, force-pushes, or rewrites history; a non-fast-forward situation
+  is refused, not forced.
+- Never runs `pip install` or any other build step afterward. If the update
+  changed dependencies, re-run `pip install -e .` (or your usual extras)
+  yourself -- `update` tells you to when it applies a change.
+
+Without `--ref`, `update` resolves the target the same way `update-check`
+does (latest published Release, or tag; `--repo`/`update.repository`
+override which repository that lookup queries). The actual `git fetch`
+always goes through your existing local git remote (`origin` by default,
+or `--remote NAME`) -- `--repo` only chooses which ref *name* to ask for,
+never which URL is fetched from.
 
 ## 17. `encrypt` and `decrypt`
 

@@ -20,6 +20,10 @@ import uuid
 from collections import OrderedDict
 
 from . import mutation
+from .atomic import (
+    _REPLACE_PERMISSION_RETRY_DELAYS_SECONDS,
+    _REPLACE_PERMISSION_RETRY_OS_NAMES,
+)
 from .mutation import FileLock, MISSING_HASH, MutationConflict
 from .transaction_policy import (
     build_integrity_manifest,
@@ -47,8 +51,6 @@ RECOVERY_STATES = frozenset(
         "compensation_failed",
     )
 )
-_REPLACE_PERMISSION_RETRY_OS_NAMES = frozenset(("nt",))
-_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS = (0.01, 0.05, 0.1, 0.25)
 
 
 class TransactionJournalError(RuntimeError):

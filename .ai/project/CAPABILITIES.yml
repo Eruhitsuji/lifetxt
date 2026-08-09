@@ -1349,3 +1349,516 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-cli-version-command
+    name: CLI --version/-V flag
+    summary: >-
+      Add a top-level `--version`/`-V` flag to the `lifetxt` CLI, printing
+      `lifetxt <version>` and exiting zero, matching the conventional
+      argparse `action="version"` pattern already available to every other
+      Python CLI.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-version-flag
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - lifetxt --version
+      - lifetxt -V
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebAppTests.test_version_flag_prints_version_and_exits_zero
+      - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/186
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/187
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/cli-version-command/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard assurance,
+      XS-sized). First implementation task of the cli-web-multiday-enhancements
+      batch (Issues #186, #188, #190, #192, #194 targeted at this session),
+      landing on its own task branch merged into the feature/cli-web-multiday-
+      enhancements integration branch before a final human-approved PR into main.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-web-display-refresh-fix
+    name: Web Display/Kiosk auto-refresh honors configured interval
+    summary: >-
+      Make the Web UI's `configureAutoRefresh()` read `appConfig.web.display_refresh`
+      for its Display/Kiosk-mode fallback interval instead of a hardcoded `"60"`,
+      matching the sibling `configureNotificationPolling()`'s existing pattern of
+      reading its fallback from `appConfig`. The `web.display_refresh` config key
+      was previously dead: setting it had no effect.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-display-refresh-fix
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - web.display_refresh
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_display_mode_auto_refresh_honors_configured_interval, confirmed via git stash to fail on the prior hardcoded-"60" code
+      - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+      - 'live: GET /api/config against a real server with web.display_refresh: 45 configured correctly reports 45'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/188
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/189
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/web-display-refresh-fix/ (below
+      the .ai/project/changes/README.md change-package threshold: Standard
+      assurance, XS/S-sized). Second implementation task of the
+      cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-tui-docs-drift-gate
+    name: TUI command-registry documentation drift gate
+    summary: >-
+      Add an automated test comparing docs/en/cli.md and docs/ja/cli.md's TUI
+      command-reference tables against the live TUI command registry, so a
+      command signature added, removed, or changed in the TUI silently
+      diverging from its documentation fails the suite instead of going
+      unnoticed. Found and fixed two pre-existing drifted rows (`/state`,
+      `/now`) in both language documents on first run.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-docs-drift-gate
+    implementation_locations:
+      - tests/test_surface_runtime.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - tests.test_surface_runtime.TuiDocumentationDriftTests
+    tests_or_evidence:
+      - tests/test_surface_runtime.py TuiDocumentationDriftTests.test_docs_command_tables_match_the_tui_command_registry
+      - python -m unittest tests.test_surface_runtime -> passes after correcting the two discovered drifted rows in both docs/en/cli.md and docs/ja/cli.md
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/190
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/191
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/tui-docs-drift-test/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard assurance,
+      S-sized). Extends cap-surface-capability-consistency's existing drift-gate
+      pattern (CLI/Web/MCP capability and command-catalog gates) to plain
+      documentation, which none of those gates covered. Third implementation task
+      of the cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-doctor-unification
+    name: Unified doctor optional-dependency set and system diagnostics
+    summary: >-
+      Reconcile `lifetxt doctor`'s and `lifetxt doctor --workspace-safety`'s two
+      previously-divergent optional-dependency package sets onto one shared
+      function, and add lifetxt/Python/OS version reporting plus a disk-space
+      check to plain `doctor`, so a single command gives an at-a-glance system
+      picture instead of requiring both flags to see the full dependency set.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-doctor-unification
+    implementation_locations:
+      - lifetxt/doctor.py
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - lifetxt doctor
+      - lifetxt doctor --workspace-safety
+      - lifetxt.doctor.OPTIONAL_DEPENDENCY_NAMES
+      - lifetxt.doctor.optional_dependency_report
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtDoctorCliTests.test_doctor_reports_version_os_and_disk_space, test_doctor_and_workspace_safety_share_the_same_dependency_set
+      - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+      - 'live: plain doctor now shows system/disk rows and the widened dependency set (fastapi/uvicorn/httpx now appear, not just under --workspace-safety); doctor --workspace-safety --format json includes matplotlib/cryptography'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - "tests/test_lifetxt.py LifeTxtDoctorCliTests.test_doctor_omits_update_row_without_the_flag, test_doctor_check_update_reports_up_to_date, test_doctor_check_update_warns_when_update_available, test_doctor_check_update_network_failure_warns_not_fails, test_doctor_check_update_reports_no_release_found"
+      - python -m unittest tests.test_lifetxt.LifeTxtDoctorCliTests tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime -> Ran 62 tests, OK
+      - "live: doctor --check-update against this project's own repository (no releases yet) correctly reports OK/no releases found; doctor --check-update --repo torvalds/linux correctly reports WARN naming the real latest tag"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/192
+      - https://github.com/Eruhitsuji/lifetxt/issues/211
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/193
+      - https://github.com/Eruhitsuji/lifetxt/pull/212
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/doctor-unification/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard assurance,
+      S-sized). Merges two originally-separate requests found to substantially
+      overlap during scoping: "system diagnostics enhancement" (1-a/1-b) and
+      "output system configuration" (1-d). dist/schemas/doctor-v1.schema.json's
+      optional_dependencies field already used additionalProperties: {"type":
+      "boolean"}, so widening the checked dependency set required no schema
+      change. Fourth implementation task of the cli-web-multiday-enhancements
+      batch. #211/#212 (Standard assurance) added an opt-in --check-update flag
+      reusing cap-cli-update-check's resolution helpers unmodified, distilled
+      from a cc-sdd spec at .kiro/specs/doctor-update-status-integration/ --
+      off by default, fail-open on any check failure, no exit-code impact.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-calendar-multiday-placement
+    name: Calendar view multi-day record placement
+    summary: >-
+      Place a record with more than one matched day (a multi-day all-day span
+      expressed as several `on:DATE` values, e.g. imported from Google
+      Calendar) in every one of those days' Web UI calendar cells instead of
+      only the earliest matched day. The server already returned every
+      matching day as its own `record.matches` entry; the frontend silently
+      read only the first.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-calendar-multiday-placement
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - Web UI Calendar view
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_matched_day, confirmed via git stash to fail on the prior matches[0]-only code
+      - 'manual: a real Node.js run of the extracted _calRecordDayPlacements/_calEntryHtml/loadCalendar source against 4 cases (3-day multi-day placement, single-occurrence, matches-less fallback, per-day HTML) -- all passed'
+      - 'design-time: direct lifetxt.agenda.agenda_records() calls against an on:/on:/on: fixture confirm the server already returns one matches entry per matched day in range, and that Timeline (_tlDisplayInfo) already receives only the in-window subset -- the basis for excluding Timeline from this capability'
+      - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - tests/test_lifetxt.py test_calendar_shows_a_day_span_badge_on_multiday_records_only
+      - 'manual: a real Node.js run confirming a 3-day record produces "1/3"/"2/3"/"3/3" badges in chronological order, and a single-day record renders no badge'
+      - 'live: real lifetxt serve process with a 3-day on:/on:/on: fixture, served page confirmed to contain the cal-entry-span markup'
+      - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 26 tests, OK (no translation-coverage regression)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/194
+      - https://github.com/Eruhitsuji/lifetxt/issues/213
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/195
+      - https://github.com/Eruhitsuji/lifetxt/pull/214
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/calendar-multiday-placement/
+      (below the .ai/project/changes/README.md change-package threshold: Standard
+      assurance, S-sized bug fix). Investigated and confirmed the fix is generic
+      across every record kind (not event-specific) and that Timeline exhibits no
+      equivalent defect, both explicitly asked for in the originating bug report;
+      recorded as findings in requirements.md rather than folded into extra,
+      unevidenced code changes. Fifth implementation task of the
+      cli-web-multiday-enhancements batch. #213/#214 (Standard assurance) added a
+      "day X of Y" badge to each multi-day placement, distilled from a cc-sdd spec
+      at .kiro/specs/calendar-multiday-span-badge/ -- a lighter alternative to a
+      connecting spanning-bar redesign, which remains explicitly out of scope.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-replace-retry-policy-dedup
+    name: Shared replace-retry policy constants
+    summary: >-
+      Make `transaction_journal.py` import its Windows replace-retry policy
+      constants (`_REPLACE_PERMISSION_RETRY_OS_NAMES`/
+      `_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS`) from `atomic.py` instead of
+      defining its own copy, so the two modules cannot silently drift apart.
+      The retry loop itself (with its per-attempt `fault_point()` hook,
+      required by the crash-recovery fault-injection test matrix) remains
+      intentionally separate and unmigrated.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-replace-retry-policy-dedup
+    implementation_locations:
+      - lifetxt/atomic.py
+      - lifetxt/transaction_journal.py
+      - tests/test_replace_retry_policy.py
+    public_interfaces:
+      - lifetxt.atomic._REPLACE_PERMISSION_RETRY_OS_NAMES
+      - lifetxt.atomic._REPLACE_PERMISSION_RETRY_DELAYS_SECONDS
+    tests_or_evidence:
+      - tests/test_replace_retry_policy.py ReplaceRetryPolicyConsistencyTests (unchanged assertions, now structurally guaranteed)
+      - tests/test_transaction_journal_v3.py, tests/test_fault_matrix_v6.py, tests/test_fault_drill_v5.py re-run unmodified -> all pass, confirming the crash-recovery fault-injection matrix is unaffected
+      - python -m unittest tests.test_transaction_journal_v3 tests.test_replace_retry_policy tests.test_fault_matrix_v6 tests.test_fault_drill_v5 tests.test_mutation tests.test_transaction_policy_v4 tests.test_config_validation -> Ran 99 tests, OK (skipped=3)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/196
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/197
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/replace-retry-policy-dedup/
+      (below the .ai/project/changes/README.md change-package threshold:
+      Standard assurance, S-sized, zero behavior change). Completes the
+      follow-up `windows-atomic-replace-retry`'s decisions.md explicitly
+      deferred ("a future spec could migrate transaction_journal.py onto the
+      shared helper"), narrowed to the part that is safe to share: the retry
+      loop itself, which interleaves fault_point() hooks the fault-injection
+      test matrix depends on, remains deliberately unmigrated for the same
+      reason it was originally excluded. Sixth implementation task of the
+      cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-web-help-command-reference
+    name: Web UI help modal command reference
+    summary: >-
+      Add a searchable slash-command reference to the Web UI's help modal
+      (opened via `?`), matching the TUI's `/help [query]`. Reuses the
+      existing `COMMAND_CATALOG`/`matchingCommands()` the Ctrl+K command
+      palette already uses, so the help modal cannot disagree with the
+      palette about what a command means. Previously the help modal only
+      showed keyboard shortcuts; the searchable command catalog existed only
+      inside the command palette, which a user pressing `?` for help had no
+      reason to already know existed.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-help-command-reference
+    implementation_locations:
+      - lifetxt/web_assets.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - Web UI help modal (? shortcut)
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference, confirmed via git stash to fail on the prior code
+      - 'manual: a real Node.js run of the extracted renderHelpModalCommands/matchingCommands/fuzzyMatch source against 4 cases (unfiltered listing, filtering by query, TUI-only badge scoping, empty-state message) -- all passed'
+      - 'live: real lifetxt serve process, GET /api/commands confirms the real 31-command catalog shape (mix of web:true/false); GET / confirms the served page contains the new markup'
+      - python -m unittest tests.test_lifetxt tests.test_web_i18n tests.test_surface_runtime -> Ran 610 tests, OK (skipped=1)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - tests/test_release_policy.py test_release_manifest_has_deterministic_fingerprint, test_repository_translation_baseline_allows_known_debt_but_no_new_gap -> fixed a real translation-coverage regression (the hint's <code>/help</code> split its sentence across release_policy.py's <code>-as-skip-tag boundary, leaving the pre-<code> text fragment without a dictionary match)
+      - python -m unittest tests.test_release_policy tests.test_web_i18n tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference -> Ran 27 tests, OK
+      - "tests/test_lifetxt.py test_help_modal_supports_keyboard_navigation"
+      - 'manual: a real Node.js run of _helpCmdMoveFocus/_runHelpModalCommand confirming forward/backward wraparound, no-op on an empty list, Enter closing the modal and calling runWebCommand for the highlighted entry, and an invalid index being a no-op'
+      - 'live: real lifetxt serve process, served page confirmed to contain the new functions'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/198
+      - https://github.com/Eruhitsuji/lifetxt/issues/204
+      - https://github.com/Eruhitsuji/lifetxt/issues/215
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/199
+      - https://github.com/Eruhitsuji/lifetxt/pull/205
+      - https://github.com/Eruhitsuji/lifetxt/pull/216
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/web-help-command-reference/
+      (below the .ai/project/changes/README.md change-package threshold:
+      Standard assurance, S/M-sized). Seventh implementation task of the
+      cli-web-multiday-enhancements batch. #204/#205 fixed a translation-
+      coverage regression found only by running the full suite (not caught by
+      tests.test_web_i18n, which does not exercise release_policy.py's
+      stricter <code>-as-skip-tag HTML parsing) -- corrected in place rather
+      than as a separate capability, since it is the same UI surface.
+      #215/#216 (Standard assurance) added arrow-key/Enter keyboard
+      navigation matching the Ctrl+K command palette's existing UX,
+      distilled from a cc-sdd spec at
+      .kiro/specs/help-modal-keyboard-navigation/ -- also added the
+      previously-missing row click handlers, and no new user-visible text.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-cli-update-check
+    name: CLI update-check command
+    summary: >-
+      Add `lifetxt update-check`, a read-only command comparing the running
+      version against the latest published GitHub Release for
+      Eruhitsuji/lifetxt (falling back to the latest tag when no Release has
+      been published). Uses only the stdlib urllib already imported in
+      cli.py -- no new runtime dependency. A prerequisite building block for
+      a separate, higher-assurance `lifetxt update` self-update command.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-update-check
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt update-check
+      - lifetxt.cli._parse_simple_version
+      - lifetxt.cli._github_latest_release_or_tag
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtUpdateCheckCliTests (8 tests: version parsing, no release/tag found, update available from a release, fallback to tag, up-to-date match, non-404 HTTP error fails loudly, network error fails loudly, argparse wiring)
+      - python -m unittest tests.test_lifetxt -> Ran 583 tests, OK (skipped=1)
+      - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 43 tests, OK
+      - 'live: real unmocked lifetxt update-check and lifetxt update-check --format json against the actual Eruhitsuji/lifetxt repository -> both correctly report no_release_found (confirmed via gh release list / gh api repos/.../tags that none exist)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/200
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/201
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/cli-update-check/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard
+      assurance, S/M-sized, read-only). Also corrects docs/en/cli.md and
+      docs/ja/cli.md's doctor check table, found drifted out of sync with
+      this batch's earlier cap-doctor-unification change (missing system/disk
+      rows and the widened dependency set) while editing the same section.
+      Eighth implementation task of the cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-cli-update-check-configurable-repo
+    name: Configurable update-check repository
+    summary: >-
+      Make `lifetxt update-check` compare against a configurable GitHub
+      repository (`update.repository` config key, `--repo OWNER/NAME` flag)
+      instead of always the hardcoded `Eruhitsuji/lifetxt`, so a fork's
+      users are not misled by comparisons against an unrelated upstream
+      repository.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-update-check-configurable-repo
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/config_registry.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - tests/test_lifetxt.py
+      - tests/test_config_validation.py
+    public_interfaces:
+      - update.repository
+      - lifetxt update-check --repo OWNER/NAME
+      - lifetxt.cli._resolve_update_check_repo
+      - lifetxt config explain update.repository
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtUpdateCheckCliTests: test_repo_flag_overrides_the_built_in_default, test_configured_repository_is_used_when_no_flag_is_given, test_repo_flag_takes_precedence_over_configured_repository, test_no_flag_or_config_falls_back_to_the_built_in_default, test_invalid_repo_format_fails_loudly (plus the 8 pre-existing tests re-run unmodified)"
+      - tests/test_config_validation.py test_registry_describes_update_repository, test_config_schema_declares_update_repository
+      - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> confirms the generator and mirrored dist/schemas/config-v1.schema.json match byte-for-byte after the update section addition
+      - python -m unittest tests.test_lifetxt tests.test_config_validation tests.test_schema_extensions_v2 tests.test_workspace_foundation -> Ran 693 tests, OK (skipped=9)
+      - "live: --repo torvalds/linux against the real GitHub API reports torvalds/linux's real latest tag; an equivalent update.repository config value produces the identical result; lifetxt config explain update.repository reports the registered metadata; no-flag/no-config case unchanged (Eruhitsuji/lifetxt, still no releases/tags)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/202
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/203
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at
+      .kiro/specs/cli-update-check-configurable-repo/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard
+      assurance, XS/S-sized, additive read-only configuration). Direct
+      follow-up to cap-cli-update-check (#200/#201), found via user feedback
+      immediately after that PR merged into this batch's integration branch.
+      Ninth implementation task of the cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-lifetxt-self-update
+    name: Safety-railed CLI self-update
+    summary: >-
+      Add `lifetxt update`, the only lifetxt command that mutates the git
+      working tree the running install lives in. Git-based (lifetxt has no
+      PyPI distribution); dry-run by default; requires `--yes` for any real
+      change; refuses on a non-git install, a dirty working tree, or a
+      detached HEAD; only ever runs `git fetch` and `git merge --ff-only`;
+      never runs `pip install` or any other code. Explicitly flagged
+      not-recommended during scoping and implemented anyway per repository
+      owner instruction, with every safety rail as the condition of that
+      acceptance.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-self-update
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt update
+      - lifetxt.cli.command_update
+      - lifetxt.cli._run_git_for_update
+      - lifetxt.cli._lifetxt_install_root
+      - lifetxt.cli._reject_option_like_git_arg
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtUpdateCommandCliTests (15 tests, subprocess.run mocked)
+      - python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 29 tests, OK
+      - "live: real disposable clone of this repository, checked out at an old commit on a real branch -- dry run correctly reported the pending fast-forward; --yes correctly fast-forwarded (confirmed via git log); a second run correctly reported already up to date; dirty-working-tree refusal and detached-HEAD refusal each confirmed against the same real clone"
+      - "live: found and fixed a real UnicodeDecodeError crash decoding git subprocess output against a real Windows ja-JP-locale directory tree, by decoding explicitly as UTF-8 with errors=\"replace\"; re-verified clean after the fix"
+      - "live: real installed lifetxt CLI (python -m lifetxt update) run directly against this dev checkout while it had in-progress uncommitted changes -- correctly refused, exit 1"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+      - "tests/test_lifetxt.py test_target_behind_current_reports_up_to_date_not_a_false_update"
+      - "live: found and fixed a real false-positive -- update --ref main against a checkout already ahead of main incorrectly reported an available update; reproduced and confirmed fixed against a disposable clone using a local-path remote and a tag pointing at an ancestor commit"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/206
+      - https://github.com/Eruhitsuji/lifetxt/issues/217
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/207
+      - https://github.com/Eruhitsuji/lifetxt/pull/210
+      - https://github.com/Eruhitsuji/lifetxt/pull/218
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/lifetxt-self-update/ plus a
+      full change package at .ai/project/changes/lifetxt-self-update/
+      (Security/High assurance, per this project's escalation rules for
+      destructive-operation-adjacent and previously-unresolved-design-
+      decision risk factors). Reuses cap-cli-update-check's target-resolution
+      helpers unmodified. Eleventh implementation task of the
+      cli-web-multiday-enhancements batch. #217/#218 (Standard assurance) is a
+      read-only correctness fix found during this batch's own final /verify
+      pass, distilled from a cc-sdd spec at
+      .kiro/specs/update-ancestor-target-detection/ -- generalizes the
+      up-to-date check from exact commit equality to ancestry via `git
+      merge-base --is-ancestor`, adding no new mutating git call. Requires independent security
+      review and Merge Authority approval before merge to main. #209/#210
+      (Standard assurance) added a bounded, fail-open pending-commit preview
+      to the dry-run and --yes success output, distilled from a cc-sdd spec
+      at .kiro/specs/update-dry-run-commit-preview/ -- read-only additions
+      only (git log/rev-list), no change to any safety rail.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

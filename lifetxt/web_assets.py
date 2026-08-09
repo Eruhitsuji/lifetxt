@@ -3730,7 +3730,8 @@ HTML_PAGE = r"""<!doctype html>
     }
     function configureAutoRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
-      const seconds = Number(firstParam(query(), ["refresh"], (isDisplayMode() || isKioskMode()) ? "60" : ""));
+      const displayFallback = String(appConfig?.web?.display_refresh || 60);
+      const seconds = Number(firstParam(query(), ["refresh"], (isDisplayMode() || isKioskMode()) ? displayFallback : ""));
       if (Number.isFinite(seconds) && seconds > 0) {
         refreshTimer = setInterval(refreshAll, seconds * 1000);
       }

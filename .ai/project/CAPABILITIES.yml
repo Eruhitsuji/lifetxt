@@ -60,17 +60,38 @@ capabilities:
       - 'the guard must read the baseline from pyproject.toml and raise when it cannot be parsed, so a reshuffle cannot disarm it'
       - 'the guard module must stay in syntax the rejected interpreters can import, or its message degrades into the import error it exists to explain'
       - 'a failing or flaky run must be reportable with complete output: unit_test_captured retains it in .test-output.log so a truncating display cannot destroy the evidence'
+      - 'the dev extra must declare httpx2, and the documented full-suite install command (pip install -e ".[web,dev]") must run every Web-dependent test without a manual pip install httpx2 step'
+      - 'a skip guard gating a Web test on find_spec("httpx") must also accept find_spec("httpx2"), or a clean [web,dev] environment silently skips tests it should run'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/36
       - https://github.com/Eruhitsuji/lifetxt/issues/41
       - https://github.com/Eruhitsuji/lifetxt/issues/44
       - https://github.com/Eruhitsuji/lifetxt/issues/72
       - https://github.com/Eruhitsuji/lifetxt/issues/78
+      - https://github.com/Eruhitsuji/lifetxt/issues/219
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/38
       - https://github.com/Eruhitsuji/lifetxt/pull/42
       - https://github.com/Eruhitsuji/lifetxt/pull/71
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #219 found that a clean pip install -e '.[web,tui]' environment (the
+      documented extras, no manual extras) fails 7 Web tests with
+      starlette.testclient's RuntimeError, because neither httpx nor its
+      successor httpx2 was declared anywhere; CI and run_ci_like.py only
+      passed because they separately hardcoded a bare httpx install outside
+      of any declared extra. httpx2 is now declared in the dev extra (the
+      correct home per this capability's own "test/dev-oriented, not
+      runtime" scope), CI/run_ci_like.py/readme.md were updated to install
+      it from there instead of a hardcoded httpx, and doctor.py's
+      OPTIONAL_DEPENDENCY_NAMES plus docs/en|ja/cli.md's checked-package
+      table were updated from httpx to httpx2 to match. Five test files
+      (test_revision_migration_metrics.py, test_revision_telemetry_v2.py,
+      test_schema_extensions_v2.py, test_surface_runtime.py,
+      test_timer_public_revisions_v3.py) had skip guards checking only
+      find_spec("httpx"), which would have silently skipped their Web tests
+      in the newly-clean [web,dev] environment; fixed to accept either
+      package, since starlette.testclient itself accepts either.
     replacement:
       replaces: []
       replaced_by: null

@@ -2168,7 +2168,7 @@ python -m lifetxt doctor
 | `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
 | `disk` | life.txt file のある volume の空き容量 (100 MiB 未満で WARN) |
 | `fzf`, `peco` | optional selector tool が `PATH` にあるか (無ければ WARN) |
-| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
+| `fastapi`, `uvicorn`, `httpx2`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
 | `check` | life.txt file を解析し error/warning 件数を報告 |
 | `ids` | `id:` が無い item を報告 |
 

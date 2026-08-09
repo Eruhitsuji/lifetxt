@@ -2503,6 +2503,50 @@ traceability:
         proposed for merge.
       status: implemented
 
+    - requirement_id: req-clean-test-environment-httpx2
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/219
+      pull_request: null
+      changed_files_or_scope:
+        - Declare httpx2 in the dev extra so the documented clean full-suite install path installs it
+        - Point CI, run_ci_like.py, and readme.md at the dev extra instead of a hardcoded bare httpx install
+        - Update doctor.py's OPTIONAL_DEPENDENCY_NAMES and docs/en|ja/cli.md's checked-package table from httpx to httpx2
+        - Widen five Web-test skip guards to accept either httpx2 or httpx, matching starlette.testclient's own fallback
+        - pyproject.toml
+        - readme.md
+        - .github/workflows/ci.yml
+        - scripts/run_ci_like.py
+        - lifetxt/doctor.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - tests/test_revision_migration_metrics.py
+        - tests/test_revision_telemetry_v2.py
+        - tests/test_schema_extensions_v2.py
+        - tests/test_surface_runtime.py
+        - tests/test_timer_public_revisions_v3.py
+      tests_or_evidence:
+        - 'live: E:/project/lifetxt/.venv/Scripts/python.exe -m pip install httpx2, then python -m unittest tests.test_completion_surfaces tests.test_remote_attachment_contracts_v6 tests.test_revision_migration_metrics tests.test_revision_telemetry_v2 tests.test_schema_extensions_v2 tests.test_surface_runtime tests.test_timer_public_revisions_v3 -> Ran 78 tests, OK (skipped=3), reproducing and resolving the exact RuntimeError the issue reported'
+        - python -m unittest tests.test_lifetxt.LifeTxtDoctorCliTests -> Ran 11 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2103 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). No cc-sdd
+        spec was written; the fix is a dependency-declaration correction with
+        a clear root cause already diagnosed in the issue body. First item of
+        the quality-and-i18n-fixes batch (Issues #219, #220, #221, #222,
+        #223, #224). requirements-web.txt itself is deliberately unchanged:
+        it lists only the shipped Web runtime's own dependencies (fastapi,
+        uvicorn[standard]), and httpx2 is test-only, matching the issue's
+        explicit "keep runtime-only extras free of test-only packages"
+        acceptance criterion. pull_request is filled in once the pull
+        request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -2490,7 +2490,7 @@ its built-in default.
 | `config` | `.lifetxt.json` (or `--config` path) exists (warns if missing) |
 | `disk` | Free space on the volume holding the life.txt file (warns below 100 MiB) |
 | `fzf`, `peco` | Optional selector tools found in `PATH` (warns if missing) |
-| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing); the same set `doctor --workspace-safety` checks |
+| `fastapi`, `uvicorn`, `httpx2`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | Optional Python packages installed (warns if missing); the same set `doctor --workspace-safety` checks |
 | `check` | Parses the life.txt file(s) and reports error/warning counts |
 | `ids` | Reports items missing an `id:` detail |
 

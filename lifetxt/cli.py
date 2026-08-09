@@ -1303,6 +1303,12 @@ def build_parser():
     find_command.add_argument(
         "--limit", type=int, help="Maximum results per entity type."
     )
+    find_command.add_argument(
+        "--fuzzy",
+        action="store_true",
+        help="Also match a small typo/edit distance of term, not only an exact "
+        "substring. Exact matches are always ranked ahead of approximate ones.",
+    )
     find_command.add_argument("--json", action="store_true", help="Emit JSON.")
     find_command.set_defaults(func=command_find)
 
@@ -2983,6 +2989,12 @@ def build_parser():
         "--count",
         action="store_true",
         help="Print only the count of matching items, not the items themselves.",
+    )
+    search_cmd.add_argument(
+        "--fuzzy",
+        action="store_true",
+        help="Also match a field within a small typo/edit distance of pattern, "
+        "not only an exact substring. Cannot be combined with --regex.",
     )
     search_cmd.set_defaults(func=command_search)
 
@@ -8314,10 +8326,17 @@ def command_who(args):
 def command_search(args):
     import re as _re
 
+    from .fuzzy_search import fuzzy_contains
+
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     pattern = args.pattern
     use_regex = getattr(args, "regex", False)
+    use_fuzzy = getattr(args, "fuzzy", False)
     in_fields = _split_csv_args(getattr(args, "in_fields", None))
+
+    if use_regex and use_fuzzy:
+        sys.stderr.write("ERROR: --fuzzy cannot be combined with --regex.\n")
+        return 1
 
     if use_regex:
         try:
@@ -8328,6 +8347,10 @@ def command_search(args):
 
         def _matches(text):
             return bool(compiled.search(str(text)))
+    elif use_fuzzy:
+
+        def _matches(text):
+            return fuzzy_contains(pattern, str(text))
     else:
         pat_lower = pattern.lower()
 
@@ -11349,7 +11372,12 @@ def command_find(args):
     )
     types = _split_csv_args(getattr(args, "types", None)) or None
     result = global_search(
-        items, _config(args), args.term, types=types, limit=getattr(args, "limit", None)
+        items,
+        _config(args),
+        args.term,
+        types=types,
+        limit=getattr(args, "limit", None),
+        fuzzy=getattr(args, "fuzzy", False),
     )
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")

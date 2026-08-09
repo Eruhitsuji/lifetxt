@@ -4,6 +4,7 @@ import re
 from collections import OrderedDict
 from datetime import datetime, time, timedelta
 
+from .fuzzy_search import fuzzy_contains
 from .links import dependency_blockers_by_item
 from .model import (
     VALID_STATUSES,
@@ -194,6 +195,7 @@ def filter_items(
     team_members=None,
     team_aliases=None,
     tag_aliases=None,
+    fuzzy=False,
 ):
     statuses = _normalize_status_filter(statuses)
     kinds = _normalize_type_filter(kinds)
@@ -210,6 +212,7 @@ def filter_items(
     recipients = _normalize_filter_values(recipients)
     teams = _normalize_filter_values(teams, team_aliases)
     details = _parse_detail_filters(detail_filters)
+    text_query = text or None
     text = text.lower() if text else None
 
     if range_start is None and range_end is not None:
@@ -251,8 +254,12 @@ def filter_items(
             continue
         if details and not _item_matches_detail_filters(item, details):
             continue
-        if text and text not in _item_search_text(item).lower():
-            continue
+        if text:
+            if fuzzy:
+                if not fuzzy_contains(text_query, _item_search_text(item)):
+                    continue
+            elif text not in _item_search_text(item).lower():
+                continue
         if range_start is not None and not item_time_matches(
             item, range_start, range_end
         ):

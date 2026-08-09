@@ -1990,6 +1990,141 @@ traceability:
         resolved by defensive archive hardening.
       status: implemented
 
+    - requirement_id: req-cli-version-flag
+      capability_id: cap-cli-version-command
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/186
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/187
+      changed_files_or_scope:
+        - Add a top-level --version/-V flag to the lifetxt CLI
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/cli-version-command/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebAppTests.test_version_flag_prints_version_and_exits_zero
+        - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/cli-version-command/ (below
+        the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, XS-sized). First implementation task of the
+        cli-web-multiday-enhancements batch (Issues #186, #188, #190, #192,
+        #194; PRs #187, #189, #191, #193, #195), landing on its own task branch
+        merged into the feature/cli-web-multiday-enhancements integration
+        branch before a final human-approved PR into main.
+      status: implemented
+
+    - requirement_id: req-web-display-refresh-fix
+      capability_id: cap-web-display-refresh-fix
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/188
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/189
+      changed_files_or_scope:
+        - Fix configureAutoRefresh to read appConfig.web.display_refresh instead of a hardcoded "60"
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/web-display-refresh-fix/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_display_mode_auto_refresh_honors_configured_interval, confirmed via git stash to fail on the prior code
+        - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+        - 'live: GET /api/config against a real server with web.display_refresh: 45 configured correctly reports 45'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/web-display-refresh-fix/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, XS/S-sized). Second implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
+    - requirement_id: req-tui-docs-drift-gate
+      capability_id: cap-tui-docs-drift-gate
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/190
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/191
+      changed_files_or_scope:
+        - Add an automated drift test comparing docs/en/cli.md and docs/ja/cli.md's TUI command tables against the live TUI command registry
+        - Fix two discovered drifted rows (/state, /now) in both language documents
+        - tests/test_surface_runtime.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/tui-docs-drift-test/
+      tests_or_evidence:
+        - tests/test_surface_runtime.py TuiDocumentationDriftTests.test_docs_command_tables_match_the_tui_command_registry
+        - python -m unittest tests.test_surface_runtime -> passes after correcting both documents
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/tui-docs-drift-test/ (below
+        the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, S-sized). Third implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
+    - requirement_id: req-doctor-unification
+      capability_id: cap-doctor-unification
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/192
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/193
+      changed_files_or_scope:
+        - Unify doctor's two divergent optional-dependency sets onto one shared function
+        - Add lifetxt/Python/OS version reporting and a disk-space check to plain doctor
+        - lifetxt/doctor.py
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/doctor-unification/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtDoctorCliTests.test_doctor_reports_version_os_and_disk_space, test_doctor_and_workspace_safety_share_the_same_dependency_set
+        - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+        - 'live: plain doctor now shows system/disk rows and the widened dependency set; doctor --workspace-safety --format json includes matplotlib/cryptography'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/doctor-unification/ (below
+        the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, S-sized). Merges two originally-separate requests found to
+        substantially overlap during scoping: "system diagnostics enhancement"
+        and "output system configuration". Fourth implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
+    - requirement_id: req-calendar-multiday-placement
+      capability_id: cap-calendar-multiday-placement
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/194
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/195
+      changed_files_or_scope:
+        - Place a multi-day Calendar record on every matched day instead of only the earliest
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/calendar-multiday-placement/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_matched_day, confirmed via git stash to fail on the prior matches[0]-only code
+        - 'manual: a real Node.js run of the extracted function source against 4 cases (3-day placement, single-occurrence, matches-less fallback, per-day HTML) -- all passed'
+        - 'design-time: direct lifetxt.agenda.agenda_records() calls confirm the server already returns one matches entry per matched day, and Timeline already receives only its in-window subset -- basis for excluding Timeline from scope'
+        - python -m unittest tests.test_lifetxt -> Ran 574 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/calendar-multiday-placement/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, S-sized bug fix). Investigated and confirmed the fix
+        is generic across every record kind and that Timeline has no equivalent
+        defect, both explicitly asked for in the originating bug report. Fifth
+        implementation task of the cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

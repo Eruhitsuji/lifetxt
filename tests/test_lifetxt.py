@@ -5530,6 +5530,18 @@ class LifeTxtWebAppTests(unittest.TestCase):
             [item.title for item in webapp.limit_items(items, "bad")],
         )
 
+    def test_version_flag_prints_version_and_exits_zero(self):
+        from lifetxt import __version__
+
+        stdout, stderr, code = run_cli("--version")
+        self.assertEqual(0, code)
+        self.assertIn(__version__, stdout)
+        self.assertEqual("", stderr)
+
+        stdout, stderr, code = run_cli("-V")
+        self.assertEqual(0, code)
+        self.assertIn(__version__, stdout)
+
     def test_serve_help_does_not_require_web_dependencies(self):
         stdout, stderr, code = run_cli("serve", "--help")
 

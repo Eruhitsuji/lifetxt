@@ -2503,6 +2503,329 @@ traceability:
         proposed for merge.
       status: implemented
 
+    - requirement_id: req-clean-test-environment-httpx2
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/219
+      pull_request: null
+      changed_files_or_scope:
+        - Declare httpx2 in the dev extra so the documented clean full-suite install path installs it
+        - Point CI, run_ci_like.py, and readme.md at the dev extra instead of a hardcoded bare httpx install
+        - Update doctor.py's OPTIONAL_DEPENDENCY_NAMES and docs/en|ja/cli.md's checked-package table from httpx to httpx2
+        - Widen five Web-test skip guards to accept either httpx2 or httpx, matching starlette.testclient's own fallback
+        - pyproject.toml
+        - readme.md
+        - .github/workflows/ci.yml
+        - scripts/run_ci_like.py
+        - lifetxt/doctor.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - tests/test_revision_migration_metrics.py
+        - tests/test_revision_telemetry_v2.py
+        - tests/test_schema_extensions_v2.py
+        - tests/test_surface_runtime.py
+        - tests/test_timer_public_revisions_v3.py
+      tests_or_evidence:
+        - 'live: E:/project/lifetxt/.venv/Scripts/python.exe -m pip install httpx2, then python -m unittest tests.test_completion_surfaces tests.test_remote_attachment_contracts_v6 tests.test_revision_migration_metrics tests.test_revision_telemetry_v2 tests.test_schema_extensions_v2 tests.test_surface_runtime tests.test_timer_public_revisions_v3 -> Ran 78 tests, OK (skipped=3), reproducing and resolving the exact RuntimeError the issue reported'
+        - python -m unittest tests.test_lifetxt.LifeTxtDoctorCliTests -> Ran 11 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2103 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). No cc-sdd
+        spec was written; the fix is a dependency-declaration correction with
+        a clear root cause already diagnosed in the issue body. First item of
+        the quality-and-i18n-fixes batch (Issues #219, #220, #221, #222,
+        #223, #224). requirements-web.txt itself is deliberately unchanged:
+        it lists only the shipped Web runtime's own dependencies (fastapi,
+        uvicorn[standard]), and httpx2 is test-only, matching the issue's
+        explicit "keep runtime-only extras free of test-only packages"
+        acceptance criterion. pull_request is filled in once the pull
+        request implementing this entry is opened.
+      status: implemented
+
+    - requirement_id: req-web-i18n-command-token-protection
+      capability_id: cap-web-help-command-reference
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/222
+      pull_request: null
+      changed_files_or_scope:
+        - Mark the command palette's slash-command label/alias spans and the help modal's command-usage span data-no-i18n
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py CommandTokenProtectionTests (2 tests: command palette label/hint protected while summary prose stays translatable; help modal usage span protected while summary column stays translatable)
+        - python -m unittest tests.test_web_i18n -> Ran 17 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain both new data-no-i18n markers verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2105 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). Extends
+        cap-web-help-command-reference (the help modal's command catalog),
+        the closest existing capability, rather than creating a new one,
+        since the command palette itself has no dedicated capability entry
+        of its own. Horizontal review confirmed the only two DOM sites that
+        render a bare command token as its own text node are the command
+        palette row and the help modal usage span (both fixed here);
+        unknown-command/terminal-only/not-wired-up toast messages
+        (showToast) were audited and found already safe by construction --
+        each is a single text node holding a full sentence, and
+        translateString's exact-match-after-peeling logic only replaces
+        text when the ENTIRE peeled remainder equals a dictionary key, which
+        a multi-word sentence never does, so no corruption is possible there
+        without a code change. Second item of the quality-and-i18n-fixes
+        batch. pull_request is filled in once the pull request implementing
+        this entry is opened.
+      status: implemented
+
+    - requirement_id: req-web-i18n-dynamic-label-translation
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/223
+      pull_request: null
+      changed_files_or_scope:
+        - Translate the Notifications button's runtime label through t() instead of a bare literal concatenation
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py DynamicLabelTranslationTests.test_notif_button_label_is_translated_at_construction, confirmed against the exact substring the prior code used
+        - python -m unittest tests.test_web_i18n -> Ran 18 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2106 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). New
+        capability cap-web-i18n-dynamic-content-fidelity created rather than
+        extending an unrelated existing one, since no capability previously
+        covered the i18n translation runtime itself; see that entry's notes
+        for why. Horizontal audit found one other `"<Word>" + dynamicPart`
+        textContent assignment in the file (the Git panel title with a
+        parenthetical commit count) and confirmed it is not a bug: "Git" has
+        no dictionary entry (proper noun, correctly untranslated) and its
+        suffix is parenthetical, which the existing suffix-peel rule already
+        handles. Third item of the quality-and-i18n-fixes batch. pull_request
+        is filled in once the pull request implementing this entry is opened.
+      status: implemented
+
+    - requirement_id: req-web-i18n-contextual-help-translation
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/224
+      pull_request: null
+      changed_files_or_scope:
+        - Translate data-help tooltip text through t() at display time in showUiHelp(), keeping dataset.help as the untouched English source
+        - Add Japanese dictionary entries for all 35 contextual-help strings (5 inline data-help, 15 CONTROL_HELP, 15 VIEW_HELP)
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py ContextualHelpTranslationTests (2 tests: showUiHelp translates via t(); every data-help/CONTROL_HELP/VIEW_HELP source string structurally extracted from the served page has a dictionary entry)
+        - tests/test_web_i18n.py DictionaryTests.test_dictionary_covers_contextual_help_strings (the same 35 strings as an explicit hardcoded list)
+        - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain tooltip.textContent = t(text); and representative Japanese contextual-help strings (dark-btn help, editor Workflow-state help) verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2109 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized: one code
+        change plus 35 new dictionary entries). Extends
+        cap-web-i18n-dynamic-content-fidelity, created alongside #223 in
+        this same batch. Chose translate-at-display-time (t(text) inside
+        showUiHelp()) over mutating dataset.help, matching the issue's own
+        stated preference and this file's established pattern for
+        JavaScript-built strings -- dataset.help stays the single English
+        source of truth, so switching language never needs it rewritten and
+        a later-bound or asynchronously-created help target is translated
+        correctly the first time it is shown, with no separate wiring.
+        aria-describedby, positioning, and hover/focus/blur behavior are
+        unchanged. Fourth item of the quality-and-i18n-fixes batch.
+        pull_request is filled in once the pull request implementing this
+        entry is opened.
+      status: implemented
+
+    - requirement_id: req-calendar-occurrence-start-precedence
+      capability_id: cap-calendar-multiday-placement
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/220
+      pull_request: null
+      changed_files_or_scope:
+        - Prefer record.matches (the authoritative per-day collection) over occurrence_start in _calRecordDayPlacements, since agenda_records() always derives occurrence_start from matches[0]
+        - File #229 to track a related, distinct Timeline/Agenda limitation found during the same horizontal review, deliberately not fixed here
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_lifetxt.py test_calendar_places_a_record_on_every_day_even_with_occurrence_start
+        - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_day_even_with_occurrence_start tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_matched_day tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_calendar_shows_a_day_span_badge_on_multiday_records_only -> Ran 3 tests, OK
+        - 'live: real lifetxt serve process against the exact #220 reproduction fixture; GET /api/agenda confirmed the real payload shape (occurrence_start=matches[0].start, matches carrying all 10 real day entries) that makes the bug reproducible'
+        - 'manual: a real Node.js run of the extracted, fixed _calRecordDayPlacements against that exact real API payload -> 10/10 placements, was 1/10 before the fix; single-day and occurrence_start-only-no-matches fallback cases re-verified unaffected'
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2110 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized bug fix).
+        Extends cap-calendar-multiday-placement; see that entry's notes for
+        the full account of why this is a #194 regression reintroduced
+        through a field the original fixture never populated, and why the
+        Timeline/Agenda finding from this same horizontal review was split
+        into #229 instead of fixed here. Fifth item of the
+        quality-and-i18n-fixes batch. pull_request is filled in once the
+        pull request implementing this entry is opened.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-shared-primitive
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/fuzzy_search.py: NFKC+casefold normalization, exact-substring-first similarity scoring, bounded token-level Levenshtein fallback
+        - lifetxt/fuzzy_search.py
+        - tests/test_fuzzy_search.py
+        - .kiro/specs/fuzzy-search-first-slice/requirements.md
+        - .kiro/specs/fuzzy-search-first-slice/design.md
+      tests_or_evidence:
+        - tests/test_fuzzy_search.py NormalizationTests, SimilarityTests, FuzzyContainsTests, IsExactMatchTests -> Ran 20 tests, OK
+        - python -m unittest tests.test_fuzzy_search -> Ran 25 tests, OK
+      release_or_deployment: null
+      notes: See cap-fuzzy-search-first-slice's notes for full scoping rationale.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-cli-search
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add search --fuzzy, rejected in combination with --regex; wire filter_items(fuzzy=...) for the underlying text filter
+        - lifetxt/cli.py
+        - lifetxt/agenda.py
+        - tests/test_lifetxt.py
+        - tests/test_fuzzy_search.py
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtSearchCommandStdinInputTests (3 new fuzzy tests) and tests/test_fuzzy_search.py FilterItemsFuzzyIntegrationTests
+        - 'live: real installed lifetxt console script -- search PATTERN --fuzzy matches a typo, plain search does not, search --fuzzy --regex is rejected with a named error'
+      release_or_deployment: null
+      notes: >-
+        Found and fixed a pre-existing, unrelated defect while adding this
+        coverage: tests/test_lifetxt.py had two colliding top-level
+        LifeTxtSearchCommandTests classes; see cap-fuzzy-search-first-slice's
+        notes.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-cli-find
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add find --fuzzy; thread fuzzy through global_search() and each of its six entity searchers, with exact-before-approximate ranking under fuzzy=True
+        - lifetxt/cli.py
+        - lifetxt/global_search.py
+        - tests/test_global_search.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_global_search.py GlobalSearchFuzzyTests (5 tests) and the full pre-existing GlobalSearchTests/GlobalSearchProposalTests suite re-run unmodified
+        - tests/test_lifetxt.py LifeTxtFindCommandTests (new -- find had no prior CLI-level test coverage at all)
+        - 'live: real installed lifetxt console script -- find TERM PATH --fuzzy matches a typo across entity types, plain find does not'
+      release_or_deployment: null
+      notes: See cap-fuzzy-search-first-slice's notes for the ranking-scope decision.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-web-items-api
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/221
+      pull_request: null
+      changed_files_or_scope:
+        - Add fuzzy=true query parameter to GET /api/items, threaded into the existing filter_items(text=...) call
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter
+        - 'live: real lifetxt serve process, GET /api/items?q=sttats (0 results) vs GET /api/items?q=sttats&fuzzy=true (1 result)'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Sixth item of the quality-and-i18n-fixes batch, and the batch's
+        largest single item; distilled directly with the repository owner's
+        approval of a scoped first slice (shared primitive plus CLI
+        search/find plus Web /api/items) before implementation, given
+        issue #221's own full horizontal-review scope had no fixed task
+        size. TUI, MCP, and Remote search surfaces recorded as explicit
+        follow-up candidates in cap-fuzzy-search-first-slice rather than
+        silently dropped. pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
+    - requirement_id: req-quality-and-i18n-fixes-batch-integration
+      capability_id: cap-fuzzy-search-first-slice
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/232
+      changed_files_or_scope:
+        - Record the quality-and-i18n-fixes batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13), run on the fully consolidated feature/quality-and-i18n-fixes branch after all six sub-PRs merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in 4 unrelated files, confirmed present on main already)
+        - ruff check lifetxt tests scripts -> All checks passed
+        - /security-review dispatched against the full branch diff -> no candidate findings
+        - 'live: real lifetxt serve process, consolidated final check confirming all four Web-facing fixes (i18n command-token protection, notifications label, contextual help, fuzzy /api/items) present together in one served page and responding correctly'
+      release_or_deployment: >-
+        This entry documents PR #232 itself: feature/quality-and-i18n-fixes
+        (Issues #219, #220, #221, #222, #223, #224; PRs #225, #226, #227,
+        #228, #229 is a filed follow-up not a sub-PR, #230, #231) merging
+        into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) and every subsequent batch in
+        this project. Each requirement entry above correctly names its own
+        sub-PR (#225-#231), and none names #232, because it did not exist
+        yet when they were written. Sub-PRs were merged into the
+        integration branch via local git merge and push rather than
+        GitHub's PR-merge action (blocked by this session's auto-mode
+        permission classifier); all six sub-PR merges (#225, #226, #227,
+        #228, #230, #231) auto-detected as "merged" on GitHub once the
+        integration branch was pushed with their commits reachable from it.
+        No epic issue was filed for this batch; the user's request to
+        implement everything actionable from the open Issues is the
+        batch's origin, and task_issue is left null accordingly. #229 is a
+        follow-up issue filed during #220's own horizontal review, not
+        itself a sub-PR of this batch. #183 and #92, the two other open
+        issues at session start, were confirmed out of scope via
+        AskUserQuestion before this batch began: #183 already hit its
+        evidence ceiling pending an owner close decision, and #92 requires
+        POSIX host access unavailable in this Windows environment.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

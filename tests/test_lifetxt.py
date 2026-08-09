@@ -4228,6 +4228,33 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertIn("dayTotal > 1", body)
         self.assertIn("dayIndex", body)
 
+    def test_calendar_places_a_record_on_every_day_even_with_occurrence_start(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # agenda_records() always derives occurrence_start from matches[0],
+        # so a real multi-day on: import (or any record with more than one
+        # match) carries both fields at once. Checking occurrence_start
+        # before matches collapsed every such record back down to a single
+        # day -- the #194/#195 regression, reintroduced through a field
+        # that fixture never populated.
+        start = html.index("function _calRecordDayPlacements")
+        end = html.index("function _calEntryHtml")
+        body = html[start:end]
+        matches_index = body.index("const matches = record.matches")
+        occurrence_index = body.index("if (record.occurrence_start) {")
+        self.assertLess(
+            matches_index,
+            occurrence_index,
+            "matches must be checked before occurrence_start, since agenda_records() "
+            "always derives occurrence_start from matches[0]",
+        )
+
     def test_help_modal_has_a_searchable_command_reference(self):
         try:
             from fastapi.testclient import TestClient
@@ -4442,6 +4469,26 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(2, false_response.json()["count"])
             self.assertEqual(200, true_response.status_code)
             self.assertEqual(1, true_response.json()["count"])
+
+    def test_items_api_fuzzy_query_parameter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                '[ ] T "Weekly stats review" id:T-1\n',
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            without_fuzzy = client.get("/api/items?q=sttats")
+            with_fuzzy = client.get("/api/items?q=sttats&fuzzy=true")
+
+            self.assertEqual(200, without_fuzzy.status_code)
+            self.assertEqual(0, without_fuzzy.json()["count"])
+            self.assertEqual(200, with_fuzzy.status_code)
+            self.assertEqual(1, with_fuzzy.json()["count"])
+            self.assertEqual(
+                "Weekly stats review", with_fuzzy.json()["items"][0]["title"]
+            )
 
     def test_messages_api_boolean_false_query_value_does_not_filter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -8228,7 +8275,14 @@ class LifeTxtWhoCommandTests(unittest.TestCase):
         self.assertIn("No active", normalize_newlines(stdout))
 
 
-class LifeTxtSearchCommandTests(unittest.TestCase):
+class LifeTxtSearchCommandStdinInputTests(unittest.TestCase):
+    # Renamed from a second, colliding LifeTxtSearchCommandTests definition
+    # later in this file (found while adding --fuzzy coverage): Python keeps
+    # only the last class bound to a repeated top-level name, so every test
+    # method below was silently never collected by unittest discover. This
+    # class's own coverage (stdin input, --in/title scoping, life-format
+    # output) is distinct from the surviving class's (explicit file path,
+    # --in/project scoping), so both are kept rather than one being deleted.
     SOURCE = (
         "[ ] T Fix_login_bug project:auth\n"
         "[x] T Write_unit_tests project:testing\n"
@@ -8283,6 +8337,80 @@ class LifeTxtSearchCommandTests(unittest.TestCase):
         )
         self.assertEqual(0, code, stderr)
         self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+
+    def test_search_fuzzy_flag_matches_a_typo(self):
+        stdout, stderr, code = run_cli(
+            "search", "Fx_login_bug", "--fuzzy", input_text=self.SOURCE
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+
+    def test_search_without_fuzzy_flag_does_not_match_a_typo(self):
+        stdout, stderr, code = run_cli("search", "Fx_login_bug", input_text=self.SOURCE)
+        self.assertEqual(1, code)
+
+    def test_search_fuzzy_and_regex_are_rejected_together(self):
+        stdout, stderr, code = run_cli(
+            "search", "Fx_login_bug", "--fuzzy", "--regex", input_text=self.SOURCE
+        )
+        self.assertEqual(1, code)
+        self.assertIn("--fuzzy", stderr)
+        self.assertIn("--regex", stderr)
+
+
+class LifeTxtFindCommandTests(unittest.TestCase):
+    # Unlike search, find never reads stdin (stdin_when_empty=False in
+    # command_find), so every case here needs a real file path.
+    SOURCE = (
+        "[ ] T Fix_login_bug project:auth\n[x] T Write_unit_tests project:testing\n"
+    )
+
+    def _make_file(self):
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
+        f.write(self.SOURCE)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_find_substring_match(self):
+        path = self._make_file()
+        try:
+            stdout, stderr, code = run_cli("find", "Fix", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+        finally:
+            os.unlink(path)
+
+    def test_find_no_match_without_fuzzy(self):
+        path = self._make_file()
+        try:
+            stdout, stderr, code = run_cli("find", "Fx_login_bug", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("No matches", normalize_newlines(stdout))
+        finally:
+            os.unlink(path)
+
+    def test_find_fuzzy_flag_matches_a_typo(self):
+        path = self._make_file()
+        try:
+            stdout, stderr, code = run_cli("find", "Fx_login_bug", path, "--fuzzy")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Fix_login_bug", normalize_newlines(stdout))
+        finally:
+            os.unlink(path)
+
+    def test_find_json_output_schema(self):
+        path = self._make_file()
+        try:
+            stdout, stderr, code = run_cli("find", "Fix", path, "--json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertIn("groups", data)
+            self.assertIn("item", data["groups"])
+        finally:
+            os.unlink(path)
 
 
 class LifeTxtHealthEdgeCaseTests(unittest.TestCase):

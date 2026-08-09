@@ -267,7 +267,7 @@ def cleanup_stale_locks(records, stale_after=300.0, enabled=False, force=False):
 OPTIONAL_DEPENDENCY_NAMES = (
     "fastapi",
     "uvicorn",
-    "httpx",
+    "httpx2",
     "textual",
     "watchdog",
     "jsonschema",

@@ -40,7 +40,8 @@ tui = [
   "watchdog>=2.0.0"
 ]
 dev = [
-  "ruff>=0.16.1"
+  "ruff>=0.16.1",
+  "httpx2"
 ]
 
 [tool.setuptools]

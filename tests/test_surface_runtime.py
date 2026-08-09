@@ -615,7 +615,10 @@ class SurfaceRuntimeTests(unittest.TestCase):
 
 @unittest.skipUnless(
     __import__("importlib").util.find_spec("fastapi") is not None
-    and __import__("importlib").util.find_spec("httpx") is not None,
+    and (
+        __import__("importlib").util.find_spec("httpx2") is not None
+        or __import__("importlib").util.find_spec("httpx") is not None
+    ),
     "Web test dependencies are not installed.",
 )
 class WebSurfaceRuntimeTests(unittest.TestCase):

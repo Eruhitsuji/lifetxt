@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -742,6 +743,67 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
             app = webapp.create_app(paths=[self.path], writable_path=other)
         self.assertTrue(captured)
         self.assertTrue(app.state.serve_target_diagnostic["mismatch"])
+
+
+_TUI_DOC_ROW = re.compile(r"^\|\s*`/(?P<name>[a-z_]+)(?:\s+(?P<usage>[^`]*))?`\s*\|")
+
+
+def _tui_doc_commands():
+    """Parse the '#### Commands' section of docs/en/cli.md into name->usage.
+
+    Mirrors lifetxt.tui_app.help_entries()'s own "/name usage" string shape so
+    the two can be compared directly without a second parsing convention.
+    """
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(repo_root, "docs", "en", "cli.md")
+    with open(path, "r", encoding="utf-8") as handle:
+        text = handle.read()
+    start = text.index("#### Commands")
+    end = text.index("#### Choosing an editor", start)
+    section = text[start:end]
+
+    commands = {}
+    for line in section.splitlines():
+        match = _TUI_DOC_ROW.match(line.strip())
+        if not match:
+            continue
+        name = match.group("name")
+        usage = (match.group("usage") or "").strip().replace("\\|", "|")
+        commands[name] = usage
+    return commands
+
+
+class TuiDocumentationDriftTests(unittest.TestCase):
+    """Covers #G: docs/en/cli.md's TUI command tables must track tui_app.COMMANDS.
+
+    No automated check enforced this before -- the two were kept in sync by
+    hand, which drifts silently on the next command addition/change.
+    """
+
+    def test_docs_command_tables_match_the_tui_command_registry(self):
+        from lifetxt.tui_app import COMMANDS
+
+        documented = _tui_doc_commands()
+        registered = {command.name: command.usage for command in COMMANDS}
+
+        missing_from_docs = sorted(set(registered) - set(documented))
+        stale_in_docs = sorted(set(documented) - set(registered))
+        self.assertEqual(
+            [], missing_from_docs, "TUI commands missing from docs/en/cli.md"
+        )
+        self.assertEqual(
+            [],
+            stale_in_docs,
+            "docs/en/cli.md documents commands no longer in tui_app.COMMANDS",
+        )
+
+        usage_mismatches = [
+            "/%s: docs usage %r != registry usage %r"
+            % (name, documented[name], registered[name])
+            for name in sorted(set(documented) & set(registered))
+            if documented[name] != registered[name]
+        ]
+        self.assertEqual([], usage_mismatches)
 
 
 if __name__ == "__main__":

@@ -111,6 +111,18 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "update.repository",
+            _entry(
+                "string",
+                "Eruhitsuji/lifetxt",
+                "GitHub owner/name checked by `lifetxt update-check` (and `lifetxt "
+                "update`). Set this on a fork so update checks compare against the "
+                "fork's own releases instead of upstream. Overridden per-invocation "
+                "by --repo.",
+                since="0.1.0",
+            ),
+        ),
+        (
             "workspaces",
             _entry(
                 "object",

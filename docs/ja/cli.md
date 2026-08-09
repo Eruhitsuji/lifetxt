@@ -1532,8 +1532,8 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | command | 用途 |
 | --- | --- |
 | `/done [now]` | task 系の row を完了して `done:` を記録。`now` で時刻も記録 |
-| `/state STATE [TITLE]` | 直前の status を閉じて presence を記録。`/state end` で閉じる |
-| `/now` | 現在 open な presence status を表示 |
+| `/state STATE [TITLE] \| end` | 直前の status を閉じて presence を記録。`/state end` で閉じる |
+| `/now [PERSON]` | 現在 open な presence status を表示 |
 | `/status open\|active\|done\|dropped` | CLI と同じ alias で status を設定 |
 | `/set KEY VALUE` | detail を設定。値を省略すると key を削除 |
 | `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |
@@ -2162,10 +2162,13 @@ python -m lifetxt doctor
 | Check | 検査内容 |
 |---|---|
 | `python` | Python 3.10+ (未満は FAIL) |
+| `system` | lifetxt version、Python の詳細 version、OS/platform (情報表示) |
+| `update` | `--check-update` 使用時のみ: 新しい GitHub release/tag があるか (あれば WARN、check 自体の失敗も WARN) |
 | `life.txt` | 設定または既定の life.txt file が存在し読み取り可能か |
 | `config` | `.lifetxt.json` (または `--config` の path) が存在するか (無ければ WARN) |
+| `disk` | life.txt file のある volume の空き容量 (100 MiB 未満で WARN) |
 | `fzf`, `peco` | optional selector tool が `PATH` にあるか (無ければ WARN) |
-| `textual`, `watchdog`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN) |
+| `fastapi`, `uvicorn`, `httpx`, `textual`, `watchdog`, `jsonschema`, `matplotlib`, `cryptography` | optional Python package が導入済みか (無ければ WARN)。`doctor --workspace-safety` と同じ package set |
 | `check` | life.txt file を解析し error/warning 件数を報告 |
 | `ids` | `id:` が無い item を報告 |
 
@@ -2173,6 +2176,84 @@ python -m lifetxt doctor
 (Python version が古い、または file が存在しない/読み取れない場合)。
 optional dependency の不足は `WARN` であり、終了コードには影響しません。
 機械可読な出力には `--format json` を使用してください。
+
+`--check-update` を付けると `update-check` と同じロジックを使う `update` 行
+が追加されます (既定では無効なので、通常の `doctor` は network access を
+必要としません)。
+
+```sh
+python -m lifetxt doctor --check-update
+python -m lifetxt doctor --check-update --repo your-github-username/your-fork
+```
+
+新しい release/tag があっても、optional dependency 不足と同様に `WARN`
+であり `doctor` の終了コードには影響しません。check 中の network / API
+の失敗も `doctor` 全体を失敗させず `WARN` (`Could not check for updates:
+...`) として報告されます。`--update-timeout SECONDS` (既定 `5`) でこの
+check の上限時間を設定できます。
+
+`update-check` は実行中の version と、repository の最新の GitHub Release
+(未公開なら最新の tag) を比較します。既定の repository はこの project 自身
+(`Eruhitsuji/lifetxt`) です。fork では `update.repository`
+([config.md](config.md#update-check) 参照) を設定するか `--repo` を渡して、
+upstream ではなく fork 自身の release と比較してください。
+
+```sh
+python -m lifetxt update-check
+python -m lifetxt update-check --format json
+python -m lifetxt update-check --repo your-github-username/your-fork
+```
+
+公開 GitHub API への読み取り専用リクエストのみを行い、何もインストール・
+変更しません。`status` の値: `up_to_date`、`update_available`、
+`ahead_of_latest` (実行中の version が最新公開 version より新しい)、
+`no_release_found` (repository にまだ Release も tag も無い)、
+`unparseable` (release/tag 名を version として解釈できなかった)。
+network timeout を変更するには `--timeout SECONDS` を使用します
+(既定値 `10`)。
+
+`update` は実行中の install 自身の git checkout を fast-forward します。
+lifetxt には PyPI 配布が無いため、更新は git で行います。**lifetxt が
+git clone からインストールされている場合のみ動作します**
+(`python -m pip install -e .`、公式に案内されているインストール方法)。
+既定では dry-run です。
+
+```sh
+python -m lifetxt update
+python -m lifetxt update --yes
+python -m lifetxt update --ref main --yes
+python -m lifetxt update --repo your-github-username/your-fork --yes
+```
+
+`--yes` を付けない場合、`update` は (git remote に対して読み取り専用の)
+fetch のみ行い、実際に何が変わるか — 現在の commit・目標の commit・解決
+された ref、そして (text 出力では) 適用予定の commit を最新から最大20件、
+1行ずつ表示し、残りがあれば件数も報告します — を working tree に触れずに
+報告します。実際に適用するには `--yes` が必須です。`--format json` では
+同じ内容が `commits` 配列と `commit_count` として含まれます。commit 一覧
+の取得に失敗しても update 自体は止まりません — その場合は空の一覧のまま
+fast-forward の予定を報告します。安全策 (すべて推測ではなく明確な失敗として現れます):
+
+- 実行中の install が git working tree の中に無い場合は拒否します。
+- working tree に (tracked / untracked を問わず) 未コミットの変更が
+  1つでもある場合は拒否します (`git status --porcelain` が空である
+  必要があります)。まずコミット・stash・破棄してください。
+- `HEAD` が detached の場合は拒否します。先に branch を checkout して
+  ください。
+- 実行するのは `git fetch` と `git merge --ff-only` のみです。reset・
+  rebase・force-push・履歴の書き換えは一切行いません。fast-forward
+  できない場合は強制せず拒否します。
+- 更新後に `pip install` などの build 手順を自動実行することはありません。
+  依存関係が変わっていた場合は `pip install -e .` (または使用している
+  extras) を自分で再実行してください -- 変更を適用した際は `update` が
+  その旨を案内します。
+
+`--ref` を指定しない場合、`update` は `update-check` と同じ方法で
+target を解決します (最新公開 Release、無ければ tag。`--repo`/
+`update.repository` はこの照会先の repository のみを変更します)。
+実際の `git fetch` は常に既存のローカル git remote (既定は `origin`、
+`--remote NAME` で変更可) を通じて行われます — `--repo` は問い合わせる
+ref の名前を選ぶだけで、fetch 元の URL を変えることはありません。
 
 ## 17. `encrypt` と `decrypt`
 

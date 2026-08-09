@@ -8,6 +8,11 @@ import unittest
 from lifetxt import entrypoint
 from lifetxt.ids import id_audit
 from lifetxt.parser import parse_text
+from lifetxt.serializer import item_to_line
+from lifetxt.ticket_activity import build_ticket_event, build_time_entry
+from lifetxt.ticket_revision_writes import ticket_file_revision
+from lifetxt.ticket_workflow import apply_transition
+from lifetxt.timezone_policy import timezone_context
 
 
 class GeneratedRecordValidationTests(unittest.TestCase):
@@ -30,6 +35,68 @@ class GeneratedRecordValidationTests(unittest.TestCase):
         )
         self.assertNotIn("W106", codes)
 
+    def test_ticket_event_builder_owned_fields_do_not_emit_generic_custom_warnings(self):
+        event = build_ticket_event(
+            "TK-1",
+            "transition",
+            "self",
+            "2026-08-09T01:00:00Z",
+            1,
+            "TX-TK-1-000001",
+            "a" * 64,
+            changes=['{"field":"ticket_status","before":["new"],"after":["in_progress"]}'],
+            body="Started",
+            project="demo",
+            tracker="task",
+            from_status="new",
+            to_status="in_progress",
+            provider="local",
+            references=["ref-1"],
+            extra={
+                "role": "administrator",
+                "watcher": "self",
+                "activity": "development",
+                "assignee": "self",
+                "version": "VER-1",
+                "sprint": "SPR-1",
+            },
+        )
+        codes = self._codes(item_to_line(event) + "\n")
+        self.assertNotIn("W106", codes)
+
+    def test_time_entry_builder_owned_fields_do_not_emit_generic_custom_warnings(self):
+        entry = build_time_entry(
+            "TK-1",
+            "demo",
+            "self",
+            "development",
+            "2026-08-09",
+            "30m",
+            1,
+            "EV-TK-1-000001",
+            "2026-08-09T01:00:00Z",
+            comment="Worked",
+            source="manual",
+            timer_ref="timer-1",
+            corrects="TIME-TK-1-000000",
+        )
+        codes = self._codes(item_to_line(entry) + "\n")
+        self.assertNotIn("W106", codes)
+
+    def test_ticket_history_unknown_custom_key_still_warns(self):
+        event = build_ticket_event(
+            "TK-1",
+            "transition",
+            "self",
+            "2026-08-09T01:00:00Z",
+            1,
+            "TX-TK-1-000001",
+            "a" * 64,
+        )
+        event.details["custom_thing"] = ["value"]
+        codes = self._codes(item_to_line(event) + "\n")
+        self.assertIn("W106", codes)
+
     def test_generic_note_custom_key_still_warns(self):
         codes = self._codes("[N] N note id:n1 custom_thing:value\n")
         self.assertIn("W106", codes)
@@ -44,6 +111,72 @@ class GeneratedRecordValidationTests(unittest.TestCase):
             "person:self\n"
         )
         self.assertIn("W207", codes)
+
+
+class TicketWorkflowCompletionMetadataTests(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.life_path = os.path.join(self.tempdir.name, "life.txt")
+        with open(self.life_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T Workflow record:ticket id:TK-1 tracker:task "
+                "ticket_status:new priority:normal project:demo assignee:self\n"
+            )
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def _read(self):
+        with open(self.life_path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        items, diagnostics = parse_text(text)
+        ticket = next(
+            item
+            for item in items
+            if "ticket" in item.details.get("record", [])
+            and item.details.get("id") == ["TK-1"]
+        )
+        return text, ticket, diagnostics
+
+    def _transition(self, status, at, resolution=None):
+        revision = ticket_file_revision(self.life_path)
+        return apply_transition(
+            self.life_path,
+            "TK-1",
+            status,
+            "self",
+            "administrator",
+            revision,
+            resolution=resolution,
+            comment="workflow test",
+            at=at,
+        )
+
+    def test_completed_transition_sets_done_preserves_it_on_close_and_reopen_clears_it(self):
+        with timezone_context("Asia/Tokyo"):
+            self._transition("in_progress", "2026-08-09T23:50:00+09:00")
+            self._transition(
+                "resolved",
+                "2026-08-10T00:30:00+09:00",
+                resolution="verified",
+            )
+            _text, ticket, diagnostics = self._read()
+            self.assertEqual("[x]", ticket.status)
+            self.assertEqual(["2026-08-10"], ticket.details.get("done"))
+            self.assertNotIn("W103", [diagnostic.code for diagnostic in diagnostics])
+            self.assertNotIn("W106", [diagnostic.code for diagnostic in diagnostics])
+
+            self._transition("closed", "2026-08-11T10:00:00+09:00")
+            _text, ticket, diagnostics = self._read()
+            self.assertEqual(["2026-08-10"], ticket.details.get("done"))
+            self.assertNotIn("W103", [diagnostic.code for diagnostic in diagnostics])
+
+            self._transition("new", "2026-08-12T10:00:00+09:00")
+            _text, ticket, diagnostics = self._read()
+            self.assertEqual("[ ]", ticket.status)
+            self.assertNotIn("done", ticket.details)
+            self.assertNotIn("W104", [diagnostic.code for diagnostic in diagnostics])
+            self.assertNotIn("W106", [diagnostic.code for diagnostic in diagnostics])
 
 
 class CaptureContextTests(unittest.TestCase):

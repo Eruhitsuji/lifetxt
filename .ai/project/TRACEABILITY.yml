@@ -2248,6 +2248,29 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-web-help-command-reference
+      capability_id: cap-web-help-command-reference
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/204
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/205
+      changed_files_or_scope:
+        - Fix a translation-coverage regression where the help modal hint's <code>/help</code> split its sentence across a skip-tag boundary
+        - lifetxt/web_assets.py
+      tests_or_evidence:
+        - tests/test_release_policy.py test_release_manifest_has_deterministic_fingerprint, test_repository_translation_baseline_allows_known_debt_but_no_new_gap
+        - python -m unittest tests.test_release_policy tests.test_web_i18n tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference -> Ran 27 tests, OK
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Found by running the full suite after merging several further batch
+        items (not caught by tests.test_web_i18n, which does not exercise
+        release_policy.py's stricter HTML-parsing translation-coverage gate).
+        Confirmed as a new gap, not pre-existing baseline debt, via the
+        failing tests' own new_missing/resolved_baseline_entries output.
+        Tenth implementation task of the cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

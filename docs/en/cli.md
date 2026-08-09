@@ -2485,6 +2485,7 @@ its built-in default.
 |---|---|
 | `python` | Python 3.10+ (fails below 3.10) |
 | `system` | lifetxt version, full Python version, and OS/platform (informational) |
+| `update` | Only with `--check-update`: whether a newer GitHub release/tag exists (warns if so, or if the check itself fails) |
 | `life.txt` | The configured or default life.txt file exists and is readable |
 | `config` | `.lifetxt.json` (or `--config` path) exists (warns if missing) |
 | `disk` | Free space on the volume holding the life.txt file (warns below 100 MiB) |
@@ -2497,6 +2498,21 @@ its built-in default.
 too old, or the file is missing/unreadable); missing optional dependencies
 are `WARN` and do not affect the exit code. Use `--format json` for
 machine-readable output.
+
+Pass `--check-update` to add an `update` row reusing `update-check`'s own
+logic (see below) -- off by default, so plain `doctor` never requires
+network access:
+
+```sh
+python -m lifetxt doctor --check-update
+python -m lifetxt doctor --check-update --repo your-github-username/your-fork
+```
+
+A newer release/tag being available reports `WARN`, matching the missing-
+optional-dependency checks -- it never fails `doctor`'s exit code. A network
+or API failure while checking also reports `WARN` (`Could not check for
+updates: ...`) rather than failing `doctor` outright; `--update-timeout
+SECONDS` (default `5`) bounds how long that check can take.
 
 `update-check` compares the running version against the latest published
 GitHub Release for a repository, falling back to the latest tag when no

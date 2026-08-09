@@ -1563,3 +1563,52 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-replace-retry-policy-dedup
+    name: Shared replace-retry policy constants
+    summary: >-
+      Make `transaction_journal.py` import its Windows replace-retry policy
+      constants (`_REPLACE_PERMISSION_RETRY_OS_NAMES`/
+      `_REPLACE_PERMISSION_RETRY_DELAYS_SECONDS`) from `atomic.py` instead of
+      defining its own copy, so the two modules cannot silently drift apart.
+      The retry loop itself (with its per-attempt `fault_point()` hook,
+      required by the crash-recovery fault-injection test matrix) remains
+      intentionally separate and unmigrated.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-replace-retry-policy-dedup
+    implementation_locations:
+      - lifetxt/atomic.py
+      - lifetxt/transaction_journal.py
+      - tests/test_replace_retry_policy.py
+    public_interfaces:
+      - lifetxt.atomic._REPLACE_PERMISSION_RETRY_OS_NAMES
+      - lifetxt.atomic._REPLACE_PERMISSION_RETRY_DELAYS_SECONDS
+    tests_or_evidence:
+      - tests/test_replace_retry_policy.py ReplaceRetryPolicyConsistencyTests (unchanged assertions, now structurally guaranteed)
+      - tests/test_transaction_journal_v3.py, tests/test_fault_matrix_v6.py, tests/test_fault_drill_v5.py re-run unmodified -> all pass, confirming the crash-recovery fault-injection matrix is unaffected
+      - python -m unittest tests.test_transaction_journal_v3 tests.test_replace_retry_policy tests.test_fault_matrix_v6 tests.test_fault_drill_v5 tests.test_mutation tests.test_transaction_policy_v4 tests.test_config_validation -> Ran 99 tests, OK (skipped=3)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/196
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/197
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/replace-retry-policy-dedup/
+      (below the .ai/project/changes/README.md change-package threshold:
+      Standard assurance, S-sized, zero behavior change). Completes the
+      follow-up `windows-atomic-replace-retry`'s decisions.md explicitly
+      deferred ("a future spec could migrate transaction_journal.py onto the
+      shared helper"), narrowed to the part that is safe to share: the retry
+      loop itself, which interleaves fault_point() hooks the fault-injection
+      test matrix depends on, remains deliberately unmigrated for the same
+      reason it was originally excluded. Sixth implementation task of the
+      cli-web-multiday-enhancements batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

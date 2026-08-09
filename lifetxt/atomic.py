@@ -20,9 +20,12 @@ import tempfile
 import time
 
 #: Platforms where a transient PermissionError during os.replace is retried.
-#: Independently mirrors lifetxt.transaction_journal's constant of the same
-#: shape rather than sharing code with it; see the windows-atomic-replace-retry
-#: change package for why.
+#: The single shared definition for this policy: lifetxt.transaction_journal
+#: imports these two constants rather than defining its own copy (see the
+#: replace-retry-policy-dedup change). Its own retry *loop* stays separate --
+#: it interleaves a fault_point() hook per attempt for the incident-hardened,
+#: fault-injection-tested crash-recovery test matrix, which this module's
+#: replace_with_retry() does not (and should not) provide.
 _REPLACE_PERMISSION_RETRY_OS_NAMES = frozenset(("nt",))
 
 #: Delay in seconds before each retry, in order. Matches the bounded budget

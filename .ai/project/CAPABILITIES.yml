@@ -1807,6 +1807,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/206
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/207
+      - https://github.com/Eruhitsuji/lifetxt/pull/210
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/lifetxt-self-update/ plus a
@@ -1816,7 +1817,11 @@ capabilities:
       decision risk factors). Reuses cap-cli-update-check's target-resolution
       helpers unmodified. Eleventh implementation task of the
       cli-web-multiday-enhancements batch. Requires independent security
-      review and Merge Authority approval before merge to main.
+      review and Merge Authority approval before merge to main. #209/#210
+      (Standard assurance) added a bounded, fail-open pending-commit preview
+      to the dry-run and --yes success output, distilled from a cc-sdd spec
+      at .kiro/specs/update-dry-run-commit-preview/ -- read-only additions
+      only (git log/rev-list), no change to any safety rail.
     replacement:
       replaces: []
       replaced_by: null

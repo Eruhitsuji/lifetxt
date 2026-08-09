@@ -6022,9 +6022,14 @@ HTML_PAGE = r"""<!doctype html>
         }
         const row = document.createElement("div");
         row.className = "cmdk-row" + (i === _cmdkIndex ? " focus" : "");
+        // The label and hint are literal command syntax ("/stats", "/s"), not
+        // prose; data-no-i18n keeps the generic translator from peeling the
+        // "/" and rewriting the bare command name as if it were a UI label.
         row.innerHTML = `<span class="cmdk-kind">${escapeHtml(entry.kind)}</span>` +
-          `<span>${escapeHtml(entry.label)}</span>` +
-          `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary || entry.hint)}</span>`;
+          `<span data-no-i18n>${escapeHtml(entry.label)}</span>` +
+          (entry.summary
+            ? `<span style="margin-left:auto;color:var(--muted);font-size:.78rem">${escapeHtml(entry.summary)}</span>`
+            : `<span style="margin-left:auto;color:var(--muted);font-size:.78rem" data-no-i18n>${escapeHtml(entry.hint)}</span>`);
         row.addEventListener("click", () => { closeCmdk(); entry.run(); });
         list.appendChild(row);
       });
@@ -6157,7 +6162,8 @@ HTML_PAGE = r"""<!doctype html>
         const alias = command.alias ? ` (/${command.alias})` : "";
         const badge = command.web ? "" : `<span class="help-command-badge">TUI only</span>`;
         return `<div class="help-command-row${i === _helpCmdIndex ? " focus" : ""}">` +
-          `<span class="help-command-usage">${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
+          // Literal command syntax, not prose -- see the cmdk-row comment above.
+          `<span class="help-command-usage" data-no-i18n>${escapeHtml(usage)}${escapeHtml(alias)}</span>${badge}` +
           `<span class="help-command-summary">${escapeHtml(command.summary || "")}</span>` +
           `</div>`;
       }).join("");

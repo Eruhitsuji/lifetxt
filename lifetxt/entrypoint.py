@@ -106,12 +106,12 @@ def _install_config_template_extension():
 def _legacy_main(argv):
     _install_config_template_extension()
     from . import cli as cli_module
-    from .archive_safety_v3 import install_archive_safety_v3
+    from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
 
-    install_archive_safety_v3()
     install_cli_timezone_context(cli_module)
-    return cli_module.main(argv)
+    with archive_safety_context(cli_module):
+        return cli_module.main(argv)
 
 
 def _review_selector_args(argv, today=None):

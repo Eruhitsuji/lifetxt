@@ -1553,10 +1553,16 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
+      - tests/test_lifetxt.py test_calendar_shows_a_day_span_badge_on_multiday_records_only
+      - 'manual: a real Node.js run confirming a 3-day record produces "1/3"/"2/3"/"3/3" badges in chronological order, and a single-day record renders no badge'
+      - 'live: real lifetxt serve process with a 3-day on:/on:/on: fixture, served page confirmed to contain the cal-entry-span markup'
+      - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 26 tests, OK (no translation-coverage regression)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/194
+      - https://github.com/Eruhitsuji/lifetxt/issues/213
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/195
+      - https://github.com/Eruhitsuji/lifetxt/pull/214
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/calendar-multiday-placement/
@@ -1566,7 +1572,10 @@ capabilities:
       equivalent defect, both explicitly asked for in the originating bug report;
       recorded as findings in requirements.md rather than folded into extra,
       unevidenced code changes. Fifth implementation task of the
-      cli-web-multiday-enhancements batch.
+      cli-web-multiday-enhancements batch. #213/#214 (Standard assurance) added a
+      "day X of Y" badge to each multi-day placement, distilled from a cc-sdd spec
+      at .kiro/specs/calendar-multiday-span-badge/ -- a lighter alternative to a
+      connecting spanning-bar redesign, which remains explicitly out of scope.
     replacement:
       replaces: []
       replaced_by: null

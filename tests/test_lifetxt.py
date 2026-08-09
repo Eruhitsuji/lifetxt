@@ -4257,6 +4257,33 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         open_body = html[open_start:open_end]
         self.assertIn("renderHelpModalCommands()", open_body)
 
+    def test_help_modal_supports_keyboard_navigation(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # Up/down arrow selection plus Enter-to-run, matching the Ctrl+K
+        # command palette's existing keyboard UX (_cmdkMoveFocus).
+        self.assertIn("function _helpCmdMoveFocus", html)
+        self.assertIn("function _runHelpModalCommand", html)
+        self.assertIn('search.addEventListener("keydown"', html)
+        start = html.index('search.addEventListener("keydown"')
+        end = html.index("});", start)
+        body = html[start:end]
+        self.assertIn("ArrowDown", body)
+        self.assertIn("ArrowUp", body)
+        self.assertIn("Enter", body)
+        # Opening the modal must focus the search box (not the first button)
+        # so arrow-key navigation works without an extra click.
+        open_start = html.index("function openHelpModal")
+        open_end = html.index("function closeHelpModal")
+        open_body = html[open_start:open_end]
+        self.assertIn('"#help-command-search"', open_body)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 

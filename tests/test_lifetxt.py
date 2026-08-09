@@ -6284,6 +6284,88 @@ class LifeTxtDoctorCliTests(unittest.TestCase):
             self.assertEqual(1, code)
             self.assertIn("[XX]", normalized)
 
+    def test_doctor_omits_update_row_without_the_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            stdout, stderr, code = run_cli("doctor", life_file, "--format", "json")
+            records = json.loads(stdout)
+            self.assertNotIn("update", {row["check"] for row in records})
+
+    def _run_doctor_with_update(self, life_file, **extra_args):
+        from lifetxt import cli
+
+        args = argparse.Namespace(
+            paths=[life_file],
+            format="json",
+            pretty=False,
+            check_update=True,
+            repo=None,
+            update_timeout=5,
+            config_data={},
+        )
+        for key, value in extra_args.items():
+            setattr(args, key, value)
+        buffer = io.StringIO()
+        with mock.patch("sys.stdout", buffer):
+            code = cli.command_doctor(args)
+        rows = {row["check"]: row for row in json.loads(buffer.getvalue())}
+        return rows, code
+
+    def test_doctor_check_update_reports_up_to_date(self):
+        from lifetxt import __version__
+
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.return_value = _FakeGithubResponse({"tag_name": __version__})
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("OK", rows["update"]["status"])
+        self.assertIn("Up to date", rows["update"]["message"])
+
+    def test_doctor_check_update_warns_when_update_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.return_value = _FakeGithubResponse({"tag_name": "v99.0.0"})
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("WARN", rows["update"]["status"])
+        self.assertIn("v99.0.0", rows["update"]["message"])
+        # Missing optional dependencies also produce WARN; an update being
+        # available must not itself flip doctor's overall exit code to fail.
+        self.assertEqual(0, code)
+
+    def test_doctor_check_update_network_failure_warns_not_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = URLError("no network")
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("WARN", rows["update"]["status"])
+        self.assertIn("Could not check for updates", rows["update"]["message"])
+        self.assertEqual(0, code)
+
+    def test_doctor_check_update_reports_no_release_found(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Fix_bug\n")
+            with mock.patch("lifetxt.cli.urlopen") as opener:
+                opener.side_effect = [
+                    HTTPError("url", 404, "Not Found", {}, None),
+                    _FakeGithubResponse([]),
+                ]
+                rows, code = self._run_doctor_with_update(life_file)
+        self.assertEqual("OK", rows["update"]["status"])
+        self.assertIn("No published releases", rows["update"]["message"])
+
 
 class _FakeGithubResponse(object):
     def __init__(self, payload, status=200):

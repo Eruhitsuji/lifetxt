@@ -411,7 +411,7 @@ traceability:
         - 'root cause: tests/test_cui_extensions.py:709 uses parenthesized with-statements (3.10+ syntax)'
         - 'clean run on the branch: Ran 1765 tests in 392.731s, OK (skipped=14) on Python 3.12'
         - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
-        - 'ruff format --check lifetxt tests scripts -> 241 files already formatted; ruff check -> All checks passed'
+        - 'ruff format --check -> 241 files already formatted; ruff check -> All checks passed'
       release_or_deployment: null
       status: implemented
 
@@ -1346,7 +1346,7 @@ traceability:
         - examples/config/software-ticket-workspace.lifetxt.json
         - tests/test_workspace_foundation.py
       tests_or_evidence:
-        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level config keys do not break resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
         - tests/test_workspace_foundation.py LoadConfigMalformedFileTests (3 tests)
         - tests/test_workspace_foundation.py ExampleConfigTests exercises the three new examples automatically via EXAMPLE_NAMES
         - manual verification against custom_field_registry_report confirming the software-ticket example's custom fields collide with no reserved canonical/relation field name
@@ -1951,6 +1951,43 @@ traceability:
         metadata compatibility layer introduced by #178/#180; todo.md keeps the
         authoritative record:<kind> registry as the long-term replacement for
         duplicated compatibility key lists.
+      status: implemented
+
+    - requirement_id: req-project-archive-zero-byte-safety
+      capability_id: cap-project-archive-workflow
+      epic: P0 Release Safety and Correctness / P1 Project and Portfolio Management
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/183
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/184
+      changed_files_or_scope:
+        - Add invocation-scoped project-archive preflight checks without leaking stricter behavior into generic archive or direct legacy CLI calls
+        - Validate revision syntax and supplied revision values before dry-run output or write-side backup work
+        - Require complete scanned-source plus destination revision sets for live project archive
+        - Reject parser-error sources/destinations and zero-byte active writable Project sources before candidate execution
+        - Print the exact live revision set from project archive dry-run and document the requirement in CLI help
+        - lifetxt/archive_safety_v3.py
+        - lifetxt/entrypoint.py
+        - tests/test_project_archive_safety_v3.py
+        - todo.md
+      tests_or_evidence:
+        - tests/test_project_archive_safety_v3.py covers dry-run immutability, empty/stale revision rejection, complete live revision requirements, successful exact-revision archive, parser-error refusal, zero-byte primary refusal, pre-backup stale-revision refusal, generic archive compatibility, help text, and stable argparse help exit handling
+        - Existing tests/test_project_archive.py remains unchanged and verifies the invocation-scoped compatibility layer does not leak into direct legacy CLI calls
+        - 'production recovery evidence: reconstructed primary matched SHA-256 af6c74885dae416d1706f3ecd38f53d874163a9e9476b02a87b6eb11b94e4f2a byte-for-byte; restored workspace check returned OK: 281 item(s), 281/281 IDs, ticket history ok=true with five events, and Web/Calendar services healthy'
+        - GitHub Actions Python 3.10/3.11/3.12 plus no-Web matrix on PR #184
+      release_or_deployment: >-
+        Safety behavior change on the stable lifetxt entrypoint: live `project archive`
+        requires explicit exact revisions for every scanned source and the destination;
+        dry-run prints the required set. Generic `archive` keeps its previous
+        optional-revision behavior. Production project archive remains blocked until
+        #183's root-cause and disposable-deployment re-enable criteria are completed.
+      notes: >-
+        The 2026-08-09 zero-byte truncation mechanism is not established by this
+        change. Code inspection confirms the historical dry-run returned before
+        `_pre_write_backup()` and multi-target commit, and `read_text_snapshot()` is
+        read-only. The concrete defect fixed here is that dry-run previously returned
+        before parsing/validating supplied revision tokens, allowing an empty `PATH=`
+        revision to look like a successful safety preview. The remaining root-cause
+        investigation stays open in #183 and todo.md instead of being mislabeled as
+        resolved by defensive archive hardening.
       status: implemented
 
 required_chain:

@@ -411,7 +411,7 @@ traceability:
         - 'root cause: tests/test_cui_extensions.py:709 uses parenthesized with-statements (3.10+ syntax)'
         - 'clean run on the branch: Ran 1765 tests in 392.731s, OK (skipped=14) on Python 3.12'
         - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
-        - 'ruff format --check -> 241 files already formatted; ruff check -> All checks passed'
+        - 'ruff format --check lifetxt tests scripts -> 241 files already formatted; ruff check -> All checks passed'
       release_or_deployment: null
       status: implemented
 
@@ -1346,7 +1346,7 @@ traceability:
         - examples/config/software-ticket-workspace.lifetxt.json
         - tests/test_workspace_foundation.py
       tests_or_evidence:
-        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level config keys do not break resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
+        - tests/test_workspace_foundation.py WorkspaceResolutionTests.test_unicode_source_path_resolves_and_reads, test_unknown_top_level_config_keys_do_not_break_resolution, test_glob_order_is_deterministic_across_mixed_priority_sources, test_repeated_resolution_of_the_same_config_is_stable
         - tests/test_workspace_foundation.py LoadConfigMalformedFileTests (3 tests)
         - tests/test_workspace_foundation.py ExampleConfigTests exercises the three new examples automatically via EXAMPLE_NAMES
         - manual verification against custom_field_registry_report confirming the software-ticket example's custom fields collide with no reserved canonical/relation field name

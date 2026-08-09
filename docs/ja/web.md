@@ -375,6 +375,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `refresh=SECONDS` | 自動更新間隔。display mode の既定値は 60 秒 |
 | `kind=E` または `type=E` | life.txt type で filter |
 | `text=VALUE` または `q=VALUE` | title、元行、detail 値を検索 |
+| `fuzzy=true` | `text`/`q` を完全な部分一致だけでなく、小さな typo・編集距離の範囲でも一致させる。opt-in、Unicode 正規化済み |
 | `open_only=true` または `open=true` | 未完了 workflow item のみ |
 | `status=todo` | status または status alias で filter |
 | `project=VALUE`、`tag=VALUE`、`tag_all=VALUE`、`exclude_tag=VALUE` | project / tag で filter |

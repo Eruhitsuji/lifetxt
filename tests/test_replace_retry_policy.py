@@ -1,20 +1,27 @@
-"""The replace-retry policy is duplicated on purpose, so pin the copies together.
+"""The replace-retry policy constants are shared; the retry loop is not.
 
-`lifetxt/atomic.py` and `lifetxt/transaction_journal.py` each define their own
-`_REPLACE_PERMISSION_RETRY_*` constants and their own retry loop. That is a
-recorded decision, not an oversight: sharing the code would have meant editing
-`transaction_journal.py`, which is incident-hardened and fault-injection-tested,
-and which the `windows-atomic-replace-retry` change package placed in forbidden
-scope. See that package's `decisions.md`.
+`lifetxt/atomic.py` originally defined its own `_REPLACE_PERMISSION_RETRY_*`
+constants independently of `lifetxt/transaction_journal.py`'s copy -- a
+recorded decision at the time (`windows-atomic-replace-retry`'s
+`decisions.md`), because sharing the *retry loop* would have meant editing
+`transaction_journal.py`, which is incident-hardened and fault-injection-
+tested, and which that change package placed in forbidden scope. That same
+`decisions.md` entry noted "a future spec could migrate transaction_journal.py
+onto the shared helper."
 
-The cost of that decision is drift. `design.md` recorded it as the residual risk
-and proposed this test as the mitigation -- and then the mitigation was never
-written, so `req-atomic-replace-retry-policy-consistency` had no test behind it
-until #116. Closing out the package found the traceability entry claiming
-assertions that did not exist.
+The `replace-retry-policy-dedup` change did exactly that, but only for the two
+constants: `transaction_journal.py` now imports them from `atomic.py` instead
+of defining its own copy, so the values cannot drift by construction. The
+retry *loop* in `transaction_journal._replace_file` still exists separately,
+because it interleaves a `fault_point()` hook per attempt for the
+crash-recovery test matrix (`tests/test_transaction_journal_v3.py`), which
+`atomic.replace_with_retry` does not provide and should not grow just to
+serve this one caller.
 
-These assert equality, never the values themselves. Changing the policy on
-purpose stays a two-line edit; changing it in one place only fails here.
+These tests keep asserting equality (now structurally guaranteed by the
+import) plus the bounded-budget property, rather than being deleted: they
+remain the regression guard if a future edit reintroduces a second literal
+definition instead of importing the shared one.
 """
 
 from __future__ import unicode_literals
@@ -25,12 +32,11 @@ from lifetxt import atomic, transaction_journal
 
 
 DELIBERATE = (
-    "The duplication is deliberate: transaction_journal.py keeps its own retry "
-    "implementation because sharing it would edit incident-hardened, "
-    "fault-injection-tested code, which the windows-atomic-replace-retry change "
-    "package placed in forbidden scope. Do not resolve this failure by deleting "
-    "one copy. Either change both, or revisit that decision in a new change "
-    "package. See .ai/project/changes/windows-atomic-replace-retry/decisions.md."
+    "atomic.py and transaction_journal.py must reference the identical "
+    "_REPLACE_PERMISSION_RETRY_* constants (transaction_journal.py imports "
+    "them from atomic.py; see the replace-retry-policy-dedup change). If this "
+    "fails, a second literal definition was reintroduced somewhere -- fix it "
+    "by importing the shared constants, not by hand-syncing two copies."
 )
 
 

@@ -1794,8 +1794,8 @@ row when nothing is marked.
 | Command | Purpose |
 | --- | --- |
 | `/done [now]` | Mark task-like rows done and record `done:`; `now` adds the time |
-| `/state STATE [TITLE]` | Record presence, closing the previous status; `/state end` closes it |
-| `/now` | Show the current open presence status |
+| `/state STATE [TITLE] \| end` | Record presence, closing the previous status; `/state end` closes it |
+| `/now [PERSON]` | Show the current open presence status |
 | `/status open\|active\|done\|dropped` | Set a status, using the same aliases as the CLI |
 | `/set KEY VALUE` | Set a detail; an empty value removes the key |
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |

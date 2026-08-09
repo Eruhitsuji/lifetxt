@@ -2518,6 +2518,42 @@ modifies anything. Reported `status` values: `up_to_date`, `update_available`,
 `unparseable` (a release/tag name that could not be read as a version). Use
 `--timeout SECONDS` to change the network timeout (default `10`).
 
+`update` fast-forwards the running install's own git checkout -- lifetxt has
+no PyPI distribution, so updating means git, and it **only ever works when
+lifetxt was installed from a git clone** (`python -m pip install -e .`, the
+documented install method). It is dry-run by default:
+
+```sh
+python -m lifetxt update
+python -m lifetxt update --yes
+python -m lifetxt update --ref main --yes
+python -m lifetxt update --repo your-github-username/your-fork --yes
+```
+
+Without `--yes`, `update` fetches (read-only against your git remote) and
+reports what *would* change -- current commit, target commit, and the ref it
+resolved to -- without touching your working tree. `--yes` is required to
+actually apply it. Safety rails, all fail loudly rather than guessing:
+
+- Refuses when the running install is not inside a git working tree.
+- Refuses when the working tree has any uncommitted change, tracked or
+  untracked (`git status --porcelain` must be empty) -- commit, stash, or
+  discard first.
+- Refuses when `HEAD` is detached -- check out a branch first.
+- Only ever runs `git fetch` and `git merge --ff-only`. Never resets,
+  rebases, force-pushes, or rewrites history; a non-fast-forward situation
+  is refused, not forced.
+- Never runs `pip install` or any other build step afterward. If the update
+  changed dependencies, re-run `pip install -e .` (or your usual extras)
+  yourself -- `update` tells you to when it applies a change.
+
+Without `--ref`, `update` resolves the target the same way `update-check`
+does (latest published Release, or tag; `--repo`/`update.repository`
+override which repository that lookup queries). The actual `git fetch`
+always goes through your existing local git remote (`origin` by default,
+or `--remote NAME`) -- `--repo` only chooses which ref *name* to ask for,
+never which URL is fetched from.
+
 ## 17. `encrypt` and `decrypt`
 
 Current behavior: `encrypt` defaults to `--algorithm xsk`, which stores values

@@ -1,0 +1,47 @@
+schema_version: 1
+
+change:
+  id: lifetxt-self-update
+  title: Add lifetxt update, a safety-railed git-based self-update command
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/206
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/207
+  base_commit: 3505e9f8fd42fd73bbc5918353d34023657d8299
+  target_release: null
+
+scope:
+  in_scope:
+    - Add lifetxt update, reusing update-check's target-resolution helpers (_resolve_update_check_repo, _github_latest_release_or_tag).
+    - Mandatory safety rails, all fail-loud (raise ValueError, non-zero exit) rather than silent: refuse on a non-git install, a dirty working tree (tracked or untracked changes), or a detached HEAD.
+    - Only ever run `git fetch` and `git merge --ff-only`; never reset, rebase, force-push, or run any build/setup code (no automatic `pip install`).
+    - Dry-run by default; `--yes` is required to actually fast-forward.
+    - "`--repo`/`update.repository` only selects which ref name the read-only GitHub API lookup asks for; the actual `git fetch` always uses the local git remote's own already-configured URL (`origin` by default, or `--remote`), never a URL derived from `--repo`."
+    - Argument-injection guard: a ref or remote beginning with "-" is refused before reaching a git argv.
+    - UTF-8-safe, timeout-safe subprocess decoding for git output (found and fixed during live verification against a real non-UTF8-locale directory).
+    - Regression tests (subprocess mocked) and live, unmocked end-to-end verification against a disposable clone of this repository.
+    - Documentation in docs/en/cli.md and docs/ja/cli.md.
+  out_of_scope:
+    - Any package-manager-based update path -- lifetxt has no PyPI distribution.
+    - Automatically running pip install or any build/setup code after a successful update -- printed as a manual follow-up instruction instead.
+    - Any non-git install path (wheel, sdist) -- refused with a clear error, not attempted.
+    - Modifying update-check or its resolution helpers.
+  write_scope:
+    - lifetxt/cli.py
+    - tests/test_lifetxt.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+  forbidden_scope:
+    - lifetxt/atomic.py
+    - lifetxt/mutation.py
+    - lifetxt/transaction_journal.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (the only lifetxt command that mutates the git working tree the running install lives in)

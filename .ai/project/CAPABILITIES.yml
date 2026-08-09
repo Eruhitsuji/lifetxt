@@ -1766,3 +1766,58 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-lifetxt-self-update
+    name: Safety-railed CLI self-update
+    summary: >-
+      Add `lifetxt update`, the only lifetxt command that mutates the git
+      working tree the running install lives in. Git-based (lifetxt has no
+      PyPI distribution); dry-run by default; requires `--yes` for any real
+      change; refuses on a non-git install, a dirty working tree, or a
+      detached HEAD; only ever runs `git fetch` and `git merge --ff-only`;
+      never runs `pip install` or any other code. Explicitly flagged
+      not-recommended during scoping and implemented anyway per repository
+      owner instruction, with every safety rail as the condition of that
+      acceptance.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-self-update
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt update
+      - lifetxt.cli.command_update
+      - lifetxt.cli._run_git_for_update
+      - lifetxt.cli._lifetxt_install_root
+      - lifetxt.cli._reject_option_like_git_arg
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtUpdateCommandCliTests (15 tests, subprocess.run mocked)
+      - python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 29 tests, OK
+      - "live: real disposable clone of this repository, checked out at an old commit on a real branch -- dry run correctly reported the pending fast-forward; --yes correctly fast-forwarded (confirmed via git log); a second run correctly reported already up to date; dirty-working-tree refusal and detached-HEAD refusal each confirmed against the same real clone"
+      - "live: found and fixed a real UnicodeDecodeError crash decoding git subprocess output against a real Windows ja-JP-locale directory tree, by decoding explicitly as UTF-8 with errors=\"replace\"; re-verified clean after the fix"
+      - "live: real installed lifetxt CLI (python -m lifetxt update) run directly against this dev checkout while it had in-progress uncommitted changes -- correctly refused, exit 1"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/206
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/207
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled from a cc-sdd spec at .kiro/specs/lifetxt-self-update/ plus a
+      full change package at .ai/project/changes/lifetxt-self-update/
+      (Security/High assurance, per this project's escalation rules for
+      destructive-operation-adjacent and previously-unresolved-design-
+      decision risk factors). Reuses cap-cli-update-check's target-resolution
+      helpers unmodified. Eleventh implementation task of the
+      cli-web-multiday-enhancements batch. Requires independent security
+      review and Merge Authority approval before merge to main.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

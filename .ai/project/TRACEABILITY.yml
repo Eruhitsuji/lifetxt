@@ -2180,6 +2180,36 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-cli-update-check
+      capability_id: cap-cli-update-check
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/200
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/201
+      changed_files_or_scope:
+        - Add lifetxt update-check, a read-only GitHub release/tag version comparison
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/cli-update-check/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtUpdateCheckCliTests (8 tests)
+        - python -m unittest tests.test_lifetxt -> Ran 583 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 43 tests, OK
+        - 'live: real unmocked lifetxt update-check (text and json) against Eruhitsuji/lifetxt -> both correctly report no_release_found'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/cli-update-check/ (below
+        the .ai/project/changes/README.md change-package threshold: Standard
+        assurance, S/M-sized, read-only). Also corrects the doctor check
+        table drift found in docs/en/cli.md and docs/ja/cli.md while editing
+        the same section. Eighth implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

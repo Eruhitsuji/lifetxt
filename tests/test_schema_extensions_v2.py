@@ -77,7 +77,10 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
 
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") is not None
-    and importlib.util.find_spec("httpx") is not None
+    and (
+        importlib.util.find_spec("httpx2") is not None
+        or importlib.util.find_spec("httpx") is not None
+    )
     and has_draft_2020_validator(),
     "Web/schema dependencies are not installed.",
 )

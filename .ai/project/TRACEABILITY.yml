@@ -2210,6 +2210,44 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-cli-update-check-configurable-repo
+      capability_id: cap-cli-update-check-configurable-repo
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/202
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/203
+      changed_files_or_scope:
+        - Make update-check's checked repository configurable via update.repository and --repo
+        - lifetxt/cli.py
+        - lifetxt/config_registry.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - docs/en/config.md
+        - docs/ja/config.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - tests/test_lifetxt.py
+        - tests/test_config_validation.py
+        - .kiro/specs/cli-update-check-configurable-repo/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtUpdateCheckCliTests (5 new tests plus 8 pre-existing re-run unmodified)
+        - tests/test_config_validation.py test_registry_describes_update_repository, test_config_schema_declares_update_repository
+        - tests.test_schema_extensions_v2.test_bundle_contains_seventy_six_generated_and_published_documents -> byte-identical after the update section addition
+        - python -m unittest tests.test_lifetxt tests.test_config_validation tests.test_schema_extensions_v2 tests.test_workspace_foundation -> Ran 693 tests, OK (skipped=9)
+        - 'live: --repo torvalds/linux and an equivalent update.repository config value both report the real latest tag; lifetxt config explain update.repository reports the registered metadata'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at
+        .kiro/specs/cli-update-check-configurable-repo/ (below the
+        .ai/project/changes/README.md change-package threshold: Standard
+        assurance, XS/S-sized). Direct follow-up to req-cli-update-check
+        (#200/#201), found via user feedback immediately after that PR
+        merged. Ninth implementation task of the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

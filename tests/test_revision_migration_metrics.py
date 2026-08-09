@@ -8,7 +8,10 @@ from lifetxt import webapp
 
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") is not None
-    and importlib.util.find_spec("httpx") is not None,
+    and (
+        importlib.util.find_spec("httpx2") is not None
+        or importlib.util.find_spec("httpx") is not None
+    ),
     "Web test dependencies are not installed.",
 )
 class RevisionMigrationMetricsTests(unittest.TestCase):

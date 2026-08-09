@@ -2622,7 +2622,7 @@ HTML_PAGE = r"""<!doctype html>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
       <h3 style="margin-top:1.25rem">Commands</h3>
-      <p class="modal-hint">Search the same slash-command set as the TUI's <code>/help</code>.</p>
+      <p class="modal-hint">Search the same slash-command set as the TUI's /help command.</p>
       <input id="help-command-search" class="help-command-search" type="text"
         placeholder="Search commands (name, alias, or summary)…" oninput="renderHelpModalCommands()">
       <div id="help-command-list" class="help-command-list" data-no-i18n></div>
@@ -2790,7 +2790,7 @@ HTML_PAGE = r"""<!doctype html>
         "Copy Line Number": "行番号をコピー",
         "Keyboard shortcuts": "キーボードショートカット",
         "Commands": "コマンド",
-        "Search the same slash-command set as the TUI's /help.": "TUIの /help と同じスラッシュコマンド一覧を検索できます。",
+        "Search the same slash-command set as the TUI's /help command.": "TUIの /help と同じスラッシュコマンド一覧を検索できます。",
         "Search commands (name, alias, or summary)…": "コマンドを検索(名前・エイリアス・概要)…",
         "No command matches. Try a different search.": "一致するコマンドがありません。別のキーワードで検索してください。",
         "TUI only": "TUI専用",

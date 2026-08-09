@@ -1641,16 +1641,24 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
+      - tests/test_release_policy.py test_release_manifest_has_deterministic_fingerprint, test_repository_translation_baseline_allows_known_debt_but_no_new_gap -> fixed a real translation-coverage regression (the hint's <code>/help</code> split its sentence across release_policy.py's <code>-as-skip-tag boundary, leaving the pre-<code> text fragment without a dictionary match)
+      - python -m unittest tests.test_release_policy tests.test_web_i18n tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference -> Ran 27 tests, OK
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/198
+      - https://github.com/Eruhitsuji/lifetxt/issues/204
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/199
+      - https://github.com/Eruhitsuji/lifetxt/pull/205
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Distilled from a cc-sdd spec at .kiro/specs/web-help-command-reference/
       (below the .ai/project/changes/README.md change-package threshold:
       Standard assurance, S/M-sized). Seventh implementation task of the
-      cli-web-multiday-enhancements batch.
+      cli-web-multiday-enhancements batch. #204/#205 fixed a translation-
+      coverage regression found only by running the full suite (not caught by
+      tests.test_web_i18n, which does not exercise release_policy.py's
+      stricter <code>-as-skip-tag HTML parsing) -- corrected in place rather
+      than as a separate capability, since it is the same UI surface.
     replacement:
       replaces: []
       replaced_by: null

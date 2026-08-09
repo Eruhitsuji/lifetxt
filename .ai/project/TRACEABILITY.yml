@@ -2433,6 +2433,34 @@ traceability:
         cli-web-multiday-enhancements batch.
       status: implemented
 
+    - requirement_id: req-help-modal-keyboard-navigation
+      capability_id: cap-web-help-command-reference
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/215
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/216
+      changed_files_or_scope:
+        - Add arrow-key/Enter keyboard navigation to the help modal's command search, matching the Ctrl+K palette
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+        - .kiro/specs/help-modal-keyboard-navigation/
+      tests_or_evidence:
+        - tests/test_lifetxt.py test_help_modal_supports_keyboard_navigation
+        - 'manual: a real Node.js run of _helpCmdMoveFocus/_runHelpModalCommand confirming forward/backward wraparound, no-op on an empty list, Enter closing the modal and calling runWebCommand for the highlighted entry, and an invalid index being a no-op'
+        - 'live: real lifetxt serve process, served page confirmed to contain the new functions'
+        - python -m unittest tests.test_lifetxt tests.test_web_i18n tests.test_release_policy tests.test_surface_runtime -> Ran 659 tests, OK (skipped=1)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/help-modal-keyboard-navigation/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, XS/S-sized). Also added the previously-missing row
+        click handlers (rows had no click handler at all before this change).
+        No new user-visible text, so no translation-coverage impact. Fourth
+        and final item of a second small follow-up round to the
+        cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

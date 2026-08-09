@@ -2586,6 +2586,40 @@ traceability:
         this entry is opened.
       status: implemented
 
+    - requirement_id: req-web-i18n-dynamic-label-translation
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/223
+      pull_request: null
+      changed_files_or_scope:
+        - Translate the Notifications button's runtime label through t() instead of a bare literal concatenation
+        - lifetxt/web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py DynamicLabelTranslationTests.test_notif_button_label_is_translated_at_construction, confirmed against the exact substring the prior code used
+        - python -m unittest tests.test_web_i18n -> Ran 18 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
+        - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2106 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Self-scoped from the issue (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, XS/S-sized). New
+        capability cap-web-i18n-dynamic-content-fidelity created rather than
+        extending an unrelated existing one, since no capability previously
+        covered the i18n translation runtime itself; see that entry's notes
+        for why. Horizontal audit found one other `"<Word>" + dynamicPart`
+        textContent assignment in the file (the Git panel title with a
+        parenthetical commit count) and confirmed it is not a bug: "Git" has
+        no dictionary entry (proper noun, correctly untranslated) and its
+        suffix is parenthetical, which the existing suffix-peel rule already
+        handles. Third item of the quality-and-i18n-fixes batch. pull_request
+        is filled in once the pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

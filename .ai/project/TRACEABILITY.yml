@@ -2347,6 +2347,35 @@ traceability:
         so task_issue is left null accordingly.
       status: implemented
 
+    - requirement_id: req-update-dry-run-commit-preview
+      capability_id: cap-lifetxt-self-update
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/209
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/210
+      changed_files_or_scope:
+        - Show pending commits (bounded, fail-open) in lifetxt update's dry-run and --yes success output
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/update-dry-run-commit-preview/
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtUpdateCommandCliTests (4 new tests: commit list populated, long list truncated with accurate count, log/rev-list failure does not block the dry-run, up-to-date path never calls the lookup)
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 31 tests, OK
+        - 'live: real disposable clone checked out at its very first commit, dry-run against --ref main correctly listed the 20 most recent of an 896-commit range with an accurate "and 876 more" line, in both text and JSON format'
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Distilled from a cc-sdd spec at .kiro/specs/update-dry-run-commit-preview/
+        (below the .ai/project/changes/README.md change-package threshold:
+        Standard assurance, XS/S-sized, read-only additive preview -- no
+        change to any of cap-lifetxt-self-update's safety rails). Requested
+        by the repository owner as a direct follow-up strengthening that
+        capability's own safety story. First item of a second small
+        follow-up round to the cli-web-multiday-enhancements batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

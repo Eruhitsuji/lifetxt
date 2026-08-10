@@ -1,9 +1,28 @@
 # Task Management Standard
 
-GitHub Issues are the source of truth for actionable work.
+GitHub Issues are the source of truth for actionable work. This does not
+change based on the status backend below.
 
-GitHub Projects are used for planning, prioritization, status, ownership, and
-cross-project visibility.
+## Status Backend
+
+The mechanism that owns issue lifecycle status is a separate, explicitly
+configured choice from the task source of truth. Record it in
+`.ai/project/PROJECT.yml`'s `governance.status_backend`:
+
+| Backend | Semantics |
+| --- | --- |
+| `github-projects` (default) | GitHub Projects owns planning, prioritization, status, ownership, and cross-project visibility. This is the backward-compatible default for any project that does not set `status_backend`. |
+| `github-labels` | `status:*` labels on the issue represent the 8 canonical status values below. Other planning fields (priority, ownership) may still live in the issue body or other labels. |
+| `external-tracker` | Status lives outside GitHub. The issue body or a comment must reference the external ticket ID; GitHub Issues remain the task source of truth, but are not the live status view. |
+
+Exactly one status backend is authoritative per project. Do not treat GitHub
+Projects and labels as simultaneous, competing sources of truth for the same
+project — if both appear to be in use, treat that as a project or execution
+finding requiring the project owner to pick one (see `RUNTIME_EVIDENCE.md`'s
+finding classes).
+
+Existing downstream projects that do not set `governance.status_backend`
+behave exactly as before this field existed: `github-projects`.
 
 ## Status Values
 

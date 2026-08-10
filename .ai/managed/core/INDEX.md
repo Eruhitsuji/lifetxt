@@ -36,6 +36,7 @@ explicitly marked overridable and the project records an approved exception.
 - `AUTOMATION_AND_HOOKS.md`: automation boundaries and mechanical safeguards
 - `KNOWLEDGE_MAINTENANCE.md`: keeping reusable knowledge current and promotable
 - `STANDARD_DISTRIBUTION.md`: `.ai/managed` and `.ai/project` model
+- `SKILLS.md`: tool-neutral packaged procedure contract and storage model
 - `STANDARD_EVALUATION.md`: model-neutral evaluation scenarios for the standard
 - `RUNTIME_EVIDENCE.md`: local-first AI history archives, normalized events,
   runtime findings, privacy, and reporting controls

@@ -41,6 +41,7 @@ guidance:
 
 governance:
   task_source_of_truth: github-issues
+  status_backend: github-labels
   traceability_required: true
   capability_registry: .ai/project/CAPABILITIES.yml
   context_index: .ai/project/CONTEXT_INDEX.yml

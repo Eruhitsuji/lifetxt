@@ -3170,6 +3170,43 @@ traceability:
         content forward.
       status: implemented
 
+    - requirement_id: req-ai-standard-guided-activation
+      capability_id: cap-ai-standard-guided-activation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/247
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/248
+      changed_files_or_scope:
+        - Sync .ai/managed/core to upstream ai-development-standard commit 0737bcacde45bc2988a87d82a30bc5bf8d63132a (adds SKILLS.md; additive updates to INDEX.md, AI_HUMAN_INTERACTION.md, MERGE_GOVERNANCE.md, REVIEW.md, TASK_DECOMPOSITION.md, TASK_MANAGEMENT.md, TRACEABILITY.md, RUNTIME_EVIDENCE.md, AI_TOOL_COMPATIBILITY.md)
+        - Add .ai/managed/skills/{next-action,runtime-evidence,review-viewpoints}/SKILL.md, mirrored verbatim
+        - Add CTX-SKILLS-001 (plus the eager/lazy-loading design-target comment) to .ai/project/CONTEXT_INDEX.yml
+        - Add governance.status_backend: github-labels to .ai/project/PROJECT.yml and update RULES.md's labels-instead-of-GitHub-Projects section to point at the new first-class field
+        - .ai/standard.lock.yml
+      tests_or_evidence:
+        - 'diff of each replaced .ai/managed/core/*.md and the new SKILLS.md/skill files against the upstream file at commit 0737bcacde45bc2988a87d82a30bc5bf8d63132a -> byte-identical'
+        - YAML parse of PROJECT.yml, CONTEXT_INDEX.yml, TRACEABILITY.yml, standard.lock.yml
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        Second sync following #132/PR #133; adopts upstream main HEAD again
+        (still no tagged release) per the standing decision from that task.
+        Nothing in this diff activates AI history collection or installs the
+        runtime-evidence scripts/schemas/evals -- RUNTIME_EVIDENCE.md's own
+        changes here are documentation clarifications (which deterministic
+        checks work in metadata_only mode), not new capability, so this
+        remains the same "docs only" scope already established.
+        governance.status_backend: github-labels and the RULES.md edit are a
+        judgment call made without a separate confirmation round, since they
+        only formalize this project's pre-existing, already-approved labels
+        policy (from #52) under the new field the standard now provides for
+        exactly that choice; flagged here for review before merge rather than
+        asked about beforehand, consistent with the "Supervised Autonomous
+        Batch Execution" pattern this sync itself adopts. task.yml's
+        lifecycle-phase/review-viewpoints/test-viewpoints fields, also added
+        upstream in this range, needed no change here: this project's
+        .github/ISSUE_TEMPLATE/task.yml already has all three, added in
+        #52/PR #53, predating upstream.
+      status: proposed
+
 required_chain:
   - Requirement
   - Capability

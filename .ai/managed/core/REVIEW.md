@@ -48,6 +48,25 @@ Reviewers must check:
 - commands and results are actually recorded
 - review freshness is still valid for the current head commit
 
+## Horizontal Review Scope Discipline
+
+Acceptance criteria sometimes ask for a horizontal review: auditing adjacent
+code or surfaces for the same defect class as the task's primary fix, then
+fixing or recording what is found. This creates a real scope-boundary decision
+for whatever the audit turns up:
+
+- Fix a discovered issue in the same pull request only when it shares the same
+  root cause as the primary fix and the fix is small and evidenced.
+- Otherwise, file it as a new, evidence-backed follow-up issue. Do not expand
+  the current pull request's scope to cover a materially separate concern or a
+  fix that needs its own product or design decision, and do not silently drop
+  an evidenced finding just because it falls outside the primary fix.
+
+A reviewer checking "no unrelated work is included" should treat an
+unscoped, unexplained expansion driven by a horizontal review the same as any
+other scope creep — and should treat a horizontal-review acceptance criterion
+with no resulting fix or follow-up issue as a sign the audit was not done.
+
 ## Review Ledger
 
 Medium-risk or higher work should record a review ledger entry:

@@ -235,17 +235,25 @@ The browser GUI supports:
   dated-key examples when the selected range has no dated records, a "no
   upcoming records left today" banner when all today records are already in
   the past, and `ongoing` badges for records that started before the selected
-  range but still overlap it; cards open the record detail modal
+  range but still overlap it; cards open the record detail modal. A record
+  with more than one in-window occurrence (a multi-day `on:` span, or several
+  repeat occurrences) gets one row per occurrence, each carrying a `day X of
+  Y` span badge, instead of collapsing to a single row.
+- An Agenda view: a flat, filterable list backed by `GET /api/agenda` (see
+  [URL Parameters](#url-parameters)) with the same per-occurrence expansion as
+  Timeline -- a record matching several days/occurrences within the selected
+  range produces one row per match, each with its own `when`.
 - A Calendar view: a month or single-week grid that plots agenda records —
-  including expanded repeat occurrences — on the day they fall. Cells show the
-  first few entries with a `+N more` expander, color-coded per record type and
-  overdue/due-soon state, a today highlight, and per-day counts. Clicking an
-  entry opens the record detail modal; clicking a day number opens that day in
-  Agenda. Prev/Next/Today navigation and Month/Week mode are keyboard-driven
-  (`,` `.` previous/next period, `t` today, `m` toggle mode) and persisted in
-  the URL via `?view=calendar&calmode=month|week&cal=YYYY-MM-DD`. The first
-  weekday column follows the `web.week_start` config (`monday` default or
-  `sunday`)
+  including expanded repeat occurrences — on every day they match, not only
+  the first. A multi-day record shows a `day X of Y` badge on each of its
+  cells. Cells show the first few entries with a `+N more` expander,
+  color-coded per record type and overdue/due-soon state, a today highlight,
+  and per-day counts. Clicking an entry opens the record detail modal;
+  clicking a day number opens that day in Agenda. Prev/Next/Today navigation
+  and Month/Week mode are keyboard-driven (`,` `.` previous/next period, `t`
+  today, `m` toggle mode) and persisted in the URL via
+  `?view=calendar&calmode=month|week&cal=YYYY-MM-DD`. The first weekday
+  column follows the `web.week_start` config (`monday` default or `sunday`)
 - A Team view: a presence board combining latest status records (colored
   presence dot and state badge per person), open messages addressed to each
   person, and an open/overdue workload summary per assignee — designed for

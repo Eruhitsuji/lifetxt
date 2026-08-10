@@ -34,11 +34,26 @@ Top-level `paths` and `write_file` are treated as an implicit workspace named
 
 Effective values are resolved from lowest to highest priority:
 
-1. built-in defaults
+1. built-in defaults (the same values `lifetxt config init` writes)
 2. the loaded configuration file
 3. the selected profile (`--profile NAME`)
-4. environment overrides (an explicit allowlist, e.g. `LIFETXT_TIMEZONE`)
-5. command-line flags
+4. environment overrides (an explicit, documented allowlist -- not every key)
+5. command-line flags (applied by each command after this layer resolves)
+
+The environment allowlist currently has five entries:
+
+| Variable | Overrides |
+| --- | --- |
+| `LIFETXT_TIMEZONE` | `defaults.timezone` |
+| `LIFETXT_PERSON` | `defaults.person` |
+| `LIFETXT_WEB_HOST` | `web.host` |
+| `LIFETXT_WEB_PORT` | `web.port` |
+| `LIFETXT_DEFAULT_WORKSPACE` | `default_workspace` |
+
+Any other `LIFETXT_*` variable you may see referenced elsewhere (for example
+`LIFETXT_CONFIG`, or a `*_env`-referenced secret variable) is not part of this
+precedence layer -- it is consulted directly by the feature that needs it,
+not merged into the effective config object.
 
 Inspect the result and where each value came from:
 
@@ -48,6 +63,20 @@ $ lifetxt config sources              # every key with its provenance
 $ lifetxt config get defaults.timezone
 $ lifetxt config explain web.port
 ```
+
+`config sources` prints one row per effective key, its value, and where it came
+from (`builtin-default`, `config:<path>`, `profile:<name>`, or
+`env:<VARIABLE>`):
+
+```console
+$ lifetxt config sources
+defaults.timezone       config:.lifetxt.json  "Asia/Tokyo"
+web.port                builtin-default       8000
+```
+
+A key set through the environment reports the variable name as its source
+(`env:LIFETXT_TIMEZONE`), which is how you can tell an override is active
+without printing environment variables yourself.
 
 ## Named workspaces
 
@@ -81,6 +110,18 @@ $ lifetxt workspace show work
 $ lifetxt workspace files --resolved
 $ lifetxt workspace validate --all
 ```
+
+Several *unconfigured* default file paths (currently the notification watch
+state file; see `lifetxt notify --watch` in
+[new-cli-workflows.md](new-cli-workflows.md)) insert the active workspace's
+name before the extension -- `.cache/lifetxt/notifications.json` becomes
+`.cache/lifetxt/notifications-work.json` under workspace `work` -- so two
+named workspaces defined in the same configuration file do not silently share
+one state file. This only applies to the built-in default; an explicitly
+configured path (`notifications.state_file`, `--state-file`) is always used
+exactly as written, with no workspace name inserted. `lifetxt path` reports
+the same resolved path `notify --watch` would actually use, so you can check
+which file applies before relying on it.
 
 ## Source manifest fields
 
@@ -144,6 +185,48 @@ Profiles are named overlays merged above the base configuration:
 ```console
 $ lifetxt config effective --profile remote
 ```
+
+## Inspecting and validating configuration
+
+`lifetxt config init [-o PATH] [--force]` writes a starter file containing the
+*full* built-in template (every top-level section `config_template()`
+defines, not a minimal skeleton) plus a printed reminder of the precedence
+order above. Editing it down to only the sections you need is expected --
+nothing requires every key to be present.
+
+`lifetxt config show` prints the raw loaded file as JSON (no defaults, no
+profile, no environment merge -- exactly what is on disk plus a public view of
+`_path`). `lifetxt config revision` prints that file's exact SHA-256 content
+hash, the same value `config set|unset|migrate --expected-revision` compares
+against.
+
+`lifetxt config check [--json]` validates structure and credential policy
+without needing `jsonschema` installed, and additionally validates the whole
+document against the published `config-v1.schema.json` when `jsonschema` is
+available. It reports one of these codes per problem:
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `C001` | error | `config_version` is newer than this build supports; writes are refused until you upgrade. |
+| `C002` | error | `config_version` is missing, not an integer, or less than 1. |
+| `C003` | error | A key that looks like a credential (containing `password`, `token`, `secret`, or `passwd`) holds a plaintext string instead of a `*_env` reference. |
+| `C005` | error | `workspaces` is present but is not an object. |
+| `C006` | error | A workspace definition has no `sources`, or a source entry is malformed. |
+| `C007` | warning | A deprecated key is set (currently only `generated_paths`; see its replacement in `config explain generated_paths`). |
+| `C008` | error | The document fails `config-v1.schema.json` validation (only reported when `jsonschema` is installed). |
+
+Any `error`-severity finding makes the file unwritable (`config set`/`unset`/
+`migrate` refuse to write it) until fixed; `warning`-severity findings do not
+block a write. `config check` also reports any retained `.rejected*`
+candidates from previously refused writes (see below), since those sit beside
+the file and are easy to forget about.
+
+`lifetxt config migrate [--dry-run] [-o PATH] [--expected-revision HASH]`
+converts a legacy top-level `paths`/`write_file` configuration into the
+versioned `workspaces.default` form and sets `config_version` to `1`, without
+changing any other value. `--dry-run` lists the planned changes and writes
+nothing. A configuration already on the current version and shape reports
+"Configuration is already current; no changes." and exits successfully.
 
 ## Editing configuration safely
 
@@ -218,6 +301,96 @@ Never store passwords or tokens directly in configuration. Reference an
 environment variable name instead — for example SMTP credentials use
 `smtp_pass_env: "LIFETXT_SMTP_PASS"`. `config effective`, `config sources`,
 and support bundles redact any key that looks like a secret.
+
+Two different, deliberately different-width checks apply here, and it is
+worth knowing both exist:
+
+- **Display redaction** (`config effective`, `config sources`, support
+  bundles) replaces the value of any key whose name contains `password`,
+  `token`, `secret`, or `pass` with `***redacted***`, unless the key ends in
+  `_env` (an environment-variable *reference* is safe to show). This is
+  intentionally broad -- it also catches a key like `api_pass`.
+- **`config check`'s `C003` error** only fires on `password`, `token`,
+  `secret`, or `passwd` (not the bare substring `pass`). A key such as
+  `api_pass: "hunter2"` is therefore redacted on display but does **not**
+  fail `config check` -- it is still a plaintext secret sitting in the file
+  on disk. Prefer the documented `*_env` convention over relying on either
+  check to catch every naming choice.
+
+## Ticketing configuration
+
+Development-ticket behavior (`lifetxt ticket ...`) reads several keys under
+`ticketing`. Full workflow, custom-field, and write-safety behavior is
+documented in [tickets.md](tickets.md) and [ticket-projects.md](ticket-projects.md);
+this table covers the plain configuration surface:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `ticketing.id_prefix` | `"TK"` | Prefix for generated ticket ids, e.g. `TK-1`. Keep distinct from task id prefixes. |
+| `ticketing.required_fields` | `[]` | Ticket fields that must be present; missing ones are reported as `TK005` errors. |
+| `ticketing.trackers` | `["bug", "feature", "task", "support"]` | Allowed ticket tracker values. |
+| `ticketing.priorities` | `["low", "normal", "high", "urgent", "immediate"]` | Allowed ticket priority values, low to high. |
+| `ticketing.severities` | `["trivial", "minor", "major", "critical", "blocker"]` | Allowed ticket severity values, least to most severe. |
+| `ticketing.components` | `[]` | Allowed ticket component values. Empty means no restriction. |
+| `ticketing.defaults.tracker` | `"task"` | Tracker assumed for `ticket new` when none is given. |
+| `ticketing.defaults.priority` | `"normal"` | Priority assumed for `ticket new` when none is given. |
+
+All eight keys are registered, so `lifetxt config explain ticketing.trackers`
+(and the others) reports type, default, and description directly.
+
+## Remote Safe Mode configuration
+
+Remote Safe Mode's full configuration surface (`remote.enabled`,
+`remote.principals`, rate limiting, audit logging, browser sessions, and the
+`remote.allow_multi_worker` deployment-topology acknowledgment) is documented
+in [remote.md](remote.md) rather than duplicated here, since enabling it also
+requires understanding authentication and permission scopes that are specific
+to that surface. Every `remote.*` key is registered; `lifetxt config explain
+remote.<key>` works for all of them.
+
+## Complete key reference
+
+Every key below is registered with the authoritative metadata registry, so
+`lifetxt config explain <key>` returns its type, default, environment
+override (if any), and a description for each. This table is grouped by area
+rather than alphabetically; keys already covered by their own section above
+or by a linked document are summarized here for completeness rather than
+re-explained.
+
+| Area | Keys |
+| --- | --- |
+| Core | `config_version`, `default_workspace`, `paths`, `write_file` |
+| Config writes | `config.write.require_revision`, `config.write.audit_log`, `config.write.audit_max_bytes` |
+| Update checks | `update.repository` |
+| Workspaces | `workspaces`, `workspaces.*.sources`, `workspaces.*.write_file`, `workspace.max_total_source_bytes` |
+| Profiles | `profiles` |
+| Defaults | `defaults.timezone`, `defaults.person` |
+| Web server | `web.host`, `web.port` |
+| Notifications | `notifications.email.smtp_pass_env` |
+| Identity | `ids.auto` |
+| Editing | `editor` |
+| Attachments | `attachments.root`, `attachments.max_files`, `attachments.max_bytes`, `attachments.max_file_bytes`, `attachments.ignores`, `attachments.allowed_mime`, `attachments.blocked_mime`, `attachments.open_state_file`, `attachments.remote_source_root`, `attachments.remote_chunk_bytes` |
+| Transactions | `transactions.policy_file`, `transactions.admin_audit_file`, `transactions.preflight_on_startup`, `transactions.terminal_retention_days`, `transactions.max_transactions`, `transactions.max_total_bytes`, `transactions.max_transaction_bytes`, `transactions.require_private_permissions`, `transactions.allow_newer_read_only`, `transactions.evidence_include_paths`, `transactions.require_operator_authorization`, `transactions.authorized_operators` |
+| Clock skew (Remote/Web writes) | `clock.skew_warning_seconds`, `clock.skew_reject_seconds`, `clock.require_remote_write_time`, `clock.client_time_header` |
+| Remote Safe Mode | see [remote.md](remote.md); every `remote.*` key is registered |
+| Projects | `projects`, `projects.*.aliases` (see [projects.md](projects.md)) |
+| Ticketing | see the table above; full behavior in [tickets.md](tickets.md) |
+| Inbox | `inbox.proposals_file` (see [inbox.md](inbox.md)) |
+| Messaging groups | `groups` (see [messaging.md](messaging.md)) |
+| Saved views | `saved_views` (see [query.md](query.md)) |
+| Deprecated | `generated_paths` -- replaced by per-source `role: generated` sources and `sync_ics.generated_paths` |
+
+This registry does not yet cover every key `lifetxt config init` writes into
+the starter template. Sections such as `user`, `users`, `teams`, `tags`,
+`message`, `timer`, `tui`, most of `notifications` (beyond the one key
+above), `api`, `ids.key`/`ids.prefixes.*`, most of `web` (beyond `host`/
+`port`), `views`, `templates`, and `sync_ics` exist and are read by their
+respective features, but `config explain` on one of their keys reports "No
+registered metadata" rather than failing silently -- it fails loudly instead
+of guessing. Run `lifetxt config init -o /tmp/example.lifetxt.json` (any
+throwaway path; `config init` always writes a file, it has no stdout mode) or
+inspect `examples/config/*.lifetxt.json` to see their current shape and
+defaults directly until they gain registry entries.
 
 ## Examples
 

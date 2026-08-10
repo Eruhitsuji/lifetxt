@@ -4,6 +4,16 @@
 
 The report contract is published as `schemas/ticket-project-report-v1.schema.json` and advertised through capability discovery as `ticket_project_report`.
 
+See docs/en/tickets.md for the ticket record model, relation keys
+(`depends_on`/`blocks`/`parent`/`related`/`duplicate_of`/`replaced_by`), typed
+custom fields, and the `ticket validate`/`check` diagnostics that catch a
+malformed or cyclic ticket before it reaches this report. See docs/en/cli.md's
+`links` section (3.2) for the reference/cycle diagnostics (`W215`-`W229`) that
+apply to ticket relation keys. See docs/en/projects.md's Archiving section for
+how `lifetxt project archive` moves a done/canceled ticket (and its
+`record:ticket_event`/`record:time_entry` history) out of this report's input
+set.
+
 ## Main CLI commands
 
 The shared report is available in the normal `lifetxt` command tree:
@@ -134,12 +144,74 @@ The report includes global and per-project totals for:
 
 Attention categories overlap. For example, one ticket may be blocked, overdue, unassigned, high severity, and stale simultaneously.
 
+## Ticket row fields
+
+Every ticket in `tickets`, `board`, and `attention` is the same `ticket`-shaped
+row (`schemas/ticket-project-report-v1.schema.json`'s `$defs.ticket`):
+
+`id`, `title`, `project`, `status`, `tracker`, `priority`, `severity`,
+`assignee`, `reporter`, `component`, `due`, `updated`, `estimate_hours`,
+`elapsed_hours`, `depends_on`, `blocks`, `terminal`, `blocked`,
+`dependency_unknown`, `unresolved_dependencies`, `unevaluated_dependencies`,
+`unevaluated_dependency_reasons`, `overdue`, `unassigned`, `high_severity`,
+`stale`, `variance_hours`.
+
+`depends_on` and `blocks` are the ticket's own raw relation values (what it
+depends on; what it blocks). `unresolved_dependencies` is different: it is the
+computed set of *other open tickets holding this one back*, built from two
+sources -- this ticket's own open `depends_on` targets, **and** every other
+open ticket in scope whose `blocks:` names this ticket (`blocks:` is declared
+on the blocker, so evaluating a ticket's own blockers requires scanning every
+other ticket's outgoing `blocks:`, not just this ticket's own details).
+`blocked` is `true` when `ticket_status` is `blocked` or
+`unresolved_dependencies` is non-empty.
+
+`unevaluated_dependencies`/`unevaluated_dependency_reasons` cover ids the
+report could not resolve at all -- absent from the selected (post-project-filter)
+read set. Each id maps to one reason:
+
+- `out_of_scope`: the id is directly known to exist in the full read set (a
+  ticket in a different, non-selected project, or the source of an open
+  `blocks:` reference naming this ticket) -- the report already saw it, so
+  disclosing that it exists but was filtered out is safe.
+- `missing`: every other case -- genuinely absent, private, archived outside
+  scope, or rejected by workspace resolution. The report deliberately does not
+  distinguish these, since doing so would disclose whether an otherwise
+  invisible ticket exists.
+
+Worked example: filtering `ticket attention` to one project turns a
+cross-project `depends_on` into `out_of_scope` rather than `blocked`, because
+the target ticket is excluded from `by_id` (used to resolve open dependencies)
+but still present in the unfiltered `all_ticket_ids` set used only for this
+disclosure decision:
+
+```console
+$ lifetxt ticket attention life.txt --project mobile --format json --pretty
+```
+
+```json
+{
+  "id": "BUG-102",
+  "project": "mobile",
+  "depends_on": ["BUG-100"],
+  "blocked": false,
+  "dependency_unknown": true,
+  "unresolved_dependencies": [],
+  "unevaluated_dependency_reasons": {"BUG-100": "out_of_scope"},
+  "unevaluated_dependencies": ["BUG-100"]
+}
+```
+
+(`BUG-100` is a real ticket in project `web`; with no `--project` filter the
+same row instead reports `blocked: true` with `BUG-100` in
+`unresolved_dependencies`, since it is then resolvable.)
+
 ## Formula and missing-data rules
 
 - **Open** means the normalized `ticket_status` is not in the effective terminal-status set.
 - **Progress** is terminal ticket count divided by total ticket count. It is count-based and is not a delivery forecast.
-- **Blocked** means an open ticket has `ticket_status: blocked` or depends on another open ticket present in the selected report.
-- **Dependency unknown** means a `depends_on` identifier is absent from the selected report. The report does not guess whether that missing ticket is open or terminal.
+- **Blocked** means an open ticket has `ticket_status: blocked`, depends on another open ticket present in the selected report, or is named by another open ticket's `blocks:` reference.
+- **Dependency unknown** means a `depends_on` id, or an open `blocks:` reference naming this ticket, is absent from the selected report. See "Ticket row fields" above for the `out_of_scope`/`missing` reason split; the report does not otherwise guess whether a missing ticket is open or terminal.
 - **Overdue** means an open ticket's due instant is at or before the reference time. A date-only value remains current through that UTC calendar date. A datetime with an offset uses its explicit offset.
 - **Stale** means the newest available `updated`, `modified`, `changed`, `created`, or `opened` timestamp is older than the configured window. Missing timestamps are not called stale.
 - Plain numeric duration values are hours. Compact values support `w`, `d`, `h`, and `m`, with one work day equal to 8 hours and one work week equal to 40 hours. Invalid or partially parsed values are excluded rather than guessed.

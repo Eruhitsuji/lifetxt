@@ -77,6 +77,25 @@ python -m lifetxt decrypt [path ...]
 python -m lifetxt share [path ...]
 python -m lifetxt digest [path ...]
 python -m lifetxt template list
+python -m lifetxt workspace list
+python -m lifetxt project list
+python -m lifetxt portfolio [path ...]
+python -m lifetxt today [path ...]
+python -m lifetxt area list [path ...]
+python -m lifetxt backlinks ID [path ...]
+python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt view list
+python -m lifetxt group list [path ...]
+python -m lifetxt message recipients [path ...]
+python -m lifetxt person list [path ...]
+python -m lifetxt proposal list
+python -m lifetxt ticket list [path ...]
+python -m lifetxt version list [path ...]
+python -m lifetxt sprint list [path ...]
+python -m lifetxt rrule daily
+python -m lifetxt update-check
+python -m lifetxt update
+python -m lifetxt remote profile-list
 ```
 
 | Command | Purpose |
@@ -145,6 +164,28 @@ python -m lifetxt template list
 | `share` | Export a self-contained HTML or Markdown report (filter + review + chart) |
 | `digest` | Send a `review` summary to Slack, email, or a local file |
 | `template` | List and apply reusable named item templates |
+| `workspace` | Inspect and validate named workspaces and their source manifests (see [config.md](config.md#workspaces)) |
+| `project` | List, inspect, and manage projects built from `project:` records (see [projects.md](projects.md)) |
+| `portfolio` | Compare projects by state, progress, risk, and workload (see [projects.md](projects.md)) |
+| `today` | Daily command center: overdue, due, blocked, messages, and project attention (see [life-hub.md](life-hub.md)) |
+| `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
+| `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
+| `query` | Filter items with the shared query language (see [query.md](query.md)) |
+| `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
+| `group` | Inspect and validate messaging groups (see [messaging.md](messaging.md)) |
+| `message` | Compose messages and inspect recipients and delivery state (see [messaging.md](messaging.md)) |
+| `person` | Overview of a person's work, messages, meetings, and memberships (see [people.md](people.md)) |
+| `proposal` | Unified Inbox: review, edit, accept, or reject staged proposals (see [inbox.md](inbox.md)) |
+| `ticket` | Development tickets (`record:ticket`): new, list, show, edit, transitions, links (see [§19](#19-development-tickets-ticket)) |
+| `version` | Manage ticket release versions (see [tickets.md](tickets.md)) |
+| `sprint` | Manage ticket sprints (see [tickets.md](tickets.md)) |
+| `rrule` | Expand a recurrence rule into concrete occurrences (see [13.10](#1310-rrule-expanding-a-recurrence)) |
+| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-init-and-doctor)) |
+| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-init-and-doctor)) |
+| `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
+
+lifetxt also has a small set of workflow and format-1.0 commands not detailed
+in this file; see [§21](#21-commands-documented-elsewhere) for pointers.
 
 ### 1.1 Fuzzy Search
 
@@ -164,7 +205,29 @@ python -m lifetxt find "stast" life.txt --fuzzy      # same tolerance across ite
 
 ## 2. Common Conventions
 
-### 2.0 External Config
+### 2.0 Global Options
+
+Three options are recognized before the subcommand name, for every command:
+
+| Option | Meaning |
+|---|---|
+| `--version`, `-V` | Print `lifetxt VERSION` and exit 0. Ignores every other argument |
+| `--config FILE` | External JSON config file (see below) |
+| `--workspace NAME` | Named workspace to resolve inputs and the write target from (see [config.md](config.md#workspaces)) |
+
+```sh
+python -m lifetxt --version
+python -m lifetxt --workspace work agenda
+python -m lifetxt --config .lifetxt.json --workspace work check
+```
+
+`--workspace` selects one of the `workspaces` entries in the loaded config,
+resolving its declared sources into the input-path/write-target set used by
+that command -- it replaces `paths`/`write_file`-only configuration for
+projects that define more than one named workspace. `lifetxt workspace list`,
+`show`, `files`, `validate`, and `doctor` inspect workspaces directly.
+
+#### External Config
 
 Any command may receive `--config FILE` before or after the subcommand. If it is
 omitted, the CLI checks `LIFETXT_CONFIG`, `.lifetxt.json`, and
@@ -2749,3 +2812,104 @@ defined): `{today}`, `{next_monday}` (the next strictly-future Monday), and
 `{next_week}` (today + 7 days). Unlike `H` habits, a template's content is
 not re-scheduled automatically — running `apply` again appends another copy
 of the same lines with freshly resolved dates.
+
+## 19. Development Tickets (`ticket`)
+
+`ticket` manages development tickets stored as normal Task records with
+`record:ticket` metadata (no new item type). It has one of the larger
+subcommand surfaces in the CLI; full behavior, field/workflow configuration,
+custom fields, versions, sprints, and planning views are documented in
+[tickets.md](tickets.md), [ticket-projects.md](ticket-projects.md), and
+[query.md](query.md#saved-views) (saved views also cover ticket queries).
+
+```sh
+python -m lifetxt ticket new WEB-1 "Fix login redirect" --project web --tracker bug
+python -m lifetxt ticket list --project web --status open
+python -m lifetxt ticket show WEB-1
+python -m lifetxt ticket transition WEB-1 review --comment "Ready for review"
+python -m lifetxt ticket comment WEB-1 "Root cause confirmed"
+python -m lifetxt ticket log-time WEB-1 90m --activity development
+```
+
+| Subcommand group | Purpose |
+|---|---|
+| `new`, `list`, `show`, `edit`, `assign`, `close`, `reopen` | Create and maintain ticket records |
+| `link`, `unlink` | Add or remove relations (`depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:`, ...) |
+| `validate`, `validate-history`, `validate-planning` | Consistency checks for tickets, append-only history, and planning data |
+| `transition`, `comment`, `reassign`, `change`, `watch`, `unwatch`, `log-time` | Audit-safe mutations that append a `record:ticket_event`/`record:time_entry` alongside the state change |
+| `activity`, `time` | Show ticket events, time entries, and authoritative append-only time |
+| `revision`, `file-revision` | Print exact source-file/writable-file revisions for conflict-aware writes |
+| `fields`, `workflow` | Inspect the effective custom-field registry and workflow configuration |
+| `summary`, `board`, `attention` | Shared ticket/project reports (also reachable via `project tickets`) |
+| `plan`, `backlog`, `roadmap` | Version/sprint membership and planning views |
+
+Ticket release versions and sprints are managed with the sibling `version`
+and `sprint` commands (`version new|list|show|close|release|lock|reopen`,
+`sprint new|list|show|start|close|reopen`); see
+[tickets.md](tickets.md#versions-and-sprints).
+
+## 20. Remote Safe Mode Client (`remote`)
+
+`remote` is a dependency-free CLI client for a server running `lifetxt serve`
+with Remote Safe Mode enabled (`remote.enabled: true` in that server's
+config). It talks to the server's HTTP API using a stored profile (URL, TLS
+preference, protocol version, and the *name* of an environment variable that
+holds the Bearer token — never the token value itself). Full protocol,
+permission-model, and conflict-handling detail lives in
+[remote.md](remote.md) and [remote-client-writes.md](remote-client-writes.md);
+this section is a command-surface summary.
+
+```sh
+python -m lifetxt remote profile-set home https://life.example.test --token-env LIFETXT_REMOTE_TOKEN
+python -m lifetxt remote profile-list
+python -m lifetxt remote test home
+python -m lifetxt remote resources home
+python -m lifetxt remote get home tickets --param project=web --param status=review
+python -m lifetxt remote ticket-show home WEB-42
+python -m lifetxt remote permissions home
+python -m lifetxt remote diagnose home
+python -m lifetxt remote snapshot home
+python -m lifetxt remote export home snapshot.json
+```
+
+| Subcommand | Purpose |
+|---|---|
+| `profile-set`, `profile-list`, `profile-show`, `profile-delete` (alias `profile-remove`) | Manage locally stored connection profiles |
+| `test` | Verify connectivity and report the negotiated protocol version and principal |
+| `resources` | List the read resources the server publishes for the negotiated protocol |
+| `get RESOURCE --param k=v` | Fetch one resource (`tickets`, `items`, `next`, `agenda`, `search`, `status`, `links`, `projects`, `ticket-detail`, `ticket-report`, ...), filtered by `--param` |
+| `ticket-show` | Show one visible ticket from the permission-filtered snapshot |
+| `permissions` | Show the authenticated principal's effective role, scopes, and denial reasons |
+| `diagnose` | Report server-side Remote Safe Mode health checks (enablement, HTTPS policy, principal registry, session store, ...) |
+| `snapshot` | Fetch the full permission-filtered data snapshot |
+| `export PATH` | Write a `remote-snapshot-v1`-shaped snapshot to a local file |
+| `ticket-create`, `ticket-edit`, `ticket-transition`, `ticket-comment`, `ticket-log-time` | Ticket mutations, gated by `remote.ticket_writes_enabled` and an exact `If-Match` revision (`--dry-run` available on each) |
+| `tui PROFILE [--interactive]` | A minimal text-mode client: read-only browsing by default, or an interactive session that can propose and confirm writes |
+
+All subcommands accept `--profiles-file PATH` to use a profiles store other
+than the default. Mutation subcommands additionally accept
+`--transaction-id ID` and `--dry-run`; see
+[remote-client-writes.md](remote-client-writes.md#revision-conflicts) for how
+revision conflicts are reported.
+
+## 21. Commands Documented Elsewhere
+
+A few command families are intentionally documented in their own file rather
+than duplicated here, because they are large enough (or specific enough) to
+warrant a dedicated guide:
+
+| Commands | Guide |
+|---|---|
+| `next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo` | [new-cli-workflows.md](new-cli-workflows.md) |
+| `safety locks\|serve-target\|timezone\|revisions\|transactions\|write-routes\|release-gate`, `attachment put\|reference\|delete\|status`, `format info\|check\|canon\|schemas`, `capabilities` | [release-safety-foundations.md](release-safety-foundations.md) |
+| `workspace` (in depth), named-workspace configuration | [config.md](config.md#workspaces) |
+| `project`, `portfolio`, `project archive`, `project tickets` | [projects.md](projects.md), [ticket-projects.md](ticket-projects.md) |
+| `query`, `view` (saved queries) | [query.md](query.md) |
+| `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |
+| `proposal` (Unified Inbox) | [inbox.md](inbox.md) |
+| `today`, `area`, `backlinks` | [life-hub.md](life-hub.md) |
+| `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
+| `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
+
+`python -m lifetxt --help` lists every command; each subcommand's own
+`--help` is always authoritative for its exact flags.

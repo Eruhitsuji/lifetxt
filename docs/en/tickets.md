@@ -171,6 +171,36 @@ without modifying anything. Transitions patch the ticket in one rewrite: `close`
 sets the terminal status, `closed_by`, and any `--resolution`; `reopen` clears
 them.
 
+`ticket link`/`ticket unlink` accept any of the six relation keys: `parent`,
+`depends_on`, `blocks`, `related`, `duplicate_of`, and `replaced_by`. Reciprocal
+edges are never auto-generated -- setting `duplicate_of` on one ticket does not
+write `replaced_by` on the other, matching how `depends_on`/`blocks` already work
+as independent assertions:
+
+```console
+$ lifetxt ticket link BUG-3 duplicate_of BUG-1
+$ lifetxt ticket link BUG-4 blocks BUG-1
+```
+
+`lifetxt check` (with or without `--config`) reports reference and cycle
+diagnostics for every relation key on a ticket the same as it would for any
+other item: missing references (`W215`), self references (`W216`), `parent:`
+cycles (`W217`), ambiguous references (`W218`), combined `depends_on:`/`blocks:`
+cycles (`W227`), `duplicate_of:` cycles (`W228`), and `replaced_by:` cycles
+(`W229`). See docs/en/cli.md's `links` section (3.2) for the complete
+reference/cycle-diagnostic catalog. `ticket validate` does not duplicate this
+check; run plain `check` (or `links`) alongside `ticket validate` to catch a
+relation cycle among tickets.
+
+Typed custom fields (see below) are validated only by `ticket validate`
+(`TK006`-`TK010`), not by the generic parser/validator: a ticket with a
+configured `ticketing.custom_fields` entry still reports `W106` ("Detail key
+... is custom for type T; it will be preserved.") under plain `lifetxt check`,
+even when the same `--config` is passed to both commands. Use `ticket validate`
+to get typed enforcement (range, enum, pattern, required/repeatable) for custom
+fields; use `check`/`ticket validate` together for the complete picture on a
+ticket file.
+
 ## Exact-revision writes
 
 `ticket revision ID` prints the lowercase SHA-256 of the exact authoritative
@@ -303,6 +333,36 @@ a duplicate transaction is rejected. Event IDs and sequences are allocated
 while the lock is held, so equal timestamps still have deterministic ordering.
 A stale revision leaves both the ticket and history unchanged.
 
+`ticket transition` also accepts `--role` (checked against the transition's
+configured `roles`), `--resolution` (required by transitions with
+`resolution_required`), and `--set`/`--unset`, so a status change and its
+accompanying field updates commit in the same atomic write and the same
+`field_change`-shaped event, instead of needing a separate `ticket change`
+call:
+
+```console
+$ lifetxt ticket transition BUG-1 resolved \
+    --revision "$REV" --actor alice --role manager \
+    --resolution "fixed in v2" --set component=auth --unset milestone
+```
+
+Events use one of `EVENT_TYPES`:
+
+```text
+created, comment, transition, assignment, field_change, time_entry,
+relation_added, relation_removed, commit_linked, pr_linked, build_failed,
+build_passed, version_assigned, sprint_assigned, watch_added, watch_removed,
+closed, reopened
+```
+
+`transition`, `comment`, `reassign`, `change`, `watch`/`unwatch`, and `plan`
+(see below) emit `transition`/`closed`/`reopened` (via the default or
+configured `event`), `comment`, `assignment`, `field_change`,
+`watch_added`/`watch_removed`, and `version_assigned`/`sprint_assigned`
+respectively. `commit_linked`, `pr_linked`, `build_failed`, and `build_passed`
+are declared for use as a custom transition's `event` value (for future Git/CI
+integration) but are not emitted by any built-in command today.
+
 `record:ticket_event` records are append-only and include a stable ID, parent
 ticket, event type, author, offset-aware UTC timestamp, per-ticket sequence,
 transaction ID, source ticket revision, changed-field summaries, comment body,
@@ -312,6 +372,38 @@ and optional provider/reference context. Validate them with:
 $ lifetxt ticket activity BUG-1
 $ lifetxt ticket validate-history --format json --pretty
 ```
+
+`ticket validate-history` reports:
+
+| Code | Meaning |
+| --- | --- |
+| `TK020` | event missing a required field (`id`, `parent`, `event`, `author`, `at`, `sequence`, `transaction`, `ticket_revision`) |
+| `TK021` | unknown event type (not in `EVENT_TYPES`) |
+| `TK022` | event `at` is not an ISO date-time with a UTC offset |
+| `TK023` | event `sequence` is not a positive integer |
+| `TK024` | event `parent` does not resolve to a known ticket |
+| `TK025` | time entry missing a required field (`id`, `parent`, `user`, `activity`, `on`, `elapsed`, `sequence`, `event_id`, `created_at`) |
+| `TK026` | time entry `on` is not `YYYY-MM-DD` |
+| `TK027` | time entry `elapsed` is not a parseable duration |
+| `TK028` | time entry `activity` is not in `ticketing.activities` |
+| `TK029` | time entry `parent` does not resolve to a known ticket |
+| `TK030`/`TK033` | duplicate `id` on a ticket event / time entry |
+| `TK031` | duplicate `(parent, sequence)` pair among ticket events |
+| `TK032` | duplicate `transaction` id among ticket events |
+| `TK034` | time entry's `event_id` does not resolve to a known event |
+| `TK035`/`TK036` | event/time-entry `id` does not match the `parent`+`sequence`-derived id |
+| `TK037` | a correction's `--corrects` target is missing, or belongs to a different ticket |
+| `TK038` | a correction targets itself, or a correction chain cycles |
+| `TK039` | a ticket's event sequence has a gap (not a dense `1..N` run) |
+
+`ticket validate-history` and `ticket validate-planning` (below) resolve their
+input the same way as `check`: an explicit path, then configured `paths`, then
+stdin. Unlike `ticket new`/`list`/`show`/`edit`/the workflow write commands
+(which fall back to `life.txt` in the current directory when neither is given),
+these two read-only validators silently read from stdin -- an empty stdin
+produces a trivially clean "valid" result rather than an error or a check of
+`life.txt`. Always pass an explicit path (or rely on configured `paths`) when
+scripting these two commands.
 
 The audit-safe commands are additive. Compatibility commands such as the older
 `ticket edit|assign|close|reopen|link|unlink` remain available and do not claim
@@ -374,6 +466,61 @@ $ lifetxt sprint close SPR-1 --revision "$REV"
 $ lifetxt ticket validate-planning
 ```
 
+Every state transition is a dedicated subcommand rather than a `--state` flag:
+`version close|release|lock|reopen` and `sprint start|close|reopen`. `reopen`
+returns a version to `open` or a sprint to `planned`; only closing/releasing a
+version and closing a sprint enforce the unresolved-members check above (a
+version can be locked or reopened, and a ticket planned into it, without that
+check running -- `lock` only signals intent, it does not freeze membership).
+
+`version new` also accepts `--parent-version ID`, recorded as a plain
+`parent_version` detail for chaining a version to its predecessor (for example
+`v1.1`'s parent is `v1.0`); nothing currently reads it automatically, it is
+descriptive metadata for future carry-over tooling.
+
+`ticket plan` clears membership with `--clear-version`/`--clear-sprint` instead
+of an empty `--version`/`--sprint` value:
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket plan BUG-1 --clear-version --revision "$REV" --actor alice
+```
+
+`version list`/`show` and `sprint list`/`show` report each record's resolved
+`state`, `due`/`release` or `start`/`end`, `parent_version` (versions) or
+`capacity`/`version` (sprints), and the member ticket/open-ticket counts and
+ids computed against the same input:
+
+```console
+$ lifetxt version show VER-1 life.txt --format json --pretty
+$ lifetxt sprint list life.txt --project web
+```
+
+`ticket validate-planning` reports:
+
+| Code | Meaning |
+| --- | --- |
+| `TK040` | version missing `id`/`project`/`state` |
+| `TK041` | unknown version state |
+| `TK042` | version `due`/`release` is not `YYYY-MM-DD` |
+| `TK043` | sprint missing `id`/`project`/`state`/`start`/`end` |
+| `TK044` | unknown sprint state |
+| `TK045` | sprint `start`/`end` is not `YYYY-MM-DD` |
+| `TK046` | sprint `end` is before `start` |
+| `TK047` | sprint `capacity` is not a non-negative number |
+| `TK048`/`TK049` | duplicate version id / duplicate sprint id |
+| `TK050` | sprint references a missing version |
+| `TK051`/`TK052` | ticket references a missing version / missing sprint |
+| `TK053` | ticket's `version` conflicts with its `sprint`'s own `version` |
+
+`version list`/`show`, `sprint list`/`show`, `ticket backlog`/`roadmap`, and
+`ticket validate-planning` share the read-resolution caveat noted above for
+`ticket validate-history`: without an explicit path or configured `paths` they
+fall back to stdin, not `life.txt`. Verified: `lifetxt version list` run with
+no arguments against a directory containing only an unconfigured `life.txt`
+prints `No versions.` even when the file has versions, while
+`lifetxt version list life.txt` correctly lists them.
+
 The current implementation is atomic for records in the same authoritative
 life.txt file. Split ticket/event/time/planning sources require revision sets
 and the existing multi-target journal/recovery contract and are therefore not
@@ -385,3 +532,18 @@ Read-only MCP adds `get_ticket_workflow`, `get_ticket_activity`,
 `validate_ticket_planning`. Capability discovery publishes the seven workflow,
 event, time, and planning schemas plus the exact-revision and same-file compound
 boundaries.
+
+## Archiving a ticket's history
+
+`lifetxt project archive NAME` (see docs/en/projects.md's Archiving section)
+follows a done/canceled ticket's `record:ticket_event` and `record:time_entry`
+Notes via their `parent:` reference and moves them to the configured archive
+source in the same transaction as the ticket -- unconditionally, since history
+records carry no status of their own and would otherwise never match the
+archive candidate filter and be left behind as a dangling log. This history
+linkage only runs for the project-filtered `project archive` command; the
+generic `lifetxt archive` (no `--project`/project filter) does not scan for or
+follow `record:ticket_event`/`record:time_entry` parents. Version and sprint
+registry entries are not moved by either command; an archived ticket's
+`version:`/`sprint:` detail values are left pointing at the still-active
+registry record.

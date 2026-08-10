@@ -3276,6 +3276,85 @@ traceability:
         .ai/project/changes/project-archive-plan-v1/.
       status: implemented
 
+    - requirement_id: req-mcp-global-search-fuzzy
+      capability_id: cap-fuzzy-search-first-slice
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/221
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/251
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/257
+      changed_files_or_scope:
+        - Add an optional fuzzy argument to the MCP global_search tool schema and thread it through to global_search()
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py GlobalSearchToolFuzzyTests (3 tests: opt-in default, typo match, exact-before-approximate parity)
+        - python -m unittest tests.test_mcp_expansion -> Ran 79 tests, OK
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (no tool schema/annotation drift)
+      release_or_deployment: null
+      notes: >-
+        Cheapest of the three #221 horizontal-review follow-ups: global_search()
+        already accepted and implemented fuzzy=True; the MCP tool schema simply
+        had no field to pass one through.
+      status: implemented
+
+    - requirement_id: req-remote-search-resource-fuzzy
+      capability_id: cap-fuzzy-search-first-slice
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/221
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/252
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/257
+      changed_files_or_scope:
+        - Add an opt-in fuzzy parameter to the Remote search resource, matching exactly ahead of approximate ranking, via local fuzzy_search primitives rather than delegating to global_search()
+        - lifetxt/remote_backend.py
+        - tests/test_remote_backend_v20.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+      tests_or_evidence:
+        - tests/test_remote_backend_v20.py fuzzy tests on RemoteReadBackendTests (5 tests: opt-in default, typo match, exact-ranked-first, permission filtering unaffected, catalog advertises the parameter)
+        - python -m unittest discover -p "test_remote*.py" -> Ran 142 tests, OK
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK
+      release_or_deployment: null
+      notes: >-
+        _resource_search is a separate, narrower hand-rolled implementation
+        (item/project/person only) than global_search(), confirmed by
+        investigation before implementation; the fix reuses the public
+        fuzzy_search primitives locally rather than a larger rewrite to
+        delegate to global_search(), keeping the existing 3-entity-type scope
+        unchanged. Permission filtering (_visible_items) runs in
+        read_resource() before the builder is called, so fuzzy matching
+        cannot surface anything a principal could not already see -- verified
+        by a dedicated regression test.
+      status: implemented
+
+    - requirement_id: req-fuzzy-search-surface-expansion-batch-integration
+      capability_id: cap-fuzzy-search-first-slice
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/221
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/257
+      changed_files_or_scope:
+        - Record the fuzzy-search-surface-expansion batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> full-suite result recorded once run on the integration branch before opening PR #257'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: >-
+        This entry documents PR #257 itself: feature/fuzzy-search-surface-expansion
+        (Issues #251, #252; work landed directly on the integration branch --
+        no separate sub-PRs exist because each task branch was merged locally
+        before being pushed, leaving no diff for GitHub to open a sub-PR
+        against) merging into main. Issue #253 (TUI search) was scoped as a
+        follow-up investigation during this batch but is not implemented by
+        it and has no PR.
+      notes: >-
+        Follows this project's established multi-PR integration-branch
+        pattern (see req-remote-batch-integration and later batch-integration
+        entries in this file), with one difference: because #251 and #252 are
+        each a single small, self-contained commit, they were merged directly
+        into the integration branch via local git merge before push, rather
+        than opened as separate sub-PRs first -- gh pr create correctly
+        refused afterward ("No commits between") since no diff remained.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

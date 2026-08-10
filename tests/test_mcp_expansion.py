@@ -96,6 +96,30 @@ class ToolRegistryTests(McpTestCase):
         self.assertFalse(call_tool("get_file_state", {}, context)["read_only"] is False)
 
 
+class GlobalSearchToolFuzzyTests(McpTestCase):
+    def test_fuzzy_defaults_to_false(self):
+        context, _path = self._context()
+        result = call_tool("global_search", {"term": "Wrte_Report"}, context)
+        self.assertEqual(0, result["total"])
+
+    def test_fuzzy_true_matches_a_typo(self):
+        context, _path = self._context()
+        # "Wrte_Report" is a deleted-letter typo for T1's title "Write_Report".
+        result = call_tool(
+            "global_search", {"term": "Wrte_Report", "fuzzy": True}, context
+        )
+        names = [row["name"] for row in result["groups"].get("item", [])]
+        self.assertIn("t1", names)
+
+    def test_fuzzy_true_still_ranks_exact_matches_first(self):
+        context, _path = self._context()
+        exact = call_tool(
+            "global_search", {"term": "Write_Report", "fuzzy": True}, context
+        )
+        without_fuzzy = call_tool("global_search", {"term": "Write_Report"}, context)
+        self.assertEqual(exact, without_fuzzy)
+
+
 class WriteSafetyTests(McpTestCase):
     def test_file_hash_changes_after_a_write(self):
         context, path = self._context()

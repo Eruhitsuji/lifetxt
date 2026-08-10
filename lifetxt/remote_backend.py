@@ -56,7 +56,7 @@ def resource_catalog():
         {"name": "links", "parameters": ["id", "direction", "relation", "limit"]},
         {"name": "status", "parameters": ["person", "active_only"]},
         {"name": "agenda", "parameters": ["after", "before", "limit"]},
-        {"name": "search", "parameters": ["q", "types", "limit"]},
+        {"name": "search", "parameters": ["q", "types", "limit", "fuzzy"]},
         {"name": "next", "parameters": ["project", "assignee", "limit"]},
     ]
 
@@ -355,8 +355,40 @@ def _resource_agenda(items, config, params):
     return {"count": len(rows), "agenda": redact_remote_value(rows)}
 
 
+def _search_matcher(term, fuzzy):
+    """Return a ``(text) -> bool`` predicate for one search term.
+
+    Exact substring containment when ``fuzzy`` is false (unchanged existing
+    behavior); ``fuzzy_search.fuzzy_contains`` otherwise.
+    """
+    from .fuzzy_search import fuzzy_contains
+
+    if fuzzy:
+        return lambda text: fuzzy_contains(term, text)
+    return lambda text: term in str(text).lower()
+
+
+def _search_rank(rows_with_text, term, fuzzy):
+    """Rank ``(row, matched_text)`` pairs; unchanged scan order when not fuzzy.
+
+    Mirrors ``global_search._rank``: exact matches first, then by descending
+    similarity, ties broken by original scan order.
+    """
+    if not fuzzy:
+        return [row for row, _matched_text in rows_with_text]
+    from .fuzzy_search import is_exact_match, similarity
+
+    scored = [
+        (row, is_exact_match(term, text), similarity(term, text))
+        for row, text in rows_with_text
+    ]
+    scored.sort(key=lambda entry: (not entry[1], -entry[2]))
+    return [row for row, _is_exact, _score in scored]
+
+
 def _resource_search(items, config, params):
     term = str(params.get("q") or "").lower()
+    fuzzy = _bool(params.get("fuzzy"), name="fuzzy")
     wanted = set(_csv(params.get("types")) or ["item", "project", "person"])
     allowed = {"item", "project", "person"}
     unsupported = wanted - allowed
@@ -372,6 +404,8 @@ def _resource_search(items, config, params):
     groups = OrderedDict()
     if not term:
         return {"term": term, "total": 0, "groups": groups}
+
+    matches = _search_matcher(term, fuzzy)
 
     if "item" in wanted:
         rows = []
@@ -389,16 +423,17 @@ def _resource_search(items, config, params):
                     "owner",
                 ):
                     searchable.extend(str(value) for value in values)
-            if any(term in str(value).lower() for value in searchable):
+            matched_text = next((v for v in searchable if matches(v)), None)
+            if matched_text is not None:
                 item_id = _first(details, "id") or getattr(item, "title", "")
-                rows.append(
-                    {
-                        "type": "item",
-                        "name": str(item_id),
-                        "title": getattr(item, "title", ""),
-                        "line": getattr(item, "line", None),
-                    }
-                )
+                row = {
+                    "type": "item",
+                    "name": str(item_id),
+                    "title": getattr(item, "title", ""),
+                    "line": getattr(item, "line", None),
+                }
+                rows.append((row, matched_text))
+        rows = _search_rank(rows, term, fuzzy)
         if limit is not None:
             rows = rows[:limit]
         if rows:
@@ -413,8 +448,9 @@ def _resource_search(items, config, params):
             )
         )
         rows = [
-            {"type": "project", "name": name} for name in names if term in name.lower()
+            ({"type": "project", "name": name}, name) for name in names if matches(name)
         ]
+        rows = _search_rank(rows, term, fuzzy)
         if limit is not None:
             rows = rows[:limit]
         if rows:
@@ -426,10 +462,11 @@ def _resource_search(items, config, params):
             details = getattr(item, "details", {}) or {}
             names.update(_list(details, "person", "owner", "assignee", "user"))
         rows = [
-            {"type": "person", "name": name}
+            ({"type": "person", "name": name}, name)
             for name in sorted(names)
-            if term in name.lower()
+            if matches(name)
         ]
+        rows = _search_rank(rows, term, fuzzy)
         if limit is not None:
             rows = rows[:limit]
         if rows:

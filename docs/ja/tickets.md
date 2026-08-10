@@ -162,6 +162,33 @@ $ lifetxt ticket validate
 設定済みカスタムフィールド・リレーション・被参照リンクを、何も変更せずに集約します。
 `close` は終端ステータス・`closed_by`・`--resolution` を設定し、`reopen` は解除します。
 
+`ticket link`/`ticket unlink` は6種類すべてのrelation key（`parent`・`depends_on`・
+`blocks`・`related`・`duplicate_of`・`replaced_by`）を受け付けます。`depends_on`/
+`blocks` と同じく、対称edgeは自動生成されません。一方のticketに`duplicate_of`を
+設定しても、もう一方に`replaced_by`は書き込まれません。
+
+```console
+$ lifetxt ticket link BUG-3 duplicate_of BUG-1
+$ lifetxt ticket link BUG-4 blocks BUG-1
+```
+
+`lifetxt check`（`--config`の有無を問わず）は、ticketの各relation keyについても
+他のitemと同様にreference/cycle診断を報告します。missing reference（`W215`）、
+self reference（`W216`）、`parent:`のcycle（`W217`）、ambiguous reference（`W218`）、
+`depends_on:`/`blocks:`を統合したcycle（`W227`）、`duplicate_of:`のcycle（`W228`）、
+`replaced_by:`のcycle（`W229`）です。完全なreference/cycle診断カタログはdocs/ja/cli.md
+の`links`セクション（3.2）を参照してください。`ticket validate`はこの検証を重複して
+行わないため、ticket間のrelation cycleを検出するにはplainな`check`（または`links`）を
+`ticket validate`と併用します。
+
+型付きカスタムフィールド（後述）は`ticket validate`（`TK006`〜`TK010`）でのみ
+検証され、汎用parser/validatorでは検証されません。`ticketing.custom_fields`に
+定義済みのフィールドを持つticketは、同じ`--config`を両方のコマンドに渡しても、
+plainな`lifetxt check`では引き続き`W106`（「Detail key ... is custom for type T;
+it will be preserved.」）を報告します。カスタムフィールドの型検証（範囲・enum・
+pattern・required/repeatable）には`ticket validate`を使用し、ticketファイルの
+全体像を得るには`check`と`ticket validate`を併用してください。
+
 ## 正確なrevisionを使用した書き込み
 
 `ticket revision ID` は、対象チケットを含む権威ソースファイルの正確なバイト列から計算した
@@ -289,6 +316,34 @@ $ lifetxt ticket unwatch BUG-1 carol --revision "$REV" --actor alice
 されます。event IDとsequenceはlock中に採番されるため、同一timestampでも順序は
 決定的です。古いrevisionではチケットと履歴の両方が変更されません。
 
+`ticket transition` は `--role`（遷移の設定済み`roles`と照合）、`--resolution`
+（`resolution_required`な遷移で必須）、`--set`/`--unset`も受け付けます。これに
+より、ステータス変更とそれに伴うフィールド更新を、`ticket change`を別途呼ぶこと
+なく同一のatomic writeと同一の`field_change`形式のeventにまとめてcommitできます。
+
+```console
+$ lifetxt ticket transition BUG-1 resolved \
+    --revision "$REV" --actor alice --role manager \
+    --resolution "fixed in v2" --set component=auth --unset milestone
+```
+
+eventは`EVENT_TYPES`のいずれかを使用します。
+
+```text
+created, comment, transition, assignment, field_change, time_entry,
+relation_added, relation_removed, commit_linked, pr_linked, build_failed,
+build_passed, version_assigned, sprint_assigned, watch_added, watch_removed,
+closed, reopened
+```
+
+`transition`・`comment`・`reassign`・`change`・`watch`/`unwatch`・`plan`
+（後述）は、それぞれ`transition`/`closed`/`reopened`（既定または設定済みの
+`event`経由）・`comment`・`assignment`・`field_change`・`watch_added`/
+`watch_removed`・`version_assigned`/`sprint_assigned`を発行します。
+`commit_linked`・`pr_linked`・`build_failed`・`build_passed`はカスタム遷移の
+`event`値として（将来のGit／CI連携向けに）宣言されていますが、現時点では
+組み込みコマンドから発行されることはありません。
+
 `record:ticket_event` は追記専用で、安定ID、親チケット、event種別、author、
 offset付きUTC timestamp、チケット単位のsequence、transaction ID、変更前の
 ticket revision、変更フィールド要約、コメント、任意のprovider／参照情報を
@@ -298,6 +353,38 @@ ticket revision、変更フィールド要約、コメント、任意のprovider
 $ lifetxt ticket activity BUG-1
 $ lifetxt ticket validate-history --format json --pretty
 ```
+
+`ticket validate-history` は次を報告します。
+
+| コード | 意味 |
+| --- | --- |
+| `TK020` | eventに必須フィールド（`id`・`parent`・`event`・`author`・`at`・`sequence`・`transaction`・`ticket_revision`）が欠落 |
+| `TK021` | 未知のevent種別（`EVENT_TYPES`に無い） |
+| `TK022` | event `at` がUTCオフセット付きISO日時でない |
+| `TK023` | event `sequence` が正の整数でない |
+| `TK024` | event `parent` が既知のticketに解決できない |
+| `TK025` | time entryに必須フィールド（`id`・`parent`・`user`・`activity`・`on`・`elapsed`・`sequence`・`event_id`・`created_at`）が欠落 |
+| `TK026` | time entryの `on` が `YYYY-MM-DD` でない |
+| `TK027` | time entryの `elapsed` が解釈可能な期間でない |
+| `TK028` | time entryの `activity` が `ticketing.activities` に無い |
+| `TK029` | time entryの `parent` が既知のticketに解決できない |
+| `TK030`/`TK033` | ticket eventのid重複／time entryのid重複 |
+| `TK031` | ticket event間で `(parent, sequence)` の組が重複 |
+| `TK032` | ticket event間で `transaction` idが重複 |
+| `TK034` | time entryの `event_id` が既知のeventに解決できない |
+| `TK035`/`TK036` | event／time entryの `id` が `parent`+`sequence` から導かれるidと一致しない |
+| `TK037` | `--corrects` の対象が存在しない、または別のticketに属する |
+| `TK038` | 修正が自分自身を対象にしている、または修正chainがcycleしている |
+| `TK039` | ticketのevent sequenceに欠番がある（`1..N` の密な連番でない） |
+
+`ticket validate-history` と `ticket validate-planning`（後述）は、`check` と
+同じ入力解決順序（明示path、次に設定済み`paths`、最後にstdin）を使用します。
+`ticket new`/`list`/`show`/`edit`／各workflow書き込みコマンド（どちらも無い
+場合はカレントディレクトリの `life.txt` にfallbackする）と異なり、この2つの
+read-only validatorはpath・設定済み`paths`のどちらも無いとstdinを黙って読み込み
+ます。空のstdinはエラーにもならず `life.txt` を検査することもなく、素通しで
+「valid」という結果になります。scriptから呼ぶ際は必ず明示pathを渡すか、設定済み
+`paths`に依存してください。
 
 新しい監査履歴付きコマンドは追加機能です。互換性のため従来の
 `ticket edit|assign|close|reopen|link|unlink` も残りますが、event追記を保証する
@@ -358,6 +445,61 @@ $ lifetxt sprint close SPR-1 --revision "$REV"
 $ lifetxt ticket validate-planning
 ```
 
+各state遷移は`--state`フラグではなく専用のsubcommandです。
+`version close|release|lock|reopen`、`sprint start|close|reopen`。`reopen`は
+versionを`open`へ、sprintを`planned`へ戻します。上記の未完了member確認が実行
+されるのは、versionのclose／releaseとsprintのcloseだけです（versionのlockや
+reopen、そのversionへのticket割り当てではこの確認は実行されません -- `lock`は
+意図の表明であり、membershipを凍結するものではありません）。
+
+`version new` は `--parent-version ID` も受け付け、単純な`parent_version`
+detailとして記録されます（例: `v1.1`の親は`v1.0`）。これはversionを前身へ
+chainするための記述的メタデータであり、現時点でこれを自動的に読み取る処理は
+ありません。将来のcarry-overツール向けです。
+
+`ticket plan` は空の`--version`/`--sprint`値ではなく、`--clear-version`/
+`--clear-sprint`でmembershipを解除します。
+
+```console
+$ REV=$(lifetxt ticket revision BUG-1)
+$ lifetxt ticket plan BUG-1 --clear-version --revision "$REV" --actor alice
+```
+
+`version list`/`show` と `sprint list`/`show` は、各recordの解決済み`state`、
+`due`/`release`または`start`/`end`、`parent_version`（version）または
+`capacity`/`version`（sprint）、そして同じ入力から計算したmember ticket数／
+未完了ticket数とidを報告します。
+
+```console
+$ lifetxt version show VER-1 life.txt --format json --pretty
+$ lifetxt sprint list life.txt --project web
+```
+
+`ticket validate-planning` は次を報告します。
+
+| コード | 意味 |
+| --- | --- |
+| `TK040` | versionに `id`/`project`/`state` が欠落 |
+| `TK041` | 未知のversion state |
+| `TK042` | version `due`/`release` が `YYYY-MM-DD` でない |
+| `TK043` | sprintに `id`/`project`/`state`/`start`/`end` が欠落 |
+| `TK044` | 未知のsprint state |
+| `TK045` | sprint `start`/`end` が `YYYY-MM-DD` でない |
+| `TK046` | sprint `end` が `start` より前 |
+| `TK047` | sprint `capacity` が0以上の数値でない |
+| `TK048`/`TK049` | versionのid重複／sprintのid重複 |
+| `TK050` | sprintが存在しないversionを参照 |
+| `TK051`/`TK052` | ticketが存在しないversionを参照／存在しないsprintを参照 |
+| `TK053` | ticketの`version`が、所属するsprintの`version`と矛盾 |
+
+`version list`/`show`、`sprint list`/`show`、`ticket backlog`/`roadmap`、
+`ticket validate-planning` は、前述の `ticket validate-history` と同じ読み取り
+解決の注意点を共有します。明示pathも設定済み`paths`も無い場合はstdinへ
+fallbackし、`life.txt`へはfallbackしません。検証済み: 設定されていない
+`life.txt`のみが存在するディレクトリで引数無しに`lifetxt version list`を
+実行すると、versionが存在していても`No versions.`と表示されます。一方
+`lifetxt version list life.txt`は正しく一覧を表示します。
+
 現時点のatomic保証は、同じ権威life.txtファイル内のrecordが対象です。
 ticket/event/time/planningを別ファイルへ分割する場合はrevision setと既存の
 multi-target journal／recovery契約が必要なため、書き込み可能とは通知しません。
@@ -368,3 +510,17 @@ multi-target journal／recovery契約が必要なため、書き込み可能と�
 `validate_ticket_planning` を追加します。capability discoveryは7つのworkflow／
 event／time／planning schemaと、exact-revision・同一ファイルcompound境界を
 公開します。
+
+## チケット履歴のアーカイブ
+
+`lifetxt project archive NAME`（docs/ja/projects.mdのArchivingセクション参照）
+は、done／canceledなticketの`record:ticket_event`／`record:time_entry` Noteを
+`parent:`参照経由でたどり、ticketと同一のtransaction内でarchive先へ移動します。
+履歴recordはそれ自体のstatusを持たないためarchive候補フィルタに一致せず、
+無条件に追従しないとdangling logとして取り残されてしまうためです。この履歴
+連動は project でフィルタされた `project archive` コマンドでのみ実行されます。
+汎用の `lifetxt archive`（`--project`／projectフィルタ無し）は
+`record:ticket_event`／`record:time_entry`の`parent:`を探索・追従しません。
+versionとsprintのregistry entryはどちらのコマンドでも移動されません。
+archiveされたticketの`version:`／`sprint:`のdetail値は、稼働中のままの
+registry recordを指し続けます。

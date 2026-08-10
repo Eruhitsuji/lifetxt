@@ -2969,6 +2969,43 @@ traceability:
         app remains an explicit, larger, unimplemented follow-up candidate.
       status: implemented
 
+    - requirement_id: req-mcp-remote-read-client
+      capability_id: cap-mcp-remote-read-client
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/243
+      pull_request: null
+      changed_files_or_scope:
+        - Add remote_list_profiles/remote_test_connection/remote_list_resources/remote_get_resource MCP tools, reusing lifetxt.remote_client's profile store and request() helper unmodified
+        - Add an OPEN_WORLD_TOOLS classification set and wire it into _annotate(), correcting openWorldHint (previously hardcoded false for every tool) for the three tools that make a real network call
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py RemoteMcpToolsTests (8 tests: profile listing with no secrets leaked, unknown-profile error, missing-resource-name error, non-object-params error, connection test, resource catalog, parameterized resource fetch, readOnlyHint/openWorldHint correctness)
+        - tests/test_mcp_expansion.py ToolRegistryTests.test_every_handler_has_a_schema_and_vice_versa, test_annotations_match_the_central_classification (pre-existing, re-run unmodified) -> confirm the four new tools are fully registered and consistently annotated
+        - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 88 tests, OK
+        - 'live: real lifetxt serve process with remote.enabled and a bearer-token principal; lifetxt.mcp.call_tool invoked directly (the real MCP dispatch path, not a mock) for all four tools against a real profiles.json written by `lifetxt remote profile-set`'
+        - 'live: remote_test_connection reports ok=true, negotiated_protocol=2, principal id "alice"'
+        - 'live: remote_list_resources lists all 10 real published resources'
+        - 'live: remote_get_resource resource=next returns both real fixture items (2); resource=next params={project: web} correctly filters to the one matching item'
+        - 'live: remote_get_resource with an unknown profile name correctly raises ValueError("Unknown remote profile: nope") rather than a KeyError leaking through the MCP boundary'
+        - ruff format --check / ruff check lifetxt/mcp.py -> clean
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the remote-client-surfaces batch
+        (following the #241 documentation task above). Scoped to read-only
+        resources per repository owner decision (AskUserQuestion): remote
+        ticket-write MCP tools are an explicit, deferred follow-up, with the
+        existing CLI `lifetxt remote ticket-*` commands (cap-remote-cli-write-client)
+        remaining the write path in the meantime. All four tools accept an
+        optional profiles_file override, matching the CLI's --profiles-file,
+        so tests do not need to mutate the real
+        ~/.config/lifetxt/remote-profiles.json or the LIFETXT_REMOTE_PROFILES
+        environment variable. remote_list_profiles reports name/url/
+        protocol_version only -- never token_env or any secret material,
+        confirmed by asserting the test token name is absent from the
+        serialized response.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

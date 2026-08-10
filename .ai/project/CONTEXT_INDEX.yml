@@ -1,5 +1,11 @@
 schema_version: 1
 
+# default_mode and max_initial_documents describe a design target for
+# trigger-based loading. Claude Code's @import-based CLAUDE.md loads every
+# referenced file eagerly on every turn; Codex's AGENTS.md depends on the AI
+# choosing to read each listed file. Neither adapter enforces this cap today
+# -- see AI_TOOL_COMPATIBILITY.md's "Context Loading Behavior by Adapter
+# Mechanism" section.
 context_loading:
   default_mode: progressive
   max_initial_documents: 8
@@ -132,6 +138,24 @@ rules:
     severity: required
     required_action: request_explicit_human_approval
     human_interaction_type: Decision Request
+    overridable: false
+
+  - id: CTX-SKILLS-001
+    title: Packaged reusable procedures
+    documents:
+      - .ai/managed/core/SKILLS.md
+      - .ai/managed/skills
+      - .ai/project/skills
+    load_when:
+      - user_asks_about_skills
+      - reusable_procedure_needed
+      - before_creating_project_skill
+    applies_to:
+      - Task
+      - Standard Feedback
+    severity: required
+    required_action: use_or_define_a_tool_neutral_skill_per_the_minimal_contract
+    human_interaction_type: Recommendation
     overridable: false
 
   - id: CTX-RUNTIME-001

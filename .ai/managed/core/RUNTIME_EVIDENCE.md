@@ -166,6 +166,24 @@ Deterministic checks should cover high-confidence conditions such as:
 - absent verification result after a claimed check
 - weak project association
 - raw evidence exported with unsafe reporting settings
+- a configured provider has no matching source files (coverage gap)
+
+### Checks by Collection Mode
+
+Metadata-only archives (`AI_HISTORY.yml`'s `default_mode: metadata_only`, the
+recommended default for routine and public collection) contain only archive
+metadata and source-file records — no message or tool-call content. Only checks
+that read those two record types can run in this mode:
+
+- weak project association
+- provider coverage gap
+
+Write-scope violation, repeated command failure, and protected-operation
+checks all depend on normalized events, which require raw content
+(`--include-raw` when exporting). Treat `metadata_only` collection as an
+inventory and association-quality signal, not as a source of behavioral
+findings; enable `--include-raw` (with its stricter privacy handling) when
+behavioral findings are needed.
 
 Semantic checks may cover lower-confidence conditions such as:
 

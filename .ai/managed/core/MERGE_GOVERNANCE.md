@@ -43,6 +43,21 @@ Tasks that touch shared files must name:
 - conflict risk
 - rollback strategy
 
+## Integration Branches
+
+Related sub-tasks may land as sub-PRs into a shared integration branch before
+one final PR merges that branch into the default branch (see `TRACEABILITY.md`'s
+"Multi-PR Integration Branches" for the traceability recording rule).
+
+- Required checks apply at both levels: each sub-PR must pass required checks
+  before merging into the integration branch, and the integration branch must
+  pass required checks again before merging into the default branch.
+- Review freshness applies at both levels; a sub-PR review does not substitute
+  for review of the final integration PR's head commit.
+- The rollback or revert plan must address both the integration-branch merge
+  and the final default-branch merge, since reverting the final merge does not
+  automatically undo what the integration branch accumulated.
+
 ## Merge Evidence
 
 PRs must record:

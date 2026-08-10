@@ -68,14 +68,22 @@ Implementation must not start while an issue is `status:inbox` or
 means asserting that every condition in `DEFINITION_OF_READY.md` is met — it is a
 gate, not a formality.
 
-### Specialization: labels instead of GitHub Projects
+### Status backend: labels instead of GitHub Projects
 
-`.ai/managed/core/TASK_MANAGEMENT.md` assigns status to GitHub Projects:
+`.ai/managed/core/TASK_MANAGEMENT.md`'s `governance.status_backend` field
+(added when the standard was synced past commit `0737bcac`) makes this an
+explicit, first-class choice rather than an undocumented deviation. This
+project sets:
 
-> GitHub Projects are used for planning, prioritization, status, ownership, and
-> cross-project visibility.
+```yaml
+governance:
+  status_backend: github-labels
+```
 
-This project uses labels instead. Reasons:
+in `.ai/project/PROJECT.yml`. Before this field existed, `status:*` labels
+were used in place of the standard's default (GitHub Projects) as a
+documented specialization; the reasons below are unchanged, they are just no
+longer a deviation from an overridable default. Reasons:
 
 - One maintainer and no cross-project portfolio, so the planning and
   cross-project-visibility benefits of Projects do not currently apply.

@@ -2011,10 +2011,12 @@ capabilities:
       (NFKC + casefold normalization, exact-substring always ranked above
       any approximate-only match, bounded token-level Levenshtein fallback),
       wired as an explicit opt-in behind CLI `search --fuzzy`, CLI
-      `find --fuzzy`, and the Web `/api/items?fuzzy=true` query parameter.
-      Existing exact-substring behavior is unchanged unless the opt-in is
-      given. TUI, MCP `global_search`, and Remote read-only search
-      surfaces are explicitly out of scope for this slice.
+      `find --fuzzy`, the Web `/api/items?fuzzy=true` query parameter, the
+      MCP `global_search` tool's `fuzzy` argument, and the Remote Safe Mode
+      `search` resource's `fuzzy` parameter. Existing exact-substring
+      behavior is unchanged unless the opt-in is given. A TUI item/entity
+      search command remains out of scope (#253) since no such command
+      exists yet to extend.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -2022,19 +2024,27 @@ capabilities:
       - req-fuzzy-search-cli-search
       - req-fuzzy-search-cli-find
       - req-fuzzy-search-web-items-api
+      - req-mcp-global-search-fuzzy
+      - req-remote-search-resource-fuzzy
     implementation_locations:
       - lifetxt/fuzzy_search.py
       - lifetxt/cli.py
       - lifetxt/global_search.py
       - lifetxt/agenda.py
       - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - lifetxt/remote_backend.py
       - tests/test_fuzzy_search.py
       - tests/test_global_search.py
       - tests/test_lifetxt.py
+      - tests/test_mcp_expansion.py
+      - tests/test_remote_backend_v20.py
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/en/web.md
       - docs/ja/web.md
+      - docs/en/remote.md
+      - docs/ja/remote.md
       - .kiro/specs/fuzzy-search-first-slice/
     public_interfaces:
       - lifetxt.fuzzy_search.similarity
@@ -2046,11 +2056,18 @@ capabilities:
       - GET /api/items?fuzzy=true
       - lifetxt.agenda.filter_items (fuzzy parameter)
       - lifetxt.global_search.global_search (fuzzy parameter)
+      - MCP tool global_search (fuzzy argument)
+      - GET .../resources/search?fuzzy=true (Remote Safe Mode)
     tests_or_evidence:
       - tests/test_fuzzy_search.py NormalizationTests, SimilarityTests, FuzzyContainsTests, IsExactMatchTests, FilterItemsFuzzyIntegrationTests (25 tests: normalization, exact-outranks-fuzzy, short-query bound, determinism, bounded cost, filter_items integration)
       - tests/test_global_search.py GlobalSearchFuzzyTests (5 tests: opt-in default, typo match, exact-before-approximate ranking, determinism, explicit-false parity)
       - tests/test_lifetxt.py LifeTxtSearchCommandStdinInputTests fuzzy tests, LifeTxtFindCommandTests, LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter
+      - tests/test_mcp_expansion.py GlobalSearchToolFuzzyTests (3 tests: opt-in default, typo match via call_tool, exact-before-approximate parity)
+      - tests/test_remote_backend_v20.py fuzzy tests on RemoteReadBackendTests (5 tests: opt-in default, typo match, exact-ranked-first, permission filtering unaffected, catalog advertises the parameter)
       - python -m unittest tests.test_fuzzy_search tests.test_global_search tests.test_lifetxt.LifeTxtSearchCommandStdinInputTests tests.test_lifetxt.LifeTxtSearchCommandTests tests.test_lifetxt.LifeTxtFindCommandTests tests.test_lifetxt.LifeTxtWebApiTests.test_items_api_fuzzy_query_parameter -> Ran 63 tests, OK
+      - python -m unittest tests.test_mcp_expansion -> Ran 79 tests, OK
+      - python -m unittest discover -p "test_remote*.py" -> Ran 142 tests, OK
+      - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (no capability/annotation drift from the new global_search tool argument or search resource parameter)
       - 'live: real installed lifetxt console script -- search PATTERN --fuzzy (typo matches, non-fuzzy does not), search --fuzzy --regex (rejected), find TERM PATH --fuzzy (typo matches, non-fuzzy does not, correct usage order confirmed against the real argparse positional definition)'
       - 'live: real lifetxt serve process, GET /api/items?q=sttats (0 results) vs GET /api/items?q=sttats&fuzzy=true (1 result) against a real typo fixture'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2154 tests, OK (skipped=13)'
@@ -2059,6 +2076,9 @@ capabilities:
       - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/221
+      - https://github.com/Eruhitsuji/lifetxt/issues/251
+      - https://github.com/Eruhitsuji/lifetxt/issues/252
+      - https://github.com/Eruhitsuji/lifetxt/issues/253
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -2070,10 +2090,25 @@ capabilities:
       .kiro/specs/fuzzy-search-first-slice/ (below the
       .ai/project/changes/README.md change-package threshold: Standard
       assurance -- read-only search behavior, opt-in, no data or write-path
-      impact). TUI search, MCP global_search, and Remote read-only search
-      resources are recorded here as explicit follow-up candidates for a
-      future slice, not silently dropped: each would reuse
-      lifetxt.fuzzy_search directly (TUI's own separate row-filter fuzzy
+      impact).
+
+      Follow-up horizontal-review investigation (#251/#252/#253) found the
+      MCP tool was the cheapest of the three deferred surfaces (it already
+      called global_search() and only needed one extra kwarg threaded
+      through the schema), while the Remote `search` resource turned out to
+      be a separate, narrower, hand-rolled implementation -- not built on
+      global_search() at all, covering only item/project/person of the six
+      entity types -- so its fix reimplements the same
+      exact-before-approximate ranking locally via the public
+      fuzzy_search.fuzzy_contains/is_exact_match/similarity primitives
+      rather than delegating. TUI search was found to have no existing
+      item/entity search command to extend at all (the TUI's `/` row filter
+      is a different, pre-existing substring-only concept over already-
+      rendered rows, unrelated to lifetxt.fuzzy_search) -- per this
+      project's Horizontal Review Scope Discipline, building one is a new
+      feature, not a small same-root-cause fix, so it was filed as its own
+      follow-up (#253) rather than implemented here. TUI's own separate
+      row-filter fuzzy
       helper in tui_app.py is a different, pre-existing, simpler concept --
       client-side keystroke filtering of already-loaded rows -- and is
       unrelated to this primitive). filter_items()'s fuzzy parameter is a

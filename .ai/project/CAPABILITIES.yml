@@ -2294,3 +2294,47 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-remote-read-client
+    name: MCP read-only Remote Safe Mode client tools
+    summary: >-
+      Four MCP tools (`remote_list_profiles`, `remote_test_connection`,
+      `remote_list_resources`, `remote_get_resource`) letting an MCP client
+      query a remote lifetxt server's Remote Safe Mode read resources (next,
+      tickets, items, agenda, etc.), reusing `lifetxt.remote_client`'s
+      profile store and request helper unmodified -- the same credential and
+      transport path `lifetxt remote get/resources/test` already use from the
+      CLI. Read-only; no MCP-side ticket-write tools in this slice.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-remote-read-client
+    implementation_locations:
+      - lifetxt/mcp.py
+    public_interfaces:
+      - MCP tool: remote_list_profiles
+      - MCP tool: remote_test_connection
+      - MCP tool: remote_list_resources
+      - MCP tool: remote_get_resource
+    tests_or_evidence:
+      - tests/test_mcp_expansion.py RemoteMcpToolsTests (8 tests)
+      - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 88 tests, OK
+      - 'live: real lifetxt serve process; lifetxt.mcp.call_tool invoked directly for all four tools against a real profiles.json -- connection test, resource catalog (10 resources), parameterized next fetch (project filter narrows 2 items to 1), and correct ValueError on an unknown profile'
+      - ruff format --check / ruff check lifetxt/mcp.py -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/243
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Also corrects MCP's openWorldHint annotation, which was hardcoded false
+      for every tool before this change: added an OPEN_WORLD_TOOLS
+      classification set (mirroring READ_ONLY_TOOLS/DESTRUCTIVE_TOOLS) so the
+      three tools that make a real network call report openWorldHint: true;
+      remote_list_profiles (local profile-store read only) correctly stays
+      false. Remote ticket-write MCP tools are an explicit, deferred
+      follow-up; cap-remote-cli-write-client's existing `lifetxt remote
+      ticket-*` commands remain the write path in the meantime.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

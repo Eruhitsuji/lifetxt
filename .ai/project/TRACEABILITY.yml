@@ -3205,7 +3205,7 @@ traceability:
         upstream in this range, needed no change here: this project's
         .github/ISSUE_TEMPLATE/task.yml already has all three, added in
         #52/PR #53, predating upstream.
-      status: proposed
+      status: implemented
 
 required_chain:
   - Requirement

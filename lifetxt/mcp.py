@@ -942,6 +942,10 @@ def _tool_schemas():
                 "term": _string("Case-insensitive search term."),
                 "types": _string("Comma-separated entity types to limit to."),
                 "limit": _integer("Maximum results per entity type."),
+                "fuzzy": _bool(
+                    "Match small typos/omissions in addition to exact substrings. "
+                    "Exact matches still rank first. Default false."
+                ),
             },
             required=["term"],
             read_only=True,
@@ -2964,6 +2968,7 @@ def _tool_global_search(args, context):
         str(args.get("term") or ""),
         types=types,
         limit=args.get("limit"),
+        fuzzy=bool(args.get("fuzzy")),
     )
 
 

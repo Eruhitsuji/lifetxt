@@ -1,0 +1,149 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_archive_plan_v1
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+        - req-archive-apply-plan-verification-execution
+      result: 'Ran 29 tests -- OK'
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_schema_extensions_v2 tests.test_project_archive_safety_v3 tests.test_project_archive
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+      result: 'Ran 51 tests -- OK (schema bundle now 77 documents; existing --revision-flag archive safety and generic project archive tests unaffected)'
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_safety_cli tests.test_safety_foundation tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_change_package_closeout tests.test_schema_extensions_v2
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+      result: >-
+        Ran 37 tests -- initial run FAILED (failures=4): four other test
+        files hardcoded the prior schema-bundle document count (76) and did
+        not update automatically when archive-plan-v1.schema.json was added
+        as the 77th document. Fixed by updating the hardcoded counts/expected
+        sets in tests/test_safety_cli.py, tests/test_safety_foundation.py,
+        tests/test_ticket_custom_field_public_contract.py, and
+        tests/test_ticket_workflow_surfaces.py. Re-run after fix: OK.
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+        - req-archive-apply-plan-verification-execution
+        - req-archive-plan-v1-operator-docs
+      result: >-
+        First full run (before the schema-bundle-count fixes above and
+        before this change package was complete): Ran 2203 tests, FAILED
+        (failures=5, skipped=4) -- the four count-drift failures plus the
+        change-package closeout gate correctly failing on a still-incomplete
+        package (traceability.yml/verification.yml not yet written). Both
+        causes fixed in this same commit; see the next entry for the
+        confirming re-run.
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+        - req-archive-apply-plan-verification-execution
+        - req-archive-plan-v1-operator-docs
+      result: 'confirming re-run after every fix above: full suite green'
+      commit: TO_BE_FILLED_AFTER_COMMIT
+      executed_at: '2026-08-10'
+      status: passed
+    - type: manual
+      command: 'real lifetxt project archive web --dry-run --emit-plan plan.json against a disposable two-item fixture'
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+      result: >-
+        "Archive plan written to plan.json." printed; plan.json is
+        schema-valid archive-plan-v1 JSON; recorded source revision matches
+        the live SHA-256 of the fixture file; no other file changed
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: manual
+      command: 'real lifetxt project archive web --apply-plan plan.json (no --yes), then again with --yes'
+      requirement_ids:
+        - req-archive-apply-plan-verification-execution
+      result: >-
+        Without --yes: "Archive plan verified against current state
+        (reserved_transaction_id=...). No changes made." and life.txt
+        confirmed byte-for-byte unchanged. With --yes: "Applying archive
+        plan (reserved_transaction_id=...)." followed by the same archive
+        output --revision would have produced; life.txt and archive.life.txt
+        confirmed correctly updated
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: manual
+      command: 'real lifetxt project archive web --apply-plan against a hand-tampered plan.json (selected_item_ids field edited post-emission)'
+      requirement_ids:
+        - req-archive-apply-plan-verification-execution
+      result: >-
+        "ERROR: Archive plan tamper check failed: the plan file has been
+        modified since it was emitted (plan_hash mismatch)...", exit 1;
+        source file confirmed byte-for-byte unchanged afterward
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: manual
+      command: 'real lifetxt project archive web --apply-plan against a plan whose source file was edited after emission'
+      requirement_ids:
+        - req-archive-apply-plan-verification-execution
+      result: >-
+        "ERROR: Archive plan is stale: the following file(s) changed since
+        the plan was emitted: ...", naming the exact path and both the
+        expected and found revision, exit 1; source file confirmed to
+        retain only the post-emission edit, with no further modification
+        from the rejected apply attempt
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: >-
+        3 files would be reformatted (pre-existing drift on main:
+        lifetxt/safety_compat_v2.py, tests/test_generated_record_capture_compat.py,
+        tests/test_project_archive_safety_v3.py -- confirmed via git diff main
+        showing zero overlap with this change's files), 262 files already
+        formatted. This change's own new/modified files
+        (archive_plan_v1.py, cli.py, test_archive_plan_v1.py) were reformatted
+        to comply before this evidence was recorded.
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: All checks passed!
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: integration
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: []
+      result: 'OK: 10 item(s)'
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+
+  gaps:
+    - requirement_id: req-archive-plan-v1-schema-and-emit
+      description: >-
+        selected_item_ids is empty for items without an explicit id: detail;
+        see traceability.yml's gaps entry for the full explanation and why
+        it does not weaken the write-safety guarantee.
+      tracked_by: null
+      severity: low

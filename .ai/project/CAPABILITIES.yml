@@ -2468,7 +2468,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/254
       - https://github.com/Eruhitsuji/lifetxt/issues/255
       - https://github.com/Eruhitsuji/lifetxt/issues/256
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/258
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Security/High assurance per ASSURANCE_LEVELS.md (data-loss-prevention

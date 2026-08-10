@@ -13,7 +13,8 @@ change:
     - https://github.com/Eruhitsuji/lifetxt/issues/254
     - https://github.com/Eruhitsuji/lifetxt/issues/255
     - https://github.com/Eruhitsuji/lifetxt/issues/256
-  related_pull_request: []
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/258
   base_commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
   target_release: null
 

@@ -261,10 +261,18 @@ not globally unique, such as `id:todoist-123` or `id:github-42`.
 | `depends_on` | Item that must be completed or resolved first | `depends_on:task_001` |
 | `blocks` | Item that is blocked by this item | `blocks:task_002` |
 | `related` | Looser related item | `related:note_001` |
+| `duplicate_of` | This item duplicates another item | `duplicate_of:task_001` |
+| `replaced_by` | This item has been superseded by another item | `replaced_by:task_002` |
+
+`duplicate_of:` and `replaced_by:` are independent, one-directional
+assertions, matching `depends_on:`/`blocks:`: writing one side never implies
+or auto-generates the other, and there is no requirement that a
+`duplicate_of:`/`replaced_by:` target itself references anything back.
 
 Reference values point to the selected ID key, normally `id:`. Tools should
 warn when a reference has no target, points to the same item, or creates a
-cycle through `parent:`.
+cycle. Parsing stays permissive regardless: an unresolved or cyclic
+reference is a validator warning, never a parse error.
 
 Dependency semantics:
 
@@ -279,6 +287,26 @@ Dependency semantics:
   when an open item is blocked by an open prerequisite. Text output shows a
   compact `blocked` column.
 - `health` emits `W305` for open items blocked by open prerequisites.
+
+Reference and cycle diagnostics (`check`/`links`), all warnings rather than
+errors:
+
+| Code | Meaning |
+|---|---|
+| `W215` | A reference value does not match any item's ID |
+| `W217` | A cycle through `parent:` (for example `a -> b -> a`) |
+| `W218` | A reference value matches more than one item's ID (ambiguous) |
+| `W227` | A cycle through the combined `depends_on:`/inverse-`blocks:` graph |
+| `W228` | A cycle through `duplicate_of:` |
+| `W229` | A cycle through `replaced_by:` |
+
+`W227`, `W228`, and `W229` are evaluated independently: for example, an item
+`A` with `duplicate_of:B` where `B` has `replaced_by:A` does not trigger
+either code, because it mixes two different relations rather than forming a
+cycle within one of them. `W227` treats `depends_on:A->B` and `blocks:B->A`
+as the same underlying edge (both mean "B is waited on"), so combining the
+two relations can still complete a cycle even though neither relation cycles
+on its own.
 
 When a command loads multiple life.txt files in one invocation, references are
 resolved against the whole loaded input set. For example, `parent:task_001` in

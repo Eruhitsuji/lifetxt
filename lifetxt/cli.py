@@ -1,4 +1,5 @@
 import argparse
+import collections
 import contextlib
 import datetime
 import html
@@ -1016,6 +1017,26 @@ def build_parser():
         help=(
             "Treat cross-file or intra-file references to archived items as errors "
             "instead of warnings. Requires --dry-run or a live run to check."
+        ),
+    )
+    proj_archive.add_argument(
+        "--emit-plan",
+        metavar="PATH",
+        dest="emit_plan",
+        help=(
+            "Write a schema-valid archive-plan-v1 JSON document to PATH instead "
+            "of writing any change. Requires --dry-run. See lifetxt project "
+            "archive --apply-plan to review and later apply the plan."
+        ),
+    )
+    proj_archive.add_argument(
+        "--apply-plan",
+        metavar="PLAN",
+        dest="apply_plan",
+        help=(
+            "Verify PLAN (an archive-plan-v1 document from --emit-plan) against "
+            "current state and, if nothing has drifted, archive using the "
+            "plan's frozen parameters. Mutually exclusive with --revision."
         ),
     )
     proj_archive.set_defaults(func=command_project_archive)
@@ -4996,8 +5017,38 @@ def _path_revision_map(values):
     return result
 
 
-def command_archive(args):
-    config = _config(args)
+_ArchiveSelection = collections.namedtuple(
+    "_ArchiveSelection",
+    [
+        "paths",
+        "mode",
+        "id_key",
+        "statuses",
+        "file_texts",
+        "file_snapshots",
+        "file_items",
+        "all_items",
+        "candidates",
+        "candidate_ids",
+        "open_children_by_parent",
+        "orphan_mode",
+        "orphan_blocked",
+        "external_refs",
+        "multi_source",
+    ],
+)
+
+
+def _archive_select(args, config):
+    """Resolve archive candidates and supporting selection state.
+
+    Pure (no printing, no writes): shared by ``command_archive``'s live/dry-run
+    flow and the ``archive-plan-v1`` emission/verification path
+    (:mod:`lifetxt.archive_plan_v1`) so both derive an identical candidate set
+    from identical inputs. Keeping this logic in one place avoids the class of
+    drift bug a hand-duplicated copy would risk -- exactly the kind of hazard
+    the archive-plan feature exists to guard against.
+    """
     paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
     if not paths:
         raise ValueError("No source files specified.")
@@ -5062,10 +5113,6 @@ def command_archive(args):
     if args.max_items is not None:
         candidates = candidates[: args.max_items]
 
-    if not candidates:
-        sys.stdout.write("No items match the archive criteria.\n")
-        return 0
-
     orphan_mode = getattr(args, "orphan_children", "block")
     open_statuses_set = {"[ ]", "[/]", "[>]", "[?]"}
     candidate_ids = set()
@@ -5086,39 +5133,26 @@ def command_archive(args):
                 if pid in candidate_ids:
                     open_children_by_parent.setdefault(pid, []).append(item)
 
-    if open_children_by_parent:
-        if orphan_mode == "block":
-            sys.stdout.write(
-                "Cannot archive: the following candidates have open children:\n"
-            )
-            for pid, children in open_children_by_parent.items():
-                child_ids = (
-                    ", ".join(
-                        str(v) for c in children for v in c.details.get(id_key, [])
-                    )
-                    or "(no id)"
-                )
-                sys.stdout.write("  parent %s: open children %s\n" % (pid, child_ids))
-            sys.stdout.write(
-                "Use --orphan-children adopt or --orphan-children promote to proceed.\n"
-            )
-            return 1
+    orphan_blocked = bool(open_children_by_parent) and orphan_mode == "block"
 
-        elif orphan_mode == "adopt":
-            already = {id(item) for item in candidates}
-            for children in open_children_by_parent.values():
-                for child in children:
-                    if id(child) not in already:
-                        candidates.append(child)
-                        already.add(id(child))
+    if open_children_by_parent and orphan_mode == "adopt":
+        already = {id(item) for item in candidates}
+        for children in open_children_by_parent.values():
+            for child in children:
+                if id(child) not in already:
+                    candidates.append(child)
+                    already.add(id(child))
 
         # promote: archive parent only; children lose parent: in source (handled below)
 
-    if project_filter:
+    if project_filter and not orphan_blocked:
         # Ticket history (record:ticket_event / record:time_entry Notes) has no
         # "done"/"canceled" status of its own, so it never matches the status
         # filter above; follow it unconditionally via parent: so a ticket's
         # history moves with it instead of being left behind as a dangling log.
+        # (Original command_archive never reached this code when blocked --
+        # it returned before this point -- so this mirrors that by skipping
+        # when orphan_blocked.)
         history_ids = {id(item) for item in candidates}
         for item in all_items:
             if id(item) in history_ids:
@@ -5133,6 +5167,73 @@ def command_archive(args):
                 history_ids.add(id(item))
 
     multi_source = len(paths) > 1
+
+    external_refs = []
+    if not orphan_blocked:
+        _ext_ref_keys = ("depends_on", "blocks", "parent", "ref", "related")
+        candidate_obj_ids = {id(c) for c in candidates}
+        for item in all_items:
+            if id(item) in candidate_obj_ids:
+                continue
+            for key in _ext_ref_keys:
+                for val in item.details.get(key, []):
+                    if str(val) in candidate_ids:
+                        external_refs.append((item, key, str(val)))
+
+    return _ArchiveSelection(
+        paths=paths,
+        mode=mode,
+        id_key=id_key,
+        statuses=statuses_arg,
+        file_texts=file_texts,
+        file_snapshots=file_snapshots,
+        file_items=file_items,
+        all_items=all_items,
+        candidates=candidates,
+        candidate_ids=candidate_ids,
+        open_children_by_parent=open_children_by_parent,
+        orphan_mode=orphan_mode,
+        orphan_blocked=orphan_blocked,
+        external_refs=external_refs,
+        multi_source=multi_source,
+    )
+
+
+def command_archive(args):
+    config = _config(args)
+    selection = _archive_select(args, config)
+    paths = selection.paths
+    mode = selection.mode
+    id_key = selection.id_key
+    file_texts = selection.file_texts
+    file_snapshots = selection.file_snapshots
+    file_items = selection.file_items
+    candidates = selection.candidates
+    candidate_ids = selection.candidate_ids
+    open_children_by_parent = selection.open_children_by_parent
+    orphan_mode = selection.orphan_mode
+    external_refs = selection.external_refs
+    multi_source = selection.multi_source
+
+    if not candidates:
+        sys.stdout.write("No items match the archive criteria.\n")
+        return 0
+
+    if open_children_by_parent and orphan_mode == "block":
+        sys.stdout.write(
+            "Cannot archive: the following candidates have open children:\n"
+        )
+        for pid, children in open_children_by_parent.items():
+            child_ids = (
+                ", ".join(str(v) for c in children for v in c.details.get(id_key, []))
+                or "(no id)"
+            )
+            sys.stdout.write("  parent %s: open children %s\n" % (pid, child_ids))
+        sys.stdout.write(
+            "Use --orphan-children adopt or --orphan-children promote to proceed.\n"
+        )
+        return 1
+
     sys.stdout.write(
         "Items to archive (%d, %s -> %s):\n" % (len(candidates), mode, args.dest)
     )
@@ -5141,17 +5242,6 @@ def command_archive(args):
         sys.stdout.write(
             "  %s %s %s%s\n" % (item.status, item.kind, item.title, source_label)
         )
-
-    _ext_ref_keys = ("depends_on", "blocks", "parent", "ref", "related")
-    candidate_obj_ids = {id(c) for c in candidates}
-    external_refs = []
-    for item in all_items:
-        if id(item) in candidate_obj_ids:
-            continue
-        for key in _ext_ref_keys:
-            for val in item.details.get(key, []):
-                if str(val) in candidate_ids:
-                    external_refs.append((item, key, str(val)))
 
     if external_refs:
         sys.stdout.write("Warning: the following items reference IDs being archived:\n")
@@ -10499,7 +10589,38 @@ def command_project_archive(args):
     warnings, and transactional multi-file write unchanged; this only adds a
     ``project:`` filter and workspace-based source/destination resolution so
     the write target is never outside the resolved source manifest.
+
+    ``--emit-plan``/``--apply-plan`` (#254/#255) add an optional reviewable
+    ``archive-plan-v1`` document between selection and write; see
+    :mod:`lifetxt.archive_plan_v1`. Neither flag changes behavior when
+    omitted.
     """
+    emit_plan_path = getattr(args, "emit_plan", None)
+    apply_plan_path = getattr(args, "apply_plan", None)
+    if emit_plan_path and apply_plan_path:
+        raise ValueError("--emit-plan and --apply-plan are mutually exclusive.")
+    if emit_plan_path and not getattr(args, "dry_run", False):
+        raise ValueError("--emit-plan requires --dry-run in this version.")
+
+    if apply_plan_path:
+        if getattr(args, "revision", None):
+            raise ValueError(
+                "--apply-plan and --revision are mutually exclusive: a plan "
+                "already freezes the exact revision set to apply."
+            )
+        if getattr(args, "paths", None):
+            raise ValueError(
+                "--apply-plan and explicit source paths are mutually "
+                "exclusive: the plan already freezes its source file list."
+            )
+        if getattr(args, "dest", None):
+            raise ValueError(
+                "--apply-plan and --dest are mutually exclusive: the plan "
+                "already freezes its destination path."
+            )
+        config = _config(args)
+        return _project_archive_apply_plan(args, config, apply_plan_path)
+
     config = _config(args)
     from .workspace import resolve_workspace, workspace_resolution_active
 
@@ -10557,7 +10678,212 @@ def command_project_archive(args):
         config_data=config,
         workspace=workspace_name,
     )
+    if emit_plan_path:
+        _project_archive_emit_plan(archive_args, config, emit_plan_path)
     return command_archive(archive_args)
+
+
+def _archive_plan_blocking_reason(selection, args):
+    """Why a plan cannot be emitted for the current selection, or ``None``."""
+    if not selection.candidates:
+        return "no items match the archive criteria"
+    if selection.orphan_blocked:
+        return "open children block the selection (see --orphan-children)"
+    if selection.external_refs and getattr(args, "block_on_external_refs", False):
+        return "blocked by external reference(s) to archived items"
+    return None
+
+
+def _project_archive_emit_plan(archive_args, config, emit_plan_path):
+    """Write an ``archive-plan-v1`` document for the current selection.
+
+    Purely additive: computed from the same ``archive_args``/``selection``
+    ``command_archive`` is about to print from, so it never changes the
+    existing dry-run text output. Nothing is written when the selection
+    would not itself proceed (no candidates, orphan-blocked, or blocked by
+    external references), matching "no other change" for --emit-plan.
+    """
+    from . import archive_plan_v1
+    from .config_writer import config_revision as _config_revision_of
+    from .mutation import read_text_snapshot
+    from .timezone_policy import utcnow
+    from .workspace import active_workspace_name
+
+    selection = _archive_select(archive_args, config)
+    reason = _archive_plan_blocking_reason(selection, archive_args)
+    if reason:
+        sys.stderr.write("No archive plan written: %s.\n" % reason)
+        return
+
+    dest_abs = os.path.abspath(archive_args.dest)
+    dest_snapshot = read_text_snapshot(dest_abs, allow_missing=True)
+    config_path = config.get("_path") if isinstance(config, dict) else None
+    config_rev = _config_revision_of(config_path)
+    workspace_name = active_workspace_name(config) or getattr(
+        archive_args, "workspace", None
+    )
+
+    sources = [
+        (path, selection.file_snapshots[path].content_hash) for path in selection.paths
+    ]
+    parameters = {
+        "statuses": list(selection.statuses),
+        "before": archive_args.before,
+        "max_items": archive_args.max_items,
+        "mode": selection.mode,
+        "orphan_children": selection.orphan_mode,
+        "preserve_structure": bool(getattr(archive_args, "preserve_structure", False)),
+        "block_on_external_refs": bool(
+            getattr(archive_args, "block_on_external_refs", False)
+        ),
+    }
+    now_iso = utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    plan = archive_plan_v1.build_plan(
+        project=archive_args.project_filter,
+        workspace_name=workspace_name,
+        config_path=config_path,
+        config_revision=config_rev,
+        sources=sources,
+        destination_path=dest_abs,
+        destination_revision=dest_snapshot.content_hash,
+        selected_item_ids=selection.candidate_ids,
+        external_references=archive_plan_v1.external_reference_rows(
+            selection.external_refs
+        ),
+        parameters=parameters,
+        now_iso=now_iso,
+    )
+    archive_plan_v1.write_plan(emit_plan_path, plan)
+    sys.stdout.write("Archive plan written to %s.\n" % emit_plan_path)
+
+
+def _project_archive_apply_plan(args, config, apply_plan_path):
+    """Verify an ``archive-plan-v1`` document against current state, then
+    delegate to :func:`command_archive` using the plan's frozen parameters.
+
+    Every verification step below runs, and must pass, before any write --
+    matching the precede-side-effects discipline ``archive_safety_v3.py``
+    already established for the ad-hoc ``--revision`` path.
+    """
+    from . import archive_plan_v1
+    from .config_writer import config_revision as _config_revision_of
+    from .mutation import read_text_snapshot
+    from .transaction_journal import journal_directory
+
+    plan = archive_plan_v1.load_plan(apply_plan_path)
+
+    # 1. plan_version supported.
+    archive_plan_v1.verify_plan_version(plan)
+
+    # 2. Tamper detection: the plan file itself must be unmodified since emit.
+    archive_plan_v1.verify_plan_hash(plan)
+
+    # 3. Current source/destination revisions must match the plan exactly.
+    current_source_revisions = {}
+    for row in plan.get("sources", []):
+        path = row.get("path")
+        snapshot = read_text_snapshot(path, allow_missing=True)
+        current_source_revisions[path] = snapshot.content_hash
+
+    dest_info = plan.get("destination") or {}
+    dest_path = dest_info.get("path")
+    current_dest_revision = None
+    if dest_path:
+        current_dest_revision = read_text_snapshot(
+            dest_path, allow_missing=True
+        ).content_hash
+
+    archive_plan_v1.verify_revisions_unchanged(
+        plan, current_source_revisions, current_dest_revision
+    )
+
+    # 4. Current workspace/config revision must match the plan exactly.
+    config_path = config.get("_path") if isinstance(config, dict) else None
+    current_config_revision = _config_revision_of(config_path)
+    archive_plan_v1.verify_workspace_revision_unchanged(plan, current_config_revision)
+
+    # 5. Candidate selection re-derived from current state must match the
+    # plan's frozen item-ID list exactly, using the plan's own frozen
+    # parameters rather than any current CLI flags.
+    parameters = plan.get("parameters") or {}
+    plan_paths = [row["path"] for row in plan.get("sources", [])]
+    reselect_args = argparse.Namespace(
+        paths=plan_paths,
+        dest=dest_path,
+        revision=[],
+        statuses=parameters.get("statuses"),
+        before=parameters.get("before"),
+        max_items=parameters.get("max_items"),
+        dry_run=True,
+        copy=parameters.get("mode") == "copy",
+        yes=True,
+        orphan_children=parameters.get("orphan_children", "block"),
+        preserve_structure=bool(parameters.get("preserve_structure", False)),
+        block_on_external_refs=bool(parameters.get("block_on_external_refs", False)),
+        project_filter=plan.get("project"),
+        config=getattr(args, "config", None),
+        config_data=config,
+        workspace=(plan.get("workspace") or {}).get("name"),
+    )
+    selection = _archive_select(reselect_args, config)
+    if not selection.candidates:
+        raise ValueError(
+            "Archive plan is stale: no items currently match the plan's "
+            "archive criteria. Re-run --dry-run --emit-plan to produce a "
+            "current plan."
+        )
+    if selection.orphan_blocked:
+        raise ValueError(
+            "Archive plan is stale: open children now block the selection. "
+            "Re-run --dry-run --emit-plan to produce a current plan."
+        )
+    archive_plan_v1.verify_selection_unchanged(plan, selection.candidate_ids)
+
+    # 6. Recovery evidence (transaction journal directory) must be reachable.
+    journal_dir = journal_directory(config, writable_path=dest_path)
+    archive_plan_v1.verify_recovery_evidence_reachable(journal_dir)
+
+    reserved_transaction_id = plan.get("reserved_transaction_id")
+
+    if not getattr(args, "yes", False):
+        sys.stdout.write(
+            "Archive plan verified against current state "
+            "(reserved_transaction_id=%s). No changes made.\n"
+            "Re-run the same command with --yes to apply it.\n"
+            % reserved_transaction_id
+        )
+        return 0
+
+    revision_tokens = [
+        "%s=%s" % (path, revision)
+        for path, revision in current_source_revisions.items()
+    ]
+    if dest_path is not None:
+        revision_tokens.append("%s=%s" % (dest_path, current_dest_revision))
+
+    execute_args = argparse.Namespace(
+        paths=plan_paths,
+        dest=dest_path,
+        revision=revision_tokens,
+        statuses=parameters.get("statuses"),
+        before=parameters.get("before"),
+        max_items=parameters.get("max_items"),
+        dry_run=False,
+        copy=parameters.get("mode") == "copy",
+        yes=True,
+        orphan_children=parameters.get("orphan_children", "block"),
+        preserve_structure=bool(parameters.get("preserve_structure", False)),
+        block_on_external_refs=bool(parameters.get("block_on_external_refs", False)),
+        project_filter=plan.get("project"),
+        config=getattr(args, "config", None),
+        config_data=config,
+        workspace=(plan.get("workspace") or {}).get("name"),
+    )
+    sys.stdout.write(
+        "Applying archive plan (reserved_transaction_id=%s).\n"
+        % reserved_transaction_id
+    )
+    return command_archive(execute_args)
 
 
 def _emit_project_line(args, line):

@@ -1,0 +1,231 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/archive-plan-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_at": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "destination": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "revision": {
+          "pattern": "^([0-9a-f]{64}|<missing>)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "external_references": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "referenced_id": {
+            "type": "string"
+          },
+          "source_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "referenced_id"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "before": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "block_on_external_refs": {
+          "type": "boolean"
+        },
+        "max_items": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "copy",
+            "move"
+          ]
+        },
+        "orphan_children": {
+          "enum": [
+            "block",
+            "adopt",
+            "promote"
+          ]
+        },
+        "preserve_structure": {
+          "type": "boolean"
+        },
+        "statuses": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "statuses",
+        "before",
+        "max_items",
+        "mode",
+        "orphan_children",
+        "preserve_structure",
+        "block_on_external_refs"
+      ],
+      "type": "object"
+    },
+    "plan_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "plan_version": {
+      "const": 1
+    },
+    "project": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "reserved_transaction_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "selected_item_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^([0-9a-f]{64}|<missing>)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "workspace": {
+      "additionalProperties": false,
+      "properties": {
+        "config_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_revision": {
+          "pattern": "^([0-9a-f]{64}|<missing>)$",
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "config_path",
+        "config_revision"
+      ],
+      "type": "object"
+    },
+    "writer": {
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pid": {
+          "type": "integer"
+        },
+        "process": {
+          "type": "string"
+        },
+        "user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "process",
+        "pid",
+        "host",
+        "user"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "plan_version",
+    "created_at",
+    "project",
+    "workspace",
+    "sources",
+    "destination",
+    "selected_item_ids",
+    "external_references",
+    "parameters",
+    "writer",
+    "reserved_transaction_id",
+    "plan_hash"
+  ],
+  "title": "lifetxt reviewable pre-write project archive plan v1",
+  "type": "object"
+}

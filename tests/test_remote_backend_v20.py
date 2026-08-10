@@ -104,6 +104,55 @@ class RemoteReadBackendTests(unittest.TestCase):
                 {"q": "x", "types": "proposal"},
             )
 
+    def test_search_fuzzy_defaults_to_false(self):
+        result = read_resource(
+            "search", [self.path], self.config, self.principal, {"q": "Shred_item"}
+        )
+        self.assertEqual(0, result["data"]["total"])
+
+    def test_search_fuzzy_true_matches_a_typo(self):
+        # "Shred_item" is a deleted-letter typo for I-1's title "Shared_item".
+        result = read_resource(
+            "search",
+            [self.path],
+            self.config,
+            self.principal,
+            {"q": "Shred_item", "fuzzy": "true"},
+        )
+        names = [row["name"] for row in result["data"]["groups"].get("item", [])]
+        self.assertIn("I-1", names)
+
+    def test_search_fuzzy_true_still_ranks_exact_matches_first(self):
+        # "Shared_item" (I-1's title) also scores close enough to fuzzy-match
+        # "Shared_ticket" (TK-1's title); the exact match must still rank first.
+        result = read_resource(
+            "search",
+            [self.path],
+            self.config,
+            self.principal,
+            {"q": "Shared_item", "fuzzy": "true"},
+        )
+        names = [row["name"] for row in result["data"]["groups"]["item"]]
+        self.assertEqual("I-1", names[0])
+
+    def test_search_fuzzy_true_never_surfaces_an_invisible_item(self):
+        # I-2 (Private_item) is not visible to alice regardless of fuzzy matching.
+        result = read_resource(
+            "search",
+            [self.path],
+            self.config,
+            self.principal,
+            {"q": "Privte_item", "fuzzy": "true"},
+        )
+        names = [row["name"] for row in result["data"]["groups"].get("item", [])]
+        self.assertNotIn("I-2", names)
+
+    def test_search_fuzzy_catalog_parameter_is_advertised(self):
+        search_entry = next(
+            row for row in resource_catalog() if row["name"] == "search"
+        )
+        self.assertIn("fuzzy", search_entry["parameters"])
+
     def test_unknown_resource_fails_closed(self):
         with self.assertRaises(RemoteAccessError) as caught:
             read_resource("secrets", [self.path], self.config, self.principal)

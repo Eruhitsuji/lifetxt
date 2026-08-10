@@ -58,6 +58,15 @@ Record whether the change is:
 - extension of existing capability
 - reuse of existing capability
 
+## Horizontal Review Scope Discipline
+
+When acceptance criteria require a horizontal review (auditing adjacent code or
+surfaces for the same defect class as the task's primary fix), the audit's
+findings do not automatically enter the current task's scope. Fix a discovered
+issue in the same task only when it shares the same root cause and is small and
+evidenced; otherwise file it as a separate, evidence-backed follow-up issue.
+See `REVIEW.md`'s "Horizontal Review Scope Discipline" for the review-side rule.
+
 ## Algorithm Changes
 
 For algorithm changes, record:

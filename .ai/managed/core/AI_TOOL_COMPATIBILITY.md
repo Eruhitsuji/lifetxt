@@ -59,6 +59,33 @@ Adapters must not define:
 - alternative sources of truth outside the repository and GitHub
 - tool-specific exceptions that are not recorded under `.ai/project`
 
+Adapters must not encode packaged, reusable procedures directly as
+tool-specific skill files with no tool-neutral equivalent; see `SKILLS.md` for
+the shared, tool-neutral skill contract and where reusable procedures belong.
+
+## Context Loading Behavior by Adapter Mechanism
+
+`.ai/project/CONTEXT_INDEX.yml`'s `default_mode: progressive` and
+`max_initial_documents` describe a design target for trigger-based, on-demand
+context loading. Today's adapter mechanisms do not enforce that target, and
+each has the opposite failure mode from the other:
+
+- Claude Code's `CLAUDE.md` uses `@import`, which is resolved eagerly: every
+  referenced file's full content loads into context at the start of every
+  conversation, regardless of the current task. There is no lazy or
+  trigger-based loading in this mechanism, so `CONTEXT_INDEX.yml`'s trigger
+  table is a checklist the AI can reason about, not something the import
+  mechanism itself consults.
+- Codex's `AGENTS.md` uses a plain numbered "Read and follow" list instead of
+  an auto-import mechanism, so its adherence depends on the AI actually
+  choosing to read each listed file. This risks under-loading rather than
+  over-loading, and gives no eager-loading guarantee.
+
+Do not read `CONTEXT_INDEX.yml`'s progressive-loading fields as an accurate
+description of current runtime behavior for either adapter. A change that
+makes either mechanism actually trigger-based is a larger design change than
+an adapter update and should be proposed as its own standard-change issue.
+
 ## Minimum Context Pack
 
 When transferring work between AI tools or between a human and an AI, include:

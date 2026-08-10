@@ -4,6 +4,16 @@
 
 レポート契約は `schemas/ticket-project-report-v1.schema.json` として公開され、capability discovery の `ticket_project_report` から確認できます。
 
+チケットのレコードモデル、relation key（`depends_on`／`blocks`／`parent`／
+`related`／`duplicate_of`／`replaced_by`）、型付きカスタムフィールド、および
+不正なticketやcyclicなticketがこのレポートに到達する前に検出する
+`ticket validate`／`check`診断についてはdocs/ja/tickets.mdを参照してください。
+ticketのrelation keyに適用されるreference／cycle診断（`W215`〜`W229`）は
+docs/ja/cli.mdの`links`セクション（3.2）を参照してください。done／canceledな
+ticket（およびその`record:ticket_event`／`record:time_entry`履歴）を
+`lifetxt project archive`がこのレポートの入力集合から除外する方法については
+docs/ja/projects.mdのArchivingセクションを参照してください。
+
 ## メインCLIコマンド
 
 通常の `lifetxt` コマンドツリーから共通レポートを利用できます。
@@ -132,12 +142,75 @@ python -m lifetxt.ticket_projects summary life.txt \
 
 注意カテゴリは排他的ではありません。1件のチケットが、ブロック・期限超過・未割当・高重大度・停滞のすべてに同時該当する場合があります。
 
+## チケット行のフィールド
+
+`tickets`・`board`・`attention` の各チケットは、すべて同じ`ticket`形状の行です
+（`schemas/ticket-project-report-v1.schema.json` の `$defs.ticket`）。
+
+`id`・`title`・`project`・`status`・`tracker`・`priority`・`severity`・
+`assignee`・`reporter`・`component`・`due`・`updated`・`estimate_hours`・
+`elapsed_hours`・`depends_on`・`blocks`・`terminal`・`blocked`・
+`dependency_unknown`・`unresolved_dependencies`・`unevaluated_dependencies`・
+`unevaluated_dependency_reasons`・`overdue`・`unassigned`・`high_severity`・
+`stale`・`variance_hours`。
+
+`depends_on` と `blocks` は、そのチケット自身が持つ生のrelation値です
+（何に依存しているか、何をブロックしているか）。`unresolved_dependencies` は
+別物で、「他の未完了チケットがこのチケットを止めている」ことを表す計算済みの
+集合です。これは2つの出所から構築されます。1つはこのチケット自身の未完了な
+`depends_on` 対象、もう1つは集計範囲内の他の未完了チケットのうち`blocks:`で
+このチケットを名指ししているものです（`blocks:`はblocker側に宣言されるため、
+あるチケット自身のblockerを評価するには、そのチケット自身のdetailだけでなく
+他のすべてのチケットの`blocks:`をスキャンする必要があります）。`blocked` は
+`ticket_status` が `blocked` であるか、`unresolved_dependencies` が空でない
+場合に `true` になります。
+
+`unevaluated_dependencies`／`unevaluated_dependency_reasons` は、レポートが
+まったく解決できなかったid（選択済み・project絞り込み後の読み取り集合に
+存在しないid）を対象とします。各idは次のいずれかの理由にマッピングされます。
+
+- `out_of_scope`: そのidが、絞り込み前の全読み取り集合に直接存在すると分かって
+  いる場合（別の、選択されていないprojectのチケット、またはこのチケットを
+  名指しするopenな`blocks:`参照の発信元）です。レポートはすでにそれを見て
+  いるため、存在はするがフィルタで除外されたと開示しても安全です。
+- `missing`: それ以外のすべての場合です。実際に存在しない、private、範囲外に
+  archiveされた、workspace解決で拒否された、などです。レポートはこれらを
+  意図的に区別しません。区別すると、本来見えないはずのチケットが存在するか
+  どうかを開示してしまうためです。
+
+実例: `ticket attention` を1つのprojectに絞り込むと、project間の
+`depends_on` は `blocked` ではなく `out_of_scope` になります。これは、
+対象チケットが（open dependencyの解決に使う）`by_id` からは除外される
+一方で、この開示判定にのみ使う絞り込み前の `all_ticket_ids` には残っている
+ためです。
+
+```console
+$ lifetxt ticket attention life.txt --project mobile --format json --pretty
+```
+
+```json
+{
+  "id": "BUG-102",
+  "project": "mobile",
+  "depends_on": ["BUG-100"],
+  "blocked": false,
+  "dependency_unknown": true,
+  "unresolved_dependencies": [],
+  "unevaluated_dependency_reasons": {"BUG-100": "out_of_scope"},
+  "unevaluated_dependencies": ["BUG-100"]
+}
+```
+
+（`BUG-100` はproject `web` に実在するチケットです。`--project` を指定しない
+場合、同じ行は代わりに `blocked: true` を報告し、`unresolved_dependencies` に
+`BUG-100` が含まれます。そのときは解決可能だからです。）
+
 ## 計算式と欠損値の扱い
 
 - **未完了**: 正規化した `ticket_status` が有効な終端ステータスに含まれないチケットです。
 - **進捗率**: 終端チケット数÷全チケット数です。件数ベースであり、納期予測ではありません。
-- **ブロック**: 未完了チケットの `ticket_status` が `blocked`、または集計範囲内の未完了チケットに依存している状態です。
-- **依存関係不明**: `depends_on` のIDが集計範囲内に存在しない状態です。欠けているチケットが未完了か終端かは推測しません。
+- **ブロック**: 未完了チケットの `ticket_status` が `blocked`、集計範囲内の未完了チケットに依存している、または集計範囲内の他の未完了チケットの`blocks:`参照で名指しされている状態です。
+- **依存関係不明**: `depends_on` のID、またはこのチケットを名指しするopenな`blocks:`参照が集計範囲内に存在しない状態です。`out_of_scope`／`missing`の理由の区別は上の「チケット行のフィールド」を参照してください。それ以外は、欠けているチケットが未完了か終端かを推測しません。
 - **期限超過**: 未完了チケットの期限時刻が基準時刻以前の状態です。日付だけの期限は、そのUTC暦日の終了まで有効です。オフセット付き日時は明示されたオフセットを使います。
 - **停滞**: `updated`、`modified`、`changed`、`created`、`opened` のうち取得できる最新時刻が設定日数より古い状態です。時刻がないチケットを停滞とは判定しません。
 - 数値だけの期間は時間として扱います。短縮表記は `w`、`d`、`h`、`m` に対応し、1日=8時間、1週=40時間です。無効値や一部しか解釈できない値は推測せず集計から除外します。

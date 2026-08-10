@@ -4255,6 +4255,84 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
             "always derives occurrence_start from matches[0]",
         )
 
+    def test_timeline_places_a_record_on_every_in_window_match(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # The old bug (_tlDisplayInfo reading (record.matches || [])[0]) only
+        # ever rendered one row per record, dropping every other in-window
+        # match for a multi-day on: span or a repeat habit -- the #229
+        # regression found alongside #220's identical Calendar bug.
+        self.assertIn("function _tlRecordEntries", html)
+        start = html.index("function _tlRecordEntries")
+        end = html.index("function _tlNowLine")
+        body = html[start:end]
+        self.assertIn("record.matches && record.matches.length", body)
+        self.assertIn("matches.map((match, i)", body)
+        # loadTimeline must flatMap every record's entries, not map one
+        # display per record.
+        load_start = html.index("async function loadTimeline")
+        load_end = html.index("// ── Calendar view")
+        load_body = html[load_start:load_end]
+        self.assertIn(
+            ".flatMap(record => _tlRecordEntries(record, from, to))", load_body
+        )
+        self.assertIn(
+            "_tlRow(record, nowIso, entry.display, entry.match, entry.matchIndex, entry.matchTotal)",
+            load_body,
+        )
+
+    def test_timeline_row_shows_a_span_badge_for_multi_match_records(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        start = html.index("function _tlRow")
+        end = html.index("async function loadTimeline")
+        body = html[start:end]
+        self.assertIn("matchTotal > 1", body)
+        # The occurrence badge must be sourced from this row's own match
+        # (each repeat occurrence carries its own occurrence_index), not
+        # only ever the record-level convenience field.
+        self.assertIn("match && match.occurrence_index !== undefined", body)
+
+    def test_agenda_places_a_record_on_every_in_window_match(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # The old bug rendered exactly one row per data.records entry,
+        # ignoring every match beyond matches[0] -- the #229 regression for
+        # Agenda's flat list.
+        self.assertIn("function _agendaRecordEntries", html)
+        start = html.index("function _agendaRecordEntries")
+        end = html.index("async function loadAgenda")
+        body = html[start:end]
+        self.assertIn("record.matches && record.matches.length", body)
+        self.assertIn("matches.map((match, i)", body)
+        load_start = html.index("async function loadAgenda")
+        load_end = html.index("// ── Presence rendering")
+        load_body = html[load_start:load_end]
+        self.assertIn(".flatMap(record => _agendaRecordEntries(record))", load_body)
+        # The empty state, limit, and "view all N" counts must reflect the
+        # expanded entry count, not the pre-expansion record count -- a
+        # record with 3 in-window matches should count as 3 toward the limit.
+        self.assertIn('entries.length ? "" : guidedEmptyState', load_body)
+        self.assertIn("entries.slice(0, limit)", load_body)
+
     def test_help_modal_has_a_searchable_command_reference(self):
         try:
             from fastapi.testclient import TestClient

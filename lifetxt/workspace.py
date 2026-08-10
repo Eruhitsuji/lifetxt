@@ -186,6 +186,29 @@ def active_workspace_name(config):
     return config.get("_active_workspace") or None
 
 
+def workspace_scoped_default_path(default_path, config):
+    """Insert the active workspace's name into a default state-file path.
+
+    Several surfaces (notification watch state today) fall back to one
+    fixed default path when the operator has not explicitly configured a
+    location. Without this, every named workspace defined in the same
+    configuration file would silently share that one file, so switching
+    ``--workspace`` would not actually separate their state. Only the
+    *default* is scoped -- an explicitly configured path is left exactly as
+    the operator wrote it, matching this project's preference for explicit
+    configuration over inferred behavior.
+
+    Returns ``default_path`` unchanged when no workspace was resolved for
+    ``config`` (legacy top-level configuration), so non-workspace callers
+    are byte-for-byte unaffected.
+    """
+    name = active_workspace_name(config)
+    if not name:
+        return default_path
+    root, ext = os.path.splitext(str(default_path))
+    return "%s-%s%s" % (root, name, ext)
+
+
 def normalize_source(entry, base_dir):
     """Normalize one raw source entry into a typed manifest record."""
     if isinstance(entry, str):

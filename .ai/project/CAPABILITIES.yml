@@ -2076,3 +2076,121 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-desktop-app-companion-shell
+    name: Tauri desktop app companion shell
+    summary: >-
+      A native desktop window wrapping lifetxt's existing Web UI via a
+      Rust/Tauri v2 companion-process shell (desktop/src-tauri/): locates
+      an already-installed lifetxt, reserves a free local port, spawns
+      `lifetxt serve --host 127.0.0.1 --port <port>` as a child process
+      unmodified, waits for /api/health, navigates the window to the real
+      served UI, and kills the child on graceful app/window close. No
+      Python code added or changed; no standalone Python-bundled
+      distributable in this slice.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-desktop-app-backend-locator
+      - req-desktop-app-server-spawn
+      - req-desktop-app-health-poll-navigation
+      - req-desktop-app-process-lifecycle
+    implementation_locations:
+      - desktop/src-tauri/Cargo.toml
+      - desktop/src-tauri/build.rs
+      - desktop/src-tauri/tauri.conf.json
+      - desktop/src-tauri/src/main.rs
+      - desktop/src-tauri/dist/index.html
+      - desktop/src-tauri/icons/icon.png
+      - desktop/src-tauri/icons/icon.ico
+      - desktop/README.md
+      - .kiro/specs/desktop-app-companion-shell/
+      - .gitignore
+    public_interfaces:
+      - desktop/src-tauri (cargo build / cargo run)
+    tests_or_evidence:
+      - 'cargo build and cargo build --release both succeed on this session''s environment (Rust GNU toolchain, installed via scoop, since MSVC Build Tools are not present; existing MinGW-w64 gcc from MSYS2 used as the linker)'
+      - 'live: real built lifetxt_desktop.exe (debug) launched with the venv on PATH -- Get-CimInstance confirmed a real lifetxt.exe child process spawned as "lifetxt" serve --host 127.0.0.1 --port <port> with the app as its parent; curl against that exact port''s /api/health returned 200/ok:true'
+      - 'live: window-region screenshot confirmed the window actually navigated to and rendered the real served lifetxt Web UI (Items view, life.txt title, dashboard tabs), not the static loading placeholder'
+      - 'live: graceful close (taskkill /PID, no /F -- the same WM_CLOSE path a user clicking the window''s X button takes) confirmed both the app process and the spawned lifetxt.exe child exit, and the reserved port stops accepting connections (curl exit 7, connection refused)'
+      - 'live: same three checks (spawn, health, graceful-close cleanup) repeated against the built --release executable'
+      - 'live: launched with a PATH containing no lifetxt install at all (System32 only) -- window-region screenshot confirmed the exact designed error message, naming all four tried candidates, renders instead of a blank or frozen window'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s) (no Python-side regression from adding the new directory)
+      - ruff check lifetxt tests scripts -> All checks passed (desktop/ is outside ruff's target paths, as intended)
+      - '/security-review found and fixed a real CWE-426/427 issue: backend resolution now goes through resolve_on_path() (PATH environment variable only), not Command::new()''s own unqualified-name search order, which on Windows checks the app''s own directory and the current working directory before PATH'
+      - 'live: a decoy lifetxt.exe (an actual copy of notepad.exe, so execution would be visually unmistakable) placed in the working directory with no real lifetxt on PATH -- confirmed the app showed the correct "not found" error state and never launched the decoy'
+      - 'live: re-verified the happy path after the fix -- the spawned child''s CommandLine now shows the full resolved absolute path rather than the bare name; /api/health and graceful-close cleanup both still confirmed working'
+      - 'live: the health-check timeout branch specifically -- a minimal locally-compiled decoy answering --version but never responding to serve was placed ahead of the real install on PATH; after the 15s bound, the window showed the exact designed timeout message, and the decoy process was confirmed killed afterward, showing cleanup also fires on this error path'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/233
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/234
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Scoped via AskUserQuestion with the repository owner before starting
+      (Tauri over Electron, given RULES.md's dependency-light design
+      principle -- Tauri uses the OS's native webview rather than bundling
+      a full Chromium + Node runtime; companion-process approach over a
+      standalone Python-bundled distributable, since cross-platform Python
+      bundling is a much larger and more fragile undertaking and this
+      session's verification is Windows-only regardless; same repository
+      under a new desktop/ directory rather than a separate repository).
+      Distilled into a lightweight requirements.md/design.md at
+      .kiro/specs/desktop-app-companion-shell/ (below the
+      .ai/project/changes/README.md change-package threshold: Standard
+      assurance -- the new surface is a local process-management/window
+      shell with no new data-handling logic; it spawns the existing,
+      already-reviewed `lifetxt serve` command completely unmodified and
+      adds no Python code).
+
+      Neither Rust nor a Rust toolchain were present in this environment
+      at the start of this task; installed via `scoop install rustup`,
+      then switched the default toolchain to
+      stable-x86_64-pc-windows-gnu (rather than the scoop default's MSVC
+      host triple) specifically because Microsoft's MSVC Build Tools were
+      not installed and installing them would have been a multi-gigabyte,
+      much heavier environment change than using the MinGW-w64 gcc
+      already available in this session's MSYS2 install. This choice is
+      recorded here because it affects how any future contributor without
+      MSVC installed needs to build this crate; see desktop/README.md.
+
+      Process-lifecycle cleanup (Requirement 4) is verified for the
+      graceful-exit path only (window close / app exit), which is what
+      Tauri's RunEvent::ExitRequested and WindowEvent::CloseRequested
+      hooks receive. A hard kill (Task Manager "End task", `taskkill /F`,
+      a crash, or a forced logoff) bypasses these hooks entirely --
+      Windows does not tie a forcibly-terminated process's children to
+      its own lifetime without an explicit Job Object, which this slice
+      does not use. This is a known, documented limitation
+      (desktop/README.md), not an unverified gap: the two paths have
+      fundamentally different guarantees on Windows, and only the
+      graceful path was in this slice's requirements.
+
+      TUI/MCP/Remote surfaces are not applicable here (this capability is
+      a new UI shell, not a search or data feature). Follow-up candidates
+      recorded rather than built: a standalone Python-bundled
+      distributable, macOS/Linux packaging verification, system tray/
+      native menu/auto-launch, auto-update, code signing, installer
+      polish, and a CI job building this app.
+
+      This task's own /security-review pass (research + false-positive-
+      filtering subagents) found the original backend locator trusted
+      Command::new()'s bare-name resolution for the actual `serve`
+      launch, which on Windows checks the app's own directory and the
+      current working directory before PATH -- a real CWE-426/427
+      binary-planting exposure for a portable build run from an
+      untrusted directory. The filtering subagent scored it 6/10
+      (below the skill's own 8/10 report threshold, since an attacker
+      able to plant a file in the app's own directory often has
+      simpler paths to code execution too) but still verdicted
+      INCLUDE. Fixed anyway, per this project's standing instruction to
+      correct noticed insecure code regardless of report thresholds:
+      resolution now goes through resolve_on_path(), restricted to the
+      PATH environment variable only, and the resolved absolute path
+      (not the bare name) is reused for the real spawn. Verified live,
+      both that the fix blocks a planted decoy and that it does not
+      regress the happy path (see tests_or_evidence).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

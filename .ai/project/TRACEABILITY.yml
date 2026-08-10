@@ -2826,6 +2826,97 @@ traceability:
         POSIX host access unavailable in this Windows environment.
       status: implemented
 
+    - requirement_id: req-desktop-app-backend-locator
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
+      changed_files_or_scope:
+        - Implement find_backend() trying lifetxt, python -m lifetxt, python3 -m lifetxt, py -m lifetxt in order
+        - Resolve each candidate to an absolute path via resolve_on_path() (PATH environment variable only) before probing or spawning it
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: launched with the venv on PATH -- lifetxt candidate resolved and was spawned correctly'
+        - 'live: launched with a PATH containing no lifetxt install (System32 only) -- all four candidates correctly failed; window-region screenshot confirmed the exact designed error message naming all four'
+        - '/security-review pass (research + false-positive-filtering subagents) found a real CWE-426/427 issue: the original bare-name Command::new() calls relied on Windows'' default unqualified-name search order, which checks the app''s own directory and the current working directory before PATH -- a planted python.exe/lifetxt.exe next to a portable build would have been silently executed'
+        - 'fix: resolve_on_path() restricts resolution to the PATH environment variable only; the resolved absolute path, not the bare name, is what both the --version probe and the real serve spawn use'
+        - 'live re-verification after the fix: a decoy lifetxt.exe (an actual copy of notepad.exe, so execution would be visually unmistakable) placed in the current working directory, with no real lifetxt on PATH -- the app correctly showed the "could not find lifetxt" error state and notepad never launched, confirming the CWD-planted decoy was not executed'
+        - 'live re-verification of the happy path after the fix: with the venv on PATH, Get-CimInstance confirmed the spawned child''s CommandLine now used the full resolved absolute path (e.g. "E:\project\lifetxt\.venv\Scripts\lifetxt.EXE" serve --host 127.0.0.1 --port <port>) rather than the bare name; /api/health on that port returned 200/ok:true; graceful close still released the process and port cleanly'
+        - cargo build and cargo build --release both succeed after the fix
+      release_or_deployment: null
+      notes: >-
+        See cap-desktop-app-companion-shell's notes for full scoping
+        rationale. The false-positive-filtering subagent scored this
+        finding 6/10 (below the security-review skill's own 8/10 report
+        threshold, given a portable-build CWD-planting attacker could
+        often achieve code execution by simpler means too, such as
+        replacing the app's own binary) and its formal verdict was still
+        INCLUDE. Applied the fix anyway per this project's own standing
+        instruction to fix noticed insecure code immediately rather than
+        only act on findings that clear a reporting bar -- the fix was
+        cheap, well-understood, and left the code more correct with no
+        behavior change to the happy path (re-verified live above).
+      status: implemented
+
+    - requirement_id: req-desktop-app-server-spawn
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
+      changed_files_or_scope:
+        - Implement reserve_port() (bind 127.0.0.1:0, read back the OS-assigned port, drop the listener) and spawn_server() (lifetxt serve --host 127.0.0.1 --port <port>, no path argument)
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: Get-CimInstance confirmed the real spawned child process command line was exactly "lifetxt" serve --host 127.0.0.1 --port <reserved-port>, parented by the app process'
+        - 'live: curl against that exact reserved port''s /api/health returned 200 with ok:true, confirming the port passed to spawn matched the one actually bound'
+      release_or_deployment: null
+      notes: >-
+        No life.txt path argument is passed, so the spawned server uses
+        lifetxt's own existing config-driven default path resolution
+        unchanged (Requirement 2.2); no Python file was modified.
+      status: implemented
+
+    - requirement_id: req-desktop-app-health-poll-navigation
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
+      changed_files_or_scope:
+        - Implement wait_for_health() (poll GET /api/health every 200ms up to a 15s bound) and window navigation via window.location.replace on success, or an error-state eval on timeout
+        - desktop/src-tauri/src/main.rs
+        - desktop/src-tauri/dist/index.html
+      tests_or_evidence:
+        - 'live: window-region screenshot confirmed the window navigated away from the static loading placeholder to the real served lifetxt Web UI (Items view, life.txt title, dashboard tabs) once /api/health responded'
+        - 'live: the timeout branch (3.4) specifically -- a minimal locally-compiled decoy binary named lifetxt.exe that answers --version successfully but never binds a port or responds when given serve arguments was placed ahead of the real install on PATH; after the full 15s bound elapsed, a window-region screenshot (found via GetWindowThreadProcessId-based window enumeration, since Process.MainWindowHandle proved unreliable across multiple app instances) confirmed the exact designed message, "lifetxt serve did not become ready within 15 seconds. Try running `lifetxt serve` from a terminal to see the actual error.", and the decoy process was confirmed no longer running afterward, showing kill_server() also fires on this error path, not only on graceful window close'
+      release_or_deployment: null
+      notes: See cap-desktop-app-companion-shell's notes for full scoping rationale.
+      status: implemented
+
+    - requirement_id: req-desktop-app-process-lifecycle
+      capability_id: cap-desktop-app-companion-shell
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/233
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/234
+      changed_files_or_scope:
+        - Manage the spawned Child in Tauri state; kill it on WindowEvent::CloseRequested and RunEvent::ExitRequested
+        - desktop/src-tauri/src/main.rs
+      tests_or_evidence:
+        - 'live: graceful close via taskkill /PID (no /F -- the same WM_CLOSE path clicking the window''s X button takes) confirmed both the app process and the spawned lifetxt.exe child exit'
+        - 'live: after graceful close, curl against the previously-reserved port returned connection-refused (exit 7), confirming the port was released, not left bound'
+        - 'live: both checks repeated against the built --release executable with the same result'
+      release_or_deployment: null
+      notes: >-
+        Verified for the graceful-exit path only, per this capability's
+        recorded, documented limitation: a hard kill (Task Manager "End
+        task", taskkill /F, a crash) bypasses Tauri's exit/close event
+        hooks entirely, since Windows does not tie a forcibly-terminated
+        process's children to its own lifetime without an explicit Job
+        Object, which this slice does not use. Sole item of the
+        desktop-app-companion-shell feature; below the
+        .ai/project/changes/README.md change-package threshold (Standard
+        assurance).
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

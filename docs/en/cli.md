@@ -77,6 +77,25 @@ python -m lifetxt decrypt [path ...]
 python -m lifetxt share [path ...]
 python -m lifetxt digest [path ...]
 python -m lifetxt template list
+python -m lifetxt workspace list
+python -m lifetxt project list
+python -m lifetxt portfolio [path ...]
+python -m lifetxt today [path ...]
+python -m lifetxt area list [path ...]
+python -m lifetxt backlinks ID [path ...]
+python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt view list
+python -m lifetxt group list [path ...]
+python -m lifetxt message recipients [path ...]
+python -m lifetxt person list [path ...]
+python -m lifetxt proposal list
+python -m lifetxt ticket list [path ...]
+python -m lifetxt version list [path ...]
+python -m lifetxt sprint list [path ...]
+python -m lifetxt rrule daily
+python -m lifetxt update-check
+python -m lifetxt update
+python -m lifetxt remote profile-list
 ```
 
 | Command | Purpose |
@@ -145,6 +164,28 @@ python -m lifetxt template list
 | `share` | Export a self-contained HTML or Markdown report (filter + review + chart) |
 | `digest` | Send a `review` summary to Slack, email, or a local file |
 | `template` | List and apply reusable named item templates |
+| `workspace` | Inspect and validate named workspaces and their source manifests (see [config.md](config.md#workspaces)) |
+| `project` | List, inspect, and manage projects built from `project:` records (see [projects.md](projects.md)) |
+| `portfolio` | Compare projects by state, progress, risk, and workload (see [projects.md](projects.md)) |
+| `today` | Daily command center: overdue, due, blocked, messages, and project attention (see [life-hub.md](life-hub.md)) |
+| `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
+| `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
+| `query` | Filter items with the shared query language (see [query.md](query.md)) |
+| `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
+| `group` | Inspect and validate messaging groups (see [messaging.md](messaging.md)) |
+| `message` | Compose messages and inspect recipients and delivery state (see [messaging.md](messaging.md)) |
+| `person` | Overview of a person's work, messages, meetings, and memberships (see [people.md](people.md)) |
+| `proposal` | Unified Inbox: review, edit, accept, or reject staged proposals (see [inbox.md](inbox.md)) |
+| `ticket` | Development tickets (`record:ticket`): new, list, show, edit, transitions, links (see [§19](#19-development-tickets-ticket)) |
+| `version` | Manage ticket release versions (see [tickets.md](tickets.md)) |
+| `sprint` | Manage ticket sprints (see [tickets.md](tickets.md)) |
+| `rrule` | Expand a recurrence rule into concrete occurrences (see [13.10](#1310-rrule-expanding-a-recurrence)) |
+| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-init-and-doctor)) |
+| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-init-and-doctor)) |
+| `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
+
+lifetxt also has a small set of workflow and format-1.0 commands not detailed
+in this file; see [§21](#21-commands-documented-elsewhere) for pointers.
 
 ### 1.1 Fuzzy Search
 

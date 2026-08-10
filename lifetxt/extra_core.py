@@ -220,6 +220,19 @@ def command_edit(args, config_data):
     return 0
 
 
+def _default_notification_state_path(config_data):
+    # Only the default is workspace-scoped; an explicitly configured
+    # state_file (handled by the caller before falling back here) is left
+    # exactly as the operator wrote it. Matches command_notify's own
+    # resolution in cli.py so `lifetxt path` reports what `lifetxt notify
+    # --watch` would actually use.
+    from .workspace import workspace_scoped_default_path
+
+    return workspace_scoped_default_path(
+        ".cache/lifetxt/notifications.json", config_data
+    )
+
+
 def command_path(args, config_data, config_path):
     config_dir = (
         os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
@@ -254,7 +267,7 @@ def command_path(args, config_data, config_path):
                 "notification_state",
                 _resolved_path(
                     notifications.get("state_file")
-                    or ".cache/lifetxt/notifications.json",
+                    or _default_notification_state_path(config_data),
                     config_dir,
                 ),
             ),

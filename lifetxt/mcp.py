@@ -253,6 +253,10 @@ READ_ONLY_TOOLS = frozenset(
         "list_tickets",
         "get_ticket",
         "validate_tickets",
+        "remote_list_profiles",
+        "remote_test_connection",
+        "remote_list_resources",
+        "remote_get_resource",
     ]
 )
 
@@ -265,6 +269,17 @@ DESTRUCTIVE_TOOLS = frozenset(
         "update_item",
         "stop_work",
         "attachment_delete",
+    ]
+)
+
+#: Tools that reach outside this server's own local filesystem (a network
+#: call to another host), per MCP's openWorldHint. Every other tool operates
+#: only on local life.txt sources, so the default stays False.
+OPEN_WORLD_TOOLS = frozenset(
+    [
+        "remote_test_connection",
+        "remote_list_resources",
+        "remote_get_resource",
     ]
 )
 
@@ -282,7 +297,7 @@ def _annotate(schema):
     annotations["readOnlyHint"] = read_only
     annotations["destructiveHint"] = name in DESTRUCTIVE_TOOLS
     annotations["idempotentHint"] = read_only
-    annotations["openWorldHint"] = False
+    annotations["openWorldHint"] = name in OPEN_WORLD_TOOLS
     return schema
 
 
@@ -953,6 +968,52 @@ def _tool_schemas():
             "get_clock_status",
             "Report server-authoritative UTC time and optional client clock skew.",
             {"client_time": _string("ISO-8601 timestamp with UTC offset.")},
+            read_only=True,
+        ),
+        _tool(
+            "remote_list_profiles",
+            "List configured Remote Safe Mode client profiles (name, URL; never secrets).",
+            {
+                "profiles_file": _string(
+                    "Override profile store path. Defaults to the shared "
+                    "~/.config/lifetxt/remote-profiles.json, the same store `lifetxt "
+                    "remote profile-set` writes."
+                )
+            },
+            read_only=True,
+        ),
+        _tool(
+            "remote_test_connection",
+            "Test connectivity and capability negotiation against a remote lifetxt server.",
+            {
+                "profile": _string("Profile name from remote_list_profiles."),
+                "profiles_file": _string("Override profile store path."),
+            },
+            required=["profile"],
+            read_only=True,
+        ),
+        _tool(
+            "remote_list_resources",
+            "List the read-only resources a remote lifetxt server publishes.",
+            {
+                "profile": _string("Profile name from remote_list_profiles."),
+                "profiles_file": _string("Override profile store path."),
+            },
+            required=["profile"],
+            read_only=True,
+        ),
+        _tool(
+            "remote_get_resource",
+            "Fetch one permission-filtered resource (e.g. next, tickets, agenda) from a remote lifetxt server.",
+            {
+                "profile": _string("Profile name from remote_list_profiles."),
+                "resource": _string(
+                    "Resource name, e.g. next, tickets, ticket-detail, items, agenda, search."
+                ),
+                "params": _object("Resource query parameters, e.g. {project: web}."),
+                "profiles_file": _string("Override profile store path."),
+            },
+            required=["profile", "resource"],
             read_only=True,
         ),
     ]
@@ -2686,6 +2747,63 @@ def _tool_get_clock_status(args, context):
     return clock_skew_report(args.get("client_time"), config=context.config)
 
 
+def _remote_profile(args):
+    from .remote_client import get_profile
+
+    name = str(args.get("profile") or "")
+    if not name:
+        raise ValueError("A remote profile name is required.")
+    try:
+        return get_profile(name, args.get("profiles_file"))
+    except KeyError:
+        raise ValueError("Unknown remote profile: %s" % name) from None
+
+
+def _tool_remote_list_profiles(args, _context):
+    """List configured Remote Safe Mode client profiles (no secrets)."""
+    from .remote_client import list_profiles
+
+    profiles = list_profiles(args.get("profiles_file"))
+    return {
+        "count": len(profiles),
+        "profiles": [
+            {
+                "name": name,
+                "url": row.get("url"),
+                "protocol_version": row.get("protocol_version"),
+            }
+            for name, row in profiles.items()
+        ],
+    }
+
+
+def _tool_remote_test_connection(args, _context):
+    """Test connectivity and capability negotiation against a remote profile."""
+    from .remote_client import test_connection
+
+    return test_connection(_remote_profile(args))
+
+
+def _tool_remote_list_resources(args, _context):
+    """List the read-only resources published by a remote server."""
+    from .remote_client import resource_catalog
+
+    return resource_catalog(_remote_profile(args))
+
+
+def _tool_remote_get_resource(args, _context):
+    """Fetch one permission-filtered resource from a remote server."""
+    from .remote_client import resource
+
+    resource_name = str(args.get("resource") or "")
+    if not resource_name:
+        raise ValueError("A resource name is required.")
+    params = args.get("params")
+    if params is not None and not isinstance(params, dict):
+        raise ValueError("params must be an object of key/value strings.")
+    return resource(_remote_profile(args), resource_name, params=params)
+
+
 def _tool_run_query(args, context):
     """Filter items with the shared query language."""
     from .query import run_query
@@ -3001,6 +3119,10 @@ TOOL_HANDLERS = OrderedDict(
         ("list_proposals", _tool_list_proposals),
         ("stage_proposal", _tool_stage_proposal),
         ("get_clock_status", _tool_get_clock_status),
+        ("remote_list_profiles", _tool_remote_list_profiles),
+        ("remote_test_connection", _tool_remote_test_connection),
+        ("remote_list_resources", _tool_remote_list_resources),
+        ("remote_get_resource", _tool_remote_get_resource),
     ]
 )
 

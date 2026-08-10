@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lifetxt.mcp import (
     DESTRUCTIVE_TOOLS,
@@ -686,6 +687,166 @@ class JsonRpcTests(McpTestCase):
         response = self._rpc(context, "nonsense/method")
 
         self.assertEqual(-32601, response["error"]["code"])
+
+
+class RemoteMcpToolsTests(McpTestCase):
+    """MCP-side wrapper over the existing lifetxt.remote_client library.
+
+    remote_list_profiles/remote_test_connection/remote_list_resources/
+    remote_get_resource reuse the same profile store and request() helper
+    the CLI's `lifetxt remote` commands already use -- these tests mock at
+    that shared boundary (lifetxt.remote_client.request), matching the
+    pattern tests/test_remote_client_v19.py already established, rather than
+    reimplementing HTTP-level mocking.
+    """
+
+    def _profiles_file(self, name="myserver", url="https://example.test"):
+        from lifetxt.remote_client import set_profile
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "profiles.json")
+        set_profile(name, url, token_env="LIFETXT_TEST_TOKEN", path=path)
+        return path
+
+    def test_remote_list_profiles_reports_url_and_no_secrets(self):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+
+        result = call_tool(
+            "remote_list_profiles", {"profiles_file": profiles_file}, context
+        )
+
+        self.assertEqual(1, result["count"])
+        self.assertEqual("myserver", result["profiles"][0]["name"])
+        self.assertEqual("https://example.test", result["profiles"][0]["url"])
+        self.assertNotIn("LIFETXT_TEST_TOKEN", json.dumps(result))
+
+    def test_remote_get_resource_requires_a_known_profile(self):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+
+        with self.assertRaises(ValueError):
+            call_tool(
+                "remote_get_resource",
+                {
+                    "profile": "does-not-exist",
+                    "resource": "next",
+                    "profiles_file": profiles_file,
+                },
+                context,
+            )
+
+    def test_remote_get_resource_requires_a_resource_name(self):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+
+        with self.assertRaises(ValueError):
+            call_tool(
+                "remote_get_resource",
+                {"profile": "myserver", "profiles_file": profiles_file},
+                context,
+            )
+
+    def test_remote_get_resource_rejects_non_object_params(self):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+
+        with self.assertRaises(ValueError):
+            call_tool(
+                "remote_get_resource",
+                {
+                    "profile": "myserver",
+                    "resource": "next",
+                    "params": "project=web",
+                    "profiles_file": profiles_file,
+                },
+                context,
+            )
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_remote_test_connection_reports_negotiated_protocol(self, req):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+        req.side_effect = [
+            ({"enabled": True}, {"lifetxt-remote-capability-revision": "rev1"}),
+            (
+                {"principal": {"id": "alice"}},
+                {"lifetxt_negotiated_protocol": 2},
+            ),
+        ]
+
+        result = call_tool(
+            "remote_test_connection",
+            {"profile": "myserver", "profiles_file": profiles_file},
+            context,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual("alice", result["session"]["principal"]["id"])
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_remote_list_resources_returns_the_catalog(self, req):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+        req.return_value = (
+            {"resources": [{"name": "next", "parameters": ["project"]}]},
+            {},
+        )
+
+        result = call_tool(
+            "remote_list_resources",
+            {"profile": "myserver", "profiles_file": profiles_file},
+            context,
+        )
+
+        self.assertEqual("next", result["resources"][0]["name"])
+        req.assert_called_once()
+        self.assertEqual("/api/remote/v1/resources", req.call_args.args[2])
+
+    @mock.patch("lifetxt.remote_client.request")
+    def test_remote_get_resource_forwards_params_and_returns_data(self, req):
+        context, _path = self._context()
+        profiles_file = self._profiles_file()
+        req.return_value = ({"data": {"count": 1, "items": []}}, {})
+
+        result = call_tool(
+            "remote_get_resource",
+            {
+                "profile": "myserver",
+                "resource": "next",
+                "params": {"project": "web"},
+                "profiles_file": profiles_file,
+            },
+            context,
+        )
+
+        self.assertEqual(1, result["data"]["count"])
+        req.assert_called_once()
+        call_kwargs = req.call_args.kwargs
+        self.assertEqual({"project": "web"}, call_kwargs["params"])
+        self.assertEqual("/api/remote/v1/resources/next", req.call_args.args[2])
+
+    def test_remote_tools_are_read_only_and_open_world_matches_network_usage(self):
+        # remote_list_profiles reads only the local profile store (no network
+        # call); the other three make a real request to another host.
+        schemas = {schema["name"]: schema for schema in tool_schemas()}
+        for name in (
+            "remote_list_profiles",
+            "remote_test_connection",
+            "remote_list_resources",
+            "remote_get_resource",
+        ):
+            self.assertTrue(schemas[name]["annotations"]["readOnlyHint"], name)
+        self.assertFalse(
+            schemas["remote_list_profiles"]["annotations"]["openWorldHint"]
+        )
+        for name in (
+            "remote_test_connection",
+            "remote_list_resources",
+            "remote_get_resource",
+        ):
+            self.assertTrue(schemas[name]["annotations"]["openWorldHint"], name)
 
 
 if __name__ == "__main__":

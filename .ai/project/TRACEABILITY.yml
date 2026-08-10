@@ -2887,6 +2887,7 @@ traceability:
         - desktop/src-tauri/dist/index.html
       tests_or_evidence:
         - 'live: window-region screenshot confirmed the window navigated away from the static loading placeholder to the real served lifetxt Web UI (Items view, life.txt title, dashboard tabs) once /api/health responded'
+        - 'live: the timeout branch (3.4) specifically -- a minimal locally-compiled decoy binary named lifetxt.exe that answers --version successfully but never binds a port or responds when given serve arguments was placed ahead of the real install on PATH; after the full 15s bound elapsed, a window-region screenshot (found via GetWindowThreadProcessId-based window enumeration, since Process.MainWindowHandle proved unreliable across multiple app instances) confirmed the exact designed message, "lifetxt serve did not become ready within 15 seconds. Try running `lifetxt serve` from a terminal to see the actual error.", and the decoy process was confirmed no longer running afterward, showing kill_server() also fires on this error path, not only on graceful window close'
       release_or_deployment: null
       notes: See cap-desktop-app-companion-shell's notes for full scoping rationale.
       status: implemented

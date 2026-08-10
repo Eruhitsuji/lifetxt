@@ -1,0 +1,60 @@
+schema_version: 1
+
+requirements:
+  - id: req-archive-plan-v1-schema-and-emit
+    kind: ADDED
+    statement: >-
+      project archive --dry-run --emit-plan PATH writes a schema-valid
+      archive-plan-v1 JSON document recording everything a live archive run
+      would need to reproduce, without writing any change to life.txt.
+    acceptance_criteria:
+      - "project archive --dry-run --emit-plan PATH writes a schema-valid archive-plan-v1 JSON file to PATH and makes no other change."
+      - "The plan's recorded source/destination revisions match the live SHA-256 of the corresponding files at emission time."
+      - "The plan's selected item IDs match exactly what the existing dry-run text output lists as candidates."
+      - "Omitting --emit-plan is byte-for-byte unaffected (existing dry-run behavior unchanged)."
+      - "Schema is added to the generated bundle and covered by the bundle-completeness gate."
+      - "--emit-plan requires --dry-run; combined with --apply-plan is rejected."
+      - "No plan is written when the selection would not itself proceed (no candidates, orphan-blocked, or blocked by external references)."
+    owner: Eruhitsuji
+
+  - id: req-archive-apply-plan-verification-execution
+    kind: ADDED
+    statement: >-
+      project archive --apply-plan PLAN re-verifies every fact a plan
+      recorded against current state -- version support, the plan_hash
+      self-consistency check, source/destination revisions, workspace/config
+      revision, re-derived candidate selection, and recovery-evidence
+      reachability -- and refuses loudly before any write on any mismatch,
+      then applies using the plan's frozen parameters only when explicitly
+      confirmed with --yes.
+    acceptance_criteria:
+      - "A plan produced by --emit-plan and applied unmodified via --apply-plan --yes against unchanged source state succeeds and produces the same result as the equivalent --revision-flag invocation."
+      - "A plan whose recorded plan_hash no longer matches its own fields (hand-edited or corrupted after emission) is rejected before any write. plan_hash is a self-consistency checksum stored in the same file it covers, not a signature -- it does not authenticate the plan's origin against a deliberate actor with write access to the plan file; operators must keep plan files under the same trust as any other local input to this command."
+      - "A stale plan (source/destination file changed since emission) is rejected before any write, leaving files byte-for-byte unchanged."
+      - "A plan whose workspace/config has drifted since emission is rejected before any write."
+      - "A plan whose derived candidate selection no longer matches its frozen item-ID list is rejected before any write."
+      - "An unsupported/future plan_version is rejected before any write."
+      - "A plan applied when recovery evidence (journal/backup directory) is unreachable is rejected before any write."
+      - "--apply-plan without --yes only verifies and reports the reserved transaction ID; it writes nothing."
+      - "--apply-plan combined with --revision, explicit source paths, or --dest is rejected with a clear error (each mutually exclusive, since the plan already freezes all three)."
+      - "Every rejection path leaves every source/destination file byte-for-byte unchanged and does not consume a backup generation."
+    constraints:
+      - Must not modify lifetxt/archive_safety_v3.py's existing --revision-flag path.
+      - Must not add new transaction-journal pre-registration machinery; reserved_transaction_id is audit-correlation metadata only.
+      - Must reuse the existing command_archive write path rather than duplicating archive execution logic.
+    owner: Eruhitsuji
+
+  - id: req-archive-plan-v1-operator-docs
+    kind: ADDED
+    statement: >-
+      English and Japanese documentation describe the archive-plan-v1
+      emit -> review -> apply workflow, every --apply-plan rejection reason
+      and its recommended operator action, and rollback/recovery guidance.
+    acceptance_criteria:
+      - "English and Japanese docs describe the full emit -> review -> apply workflow with a worked example."
+      - "Every rejection reason from req-archive-apply-plan-verification-execution has a documented meaning and recommended operator action."
+      - "Rollback/recovery procedure is documented, referencing the existing backup/journal recovery contract rather than inventing a new one."
+      - "Existing project archive docs are updated to mention the plan-based path alongside the existing --revision-flag path, not as a silent replacement."
+    owner: Eruhitsuji
+
+open_questions: []

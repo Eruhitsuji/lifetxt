@@ -1,0 +1,53 @@
+schema_version: 1
+
+change:
+  id: project-archive-plan-v1
+  title: Add a reviewable archive-plan-v1 pre-write document and --apply-plan verification/execution to project archive
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue:
+    - https://github.com/Eruhitsuji/lifetxt/issues/183
+    - https://github.com/Eruhitsuji/lifetxt/issues/254
+    - https://github.com/Eruhitsuji/lifetxt/issues/255
+    - https://github.com/Eruhitsuji/lifetxt/issues/256
+  related_pull_request: []
+  base_commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+  target_release: null
+
+scope:
+  in_scope:
+    - Define archive-plan-v1 as a versioned, schema-validated JSON document (lifetxt/schema_extensions_v23.py, dist/schemas/archive-plan-v1.schema.json) recording resolved workspace/config identity, exact source/destination revisions, the frozen selected item-ID set, external-reference effects, archive parameters, writer/process provenance, a reserved transaction ID, and a self-consistency checksum (plan_hash).
+    - Add project archive --dry-run --emit-plan PATH to write the plan; purely additive, no change to existing dry-run text output when omitted.
+    - Add project archive --apply-plan PLAN, which re-verifies plan_version support, the plan_hash self-consistency check, current source/destination revisions, current workspace/config revision, the re-derived candidate selection, and recovery-evidence (transaction journal directory) reachability, all before any write, then delegates to the existing command_archive path using the plan's frozen parameters. Requires --yes to actually write; without it, only verifies and reports.
+    - --apply-plan is mutually exclusive with --revision, explicit source paths, and --dest.
+    - English and Japanese operator documentation (docs/en/projects.md, docs/ja/projects.md) covering the emit -> review -> apply workflow, every rejection reason, and rollback guidance.
+  out_of_scope:
+    - Building new transaction/journal pre-registration machinery in transaction_journal.py -- reserved_transaction_id is a plan-identity value for audit correlation, not threaded into the underlying journal transaction.
+    - Changing generic (non-project) archive's behavior.
+    - Root-causing the original #183 incident -- that remains open and unresolved by this change; see decisions.md.
+    - A versioned Project archive plan/provenance workflow beyond what todo.md's P1 Project and Portfolio Management item names (e.g. no plan-signing key infrastructure, no remote plan storage).
+  write_scope:
+    - lifetxt/archive_plan_v1.py
+    - lifetxt/schema_extensions_v23.py
+    - lifetxt/cli.py
+    - lifetxt/__init__.py
+    - tests/test_archive_plan_v1.py
+    - tests/test_schema_extensions_v2.py
+    - docs/en/projects.md
+    - docs/ja/projects.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - lifetxt/archive_safety_v3.py (the existing --revision-flag path stays unmodified and independently testable)
+    - lifetxt/transaction_journal.py
+    - .ai/managed/**
+  shared_files:
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (data-loss-prevention feature responding to a real production incident)

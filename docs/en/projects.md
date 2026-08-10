@@ -67,6 +67,93 @@ $ lifetxt project add meeting web "Kickoff" --on 2026-06-01
 
 Add `--dry-run` to print the line without writing.
 
+## Archiving
+
+`lifetxt project archive NAME` moves one project's done/canceled records (and
+any `record:ticket_event`/`record:time_entry` history that follows a done
+ticket by `parent:`) to the workspace's configured `role: archive` source,
+using the same atomic multi-file transaction engine as generic `archive`.
+
+```console
+$ lifetxt project archive web --dry-run   # preview only, no changes made
+$ lifetxt project archive web             # requires --revision for every
+                                           # scanned source and the archive
+                                           # destination (see below)
+```
+
+Because a live `project archive` writes to an authoritative file, it requires
+an exact `--revision PATH=SHA256` for every scanned source and the
+destination; `--dry-run` prints the exact set to copy. This precondition,
+plus a same-invocation zero-byte and parser-error refusal, were added after a
+production incident (#183) where the safety of a live archive run could not
+be confirmed after the fact.
+
+### Reviewable archive plans (`--emit-plan` / `--apply-plan`)
+
+For a review step between "what will be archived" and "actually archive it,"
+`--dry-run --emit-plan PATH` writes an `archive-plan-v1` JSON document instead
+of only printing text: the resolved workspace/config identity, exact source
+and destination revisions, the frozen list of selected item IDs, external
+references to archived items, and writer/process provenance. Nothing is
+written to `life.txt` by `--emit-plan` itself.
+
+`selected_item_ids` only lists items that carry an explicit `id:` (or
+configured `id_key`) detail; an item with no ID is still archived correctly
+but contributes nothing to that field. For a workspace without automatic ID
+assignment enabled, review the plan alongside the dry-run text output rather
+than `selected_item_ids` alone -- this does not weaken `--apply-plan`'s
+safety guarantee, which comes from the source/destination revision check
+(byte-identical input reproduces the same selection deterministically), not
+from `selected_item_ids` itself.
+
+```console
+$ lifetxt project archive web --dry-run --emit-plan plan.json
+Archive plan written to plan.json.
+$ cat plan.json   # review before applying
+$ lifetxt project archive web --apply-plan plan.json
+Archive plan verified against current state (reserved_transaction_id=...).
+No changes made.
+Re-run the same command with --yes to apply it.
+$ lifetxt project archive web --apply-plan plan.json --yes
+Applying archive plan (reserved_transaction_id=...).
+Archived 3 item(s) to ...
+```
+
+`--apply-plan` re-verifies every fact the plan recorded against *current*
+state before writing anything, refusing loudly (with no files touched) when:
+
+| Rejection | Meaning | Recommended action |
+| --- | --- | --- |
+| unsupported `plan_version` | The plan was produced by a newer/older `lifetxt` than this one understands | Re-emit the plan with the matching version |
+| consistency check failed (`plan_hash` mismatch) | The plan file does not match its own recorded hash -- it was hand-edited or corrupted since `--emit-plan` wrote it | Re-emit and review a fresh plan; never hand-edit a plan file |
+| stale source/destination revision | A scanned source or the archive destination changed since the plan was emitted | Re-run `--dry-run --emit-plan` to produce a current plan |
+| workspace/config drift | The active workspace's configuration changed since emission | Re-run `--dry-run --emit-plan` |
+| selection drift | The candidate set re-derived from current state no longer matches the plan's frozen item-ID list | Re-run `--dry-run --emit-plan`; investigate what changed the selection (edited status, new someday tag, etc.) |
+| recovery evidence unreachable | The transaction journal/backup directory is missing or not writable | Fix storage access before applying |
+
+**`plan_hash` is a self-consistency checksum, not a signature.** It is
+computed from, and stored inside, the plan file itself, so it detects
+accidental hand-edits or corruption -- it does not authenticate the plan's
+origin or protect against someone who deliberately edits the file (they can
+recompute a matching hash after any change). Treat a `plan.json` file with
+the same trust as any other local input to this command: keep it under your
+own control between `--emit-plan` and `--apply-plan`, the same way you would
+an unsigned config file, rather than passing it through an untrusted
+intermediary and relying on the consistency check to catch tampering.
+
+`--apply-plan` is mutually exclusive with `--revision`, explicit source paths,
+and `--dest` -- the plan already freezes all three. Applying without `--yes`
+only verifies and reports the reserved transaction ID; it writes nothing.
+
+As with the `--revision` path, a rejection leaves every source and
+destination file byte-for-byte unchanged and does not consume a backup
+generation. Recovery from a completed archive uses the same backup/journal
+contract as any other multi-file write (see
+[Safe Writes, Attachments, and Work Sessions](safe-writes-attachments-and-work-sessions.md));
+a shell-side defense such as `set -o noclobber` is a reasonable extra
+precaution when scripting `--emit-plan`/`--apply-plan` around an
+untrusted or hand-edited plan path.
+
 ## Transparent derivations
 
 Every derived number states how it was computed:

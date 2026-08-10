@@ -2410,3 +2410,96 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-project-archive-plan-v1
+    name: Reviewable pre-write project archive plan
+    summary: >-
+      A machine-readable, self-consistency-checked, schema-valid
+      archive-plan-v1 document (project archive --dry-run --emit-plan
+      PATH) and a verify-then-apply counterpart (project archive
+      --apply-plan PLAN) that re-checks every frozen fact -- plan version,
+      the plan_hash self-consistency check, source/destination revisions,
+      workspace/config revision, re-derived
+      candidate selection, recovery-evidence reachability -- against
+      current state before any write, requiring explicit --yes to
+      actually apply. Follow-up to the #183 production zero-byte incident,
+      giving operators a reviewable object between "what will be archived"
+      and "archive it" beyond the existing --revision-flag path.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-archive-plan-v1-schema-and-emit
+      - req-archive-apply-plan-verification-execution
+      - req-archive-plan-v1-operator-docs
+    implementation_locations:
+      - lifetxt/archive_plan_v1.py
+      - lifetxt/schema_extensions_v23.py
+      - lifetxt/cli.py
+      - dist/schemas/archive-plan-v1.schema.json
+      - tests/test_archive_plan_v1.py
+      - docs/en/projects.md
+      - docs/ja/projects.md
+      - .ai/project/changes/project-archive-plan-v1/
+    public_interfaces:
+      - lifetxt project archive --dry-run --emit-plan PATH
+      - lifetxt project archive --apply-plan PLAN [--yes]
+      - lifetxt.archive_plan_v1.build_plan
+      - lifetxt.archive_plan_v1.write_plan
+      - lifetxt.archive_plan_v1.load_plan
+      - lifetxt.archive_plan_v1.verify_plan_version
+      - lifetxt.archive_plan_v1.verify_plan_hash
+      - lifetxt.archive_plan_v1.verify_revisions_unchanged
+      - lifetxt.archive_plan_v1.verify_workspace_revision_unchanged
+      - lifetxt.archive_plan_v1.verify_selection_unchanged
+      - lifetxt.archive_plan_v1.verify_recovery_evidence_reachable
+    tests_or_evidence:
+      - tests/test_archive_plan_v1.py EmitPlanTests, ApplyPlanTests, ArchivePlanV1UnitTests (29 tests)
+      - tests/test_schema_extensions_v2.py bundle-completeness gate (77 documents)
+      - python -m unittest tests.test_archive_plan_v1 tests.test_schema_extensions_v2 tests.test_project_archive_safety_v3 tests.test_project_archive -> Ran 51 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> full suite green after fixing four other test files'' hardcoded schema-bundle document counts (76 -> 77)'
+      - 'live: real lifetxt project archive --dry-run --emit-plan against a disposable fixture wrote a schema-valid plan matching live SHA-256 revisions and dry-run candidates'
+      - 'live: real lifetxt project archive --apply-plan without --yes verifies and writes nothing; with --yes archives correctly, matching the equivalent --revision invocation'
+      - 'live: a hand-edited plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged in each case'
+      - '/security-review (research + false-positive-filtering subagents): 1 finding confirmed at 8/10 -- plan_hash was described as "tamper detection" but is a self-referential checksum with no external key; fixed by renaming to "self-consistency check" throughout and removing misleading "share it" doc language. A second candidate (unscoped plan source/destination paths) was excluded at 2/10, confirmed pre-existing in archive_safety_v3.py, not a regression'
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check / ruff check lifetxt tests scripts -> clean (pre-existing drift in 3 unrelated files confirmed present on main already)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/183
+      - https://github.com/Eruhitsuji/lifetxt/issues/254
+      - https://github.com/Eruhitsuji/lifetxt/issues/255
+      - https://github.com/Eruhitsuji/lifetxt/issues/256
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security/High assurance per ASSURANCE_LEVELS.md (data-loss-prevention
+      feature responding to a real production incident); full change
+      package at .ai/project/changes/project-archive-plan-v1/. Does not
+      modify lifetxt/archive_safety_v3.py's existing --revision-flag path,
+      which remains available and independently tested. reserved_transaction_id
+      is a plan-identity value for audit correlation only, not threaded into
+      transaction_journal.py's actual transaction ID -- see decisions.md for
+      why deeper journal integration was scoped out. Known limitation:
+      selected_item_ids is populated only from items carrying an explicit
+      id: (or configured id_key) detail; an id-less item archives correctly
+      but is invisible in that field. This does not weaken the write-safety
+      guarantee (byte-identical source revisions deterministically reproduce
+      the same selection), but for a workspace without ids.auto enabled,
+      operators should review the accompanying dry-run text alongside the
+      plan rather than selected_item_ids alone -- documented in
+      docs/en|ja/projects.md and decisions.md. Known limitation: plan_hash
+      is a self-consistency checksum (computed from and stored in the same
+      file it covers), not a signature -- it detects accidental corruption
+      or a hand-edit, not a deliberately forged plan; a plan file must be
+      kept under the same trust as any other local input to this command,
+      documented in docs/en|ja/projects.md and design.md's Security Review
+      Finding after this was found by /security-review during
+      implementation (original docs suggested a "share it" review/handoff
+      workflow that the mechanism does not actually protect). #183 itself
+      stays open: its own root-cause investigation goals are separate and
+      unresolved by this change, which implements only the "reviewable
+      plan workflow" item todo.md's P1 Project and Portfolio Management
+      section requests.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

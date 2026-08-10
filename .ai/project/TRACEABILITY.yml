@@ -3174,7 +3174,7 @@ traceability:
       capability_id: cap-ai-standard-guided-activation
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/247
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/248
       changed_files_or_scope:
         - Sync .ai/managed/core to upstream ai-development-standard commit 0737bcacde45bc2988a87d82a30bc5bf8d63132a (adds SKILLS.md; additive updates to INDEX.md, AI_HUMAN_INTERACTION.md, MERGE_GOVERNANCE.md, REVIEW.md, TASK_DECOMPOSITION.md, TASK_MANAGEMENT.md, TRACEABILITY.md, RUNTIME_EVIDENCE.md, AI_TOOL_COMPATIBILITY.md)
         - Add .ai/managed/skills/{next-action,runtime-evidence,review-viewpoints}/SKILL.md, mirrored verbatim

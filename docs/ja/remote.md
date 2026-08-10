@@ -133,7 +133,7 @@ GET /api/remote/v1/diagnostics
 - `links`: ID、direction、relationで絞り込んだrelation record
 - `status`:最新のvisible status record
 - `agenda`:指定期間内のvisible record
-- `search`:visible item、project、personだけを対象にしたsafe search
+- `search`:visible item、project、personだけを対象にしたsafe search。オプトインの`fuzzy=true`parameterで、CLIの`search --fuzzy`/`find --fuzzy`や`/api/items?fuzzy=true`と同じprimitiveによる小さなタイプミス/脱字のマッチングが可能。exact matchは常に最優先で並ぶ
 - `next`: `lifetxt next`・TUIの`/next`・MCPの`get_next_actions`と同じ共有定義によるactionable item。`project`・`assignee`・上限付き`limit`（既定は無制限、最大1000）で絞り込み可能。principalから見えないdependencyでblockされているitemはactionableに昇格せず除外されたままになる
 
 未知resourceや未対応parameterはfail closedで拒否されます。すべてのresourceは同一のprincipal filteringとsource revisionを使用します。diagnosticsはseverity／codeの集計と運用checkだけを返し、record text、source path、parser messageは返しません。

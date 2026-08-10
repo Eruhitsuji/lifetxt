@@ -5849,6 +5849,101 @@ class LifeTxtWebAppTests(unittest.TestCase):
             self.assertIn("seen", data)
             self.assertTrue(data["seen"])
 
+    def test_notify_watch_default_state_file_is_workspace_scoped(self):
+        # Without an explicit --state-file or notifications.state_file, two
+        # named workspaces sharing one configuration file must not silently
+        # share one notification-state file -- switching --workspace has to
+        # actually separate their seen/dismissed state.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            life_path = os.path.join(temp_dir, "work.txt")
+            notify_at = (
+                datetime.now()
+                .replace(second=0, microsecond=0)
+                .strftime("%Y-%m-%dT%H:%M")
+            )
+            Path(life_path).write_text(
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:%s\n"
+                % notify_at,
+                encoding="utf-8",
+            )
+            config_path = os.path.join(temp_dir, "lifetxt.json")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(
+                    {
+                        "default_workspace": "work",
+                        "workspaces": {"work": {"sources": ["work.txt"]}},
+                    },
+                    handle,
+                )
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "notify",
+                "--recipient",
+                "self",
+                "--lookahead",
+                "1h",
+                "--grace",
+                "1h",
+                "--watch",
+                "--once",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Ping", stdout)
+            expected_state_path = os.path.join(
+                temp_dir, ".cache", "lifetxt", "notifications-work.json"
+            )
+            self.assertTrue(
+                os.path.exists(expected_state_path),
+                "expected workspace-scoped default state file at %s"
+                % expected_state_path,
+            )
+            data = json.loads(Path(expected_state_path).read_text(encoding="utf-8"))
+            self.assertTrue(data.get("seen"))
+            # The plain, non-workspace-scoped default must not be created.
+            self.assertFalse(
+                os.path.exists(
+                    os.path.join(temp_dir, ".cache", "lifetxt", "notifications.json")
+                )
+            )
+
+    def test_notify_watch_without_state_file_or_workspace_does_not_persist(self):
+        # Legacy (non-workspace) configurations must be byte-for-byte
+        # unaffected: no default is introduced for them by this change.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            life_path = os.path.join(temp_dir, "life.txt")
+            notify_at = (
+                datetime.now()
+                .replace(second=0, microsecond=0)
+                .strftime("%Y-%m-%dT%H:%M")
+            )
+            Path(life_path).write_text(
+                "[ ] M Ping id:msg_001 sender:alice recipient:self notify_at:%s\n"
+                % notify_at,
+                encoding="utf-8",
+            )
+
+            stdout, stderr, code = run_cli(
+                "notify",
+                life_path,
+                "--recipient",
+                "self",
+                "--lookahead",
+                "1h",
+                "--grace",
+                "1h",
+                "--watch",
+                "--once",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("Ping", stdout)
+            self.assertFalse(os.path.exists(os.path.join(temp_dir, ".cache")))
+
 
 class LifeTxtAssistCliTests(unittest.TestCase):
     def test_assist_output_file(self):

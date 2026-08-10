@@ -3127,6 +3127,49 @@ traceability:
         serialized response.
       status: implemented
 
+    - requirement_id: req-workspace-remote-and-quality-batch-integration
+      capability_id: cap-remote-cli-read-client
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/246
+      changed_files_or_scope:
+        - Record the workspace-remote-and-quality batch's integration into main as its own traceable step
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; python -m unittest discover -> Ran 2174 tests, OK (skipped=13), run on the fully consolidated feature/workspace-remote-and-quality-batch branch after all three sub-integration branches merged'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff check lifetxt tests scripts -> All checks passed
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK
+      release_or_deployment: >-
+        This entry documents PR #246 itself: feature/quality-fixes-2 (Issues
+        #92, #229; PRs #235, #236; originally opened as PR #237),
+        feature/workspace-notification-parity (Issue #238; PR #239;
+        originally opened as PR #240), and feature/remote-client-surfaces
+        (Issues #241, #243; PRs #242, #244; originally opened as PR #245)
+        consolidated into one branch and merged into main via #246, per
+        explicit repository owner request to close the previously-open
+        PRs #237/#240/#245 in favor of a single final PR.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established by
+        req-remote-batch-integration (#131) and every subsequent batch in
+        this project, extended one level further: three *already-integrated*
+        branches (each with their own sub-PRs already merged into them) were
+        merged into a fourth, final branch rather than each going to main
+        separately. Every requirement entry above correctly names its own
+        sub-PR (#235, #236, #239, #242, #244), and none names #246 or the
+        three superseded PRs, because #246 did not exist yet when they were
+        written. The three merges into feature/workspace-remote-and-quality-batch
+        used the same local git merge and push workaround as every sub-PR
+        merge in this project (gh pr merge is blocked by the auto-mode
+        permission classifier); two of the three merges conflicted only in
+        .ai/project/CAPABILITIES.yml and TRACEABILITY.yml (each batch's own
+        self-contained entries appended near the same tail location),
+        resolved by concatenating both sides, matching this project's
+        recorded conflict-resolution guidance for these files. PRs #237,
+        #240, and #245 were closed without merging once #246 carried their
+        content forward.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -2917,6 +2917,58 @@ traceability:
         assurance).
       status: implemented
 
+    - requirement_id: req-remote-cli-client-traceability
+      capability_id: cap-remote-cli-read-client
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/241
+      pull_request: null
+      changed_files_or_scope:
+        - Record CAPABILITIES.yml/TRACEABILITY.yml entries for the pre-existing, untraced CLI Remote Safe Mode read client
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - tests/test_remote_client_v19.py, tests/test_remote_client_v20.py -> Ran 9 tests, OK
+        - 'live: real lifetxt serve process with remote.enabled true and a bearer-token principal; profile-set/profile-list round-trip against a real profiles file'
+        - 'live: test reports negotiated_protocol 2, session.principal.id "alice", and a real capability_revision hash'
+        - 'live: resources lists all 10 published resources (items, tickets, ticket-detail, projects, ticket-report, links, status, agenda, search, next)'
+        - 'live: get next / get items against a real 2-item fixture (a plain Task plus a record:ticket Task) returns correctly-shaped, permission-filtered data with matching diagnostics'
+        - 'live: get next --param project=web and --param project=home each correctly filter to exactly the one matching item'
+        - 'live: export PATH writes a real remote-snapshot-v1-shaped JSON file'
+        - 'live: diagnose reports the expected check set (remote-enabled, https-policy, principal-registry, source-count, browser-session, authoritative-remote-writes) against the real server'
+      release_or_deployment: null
+      notes: >-
+        No code changes -- this entry documents pre-existing, working
+        functionality found undocumented during a broader "make server-side
+        lifetxt operable from CLI/TUI/Web/MCP" scoping session. See
+        cap-remote-cli-read-client's own notes for why source_requirements is
+        empty (no originating requirement record exists for the original
+        untraced implementation).
+      status: implemented
+
+    - requirement_id: req-remote-cli-client-traceability
+      capability_id: cap-remote-cli-write-client
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/241
+      pull_request: null
+      changed_files_or_scope:
+        - Record CAPABILITIES.yml/TRACEABILITY.yml entries for the pre-existing, untraced CLI Remote Safe Mode write client and interactive REPL
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - tests/test_remote_client_writes_v23.py, tests/test_remote_client_writes_compat_v25.py -> Ran 12 tests, OK
+        - 'live: real lifetxt serve process with remote.ticket_writes_enabled: false -- ticket-edit --dry-run correctly refuses with REMOTE_TICKET_WRITES_DISABLED (the server''s write-admission gate runs before dry-run evaluation; a dry-run still performs a real HTTP round-trip and is rejected identically to a real write -- intentional security posture, not a defect, and recorded as observed behavior rather than "fixed")'
+        - 'live: real lifetxt serve process with remote.ticket_writes_enabled: true -- ticket-edit --set priority=low against a real fixture ticket correctly mutates the authoritative local life.txt file (priority high -> low) and appends a properly-shaped record:ticket_event audit entry (field_change, before/after values, transaction_id, ticket_revision) in the same atomic write'
+        - 'live: permissions against the editor-role principal with server-side ticket_writes_enabled: false correctly reports can_write: false and denial_reasons [remote_write_admission_only, ticket_mutations_disabled]'
+        - 'live: remote tui PROFILE --interactive with scripted stdin ("show", "tk-1", "quit") prints principal/role/scopes/denial-reasons, lists the fixture ticket, shows full ticket detail on "show", and exits cleanly on "quit" with no unhandled errors'
+      release_or_deployment: null
+      notes: >-
+        No code changes -- see cap-remote-cli-write-client's own notes.
+        Confirmed with the repository owner via AskUserQuestion that
+        documenting this existing capability is the correct response rather
+        than building a new CLI/TUI remote client from scratch, per
+        CAPABILITY_MANAGEMENT.md's reuse-before-new-implementation
+        requirement. Integrating remote access into the curses `lifetxt tui`
+        app remains an explicit, larger, unimplemented follow-up candidate.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

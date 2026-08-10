@@ -2194,3 +2194,103 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-cli-read-client
+    name: CLI Remote Safe Mode read client
+    summary: >-
+      A `lifetxt remote` CLI client for Remote Safe Mode: profile storage
+      (`profile-set/list/show/delete`), connection/capability negotiation
+      testing (`test`), a capability/diagnostics snapshot (`snapshot`,
+      `diagnose`), the resource catalog (`resources`), permission-aware
+      resource fetching with parameter filtering (`get RESOURCE --param
+      k=v`, covering every server-published resource: items, tickets,
+      ticket-detail, projects, ticket-report, links, status, agenda, search,
+      next), and snapshot export (`export PATH`). Reuses `urllib` only, no
+      new HTTP dependency.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: []
+    implementation_locations:
+      - lifetxt/remote_client.py
+    public_interfaces:
+      - lifetxt remote profile-set|profile-list|profile-show|profile-delete
+      - lifetxt remote test|snapshot|diagnose|resources|export
+      - lifetxt remote get RESOURCE --param k=v
+      - lifetxt.remote_client.request
+      - lifetxt.remote_client.resource
+      - lifetxt.remote_client.resource_catalog
+    tests_or_evidence:
+      - tests/test_remote_client_v19.py, tests/test_remote_client_v20.py (9 tests)
+      - 'live: real lifetxt serve process with remote.enabled/a bearer-token principal; profile-set/profile-list round-trip; test reports negotiated protocol 2, session principal, and capability_revision; resources lists all 10 catalog resources'
+      - 'live: get next / get items against a real 2-item fixture (a plain Task and a record:ticket Task) returns correctly-shaped, permission-filtered data'
+      - 'live: get next --param project=web / --param project=home each correctly filter to the one matching item, confirming --param reaches the server-side resource filter'
+      - 'live: export PATH writes a real remote-snapshot-v1-shaped JSON file to disk'
+      - 'live: diagnose reports remote-enabled/https-policy/principal-registry/source-count/browser-session/authoritative-remote-writes checks against the real running server'
+      - python -m unittest tests.test_remote_client_v19 tests.test_remote_client_v20 -> Ran 9 tests, OK
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/241
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Found during a broader "make server-side lifetxt operable from CLI/TUI
+      /Web/MCP" scoping session to already exist, fully functional, but never
+      recorded in this registry -- confirmed via `git log` that the module
+      predates this project's traceability discipline being applied
+      consistently to every change. This entry closes that gap with live
+      verification rather than assuming the code works from reading it alone.
+      `source_requirements` is empty because no originating requirement
+      record exists for the original (untraced) implementation; #241 is
+      recorded as the closing task_issue instead.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-remote-cli-write-client
+    name: CLI Remote Safe Mode write client and interactive REPL
+    summary: >-
+      `lifetxt remote` ticket mutation commands (`ticket-create/edit/
+      transition/comment/log-time`), effective-permission introspection
+      (`permissions`), single-ticket detail (`ticket-show`), and a
+      dependency-free interactive text-mode REPL (`remote tui PROFILE
+      --interactive`: list tickets, show detail, refresh, propose a write,
+      and require an explicit y/N confirmation before applying it). Distinct
+      from the curses-based `lifetxt tui` app, which has no remote mode.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: []
+    implementation_locations:
+      - lifetxt/remote_client_writes.py
+      - lifetxt/remote_client_writes_compat_v25.py
+    public_interfaces:
+      - lifetxt remote ticket-create|ticket-edit|ticket-transition|ticket-comment|ticket-log-time
+      - lifetxt remote ticket-show|permissions
+      - lifetxt remote tui PROFILE --interactive
+      - lifetxt.remote_client_writes.mutate_ticket
+      - lifetxt.remote_client_writes.interactive_tui
+    tests_or_evidence:
+      - tests/test_remote_client_writes_v23.py (9 tests), tests/test_remote_client_writes_compat_v25.py (3 tests)
+      - 'live: real lifetxt serve process with remote.ticket_writes_enabled: false -- ticket-edit --dry-run correctly refuses with REMOTE_TICKET_WRITES_DISABLED, confirming the server''s write-admission gate runs before dry-run evaluation (a dry-run still performs a real round-trip and is rejected identically to a real write when writes are disabled server-side -- intentional security posture, not a defect)'
+      - 'live: real lifetxt serve process with remote.ticket_writes_enabled: true -- ticket-edit --set priority=low against a real fixture ticket correctly mutates the authoritative local life.txt (priority high -> low) and appends a properly-shaped record:ticket_event audit entry (field_change, before/after, transaction_id, ticket_revision) in the same file'
+      - 'live: permissions against an editor-role principal with server-side ticket_writes_enabled: false correctly reports can_write: false with denial_reasons [remote_write_admission_only, ticket_mutations_enabled: false]'
+      - 'live: remote tui PROFILE --interactive, scripted input ("show", "tk-1", "quit") -- prints principal/role/scopes/denial reasons, lists the ticket, shows full detail on "show", and exits cleanly on "quit"'
+      - python -m unittest tests.test_remote_client_writes_v23 tests.test_remote_client_writes_compat_v25 -> Ran 12 tests, OK
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/241
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Same discovery as cap-remote-cli-read-client: found already implemented
+      and untraced during this session's remote-client scoping. Confirmed
+      with the repository owner (via AskUserQuestion) that documenting this
+      existing capability, rather than building a new one, is the correct
+      response -- CAPABILITY_MANAGEMENT.md requires checking for and
+      preferring reuse of existing capabilities before new implementation.
+      Integrating remote access into the curses `lifetxt tui` app (a UI-layer
+      change spanning tui_app.py's rendering/input pipeline) is recorded here
+      as an explicit, larger follow-up candidate, not undertaken in this
+      session.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

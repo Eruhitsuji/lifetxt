@@ -8,6 +8,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::TcpListener;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -27,7 +28,43 @@ fn backend_candidates() -> Vec<Vec<&'static str>> {
     ]
 }
 
-fn command_with_no_window(program: &str) -> Command {
+/// Resolve `program` against the `PATH` environment variable only --
+/// deliberately narrower than `Command::new`'s own unqualified-name
+/// lookup, which on Windows also searches the directory this app was
+/// loaded from and the current working directory *before* PATH. Trusting
+/// either of those for the actual `lifetxt serve` launch would let a
+/// planted `python.exe`/`lifetxt.exe` sitting next to a portable build
+/// (e.g. in a Downloads folder) execute silently in place of the real
+/// interpreter. PATH itself is a trusted input, matching the treatment
+/// of environment variables elsewhere in this project.
+fn resolve_on_path(program: &str) -> Option<PathBuf> {
+    let path_var = std::env::var_os("PATH")?;
+    let extensions: Vec<String> = if cfg!(windows) {
+        std::env::var("PATHEXT")
+            .unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".to_string())
+            .split(';')
+            .filter(|ext| !ext.is_empty())
+            .map(|ext| ext.to_string())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    for dir in std::env::split_paths(&path_var) {
+        let base = dir.join(program);
+        if base.is_file() {
+            return Some(base);
+        }
+        for ext in &extensions {
+            let candidate = dir.join(format!("{program}{ext}"));
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+fn command_with_no_window(program: impl AsRef<std::ffi::OsStr>) -> Command {
     let mut command = Command::new(program);
     #[cfg(windows)]
     {
@@ -41,14 +78,19 @@ fn command_with_no_window(program: &str) -> Command {
 fn find_backend() -> Option<Vec<String>> {
     for candidate in backend_candidates() {
         let (program, args) = candidate.split_first().expect("candidate is non-empty");
-        let mut cmd = command_with_no_window(program);
+        let Some(resolved) = resolve_on_path(program) else {
+            continue;
+        };
+        let mut cmd = command_with_no_window(&resolved);
         cmd.args(args)
             .arg("--version")
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         if let Ok(status) = cmd.status() {
             if status.success() {
-                return Some(candidate.iter().map(|s| s.to_string()).collect());
+                let mut resolved_candidate = vec![resolved.to_string_lossy().into_owned()];
+                resolved_candidate.extend(args.iter().map(|s| s.to_string()));
+                return Some(resolved_candidate);
             }
         }
     }

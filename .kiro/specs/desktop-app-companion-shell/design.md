@@ -42,6 +42,20 @@ already established for the CLI update-check tooling's own
 interpreter-invocation patterns in this project, applied here to
 locating the package itself rather than an interpreter.
 
+Each candidate's program name is resolved to an absolute path via
+`resolve_on_path()`, which searches only the directories listed in the
+`PATH` environment variable, before that candidate is ever invoked
+(including the `--version` probe). This is deliberately narrower than
+`Command::new`'s own unqualified-name lookup, which on Windows also
+searches the directory the app was loaded from and the current working
+directory *before* PATH -- trusting either of those for the actual
+`lifetxt serve` launch would let a planted `python.exe`/`lifetxt.exe`
+sitting next to a portable build (for example in a Downloads folder)
+execute silently in place of the real interpreter (CWE-426/427,
+found during this task's own `/security-review` pass). The resolved
+absolute path, not the bare candidate name, is what `spawn_server()`
+reuses for the real invocation.
+
 ## Port Reservation
 Bind a `TcpListener` to `127.0.0.1:0`, read back the OS-assigned port
 from `local_addr()`, then drop the listener before spawning the

@@ -2117,6 +2117,9 @@ capabilities:
       - 'live: launched with a PATH containing no lifetxt install at all (System32 only) -- window-region screenshot confirmed the exact designed error message, naming all four tried candidates, renders instead of a blank or frozen window'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s) (no Python-side regression from adding the new directory)
       - ruff check lifetxt tests scripts -> All checks passed (desktop/ is outside ruff's target paths, as intended)
+      - '/security-review found and fixed a real CWE-426/427 issue: backend resolution now goes through resolve_on_path() (PATH environment variable only), not Command::new()''s own unqualified-name search order, which on Windows checks the app''s own directory and the current working directory before PATH'
+      - 'live: a decoy lifetxt.exe (an actual copy of notepad.exe, so execution would be visually unmistakable) placed in the working directory with no real lifetxt on PATH -- confirmed the app showed the correct "not found" error state and never launched the decoy'
+      - 'live: re-verified the happy path after the fix -- the spawned child''s CommandLine now shows the full resolved absolute path rather than the bare name; /api/health and graceful-close cleanup both still confirmed working'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/233
     related_pull_requests:
@@ -2168,6 +2171,24 @@ capabilities:
       distributable, macOS/Linux packaging verification, system tray/
       native menu/auto-launch, auto-update, code signing, installer
       polish, and a CI job building this app.
+
+      This task's own /security-review pass (research + false-positive-
+      filtering subagents) found the original backend locator trusted
+      Command::new()'s bare-name resolution for the actual `serve`
+      launch, which on Windows checks the app's own directory and the
+      current working directory before PATH -- a real CWE-426/427
+      binary-planting exposure for a portable build run from an
+      untrusted directory. The filtering subagent scored it 6/10
+      (below the skill's own 8/10 report threshold, since an attacker
+      able to plant a file in the app's own directory often has
+      simpler paths to code execution too) but still verdicted
+      INCLUDE. Fixed anyway, per this project's standing instruction to
+      correct noticed insecure code regardless of report thresholds:
+      resolution now goes through resolve_on_path(), restricted to the
+      PATH environment variable only, and the resolved absolute path
+      (not the bare name) is reused for the real spawn. Verified live,
+      both that the fix blocks a planted decoy and that it does not
+      regress the happy path (see tests_or_evidence).
     replacement:
       replaces: []
       replaced_by: null

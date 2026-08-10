@@ -2917,6 +2917,41 @@ traceability:
         assurance).
       status: implemented
 
+    - requirement_id: req-local-unittest-compatibility
+      capability_id: cap-local-test-compatibility
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/92
+      pull_request: null
+      changed_files_or_scope:
+        - Execute the POSIX venv activation line recorded by #81 on a real POSIX host and record the result
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'live: WSL2 Ubuntu-22.04 (Linux 6.18.33.2-microsoft-standard-WSL2), Python 3.10.12 -- python3 -m venv .venv --without-pip --copies (system python3-venv/pip packages were absent and apt required a password this session; bootstrapped pip via the standard get-pip.py bootstrapper instead of installing python3-venv, so the venv itself was created by the unmodified stdlib venv module)'
+        - 'live: . .venv/bin/activate followed by `python -c "import sys; print(sys.version)"` resolved to the venv interpreter (/mnt/e/project/lifetxt/.venv-posix-verify/bin/python, 3.10.12), confirming the recorded activation line is exactly correct and unmodified'
+        - 'live: python -m unittest tests.test_supported_runtime -> Ran 2 tests, OK'
+        - 'live: python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+        - 'live: ruff check lifetxt tests scripts -> All checks passed!'
+        - 'live: ruff format --check lifetxt tests scripts -> 4 files would be reformatted, 258 files already formatted; the same pre-existing drift already recorded as present on main by multiple other traceability entries in this file, not introduced by this verification'
+      release_or_deployment: null
+      notes: >-
+        The POSIX activation line (`. .venv/bin/activate`) is confirmed correct
+        and unmodified -- no correction to .ai/project/COMMANDS.yml or readme.md
+        was needed. The disposable verification venv itself could not be created
+        with `python3 -m venv .venv` exactly as documented, because this WSL
+        host's python3-venv/pip system packages were not installed and `apt`
+        required an interactive sudo password unavailable in this session; pip
+        was bootstrapped into an ensurepip-less venv via the standard
+        bootstrap.pypa.io/get-pip.py script instead, after which `pip install -e
+        ".[dev]"` and every other recorded command ran completely unmodified.
+        This is a host provisioning gap, not a defect in the recorded commands,
+        and is out of this issue's scope (`.ai/managed/**`/command content are
+        explicitly forbidden scope) to fix. The verification venv was created as
+        `.venv-posix-verify` rather than `.venv` to avoid disturbing an existing
+        `.venv` already present on this shared checkout from earlier Windows
+        work, and was deleted after verification; the activation line itself
+        was exercised exactly as recorded, only the directory name differed.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

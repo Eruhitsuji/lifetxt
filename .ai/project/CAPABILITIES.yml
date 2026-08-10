@@ -2120,6 +2120,7 @@ capabilities:
       - '/security-review found and fixed a real CWE-426/427 issue: backend resolution now goes through resolve_on_path() (PATH environment variable only), not Command::new()''s own unqualified-name search order, which on Windows checks the app''s own directory and the current working directory before PATH'
       - 'live: a decoy lifetxt.exe (an actual copy of notepad.exe, so execution would be visually unmistakable) placed in the working directory with no real lifetxt on PATH -- confirmed the app showed the correct "not found" error state and never launched the decoy'
       - 'live: re-verified the happy path after the fix -- the spawned child''s CommandLine now shows the full resolved absolute path rather than the bare name; /api/health and graceful-close cleanup both still confirmed working'
+      - 'live: the health-check timeout branch specifically -- a minimal locally-compiled decoy answering --version but never responding to serve was placed ahead of the real install on PATH; after the 15s bound, the window showed the exact designed timeout message, and the decoy process was confirmed killed afterward, showing cleanup also fires on this error path'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/233
     related_pull_requests:

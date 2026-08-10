@@ -9675,6 +9675,21 @@ def command_notify(args):
     state_file = None
     if not args.no_state:
         state_file = args.state_file or notification_config.get("state_file")
+        if not state_file:
+            config = _config(args)
+            from .workspace import active_workspace_name, workspace_scoped_default_path
+
+            if active_workspace_name(config):
+                default_state_file = workspace_scoped_default_path(
+                    ".cache/lifetxt/notifications.json", config
+                )
+                config_path = config.get("_path") if config else None
+                base_dir = (
+                    os.path.dirname(os.path.abspath(config_path))
+                    if config_path
+                    else os.getcwd()
+                )
+                state_file = os.path.abspath(os.path.join(base_dir, default_state_file))
 
     def load_records():
         items, diagnostics = _parse_or_exit(args.paths, _config(args))

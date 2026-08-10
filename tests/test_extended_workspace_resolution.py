@@ -79,7 +79,9 @@ class ExtendedWorkspaceResolutionTests(unittest.TestCase):
         self.assertEqual(result, 0, stderr.getvalue())
         return stdout.getvalue()
 
-    def test_default_workspace_resolves_config_relative_sources_outside_config_cwd(self):
+    def test_default_workspace_resolves_config_relative_sources_outside_config_cwd(
+        self,
+    ):
         with self._cwd(self.unrelated_cwd):
             output = self._run(
                 ["--config", self.config_path, "next", "--format", "json"]
@@ -160,6 +162,63 @@ class ExtendedWorkspaceResolutionTests(unittest.TestCase):
                 ["--config", legacy_config_path, "next", "--format", "json"]
             )
         self.assertIn('"id":"l1"', output)
+
+    def test_path_command_reports_workspace_scoped_notification_state(self):
+        # `lifetxt path` must report the same default notification state
+        # file that `lifetxt notify --watch` would actually use, so the two
+        # named workspaces sharing this configuration file are shown as
+        # having distinct default state files, not one shared path.
+        with self._cwd(self.unrelated_cwd):
+            personal_output = self._run(
+                ["--config", self.config_path, "path", "--format", "json"]
+            )
+            work_output = self._run(
+                [
+                    "--config",
+                    self.config_path,
+                    "--workspace",
+                    "work",
+                    "path",
+                    "--format",
+                    "json",
+                ]
+            )
+        personal_data = json.loads(personal_output)
+        work_data = json.loads(work_output)
+        self.assertTrue(
+            personal_data["notification_state"].endswith(
+                os.path.join("notifications-personal.json")
+            )
+        )
+        self.assertTrue(
+            work_data["notification_state"].endswith(
+                os.path.join("notifications-work.json")
+            )
+        )
+        self.assertNotEqual(
+            personal_data["notification_state"], work_data["notification_state"]
+        )
+
+    def test_path_command_legacy_config_reports_unscoped_default(self):
+        legacy_path = os.path.join(self.config_dir, "legacy.life.txt")
+        with open(legacy_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Legacy id:l1\n")
+        legacy_config_path = os.path.join(self.config_dir, "legacy.json")
+        with open(legacy_config_path, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(
+                {"paths": [legacy_path], "write_file": legacy_path},
+                handle,
+            )
+
+        with self._cwd(self.unrelated_cwd):
+            output = self._run(
+                ["--config", legacy_config_path, "path", "--format", "json"]
+            )
+        data = json.loads(output)
+        self.assertTrue(
+            data["notification_state"].endswith(os.path.join("notifications.json"))
+        )
+        self.assertNotIn("notifications-", data["notification_state"])
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from lifetxt.workspace import (
     source_reason,
     workspace_doctor,
     workspace_resolution_active,
+    workspace_scoped_default_path,
     workspace_summaries,
 )
 from lifetxt.config_layers import (
@@ -527,6 +528,46 @@ class ActiveWorkspaceNameTests(unittest.TestCase):
     def test_returns_injected_workspace_name(self):
         config = {"_active_workspace": "work"}
         self.assertEqual("work", active_workspace_name(config))
+
+
+class WorkspaceScopedDefaultPathTests(unittest.TestCase):
+    """Covers #229-adjacent notification-state workspace derivation."""
+
+    def test_unchanged_when_no_workspace_active(self):
+        config = {"paths": ["life.txt"]}
+        self.assertEqual(
+            ".cache/lifetxt/notifications.json",
+            workspace_scoped_default_path(".cache/lifetxt/notifications.json", config),
+        )
+
+    def test_unchanged_for_non_dict_config(self):
+        self.assertEqual(
+            ".cache/lifetxt/notifications.json",
+            workspace_scoped_default_path(".cache/lifetxt/notifications.json", None),
+        )
+
+    def test_inserts_workspace_name_before_extension(self):
+        config = {"_active_workspace": "work"}
+        self.assertEqual(
+            ".cache/lifetxt/notifications-work.json",
+            workspace_scoped_default_path(".cache/lifetxt/notifications.json", config),
+        )
+
+    def test_different_workspaces_produce_different_paths(self):
+        work = workspace_scoped_default_path(
+            ".cache/lifetxt/notifications.json", {"_active_workspace": "work"}
+        )
+        personal = workspace_scoped_default_path(
+            ".cache/lifetxt/notifications.json", {"_active_workspace": "personal"}
+        )
+        self.assertNotEqual(work, personal)
+
+    def test_handles_path_with_no_extension(self):
+        config = {"_active_workspace": "work"}
+        self.assertEqual(
+            "notifications-work",
+            workspace_scoped_default_path("notifications", config),
+        )
 
 
 class ConfigLayerTests(unittest.TestCase):

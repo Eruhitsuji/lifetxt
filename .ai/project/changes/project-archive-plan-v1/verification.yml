@@ -58,7 +58,7 @@ verification:
         - req-archive-apply-plan-verification-execution
         - req-archive-plan-v1-operator-docs
       result: 'confirming re-run after every fix above: full suite green'
-      commit: TO_BE_FILLED_AFTER_COMMIT
+      commit: 36eb4d0c0ad1cbf62cbf1b942aeec0d1ef10390f
       executed_at: '2026-08-10'
       status: passed
     - type: manual
@@ -87,13 +87,39 @@ verification:
       executed_at: '2026-08-10'
       status: passed
     - type: manual
-      command: 'real lifetxt project archive web --apply-plan against a hand-tampered plan.json (selected_item_ids field edited post-emission)'
+      command: 'real lifetxt project archive web --apply-plan against a hand-edited plan.json (selected_item_ids field edited post-emission)'
       requirement_ids:
         - req-archive-apply-plan-verification-execution
       result: >-
-        "ERROR: Archive plan tamper check failed: the plan file has been
-        modified since it was emitted (plan_hash mismatch)...", exit 1;
-        source file confirmed byte-for-byte unchanged afterward
+        "ERROR: Archive plan consistency check failed: the plan file does
+        not match its own recorded hash (plan_hash mismatch) -- it may have
+        been hand-edited or corrupted since it was emitted. This check
+        detects accidental modification, not a deliberately forged plan;
+        keep plan files under the same trust as any other local input to
+        this command...", exit 1; source file confirmed byte-for-byte
+        unchanged afterward. Re-verified after the /security-review fix
+        that renamed this message from its original "tamper check failed"
+        wording (see decisions.md)
+      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      executed_at: '2026-08-10'
+      status: passed
+    - type: security_review
+      command: /security-review against the full archive-plan-v1 diff (research + false-positive-filtering subagents)
+      requirement_ids:
+        - req-archive-apply-plan-verification-execution
+      result: >-
+        1 finding confirmed at 8/10 confidence: plan_hash was described as
+        "tamper detection" but is a self-referential checksum with no
+        external key, misleading given the original docs' "share it"
+        review/handoff workflow language. Fixed: renamed to
+        "self-consistency check" throughout code/docs/error messages,
+        removed the "share it" language, added explicit guidance to keep
+        plan files under the same trust as any other local input. A second
+        candidate finding (unscoped sources/destination paths from a
+        loaded plan) was investigated and excluded at 2/10 confidence:
+        confirmed pre-existing in archive_safety_v3.py's --revision-flag
+        path, not a regression introduced by this change. See design.md's
+        "Security Review Finding" and decisions.md for full detail.
       commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
       executed_at: '2026-08-10'
       status: passed

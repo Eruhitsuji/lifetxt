@@ -32,8 +32,12 @@ document:
 - a `reserved_transaction_id` (a UUID, generated at emit time) for audit
   correlation across emit and apply
 - a `plan_hash`: a SHA-256 over the canonical (sorted-key) JSON serialization
-  of every other field, so any post-emission edit to the plan file is
-  detectable
+  of every other field, so accidental post-emission corruption or a
+  hand-edit is detectable. This is a self-consistency checksum, not a
+  signature -- it is computed from and stored in the same file it covers,
+  so it does not authenticate the plan's origin against a deliberate actor
+  who can also recompute a matching hash after editing the file. See
+  "Security Review Finding" below.
 
 `--apply-plan` re-derives every one of those facts from current state and
 compares. Any mismatch refuses loudly, before `command_archive` is ever
@@ -70,6 +74,37 @@ destructive operations.
 ## Alternatives Considered
 
 See `decisions.md`.
+
+## Security Review Finding
+
+`/security-review` (research + false-positive-filtering subagents) found and
+confirmed one issue at 8/10 confidence: the originally-shipped code and docs
+described `plan_hash` as "tamper detection," implying it protects against a
+deliberate actor editing the plan file. It does not -- `plan_hash` is a
+self-referential checksum (computed from and stored in the same file it
+covers) with no external key, so anyone who can edit the plan file can
+trivially recompute a matching hash. This became a real (not merely
+theoretical) concern because the original operator documentation explicitly
+suggested a review/handoff workflow ("share it, diff it, hold it") that
+implies the plan crosses a trust boundary between emission and application --
+exactly the scenario the "tamper detection" framing would need to hold up
+under, and does not.
+
+Fixed by: renaming every user-facing and code-comment reference from "tamper
+detection"/"tamper check" to "self-consistency check," rewriting
+`verify_plan_hash`'s docstring and error message to accurately describe what
+it does and does not protect against, and removing the "share it" language
+from both language docs in favor of explicit guidance that a plan file must
+be kept under the same operator's/process's control between emit and apply,
+with the same trust level as any other local input to this command. A
+related candidate finding (unscoped `sources`/`destination` paths taken
+verbatim from the plan) was investigated and found to be **not** a
+regression: the pre-existing `--revision`-flag path (`archive_safety_v3.py`)
+already accepts an arbitrary `--dest`/source paths from the same trusted
+local operator with no workspace-scope validation, so `--apply-plan`
+inherits an existing characteristic rather than introducing a new one; not
+fixed, per the filtering pass's explicit-scope guidance to only act on
+security implications newly introduced by this change.
 
 ## Known Gap Found During This Work
 

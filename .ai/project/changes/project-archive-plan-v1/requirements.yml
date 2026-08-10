@@ -21,14 +21,15 @@ requirements:
     kind: ADDED
     statement: >-
       project archive --apply-plan PLAN re-verifies every fact a plan
-      recorded against current state -- version support, tamper hash,
-      source/destination revisions, workspace/config revision, re-derived
-      candidate selection, and recovery-evidence reachability -- and refuses
-      loudly before any write on any mismatch, then applies using the plan's
-      frozen parameters only when explicitly confirmed with --yes.
+      recorded against current state -- version support, the plan_hash
+      self-consistency check, source/destination revisions, workspace/config
+      revision, re-derived candidate selection, and recovery-evidence
+      reachability -- and refuses loudly before any write on any mismatch,
+      then applies using the plan's frozen parameters only when explicitly
+      confirmed with --yes.
     acceptance_criteria:
       - "A plan produced by --emit-plan and applied unmodified via --apply-plan --yes against unchanged source state succeeds and produces the same result as the equivalent --revision-flag invocation."
-      - "A tampered plan (any field altered post-emission) is rejected before any write."
+      - "A plan whose recorded plan_hash no longer matches its own fields (hand-edited or corrupted after emission) is rejected before any write. plan_hash is a self-consistency checksum stored in the same file it covers, not a signature -- it does not authenticate the plan's origin against a deliberate actor with write access to the plan file; operators must keep plan files under the same trust as any other local input to this command."
       - "A stale plan (source/destination file changed since emission) is rejected before any write, leaving files byte-for-byte unchanged."
       - "A plan whose workspace/config has drifted since emission is rejected before any write."
       - "A plan whose derived candidate selection no longer matches its frozen item-ID list is rejected before any write."

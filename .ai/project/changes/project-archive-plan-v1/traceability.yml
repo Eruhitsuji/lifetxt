@@ -21,7 +21,8 @@ links:
     tests_or_evidence:
       - tests/test_archive_plan_v1.py ApplyPlanTests (14 tests: mutual exclusion x3, verify-without-yes writes nothing, unmodified-plan matches equivalent --revision invocation, malformed JSON rejected, missing recovery evidence rejected, missing required field rejected, selection drift rejected, stale destination/source revision rejected, tampered plan rejected, unsupported version rejected, workspace/config drift rejected, reserved transaction ID reported)
       - "live: real lifetxt project archive --apply-plan against a disposable fixture -- verify-without---yes reported the reserved transaction ID and wrote nothing; --yes actually archived the item and matched the plan exactly"
-      - "live: a hand-tampered plan.json (selected_item_ids edited) was rejected with the exact designed tamper-check error before any write; life.txt confirmed byte-for-byte unchanged"
+      - "live: a hand-edited plan.json (selected_item_ids edited) was rejected with the designed self-consistency-check error before any write; life.txt confirmed byte-for-byte unchanged"
+      - "/security-review found and this fix corrected a misleading 'tamper detection' claim (plan_hash is a self-consistency checksum, not a signature); see design.md's Security Review Finding and decisions.md"
       - "live: a plan applied after its source file changed was rejected with the exact designed staleness error before any write; life.txt confirmed unchanged (retained the post-emission edit, not reverted or further modified)"
     release_or_deployment: null
     status: implemented

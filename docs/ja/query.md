@@ -1,34 +1,31 @@
-# クエリ言語と保存ビュー
+# Query Language and Saved Views
 
-lifetxt には単一のクエリ言語があり、CLI の `query` コマンド、保存ビュー、MCP の
-`run_query` ツールで共有されます。一度書いたフィルタはどのサーフェスでも同じ結果に
-なり、誤りは黙って誤った結果を返すのではなく型付き診断として報告されます。
+lifetxt には 1 つの query language があり、CLI `query` command、saved views、MCP `run_query` tool で共有されます。一度書いた filter はどの surface でも同じように動作し、mistake は silent wrong result ではなく typed diagnostics として返ります。
 
-## 文法
+## Grammar
 
-クエリは空白区切りの項の列です。値は引用符で囲めます。
+query は whitespace-separated terms です。values は quoted にできます。
 
-| 項                       | 意味                                                |
-| ------------------------ | --------------------------------------------------- |
-| `field:value`            | メンバーシップまたは詳細の等価                       |
-| `field:a,b`              | フィールド内の値の OR                                |
-| `field=value`            | `:` と同じ                                          |
-| `field<DATE` `field>DATE`| 日付比較（`<`・`>`・`<=`・`>=`・`!=`）               |
-| `-tag:value`             | 除外（`exclude_tag:value` も可）                     |
-| `open`                   | 未完了のワークフローステータスのみ                  |
-| `text:"free text"`       | タイトルへの部分一致（素の語句も可）                |
+| Term | Meaning |
+| --- | --- |
+| `field:value` | membership または detail equality |
+| `field:a,b` | 同じ field 内の values の OR |
+| `field=value` | `:` と同じ |
+| `field<DATE` `field>DATE` | date comparison (`<`, `>`, `<=`, `>=`, `!=`) |
+| `-tag:value` | exclude。`exclude_tag:value` も可 |
+| `open` | open workflow statuses のみ |
+| `text:"free text"` | title への substring match。bare words も可 |
 
-異なるフィールド同士は AND、同一フィールドの複数値は OR で結合されます。
+異なる fields は AND で結合されます。同じ field の複数 values は OR です。
 
-### フィールド
+### Fields
 
-- **メンバーシップ**: `status`・`type`/`kind`・`project`・`tag`・`tag_all`・
-  `user`・`person`・`owner`・`assignee`・`attendee`・`sender`・`recipient`・`team`
-- **日付**: `due`・`do`・`from`・`to`・`on`・`at`・`done`・`created`・`updated`
-- **詳細（等価）**: `area`・`context`・`loc`・`priority` ほか既知キー
-- **テキスト**: `text` / `q`、または素の語句
+- **Membership**: `status`, `type`/`kind`, `project`, `tag`, `tag_all`, `user`, `person`, `owner`, `assignee`, `attendee`, `sender`, `recipient`, `team`
+- **Dates**: `due`, `do`, `from`, `to`, `on`, `at`, `done`, `created`, `updated`
+- **Details** (equality): `area`, `context`, `loc`, `priority`, and any known key
+- **Text**: `text` / `q`, or bare words
 
-未知のフィールドは `Q001` 警告として無視され、不正な日付は `Q002` エラーになります。
+unknown fields は `Q001` warning になり ignored されます。invalid dates は `Q002` error です。warnings は result set と一緒に返りますが、errors は query を止めます。field typo が silently zero results にならず、malformed date comparison が valid のふりをしないようにするためです。
 
 ## CLI
 
@@ -36,11 +33,12 @@ lifetxt には単一のクエリ言語があり、CLI の `query` コマンド�
 $ lifetxt query "open project:web tag:urgent due<2026-08-01"
 $ lifetxt query "area:work" --sort due --limit 10 --format table
 $ lifetxt query "status:done project:web" --format json
+$ lifetxt query "open text:\"release plan\""
 ```
 
-## 保存ビュー
+## Saved views
 
-よく使うクエリを設定の `saved_views` に保存します。
+よく使う query は configuration の `saved_views` に保存します。
 
 ```json
 {
@@ -52,8 +50,7 @@ $ lifetxt query "status:done project:web" --format json
 }
 ```
 
-ビューはオブジェクト（`query` と任意の `sort`・`order`・`limit`）または単なる
-クエリ文字列です。実行と確認:
+view は object (`query` と optional `sort`、`order`、`limit`) または plain query string です。実行と確認:
 
 ```console
 $ lifetxt view list
@@ -62,10 +59,10 @@ $ lifetxt view validate
 $ lifetxt view run web_open --format table
 ```
 
-保存ビューは `saved-view-v1.schema.json` で検証され、`view validate` は空
-（`V001`）や不正（`V002`）なクエリを報告します。
+saved views は `saved-view-v1.schema.json` で validate されます。`view validate` は empty (`V001`) または malformed (`V002`) queries を report します。
+
+`view run` は saved query を適用してから optional sort、order、limit を適用します。そのため 1 つの saved definition を table、JSON、MCP output で再利用できます。
 
 ## MCP
 
-AI クライアントは `run_query`・`list_saved_views`・`run_saved_view` を使います。
-文法も結果（クエリ診断を含む）も人が見るものと同一です。
+AI clients は `run_query`、`list_saved_views`、`run_saved_view` を使います。grammar も results も human が見るものと同じで、query diagnostics も含まれます。

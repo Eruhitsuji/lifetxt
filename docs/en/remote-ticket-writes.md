@@ -23,6 +23,15 @@ Remote protocol version 2 can expose a deliberately narrow, history-preserving t
 ```
 
 `remote.ticket_writes_enabled` requires a server restart. It does not enable general Web, MCP, attachment, planning, relation, watcher, or multi-file writes.
+The CLI client reports the effective write policy with:
+
+```sh
+lifetxt remote permissions PROFILE
+```
+
+That report combines the authenticated principal's scopes with the server's
+`mutation_policy.ticket_mutations_enabled`, advertised operations, and denial
+reasons. A profile can read tickets and still be unable to write them.
 
 ## Endpoint and required headers
 
@@ -42,6 +51,17 @@ Every request requires:
 - the browser-session CSRF token and an allowed `Origin` when cookie authentication is used.
 
 Read the current aggregate revision from `GET /api/remote/v1/snapshot`, `GET /api/remote/v1/resources`, or another Remote read response. The server also performs an exact SHA-256 CAS against the writable ticket file while holding the normal sidecar mutation lock.
+The CLI write client obtains the snapshot revision immediately before posting
+and sends it as `If-Match`; it does not automatically retry a conflict. On a
+conflict it returns a structured `REMOTE_MUTATION_CONFLICT` with the attempted
+change and next actions: refresh, abandon, or submit a new transaction.
+
+Every operation also accepts `dry_run: true`. Dry-run requests still perform the
+normal protocol, authentication, authorization, capability, and revision
+admission checks. If the server has ticket writes disabled, a dry-run is
+rejected the same way a real write is rejected. When admission succeeds, the
+authoritative file remains byte-identical and the response reports the proposed
+result.
 
 ## Supported operations
 
@@ -142,3 +162,20 @@ This first writable Remote contract is intentionally limited:
 - no claim of multi-worker browser-session sharing or production readiness.
 
 Use capability discovery before writing. Protocol-v2 capabilities publish `mutation_policy.ticket_mutations_enabled`, the exact operation list, and all remaining limitations.
+
+## CLI and interactive client
+
+The dependency-free CLI client wraps the same endpoint:
+
+```sh
+lifetxt remote ticket-create PROFILE WEB-42 "Fix remote login" --project web --dry-run
+lifetxt remote ticket-edit PROFILE WEB-42 --set priority=urgent --comment "Incident review"
+lifetxt remote ticket-transition PROFILE WEB-42 review --comment "Ready for review"
+lifetxt remote ticket-comment PROFILE WEB-42 "Root cause identified"
+lifetxt remote ticket-log-time PROFILE WEB-42 90m --activity development --date 2026-07-26
+```
+
+`lifetxt remote tui PROFILE --interactive` is a simple text-mode remote ticket
+review and proposal loop. It lists visible tickets, shows detail, and asks for
+an explicit `y/N` confirmation before submitting a write. It is separate from
+the curses-based local `lifetxt tui` app.

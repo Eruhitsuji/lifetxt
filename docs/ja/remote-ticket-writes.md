@@ -1,8 +1,8 @@
-# Remoteチケット更新
+# Remote ticket mutations
 
-Remote protocol version 2では、履歴を必ず残す限定的なチケット更新エンドポイントを公開できます。このエンドポイントは既定で無効であり、サーバーに設定された書き込み対象の`life.txt`だけを更新します。
+Remote protocol version 2 は、履歴を保つために範囲を絞った ticket mutation endpoint を公開できます。この endpoint は default では disabled で、server に設定された writable `life.txt` source だけを書き換えます。
 
-## アダプターの有効化
+## Adapter を有効にする
 
 ```json
 {
@@ -22,32 +22,44 @@ Remote protocol version 2では、履歴を必ず残す限定的なチケット�
 }
 ```
 
-`remote.ticket_writes_enabled`の変更後はサーバーを再起動してください。この設定は、一般Web API、MCP、添付ファイル、計画、関連、watcher、複数ファイルの書き込みを有効にしません。
+`remote.ticket_writes_enabled` の変更後は server restart が必要です。この設定は general Web、MCP、attachment、planning、relation、watcher、multi-file writes を有効化しません。
 
-## エンドポイントと必須ヘッダー
+CLI client では次の command で effective write policy を確認できます。
 
-対応する操作はすべて次へ送信します。
+```sh
+lifetxt remote permissions PROFILE
+```
+
+この report は、authenticated principal の scopes、server の `mutation_policy.ticket_mutations_enabled`、advertised operations、denial reasons を組み合わせます。profile が ticket を読めても、書き込めるとは限りません。
+
+## Endpoint と required headers
+
+対応するすべての operation は次に送ります。
 
 ```text
 POST /api/remote/v1/ticket-mutations
 ```
 
-各リクエストには次が必要です。
+各 request には次が必要です。
 
-- `X-Lifetxt-Remote-Version: 2`によるRemote protocol 2の選択
-- 認証済みprincipalの`write` scope
-- 現在のRemote snapshot／resource revisionを指定した`If-Match`
-- JSON本文内の、呼び出し側が生成した安定した`transaction_id`
-- `clock.require_remote_write_time`有効時の`X-Lifetxt-Client-Time`
-- ブラウザセッション認証時のCSRF tokenと許可された`Origin`
+- `X-Lifetxt-Remote-Version: 2` による Remote protocol 2
+- authenticated `write` scope
+- current Remote snapshot/resource revision を示す `If-Match`
+- JSON body 内の caller-generated stable `transaction_id`
+- `clock.require_remote_write_time` が enabled の場合は `X-Lifetxt-Client-Time`
+- cookie authentication を使う場合は browser-session CSRF token と allowed `Origin`
 
-現在の集約revisionは`GET /api/remote/v1/snapshot`、`GET /api/remote/v1/resources`、または他のRemote読み取り応答から取得します。サーバーはさらに、通常のsidecar mutation lockを保持した状態で、書き込み対象のチケットファイルに対する正確なSHA-256 CASを実行します。
+current aggregate revision は `GET /api/remote/v1/snapshot`、`GET /api/remote/v1/resources`、または別の Remote read response から読みます。server は通常の sidecar mutation lock を保持した状態で、writable ticket file に対して exact SHA-256 CAS も実行します。
 
-## 対応操作
+CLI write client は post 直前に snapshot revision を取得し、`If-Match` として送ります。conflict を自動 retry しません。conflict 時は attempted change と next actions (refresh、abandon、submit_new_transaction) を含む structured `REMOTE_MUTATION_CONFLICT` を返します。
 
-### 作成
+すべての operation は `dry_run: true` も受け付けます。dry-run request も通常の protocol、authentication、authorization、capability、revision admission checks を通ります。server 側で ticket writes が disabled なら、dry-run も real write と同じように拒否されます。admission が成功した場合、authoritative file は byte-identical のままで、response は proposed result を返します。
 
-応答を受信できなかった場合でも安全に再試行できるよう、Remote作成では明示的な安定IDが必要です。
+## Supported operations
+
+### Create
+
+Remote creation では、lost response を安全に retry できるよう explicit stable ticket ID が必要です。
 
 ```json
 {
@@ -62,9 +74,9 @@ POST /api/remote/v1/ticket-mutations
 }
 ```
 
-チケットと`record:ticket_event event:created`履歴は、1回のexact-revisionファイル置換で同時に追記されます。
+ticket と `record:ticket_event event:created` record は、1 回の exact-revision file replacement で append されます。
 
-### フィールド編集
+### Edit fields
 
 ```json
 {
@@ -80,9 +92,9 @@ POST /api/remote/v1/ticket-mutations
 }
 ```
 
-最初の契約で変更できるのは、保守的に選んだ単一値の計画・担当フィールドだけです。project、visibility、owner、reporter、watcher、関連、添付、任意のカスタムフィールド、生のstatus変更は受け付けません。
+最初の contract が受け付けるのは、保守的に選ばれた scalar planning/assignment fields だけです。project、visibility、owner、reporter、watcher、relation、attachment、arbitrary custom-field、raw status changes は受け付けません。
 
-### ステータス遷移
+### Transition
 
 ```json
 {
@@ -94,9 +106,9 @@ POST /api/remote/v1/ticket-mutations
 }
 ```
 
-認証済みRemote roleを`ticketing.workflow`に対して評価します。イベントのauthorには認証済みprincipalを使用し、クライアントによる別actorの指定はできません。
+authenticated Remote role は `ticketing.workflow` に対して評価されます。event author は authenticated principal です。client は別 actor を impersonate できません。
 
-### コメント
+### Comment
 
 ```json
 {
@@ -107,7 +119,7 @@ POST /api/remote/v1/ticket-mutations
 }
 ```
 
-### 工数入力
+### Log time
 
 ```json
 {
@@ -121,24 +133,38 @@ POST /api/remote/v1/ticket-mutations
 }
 ```
 
-`record:ticket_event event:time_entry`と`record:time_entry`を同じチケット操作で追記します。`corrects`を使うことで、以前の工数レコードを訂正できます。
+`record:ticket_event event:time_entry` と `record:time_entry` は、ticket operation と一緒に append されます。correction は `corrects` で earlier time entry を参照できます。
 
-## 再試行と競合
+## Retry と conflict behavior
 
-コミットされた各イベントにはRemote operationと、正規化したリクエストのハッシュを保存します。同じ本文と同じ`transaction_id`を再送した場合、最初の応答を受信できていなくても、既存結果を`replayed: true`として返します。異なる本文で同じIDを再利用すると`REMOTE_TRANSACTION_REUSED`になります。
+committed event は Remote operation と normalized request hash を保存します。同じ `transaction_id` と同じ body を繰り返すと、caller が最初の response を受け取れなかった場合でも existing result を `replayed: true` として返します。同じ ID を別 body に再利用すると `REMOTE_TRANSACTION_REUSED` で失敗します。
 
-`If-Match`がない場合や古い場合は更新前に拒否します。対象ファイルの競合もper-file CASで拒否します。validation、workflow、history、custom-field、timestamp、time-entryの検証に失敗した場合、authoritativeなバイト列は変更されません。
+missing/stale `If-Match` values は mutation 前に失敗します。target-file race も per-file CAS で拒否されます。validation、workflow、history、custom-field、timestamp、time-entry failures は authoritative bytes を変更しません。
 
-## 現在の境界
+## Current boundaries
 
-最初の書き込み可能Remote契約は意図的に次へ限定しています。
+この最初の writable Remote contract は意図的に限定されています。
 
-- 設定された書き込み可能な`life.txt`は1ファイルだけ
-- チケット・イベント・工数・計画を複数ファイルに分けた更新には未対応
-- Remoteからのversion・sprint更新には未対応
-- チケット一括更新には未対応
-- 関連、watcher、添付、timer side effect、provider side effectの更新には未対応
-- MCP書き込みツールには未対応
-- 複数worker間のブラウザセッション共有や本番運用の安全性は未主張
+- configured writable `life.txt` source は exactly one
+- cross-file ticket/event/time/planning transactions はない
+- Remote version/sprint mutations はない
+- bulk ticket mutation はない
+- relation、watcher、attachment、timer-side-effect、provider-side-effect mutation はない
+- MCP write tools はない
+- multi-worker browser-session sharing や production readiness は主張しない
 
-書き込み前にcapability discoveryを利用してください。Protocol v2 capabilitiesの`mutation_policy.ticket_mutations_enabled`、対応operation一覧、残っている制限を確認できます。
+write 前には capability discovery を使ってください。protocol-v2 capabilities は `mutation_policy.ticket_mutations_enabled`、exact operation list、remaining limitations を publish します。
+
+## CLI と interactive client
+
+dependency-free CLI client は同じ endpoint を wrap します。
+
+```sh
+lifetxt remote ticket-create PROFILE WEB-42 "Fix remote login" --project web --dry-run
+lifetxt remote ticket-edit PROFILE WEB-42 --set priority=urgent --comment "Incident review"
+lifetxt remote ticket-transition PROFILE WEB-42 review --comment "Ready for review"
+lifetxt remote ticket-comment PROFILE WEB-42 "Root cause identified"
+lifetxt remote ticket-log-time PROFILE WEB-42 90m --activity development --date 2026-07-26
+```
+
+`lifetxt remote tui PROFILE --interactive` は simple text-mode remote ticket review/proposal loop です。visible tickets を list し、detail を表示し、write を submit する前に explicit `y/N` confirmation を求めます。curses-based local `lifetxt tui` app とは別です。

@@ -15,6 +15,10 @@ $ lifetxt today --mode morning --horizon 5
 $ lifetxt today --person self --json
 ```
 
+`--mode` changes presentation emphasis, not the underlying records. Use it for
+morning planning, midday re-checks, or evening review while keeping the same
+deterministic buckets available to JSON and MCP clients.
+
 Buckets:
 
 - **overdue** — tasks/deadlines with a `due:` before today
@@ -45,6 +49,8 @@ $ lifetxt area show work
 ```
 
 MCP: `get_areas`.
+Because areas are data-derived, renaming an area means changing the relevant
+`area:` details or project registry records; there is no hidden area database.
 
 ## Backlinks
 
@@ -58,6 +64,8 @@ $ lifetxt backlinks T-1 --json
 ```
 
 MCP: `get_backlinks`.
+Backlinks are read-only. They report incoming relationships so you can decide
+whether a change is safe before editing the source item.
 
 ## Projects over MCP
 

@@ -2194,3 +2194,55 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-workspace-scoped-notification-state
+    name: Workspace-scoped notification watch state default
+    summary: >-
+      Give each named workspace defined in one configuration file its own
+      default notification-watch dedup state file
+      (`.cache/lifetxt/notifications-<workspace>.json`) instead of silently
+      sharing one file, so switching `--workspace` actually separates
+      `lifetxt notify --watch`'s seen/dismissed state. Only the unconfigured
+      default is scoped; an explicitly configured `state_file` is left
+      exactly as written. `lifetxt path`'s diagnostic report is kept in
+      agreement with what `notify --watch` actually uses.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-workspace-scoped-notification-state-default
+    implementation_locations:
+      - lifetxt/workspace.py
+      - lifetxt/cli.py
+      - lifetxt/extra_core.py
+    public_interfaces:
+      - lifetxt.workspace.workspace_scoped_default_path
+      - lifetxt notify --watch
+      - lifetxt path
+    tests_or_evidence:
+      - tests/test_workspace_foundation.py WorkspaceScopedDefaultPathTests
+      - tests/test_extended_workspace_resolution.py test_path_command_reports_workspace_scoped_notification_state, test_path_command_legacy_config_reports_unscoped_default
+      - tests/test_lifetxt.py LifeTxtWebAppTests.test_notify_watch_default_state_file_is_workspace_scoped, test_notify_watch_without_state_file_or_workspace_does_not_persist
+      - python -m unittest tests.test_workspace_foundation tests.test_extended_workspace_resolution tests.test_lifetxt.LifeTxtWebAppTests tests.test_lifetxt.LifeTxtNotifyTests tests.test_extra_cli -> Ran 119 tests, OK (skipped=3)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check / ruff check on the touched files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/238
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      First implementation task of the workspace-notification-parity batch,
+      addressing todo.md's P1 "Configuration and Workspace Foundation" item
+      "make notification state/config derive from the selected workspace".
+      MCP's list_notifications/ack_message/snooze_message tools were
+      confirmed to never read or write this state file, so no MCP change was
+      needed. Web UI's `/api/config` reporting of the raw configured value,
+      the timer state file's identical but differently-named gap
+      (`timer.state_file`, resolved by `lifetxt.timer.timer_state_file`), and
+      a general per-workspace config-section override mechanism (no
+      precedent exists elsewhere in this codebase) are recorded as explicit
+      follow-up candidates, not silently folded into this narrowly-scoped
+      fix.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

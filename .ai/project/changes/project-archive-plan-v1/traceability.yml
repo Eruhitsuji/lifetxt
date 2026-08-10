@@ -5,7 +5,7 @@ links:
     capability_id: cap-project-archive-plan-v1
     epic: https://github.com/Eruhitsuji/lifetxt/issues/183
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/254
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
     tests_or_evidence:
       - tests/test_archive_plan_v1.py EmitPlanTests (9 tests)
       - tests/test_schema_extensions_v2.py bundle-completeness gate (updated to 77 documents)
@@ -17,7 +17,7 @@ links:
     capability_id: cap-project-archive-plan-v1
     epic: https://github.com/Eruhitsuji/lifetxt/issues/183
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/255
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
     tests_or_evidence:
       - tests/test_archive_plan_v1.py ApplyPlanTests (14 tests: mutual exclusion x3, verify-without-yes writes nothing, unmodified-plan matches equivalent --revision invocation, malformed JSON rejected, missing recovery evidence rejected, missing required field rejected, selection drift rejected, stale destination/source revision rejected, tampered plan rejected, unsupported version rejected, workspace/config drift rejected, reserved transaction ID reported)
       - "live: real lifetxt project archive --apply-plan against a disposable fixture -- verify-without---yes reported the reserved transaction ID and wrote nothing; --yes actually archived the item and matched the plan exactly"
@@ -31,7 +31,7 @@ links:
     capability_id: cap-project-archive-plan-v1
     epic: https://github.com/Eruhitsuji/lifetxt/issues/183
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/256
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
     tests_or_evidence:
       - docs/en/projects.md and docs/ja/projects.md new "Archiving" section, covering project archive basics (previously undocumented) plus the emit -> review -> apply workflow, a worked console example, a rejection-reason table, and rollback guidance referencing the existing backup/journal contract
     release_or_deployment: null

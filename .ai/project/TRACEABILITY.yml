@@ -3211,7 +3211,7 @@ traceability:
       capability_id: cap-project-archive-plan-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/183
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/254
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
       changed_files_or_scope:
         - Define archive-plan-v1 as a versioned, schema-validated JSON document and add project archive --dry-run --emit-plan PATH to write it
         - lifetxt/archive_plan_v1.py
@@ -3237,7 +3237,7 @@ traceability:
       capability_id: cap-project-archive-plan-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/183
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/255
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
       changed_files_or_scope:
         - Add project archive --apply-plan PLAN, re-verifying plan version, the plan_hash self-consistency check, source/destination revisions, workspace/config revision, re-derived selection, and recovery-evidence reachability before any write; requires --yes to apply
         - lifetxt/cli.py
@@ -3260,7 +3260,7 @@ traceability:
       capability_id: cap-project-archive-plan-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/183
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/256
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
       changed_files_or_scope:
         - Add English and Japanese operator documentation for the archive-plan-v1 workflow, including a rejection-reason table and rollback guidance; also documents the previously-undocumented project archive base command
         - docs/en/projects.md

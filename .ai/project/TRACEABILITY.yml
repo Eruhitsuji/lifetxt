@@ -3239,14 +3239,15 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/255
       pull_request: null
       changed_files_or_scope:
-        - Add project archive --apply-plan PLAN, re-verifying plan version, tamper hash, source/destination revisions, workspace/config revision, re-derived selection, and recovery-evidence reachability before any write; requires --yes to apply
+        - Add project archive --apply-plan PLAN, re-verifying plan version, the plan_hash self-consistency check, source/destination revisions, workspace/config revision, re-derived selection, and recovery-evidence reachability before any write; requires --yes to apply
         - lifetxt/cli.py
         - tests/test_archive_plan_v1.py
       tests_or_evidence:
         - tests/test_archive_plan_v1.py ApplyPlanTests (14 tests)
         - 'live: verify-without---yes reports the reserved transaction ID and writes nothing; --yes archives correctly, matching the equivalent --revision invocation'
-        - 'live: a hand-tampered plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged'
+        - 'live: a hand-edited plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged'
         - python -m unittest tests.test_archive_plan_v1 tests.test_schema_extensions_v2 tests.test_project_archive_safety_v3 tests.test_project_archive -> Ran 51 tests, OK
+        - '/security-review found and this fix corrected a misleading "tamper detection" claim; see design.md''s Security Review Finding'
       release_or_deployment: null
       notes: >-
         Does not modify lifetxt/archive_safety_v3.py's existing

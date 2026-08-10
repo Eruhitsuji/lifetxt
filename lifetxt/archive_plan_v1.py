@@ -15,10 +15,16 @@ full change package):
   *current* state before delegating to the existing, already-hardened
   ``command_archive`` write path. Any drift -- a changed file, a changed
   config, a changed candidate selection, an unsupported plan version, a
-  tampered plan file, or unreachable recovery evidence -- is refused loudly
-  before any write, mirroring the precede-side-effects discipline
-  ``archive_safety_v3.py`` already established for the ad-hoc ``--revision``
-  path.
+  plan file that fails its own self-consistency check, or unreachable
+  recovery evidence -- is refused loudly before any write, mirroring the
+  precede-side-effects discipline ``archive_safety_v3.py`` already
+  established for the ad-hoc ``--revision`` path.
+* ``plan_hash`` is a self-consistency checksum (SHA-256 over the plan's own
+  fields, stored in the same file), not a signature: it catches accidental
+  corruption or a hand-edited field, not a deliberate forgery. A plan file
+  must be kept under the same trust as any other local input to this
+  command -- see ``verify_plan_hash``'s docstring and ``decisions.md`` in
+  the change package.
 * This module intentionally does not build new transaction/journal
   pre-registration machinery: ``reserved_transaction_id`` is a plan-identity
   value for audit correlation, not a value threaded into the underlying
@@ -215,10 +221,18 @@ def verify_plan_version(plan):
 
 
 def verify_plan_hash(plan):
-    """Re-verify the plan's tamper-detection hash before any write.
+    """Re-verify the plan's self-consistency hash before any write.
 
-    Detects any post-emission edit to the plan file: the hash is
-    recomputed over every field except ``plan_hash`` itself and compared.
+    ``plan_hash`` is a SHA-256 over the plan's own fields, stored inside the
+    same file it covers. It has no external key, so it does *not*
+    authenticate the plan's origin or defend against a deliberate actor who
+    can edit the plan file (they can trivially recompute a matching hash
+    after editing any field). It catches accidental corruption or a
+    hand-edited field -- the same class of protection a checksum gives, not
+    a signature. Callers must not treat a passing ``verify_plan_hash`` as
+    proof the plan's `sources`/`destination` paths are safe to trust; that
+    guarantee instead comes from re-deriving those paths from the *current*
+    workspace resolution, not from anything recorded in the plan.
     """
     recorded = plan.get("plan_hash")
     fields = dict(plan)
@@ -226,9 +240,13 @@ def verify_plan_hash(plan):
     expected = compute_plan_hash(fields)
     if not isinstance(recorded, str) or recorded != expected:
         raise ValueError(
-            "Archive plan tamper check failed: the plan file has been "
-            "modified since it was emitted (plan_hash mismatch). Re-emit "
-            "the plan with --emit-plan and review it again before applying."
+            "Archive plan consistency check failed: the plan file does not "
+            "match its own recorded hash (plan_hash mismatch) -- it may "
+            "have been hand-edited or corrupted since it was emitted. This "
+            "check detects accidental modification, not a deliberately "
+            "forged plan; keep plan files under the same trust as any other "
+            "local input to this command. Re-emit the plan with --emit-plan "
+            "and review it again before applying."
         )
 
 

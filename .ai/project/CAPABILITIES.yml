@@ -2414,11 +2414,12 @@ capabilities:
   - id: cap-project-archive-plan-v1
     name: Reviewable pre-write project archive plan
     summary: >-
-      A machine-readable, tamper-detected, schema-valid archive-plan-v1
-      document (project archive --dry-run --emit-plan PATH) and a
-      verify-then-apply counterpart (project archive --apply-plan PLAN)
-      that re-checks every frozen fact -- plan version, tamper hash,
-      source/destination revisions, workspace/config revision, re-derived
+      A machine-readable, self-consistency-checked, schema-valid
+      archive-plan-v1 document (project archive --dry-run --emit-plan
+      PATH) and a verify-then-apply counterpart (project archive
+      --apply-plan PLAN) that re-checks every frozen fact -- plan version,
+      the plan_hash self-consistency check, source/destination revisions,
+      workspace/config revision, re-derived
       candidate selection, recovery-evidence reachability -- against
       current state before any write, requiring explicit --yes to
       actually apply. Follow-up to the #183 production zero-byte incident,
@@ -2458,7 +2459,8 @@ capabilities:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> full suite green after fixing four other test files'' hardcoded schema-bundle document counts (76 -> 77)'
       - 'live: real lifetxt project archive --dry-run --emit-plan against a disposable fixture wrote a schema-valid plan matching live SHA-256 revisions and dry-run candidates'
       - 'live: real lifetxt project archive --apply-plan without --yes verifies and writes nothing; with --yes archives correctly, matching the equivalent --revision invocation'
-      - 'live: a hand-tampered plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged in each case'
+      - 'live: a hand-edited plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged in each case'
+      - '/security-review (research + false-positive-filtering subagents): 1 finding confirmed at 8/10 -- plan_hash was described as "tamper detection" but is a self-referential checksum with no external key; fixed by renaming to "self-consistency check" throughout and removing misleading "share it" doc language. A second candidate (unscoped plan source/destination paths) was excluded at 2/10, confirmed pre-existing in archive_safety_v3.py, not a regression'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check / ruff check lifetxt tests scripts -> clean (pre-existing drift in 3 unrelated files confirmed present on main already)
     related_issues:
@@ -2484,10 +2486,19 @@ capabilities:
       the same selection), but for a workspace without ids.auto enabled,
       operators should review the accompanying dry-run text alongside the
       plan rather than selected_item_ids alone -- documented in
-      docs/en|ja/projects.md and decisions.md. #183 itself stays open: its
-      own root-cause investigation goals are separate and unresolved by
-      this change, which implements only the "reviewable plan workflow"
-      item todo.md's P1 Project and Portfolio Management section requests.
+      docs/en|ja/projects.md and decisions.md. Known limitation: plan_hash
+      is a self-consistency checksum (computed from and stored in the same
+      file it covers), not a signature -- it detects accidental corruption
+      or a hand-edit, not a deliberately forged plan; a plan file must be
+      kept under the same trust as any other local input to this command,
+      documented in docs/en|ja/projects.md and design.md's Security Review
+      Finding after this was found by /security-review during
+      implementation (original docs suggested a "share it" review/handoff
+      workflow that the mechanism does not actually protect). #183 itself
+      stays open: its own root-cause investigation goals are separate and
+      unresolved by this change, which implements only the "reviewable
+      plan workflow" item todo.md's P1 Project and Portfolio Management
+      section requests.
     replacement:
       replaces: []
       replaced_by: null

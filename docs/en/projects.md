@@ -109,7 +109,7 @@ from `selected_item_ids` itself.
 ```console
 $ lifetxt project archive web --dry-run --emit-plan plan.json
 Archive plan written to plan.json.
-$ cat plan.json   # review before applying -- share it, diff it, hold it
+$ cat plan.json   # review before applying
 $ lifetxt project archive web --apply-plan plan.json
 Archive plan verified against current state (reserved_transaction_id=...).
 No changes made.
@@ -125,11 +125,21 @@ state before writing anything, refusing loudly (with no files touched) when:
 | Rejection | Meaning | Recommended action |
 | --- | --- | --- |
 | unsupported `plan_version` | The plan was produced by a newer/older `lifetxt` than this one understands | Re-emit the plan with the matching version |
-| tamper check failed (`plan_hash` mismatch) | The plan file was edited after `--emit-plan` wrote it | Re-emit and review a fresh plan; never hand-edit a plan file |
+| consistency check failed (`plan_hash` mismatch) | The plan file does not match its own recorded hash -- it was hand-edited or corrupted since `--emit-plan` wrote it | Re-emit and review a fresh plan; never hand-edit a plan file |
 | stale source/destination revision | A scanned source or the archive destination changed since the plan was emitted | Re-run `--dry-run --emit-plan` to produce a current plan |
 | workspace/config drift | The active workspace's configuration changed since emission | Re-run `--dry-run --emit-plan` |
 | selection drift | The candidate set re-derived from current state no longer matches the plan's frozen item-ID list | Re-run `--dry-run --emit-plan`; investigate what changed the selection (edited status, new someday tag, etc.) |
 | recovery evidence unreachable | The transaction journal/backup directory is missing or not writable | Fix storage access before applying |
+
+**`plan_hash` is a self-consistency checksum, not a signature.** It is
+computed from, and stored inside, the plan file itself, so it detects
+accidental hand-edits or corruption -- it does not authenticate the plan's
+origin or protect against someone who deliberately edits the file (they can
+recompute a matching hash after any change). Treat a `plan.json` file with
+the same trust as any other local input to this command: keep it under your
+own control between `--emit-plan` and `--apply-plan`, the same way you would
+an unsigned config file, rather than passing it through an untrusted
+intermediary and relying on the consistency check to catch tampering.
 
 `--apply-plan` is mutually exclusive with `--revision`, explicit source paths,
 and `--dest` -- the plan already freezes all three. Applying without `--yes`

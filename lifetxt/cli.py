@@ -10775,7 +10775,9 @@ def _project_archive_apply_plan(args, config, apply_plan_path):
     # 1. plan_version supported.
     archive_plan_v1.verify_plan_version(plan)
 
-    # 2. Tamper detection: the plan file itself must be unmodified since emit.
+    # 2. Self-consistency: the plan file must match its own recorded hash
+    #    (catches corruption/hand-edits, not a deliberate forgery -- see
+    #    verify_plan_hash's docstring).
     archive_plan_v1.verify_plan_hash(plan)
 
     # 3. Current source/destination revisions must match the plan exactly.

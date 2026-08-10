@@ -106,7 +106,7 @@ dry-runのテキスト出力もあわせてレビューしてください。こ�
 ```console
 $ lifetxt project archive web --dry-run --emit-plan plan.json
 Archive plan written to plan.json.
-$ cat plan.json   # 適用前にレビュー・共有・diff・保管できる
+$ cat plan.json   # 適用前にレビューできる
 $ lifetxt project archive web --apply-plan plan.json
 Archive plan verified against current state (reserved_transaction_id=...).
 No changes made.
@@ -122,11 +122,20 @@ Archived 3 item(s) to ...
 | 拒否理由 | 意味 | 推奨される対応 |
 | --- | --- | --- |
 | 未対応の`plan_version` | このlifetxtが理解できないversionでplanが作成されている | 対応するversionでplanを再emitする |
-| tamper check失敗（`plan_hash`不一致） | `--emit-plan`が書き出した後にplanファイルが編集された | planを再emitしてレビューし直す。planファイルを手編集しない |
+| consistency check失敗（`plan_hash`不一致） | planファイルが自身の記録済みhashと一致しない──`--emit-plan`が書き出した後に手編集または破損した | planを再emitしてレビューし直す。planファイルを手編集しない |
 | sourceまたはdestinationのrevisionが古い | emit後にスキャン対象sourceまたはarchive先が変更された | `--dry-run --emit-plan`を再実行して最新のplanを作成する |
 | workspace/configのdrift | emit後にactive workspaceの設定が変更された | `--dry-run --emit-plan`を再実行する |
 | selectionのdrift | 現在の状態から再導出した候補集合が、planで固定されたitem IDリストと一致しない | `--dry-run --emit-plan`を再実行し、選択が変化した原因（status変更、someday tag追加など）を確認する |
 | recovery evidenceに到達不能 | transaction journal/backupディレクトリが存在しないか書き込み不可 | 適用前にstorageへのアクセスを修正する |
+
+**`plan_hash`は自己一貫性のためのchecksumであり、署名ではありません。**
+planファイル自身から計算されファイル内に保存されるため、意図しない手編集や
+破損は検知できますが、planの出自を認証したり、意図的にファイルを編集する者
+（変更後に一致するhashを再計算できる）を防ぐものではありません。
+`plan.json`は他のこのコマンドへのlocal入力と同様に信頼してください──
+信頼できない仲介者を経由させてconsistency checkが改ざんを検知することを
+期待するのではなく、`--emit-plan`から`--apply-plan`までの間、未署名の
+設定ファイルと同じように自分の管理下に置いてください。
 
 `--apply-plan`は`--revision`・明示的なsource path・`--dest`と併用できません
 （planがこれら3つをすべて固定しているため）。`--yes`なしで適用すると検証と

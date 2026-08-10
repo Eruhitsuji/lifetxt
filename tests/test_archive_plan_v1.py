@@ -382,7 +382,7 @@ class ApplyPlanTests(ArchivePlanV1TestCase):
         )
 
         self.assertEqual(1, code)
-        self.assertIn("tamper check failed", stderr)
+        self.assertIn("consistency check failed", stderr)
         self.assert_unchanged(before)
 
     def test_stale_source_revision_is_rejected_before_any_write(self):

@@ -19,9 +19,9 @@ change:
 
 scope:
   in_scope:
-    - Define archive-plan-v1 as a versioned, schema-validated JSON document (lifetxt/schema_extensions_v23.py, dist/schemas/archive-plan-v1.schema.json) recording resolved workspace/config identity, exact source/destination revisions, the frozen selected item-ID set, external-reference effects, archive parameters, writer/process provenance, a reserved transaction ID, and a tamper-detection hash.
+    - Define archive-plan-v1 as a versioned, schema-validated JSON document (lifetxt/schema_extensions_v23.py, dist/schemas/archive-plan-v1.schema.json) recording resolved workspace/config identity, exact source/destination revisions, the frozen selected item-ID set, external-reference effects, archive parameters, writer/process provenance, a reserved transaction ID, and a self-consistency checksum (plan_hash).
     - Add project archive --dry-run --emit-plan PATH to write the plan; purely additive, no change to existing dry-run text output when omitted.
-    - Add project archive --apply-plan PLAN, which re-verifies plan_version support, the tamper hash, current source/destination revisions, current workspace/config revision, the re-derived candidate selection, and recovery-evidence (transaction journal directory) reachability, all before any write, then delegates to the existing command_archive path using the plan's frozen parameters. Requires --yes to actually write; without it, only verifies and reports.
+    - Add project archive --apply-plan PLAN, which re-verifies plan_version support, the plan_hash self-consistency check, current source/destination revisions, current workspace/config revision, the re-derived candidate selection, and recovery-evidence (transaction journal directory) reachability, all before any write, then delegates to the existing command_archive path using the plan's frozen parameters. Requires --yes to actually write; without it, only verifies and reports.
     - --apply-plan is mutually exclusive with --revision, explicit source paths, and --dest.
     - English and Japanese operator documentation (docs/en/projects.md, docs/ja/projects.md) covering the emit -> review -> apply workflow, every rejection reason, and rollback guidance.
   out_of_scope:

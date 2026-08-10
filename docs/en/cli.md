@@ -205,7 +205,29 @@ python -m lifetxt find "stast" life.txt --fuzzy      # same tolerance across ite
 
 ## 2. Common Conventions
 
-### 2.0 External Config
+### 2.0 Global Options
+
+Three options are recognized before the subcommand name, for every command:
+
+| Option | Meaning |
+|---|---|
+| `--version`, `-V` | Print `lifetxt VERSION` and exit 0. Ignores every other argument |
+| `--config FILE` | External JSON config file (see below) |
+| `--workspace NAME` | Named workspace to resolve inputs and the write target from (see [config.md](config.md#workspaces)) |
+
+```sh
+python -m lifetxt --version
+python -m lifetxt --workspace work agenda
+python -m lifetxt --config .lifetxt.json --workspace work check
+```
+
+`--workspace` selects one of the `workspaces` entries in the loaded config,
+resolving its declared sources into the input-path/write-target set used by
+that command -- it replaces `paths`/`write_file`-only configuration for
+projects that define more than one named workspace. `lifetxt workspace list`,
+`show`, `files`, `validate`, and `doctor` inspect workspaces directly.
+
+#### External Config
 
 Any command may receive `--config FILE` before or after the subcommand. If it is
 omitted, the CLI checks `LIFETXT_CONFIG`, `.lifetxt.json`, and

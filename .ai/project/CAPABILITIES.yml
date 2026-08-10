@@ -1551,21 +1551,25 @@ capabilities:
   - id: cap-calendar-multiday-placement
     name: Calendar view multi-day record placement
     summary: >-
-      Place a record with more than one matched day (a multi-day all-day span
-      expressed as several `on:DATE` values, e.g. imported from Google
-      Calendar) in every one of those days' Web UI calendar cells instead of
-      only the earliest matched day. The server already returned every
-      matching day as its own `record.matches` entry; the frontend silently
-      read only the first.
+      Place a record with more than one in-window match (a multi-day all-day
+      span expressed as several `on:DATE` values, e.g. imported from Google
+      Calendar, or several repeat occurrences) on every matched
+      day/occurrence instead of only the first, across the Web UI Calendar,
+      Timeline, and Agenda views. The server already returned every matching
+      occurrence as its own `record.matches` entry; the frontend silently
+      read only the first for all three views.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-calendar-multiday-placement
+      - req-timeline-agenda-multi-occurrence-placement
     implementation_locations:
       - lifetxt/web_assets.py
       - tests/test_lifetxt.py
     public_interfaces:
       - Web UI Calendar view
+      - Web UI Timeline view
+      - Web UI Agenda view
     tests_or_evidence:
       - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_calendar_places_a_record_on_every_matched_day, confirmed via git stash to fail on the prior matches[0]-only code
       - 'manual: a real Node.js run of the extracted _calRecordDayPlacements/_calEntryHtml/loadCalendar source against 4 cases (3-day multi-day placement, single-occurrence, matches-less fallback, per-day HTML) -- all passed'
@@ -1583,10 +1587,14 @@ capabilities:
       - 'manual: a real Node.js run of the extracted, fixed _calRecordDayPlacements against that exact real API payload -> 10/10 placements (was 1 before the fix); single-day and occurrence_start-only-no-matches fallback cases re-verified unaffected'
       - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2110 tests, OK (skipped=13)'
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_timeline_places_a_record_on_every_in_window_match, test_timeline_row_shows_a_span_badge_for_multi_match_records, test_agenda_places_a_record_on_every_in_window_match
+      - 'manual: a real Node.js 20.20.0 run (via WSL2; the system Node was 12.22.9, which predates optional chaining) of the extracted, real _tlRecordEntries/_agendaRecordEntries/_agendaMatchWhen source against a 3-day on: span fixture and a 3-occurrence daily-habit fixture -- both Timeline and Agenda now produce 3 entries with correct per-match when/occurrence_index/matchIndex/matchTotal, versus 1 before the fix'
+      - '$env:MPLBACKEND="Agg"; python -m unittest discover -> Ran 2157 tests, OK (skipped=13)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/194
       - https://github.com/Eruhitsuji/lifetxt/issues/213
       - https://github.com/Eruhitsuji/lifetxt/issues/220
+      - https://github.com/Eruhitsuji/lifetxt/issues/229
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/195
       - https://github.com/Eruhitsuji/lifetxt/pull/214
@@ -1625,6 +1633,18 @@ capabilities:
       exhibits no equivalent defect" claim above: that check was about
       in-window record *selection*, not about how many rows one selected
       record with several in-window matches produces, which #229 is about.
+      #229 was resolved after confirming with the repository owner (via
+      AskUserQuestion) that Timeline and Agenda should mirror Calendar's
+      post-#220 behavior: one row per in-window match, not one row per
+      record with a badge count. record.matches was already the
+      authoritative, range-clipped per-occurrence list on the server side
+      for both views (confirmed by reading lifetxt/agenda.py's
+      item_time_matches/_add_match, which only ever appends matches
+      overlapping the requested range), so the fix is pure client-side
+      expansion mirroring _calRecordDayPlacements -- no Python change was
+      needed. Agenda's overdue badge intentionally still counts unique
+      records, not expanded occurrences; that distinction was out of #229's
+      scope.
     replacement:
       replaces: []
       replaced_by: null

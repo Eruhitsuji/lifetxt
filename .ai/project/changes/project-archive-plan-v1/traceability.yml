@@ -1,0 +1,51 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-archive-plan-v1-schema-and-emit
+    capability_id: cap-project-archive-plan-v1
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/254
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+    tests_or_evidence:
+      - tests/test_archive_plan_v1.py EmitPlanTests (9 tests)
+      - tests/test_schema_extensions_v2.py bundle-completeness gate (updated to 77 documents)
+      - "live: real lifetxt project archive web --dry-run --emit-plan plan.json against a disposable fixture wrote a schema-valid plan and made no other change; the plan's recorded source revision matched the live SHA-256 of the file"
+    release_or_deployment: null
+    status: implemented
+
+  - requirement_id: req-archive-apply-plan-verification-execution
+    capability_id: cap-project-archive-plan-v1
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/255
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+    tests_or_evidence:
+      - tests/test_archive_plan_v1.py ApplyPlanTests (14 tests: mutual exclusion x3, verify-without-yes writes nothing, unmodified-plan matches equivalent --revision invocation, malformed JSON rejected, missing recovery evidence rejected, missing required field rejected, selection drift rejected, stale destination/source revision rejected, tampered plan rejected, unsupported version rejected, workspace/config drift rejected, reserved transaction ID reported)
+      - "live: real lifetxt project archive --apply-plan against a disposable fixture -- verify-without---yes reported the reserved transaction ID and wrote nothing; --yes actually archived the item and matched the plan exactly"
+      - "live: a hand-edited plan.json (selected_item_ids edited) was rejected with the designed self-consistency-check error before any write; life.txt confirmed byte-for-byte unchanged"
+      - "/security-review found and this fix corrected a misleading 'tamper detection' claim (plan_hash is a self-consistency checksum, not a signature); see design.md's Security Review Finding and decisions.md"
+      - "live: a plan applied after its source file changed was rejected with the exact designed staleness error before any write; life.txt confirmed unchanged (retained the post-emission edit, not reverted or further modified)"
+    release_or_deployment: null
+    status: implemented
+
+  - requirement_id: req-archive-plan-v1-operator-docs
+    capability_id: cap-project-archive-plan-v1
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/256
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+    tests_or_evidence:
+      - docs/en/projects.md and docs/ja/projects.md new "Archiving" section, covering project archive basics (previously undocumented) plus the emit -> review -> apply workflow, a worked console example, a rejection-reason table, and rollback guidance referencing the existing backup/journal contract
+    release_or_deployment: null
+    status: implemented
+
+gaps:
+  - requirement_id: req-archive-plan-v1-schema-and-emit
+    description: >-
+      selected_item_ids is populated only from items carrying an explicit
+      id: (or configured id_key) detail; an id-less item is archived
+      correctly but is invisible in that field, so a workspace without
+      ids.auto enabled can emit a plan with an empty selected_item_ids
+      even though real candidates exist. The underlying safety property
+      (byte-identical revision implies identical selection) is unaffected;
+      this is a plan-readability/audit gap, not a write-safety gap.
+    tracked_by: null
+    severity: low

@@ -3207,6 +3207,75 @@ traceability:
         #52/PR #53, predating upstream.
       status: implemented
 
+    - requirement_id: req-archive-plan-v1-schema-and-emit
+      capability_id: cap-project-archive-plan-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/254
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+      changed_files_or_scope:
+        - Define archive-plan-v1 as a versioned, schema-validated JSON document and add project archive --dry-run --emit-plan PATH to write it
+        - lifetxt/archive_plan_v1.py
+        - lifetxt/schema_extensions_v23.py
+        - lifetxt/__init__.py
+        - lifetxt/cli.py
+        - dist/schemas/archive-plan-v1.schema.json
+        - tests/test_archive_plan_v1.py
+        - tests/test_schema_extensions_v2.py
+      tests_or_evidence:
+        - tests/test_archive_plan_v1.py EmitPlanTests (9 tests)
+        - tests/test_schema_extensions_v2.py bundle-completeness gate (77 documents)
+        - 'live: real lifetxt project archive web --dry-run --emit-plan plan.json against a disposable fixture wrote a schema-valid plan and made no other change; recorded revision matched the live SHA-256 of the file'
+      release_or_deployment: null
+      notes: >-
+        Full change package at .ai/project/changes/project-archive-plan-v1/,
+        including a recorded gap: selected_item_ids is empty for items
+        without an explicit id: detail (does not weaken the write-safety
+        guarantee; see the package's decisions.md).
+      status: implemented
+
+    - requirement_id: req-archive-apply-plan-verification-execution
+      capability_id: cap-project-archive-plan-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/255
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+      changed_files_or_scope:
+        - Add project archive --apply-plan PLAN, re-verifying plan version, the plan_hash self-consistency check, source/destination revisions, workspace/config revision, re-derived selection, and recovery-evidence reachability before any write; requires --yes to apply
+        - lifetxt/cli.py
+        - tests/test_archive_plan_v1.py
+      tests_or_evidence:
+        - tests/test_archive_plan_v1.py ApplyPlanTests (14 tests)
+        - 'live: verify-without---yes reports the reserved transaction ID and writes nothing; --yes archives correctly, matching the equivalent --revision invocation'
+        - 'live: a hand-edited plan and a plan applied after its source changed were both rejected before any write, with the source file confirmed byte-for-byte unchanged'
+        - python -m unittest tests.test_archive_plan_v1 tests.test_schema_extensions_v2 tests.test_project_archive_safety_v3 tests.test_project_archive -> Ran 51 tests, OK
+        - '/security-review found and this fix corrected a misleading "tamper detection" claim; see design.md''s Security Review Finding'
+      release_or_deployment: null
+      notes: >-
+        Does not modify lifetxt/archive_safety_v3.py's existing
+        --revision-flag path, which remains available and independently
+        tested. Full change package at
+        .ai/project/changes/project-archive-plan-v1/.
+      status: implemented
+
+    - requirement_id: req-archive-plan-v1-operator-docs
+      capability_id: cap-project-archive-plan-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/183
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/256
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/258
+      changed_files_or_scope:
+        - Add English and Japanese operator documentation for the archive-plan-v1 workflow, including a rejection-reason table and rollback guidance; also documents the previously-undocumented project archive base command
+        - docs/en/projects.md
+        - docs/ja/projects.md
+      tests_or_evidence:
+        - Manual review of both documents against the rejection paths exercised in tests/test_archive_plan_v1.py and the live verification above
+      release_or_deployment: null
+      notes: >-
+        project archive itself had no prior documentation in docs/en or
+        docs/ja before this change (confirmed by search); this change
+        documents both together rather than the plan workflow in isolation.
+        Full change package at
+        .ai/project/changes/project-archive-plan-v1/.
+      status: implemented
+
     - requirement_id: req-mcp-global-search-fuzzy
       capability_id: cap-fuzzy-search-first-slice
       epic: https://github.com/Eruhitsuji/lifetxt/issues/221

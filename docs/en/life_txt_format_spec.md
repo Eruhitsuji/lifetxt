@@ -421,6 +421,13 @@ daily/weekly `BYDAY`.
 |---|---|---|
 | `created` | Creation date or datetime | `created:2026-06-06` |
 | `updated` | Last updated date or datetime | `updated:2026-06-06T16:30` |
+| `record` | Marks an item as a specific first-party record kind layered on top of the base type/status grammar (for example `project`, `ticket`, `ticket_event`, `time_entry`, `milestone`, `risk`, `issue`, `decision`, `meeting`) | `record:ticket` |
+
+`record:` values are an open, growing set defined by their owning feature
+rather than by this specification; unknown values remain valid syntax like
+any other custom key. See [projects.md](projects.md) for `record:project`
+and related project records, and [tickets.md](tickets.md) for
+`record:ticket`, `record:ticket_event`, and `record:time_entry`.
 
 ## 8. Date And Time Values
 

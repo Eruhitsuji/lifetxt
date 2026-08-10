@@ -61,6 +61,16 @@ verification:
       commit: 36eb4d0c0ad1cbf62cbf1b942aeec0d1ef10390f
       executed_at: '2026-08-10'
       status: passed
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-archive-plan-v1-schema-and-emit
+        - req-archive-apply-plan-verification-execution
+        - req-archive-plan-v1-operator-docs
+      result: 'final confirming re-run after the /security-review fix commit: Ran 2203 tests in 387.979s, OK (skipped=4)'
+      commit: 18ac34a33128ae2a2dfff84684e9262695f852c0
+      executed_at: '2026-08-10'
+      status: passed
     - type: manual
       command: 'real lifetxt project archive web --dry-run --emit-plan plan.json against a disposable two-item fixture'
       requirement_ids:
@@ -120,7 +130,7 @@ verification:
         confirmed pre-existing in archive_safety_v3.py's --revision-flag
         path, not a regression introduced by this change. See design.md's
         "Security Review Finding" and decisions.md for full detail.
-      commit: 06b05bc8cc8c0af95bf965f3311315500a13d611
+      commit: 18ac34a
       executed_at: '2026-08-10'
       status: passed
     - type: manual

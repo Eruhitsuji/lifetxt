@@ -2990,6 +2990,54 @@ traceability:
         was not part of this issue's scope.
       status: implemented
 
+    - requirement_id: req-workspace-scoped-notification-state-default
+      capability_id: cap-workspace-scoped-notification-state
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/238
+      pull_request: null
+      changed_files_or_scope:
+        - Add workspace.workspace_scoped_default_path(), inserting the active workspace's name into a default (unconfigured) state-file path
+        - Apply it in command_notify's default-path branch (cli.py), only when neither --state-file nor notifications.state_file was given and a named workspace is active
+        - Apply the same resolution in command_path's notification_state diagnostic (extra_core.py) so `lifetxt path` reports what `lifetxt notify --watch` would actually use
+        - lifetxt/workspace.py
+        - lifetxt/cli.py
+        - lifetxt/extra_core.py
+        - tests/test_workspace_foundation.py
+        - tests/test_extended_workspace_resolution.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_workspace_foundation.py WorkspaceScopedDefaultPathTests (5 tests: unchanged for no-workspace/non-dict config, inserts workspace name before extension, different workspaces produce different paths, handles a path with no extension)
+        - tests/test_extended_workspace_resolution.py test_path_command_reports_workspace_scoped_notification_state, test_path_command_legacy_config_reports_unscoped_default
+        - tests/test_lifetxt.py LifeTxtWebAppTests.test_notify_watch_default_state_file_is_workspace_scoped, test_notify_watch_without_state_file_or_workspace_does_not_persist (real `lifetxt notify --watch --once` subprocess runs, confirming the actual file written on disk)
+        - python -m unittest tests.test_workspace_foundation tests.test_extended_workspace_resolution tests.test_lifetxt.LifeTxtWebAppTests tests.test_lifetxt.LifeTxtNotifyTests tests.test_extra_cli -> Ran 119 tests, OK (skipped=3)
+        - ruff format --check / ruff check on the touched files -> clean
+      release_or_deployment: >-
+        Behaviour change for release notes: `lifetxt notify --watch` without an
+        explicit --state-file, run against a configuration with a named
+        workspace active, now defaults to a workspace-scoped state file
+        (`.cache/lifetxt/notifications-<workspace>.json`) instead of the
+        unscoped default -- two workspaces sharing one configuration no longer
+        share notification dedup state.
+      notes: >-
+        Distilled directly from the issue and todo.md P1 "Configuration and
+        Workspace Foundation" item "make notification state/config derive from
+        the selected workspace" (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance, S-sized). Investigation
+        found `command_notify` applies no default at all today when
+        unconfigured (in-memory-only dedup for the lifetime of one --watch
+        process) -- that pre-existing gap is unchanged by this fix; only the
+        *workspace-scoping* of the default is new, and legacy/non-workspace
+        configurations are confirmed byte-for-byte unaffected
+        (test_notify_watch_without_state_file_or_workspace_does_not_persist).
+        MCP's list_notifications/ack_message/snooze_message tools were
+        confirmed to never read or write this state file (notifications are
+        computed fresh per call; ack/snooze mutate the item's own detail), so
+        MCP needed no change. Web UI's `/api/config` reporting of the raw
+        configured value, and the timer state file's identical but
+        differently-named gap, are recorded as explicit follow-up candidates
+        rather than folded into this narrowly-scoped fix.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

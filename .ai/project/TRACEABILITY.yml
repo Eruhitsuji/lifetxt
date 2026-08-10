@@ -2952,6 +2952,44 @@ traceability:
         was exercised exactly as recorded, only the directory name differed.
       status: implemented
 
+    - requirement_id: req-timeline-agenda-multi-occurrence-placement
+      capability_id: cap-calendar-multiday-placement
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/229
+      pull_request: null
+      changed_files_or_scope:
+        - Expand Timeline into one row per in-window match (_tlRecordEntries), sourcing the occurrence badge from each row's own match and adding an X/Y span badge when a record has more than one in-window match
+        - Expand Agenda into one row per in-window match (_agendaRecordEntries), applying the existing agenda_limit/"view all" count to the expanded entry list rather than the pre-expansion record count
+        - lifetxt/web_assets.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_timeline_places_a_record_on_every_in_window_match, test_timeline_row_shows_a_span_badge_for_multi_match_records, test_agenda_places_a_record_on_every_in_window_match
+        - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests -> Ran 21 tests, OK
+        - 'live: real Node.js 20.20.0 run (via WSL2, since the system Node was 12.22.9 and predates optional chaining) of the extracted, real _tlRecordEntries/_agendaRecordEntries/_agendaMatchWhen source against a 3-day on: span fixture and a 3-occurrence daily-habit fixture -- both Timeline and Agenda now produce 3 entries with correct per-match when/occurrence_index/matchIndex/matchTotal, versus 1 before the fix; single-day and no-matches-array fallback cases confirmed unaffected'
+        - 'live: TestClient GET /api/agenda against a real 3-day on: fixture confirms the real payload shape (one record, matches carrying all 3 real day entries) matches the Node fixtures used above'
+        - '$env:MPLBACKEND="Agg"; python -m unittest discover -> Ran 2157 tests, OK (skipped=13)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in the same 4 unrelated files already present on main, not introduced by this change; the one new file this change touched, tests/test_lifetxt.py, is formatted)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Extends cap-calendar-multiday-placement (Calendar's #194/#220 fix) to
+        Timeline and Agenda, resolving the design question #229 itself raised:
+        confirmed with the repository owner via AskUserQuestion that both views
+        should show one row per matched occurrence within the visible window,
+        mirroring Calendar's post-#220 behavior, rather than keeping one row per
+        record with only a badge count. record.matches is already the
+        authoritative, range-clipped per-occurrence list on the server side
+        (lifetxt/agenda.py's item_time_matches/_add_match only ever appends
+        matches overlapping [range_start, range_end]), so no Python change was
+        needed -- both fixes are pure client-side expansion of the existing
+        contract, matching #220's own finding that agenda_records() never
+        needed to change. Agenda's overdue badge (updateAgendaOverdueBadge)
+        intentionally still counts unique records, not expanded occurrences,
+        since "N records overdue" is the established semantic and changing it
+        was not part of this issue's scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

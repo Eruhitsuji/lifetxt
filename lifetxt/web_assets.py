@@ -4584,6 +4584,30 @@ HTML_PAGE = r"""<!doctype html>
       selectedItem = null;
       await refreshAll();
     }
+    function _agendaMatchWhen(match, fallbackWhen) {
+      if (!match) return fallbackWhen || "";
+      if (match.end !== undefined && match.end !== "") return `${match.start}..${match.end}`;
+      if (match.end === "") return `${match.start}..`;
+      return match.start || fallbackWhen || "";
+    }
+    // Expand a record into one entry per in-window match, mirroring
+    // _tlRecordEntries/_calRecordDayPlacements: record.matches is the
+    // authoritative per-occurrence list (already clipped server-side to the
+    // requested range), so a multi-day on: span or a repeat habit with
+    // several occurrences inside the visible range shows one row per
+    // occurrence instead of collapsing to matches[0]. A record with no
+    // matches array falls back to a single entry, same as before.
+    function _agendaRecordEntries(record) {
+      const matches = record.matches && record.matches.length ? record.matches : [null];
+      const total = matches.length;
+      return matches.map((match, i) => ({
+        record,
+        match,
+        when: _agendaMatchWhen(match, record.when),
+        matchIndex: i + 1,
+        matchTotal: total,
+      }));
+    }
     async function loadAgenda() {
       const params = query();
       const agendaParams = new URLSearchParams();
@@ -4600,35 +4624,48 @@ HTML_PAGE = r"""<!doctype html>
       _syncAgendaBlockedBtn(blockedMode);
       const data = await api(`/api/agenda?${agendaParams}`);
       const node = document.getElementById("agenda");
-      node.innerHTML = data.records.length ? "" : guidedEmptyState("📅", "Nothing scheduled in this range",
+      const entries = (data.records || [])
+        .flatMap(record => _agendaRecordEntries(record))
+        .sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
+      node.innerHTML = entries.length ? "" : guidedEmptyState("📅", "Nothing scheduled in this range",
         "Agenda shows records with <code>due</code>, <code>do</code>, <code>from</code>/<code>to</code>, or <code>on</code> dates. Add a dated record or widen the range.",
         [["Today", "agendaToday"], ["7 days", "agendaWeek"], ["New record", "newItem"], ["Help", "help"]]);
       const agendaLimitRaw = firstParam(query(), ["agenda_limit"], "8");
       const maxAgenda = Number(agendaLimitRaw);
       const unlimitedAgenda = agendaLimitRaw === "0" || maxAgenda === 0;
       const limit = unlimitedAgenda ? Infinity : (Number.isFinite(maxAgenda) && maxAgenda > 0 ? maxAgenda : 8);
-      const shown = unlimitedAgenda ? data.records : data.records.slice(0, limit);
-      for (const record of shown) {
+      const shown = unlimitedAgenda ? entries : entries.slice(0, limit);
+      for (const entry of shown) {
+        const record = entry.record;
+        const match = entry.match;
         const dueCls = agendaDueSoonClass(record);
         const borderStyle = dueCls === "overdue" ? "border-left:3px solid #c0392b;" : dueCls === "due-soon" ? "border-left:3px solid #e67e22;" : "";
-        const occ = record.occurrence_start || record.repeat_rule
-          ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
+        const occIndex = match && match.occurrence_index !== undefined ? match.occurrence_index : record.occurrence_index;
+        const repeatRule = match && match.repeat !== undefined ? match.repeat : record.repeat_rule;
+        const occ = (occIndex !== undefined || repeatRule)
+          ? `<span class="occurrence-badge" title="${escapeHtml(repeatRule || entry.when || "")}">occ #${escapeHtml(String(occIndex || 1))}</span>`
+          : "";
+        // A record with more than one in-window match gets a small X/Y
+        // badge, matching Timeline's cal-entry-span-style treatment, so the
+        // separate rows read as one record rather than duplicates.
+        const spanBadge = entry.matchTotal > 1
+          ? `<span class="occurrence-badge" title="Occurrence ${entry.matchIndex} of ${entry.matchTotal} in this range">${entry.matchIndex}/${entry.matchTotal}</span>`
           : "";
         const blockedBadge = record.blocked
           ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
           : "";
         const source = record.source_id ? `<div class="meta">source: ${escapeHtml(record.source_id)}</div>` : "";
-        const countdown = agendaCountdownLabel(record);
+        const countdown = agendaCountdownLabel({status: record.status, occurrence_start: entry.when});
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(record.when)}</span>${occ}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(entry.when)}</span>${occ}${spanBadge}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
         );
       }
-      if (!unlimitedAgenda && data.records.length > limit) {
-        const remaining = data.records.length - limit;
+      if (!unlimitedAgenda && entries.length > limit) {
+        const remaining = entries.length - limit;
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="padding:.3rem .45rem"><a href="#" class="drawer-link" onclick="event.preventDefault();setAgendaLimit(0)">View all ${data.records.length} (${remaining} more)</a></div>`
+          `<div style="padding:.3rem .45rem"><a href="#" class="drawer-link" onclick="event.preventDefault();setAgendaLimit(0)">View all ${entries.length} (${remaining} more)</a></div>`
         );
       }
       updateAgendaOverdueBadge(data.records);
@@ -4817,13 +4854,12 @@ HTML_PAGE = r"""<!doctype html>
       if (text.length > 10) return text;
       return text + (endOfDay ? "T23:59" : "T00:00");
     }
-    function _tlDisplayInfo(record, rangeStart, rangeEnd) {
-      const primary = (record.matches || [])[0] || {};
-      const originalStart = primary.start || record.when || "";
-      const originalEnd = primary.end || "";
+    function _tlDisplayInfo(match, fallbackWhen, rangeStart, rangeEnd) {
+      const originalStart = match?.start || fallbackWhen || "";
+      const originalEnd = match?.end || "";
       const rangeStartIso = _tlComparable(rangeStart, false);
       const rangeEndIso = _tlComparable(rangeEnd, true);
-      let when = originalStart || record.when || "";
+      let when = originalStart || fallbackWhen || "";
       let clipped = false;
       if (originalStart && rangeStartIso && _tlComparable(originalStart, false) < rangeStartIso) {
         when = rangeStartIso;
@@ -4833,6 +4869,24 @@ HTML_PAGE = r"""<!doctype html>
         when = rangeEndIso;
       }
       return {when, originalStart, originalEnd, clipped};
+    }
+    // Expand a record into one entry per in-window match, mirroring
+    // _calRecordDayPlacements: record.matches is the authoritative
+    // per-occurrence list (already clipped server-side to the requested
+    // range by agenda.py's item_time_matches), so a multi-day on: span or a
+    // repeat habit with several occurrences inside the visible range shows
+    // one row per occurrence instead of collapsing to matches[0]. A record
+    // with no matches array falls back to a single entry, same as before.
+    function _tlRecordEntries(record, rangeStart, rangeEnd) {
+      const matches = record.matches && record.matches.length ? record.matches : [null];
+      const total = matches.length;
+      return matches.map((match, i) => ({
+        record,
+        match,
+        display: _tlDisplayInfo(match, record.occurrence_start || record.when, rangeStart, rangeEnd),
+        matchIndex: i + 1,
+        matchTotal: total,
+      }));
     }
     function _tlNowLine() {
       const now = new Date();
@@ -4883,7 +4937,7 @@ HTML_PAGE = r"""<!doctype html>
         `<button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>` +
         `<button type="button" class="secondary" onclick="newItem()">New record</button></div></div>`;
     }
-    function _tlRow(record, nowIso, displayInfo) {
+    function _tlRow(record, nowIso, displayInfo, match, matchIndex, matchTotal) {
       const when = String(displayInfo?.when || record.when || "");
       const timed = when.length > 10;
       const time = timed ? when.slice(11, 16) : "all-day";
@@ -4892,11 +4946,24 @@ HTML_PAGE = r"""<!doctype html>
       const blockedBadge = record.blocked
         ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
         : "";
-      const occ = record.occurrence_start || record.repeat_rule
-        ? `<span class="occurrence-badge" title="${escapeHtml(record.repeat_rule || record.occurrence_start || "")}">occ #${escapeHtml(String(record.occurrence_index || 1))}</span>`
+      // Occurrence badge is sourced from this row's own match when one is
+      // available (each repeat occurrence in matches carries its own
+      // occurrence_index/repeat), falling back to the record-level
+      // convenience fields for a record with no matches array.
+      const occIndex = match && match.occurrence_index !== undefined ? match.occurrence_index : record.occurrence_index;
+      const repeatRule = match && match.repeat !== undefined ? match.repeat : record.repeat_rule;
+      const occ = (occIndex !== undefined || repeatRule)
+        ? `<span class="occurrence-badge" title="${escapeHtml(repeatRule || displayInfo?.originalStart || "")}">occ #${escapeHtml(String(occIndex || 1))}</span>`
         : "";
       const ongoing = displayInfo?.clipped
         ? `<span class="occurrence-badge" title="Started ${escapeHtml(displayInfo.originalStart || record.when || "")}${displayInfo.originalEnd ? ` / until ${escapeHtml(displayInfo.originalEnd)}` : ""}">ongoing</span>`
+        : "";
+      // A record with more than one match inside the visible range (a
+      // multi-day on: span, or several repeat occurrences) gets a small
+      // X/Y badge so the separate rows read as one record, not several
+      // unrelated same-title entries -- matches Calendar's cal-entry-span.
+      const spanBadge = matchTotal > 1
+        ? `<span class="occurrence-badge" title="Occurrence ${matchIndex} of ${matchTotal} in this range">${matchIndex}/${matchTotal}</span>`
         : "";
       const proj = record.details?.project?.[0]
         ? `<span class="pill">${escapeHtml(String(record.details.project[0]))}</span>` : "";
@@ -4909,7 +4976,7 @@ HTML_PAGE = r"""<!doctype html>
         `<div class="tl-card-meta">` +
         `<span class="type-badge type-${escapeHtml(type)}" style="font-size:.66rem;padding:.05rem .35rem;min-height:auto">${escapeHtml(type)}</span>` +
         (record.status ? `<span>${escapeHtml(record.status)}</span>` : "") +
-        `${proj}${blockedBadge}${occ}${ongoing}</div></div></div>`;
+        `${proj}${blockedBadge}${occ}${ongoing}${spanBadge}</div></div></div>`;
     }
     async function loadTimeline() {
       const node = document.getElementById("timeline");
@@ -4942,12 +5009,11 @@ HTML_PAGE = r"""<!doctype html>
         node.innerHTML = `<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
         return;
       }
-      const records = (data.records || []).map(record => ({
-        record,
-        display: _tlDisplayInfo(record, from, to),
-      })).sort((a, b) =>
-        String(a.display.when || a.record.when || "").localeCompare(String(b.display.when || b.record.when || ""))
-      );
+      const records = (data.records || [])
+        .flatMap(record => _tlRecordEntries(record, from, to))
+        .sort((a, b) =>
+          String(a.display.when || a.record.when || "").localeCompare(String(b.display.when || b.record.when || ""))
+        );
       if (!records.length) {
         node.innerHTML = _timelineEmptyState(timelineRange, label, from, to);
         return;
@@ -4980,7 +5046,7 @@ HTML_PAGE = r"""<!doctype html>
           html += _tlNowLine();
           nowInserted = true;
         }
-        html += _tlRow(record, nowIso, entry.display);
+        html += _tlRow(record, nowIso, entry.display, entry.match, entry.matchIndex, entry.matchTotal);
         if (!multiDay) lastDay = day;
       }
       if (!nowInserted && lastDay === today) html += _tlNowLine();

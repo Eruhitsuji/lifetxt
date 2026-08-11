@@ -69,7 +69,7 @@ server として実装する方針が適しています。
 ## CLI からの編集: `lifetxt edit`
 
 TUI の `/edit` コマンドや `fzf --action edit`
-（[`cli.md`](../en/cli.md) の 13.1 `tui` と 13.2 `fzf` を参照）とは別に、
+（[`cli.md`](./cli.md) の 13.1 `tui` と 13.2 `fzf` を参照）とは別に、
 lifetxt には 1 item の source file を外部 editor で開くための独立した
 command があります。
 
@@ -159,7 +159,7 @@ The editor and source changed the same line range (1:2).
 
 どちらの呼び出し元も `EDITOR`、次に `VISUAL`、次に config file の `editor`
 key を順に探します（正確な解決順序、`PATH` 経由の実行ファイル解決、editor
-ごとの行番号引数の書式は [`cli.md`](../en/cli.md) の「Choosing an editor」
+ごとの行番号引数の書式は [`cli.md`](./cli.md) の「Choosing an editor」
 節を参照してください）。**どれも設定されていない場合** の挙動は異なります。
 
 - `fzf --action edit` と TUI の `/edit`（`lifetxt.fzf_helper.resolve_editor`）

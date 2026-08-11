@@ -26,7 +26,7 @@
 
 ## Topic index
 
-`docs/en/` 配下の Markdown files に対応する docs index です。
+`docs/ja/` 配下の Markdown files に対応する docs index です。
 
 | Topic | Document |
 | --- | --- |

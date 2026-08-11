@@ -725,7 +725,7 @@ traceability:
       capability_id: cap-durable-transaction-recovery
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/305
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/336
       changed_files_or_scope:
         - Define stable `os-private-v1` recovery-evidence storage profile
         - Add profile report and enforcement helpers for OS private permissions with explicit unsupported encryption refusal

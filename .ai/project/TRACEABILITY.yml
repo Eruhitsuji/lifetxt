@@ -3763,6 +3763,37 @@ traceability:
         proposal and source revision preconditions.
       status: implemented
 
+    - requirement_id: req-delegated-mutation-lifecycle-retention-sandbox-policy
+      capability_id: cap-delegated-mutation-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/295
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Add lifecycle timeout, cancellation, retention, and cleanup metadata to delegated proposals
+        - Add private-temporary-copy sandbox metadata and validation
+        - Reject unsupported lifecycle or sandbox claims
+        - Cover timeout/no-write, cleanup, retained proposal restart, and invalid sandbox metadata
+        - lifetxt/delegated_mutation.py
+        - lifetxt/schema_extensions_v13.py
+        - dist/schemas/delegated-mutation-proposal-v1.schema.json
+        - tests/test_delegated_mutation_v6.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_delegated_mutation_v6 and delegated CLI/schema smoke -> Ran 17 tests, OK
+        - ruff check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - ruff format --check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because delegated process lifecycle and sandbox claims
+        bound whether external adapter writes can be stable-supported. The
+        implementation reuses the existing private temporary copy and timeout
+        mechanics, makes them explicit in the proposal contract, and verifies
+        timeout/cancellation paths do not mutate the authoritative file.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

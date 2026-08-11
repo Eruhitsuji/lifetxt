@@ -3633,7 +3633,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/285
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/330
       changed_files_or_scope:
         - Add the stable-release support matrix to .ai/project/STABLE_RELEASE.yml
         - Classify runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries

@@ -675,3 +675,11 @@ lifetxt serve life.txt --port 8080
 **1024 未満の port。** macOS や Linux では管理者権限が必要です。
 1024 より大きい port を使ってください。
 
+## 最近の Web 互換メモ
+
+この節は英語版の追加内容に合わせた要約です。
+
+- Web Agenda は CLI の agenda と同じ日付範囲、timezone、繰り返し展開の考え方を使います。複数日にまたがる item や RRULE の occurrence は、表示範囲に含まれる日だけに展開されます。
+- Dashboard、Items、Team、Timeline の各表示は、同じ parse 結果と link graph を共有します。`duplicate_of:`、`replaced_by:`、`depends_on:`、`blocks:` の関係は Link API と GUI の両方で確認できます。
+- 古い Calendar 連携の説明は、実装済み機能として扱いません。現在の Web 画面で確認できるのは、life.txt ファイルから読み込んだ item、通知、リンク、補完、MCP/REST API です。
+- `/api/items`、`/api/agenda`、`/api/links` は UI と同じ workspace 解決を使います。設定や入力ファイルを切り替えた場合は、Web UI の表示と言語設定も同じ対象を見ていることを確認します。

@@ -226,3 +226,12 @@ The release gate validates all generated and published schemas, all representati
 ## 11. Remaining boundaries
 
 This implementation does not complete real power-loss fault injection, every legacy CLI/TUI/fzf write migration, every attachment handler, compound work-session capability enforcement, or real terminal/browser/SMTP/platform verification. Those items remain explicit P0 work.
+
+## Recovery decision order
+
+When a non-terminal journal is found, inspect before choosing an action:
+
+1. `inspect` to confirm recorded before/after revisions and target state.
+2. `resume` only when finishing the recorded commit is still the intended outcome.
+3. `compensate` when the recorded before revisions are the desired recovery point.
+4. `abandon` only after evidence has been backed up and a human operator has accepted that no automated action should continue.

@@ -222,3 +222,13 @@ repository ですが、fork では upstream ではなく自分自身の reposito
 - `personal.lifetxt.json`
 - `work.lifetxt.json`
 - `project-multi-file.lifetxt.json`
+
+## 最近の設定互換メモ
+
+この節は英語版の追加内容に合わせた要約です。
+
+- 設定値は、コマンドライン引数、環境変数、明示された設定ファイル、workspace 内の設定、既定値の順に解決します。`config show` と `config explain` は、値だけでなく由来も確認するために使います。
+- `config init` は最小構成の作成に使います。既存ファイルを壊さないことを優先し、上書きが必要な場合は dry-run や差分確認を先に行います。
+- `config set`、`config unset`、`config migrate` は revision を確認してから書き込みます。`--expected-revision` が合わない場合や workspace 境界を越える場合は拒否されます。
+- `config.write.audit_log` を設定すると、設定書き込みの成功、拒否、関連 revision を JSONL で記録できます。秘密情報の値は記録対象にしません。
+- timezone、release、remote、archive の設定は、安全な workspace 解決に依存します。設定変更後は `lifetxt check`、必要に応じて `doctor --check-update` を実行して、実行環境と文書化された前提が一致していることを確認します。

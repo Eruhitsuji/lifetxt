@@ -1,30 +1,34 @@
-# 安全なプロセス境界・ディレクトリアタッチメント・トランザクション管理
+# Safe process boundaries, directory attachments, and transaction administration
 
-このリリースでは、revision-aware write基盤を外部エディタ、ディレクトリ／パッケージアタッチメント、versioned transaction policy、プロセス強制終了ドリル、server-authoritative clock skewへ拡張します。
+この文書は revision-aware write foundation を external editors、directory/package attachments、versioned transaction policy administration、abrupt-process drills、server-authoritative clock-skew reporting に広げた範囲を説明します。
 
-## 安全な外部エディタ
+## Safe external editor sessions
 
-`lifetxt edit`は、authoritative fileをエディタへ直接渡しません。一時コピーを編集し、編集後のlife.txtを検証してからSHA-256 revision付きで反映します。
+`lifetxt edit` は authoritative file を直接 editor に渡しません。temporary copy を作り、その copy を editor で開き、edited life.txt text を validate し、SHA-256 precondition 付きで replacement を apply します。
 
 ```bash
 lifetxt edit life.txt --editor "code --wait" --show-diff
 ```
 
-- `--review-only`: unified diffのみを返して書き込みません。
-- `--reconcile`: 編集中にsourceが変化した場合、重複しない行範囲だけを保守的にthree-way reconcileします。
-- `--keep-temp`: 手動復旧用に一時コピーを残します。
-- `--dry-run`: 従来どおりeditor commandだけを表示します。
+useful modes:
 
-TUIとfzf/pecoのeditor handoffも同じ契約を使用します。
+- `--review-only`: full unified diff を返し write しない
+- `--reconcile`: editor 中に source が変わった場合、conservative line-based three-way reconciliation を試す。overlap は reject
+- `--keep-temp`: recovery 用に temporary copy を残す
+- `--dry-run`: editor command を print し launch しない
 
-## ディレクトリ／パッケージアタッチメント
+TUI と fzf/peco editor handoff も同じ temporary-copy/revision-check contract を使います。
+
+## Directory and package attachments
+
+directory reference と deterministic ZIP package が supported です。
 
 ```bash
 lifetxt attachment directory-reference life.txt \
   --id T-1 \
   --file ./attachments/specs \
-  --item-revision LIFE_SHA256 \
-  --require-revisions
+  --require-revisions \
+  --item-revision LIFE_SHA256
 ```
 
 ```bash
@@ -37,28 +41,13 @@ lifetxt attachment package life.txt \
   --require-revisions
 ```
 
-パッケージはpath順、固定ZIP metadata、fileごとのSHA-256、`lifetxt-package-manifest.json`を使用して決定的に生成されます。file数、合計size、1 file size、ignore、MIME allow/deny policyをcommit前に検証します。symlinkと非regular fileは既定で拒否します。
+packages は sorted paths、fixed ZIP metadata、per-file SHA-256 values、embedded `lifetxt-package-manifest.json` を使います。limits は commit 前に enforce され、symlink と non-regular entries は default reject です。
 
-外部変更後のhash参照更新：
+remote/open operations は OS command plan を返します。server は opener を execute しません。
 
-```bash
-lifetxt attachment reconcile life.txt \
-  --id T-1 \
-  --file ./attachments/report.pdf \
-  --recorded-revision PREVIOUS_SHA256 \
-  --item-revision LIFE_SHA256 \
-  --require-revisions
-```
+## Transaction administration
 
-OS open commandの検証・計画：
-
-```bash
-lifetxt attachment open life.txt --file ./attachments/report.pdf
-```
-
-既定ではcommand planのみを返します。`--execute`でplatform openerを起動します。
-
-## Versioned transaction policy
+`transactions.policy_file` で standalone versioned policy file を supplement できます。
 
 ```bash
 lifetxt safety transactions policy-write \
@@ -68,89 +57,16 @@ lifetxt safety transactions policy-write \
   --pretty
 ```
 
-`--expected-revision`でpolicy fileのstrict CASを行えます。古いunversioned policyは明示的にmigrationします。
+administrative operations は bounded, revision-safe audit records を append します。policy writes には operator identity を含めてください。
 
-```bash
-lifetxt safety transactions policy-migrate \
-  --journal-dir .lifetxt-transactions \
-  --operator alice \
-  --expected-revision POLICY_SHA256 \
-  --pretty
-```
+## Abrupt-process drills and clock skew
 
-新しい未知versionは自動downgradeせず拒否します。
+`lifetxt safety transactions drill` は child Python process を起動し、selected durable boundary で `os._exit` します。これは abrupt interpreter termination の evidence であり、power loss や storage-controller ordering の evidence ではありません。
 
-Startup相当のpreflight：
+`GET /api/time` と MCP `get_clock_status` は server-authoritative UTC time と client skew report を返します。naive timestamps without UTC offset は reject されます。
 
-```bash
-lifetxt safety transactions preflight \
-  --journal-dir .lifetxt-transactions \
-  --pretty
-```
+## Boundary checklist
 
-`transactions.preflight_on_startup: true`にすると、writable Web/MCPはversion、容量、owner、permissionが安全でない場合に起動を拒否します。
-
-管理auditとarchive rotation：
-
-```bash
-lifetxt safety transactions audit \
-  --journal-dir .lifetxt-transactions \
-  --operator alice \
-  --event policy-reviewed \
-  --details-json '{"ticket":"OPS-42"}' \
-  --pretty
-```
-
-```bash
-lifetxt safety transactions rotate-archives \
-  --archive-dir transaction-archive \
-  --max-archives 100 \
-  --max-archive-bytes 1073741824 \
-  --force \
-  --operator alice \
-  --pretty
-```
-
-## プロセス強制終了ドリル
-
-```bash
-lifetxt safety transactions drill \
-  --point after_journal_publish \
-  --recovery resume \
-  --pretty
-```
-
-```bash
-lifetxt safety transactions drill \
-  --point after_target_commit \
-  --recovery compensate \
-  --pretty
-```
-
-child processを`os._exit`で終了し、journalをinspectしてresume／compensateします。これはinterpreter強制終了の検証であり、電源断、Windows replace、antivirus、cloud sync、network filesystemの保証ではありません。
-
-## Remote clock skew
-
-`GET /api/time`とMCP `get_clock_status`はserver-authoritative UTC timeを返します。client timestampを渡すとskewを測定します。
-
-```json
-{
-  "clock": {
-    "skew_warning_seconds": 30,
-    "skew_reject_seconds": 300
-  }
-}
-```
-
-UTC offsetがないnaive timestampは拒否します。結果は`ok`、`warning`、`reject`、`not_measured`で、remote write可否も明示します。
-
-## 公開schema
-
-- `editor-session-v1.schema.json`
-- `directory-package-v1.schema.json`
-- `attachment-open-v1.schema.json`
-- `transaction-policy-admin-v1.schema.json`
-- `transaction-preflight-v1.schema.json`
-- `clock-skew-v1.schema.json`
-
-実platform検証とremote write enforcementは、引き続き独立したrelease gateです。
+- external editors は temporary copies を操作します。authoritative file は validation と revision checks の後だけ replace されます。
+- directory package creation は review/retry できる deterministic operation ですが、package sources は configured root に confinement されている必要があります。
+- transaction policy writes は administrative operations であり、audit records に operator identity を含めるべきです。

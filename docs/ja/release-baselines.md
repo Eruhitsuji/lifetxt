@@ -1,56 +1,60 @@
-# Review済みrelease baseline
+# Reviewed release baselines
 
-Release baselineは、既存のtechnical debtを明示しながら、それが黙って増えることを防ぎます。包括的な無視設定ではありません。
+Release baselines は existing technical debt を明示し、その debt が silent に増えることを防ぎます。blanket suppressions ではありません。
 
 ## Translation baseline
 
-`config/release/web-ja-translation-baseline-v1.json`には、baseline version 1の時点で`UI_STRINGS.ja`に存在しないことが確認されたWeb chromeの英語文字列を記録します。
+`config/release/web-ja-translation-baseline-v1.json` は、baseline version 1 時点で `UI_STRINGS.ja` に存在しないことが review 済みの English Web chrome strings を記録します。
 
-Release manifestは次の4種類を個別に報告します。
+release manifest は次の 4 lists を report します。
 
-- `all_missing`: 現在未翻訳のchrome文字列すべて
-- `known_missing`: review済みbaselineと一致する現在の未翻訳文字列
-- `new_missing`: baselineにない新規未翻訳文字列
-- `resolved_baseline_entries`: すでに未翻訳ではなくなったbaseline項目
+- `all_missing`: 現在 untranslated の chrome strings すべて
+- `known_missing`: reviewed baseline と一致する current missing strings
+- `new_missing`: baseline にない untranslated strings
+- `resolved_baseline_entries`: もう missing ではなくなった baseline entries
 
-CIを失敗させるのは`new_missing`だけです。`known_missing`も常に可視化され、時間とともに減らす必要があります。翻訳を追加した場合、同じpull requestで対応するresolved entryをbaselineから削除してください。
+CI を fail させるのは `new_missing` だけです。`known_missing` は visible debt として残り、時間とともに減らす必要があります。entry を translate した場合は、同じ pull request で対応する resolved entry を baseline から削除してください。
 
-通常のUI変更では`UI_STRINGS.ja`を更新してください。翻訳する代わりに新しい文字列をbaselineへ追加してはいけません。追加を認めるのは、migrationまたはdesign上の理由が文書化されている場合だけです。
-
-Record contentはbaselineの対象ではありません。`data-no-i18n`と既知のrecord-content classはscannerから除外され、`excluded_record_nodes`として別に数えられます。
+normal UI work では `UI_STRINGS.ja` を更新します。documented migration または design reason なしに、新しい string を translate せず baseline に追加してはいけません。record content は baseline material ではありません。`data-no-i18n` と known record-content classes は scanner から excluded され、`excluded_record_nodes` として別に count されます。
 
 ## Direct-write baseline
 
-`config/release/write-route-baseline-v1.json`には、AST auditが検出した既存direct writeのreview済み`(path, call)` pairを記録します。
+`config/release/write-route-baseline-v1.json` は、AST audit が検出した pre-existing direct writes の reviewed `(path, call)` pairs を記録します。
 
-各allowanceには理由があります。現在の分類は次のとおりです。
+各 allowance は reason を持ちます。current categories は次の通りです。
 
-- authoritativeな`life.txt` dataではないundo/backup/configuration cache出力
-- generated JSON Schema公開出力
-- durable transaction journalを公開する`os.replace`
+- authoritative `life.txt` data ではない undo/backup/configuration cache output
+- generated JSON Schema publication output
+- `os.replace` による durable transaction-journal publication
 
-Quick capture、journal append、digest/template append、fzf/peco action、archive、tag merge、TUI edit、attachment、compound work sessionはsemantic CASまたはjournal-backed transactionへ移行済みで、direct-write allowanceは不要です。
+quick capture、journal append、digest/template append、fzf/peco actions、archive、tag merge、TUI edits、attachments、compound work sessions は semantic CAS または journal-backed transactions に移行済みで、direct-write allowances は不要です。
 
-Baselineにはline numberを含めません。そのため通常のrefactoringでは誤検出せず、別moduleへのdirect write追加や新しいcall shapeはgateを失敗させます。
+baseline は line numbers を含みません。refactoring だけでは false failure にならず、別 module への direct write 追加や新しい call shape は gate を fail させます。
 
-Baseline更新には次のすべてが必要です。
+baseline update には次が必要です。
 
-1. targetをauthoritative data、operational state、configuration、cache、export、generated outputのいずれかに分類する
-2. shared mutation pathをまだ使えない理由を説明する
-3. technical debtの場合はroadmap項目を追加する
-4. authoritative data pathがconflict-awareであることを証明するtestを維持または追加する
+1. target を authoritative data、operational state、configuration、cache、export、generated output のどれかに classify する。
+2. shared mutation path をまだ使えない理由を説明する。
+3. allowance が technical debt なら roadmap item を追加する。
+4. authoritative data path が conflict-aware であることを証明する test を保持または追加する。
 
 ## Golden corpus baseline
 
-`tests/golden/policy-v1.json`はminimum corpus、required field、required case name、corpus versionを定義します。難しいcompatibility caseが誤って削除されることを防ぎます。
+`tests/golden/policy-v1.json` は minimum corpus、required fields、required case names、corpus version を定義します。難しい compatibility cases が accidental に削除されることを防ぎます。
 
-Canonical outputを変更する場合はcorpus version更新と明示的migration noteが必要です。testを通すだけの目的でexpected outputを書き換えることはpolicy違反です。
+canonical output change には corpus version bump と explicit migration note が必要です。test を通すためだけに expected output を書き換えることは policy violation です。
 
-## Evidenceの確認
+## Reviewing evidence
 
-GitHub Actionsは次を含む`release-policy-evidence`をuploadします。
+GitHub Actions は `release-policy-evidence` artifact を upload します。
 
 - `release-gate.log`
 - `.cache/release-policy-manifest.json`
 
-Jobが成功した場合もmanifestを確認してください。成功結果にもknown debtや、baselineから削除すべきresolved entryが含まれる場合があります。
+job が成功した場合でも manifest を review してください。successful result に known debt や、policy files から削除すべき newly resolved baseline entries が含まれることがあります。
+
+## Baseline review checklist
+
+- baseline entry は scanner が見つけた事実だけでなく、その exception が review 済みである理由を説明する。
+- ordinary UI text は translation baseline ではなく `UI_STRINGS.ja` に追加する。
+- resolved baseline entry は、それを解決した change と同じ change で削除する。

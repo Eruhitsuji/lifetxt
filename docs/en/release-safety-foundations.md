@@ -153,3 +153,9 @@ lifetxt capabilities --read-only --authentication session --pretty
 ```
 
 The versioned response reports format, canonical, and schema versions; supported operations; authentication mode; read-only state; writable targets; optional features; and SHA-256 revision-precondition support. This is the base contract for future remote clients.
+
+## Safety boundary checklist
+
+- Do not mutate a file that declares an unsupported `#! format_version:` until a migration path is chosen.
+- Use `format canon --write` only with the inspected revision; an intervening edit should be a conflict.
+- Treat `lifetxt capabilities` as the advertised contract for clients rather than inferring write safety from individual commands.

@@ -183,3 +183,9 @@ The schema bundle adds:
 - `clock-skew-v1.schema.json`
 
 Real platform verification and remote write enforcement remain separate release gates.
+
+## Boundary checklist
+
+- External editors operate on temporary copies; the authoritative file is replaced only after validation and revision checks.
+- Directory package creation is deterministic enough to review and retry, but package sources must still be confined to the configured root.
+- Transaction policy writes are administrative operations and should carry an operator identity in audit records.

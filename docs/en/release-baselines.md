@@ -54,3 +54,9 @@ GitHub Actions uploads `release-policy-evidence`, containing:
 - `.cache/release-policy-manifest.json`.
 
 Review the manifest even when the job succeeds. A successful result can still contain known debt or newly resolved baseline entries that should be removed from policy files.
+
+## Baseline review checklist
+
+- A baseline entry must describe why the exception is reviewed, not merely that a scanner found it.
+- New ordinary UI text belongs in `UI_STRINGS.ja`, not in the translation baseline.
+- A resolved baseline entry should be removed in the same change that resolves it, so the manifest does not keep reporting stale debt.

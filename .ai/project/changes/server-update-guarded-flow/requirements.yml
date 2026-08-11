@@ -1,0 +1,38 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-update-guarded-core-flow
+    kind: ADDED
+    statement: >-
+      lifetxt provides a guarded production update command for a
+      systemd-managed install: dry-run by default, and with --yes,
+      backs up configured production files, stops only currently-active
+      configured services, fast-forwards the install's git checkout to
+      the already-resolved exact target commit, reinstalls the package,
+      verifies production data was not touched by the code update, runs
+      configurable integrity checks, restarts the services it stopped,
+      and checks a configured health endpoint -- reporting a distinct,
+      non-raising status for every partial-success outcome.
+    acceptance_criteria:
+      - "Without --yes, server-update fetches and reports the pending update (current/target commit, ref, commit preview) without touching anything."
+      - "With --yes, server-update refuses when the working tree is dirty, HEAD is detached, the branch does not match a configured branch, or another server-update is already running (lock held)."
+      - "Only services already systemctl is-active before the run are stopped; a service the operator left stopped is never started by this command."
+      - "The code update uses exactly one fetch per run; the same resolved target commit used for the dry-run preview is the one merged, never a second unreviewed fetch."
+      - "A failure before the code update (git merge) restores whatever service state existed before the attempt and releases the lock."
+      - "A failure after the code update but before validation completes (hash verification, integrity checks) leaves services stopped rather than restarting unvalidated code, and the report names the exact backup directory and pre-update commit."
+      - "Backed-up files are re-hashed after the code update; any change is treated as a fail-loud error (production data must never be touched by a code-only update)."
+      - "A validated, applied update whose service restart or health check itself fails reports a distinct status (validated_restart_incomplete / validated_health_check_failed) rather than silently claiming full success, and exits non-zero."
+      - "The deployment config (--server-config PATH) is a separate JSON file from the application's own .lifetxt.json/global --config."
+      - "server_update.py reuses lifetxt.cli's existing git helpers (_run_git_for_update, _lifetxt_install_root, _reject_option_like_git_arg, _git_commit_summary, _github_latest_release_or_tag) rather than reimplementing fetch/fast-forward logic."
+    constraints:
+      - Must not run any git operation beyond fetch and merge --ff-only (no reset, rebase, or force-push), matching lifetxt update's existing safety rails.
+      - Must never run pip install or any other mutating step before the exact target commit has been resolved and, on --yes, merged.
+      - Must treat --server-config file contents (paths, service names, python executable) as operator-trusted input, per this project's established rule that CLI flags/config files are trusted values.
+      - Must not silently start a service that was not active before the run (found during independent review; see decisions.md).
+      - Must not create backup files or directories through a path that could follow a pre-planted symlink at a predictable, second-granularity-timestamped destination (found during /security-review; see decisions.md).
+    owner: Eruhitsuji
+
+open_questions:
+  - question: Should server-update gain a pre-mutation risk-classification and approval gate for high-impact changes before it is used for routine unattended production updates?
+    status: open
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/273

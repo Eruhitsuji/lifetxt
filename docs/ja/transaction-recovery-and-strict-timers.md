@@ -1,158 +1,50 @@
-# Transaction RecoveryとStrict Timer Write
+# Transaction Recovery and Strict Timer Writes
 
-この文書では、補償付きmulti-target transactionの上に追加したdurable recovery layerを説明します。Transaction journal、明示的recovery action、timerのstrict revision、revision metricsの移設、deterministic clock、diagnostic、schema、support bundleを対象とします。
+この文書は compensated multi-target transaction contract の上に追加された durable recovery layer を説明します。transaction journals、explicit recovery actions、strict timer revisions、revision-metrics relocation、deterministic clocks、diagnostics、schemas、support bundles を扱います。
 
-## 1. Durable journalが必要な理由
+## Durable journal の目的
 
-`lifetxt.multi_target`は、すべてのtargetをlockし、expected revisionを検証し、replacementをすべてstageしてから決定順でcommitします。同一process内で後続writeが失敗した場合は、commit済みtargetを補償します。しかしprocess終了、停電、OS障害がcommit途中で発生する可能性は残ります。
+`lifetxt.multi_target` は every target を lock し、expected revisions を validate し、replacements を stage し、deterministic order で commit し、同じ process 内の後続 write が fail した場合は committed targets を compensate します。それでも process termination、power loss、OS failure は sequence を interrupt できます。
 
-Transaction journalは、推測せずに中断状態を調査・復旧できる正確な証拠を保存します。無関係な複数fileに対してportableなfilesystem transactionを提供すると主張するものではありません。
+transaction journal は、その interruption を guessing なしに inspect/recover するための exact evidence を記録します。unrelated files が portable filesystem transaction を共有するという主張ではありません。
 
-## 2. Journalの場所と内容
+## Journal contents
 
-Default journal directoryは、書き込み対象life.txtと同じdirectoryの`.lifetxt-transactions`です。Configまたは環境変数で変更できます。
+default journal directory は writable life.txt の横の `.lifetxt-transactions` です。config または `LIFETXT_TRANSACTION_JOURNAL_DIR` で override できます。
 
-```json
-{
-  "transactions": {
-    "journal_dir": ".cache/lifetxt/transactions"
-  }
-}
-```
+各 transaction directory には `journal.json` と exact before/after binary artifacts が入ります。journal は transaction ID、operation、targets、expected/before/after revisions、artifact hashes、commit/compensation progress、timestamps、state、last error を記録します。
 
-```text
-LIFETXT_TRANSACTION_JOURNAL_DIR
-```
+terminal states は `committed`、`compensated`、`abandoned` です。recovery states には `prepared`、`committing`、`compensating`、`recovery_required`、`resume_failed`、`compensation_failed` があります。
 
-各transactionには固有directoryが作られ、`journal.json`とbefore/afterの正確なbinary artifactが保存されます。Versioned journalには次が含まれます。
-
-- Transaction IDとoperation名
-- Target pathとkind
-- Expected、before、afterのSHA-256 revision
-- Targetが以前存在したか、commit後に削除されるか
-- Artifact名とhash
-- Commitとcompensationの進行状況
-- Created、updated、terminal timestamp
-- Terminalまたはrecovery-required state
-- 最後に観測したerror
-
-Journalとartifactは、file fsync、atomic replace、parent directory fsyncの順で保存されます。
-
-## 3. Journal state
-
-Terminal stateは次のとおりです。
-
-- `committed`: 全targetが記録済みafter revisionと一致
-- `compensated`: 全targetが記録済みbefore revisionへ復元済み
-- `abandoned`: Journalとartifactの完全なbackup後に明示的に放棄
-
-Recovery stateには`prepared`、`committing`、`compensating`、`recovery_required`、`resume_failed`、`compensation_failed`があります。
-
-Targetの現在hashが記録済みbefore/afterのどちらにも一致しない場合、recovery actionは上書きを拒否します。この場合は手動確認が必要です。
-
-## 4. Transactionの確認と復旧
-
-Journal一覧を表示します。
+## Inspect and recover
 
 ```bash
 lifetxt safety transactions list --pretty
-```
-
-Directoryを明示する場合：
-
-```bash
-lifetxt safety transactions list \
-  --journal-dir .cache/lifetxt/transactions \
-  --pretty
-```
-
-Transaction IDまたはjournal pathで確認します。
-
-```bash
 lifetxt safety transactions inspect --journal TX_ID --pretty
-```
-
-残りのcommitを再開します。
-
-```bash
 lifetxt safety transactions resume --journal TX_ID --pretty
-```
-
-全targetをbefore revisionへ戻します。
-
-```bash
 lifetxt safety transactions compensate --journal TX_ID --pretty
+lifetxt safety transactions abandon --journal TX_ID --backup-dir recovery-backups --pretty
+lifetxt safety transactions export --journal TX_ID --output transaction-evidence.json --pretty
 ```
 
-Journalとartifactの完全なbackupを作成して放棄します。
+retention cleanup は old terminal journals だけを remove できます。non-terminal journals は cleanup されません。
 
-```bash
-lifetxt safety transactions abandon \
-  --journal TX_ID \
-  --backup-dir recovery-backups \
-  --pretty
-```
+## Doctor and support bundles
 
-Binary artifactを含めず、metadataとhashをexportします。
-
-```bash
-lifetxt safety transactions export \
-  --journal TX_ID \
-  --output transaction-evidence.json \
-  --pretty
-```
-
-古いterminal journalは明示的なforce付きで削除します。
-
-```bash
-lifetxt safety transactions cleanup \
-  --older-than-days 30 \
-  --force \
-  --pretty
-```
-
-Non-terminal journalはretention cleanupで削除されません。
-
-## 5. Doctorとstable diagnostic
-
-`doctor --workspace-safety`はtransaction directoryを検出し、journal stateを一覧化します。Recovery-required transactionはhard failureとして扱われます。
+`doctor --workspace-safety` は transaction directory を discover し、journal states を list し、recovery-required transaction を hard failure として扱います。
 
 ```bash
 lifetxt doctor --workspace-safety life.txt \
   --journal-dir .cache/lifetxt/transactions \
-  --pretty
-```
-
-追加したstable diagnosticは次のとおりです。
-
-| Code | 内容 |
-|---|---|
-| `F123` | Transaction journalが読めない、または構造的に破損 |
-| `F124` | Commitが中断され、明示的recoveryが必要 |
-| `F125` | Compensationが中断または失敗 |
-| `F126` | Targetが記録済みbefore/afterの両方からdiverge |
-
-`--cleanup-transactions`、`--transaction-retention-days`、`--force`により、古いterminal journalをdoctorから削除できます。
-
-## 6. Redacted support bundle
-
-Support bundleにはversion、hash、diagnostic、policy output、recovery metadataを含めます。一方、life.txt本文、transaction artifact、credential、cookie、token、raw absolute pathは除外します。
-
-```bash
-lifetxt doctor --workspace-safety life.txt \
   --support-bundle lifetxt-support.json \
   --pretty
 ```
 
-Absolute pathはdeterministicなpath pseudonymへ置換されます。運用metadataから環境特性を推測できる可能性はあるため、共有前に内容を確認してください。
+support bundle は versions、hashes、diagnostics、policy output、recovery metadata を含みますが、authored life.txt content、transaction artifacts、credentials、tokens、raw absolute paths は除外します。
 
-## 7. Timerのstrict revision contract
+## Strict timer revision contract
 
-Timer operationはtimer JSON stateとlife.txtの両方に触れる場合があります。Startとstopでは2つのrevisionを使い、pause、resume、cancelではtimer-state revisionを使います。
-
-Timer statusから現在revisionを取得し、mutation requestに渡します。Required modeではrevision不足をwrite前に拒否します。Stale revisionはconflictになり、成功responseには両revisionとtransaction evidenceが含まれます。
-
-CLI例：
+timer operations は timer JSON state と life.txt の両方を触る場合があります。start/stop は `item_revision` と `timer_revision` の 2 revisions を使います。pause/resume/cancel は timer-state revision を使います。
 
 ```bash
 lifetxt timer start life.txt --id T-1 \
@@ -162,65 +54,19 @@ lifetxt timer start life.txt --id T-1 \
 lifetxt timer stop life.txt \
   --item-revision ITEM_SHA256 \
   --timer-revision TIMER_SHA256
-
-lifetxt timer pause --timer-revision TIMER_SHA256
 ```
 
-Web request例：
+Web と MCP timer tools も同じ fields を expose します。status response が revision-discovery step です。
 
-```json
-{
-  "action": "start",
-  "item_id": "T-1",
-  "item_revision": "ITEM_SHA256",
-  "timer_revision": "<missing>"
-}
-```
+## Recovery decision order
 
-MCP timer toolも同じ`item_revision`と`timer_revision`を公開します。Web/MCPのstatus responseがrevision discovery stepです。
+non-terminal journal が見つかった場合は、action を選ぶ前に inspect します。
 
-すべてのcompound work-sessionとattachment pathが同じpublic contractへ移行するまでは、capability matrixを保守的な状態に維持します。
+1. `inspect` で recorded before/after revisions と target state を確認する。
+2. recorded commit を完了することがまだ意図した結果である場合だけ `resume` する。
+3. recorded before revisions が望ましい recovery point である場合は `compensate` する。
+4. evidence を backup し、human operator が automated action を続けない判断を受け入れた後だけ `abandon` する。
 
-## 8. Revision metricsの移設とevidence
+## Remaining boundaries
 
-Local metrics pathを含めず、revision migration evidenceをexportできます。
-
-```bash
-lifetxt safety revisions life.txt \
-  --export-evidence revision-migration-evidence.json \
-  --pretty
-```
-
-正確なexpected revisionを指定してmetrics storeを移設します。
-
-```bash
-lifetxt safety revisions life.txt \
-  --metrics-path old/revision-metrics.json \
-  --relocate new/revision-metrics.json \
-  --expected-hash METRICS_SHA256 \
-  --pretty
-```
-
-Copyではなくmoveする場合は`--delete-source`を追加します。Source削除とdestination作成はjournal対象となり、server instance ID、observation開始、counter、zero-use windowをserver restartやpackage upgrade後も維持します。
-
-## 9. Deterministic timezone clock
-
-Timezone policyはcontext-localな`now`、`today`、`utcnow`とdeterministicな`clock_context`を提供します。主要なagenda、review、notification、timer、completion、journal、invoice、standup、Web、MCP、CLI境界は、それぞれhost clockを直接参照せず共通clockを使います。
-
-これにより、同じfrozen instantを異なる設定timezoneで解釈し、midnight、DST fold/gap、非整数時間offsetをdeterministicにtestできます。
-
-## 10. 公開schemaとrelease evidence
-
-Draft 2020-12 bundleは21文書です。追加した5 contractは次のとおりです。
-
-- `transaction-journal-v1.schema.json`
-- `transaction-recovery-v1.schema.json`
-- `timer-operation-v1.schema.json`
-- `support-bundle-v1.schema.json`
-- `revision-migration-evidence-v1.schema.json`
-
-Release gateはgenerated/published schema、representative instance、duplicate `$id`拒否、network-freeな`referencing.Registry`による全local `$ref`を検証します。
-
-## 11. 残る境界
-
-実際の停電fault injection、すべてのlegacy CLI/TUI/fzf write、すべてのattachment handler、compound work-session capability enforcement、実terminal/browser/SMTP/platform検証は未完です。これらは明示的なP0として残します。
+real power-loss fault injection、すべての legacy write migration、すべての attachment handler、compound work-session capability enforcement、real terminal/browser/SMTP/platform verification は残る P0 work です。

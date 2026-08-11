@@ -7,12 +7,12 @@
 チケットのレコードモデル、relation key（`depends_on`／`blocks`／`parent`／
 `related`／`duplicate_of`／`replaced_by`）、型付きカスタムフィールド、および
 不正なticketやcyclicなticketがこのレポートに到達する前に検出する
-`ticket validate`／`check`診断についてはdocs/ja/tickets.mdを参照してください。
+`ticket validate`／`check`診断については[tickets.md](./tickets.md)を参照してください。
 ticketのrelation keyに適用されるreference／cycle診断（`W215`〜`W229`）は
-docs/ja/cli.mdの`links`セクション（3.2）を参照してください。done／canceledな
+[cli.md](./cli.md)の`links`セクション（3.2）を参照してください。done／canceledな
 ticket（およびその`record:ticket_event`／`record:time_entry`履歴）を
 `lifetxt project archive`がこのレポートの入力集合から除外する方法については
-docs/ja/projects.mdのArchivingセクションを参照してください。
+[projects.md](./projects.md)のArchivingセクションを参照してください。
 
 ## メインCLIコマンド
 

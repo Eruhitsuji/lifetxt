@@ -11,7 +11,8 @@ the local-first patterns that keep your data yours.
 - [4. Write Safety](#4-write-safety)
 - [5. Prompts](#5-prompts)
 - [6. Read-Only And Privacy](#6-read-only-and-privacy)
-- [7. Without MCP](#7-without-mcp)
+- [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
+- [8. Without MCP](#8-without-mcp)
 
 ---
 
@@ -137,6 +138,10 @@ client can decide what needs confirmation.
 | `get_file_state` | Paths, write target, read-only flag, content hashes |
 | `check_files` | Verify `file:`/`dir:` attachments: existence, type, hash, portability |
 | `timer_status` | The running timer, if any |
+| `remote_list_profiles` | Local Remote Safe Mode profile names and URLs, never stored secrets |
+| `remote_test_connection` | Connectivity and capability negotiation for one remote profile |
+| `remote_list_resources` | The read-only resources published by a remote lifetxt server |
+| `remote_get_resource` | One permission-filtered remote resource such as `next`, `tickets`, `agenda`, or `search` |
 
 ### Writing
 
@@ -307,7 +312,40 @@ literal tokens.
 
 ---
 
-## 7. Without MCP
+## 7. Remote Safe Mode Client Tools
+
+The MCP server can also act as a read-only client for another lifetxt server
+running Remote Safe Mode. These tools reuse the same profile store as the CLI
+`lifetxt remote profile-*` commands:
+
+```json
+{"name": "remote_list_profiles", "arguments": {}}
+```
+
+returns profile names and URLs only. Secrets are not returned. The other remote
+tools take one of those profile names:
+
+```json
+{"name": "remote_test_connection", "arguments": {"profile": "home"}}
+{"name": "remote_list_resources", "arguments": {"profile": "home"}}
+{"name": "remote_get_resource", "arguments": {"profile": "home", "resource": "next", "params": {"project": "web"}}}
+```
+
+`remote_get_resource` passes query parameters through to the server resource,
+so a model can ask for the same filtered slices available to the CLI remote
+client. The server still enforces the remote principal's permissions; the MCP
+tool does not bypass Remote Safe Mode. These four tools are read-only from the
+MCP client's point of view: they may perform an HTTP request to the configured
+remote URL, but they do not mutate the remote `life.txt`.
+
+Use them when the AI client is local but the authoritative workspace is on a
+different machine. For writes, use the CLI remote write flow with an explicit
+proposal and confirmation; MCP exposes only the Remote Safe Mode read-client
+slice.
+
+---
+
+## 8. Without MCP
 
 MCP is not required. The CLI composes well with any model that can run commands:
 

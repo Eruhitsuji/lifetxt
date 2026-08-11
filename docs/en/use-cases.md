@@ -73,6 +73,10 @@ python -m lifetxt timer stop
 python -m lifetxt stats life.txt projects/ --project thesis
 ```
 
+Use `|` continuation lines for long research logs. Avoid placing a continuation
+block after repeated inline `body:` values, because that shape is intentionally
+ambiguous. See [round-trip and body rules](./roundtrip-and-body.md).
+
 ## Small teams sharing through Git
 
 Use `assignee`, `owner`, `team`, and stable IDs. Install the validation hook:
@@ -128,6 +132,11 @@ python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file 
 ```
 
 Start with read tools and require review before mutations. With multiple inputs, always fix the writable target with `--write-file`.
+If the authoritative workspace is on another machine running Remote Safe Mode,
+an AI/MCP client can read it through `remote_list_profiles`,
+`remote_test_connection`, `remote_list_resources`, and `remote_get_resource`.
+Remote writes are intentionally left to the CLI remote write flow with proposal
+and confirmation.
 
 ## Maintenance
 

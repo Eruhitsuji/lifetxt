@@ -170,3 +170,10 @@ Both surfaces delegate to `review.resolve_named_review_range` rather than derivi
 The operation matrix deliberately does not claim full revision enforcement for timer and attachment operations. Those workflows can modify more than the writable life.txt file, such as timer JSON state or attachment storage. They need a multi-target transaction design before they can make the same atomicity guarantee.
 
 Real-terminal TUI/fzf verification, SMTP delivery tests, browser-engine accessibility smoke tests, timezone application across all date boundaries, release-gate CI, and removal of the legacy Web fallback remain separate roadmap items.
+
+## Client implementation checklist
+
+- Discover the writable revision before the first write.
+- Send `If-Match` or `expected_file_hash` on every supported mutation.
+- Treat HTTP 428 as a client bug: fetch the revision and retry only after rebuilding the intended change.
+- Treat HTTP 409 as a real conflict: reload and ask the user or caller to choose the next edit; do not automatically merge.

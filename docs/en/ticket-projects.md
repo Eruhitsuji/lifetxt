@@ -4,12 +4,12 @@
 
 The report contract is published as `schemas/ticket-project-report-v1.schema.json` and advertised through capability discovery as `ticket_project_report`.
 
-See docs/en/tickets.md for the ticket record model, relation keys
+See [tickets.md](./tickets.md) for the ticket record model, relation keys
 (`depends_on`/`blocks`/`parent`/`related`/`duplicate_of`/`replaced_by`), typed
 custom fields, and the `ticket validate`/`check` diagnostics that catch a
-malformed or cyclic ticket before it reaches this report. See docs/en/cli.md's
+malformed or cyclic ticket before it reaches this report. See [cli.md](./cli.md)'s
 `links` section (3.2) for the reference/cycle diagnostics (`W215`-`W229`) that
-apply to ticket relation keys. See docs/en/projects.md's Archiving section for
+apply to ticket relation keys. See [projects.md](./projects.md)'s Archiving section for
 how `lifetxt project archive` moves a done/canceled ticket (and its
 `record:ticket_event`/`record:time_entry` history) out of this report's input
 set.

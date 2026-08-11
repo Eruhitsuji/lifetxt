@@ -148,3 +148,7 @@ X-Lifetxt-Legacy-Revision-Fallback: used
 ```
 
 Revision-aware writes do not increment the counter. Strict sessions still reject a missing revision with HTTP 428.
+
+## Local evidence checklist
+
+Before reporting a release-policy result, keep the command output and manifest together. The manifest fingerprint is only useful when reviewers can see which root, examples, policy versions, and optional dependency state produced it.

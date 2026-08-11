@@ -756,7 +756,7 @@ traceability:
       capability_id: cap-durable-transaction-recovery
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/306
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/337
       changed_files_or_scope:
         - Extend transaction administration authorization to support authenticated principal context, role checks, recovery scopes, project limits, stale-session refusal, and destructive approval separation
         - Route backup restore inspect/resume/compensate authorization through the shared recovery authorization contract before working-copy mutation

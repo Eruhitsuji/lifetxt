@@ -2555,15 +2555,17 @@ capabilities:
       backup/restore/validation procedures), plus `lifetxt server-update`: a
       guarded production-update CLI command wrapping `lifetxt update`'s
       existing git fast-forward logic with backup, service stop/start,
-      dependency reinstall, pre/post-update data-hash verification, and
-      configurable integrity checks -- all behind a single-instance lock,
-      dry-run by default.
+      dependency reinstall, pre/post-update data-hash verification,
+      configurable integrity checks, and a pre-mutation risk-classification
+      review gate for high-impact updates -- all behind a single-instance
+      lock, dry-run by default.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-ubuntu-server-deployment-runbook
       - req-ubuntu-server-deployment-examples
       - req-server-update-guarded-core-flow
+      - req-server-update-review-gate
     implementation_locations:
       - docs/deployment/ubuntu-server.md
       - contrib/README.md
@@ -2577,15 +2579,20 @@ capabilities:
       - tests/test_server_update.py
       - config/release/clock-boundary-baseline-v1.json
     public_interfaces:
-      - lifetxt server-update --server-config PATH [--yes] [--format text|json]
+      - lifetxt server-update --server-config PATH [--yes] [--approve SHA] [--format text|json]
       - lifetxt.server_update.run_server_update
       - lifetxt.server_update.load_config
+      - lifetxt.server_update.classify_risk
+      - lifetxt.server_update.gather_diff_summary
+      - lifetxt.server_update.format_review_block
     tests_or_evidence:
-      - tests/test_server_update.py (41 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, and the full apply path including every documented failure state)
-      - python -m unittest tests.test_server_update tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 75 tests, OK
-      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2252 tests, OK (skipped=4)'
-      - python -m lifetxt server-update --help -> renders correctly
+      - tests/test_server_update.py (90 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, the full apply path including every documented failure state, diff parsing, per-trigger-category risk classification, review-block formatting, and the review-gate/--approve integration flow)
+      - python -m unittest tests.test_server_update tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 124 tests, OK
+      - python -m lifetxt server-update --help -> renders correctly, including --approve
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - 'live: real disposable bare-origin + checkout git repository; server-update --yes against a commit touching lifetxt/parser.py and contrib/systemd/lifetxt.service with a "security:" commit message printed the exact designed review block and made no mutation'
+      - 'live: --approve <wrong-sha> against the same disposable repo refused with the exact designed message, checkout unchanged'
+      - 'live: --approve <correct target sha> proceeded past the gate; checkout HEAD moved to the target commit (git merge --ff-only genuinely ran), then failed at pip install as expected (no real Python package at the disposable path) -- #272''s existing, unmodified failure handling'
       - ruff format --check lifetxt tests scripts (pre-existing drift in 3 unrelated files confirmed present on origin/main already, not introduced by this change)
       - ruff check lifetxt tests scripts -> All checks passed
     related_issues:
@@ -2596,18 +2603,26 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/273
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
+      - https://github.com/Eruhitsuji/lifetxt/pull/276
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #260 was too large to implement directly (Task Decomposition Standard:
       L/XL must be decomposed) and was split into an epic (#260) plus four
       sub-issues; this entry covers #270 (runbook), #271 (systemd/nginx
-      examples), and #272 (the guarded core update flow) together, since
-      they are one coherent capability landing in the same batch. #273
-      (risk classification and a pre-mutation review/approval gate for
-      high-impact updates) is a planned, not-yet-implemented extension of
-      this same capability -- `server-update` today runs its full flow
-      unconditionally once invoked with --yes, with no risk-based stop
-      point. `command_server_update` reuses `command_update`'s git helpers
+      examples), #272 (the guarded core update flow), and #273 (risk
+      classification and the review gate) together, since they are one
+      coherent capability. #273 landed in a separate PR after #272 was
+      independently reviewed and merged, per the Task Decomposition
+      Standard's own reasoning for the original split: #272 could be
+      reviewed and shipped without waiting on the gate. Risk classification
+      is deliberately split into an impure `gather_diff_summary()` (the
+      only git-touching part) and a pure `classify_risk()`, so the pure
+      function is unit-testable with fixture data with no live git
+      repository, per #273's own acceptance criteria; see
+      `.ai/project/changes/server-update-review-gate/design.md` for the
+      full design record, including a live disposable-git-repository
+      verification transcript. `command_server_update` reuses
+      `command_update`'s git helpers
       (`_run_git_for_update`, `_lifetxt_install_root`,
       `_reject_option_like_git_arg`, `_git_commit_summary`,
       `_github_latest_release_or_tag`) via a lazy import

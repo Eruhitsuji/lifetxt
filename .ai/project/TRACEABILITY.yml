@@ -721,6 +721,37 @@ traceability:
         and network filesystem semantics remain out of scope for #304.
       status: implemented
 
+    - requirement_id: req-protected-recovery-evidence-storage-profile
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/305
+      pull_request: null
+      changed_files_or_scope:
+        - Define stable `os-private-v1` recovery-evidence storage profile
+        - Add profile report and enforcement helpers for OS private permissions with explicit unsupported encryption refusal
+        - Enforce the declared profile during journal preparation, backup restore, backup destination setup, and archive destination setup
+        - Include evidence-storage profile state in transaction startup/preflight reports
+        - Add policy/admin/journal tests for supported profile, unsupported encrypted profile refusal, preflight refusal, and backup/archive/restore profile boundary
+        - lifetxt/transaction_policy.py
+        - lifetxt/transaction_admin.py
+        - lifetxt/transaction_journal.py
+        - tests/test_transaction_policy_v4.py
+        - tests/test_transaction_admin_v5.py
+        - tests/test_transaction_journal_v3.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_transaction_policy_v4 tests.test_transaction_admin_v5 tests.test_transaction_journal_v3 -> Ran 40 tests, OK (skipped=1 POSIX permission-bits test on Windows)
+      release_or_deployment: null
+      notes: >-
+        Standard assurance protection-profile hardening. Stable support is
+        limited to `os-private-v1`, meaning current OS-user private permissions
+        plus integrity manifests; encryption-at-rest is deliberately not claimed
+        because no encrypted profile is implemented or tested. Unsupported
+        profiles fail before authoritative mutation.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

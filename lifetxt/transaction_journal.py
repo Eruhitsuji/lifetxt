@@ -28,7 +28,7 @@ from .mutation import FileLock, MISSING_HASH, MutationConflict
 from .transaction_policy import (
     build_integrity_manifest,
     enforce_capacity,
-    ensure_private_tree,
+    ensure_evidence_storage_profile,
     fault_point,
     permission_report,
     policy_from_config,
@@ -129,9 +129,7 @@ def prepare(
     txid = transaction_id(transaction_id_value)
     root = os.path.abspath(journal_dir)
     resolved_policy = policy or policy_from_config(config)
-    ensure_private_tree(
-        root, require_private=resolved_policy["require_private_permissions"]
-    )
+    ensure_evidence_storage_profile(root, policy=resolved_policy, create=True)
     estimated = 4096
     for row in staged_rows:
         estimated += len(_before_bytes(row))
@@ -464,7 +462,9 @@ def abandon_with_backup(path, backup_dir, now=None):
     journal = TransactionJournal(path)
     record = journal.load()
     destination_root = os.path.abspath(backup_dir)
-    os.makedirs(destination_root, exist_ok=True)
+    ensure_evidence_storage_profile(
+        destination_root, policy=policy_from_config(config=None), create=True
+    )
     destination = os.path.join(destination_root, record["transaction_id"])
     if os.path.exists(destination):
         raise TransactionJournalError(
@@ -597,11 +597,14 @@ def verify_backup(backup_dir):
 
 
 def archive_terminal(
-    journal_dir, archive_dir, older_than_days=30, force=False, now=None
+    journal_dir, archive_dir, older_than_days=30, force=False, now=None, config=None
 ):
     root = os.path.abspath(journal_dir)
     destination_root = os.path.abspath(archive_dir)
-    os.makedirs(destination_root, mode=0o700, exist_ok=True)
+    resolved_policy = policy_from_config(config)
+    ensure_evidence_storage_profile(
+        destination_root, policy=resolved_policy, create=True
+    )
     archived = []
     skipped = []
     errors = []
@@ -688,6 +691,9 @@ def restore_backup(
         config, operator, action="transaction backup restore"
     )
     source = os.path.abspath(backup_dir)
+    ensure_evidence_storage_profile(
+        source, policy=policy_from_config(config), create=False
+    )
     try:
         verification = verify_integrity_manifest(source)
     except Exception as exc:

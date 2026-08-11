@@ -74,11 +74,23 @@ class TransactionAdminTests(unittest.TestCase):
         missing = preflight_report(self.journal)
         self.assertTrue(missing["ok"])
         self.assertEqual("missing", missing["policy_file"]["state"])
+        self.assertEqual("os-private-v1", missing["evidence_storage"]["profile"])
+        self.assertFalse(missing["evidence_storage"]["encrypted_at_rest"])
         with open(self.policy_path, "w", encoding="utf-8") as handle:
             json.dump({"max_transactions": 1}, handle)
         migration = preflight_report(self.journal)
         self.assertFalse(migration["ok"])
         self.assertEqual("migration_required", migration["policy_file"]["state"])
+
+    def test_preflight_rejects_unsupported_evidence_storage_profile(self):
+        report = preflight_report(
+            os.path.join(self.root, "unsupported-profile"),
+            config={"transactions": {"evidence_storage_profile": "encrypted-v1"}},
+            create=True,
+        )
+        self.assertFalse(report["ok"])
+        self.assertFalse(report["evidence_storage"]["supported"])
+        self.assertIn("unsupported evidence storage profile", report["errors"][0])
 
     def test_audit_is_bounded_and_private(self):
         for index in range(5):

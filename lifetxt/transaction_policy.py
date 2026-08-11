@@ -23,6 +23,7 @@ class TransactionPolicyError(RuntimeError):
 
 CAPACITY_ERROR_CODES = frozenset((errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)))
 PERMISSION_ERROR_CODES = frozenset((errno.EACCES, errno.EPERM))
+SUPPORTED_EVIDENCE_STORAGE_PROFILES = frozenset(("os-private-v1",))
 
 
 def storage_access_failure_kind(exc):
@@ -130,8 +131,55 @@ def policy_from_config(config=None):
                 "evidence_include_paths",
                 _boolean(raw.get("evidence_include_paths"), False),
             ),
+            (
+                "evidence_storage_profile",
+                _evidence_storage_profile(raw.get("evidence_storage_profile")),
+            ),
         )
     )
+
+
+def evidence_storage_profile_report(path, policy=None, create=False):
+    resolved = policy or policy_from_config()
+    profile = resolved.get("evidence_storage_profile") or "os-private-v1"
+    absolute = os.path.abspath(path)
+    report = OrderedDict(
+        (
+            ("profile", profile),
+            ("path", absolute),
+            ("supported", profile in SUPPORTED_EVIDENCE_STORAGE_PROFILES),
+            ("encrypted_at_rest", False),
+            ("protection_model", "current-os-user-private-permissions"),
+            ("permission_report", None),
+            ("problems", []),
+        )
+    )
+    if profile not in SUPPORTED_EVIDENCE_STORAGE_PROFILES:
+        report["problems"].append("unsupported evidence storage profile: %s" % profile)
+        return report
+    if create:
+        try:
+            ensure_private_tree(
+                absolute, require_private=resolved["require_private_permissions"]
+            )
+        except Exception as exc:
+            report["problems"].append(str(exc))
+    permissions = permission_report(
+        absolute, require_private=resolved["require_private_permissions"]
+    )
+    report["permission_report"] = permissions
+    report["problems"].extend(permissions.get("problems") or [])
+    return report
+
+
+def ensure_evidence_storage_profile(path, policy=None, create=True):
+    report = evidence_storage_profile_report(path, policy=policy, create=create)
+    if report["problems"]:
+        raise TransactionPolicyError(
+            "Unusable evidence storage profile %s: %s"
+            % (report["profile"], "; ".join(report["problems"]))
+        )
+    return report
 
 
 def journal_usage(root):
@@ -344,3 +392,8 @@ def _boolean(value, default):
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _evidence_storage_profile(value):
+    text = str(value or "os-private-v1").strip()
+    return text or "os-private-v1"

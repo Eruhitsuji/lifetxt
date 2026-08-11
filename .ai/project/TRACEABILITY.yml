@@ -419,7 +419,7 @@ traceability:
       capability_id: cap-supported-platform-install
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/73
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/280
       changed_files_or_scope:
         - Declare tzdata for Windows so a clean install can resolve timezones
         - pyproject.toml

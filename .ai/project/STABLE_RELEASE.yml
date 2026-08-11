@@ -1,0 +1,83 @@
+schema_version: 1
+
+stable_release:
+  tracker_issue: https://github.com/Eruhitsuji/lifetxt/issues/283
+  phase: stabilization
+  stabilization_start:
+    trigger: >-
+      The stabilization phase starts when the first child issue under #283 is
+      moved to status:in-progress on a dedicated stabilization branch.
+    first_issue: https://github.com/Eruhitsuji/lifetxt/issues/284
+    parent_branch: stabilize/issue-283
+    branch_policy: >-
+      Use one integration branch for the tracker and one dedicated branch per
+      child issue. Child branches target the integration branch; the integration
+      branch targets main after the tracker-level release evidence is complete.
+
+  feature_freeze:
+    purpose: >-
+      Keep the first stable-release surface from expanding while release
+      blockers, compatibility contracts, and real-environment evidence are still
+      being resolved.
+    task_source_of_truth: github_issues
+    status_gate: >-
+      Existing status:* label gates remain authoritative. Implementation must
+      not start from status:inbox or status:blocked issues.
+    allowed_change_classes:
+      - release_blocking_bug_fix
+      - security_fix
+      - compatibility_fix
+      - migration_or_downgrade_safety
+      - recovery_or_data_loss_prevention
+      - release_required_test_or_fixture
+      - release_required_documentation
+      - release_engineering
+      - stabilization_governance
+    release_blocker_definition: >-
+      A release blocker is a defect, missing contract, missing migration or
+      recovery path, unsupported advertised surface, or unverified required
+      environment that would make the first stable release unsafe, misleading,
+      or impractical to support.
+    post_stable_definition: >-
+      Post-stable work is useful product or platform work that can wait without
+      making the first stable release unsafe or falsely advertised.
+    deferred_work_policy: >-
+      Deferred work must remain represented by a GitHub Issue, roadmap item, or
+      explicit known limitation. Deferral is not permission to ignore a release
+      blocker; it must state why the work is outside the first stable support
+      surface or why the limitation is acceptable.
+
+  exception_path:
+    required_for:
+      - new_feature
+      - expansion_of_supported_surface
+      - new_external_dependency
+      - new_provider_or_integration_write_surface
+      - public_contract_change_not_required_by_stabilization
+    approval: human_maintainer
+    required_evidence:
+      - issue_links_to_tracker
+      - reason_the_change_is_needed_before_stable_release
+      - affected_support_surface
+      - compatibility_and_migration_impact
+      - assurance_level_and_required_review
+      - test_or_real_environment_evidence_plan
+      - explicit_deferred_alternatives_considered
+    recording_location: >-
+      Record the exception in the issue or pull request before implementation.
+      High, Regulated, migration, data, security-sensitive, or operations changes
+      also need the normal project approval and change-package evidence.
+
+  release_boundary:
+    stable_release_may_include:
+      - completed_child_issues_under_283
+      - explicitly approved feature-freeze exceptions
+      - documentation of unsupported, experimental, or deferred surfaces
+    stable_release_must_not_include:
+      - unreviewed broad feature work
+      - writable adapters without a verified proposal or mutation contract
+      - advertised support for environments without the evidence required by the
+        support matrix
+      - compatibility-breaking changes without a documented migration or
+        downgrade decision
+

@@ -598,6 +598,30 @@ class CheckHealthTests(unittest.TestCase):
         self.assertEqual(0.1, result["retry_interval"])
         self.assertEqual([0.1], sleeps)
 
+    def test_wait_for_health_caps_request_timeout_to_readiness_deadline(self):
+        request_timeouts = []
+
+        def _fail(_url, timeout):
+            request_timeouts.append(timeout)
+            return {"ok": False, "error": "timed out"}
+
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=10,
+            ready_timeout=1,
+            retry_interval=0.5,
+            health_checker=_fail,
+            sleep=lambda _seconds: None,
+            monotonic=iter([50.0, 50.6, 50.9, 51.0]).__next__,
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(3, len(request_timeouts))
+        self.assertAlmostEqual(1.0, request_timeouts[0])
+        self.assertAlmostEqual(0.4, request_timeouts[1])
+        self.assertAlmostEqual(0.1, request_timeouts[2])
+        self.assertEqual(3, result["attempts"])
+
     def test_wait_for_health_retries_http_error_until_success(self):
         attempts = iter(
             [

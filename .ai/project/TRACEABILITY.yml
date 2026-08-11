@@ -3585,13 +3585,13 @@ traceability:
         - .kiro/specs/server-update-health-readiness/
       tests_or_evidence:
         - '.\.venv\Scripts\python.exe -m unittest tests.test_server_update.CheckHealthTests tests.test_server_update.RunServerUpdateApplyTests.test_health_check_failure_after_restart_is_reported_but_does_not_raise tests.test_server_update.RunServerUpdateApplyTests.test_health_check_transient_connection_failure_after_restart_retries_to_updated tests.test_server_update.RunServerUpdateApplyTests.test_restart_failure_after_validation_is_reported_but_does_not_raise -> Ran 10 tests, OK'
-        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_update -> Ran 111 tests, OK (skipped=1)'
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_update -> Ran 112 tests, OK (skipped=1)'
         - '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest discover -> Ran 2331 tests, OK (skipped=9)'
         - '.\.venv\Scripts\ruff.exe check lifetxt tests scripts -> All checks passed!'
         - '.\.venv\Scripts\ruff.exe format --check lifetxt\server_update.py tests\test_server_update.py -> 2 files already formatted'
         - '.\.venv\Scripts\python.exe -m lifetxt check examples\minimal_life.txt -> OK: 10 item(s)'
         - '.\.venv\Scripts\python.exe -m lifetxt server-update --help -> help renders successfully'
-        - '/security-review found and fixed one tight-retry-loop issue; post-fix re-review found no remaining candidate findings'
+        - '/security-review found and fixed tight-retry-loop and deadline-overrun issues; post-fix re-review found no remaining candidate findings'
       release_or_deployment: null
       notes: >-
         Security/High assurance continues from #272/#273/#277 because

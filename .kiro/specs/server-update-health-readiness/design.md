@@ -117,6 +117,7 @@ flowchart LR
 - Retry failed results until `health_ready_timeout` is exhausted.
 - Include `attempts`, `elapsed_seconds`, and timing fields in the returned record.
 - Preserve the last `error`/`status_code`/`body` values from the final attempt.
+- Cap each attempt's request timeout to the remaining readiness deadline.
 
 ##### Service Interface
 
@@ -138,6 +139,7 @@ def wait_for_health(
 - A failed final health result remains non-raising and maps to `validated_health_check_failed`.
 - Restart failures short-circuit before health retry and remain `validated_restart_incomplete`.
 - Invalid or negative timing config is normalized conservatively; retry interval has a small positive floor so a zero value cannot create a tight retry loop.
+- Each HTTP attempt uses the smaller of `health_timeout` and the remaining `health_ready_timeout`, so one slow request cannot overrun the total readiness deadline.
 
 ## Testing Strategy
 

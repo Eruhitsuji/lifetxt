@@ -1,0 +1,361 @@
+schema_version: 1
+
+stable_release:
+  tracker_issue: https://github.com/Eruhitsuji/lifetxt/issues/283
+  phase: stabilization
+  stabilization_start:
+    trigger: >-
+      The stabilization phase starts when the first child issue under #283 is
+      moved to status:in-progress on a dedicated stabilization branch.
+    first_issue: https://github.com/Eruhitsuji/lifetxt/issues/284
+    parent_branch: stabilize/issue-283
+    branch_policy: >-
+      Use one integration branch for the tracker and one dedicated branch per
+      child issue. Child branches target the integration branch; the integration
+      branch targets main after the tracker-level release evidence is complete.
+
+  feature_freeze:
+    purpose: >-
+      Keep the first stable-release surface from expanding while release
+      blockers, compatibility contracts, and real-environment evidence are still
+      being resolved.
+    task_source_of_truth: github_issues
+    status_gate: >-
+      Existing status:* label gates remain authoritative. Implementation must
+      not start from status:inbox or status:blocked issues.
+    allowed_change_classes:
+      - release_blocking_bug_fix
+      - security_fix
+      - compatibility_fix
+      - migration_or_downgrade_safety
+      - recovery_or_data_loss_prevention
+      - release_required_test_or_fixture
+      - release_required_documentation
+      - release_engineering
+      - stabilization_governance
+    release_blocker_definition: >-
+      A release blocker is a defect, missing contract, missing migration or
+      recovery path, unsupported advertised surface, or unverified required
+      environment that would make the first stable release unsafe, misleading,
+      or impractical to support.
+    post_stable_definition: >-
+      Post-stable work is useful product or platform work that can wait without
+      making the first stable release unsafe or falsely advertised.
+    deferred_work_policy: >-
+      Deferred work must remain represented by a GitHub Issue, roadmap item, or
+      explicit known limitation. Deferral is not permission to ignore a release
+      blocker; it must state why the work is outside the first stable support
+      surface or why the limitation is acceptable.
+
+  exception_path:
+    required_for:
+      - new_feature
+      - expansion_of_supported_surface
+      - new_external_dependency
+      - new_provider_or_integration_write_surface
+      - public_contract_change_not_required_by_stabilization
+    approval: human_maintainer
+    required_evidence:
+      - issue_links_to_tracker
+      - reason_the_change_is_needed_before_stable_release
+      - affected_support_surface
+      - compatibility_and_migration_impact
+      - assurance_level_and_required_review
+      - test_or_real_environment_evidence_plan
+      - explicit_deferred_alternatives_considered
+    recording_location: >-
+      Record the exception in the issue or pull request before implementation.
+      High, Regulated, migration, data, security-sensitive, or operations changes
+      also need the normal project approval and change-package evidence.
+
+  release_boundary:
+    stable_release_may_include:
+      - completed_child_issues_under_283
+      - explicitly approved feature-freeze exceptions
+      - documentation of unsupported, experimental, or deferred surfaces
+    stable_release_must_not_include:
+      - unreviewed broad feature work
+      - writable adapters without a verified proposal or mutation contract
+      - advertised support for environments without the evidence required by the
+        support matrix
+      - compatibility-breaking changes without a documented migration or
+        downgrade decision
+
+  support_matrix:
+    classification_values:
+      supported: >-
+        Included in the first stable-release support surface once the named
+        evidence is recorded.
+      experimental: >-
+        Available for trial use, but not a stable compatibility promise for the
+        first stable release.
+      deferred: >-
+        Intentionally outside the first stable-release support promise; may be
+        completed after stable release without blocking it.
+      unsupported: >-
+        Not supported for the first stable release; documentation must avoid
+        advertising it as stable.
+    evidence_types:
+      simulated_or_subprocess: >-
+        Unit, integration, subprocess, fixture, or disposable-local checks that
+        do not prove behavior in the real target environment.
+      real_environment: >-
+        Evidence from the actual OS, terminal, browser engine, provider, server,
+        or filesystem class named by the matrix entry.
+    entries:
+      - id: python-3-10
+        category: runtime
+        classification: supported
+        minimum_evidence:
+          - CI or local clean-environment test run on Python 3.10
+          - release artifact install smoke for core CLI
+        evidence_type: simulated_or_subprocess
+        limitation: null
+      - id: python-3-11
+        category: runtime
+        classification: supported
+        minimum_evidence:
+          - CI or local clean-environment test run on Python 3.11
+          - release artifact install smoke for core CLI
+        evidence_type: simulated_or_subprocess
+        limitation: null
+      - id: python-3-12
+        category: runtime
+        classification: supported
+        minimum_evidence:
+          - CI or local clean-environment test run on Python 3.12
+          - release artifact install smoke for core CLI
+        evidence_type: simulated_or_subprocess
+        limitation: null
+      - id: windows
+        category: os
+        classification: supported
+        minimum_evidence:
+          - Windows PowerShell CLI smoke with declared tzdata behavior
+          - Windows file-replacement and recovery smoke for authoritative writes
+        evidence_type: real_environment
+        limitation: null
+      - id: wsl
+        category: os
+        classification: supported
+        minimum_evidence:
+          - WSL CLI smoke
+          - WSL terminal TUI smoke if TUI is in the supported surface
+        evidence_type: real_environment
+        limitation: null
+      - id: linux
+        category: os
+        classification: supported
+        minimum_evidence:
+          - Linux CLI release artifact smoke
+          - Linux filesystem recovery smoke for local authoritative writes
+        evidence_type: real_environment
+        limitation: null
+      - id: macos
+        category: os
+        classification: supported
+        minimum_evidence:
+          - macOS CLI release artifact smoke
+          - macOS terminal TUI smoke if TUI is in the supported surface
+        evidence_type: real_environment
+        limitation: null
+      - id: dependency-free-cli
+        category: public_surface
+        classification: supported
+        minimum_evidence:
+          - core-only release artifact install has no optional Web/TUI packages
+          - lifetxt entry point and python -m lifetxt both run stable smoke commands
+        evidence_type: simulated_or_subprocess
+        limitation: null
+      - id: tui-extra
+        category: public_surface
+        classification: supported
+        minimum_evidence:
+          - real terminal smoke on Windows Terminal or WSL
+          - real terminal smoke on macOS or Linux
+          - documented unsupported terminal and locale cases
+        evidence_type: real_environment
+        limitation: >-
+          Stable support is limited to terminal environments verified by #312
+          and #313; other terminals are best-effort.
+      - id: web-extra
+        category: public_surface
+        classification: supported
+        minimum_evidence:
+          - real browser-engine smoke for revision and recovery workflows
+          - real browser-engine smoke for core UI interaction and accessibility
+          - strict Web revision migration evidence where Web writes are stable
+        evidence_type: real_environment
+        limitation: >-
+          Stable writable Web support depends on completing the strict revision
+          evidence chain; otherwise Web writes must remain experimental or
+          documented with a limitation before stable promotion.
+      - id: browser-engines
+        category: client
+        classification: supported
+        minimum_evidence:
+          - at least one named browser engine passes the stable Web smoke suite
+          - unsupported engines are documented as unverified
+        evidence_type: real_environment
+        limitation: >-
+          Only browser engines named in release evidence are stable-supported.
+      - id: mcp-client-read
+        category: client
+        classification: supported
+        minimum_evidence:
+          - MCP read-only resource smoke against installed release artifacts
+          - schema/capability contract validation for stable MCP responses
+        evidence_type: simulated_or_subprocess
+        limitation: >-
+          MCP write surfaces are not stable-supported unless selected and
+          verified through the delegated proposal contract.
+      - id: remote-read-client
+        category: client
+        classification: supported
+        minimum_evidence:
+          - remote read client smoke against a supported server setup
+          - revision-aware pagination and resource response contract evidence
+        evidence_type: real_environment
+        limitation: null
+      - id: remote-write-client
+        category: client
+        classification: experimental
+        minimum_evidence:
+          - delegated mutation proposal and permission evidence before promotion
+          - remote clock, authorization, privacy, and recovery evidence before promotion
+        evidence_type: real_environment
+        limitation: >-
+          Writable Remote clients remain experimental until #293-#296 and #311
+          classify and verify the stable writable scope.
+      - id: fzf-peco-selectors
+        category: client
+        classification: supported
+        minimum_evidence:
+          - PowerShell real-shell selector action smoke
+          - Unix-like real-shell selector action smoke
+          - stable exit-code and quoting evidence
+        evidence_type: real_environment
+        limitation: >-
+          Only selector and shell combinations verified by #314 are stable.
+      - id: smtp-delivery
+        category: integration
+        classification: experimental
+        minimum_evidence:
+          - STARTTLS and authentication failure evidence with safe accounts
+          - retry, recipient, watcher state, quiet-hours, and provider-limit evidence
+        evidence_type: real_environment
+        limitation: >-
+          SMTP remains experimental until #315 and #316 record provider-safe
+          evidence without committing credentials or private message content.
+      - id: local-filesystems
+        category: filesystem
+        classification: supported
+        minimum_evidence:
+          - local filesystem transaction and recovery smoke
+          - Windows file-interference evidence where Windows is supported
+        evidence_type: real_environment
+        limitation: null
+      - id: cloud-sync-removable-network-filesystems
+        category: filesystem
+        classification: deferred
+        minimum_evidence:
+          - cloud-sync, removable, and network filesystem recovery procedures
+          - documented support limits and refusal behavior
+        evidence_type: real_environment
+        limitation: >-
+          These filesystem classes are not stable-supported until #304 records
+          support limits or explicit refusal guidance.
+
+  release_gates:
+    rc_entry:
+      purpose: >-
+        Decide whether a reviewed commit may become a release candidate for the
+        first stable release.
+      required_evidence:
+        ci:
+          - required branch protection checks pass on the RC candidate commit
+          - project release-gate commands pass on a supported interpreter
+          - traceability and change-package close-out checks pass
+        real_environment:
+          - every support_matrix entry classified as supported has recorded the
+            minimum evidence named for that entry, or has an explicit limitation
+          - real Web, terminal, SMTP, Remote, and filesystem evidence is recorded
+            where those surfaces remain in the stable support matrix
+        migration:
+          - format, configuration, policy, journal, and Web revision migration or
+            refusal behavior is documented for the stable support surface
+          - downgrade inspection or limitation is recorded where downgrade is not
+            supported
+        recovery:
+          - transaction, attachment, archive, recovery-evidence, and filesystem
+            recovery procedures required by supported surfaces have recorded
+            evidence or documented limitations
+        documentation:
+          - release notes draft lists supported, experimental, deferred, and
+            unsupported surfaces from the support matrix
+          - upgrade, downgrade, known limitation, and installation guidance is
+            consistent with the support matrix
+          - English and Japanese documentation do not contradict the matrix for
+            release-critical support claims
+      blockers:
+        - open stable-release-blocker known issue
+        - missing required evidence for a supported matrix entry
+        - failed or flaky required check without resolution or accepted limitation
+        - unreviewed feature-freeze exception
+        - security, data-loss, migration, or recovery finding without explicit
+          human disposition
+
+    stable_promotion:
+      purpose: >-
+        Decide whether a validated release candidate may be promoted to the
+        first stable release.
+      required_evidence:
+        - all rc_entry evidence remains valid for the promoted commit
+        - the promoted commit is identical to the validated RC code, or differs
+          only by reviewed release-metadata-only changes with re-run smoke
+          evidence
+        - no open stable-release-blocker issue remains unresolved
+        - required RC-cycle findings are classified as stable-release blocker,
+          RC blocker, supported limitation, or post-stable
+        - final release notes, version metadata, artifact integrity evidence,
+          installation smoke evidence, and known limitations are linked from the
+          release record
+        - human release authority approves promotion after reviewing CI,
+          real-environment, migration, recovery, and documentation evidence
+      blockers:
+        - any unresolved stable-release blocker
+        - any required RC validation check failed, flaky, stale, or not run
+        - any accepted limitation missing from release notes or support docs
+        - artifact build or install evidence not tied to the promoted commit
+        - release authority approval missing
+
+    required_check_policy:
+      failed_check: >-
+        A failed required check blocks RC entry and stable promotion until the
+        underlying issue is fixed, the check is re-run successfully, or a human
+        maintainer records an explicit stable-release limitation or deferral.
+      flaky_check: >-
+        A flaky required check is treated as failed evidence. Promotion remains
+        blocked until the flake is diagnosed and resolved, or explicitly accepted
+        as a documented limitation with the affected support surface named.
+      stale_check: >-
+        Evidence collected against an older commit is stale when code,
+        dependencies, packaging, support classification, migration behavior, or
+        recovery behavior relevant to that evidence has changed.
+
+    known_issue_severity:
+      stable_release_blocker: >-
+        Must be fixed or explicitly removed from the stable support surface
+        before stable promotion.
+      rc_blocker: >-
+        Must be fixed or intentionally deferred before the first RC can be cut,
+        because it prevents meaningful RC validation.
+      supported_limitation: >-
+        May ship only when the limitation is user-facing, linked from release
+        notes, and does not contradict the support matrix.
+      post_stable: >-
+        Useful work outside the first stable-release promise; must remain
+        tracked without blocking RC or stable promotion.
+      not_release_relevant: >-
+        Does not affect supported stable behavior, release artifacts,
+        migration, recovery, security, or documentation claims.

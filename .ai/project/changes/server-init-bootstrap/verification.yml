@@ -9,14 +9,14 @@ review_ledger:
   - reviewer: Codex
     review_type: implementation
     target_commit: null
-    result: pending
-    finding_count: null
+    result: completed
+    finding_count: 1
     completed_at: null
   - reviewer: Codex
     review_type: security
     target_commit: null
-    result: pending
-    finding_count: null
+    result: completed
+    finding_count: 1
     completed_at: null
 
 release_evidence:

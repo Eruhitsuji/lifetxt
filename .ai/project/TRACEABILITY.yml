@@ -3552,7 +3552,7 @@ traceability:
         - .ai/project/CAPABILITIES.yml
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
-        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_init -> Ran 8 tests, OK'
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_init -> Ran 9 tests, OK'
         - '.\.venv\Scripts\ruff.exe format --check lifetxt/server_init.py tests/test_server_init.py lifetxt/cli.py -> 3 files already formatted'
         - '.\.venv\Scripts\ruff.exe check lifetxt/server_init.py tests/test_server_init.py lifetxt/cli.py -> All checks passed'
       release_or_deployment: null

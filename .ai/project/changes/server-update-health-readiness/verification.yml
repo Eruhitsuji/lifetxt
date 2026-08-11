@@ -1,0 +1,45 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: unit
+      command: python -m unittest tests.test_server_update
+      requirement_ids:
+        - req-server-update-health-readiness
+      status: planned
+    - type: integration
+      command: python -m lifetxt server-update --help
+      requirement_ids:
+        - req-server-update-health-readiness
+      status: planned
+    - type: full
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-server-update-health-readiness
+      status: planned
+    - type: review
+      command: /security-review against full branch diff
+      requirement_ids:
+        - req-server-update-health-readiness
+      status: planned
+
+  executed: []
+
+review_ledger:
+  - reviewer: Codex
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: Codex
+    review_type: security
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: "No schema or data migration."
+  rollback_plan: "No new rollback mechanism. A failed health check still reports `validated_health_check_failed`; operator rollback remains the existing server-update deployment rollback path."
+  operations_evidence: []

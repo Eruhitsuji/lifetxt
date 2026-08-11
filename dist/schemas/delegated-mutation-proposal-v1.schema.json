@@ -98,6 +98,41 @@
       "pattern": "^D-[0-9a-f]{12}$",
       "type": "string"
     },
+    "lifecycle": {
+      "additionalProperties": true,
+      "properties": {
+        "cancellation_behavior": {
+          "const": "abort_without_authoritative_write"
+        },
+        "process_timeout_seconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "proposal_retention": {
+          "enum": [
+            "persisted_if_proposal_path_supplied",
+            "not_persisted_without_proposal_path"
+          ]
+        },
+        "temporary_cleanup": {
+          "enum": [
+            "delete_after_prepare",
+            "retained_for_review"
+          ]
+        },
+        "timeout_behavior": {
+          "const": "abort_without_authoritative_write"
+        }
+      },
+      "required": [
+        "process_timeout_seconds",
+        "timeout_behavior",
+        "cancellation_behavior",
+        "proposal_retention",
+        "temporary_cleanup"
+      ],
+      "type": "object"
+    },
     "operation": {
       "type": "string"
     },
@@ -141,6 +176,41 @@
     "result": {
       "type": "object"
     },
+    "sandbox": {
+      "additionalProperties": true,
+      "properties": {
+        "authoritative_path_exposed_to_adapter": {
+          "const": false
+        },
+        "authoritative_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "model": {
+          "const": "private_temporary_copy"
+        },
+        "private_temporary_copy": {
+          "const": true
+        },
+        "temporary_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "temporary_root_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "private_temporary_copy",
+        "authoritative_path_exposed_to_adapter",
+        "authoritative_path_sha256",
+        "temporary_path_sha256",
+        "temporary_root_sha256"
+      ],
+      "type": "object"
+    },
     "state": {
       "enum": [
         "prepared",
@@ -165,6 +235,8 @@
     "adapter",
     "provenance",
     "authorization",
+    "lifecycle",
+    "sandbox",
     "contract_sha256",
     "before_revision",
     "edited_revision",

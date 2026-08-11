@@ -29,6 +29,8 @@ def schema_bundle_v13():
                         "adapter",
                         "provenance",
                         "authorization",
+                        "lifecycle",
+                        "sandbox",
                         "contract_sha256",
                         "before_revision",
                         "edited_revision",
@@ -97,6 +99,63 @@ def schema_bundle_v13():
                                 },
                                 "direct_write_allowed": {"const": False},
                                 "apply_requires_revision": {"const": True},
+                            },
+                            "additionalProperties": True,
+                        },
+                        "lifecycle": {
+                            "type": "object",
+                            "required": [
+                                "process_timeout_seconds",
+                                "timeout_behavior",
+                                "cancellation_behavior",
+                                "proposal_retention",
+                                "temporary_cleanup",
+                            ],
+                            "properties": {
+                                "process_timeout_seconds": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0,
+                                },
+                                "timeout_behavior": {
+                                    "const": "abort_without_authoritative_write"
+                                },
+                                "cancellation_behavior": {
+                                    "const": "abort_without_authoritative_write"
+                                },
+                                "proposal_retention": {
+                                    "enum": [
+                                        "persisted_if_proposal_path_supplied",
+                                        "not_persisted_without_proposal_path",
+                                    ]
+                                },
+                                "temporary_cleanup": {
+                                    "enum": [
+                                        "delete_after_prepare",
+                                        "retained_for_review",
+                                    ]
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
+                        "sandbox": {
+                            "type": "object",
+                            "required": [
+                                "model",
+                                "private_temporary_copy",
+                                "authoritative_path_exposed_to_adapter",
+                                "authoritative_path_sha256",
+                                "temporary_path_sha256",
+                                "temporary_root_sha256",
+                            ],
+                            "properties": {
+                                "model": {"const": "private_temporary_copy"},
+                                "private_temporary_copy": {"const": True},
+                                "authoritative_path_exposed_to_adapter": {
+                                    "const": False
+                                },
+                                "authoritative_path_sha256": HASH,
+                                "temporary_path_sha256": HASH,
+                                "temporary_root_sha256": HASH,
                             },
                             "additionalProperties": True,
                         },
@@ -333,6 +392,21 @@ def schema_samples_v13():
                         ],
                         "direct_write_allowed": False,
                         "apply_requires_revision": True,
+                    },
+                    "lifecycle": {
+                        "process_timeout_seconds": 300.0,
+                        "timeout_behavior": "abort_without_authoritative_write",
+                        "cancellation_behavior": "abort_without_authoritative_write",
+                        "proposal_retention": "persisted_if_proposal_path_supplied",
+                        "temporary_cleanup": "delete_after_prepare",
+                    },
+                    "sandbox": {
+                        "model": "private_temporary_copy",
+                        "private_temporary_copy": True,
+                        "authoritative_path_exposed_to_adapter": False,
+                        "authoritative_path_sha256": h,
+                        "temporary_path_sha256": h,
+                        "temporary_root_sha256": h,
                     },
                     "contract_sha256": h,
                     "created_at_utc": "2026-07-25T00:00:00Z",

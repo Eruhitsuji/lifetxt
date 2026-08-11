@@ -575,15 +575,18 @@ stable_release:
           - tests/test_delegated_mutation_v6.py
           - tests/test_p0_cli_v6.py::test_delegated_prepare_inspect_and_apply_cli
           - https://github.com/Eruhitsuji/lifetxt/issues/294
+          - https://github.com/Eruhitsuji/lifetxt/issues/295
         related_issues:
           - https://github.com/Eruhitsuji/lifetxt/issues/293
           - https://github.com/Eruhitsuji/lifetxt/issues/294
+          - https://github.com/Eruhitsuji/lifetxt/issues/295
         notes: >-
           External programs receive only a private temporary copy. Applying the
           result requires a validated proposal object and an authoritative
           revision precondition. Proposal records include validated adapter,
-          provenance, authorization, and contract hash metadata from #294;
-          unsafe override is present but not part of the stable advertised path.
+          provenance, authorization, lifecycle, sandbox, and contract hash
+          metadata from #294 and #295; unsafe override is present but not part
+          of the stable advertised path.
       - id: editor-session-contract
         surface: Existing CLI, TUI, fzf, and peco editor sessions
         implementation_paths:

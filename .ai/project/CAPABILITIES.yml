@@ -176,6 +176,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-delegated-mutation-provenance-permission-contract
+      - req-delegated-mutation-lifecycle-retention-sandbox-policy
     implementation_locations:
       - lifetxt/delegated_mutation.py
       - lifetxt/schema_extensions_v13.py
@@ -198,9 +199,11 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt
       - ruff check/format on delegated mutation contract files
       - git diff --check
+      - '#295 timeout, cleanup, retained proposal restart, and unsupported sandbox metadata tests'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/293
       - https://github.com/Eruhitsuji/lifetxt/issues/294
+      - https://github.com/Eruhitsuji/lifetxt/issues/295
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/333
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -213,6 +216,11 @@ capabilities:
       contract_sha256 over the stable proposal contract fields. Apply/reject
       update the contract hash after state changes, preserving restart-safe
       proposal-file semantics and proposal-file revision checks.
+      #295 extends the same contract with process timeout/cancellation policy,
+      deterministic proposal-retention and temporary-cleanup metadata, and
+      private-temporary-copy sandbox metadata. Timeout and cancellation are
+      defined as abort-without-authoritative-write behavior; unsupported
+      sandbox claims fail validation.
     replacement:
       replaces: []
       replaced_by: null

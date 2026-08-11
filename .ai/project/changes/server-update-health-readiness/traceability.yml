@@ -1,0 +1,13 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-server-update-health-readiness
+    capability_id: cap-server-update-health-readiness
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/281
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+gaps: []

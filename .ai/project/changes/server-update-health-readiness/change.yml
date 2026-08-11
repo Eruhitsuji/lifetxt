@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: server-update-health-readiness
+  title: Retry server-update health checks during service startup
+  status: draft
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/281
+  related_pull_request: null
+  base_commit: 67d4cdda5ce758e2e638300df471294012978e6b
+  target_release: null
+
+scope:
+  in_scope:
+    - "Add bounded readiness retry for `lifetxt server-update` health checks after service restart."
+    - "Expose useful attempt/elapsed/final-error health evidence in the update report."
+    - "Document health readiness timing in CLI and Ubuntu Server deployment docs."
+  out_of_scope:
+    - "Changing git update, backup, reinstall, validation, service restart, or rollback behavior."
+    - "Changing `validated_restart_incomplete` classification."
+    - "Adding any new production data mutation or service action during health retry."
+  write_scope:
+    - lifetxt/server_update.py
+    - tests/test_server_update.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+    - .kiro/specs/server-update-health-readiness/**
+    - .ai/project/changes/server-update-health-readiness/**
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/CAPABILITIES.yml
+  forbidden_scope:
+    - lifetxt/mutation.py
+    - lifetxt/transaction_journal.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation review before merge.
+  - Security review before merge.
+  - Merge Authority approval before merge into main.

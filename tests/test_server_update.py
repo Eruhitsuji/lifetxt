@@ -536,6 +536,87 @@ class CheckHealthTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("503", result["error"])
 
+    def test_wait_for_health_immediate_success_reports_one_attempt(self):
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=5,
+            ready_timeout=10,
+            retry_interval=0.5,
+            health_checker=lambda _url, _timeout: {"ok": True, "status_code": 200},
+            sleep=lambda _seconds: None,
+            monotonic=iter([100.0, 100.0]).__next__,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, result["attempts"])
+        self.assertEqual(0.0, result["elapsed_seconds"])
+        self.assertEqual(200, result["status_code"])
+
+    def test_wait_for_health_retries_connection_failure_until_success(self):
+        attempts = iter(
+            [
+                {"ok": False, "error": "connection refused"},
+                {"ok": False, "error": "connection refused"},
+                {"ok": True, "status_code": 200, "body": '{"ok":true}'},
+            ]
+        )
+        sleeps = []
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=5,
+            ready_timeout=10,
+            retry_interval=0.5,
+            health_checker=lambda _url, _timeout: next(attempts),
+            sleep=sleeps.append,
+            monotonic=iter([10.0, 10.0, 10.4, 10.8]).__next__,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(3, result["attempts"])
+        self.assertEqual(0.8, result["elapsed_seconds"])
+        self.assertEqual([0.5, 0.5], sleeps)
+
+    def test_wait_for_health_retries_http_error_until_success(self):
+        attempts = iter(
+            [
+                {"ok": False, "error": "HTTP 503"},
+                {"ok": True, "status_code": 200},
+            ]
+        )
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=5,
+            ready_timeout=2,
+            retry_interval=0.25,
+            health_checker=lambda _url, _timeout: next(attempts),
+            sleep=lambda _seconds: None,
+            monotonic=iter([20.0, 20.0, 20.2]).__next__,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(2, result["attempts"])
+
+    def test_wait_for_health_reports_final_failure_after_deadline(self):
+        sleeps = []
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=5,
+            ready_timeout=1,
+            retry_interval=0.5,
+            health_checker=lambda _url, _timeout: {
+                "ok": False,
+                "error": "connection refused",
+            },
+            sleep=sleeps.append,
+            monotonic=iter([30.0, 30.0, 30.4, 31.1]).__next__,
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(3, result["attempts"])
+        self.assertEqual(1.1, result["elapsed_seconds"])
+        self.assertEqual("connection refused", result["error"])
+        self.assertEqual([0.5, 0.5], sleeps)
+
 
 class DiffSummaryParsingTests(unittest.TestCase):
     def test_numstat_parses_added_removed_and_binary(self):
@@ -1389,9 +1470,44 @@ class RunServerUpdateApplyTests(unittest.TestCase):
             _patch_subprocess(sub),
             mock.patch("urllib.request.urlopen", side_effect=_raise),
         ):
-            report = server_update.run_server_update(self._config(), yes=True)
+            report = server_update.run_server_update(
+                self._config(health_ready_timeout=0), yes=True
+            )
         self.assertEqual("validated_health_check_failed", report["status"])
         self.assertFalse(os.path.exists(self.lock_path))
+        self.assertEqual(1, report["health_check"]["attempts"])
+
+    def test_health_check_transient_connection_failure_after_restart_retries_to_updated(
+        self,
+    ):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        response = mock.MagicMock()
+        response.read.return_value = b'{"ok": true}'
+        response.status = 200
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+
+        def _health_attempt(*_args, **_kwargs):
+            from urllib.error import URLError
+
+            if urlopen_mock.call_count < 3:
+                raise URLError("connection refused")
+            return response
+
+        with (
+            _patch_git(git),
+            _patch_subprocess(sub),
+            mock.patch("urllib.request.urlopen") as urlopen_mock,
+        ):
+            urlopen_mock.side_effect = _health_attempt
+            report = server_update.run_server_update(
+                self._config(health_retry_interval=0), yes=True
+            )
+        self.assertEqual("updated", report["status"])
+        self.assertTrue(report["health_check"]["ok"])
+        self.assertEqual(3, report["health_check"]["attempts"])
+        self.assertIn("elapsed_seconds", report["health_check"])
 
 
 class RunServerUpdateReviewGateTests(unittest.TestCase):

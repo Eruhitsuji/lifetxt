@@ -663,6 +663,35 @@ traceability:
         when journal metadata itself is still valid.
       status: implemented
 
+    - requirement_id: req-storage-access-failure-transaction-recovery
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/302
+      pull_request: null
+      changed_files_or_scope:
+        - Add platform-neutral storage/access failure classification for capacity, permission, and generic I/O failures
+        - Record classified recovery failure diagnostics in transaction resume and compensation terminal error fields
+        - Add simulated capacity preflight, disk-full before journal publication, quota failure during resume, and permission failure during compensation tests
+        - Verify restored capacity/access retries complete deterministically
+        - lifetxt/transaction_policy.py
+        - lifetxt/transaction_journal.py
+        - tests/test_transaction_policy_v4.py
+        - tests/test_transaction_journal_v3.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_transaction_policy_v4 tests.test_transaction_journal_v3 -> Ran 29 tests, OK (skipped=1 POSIX permission-bits test on Windows)
+      release_or_deployment: null
+      notes: >-
+        Standard assurance recovery-safety hardening. The failure fixtures are
+        deterministic errno-based simulations, not physical disk-full, quota, or
+        ownership changes. That keeps the tests portable while preserving the
+        stable-release claim being verified: no ambiguous authoritative success,
+        inspectable post-publication evidence, and deterministic recovery after
+        the injected capacity or permission fault is removed.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

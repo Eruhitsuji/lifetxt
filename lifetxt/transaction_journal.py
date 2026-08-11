@@ -682,13 +682,23 @@ def restore_backup(
     operator=None,
     config=None,
     audit_file=None,
+    authorization_context=None,
+    approval=None,
 ):
     """Verify immutable backup evidence and recover through a separate working copy."""
     from .transaction_admin import append_admin_audit, authorize_operator
     from .transaction_policy import write_integrity_manifest
 
+    if action not in ("inspect", "resume", "compensate"):
+        raise ValueError("restore action must be inspect, resume, or compensate.")
     authorization = authorize_operator(
-        config, operator, action="transaction backup restore"
+        config,
+        operator,
+        action="transaction backup restore.%s" % action,
+        authorization_context=authorization_context,
+        required_scopes=["recovery:%s" % action],
+        destructive=action in ("resume", "compensate"),
+        approval=approval,
     )
     source = os.path.abspath(backup_dir)
     ensure_evidence_storage_profile(
@@ -719,8 +729,6 @@ def restore_backup(
                 ("original_backup_unchanged", True),
             )
         )
-    if action not in ("resume", "compensate"):
-        raise ValueError("restore action must be inspect, resume, or compensate.")
     if working_dir is None:
         working_dir = source + ".restore-" + uuid.uuid4().hex[:8]
     destination = os.path.abspath(working_dir)
@@ -758,7 +766,7 @@ def restore_backup(
         append_admin_audit(
             audit_file,
             "backup.restore.%s" % action,
-            operator=operator,
+            operator=authorization.get("operator") or operator,
             details={
                 "backup_dir": source,
                 "working_dir": destination,
@@ -766,6 +774,7 @@ def restore_backup(
                 "result_state": report.get("state"),
             },
             config=config,
+            authorization_context=authorization_context,
         )
     return OrderedDict(
         (

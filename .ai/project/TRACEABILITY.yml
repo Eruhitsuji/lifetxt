@@ -752,6 +752,39 @@ traceability:
         profiles fail before authoritative mutation.
       status: implemented
 
+    - requirement_id: req-authenticated-recovery-authorization-approval-separation
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/306
+      pull_request: pending
+      changed_files_or_scope:
+        - Extend transaction administration authorization to support authenticated principal context, role checks, recovery scopes, project limits, stale-session refusal, and destructive approval separation
+        - Route backup restore inspect/resume/compensate authorization through the shared recovery authorization contract before working-copy mutation
+        - Document local single-operator authorization as a limitation rather than remote/multi-user authorization
+        - lifetxt/transaction_admin.py
+        - lifetxt/transaction_journal.py
+        - lifetxt/config_registry.py
+        - tests/test_backup_restore_v6.py
+        - docs/en/config.md
+        - docs/en/delegated-remote-attachments-and-recovery.md
+        - docs/ja/delegated-remote-attachments-and-recovery.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_backup_restore_v6 covers legacy allow-list refusal, authenticated context identity over caller-supplied operator, authenticated audit identity, unauthenticated denial, stale-session denial, scope/project mismatch denial before mutation, and same-operator approval denial
+      release_or_deployment: null
+      notes: >-
+        High assurance recovery authorization hardening. The stable remote or
+        multi-user recovery boundary does not trust a caller-supplied operator
+        string as authentication; authorization is derived from authenticated
+        principal context and denied with bounded reason codes. Destructive
+        backup restore actions can require approval by a different identity.
+        Local single-operator administration remains supported only as a
+        documented stable-release limitation when authenticated recovery
+        authorization is disabled.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

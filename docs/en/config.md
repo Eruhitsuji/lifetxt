@@ -348,6 +348,19 @@ requires understanding authentication and permission scopes that are specific
 to that surface. Every `remote.*` key is registered; `lifetxt config explain
 remote.<key>` works for all of them.
 
+## Transaction recovery authorization
+
+Local transaction administration can use `transactions.require_operator_authorization`
+and `transactions.authorized_operators` as a single-operator allow-list. Remote
+or multi-user recovery is stricter: authorization is derived from authenticated
+principal context, not from the caller-provided `--operator` string. Use
+`transactions.require_authenticated_recovery_authorization`,
+`transactions.recovery_authorized_roles`,
+`transactions.recovery_required_scopes`,
+`transactions.recovery_allowed_projects`, and
+`transactions.require_destructive_recovery_approval` to require roles, recovery
+scopes, project limits, and separate approval for destructive restore actions.
+
 ## Complete key reference
 
 Every key below is registered with the authoritative metadata registry, so
@@ -370,7 +383,7 @@ re-explained.
 | Identity | `ids.auto` |
 | Editing | `editor` |
 | Attachments | `attachments.root`, `attachments.max_files`, `attachments.max_bytes`, `attachments.max_file_bytes`, `attachments.ignores`, `attachments.allowed_mime`, `attachments.blocked_mime`, `attachments.open_state_file`, `attachments.remote_source_root`, `attachments.remote_chunk_bytes` |
-| Transactions | `transactions.policy_file`, `transactions.admin_audit_file`, `transactions.preflight_on_startup`, `transactions.terminal_retention_days`, `transactions.max_transactions`, `transactions.max_total_bytes`, `transactions.max_transaction_bytes`, `transactions.require_private_permissions`, `transactions.allow_newer_read_only`, `transactions.evidence_include_paths`, `transactions.require_operator_authorization`, `transactions.authorized_operators` |
+| Transactions | `transactions.policy_file`, `transactions.admin_audit_file`, `transactions.preflight_on_startup`, `transactions.terminal_retention_days`, `transactions.max_transactions`, `transactions.max_total_bytes`, `transactions.max_transaction_bytes`, `transactions.require_private_permissions`, `transactions.allow_newer_read_only`, `transactions.evidence_include_paths`, `transactions.require_operator_authorization`, `transactions.authorized_operators`, `transactions.require_authenticated_recovery_authorization`, `transactions.recovery_authorized_roles`, `transactions.recovery_required_scopes`, `transactions.recovery_allowed_projects`, `transactions.require_destructive_recovery_approval` |
 | Clock skew (Remote/Web writes) | `clock.skew_warning_seconds`, `clock.skew_reject_seconds`, `clock.require_remote_write_time`, `clock.client_time_header` |
 | Remote Safe Mode | see [remote.md](remote.md); every `remote.*` key is registered |
 | Projects | `projects`, `projects.*.aliases` (see [projects.md](projects.md)) |

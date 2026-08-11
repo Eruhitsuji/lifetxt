@@ -460,6 +460,13 @@ stable_release:
             Encryption-at-rest is not advertised as supported; unsupported
             encrypted profiles fail preflight or journal preparation before
             authoritative mutation.
+          - >-
+            #306 requires authenticated principal-derived recovery
+            authorization for remote or multi-user recovery surfaces, enforces
+            configured role/scope/project restrictions before restore mutation,
+            and supports separate approval identity checks for destructive
+            backup restore actions. Local single-operator administration
+            remains a documented limitation when these settings are disabled.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

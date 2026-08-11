@@ -2575,6 +2575,7 @@ capabilities:
       - req-server-update-guarded-core-flow
       - req-server-update-review-gate
       - req-server-update-production-readiness
+      - req-server-update-health-readiness
       - req-server-init-bootstrap
     implementation_locations:
       - docs/deployment/ubuntu-server.md
@@ -2607,9 +2608,11 @@ capabilities:
       - server-update config: service_command, service_preflight_commands
       - server-update config: integrity_checks object entries, application_config, workspace
       - server-update config: validation_commands
+      - server-update config: health_ready_timeout, health_retry_interval
       - server-init config: install_root, data_root, python, installer, extras, service_user, service_group, web, calendar_sync, systemd, service_control, reverse_proxy
     tests_or_evidence:
       - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, source/data root overlap refusal, generated unit/sudoers injection-value refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, health-check planning, and CLI JSON output.
+      - tests/test_server_update.py covers post-restart health readiness retry, including immediate success, connection-refused followed by success, HTTP error followed by success, deadline exhaustion preserving validated_health_check_failed, and restart failure preserving validated_restart_incomplete without health attempts.
       - tests/test_server_update.py (conda-pip coverage added after the initial #277 slice: explicit name/prefix environment selectors, setup/reinstall through `conda run`, and the same environment used for sanity import)
       - tests/test_server_update.py (100 tests: prior guarded-update/review-gate coverage plus uv reinstall, argv-only hook validation, per-check targets/config/workspace, service preflight failure, structured service command, validation failure fail-safe, and dry-run/review install-plan visibility)
       - tests/test_server_update.py (90 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, the full apply path including every documented failure state, diff parsing, per-trigger-category risk classification, review-block formatting, and the review-gate/--approve integration flow)
@@ -2628,6 +2631,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/272
       - https://github.com/Eruhitsuji/lifetxt/issues/273
       - https://github.com/Eruhitsuji/lifetxt/issues/277
+      - https://github.com/Eruhitsuji/lifetxt/issues/281
       - https://github.com/Eruhitsuji/lifetxt/issues/279
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274

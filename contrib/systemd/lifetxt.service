@@ -1,0 +1,41 @@
+# Example systemd unit for `lifetxt serve`, bound to loopback only.
+#
+# This is a documented EXAMPLE, not a ready-to-use file: the User=, Group=,
+# WorkingDirectory=, and ExecStart= paths below (lifetxt / /opt/lifetxt /
+# /srv/lifetxt / port 8765) are placeholders matching
+# docs/deployment/ubuntu-server.md. Edit them for your installation before
+# installing this unit, or your install will fail to find the venv/data
+# directory rather than silently using someone else's paths.
+#
+# Install:
+#   sudo cp contrib/systemd/lifetxt.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lifetxt.service
+#
+# See docs/deployment/ubuntu-server.md for the full runbook.
+
+[Unit]
+Description=lifetxt Web UI / API (loopback only)
+Documentation=https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md
+After=network.target
+
+[Service]
+Type=simple
+User=lifetxt
+Group=lifetxt
+WorkingDirectory=/srv/lifetxt
+ExecStart=/opt/lifetxt/venv/bin/lifetxt serve --host 127.0.0.1 --port 8765 --config /srv/lifetxt/.lifetxt.json
+Restart=on-failure
+RestartSec=5
+
+# Defense-in-depth process hardening. ReadWritePaths must match the data
+# directory above (and anywhere else lifetxt is configured to write, such
+# as a workspace source outside /srv/lifetxt).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/lifetxt
+
+[Install]
+WantedBy=multi-user.target

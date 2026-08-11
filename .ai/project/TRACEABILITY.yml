@@ -4040,7 +4040,7 @@ traceability:
       capability_id: cap-timezone-aware-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/310
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/338
       changed_files_or_scope:
         - Add one fixture source for timezone normalization, wall-time, and clock-skew cases
         - Route timezone policy, CLI precedence, remote clock, and tzdata provider tests through shared cases

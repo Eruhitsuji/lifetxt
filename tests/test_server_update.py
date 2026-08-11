@@ -1608,6 +1608,8 @@ class RunServerUpdateReviewGateTests(unittest.TestCase):
         config = self._config(
             installer="uv",
             uv_install_args=["-e", "/opt/lifetxt/src[web,tui,dev]"],
+            health_ready_timeout=12,
+            health_retry_interval=0.25,
             validation_commands=[
                 {
                     "name": "full_suite",
@@ -1633,6 +1635,10 @@ class RunServerUpdateReviewGateTests(unittest.TestCase):
         self.assertEqual(
             config["validation_commands"], report["would_run_validation_commands"]
         )
+        self.assertEqual(config["health_url"], report["would_check_health_url"])
+        self.assertEqual(10, report["would_use_health_timeout"])
+        self.assertEqual(12, report["would_use_health_ready_timeout"])
+        self.assertEqual(0.25, report["would_use_health_retry_interval"])
 
     def test_review_block_reports_install_command(self):
         git = self._risky_git()

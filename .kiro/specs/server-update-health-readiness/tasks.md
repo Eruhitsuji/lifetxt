@@ -19,7 +19,7 @@
   - _Boundary: `tests/test_server_update.py`_
   - _Depends: 1_
 
-- [ ] 3. Update operator docs and traceability
+- [x] 3. Update operator docs and traceability
   - Document `health_ready_timeout` and `health_retry_interval` in CLI and Ubuntu Server deployment docs.
   - Record the High assurance change package, capability impact, and verification evidence.
   - _Requirements: 2_

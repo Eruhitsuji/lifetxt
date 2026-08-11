@@ -324,6 +324,14 @@ short:
   moved since the block was generated -- see
   [`cli.md` §22.1](../en/cli.md#221-high-impact-review-gate) for the full
   trigger list and block format.
+- Health checking after service restart is readiness-aware. If systemd has
+  started the service but the Web process is not listening yet,
+  `server-update` retries the configured `health_url` until
+  `health_ready_timeout` expires, waiting `health_retry_interval` seconds
+  between failed attempts. Keep the defaults (`10` seconds total and `0.5`
+  seconds between attempts) unless your production startup is consistently
+  slower; this wait runs only after code validation and service restart, and
+  it does not perform another git/package/data/service mutation.
 
 **Rollback**, if an update produces a broken state that `server-update`'s
 own failure handling did not already recover from: restore the backup

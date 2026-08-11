@@ -2,7 +2,7 @@ schema_version: 1
 
 links:
   - requirement_id: req-server-update-health-readiness
-    capability_id: cap-server-update-health-readiness
+    capability_id: cap-ubuntu-server-deployment
     epic: null
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/281
     pull_request: null

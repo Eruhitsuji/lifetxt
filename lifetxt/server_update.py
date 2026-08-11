@@ -38,6 +38,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from collections import OrderedDict
 from datetime import datetime, timezone
 
@@ -80,6 +81,8 @@ DEFAULT_CONFIG = {
     "integrity_checks": ["check"],
     "health_url": None,
     "health_timeout": 10,
+    "health_ready_timeout": 10,
+    "health_retry_interval": 0.5,
     "git_timeout": 10,
     "service_timeout": 30,
     "installer": "pip",
@@ -674,6 +677,61 @@ def check_health(url, timeout):
         return OrderedDict([("ok", False), ("error", str(exc))])
 
 
+def _non_negative_float(value, default):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return max(0.0, number)
+
+
+def _retry_interval_seconds(value, default):
+    return max(0.1, _non_negative_float(value, default))
+
+
+def wait_for_health(
+    url,
+    request_timeout,
+    ready_timeout,
+    retry_interval,
+    health_checker=check_health,
+    sleep=time.sleep,
+    monotonic=time.monotonic,
+):
+    if not url:
+        return None
+
+    request_timeout = _non_negative_float(request_timeout, 10)
+    ready_timeout = _non_negative_float(ready_timeout, request_timeout)
+    retry_interval = _retry_interval_seconds(retry_interval, 0.5)
+    start = monotonic()
+    attempts = 0
+    elapsed = 0.0
+    last = None
+
+    while True:
+        attempts += 1
+        remaining_before_attempt = max(0.0, ready_timeout - elapsed)
+        attempt_timeout = min(request_timeout, remaining_before_attempt)
+        last = health_checker(url, attempt_timeout)
+        elapsed = max(0.0, monotonic() - start)
+        if last is None:
+            last = OrderedDict(
+                [("ok", False), ("error", "health check returned no result")]
+            )
+        result = OrderedDict(last)
+        result["attempts"] = attempts
+        result["elapsed_seconds"] = round(elapsed, 3)
+        result["request_timeout"] = request_timeout
+        result["attempt_timeout"] = attempt_timeout
+        result["ready_timeout"] = ready_timeout
+        result["retry_interval"] = retry_interval
+        if result.get("ok") or elapsed >= ready_timeout:
+            return result
+        remaining = ready_timeout - elapsed
+        sleep(min(retry_interval, remaining))
+
+
 class UpdateLock:
     """A single-update lock: refuses to run two `server-update`s at once.
 
@@ -952,6 +1010,8 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
     git_timeout = config.get("git_timeout", 10)
     service_timeout = config.get("service_timeout", 30)
     health_timeout = config.get("health_timeout", 10)
+    health_ready_timeout = config.get("health_ready_timeout", health_timeout)
+    health_retry_interval = config.get("health_retry_interval", 0.5)
     manager = config.get("service_manager", "systemctl")
     service_command = _service_command(config)
     services = list(config.get("services") or [])
@@ -1097,6 +1157,10 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         )
         report["would_run_integrity_checks"] = integrity_checks
         report["would_run_validation_commands"] = validation_commands
+        report["would_check_health_url"] = config.get("health_url")
+        report["would_use_health_timeout"] = health_timeout
+        report["would_use_health_ready_timeout"] = health_ready_timeout
+        report["would_use_health_retry_interval"] = health_retry_interval
         return report
 
     # -- review gate: a risky update must be explicitly approved by exact
@@ -1239,7 +1303,12 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         )
         return report
 
-    health = check_health(config.get("health_url"), health_timeout)
+    health = wait_for_health(
+        config.get("health_url"),
+        health_timeout,
+        health_ready_timeout,
+        health_retry_interval,
+    )
     report["health_check"] = health
     if health is not None and not health.get("ok"):
         report["status"] = "validated_health_check_failed"

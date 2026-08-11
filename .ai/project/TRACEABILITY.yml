@@ -3567,6 +3567,40 @@ traceability:
         .ai/project/changes/server-init-bootstrap/design.md.
       status: implemented
 
+    - requirement_id: req-server-update-health-readiness
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/281
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/282
+      changed_files_or_scope:
+        - Add bounded readiness retry for post-restart `lifetxt server-update` health checks
+        - Add `health_ready_timeout` and `health_retry_interval` config defaults
+        - Preserve `validated_restart_incomplete` and `validated_health_check_failed` classifications
+        - Report health attempts, elapsed seconds, timing settings, and final status/error
+        - lifetxt/server_update.py
+        - tests/test_server_update.py
+        - docs/en/cli.md
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-update-health-readiness/
+        - .kiro/specs/server-update-health-readiness/
+      tests_or_evidence:
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_update.CheckHealthTests tests.test_server_update.RunServerUpdateApplyTests.test_health_check_failure_after_restart_is_reported_but_does_not_raise tests.test_server_update.RunServerUpdateApplyTests.test_health_check_transient_connection_failure_after_restart_retries_to_updated tests.test_server_update.RunServerUpdateApplyTests.test_restart_failure_after_validation_is_reported_but_does_not_raise -> Ran 10 tests, OK'
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_update -> Ran 112 tests, OK (skipped=1)'
+        - '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest discover -> Ran 2331 tests, OK (skipped=9)'
+        - '.\.venv\Scripts\ruff.exe check lifetxt tests scripts -> All checks passed!'
+        - '.\.venv\Scripts\ruff.exe format --check lifetxt\server_update.py tests\test_server_update.py -> 2 files already formatted'
+        - '.\.venv\Scripts\python.exe -m lifetxt check examples\minimal_life.txt -> OK: 10 item(s)'
+        - '.\.venv\Scripts\python.exe -m lifetxt server-update --help -> help renders successfully'
+        - '/security-review found and fixed tight-retry-loop and deadline-overrun issues; post-fix re-review found no remaining candidate findings'
+      release_or_deployment: null
+      notes: >-
+        Security/High assurance continues from #272/#273/#277 because
+        server-update controls production git/package/service validation
+        behavior. This change is deliberately limited to repeated HTTP
+        health reads and bounded sleeps after validation and restart; it
+        performs no additional git, package, data, or service mutation.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -3037,6 +3037,8 @@ environment and the deployment's paths/services, not any life.txt content:
 | `conda_executable`, `conda_env_name`, `conda_env_prefix`, `conda_install_args` | conda backend settings. The command is `<conda_executable> run --name NAME python -m pip install ...` or `--prefix PREFIX`; set exactly one of name/prefix. |
 | `validation_commands` | Optional structured argv commands run after reinstall/sanity/import/integrity validation and before services restart. Disabled by default. Each entry may be an argv array or an object with `name`, `argv`, optional `cwd`, and optional `timeout`. |
 | `health_timeout`, `git_timeout`, `service_timeout` | Per-category subprocess/network timeouts in seconds. |
+| `health_ready_timeout` | Total readiness deadline, in seconds, for post-restart health retries. Defaults to `10`. |
+| `health_retry_interval` | Delay, in seconds, between failed health attempts during the readiness window. Defaults to `0.5`. |
 
 Example with a pip-less `uv`-managed venv, separate primary/archive
 life.txt targets, and an explicit application config/workspace:
@@ -3081,7 +3083,9 @@ life.txt targets, and an explicit application config/workspace:
       "timeout": 900
     }
   ],
-  "health_url": "http://127.0.0.1:8765/api/health"
+  "health_url": "http://127.0.0.1:8765/api/health",
+  "health_ready_timeout": 10,
+  "health_retry_interval": 0.5
 }
 ```
 
@@ -3124,6 +3128,18 @@ Without `--yes`, `server-update` fetches and reports the pending update
 8. Runs the configured `integrity_checks`.
 9. Runs optional `validation_commands`.
 10. Restarts the services it stopped and checks `health_url`.
+
+The health check is readiness-aware. After services restart successfully,
+`server-update` sends one health request immediately. If the endpoint is
+not listening yet, returns a transient connection error, times out, or
+returns an unhealthy HTTP response, `server-update` waits
+`health_retry_interval` seconds and tries again until
+`health_ready_timeout` expires. The first healthy response ends the wait
+and the update reports `updated`. If the deadline expires, the update still
+reports `validated_health_check_failed`. The `health_check` report includes
+attempt count, elapsed seconds, timing settings, and the final status or
+error. Dry-run output includes the health URL and readiness timing that
+would apply during the mutating run.
 
 Failure behavior:
 

@@ -23,23 +23,73 @@ verification:
         - req-server-update-health-readiness
       status: planned
 
-  executed: []
+  executed:
+    - type: unit
+      command: .\.venv\Scripts\python.exe -m unittest tests.test_server_update
+      result: Ran 111 tests in 1.031s, OK (skipped=1)
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: full
+      command: '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest discover'
+      result: Ran 2331 tests in 477.227s, OK (skipped=9)
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: lint
+      command: .\.venv\Scripts\ruff.exe check lifetxt tests scripts
+      result: All checks passed!
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: format
+      command: .\.venv\Scripts\ruff.exe format --check lifetxt\server_update.py tests\test_server_update.py
+      result: 2 files already formatted
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: integration
+      command: .\.venv\Scripts\python.exe -m lifetxt check examples\minimal_life.txt
+      result: 'OK: 10 item(s)'
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: smoke
+      command: .\.venv\Scripts\python.exe -m lifetxt server-update --help
+      result: help renders successfully, including --server-config, --yes, --approve, and --format
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
+    - type: review
+      command: /security-review against full branch diff
+      result: '1 finding found and fixed: `health_retry_interval=0` could create a tight retry loop until deadline; fixed by clamping retry interval to a small positive floor. Re-review found no remaining candidate findings in changed code. Secret scan found one pre-existing docs example outside changed lines, not introduced by this change.'
+      requirement_ids:
+        - req-server-update-health-readiness
+      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      completed_at: 2026-08-11
 
 review_ledger:
   - reviewer: Codex
     review_type: implementation
-    target_commit: null
-    result: pending
+    target_commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+    result: passed
     finding_count: 0
-    completed_at: null
+    completed_at: 2026-08-11
   - reviewer: Codex
     review_type: security
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
+    target_commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+    result: passed_after_fix
+    finding_count: 1
+    completed_at: 2026-08-11
 
 release_evidence:
   migration_notes: "No schema or data migration."
   rollback_plan: "No new rollback mechanism. A failed health check still reports `validated_health_check_failed`; operator rollback remains the existing server-update deployment rollback path."
-  operations_evidence: []
+  operations_evidence:
+    - "No production host or data was touched. Verification used unit tests, full local suite, CLI help smoke, and minimal fixture check only."

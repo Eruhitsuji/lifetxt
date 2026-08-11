@@ -50,6 +50,7 @@ capabilities:
       - req-stable-release-feature-freeze
       - req-stable-release-support-matrix
       - req-stable-release-gates
+      - req-stable-release-roadmap-classification
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -64,11 +65,13 @@ capabilities:
       - '#284 acceptance-criteria mapping reviewed in the pull request'
       - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
       - '#286 release gates separately define RC entry and stable promotion criteria'
+      - '#287 roadmap classification maps current P0 and Format 1.0 compatibility work to release severity and child issues'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
       - https://github.com/Eruhitsuji/lifetxt/issues/285
       - https://github.com/Eruhitsuji/lifetxt/issues/286
+      - https://github.com/Eruhitsuji/lifetxt/issues/287
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -84,6 +87,9 @@ capabilities:
       surface as stable.
       #286 adds the RC entry and stable promotion gates, including failed,
       flaky, and stale required-check handling plus known-issue severity classes.
+      #287 classifies the current P0 roadmap and public-compatibility Format
+      1.0 work against the stable-release boundary without turning todo.md into
+      a task-status source.
     replacement:
       replaces: []
       replaced_by: null

@@ -3658,7 +3658,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/286
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/331
       changed_files_or_scope:
         - Add RC entry criteria to .ai/project/STABLE_RELEASE.yml
         - Add stable promotion criteria separately from RC entry

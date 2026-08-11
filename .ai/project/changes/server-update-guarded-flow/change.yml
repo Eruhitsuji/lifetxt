@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: server-update-guarded-flow
+  title: Guarded core update flow for a systemd-managed production install
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/272
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/274
+  base_commit: 02867f0d01620fb17f8d4fcecfd2913af1f51db4
+  target_release: null
+
+scope:
+  in_scope:
+    - "Add `lifetxt server-update`, a CLI command wrapping `lifetxt update`'s existing git fast-forward logic with a single-instance lock, timestamped backup, service stop/start, dependency reinstall, sanity import check, pre/post-update data-hash verification, configurable integrity checks, service restart, and a health check."
+    - "Reuse `command_update`'s git helpers (`_run_git_for_update`, `_lifetxt_install_root`, `_reject_option_like_git_arg`, `_git_commit_summary`, `_github_latest_release_or_tag`) via a lazy import rather than reimplementing fetch/fast-forward logic."
+    - "A separate `--server-config PATH` JSON deployment config (python executable, remote/branch/ref, backup paths, services, service_manager, integrity_checks, health_url, lock_path, timeouts), distinct from the application's own `.lifetxt.json`/global `--config`."
+    - Documented failure-state handling: a failure before the code update restores whatever service state existed before the attempt; a failure after the code update but before validation completes leaves services stopped rather than restarting unvalidated code.
+    - "`docs/deployment/ubuntu-server.md` and `docs/en/cli.md` section 22 documenting the command."
+  out_of_scope:
+    - "Risk classification and a pre-mutation review/approval gate for high-impact updates (tracked separately as #273; `server-update --yes` runs its full flow unconditionally today)."
+    - "Non-systemd/rootless service management (`service_manager: \"none\"` exists as a no-op escape hatch, not a second implementation)."
+    - "Any change to `lifetxt update`'s own behavior or safety rails."
+  write_scope:
+    - lifetxt/server_update.py
+    - lifetxt/cli.py
+    - tests/test_server_update.py
+    - config/release/clock-boundary-baseline-v1.json
+    - docs/deployment/ubuntu-server.md
+    - docs/en/cli.md
+  forbidden_scope:
+    - lifetxt/mutation.py
+    - lifetxt/transaction_journal.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (production git working-tree mutation plus systemd service control, same escalation basis as cap-lifetxt-self-update and cap-remote-single-worker-guard)

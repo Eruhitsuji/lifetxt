@@ -247,17 +247,21 @@ def append_admin_audit(
     max_events=DEFAULT_AUDIT_MAX_EVENTS,
     now=None,
     config=None,
+    authorization_context=None,
 ):
     absolute = os.path.abspath(path)
     authorization = authorize_operator(
-        config, operator, action="transaction audit append"
+        config,
+        operator,
+        action="transaction audit append",
+        authorization_context=authorization_context,
     )
     ensure_private_tree(os.path.dirname(absolute) or ".", require_private=True)
     limit = max(1, int(max_events))
     entry = OrderedDict(
         (
             ("timestamp_utc", utc_now_text(now)),
-            ("operator", str(operator or "unknown")),
+            ("operator", str(authorization.get("operator") or operator or "unknown")),
             ("event", str(event)),
             ("details", details or {}),
         )
@@ -454,28 +458,162 @@ def _make_private(path, directory=False):
         pass
 
 
-def authorize_operator(config, operator, action="transaction administration"):
-    """Enforce the optional transaction-administration operator allow-list."""
+class TransactionAuthorizationError(TransactionPolicyError):
+    def __init__(self, report):
+        self.report = report
+        TransactionPolicyError.__init__(
+            self,
+            "Recovery authorization denied for %s: %s."
+            % (
+                report.get("action") or "transaction administration",
+                ", ".join(report.get("denial_reasons") or ["not_authorized"]),
+            ),
+        )
+
+
+def authorize_operator(
+    config,
+    operator=None,
+    action="transaction administration",
+    authorization_context=None,
+    required_scopes=None,
+    destructive=False,
+    approval=None,
+):
+    """Enforce transaction administration and recovery authorization policy."""
     config = config or {}
     section = (
         config.get("transactions")
         if isinstance(config.get("transactions"), dict)
         else {}
     )
+    remote_section = (
+        config.get("remote") if isinstance(config.get("remote"), dict) else {}
+    )
+    remote_or_multi_user = (
+        bool(remote_section.get("enabled"))
+        or len(remote_section.get("principals") or []) > 1
+    )
+    authenticated_required = bool(
+        section.get("require_authenticated_recovery_authorization")
+        or remote_or_multi_user
+    )
     required = bool(section.get("require_operator_authorization"))
     allowed = [str(value) for value in (section.get("authorized_operators") or [])]
-    identity = str(operator or "").strip()
+    context = authorization_context if isinstance(authorization_context, dict) else {}
+    principal = (
+        context.get("principal") if isinstance(context.get("principal"), dict) else {}
+    )
+    identity = _context_identity(context, principal) if authenticated_required else ""
+    if not identity:
+        identity = str(operator or "").strip()
+    roles = _string_list(principal.get("roles") or context.get("roles"))
+    scopes = _string_list(principal.get("scopes") or context.get("scopes"))
+    project = _context_project(context, principal)
+    configured_scopes = _string_list(section.get("recovery_required_scopes"))
+    effective_scopes = configured_scopes + _string_list(required_scopes)
+    allowed_projects = _string_list(section.get("recovery_allowed_projects"))
+    allowed_roles = _string_list(section.get("recovery_authorized_roles"))
+    approval_required = bool(
+        destructive and section.get("require_destructive_recovery_approval")
+    )
+    approval = approval if isinstance(approval, dict) else {}
+    approved_by = str(
+        approval.get("approved_by") or approval.get("approver") or ""
+    ).strip()
+    denial_reasons = []
+    if required and not (bool(identity) and identity in allowed):
+        denial_reasons.append("operator_not_authorized")
+    if authenticated_required:
+        if not context.get("authenticated"):
+            denial_reasons.append("unauthenticated_context")
+        if _context_stale(context):
+            denial_reasons.append("stale_session")
+        if not identity:
+            denial_reasons.append("missing_authenticated_identity")
+    scoped_context_required = authenticated_required or bool(authorization_context)
+    if (
+        scoped_context_required
+        and allowed_roles
+        and not set(roles).intersection(allowed_roles)
+    ):
+        denial_reasons.append("role_not_authorized")
+    missing_scopes = (
+        [scope for scope in effective_scopes if scope not in scopes]
+        if scoped_context_required
+        else []
+    )
+    if missing_scopes:
+        denial_reasons.append("scope_mismatch")
+    if scoped_context_required and allowed_projects and project not in allowed_projects:
+        denial_reasons.append("project_scope_mismatch")
+    if approval_required:
+        if not approval.get("approved"):
+            denial_reasons.append("approval_required")
+        if not approved_by:
+            denial_reasons.append("approval_identity_missing")
+        elif approved_by == identity:
+            denial_reasons.append("approval_separation_required")
     report = OrderedDict(
         (
             ("required", required),
+            ("authenticated_required", authenticated_required),
             ("operator", identity or None),
             ("authorized_operators", allowed),
             ("action", str(action)),
-            ("authorized", (not required) or (bool(identity) and identity in allowed)),
+            ("roles", roles),
+            ("scopes", scopes),
+            ("required_scopes", effective_scopes),
+            ("project", project),
+            ("allowed_projects", allowed_projects),
+            ("destructive", bool(destructive)),
+            ("approval_required", approval_required),
+            ("approved_by", approved_by or None),
+            ("denial_reasons", denial_reasons),
+            ("authorized", not denial_reasons),
         )
     )
     if not report["authorized"]:
-        raise TransactionPolicyError(
-            "Operator %r is not authorized for %s." % (identity or None, action)
-        )
+        raise TransactionAuthorizationError(report)
     return report
+
+
+def _string_list(values):
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)):
+        return [str(values)]
+    try:
+        return [str(value) for value in values]
+    except TypeError:
+        return [str(values)]
+
+
+def _context_identity(context, principal):
+    raw = (
+        principal.get("id")
+        or principal.get("identity")
+        or context.get("identity")
+        or context.get("operator")
+    )
+    return str(raw or "").strip()
+
+
+def _context_project(context, principal):
+    raw = (
+        context.get("project")
+        or context.get("project_id")
+        or principal.get("project")
+        or principal.get("project_id")
+    )
+    return str(raw).strip() if raw is not None else None
+
+
+def _context_stale(context):
+    session = context.get("session") if isinstance(context.get("session"), dict) else {}
+    if context.get("stale") or session.get("stale"):
+        return True
+    if context.get("active") is False or session.get("active") is False:
+        return True
+    state = str(context.get("state") or session.get("state") or "").strip().lower()
+    return state in ("expired", "stale", "revoked", "inactive")

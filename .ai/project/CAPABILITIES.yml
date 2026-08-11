@@ -607,6 +607,7 @@ capabilities:
       - req-storage-access-failure-transaction-recovery
       - req-windows-file-interference-transaction-recovery
       - req-protected-recovery-evidence-storage-profile
+      - req-authenticated-recovery-authorization-approval-separation
     implementation_locations:
       - lifetxt/transaction_journal.py
       - lifetxt/multi_target.py
@@ -628,6 +629,7 @@ capabilities:
       - '#302 covers simulated ENOSPC/EDQUOT/EACCES transaction failures before publication and during recovery, with capacity versus permission diagnostics'
       - '#303 records Windows 10.0.19045 / NTFS evidence for byte-range locked target interference refusing replace, then recovering after lock release'
       - '#305 defines stable `os-private-v1` recovery-evidence storage profile for transaction, backup, archive, and restore evidence; unsupported encryption profiles fail preflight before mutation'
+      - '#306 requires authenticated principal-derived recovery authorization for remote/multi-user surfaces, scoped project checks, and approval separation for destructive backup restore actions'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -641,6 +643,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/302
       - https://github.com/Eruhitsuji/lifetxt/issues/303
       - https://github.com/Eruhitsuji/lifetxt/issues/305
+      - https://github.com/Eruhitsuji/lifetxt/issues/306
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
       - https://github.com/Eruhitsuji/lifetxt/pull/334
@@ -673,6 +676,13 @@ capabilities:
       Encryption is intentionally not advertised as supported; an unsupported
       encrypted profile fails startup/preflight or journal preparation before
       mutating authoritative targets.
+      #306 extends recovery authorization beyond caller-supplied operator
+      strings. Remote or multi-user recovery derives identity, roles, scopes,
+      and project restrictions from authenticated context, and destructive
+      backup restore actions can require a separate approval identity. Local
+      single-operator administration remains available as an explicit
+      stable-release limitation when authenticated recovery authorization is not
+      configured.
     replacement:
       replaces: []
       replaced_by: null

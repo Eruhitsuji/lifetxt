@@ -209,6 +209,27 @@ The operation verifies the original backup again after recovery and writes a fre
 ```
 
 This is a local allow-list boundary, not a replacement for authenticated roles or OS access controls. Encrypted evidence profiles, key rotation, role-backed authorization, and real incident handoff drills remain release work.
+For remote or multi-user recovery surfaces, authorization is derived from the
+authenticated principal context instead of `--operator`. Configure recovery
+roles, scopes, project limits, and destructive-action approval separation with:
+
+```json
+{
+  "transactions": {
+    "require_authenticated_recovery_authorization": true,
+    "recovery_authorized_roles": ["recovery-admin"],
+    "recovery_required_scopes": ["recovery"],
+    "recovery_allowed_projects": ["default"],
+    "require_destructive_recovery_approval": true
+  }
+}
+```
+
+`resume` and `compensate` from a backup are destructive recovery actions. When
+approval separation is enabled, the approval identity must be different from the
+authenticated recovery operator. Local single-operator use can leave these
+settings disabled, but that is a stable-release limitation for local-only
+administration and must not be presented as remote authorization.
 For incident handling, prefer `inspect` first. It reads the retained evidence
 without creating a working copy, which makes it the lowest-risk way to decide
 whether a transaction should be resumed, compensated, abandoned, or escalated.

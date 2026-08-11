@@ -202,6 +202,22 @@ operation は recovery 後に original backup を再 verify し、working copy �
 
 これは local allow-list boundary であり、authenticated roles や OS access controls の代替ではありません。encrypted evidence profiles、key rotation、role-backed authorization、real incident handoff drills は今後の release work です。
 
+remote または multi-user recovery surface では、authorization は `--operator` ではなく authenticated principal context から derive します。recovery role、scope、project limit、destructive action の approval separation は次で設定します。
+
+```json
+{
+  "transactions": {
+    "require_authenticated_recovery_authorization": true,
+    "recovery_authorized_roles": ["recovery-admin"],
+    "recovery_required_scopes": ["recovery"],
+    "recovery_allowed_projects": ["default"],
+    "require_destructive_recovery_approval": true
+  }
+}
+```
+
+backup からの `resume` と `compensate` は destructive recovery action です。approval separation が有効な場合、approval identity は authenticated recovery operator と別でなければなりません。local single-operator use ではこれらの設定を disabled のままにできますが、それは local-only administration の stable-release limitation であり、remote authorization として扱ってはいけません。
+
 incident handling では、まず `inspect` を優先してください。これは working copy を作らず retained evidence を読むため、transaction を resume、compensate、abandon、または escalate すべきか判断する最も低 risk な方法です。
 
 ## Published schemas

@@ -3629,6 +3629,31 @@ traceability:
         Definition of Ready and status-label gates.
       status: implemented
 
+    - requirement_id: req-stable-release-support-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/285
+      pull_request: null
+      changed_files_or_scope:
+        - Add the stable-release support matrix to .ai/project/STABLE_RELEASE.yml
+        - Classify runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries
+        - Distinguish simulated/subprocess evidence from real-environment evidence
+        - Record limitations for experimental, deferred, or narrowly verified surfaces
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - python -m lifetxt check examples/minimal_life.txt
+        - '#285 acceptance criteria mapped to stable_release.support_matrix entries'
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This records the first stable-release
+        support promise and minimum evidence requirements only; it does not run
+        the platform-specific verification assigned to later #283 child issues
+        and does not change runtime dependency declarations.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

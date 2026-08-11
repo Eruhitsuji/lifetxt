@@ -48,6 +48,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-stable-release-feature-freeze
+      - req-stable-release-support-matrix
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -60,9 +61,11 @@ capabilities:
       - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
       - python -m lifetxt check examples/minimal_life.txt
       - '#284 acceptance-criteria mapping reviewed in the pull request'
+      - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
+      - https://github.com/Eruhitsuji/lifetxt/issues/285
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/329
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -72,6 +75,10 @@ capabilities:
       status:* labels remain authoritative for actionable work. Later Phase 0
       issues (#285, #286, #287) should reuse this boundary rather than
       redefining feature-freeze rules.
+      #285 extends the same policy file with a support matrix that distinguishes
+      stable support, experimental surfaces, deferred filesystem classes, and
+      the minimum evidence required before release documentation can advertise a
+      surface as stable.
     replacement:
       replaces: []
       replaced_by: null

@@ -3463,7 +3463,7 @@ traceability:
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/260
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/273
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/276
       changed_files_or_scope:
         - Add risk classification (gather_diff_summary/classify_risk) and a pre-mutation high-impact review gate (--approve SHA) to `lifetxt server-update`
         - lifetxt/server_update.py
@@ -3492,8 +3492,7 @@ traceability:
         section transcribing the live disposable-git-repository verification.
         Security/High assurance, matching cap-lifetxt-self-update's and
         #272's own escalation basis; requires independent security review
-        and Merge Authority approval before merge to main. pull_request is
-        filled in once the pull request implementing this entry is opened.
+        and Merge Authority approval before merge to main.
       status: implemented
 
 required_chain:

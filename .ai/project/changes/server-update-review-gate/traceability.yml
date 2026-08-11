@@ -5,7 +5,7 @@ links:
     capability_id: cap-ubuntu-server-deployment
     epic: https://github.com/Eruhitsuji/lifetxt/issues/260
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/273
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/276
     tests_or_evidence:
       - "tests/test_server_update.py DiffSummaryParsingTests, ClassifyRiskTests, ReviewBlockFormatTests, RunServerUpdateReviewGateTests, and CommandServerUpdateCliTests additions -> 90 tests total in the module, OK (skipped=1, no symlink privilege)"
       - "live: real disposable bare-origin + checkout git repository; server-update --yes against a commit touching lifetxt/parser.py and contrib/systemd/lifetxt.service with a 'security:' commit message printed the exact designed review block and made no mutation"

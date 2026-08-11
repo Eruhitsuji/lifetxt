@@ -477,6 +477,11 @@ stable_release:
             identifiers, revision hashes, timestamps, and target relations are
             retained; raw paths, error text, artifact payloads, authored content,
             credentials, and tokens are redacted or prohibited.
+          - >-
+            #309 exercises the operator escalation path in a temporary
+            workspace: safe compensation, diverged-target refusal, immutable
+            backup handoff, manifest verification, and separate restore
+            inspection. No production data is used.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

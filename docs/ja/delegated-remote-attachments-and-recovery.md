@@ -195,6 +195,17 @@ artifact payload、authored content、credential、token は export しません
 operator-local journal と共有 bundle の境界を確認し、bundle は共有前に内容を
 review してください。
 
+## End-to-end recovery drill
+
+drill は production data を使わず temporary workspace で実施します。incident
+owner と handoff reviewer を先に記録し、journal を inspect して before/after
+hash と target の状態を照合します。safe な場合だけ `resume` または
+`compensate` を実行します。target が diverged なら mutation action を使わず、
+`abandon --backup-dir` で immutable evidence を保全し、`restore --action inspect`
+で backup integrity を確認します。working copy を recovery する場合も original
+backup は変更しません。runbook の曖昧さは undocumented assumption で埋めず、
+blocking follow-up issue として記録します。
+
 abandoned transaction backups は immutable evidence として残ります。restoration はまず original integrity manifest を verify します。`inspect` は working copy を作らず evidence を読みます。`resume` と `compensate` は backup を separate working directory に copy し、その copy から recover します。
 
 ```bash

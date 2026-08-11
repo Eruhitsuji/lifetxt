@@ -644,6 +644,59 @@ class TransactionJournalV3Tests(unittest.TestCase):
             first["targets"][0]["before_hash"], self.read(self.path("evidence-1.json"))
         )
 
+    def test_end_to_end_recovery_escalation_drill_isolated_and_handoff_safe(self):
+        safe_path = self.write("drill-safe.txt", "safe-before\n")
+        safe_result = apply_multi_target(
+            [
+                text_plan(
+                    safe_path,
+                    lambda _text: "safe-after\n",
+                    mutation.read_text_snapshot(safe_path).content_hash,
+                )
+            ],
+            operation="drill.safe-compensate",
+            journal_dir=self.journal_dir,
+            transaction_id="drill-safe",
+        )
+        self.force_journal_state(safe_result.journal_path, "committing")
+        safe_inspection = inspect_journal(safe_result.journal_path)
+        self.assertEqual("after", safe_inspection["observed_targets"][0]["relation"])
+        self.assertIn("compensate", safe_inspection["available_actions"])
+        compensated = compensate(safe_result.journal_path)
+        self.assertEqual("compensated", compensated["state"])
+        self.assertEqual("safe-before\n", self.read(safe_path))
+
+        diverged_path = self.write("drill-diverged.txt", "before\n")
+        diverged = apply_multi_target(
+            [
+                text_plan(
+                    diverged_path,
+                    lambda _text: "after\n",
+                    mutation.read_text_snapshot(diverged_path).content_hash,
+                )
+            ],
+            operation="drill.diverged-escalation",
+            journal_dir=self.journal_dir,
+            transaction_id="drill-diverged",
+        )
+        self.force_journal_state(diverged.journal_path, "committing")
+        self.write("drill-diverged.txt", "operator-edit\n")
+        inspection = inspect_journal(diverged.journal_path)
+        self.assertEqual("diverged", inspection["observed_targets"][0]["relation"])
+        self.assertNotIn("resume", inspection["available_actions"])
+        self.assertNotIn("compensate", inspection["available_actions"])
+
+        abandoned = abandon_with_backup(
+            diverged.journal_path, self.path("drill-backups")
+        )
+        handoff = transaction_journal.restore_backup(
+            abandoned["backup_path"], action="inspect"
+        )
+        self.assertTrue(abandoned["backup_manifest_sha256"])
+        self.assertTrue(handoff["verification"]["ok"])
+        self.assertTrue(handoff["original_backup_unchanged"])
+        self.assertEqual("operator-edit\n", self.read(diverged_path))
+
     def test_cleanup_only_removes_old_terminal_journals_with_force(self):
         path = self.write("one.txt", "one\n")
         result = apply_multi_target(

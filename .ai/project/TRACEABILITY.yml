@@ -3798,7 +3798,7 @@ traceability:
       capability_id: cap-delegated-mutation-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/296
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/334
       changed_files_or_scope:
         - Route stable editor-session adapter writes through delegated proposal prepare/apply
         - Preserve temporary-copy editing and authoritative compare-and-swap apply

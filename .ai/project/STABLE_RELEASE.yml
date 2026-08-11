@@ -429,6 +429,11 @@ stable_release:
             artifacts, and backup manifests fail safely before recovery mutates
             authoritative targets, with deterministic repeat attempts and
             inspect output retained where possible.
+          - >-
+            #302 verifies simulated disk-full, quota, and permission-denied
+            transaction failures before journal publication and during recovery,
+            distinguishing capacity from permission diagnostics without relying
+            on POSIX-only permission behavior.
       - id: p0-protected-recovery-evidence-authorization
         todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
         classification: stable_release_blocker

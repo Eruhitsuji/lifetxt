@@ -1,5 +1,6 @@
 import json
 import os
+import errno
 import shutil
 import tempfile
 import unittest
@@ -17,7 +18,7 @@ from lifetxt.transaction_journal import (
     list_journals,
     resume,
 )
-from lifetxt.transaction_policy import fault_injection
+from lifetxt.transaction_policy import TransactionPolicyError, fault_injection
 
 
 class TransactionJournalV3Tests(unittest.TestCase):
@@ -47,6 +48,14 @@ class TransactionJournalV3Tests(unittest.TestCase):
         return sorted(
             name for name in os.listdir(directory) if name.startswith(".lifetxt-tx-")
         )
+
+    def force_journal_state(self, journal_path, state):
+        with open(journal_path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+        record["state"] = state
+        with open(journal_path, "w", encoding="utf-8") as handle:
+            json.dump(record, handle)
+        return record
 
     def test_durable_write_retries_transient_replace_permission_refusal(self):
         target = self.write("journal.json", "old\n")
@@ -170,6 +179,141 @@ class TransactionJournalV3Tests(unittest.TestCase):
         resumed = resume(journal_path)
         self.assertEqual("committed", resumed["state"])
         self.assertEqual("ONE\n", self.read(target))
+
+    def test_capacity_policy_refuses_before_publication_without_authoritative_change(
+        self,
+    ):
+        target = self.write("one.txt", "one\n")
+        with self.assertRaisesRegex(TransactionPolicyError, "per-transaction limit"):
+            apply_multi_target(
+                [
+                    text_plan(
+                        target,
+                        lambda _text: "ONE\n",
+                        mutation.read_text_snapshot(target).content_hash,
+                    )
+                ],
+                operation="journal.capacity-preflight",
+                journal_dir=self.journal_dir,
+                transaction_policy=dict(
+                    transaction_journal.policy_from_config(),
+                    max_transaction_bytes=1024,
+                ),
+            )
+
+        self.assertEqual("one\n", self.read(target))
+        self.assertEqual([], list_journals(self.journal_dir))
+
+    def test_disk_full_before_journal_publication_leaves_no_success_or_target_change(
+        self,
+    ):
+        target = self.write("one.txt", "one\n")
+
+        def fail_before_publish(point, details):
+            if point != "before_file_fsync":
+                return
+            if os.path.basename(details["path"]) == "journal.json":
+                raise OSError(errno.ENOSPC, "simulated disk full")
+
+        with fault_injection(fail_before_publish):
+            with self.assertRaisesRegex(OSError, "simulated disk full"):
+                apply_multi_target(
+                    [
+                        text_plan(
+                            target,
+                            lambda _text: "ONE\n",
+                            mutation.read_text_snapshot(target).content_hash,
+                        )
+                    ],
+                    operation="journal.disk-full-before-publish",
+                    journal_dir=self.journal_dir,
+                    transaction_id="disk-full-before-publish",
+                )
+
+        self.assertEqual("one\n", self.read(target))
+        self.assertEqual([], list_journals(self.journal_dir))
+        tx_dir = os.path.join(self.journal_dir, "disk-full-before-publish")
+        self.assertTrue(os.path.isdir(tx_dir))
+        self.assertFalse(os.path.exists(os.path.join(tx_dir, "journal.json")))
+        self.assertEqual([], self.temporary_names(tx_dir))
+
+    def test_quota_failure_after_publication_is_inspectable_then_recoverable(self):
+        target = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    target,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(target).content_hash,
+                )
+            ],
+            operation="journal.quota-recovery",
+            journal_dir=self.journal_dir,
+        )
+        report = inspect_journal(result.journal_path)
+        target_record = report["targets"][0]
+        with open(
+            os.path.join(
+                os.path.dirname(result.journal_path), target_record["before_artifact"]
+            ),
+            "rb",
+        ) as handle:
+            mutation.atomic_write_bytes(target, handle.read())
+        self.force_journal_state(result.journal_path, "committing")
+        failures = []
+
+        def fail_once_on_recovery_write(point, _details):
+            if point == "before_recovery_target_write" and not failures:
+                failures.append(point)
+                raise OSError(getattr(errno, "EDQUOT", errno.ENOSPC), "simulated quota")
+
+        with fault_injection(fail_once_on_recovery_write):
+            with self.assertRaisesRegex(OSError, "simulated quota"):
+                resume(result.journal_path)
+
+        failed = inspect_journal(result.journal_path)
+        self.assertEqual("resume_failed", failed["state"])
+        self.assertIn("Storage capacity failure", failed["last_error"])
+        self.assertEqual("before", failed["observed_targets"][0]["relation"])
+
+        restored = resume(result.journal_path)
+        self.assertEqual("committed", restored["state"])
+        self.assertEqual("ONE\n", self.read(target))
+
+    def test_permission_failure_during_compensation_is_diagnostic_and_repeatable(self):
+        target = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    target,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(target).content_hash,
+                )
+            ],
+            operation="journal.permission-compensation",
+            journal_dir=self.journal_dir,
+        )
+        failures = []
+
+        def deny_compensation(point, _details):
+            if point == "before_recovery_target_write":
+                failures.append(point)
+                raise PermissionError(errno.EACCES, "simulated permission denied")
+
+        for _attempt in range(2):
+            with fault_injection(deny_compensation):
+                with self.assertRaisesRegex(PermissionError, "simulated permission"):
+                    compensate(result.journal_path)
+            failed = inspect_journal(result.journal_path)
+            self.assertEqual("compensation_failed", failed["state"])
+            self.assertIn("Storage permission failure", failed["last_error"])
+            self.assertEqual("after", failed["observed_targets"][0]["relation"])
+            self.assertEqual("ONE\n", self.read(target))
+
+        restored = compensate(result.journal_path)
+        self.assertEqual("compensated", restored["state"])
+        self.assertEqual("one\n", self.read(target))
+        self.assertEqual(2, len(failures))
 
     def test_successful_transaction_records_exact_artifacts_and_terminal_state(self):
         first = self.write("one.txt", "one\n")

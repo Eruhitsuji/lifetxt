@@ -32,6 +32,7 @@ from .transaction_policy import (
     fault_point,
     permission_report,
     policy_from_config,
+    storage_access_diagnostic,
     version_compatibility,
     verify_integrity_manifest,
     write_integrity_manifest,
@@ -435,7 +436,7 @@ def resume(path, lock_timeout=5.0):
                 _resume_target(journal, target)
         journal.set_state("committed")
     except Exception as exc:
-        journal.set_state("resume_failed", error=exc)
+        journal.set_state("resume_failed", error=storage_access_diagnostic(exc))
         raise
     return inspect_journal(path)
 
@@ -454,7 +455,7 @@ def compensate(path, lock_timeout=5.0):
                 _compensate_target(journal, target)
         journal.set_state("compensated")
     except Exception as exc:
-        journal.set_state("compensation_failed", error=exc)
+        journal.set_state("compensation_failed", error=storage_access_diagnostic(exc))
         raise
     return inspect_journal(path)
 

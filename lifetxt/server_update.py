@@ -192,16 +192,31 @@ def create_backup(paths, backup_dir, timestamp):
     configured (a deliberately supported "I am relying on external backups"
     escape hatch -- but then hash verification still runs, so a silent data
     change is still caught even without this module's own backup).
+
+    Refuses to reuse or follow a pre-existing path at the destination
+    directory or any per-file destination, mirroring UpdateLock's
+    O_CREAT|O_EXCL pattern: a fresh, second-granularity-timestamped backup
+    directory should never already exist, so if one does (including as a
+    symlink), something is wrong and this must not silently write through it.
     """
     if not backup_dir:
         return None
     destination = os.path.join(backup_dir, timestamp)
-    os.makedirs(destination, exist_ok=True)
+    if os.path.lexists(destination):
+        raise ServerUpdateError(
+            "Refusing to back up into %s: it already exists." % destination,
+            step="backup",
+        )
+    os.makedirs(destination)
     for path in paths:
         if not path or not os.path.isfile(path):
             continue
         flat_name = os.path.normpath(path).replace(os.sep, "__").lstrip("_")
-        shutil.copy2(path, os.path.join(destination, flat_name))
+        dest_path = os.path.join(destination, flat_name)
+        fd = os.open(dest_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(fd, "wb") as dest_handle, open(path, "rb") as src_handle:
+            shutil.copyfileobj(src_handle, dest_handle)
+        shutil.copystat(path, dest_path, follow_symlinks=False)
     return destination
 
 
@@ -217,6 +232,26 @@ def _service_action(manager, action, unit, timeout):
     ok = result.returncode == 0
     message = (result.stderr or "").strip() or (result.stdout or "").strip() or "ok"
     return ok, message
+
+
+def _service_is_active(manager, unit, timeout):
+    """True only if systemctl reports this unit as currently active.
+
+    Deliberately conservative: a unit that is already stopped, failed, or in
+    any other non-"active" state is left alone entirely -- it is never
+    stopped by this run and therefore never restarted by it either. Without
+    this check, `systemctl stop` on an already-inactive unit still exits 0,
+    so a unit an operator intentionally left disabled would silently get
+    started by an update that is supposed to only restore prior state.
+    """
+    if manager == "none":
+        return False
+    result = _run(
+        ["systemctl", "is-active", unit], step="service_is_active", timeout=timeout
+    )
+    if result is None or result.returncode != 0:
+        return False
+    return (result.stdout or "").strip() == "active"
 
 
 def reinstall_package(python, install_root, pip_install_args, timeout):
@@ -502,7 +537,13 @@ def run_server_update(config, yes=False):
         pre_hashes = hash_paths(backup_paths)
         report["pre_update_hashes"] = pre_hashes
 
-        for unit in services:
+        active_services = [
+            unit
+            for unit in services
+            if _service_is_active(manager, unit, service_timeout)
+        ]
+        report["services_active_before_update"] = active_services
+        for unit in active_services:
             ok, message = _service_action(manager, "stop", unit, service_timeout)
             if not ok:
                 raise ServerUpdateError(

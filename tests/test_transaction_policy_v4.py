@@ -7,7 +7,9 @@ from unittest import mock
 from lifetxt.transaction_policy import (
     TransactionPolicyError,
     build_integrity_manifest,
+    evidence_storage_profile_report,
     enforce_capacity,
+    ensure_evidence_storage_profile,
     ensure_private_tree,
     fault_injection,
     fault_point,
@@ -36,12 +38,14 @@ class TransactionPolicyV4Tests(unittest.TestCase):
                     "max_total_bytes": "4096",
                     "max_transaction_bytes": "2048",
                     "require_private_permissions": "false",
+                    "evidence_storage_profile": "os-private-v1",
                 }
             }
         )
         self.assertEqual(7.0, policy["terminal_retention_days"])
         self.assertEqual(3, policy["max_transactions"])
         self.assertFalse(policy["require_private_permissions"])
+        self.assertEqual("os-private-v1", policy["evidence_storage_profile"])
 
     def test_windows_private_tree_ignores_posix_mode_bits(self):
         root = os.path.join(self.temp.name, "transactions")
@@ -49,6 +53,28 @@ class TransactionPolicyV4Tests(unittest.TestCase):
             report = ensure_private_tree(root, require_private=True)
         self.assertEqual([], report["problems"])
         self.assertTrue(report["private"])
+
+    def test_os_private_evidence_storage_profile_is_supported_and_not_encrypted(self):
+        root = os.path.join(self.temp.name, "evidence")
+        report = ensure_evidence_storage_profile(root, create=True)
+        self.assertEqual("os-private-v1", report["profile"])
+        self.assertTrue(report["supported"])
+        self.assertFalse(report["encrypted_at_rest"])
+        self.assertEqual([], report["problems"])
+        self.assertTrue(os.path.isdir(root))
+
+    def test_unsupported_evidence_storage_profile_fails_closed(self):
+        root = os.path.join(self.temp.name, "evidence")
+        policy = dict(
+            policy_from_config(
+                {"transactions": {"evidence_storage_profile": "encrypted-v1"}}
+            )
+        )
+        report = evidence_storage_profile_report(root, policy=policy)
+        self.assertFalse(report["supported"])
+        self.assertIn("unsupported evidence storage profile", report["problems"][0])
+        with self.assertRaisesRegex(TransactionPolicyError, "encrypted-v1"):
+            ensure_evidence_storage_profile(root, policy=policy, create=True)
 
     def test_capacity_rejects_count_total_and_single_transaction_limits(self):
         root = os.path.join(self.temp.name, "transactions")

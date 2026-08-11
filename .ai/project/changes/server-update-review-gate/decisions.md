@@ -1,0 +1,22 @@
+# Decisions
+
+| Date | Decision | Owner | Alternatives | Reason | Follow-up |
+| --- | --- | --- | --- | --- | --- |
+| 2026-08-11 | Split risk classification into an impure `gather_diff_summary()` (the only git-touching part) and a pure `classify_risk()` (fixture-testable, no I/O) | Claude Code, per the plan approved by the repository owner before implementation | One combined function that both runs git and classifies | #273's own acceptance criteria explicitly require risk classification to be "a pure function... independently unit-testable without any live service" -- combining the two would make that criterion aspirational rather than literally true. |None |
+| 2026-08-11 | `--no-renames` on both `git diff` calls | Claude Code | Detect renames and parse `{old => new}` syntax | Avoids an entire parsing edge case for no material benefit: a rename is adequately represented as a delete+add pair for risk-category matching, and both old/new paths still get evaluated against the trigger categories either way. | None |
+| 2026-08-11 | `\x1e` (ASCII record separator) prefix in `git log --format=%x1e%B` | Claude Code | Split commit messages on blank lines | A commit body can itself contain blank lines, so blank-line splitting would misparse multi-paragraph messages; `\x1e` is a control character no real commit message contains, giving an unambiguous split. | None |
+| 2026-08-11 | Trigger categories/keywords are fixed Python module constants, not read from `--server-config` | Claude Code, per the approved plan | A `risk_triggers` config key allowing per-deployment customization | #273's acceptance criteria state no flag other than exact-SHA `--approve` may bypass a fired trigger; a config-editable trigger list would blur that boundary, since the deployment config is operator-writable. | If a real deployment later needs an additional category, that is a follow-up change with its own review, not a runtime knob added here. |
+| 2026-08-11 | `--approve SHA` implies `--yes` at the CLI layer | Claude Code | Require both `--approve` and `--yes` together | The review block's own `approved_command` line (per #260's specified format) is `... --approve <exact-target-sha>` with no `--yes`; requiring both would make the printed, copy-paste-intended command non-functional as written. | None |
+| 2026-08-11 | The `--approve`/target mismatch check runs unconditionally, not only when a trigger fired | Claude Code | Only validate `--approve` when `risk["reasons"]` is non-empty | An operator's `--approve <sha>` is a claim ("I reviewed exactly this commit"); silently accepting a stale SHA whenever the diff happens to have no trigger would make that claim's meaning inconsistent depending on diff content, which is a confusing contract. | None |
+| 2026-08-11 | No persisted review-approval state between the review run and the `--approve` run | Claude Code | Write the reviewed target SHA to a side file, read it back at approve time | `run_server_update` already re-resolves the target from git on every invocation (the same fetch it always does); comparing that live value against `--approve` gives the identical safety guarantee with no new state, no cleanup path, and no new failure mode (a stale/corrupted state file). | None |
+| 2026-08-11 | Escalate to assurance level High / change_type Operations, matching #272's own escalation basis | Claude Code, per `ASSURANCE_LEVELS.md`'s escalation rules (still gates production git/service mutation) | Standard assurance, since this change adds no new mutation path of its own (only a stop-point before #272's existing one) | The gate's entire purpose is safety-critical: a defect here (e.g., a trigger that silently never fires, or an `--approve` check that can be spoofed) would defeat #272's own High-assurance review requirement by letting a high-impact update through unreviewed. | Independent security review and Merge Authority approval required before merge, per `human_approvals_required` in `change.yml`. |
+
+## Live verification note
+
+This change package's `verification.yml` records both the unit-test suite
+and a real, disposable-git-repository run (bare origin + working clone,
+created and destroyed outside this repository during implementation) that
+exercised the review block's exact printed output, a stale-`--approve`
+refusal, and a matching-`--approve` run that genuinely performed
+`git merge --ff-only` against the disposable checkout. See `design.md`'s
+"Live verification" section for the full transcript of what was observed.

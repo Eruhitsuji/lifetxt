@@ -1,0 +1,18 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-server-update-review-gate
+    capability_id: cap-ubuntu-server-deployment
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/273
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/276
+    tests_or_evidence:
+      - "tests/test_server_update.py DiffSummaryParsingTests, ClassifyRiskTests, ReviewBlockFormatTests, RunServerUpdateReviewGateTests, and CommandServerUpdateCliTests additions -> 90 tests total in the module, OK (skipped=1, no symlink privilege)"
+      - "live: real disposable bare-origin + checkout git repository; server-update --yes against a commit touching lifetxt/parser.py and contrib/systemd/lifetxt.service with a 'security:' commit message printed the exact designed review block and made no mutation"
+      - "live: --approve <wrong-sha> against the same disposable repo refused with the exact designed message, checkout unchanged"
+      - "live: --approve <correct target sha> proceeded past the gate; checkout HEAD moved to the target commit (git merge --ff-only genuinely ran), then failed at pip install as expected (no real Python package at the disposable path) -- #272's existing, unmodified failure handling"
+      - python -m unittest tests.test_server_update -> Ran 90 tests, OK (skipped=1)
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

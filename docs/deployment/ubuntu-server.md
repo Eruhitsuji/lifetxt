@@ -199,14 +199,17 @@ short:
   completes leaves services **stopped** rather than restarting a
   potentially broken install, and the report names the exact backup and
   pre-update commit to restore manually (section 5).
-- `server-update` has **no built-in high-impact-change review gate yet** --
-  with `--yes`, it runs the full flow above unconditionally once the
-  target is resolved. A pre-mutation risk classification and approval step
-  (stopping before any mutation when a change looks high-impact, with an
-  explicit `--approve <exact-sha>` step) is a tracked, not-yet-implemented
-  follow-up. Until it lands, review `server-update`'s dry-run output
-  (which lists the pending commits) yourself before passing `--yes` for
-  any update you have not already reviewed through your normal process.
+- Before touching anything, `server-update` also classifies how risky the
+  update looks (parser/config/atomic-write/schema/remote/ICS/deployment
+  changes, a tracked file deletion, or a "breaking"/"security"/"migration"
+  commit message). A low-risk update with `--yes` proceeds with no operator
+  interaction. A flagged one stops before any mutation and prints a
+  paste-friendly review block instead; copy its `approved_command` line
+  (or otherwise pass `--approve <exact-target-sha>`) to apply that exact,
+  already-reviewed commit. `--approve` is refused if the upstream target
+  moved since the block was generated -- see
+  [`cli.md` §22.1](../en/cli.md#221-high-impact-review-gate) for the full
+  trigger list and block format.
 
 **Rollback**, if an update produces a broken state that `server-update`'s
 own failure handling did not already recover from: restore the backup

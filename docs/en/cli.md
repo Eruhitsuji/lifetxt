@@ -2931,6 +2931,7 @@ python -m lifetxt server-update --server-config /etc/lifetxt/server-update.json 
 |---|---|
 | `--server-config PATH` | Required. Deployment config JSON file -- distinct from the global `--config` application config.json. |
 | `--yes` | Actually apply the update. Without this, `server-update` only fetches and reports what would happen. |
+| `--approve SHA` | Apply an update the review gate flagged as high-impact (see below), bound to the exact resolved target commit. Implies `--yes`. |
 | `--format text\|json` | Output format. |
 
 `--server-config` points at a JSON file naming the target Python
@@ -2981,7 +2982,59 @@ Failure behavior:
   `validated_health_check_failed`) rather than silently claiming full
   success -- both still exit non-zero.
 
-`server-update` has no built-in high-impact-change review gate today: with
-`--yes`, it runs the full flow above unconditionally once the target is
-resolved. A pre-mutation risk classification and approval step is tracked
-as a separate, not-yet-implemented follow-up.
+### 22.1 High-impact review gate
+
+Before touching backup, services, or code, `server-update` classifies how
+risky the pending update looks. If nothing about it looks high-impact,
+`--yes` proceeds straight into the flow above with no operator
+interaction. If it does, `--yes` alone stops before any mutation and
+prints a paste-friendly review block instead:
+
+```text
+===== LIFETXT_UPDATE_REVIEW_BEGIN =====
+status=REVIEW_REQUIRED
+current=<sha>
+target=<sha>
+commit_count=<n>
+changed_file_count=<n>
+changed_line_count=<n>
+binary_file_count=<n>
+--- reasons ---
+...
+--- commits ---
+...
+--- changed files ---
+...
+--- diff stat ---
+...
+approved_command=lifetxt server-update --server-config <path> --approve <exact-target-sha>
+===== LIFETXT_UPDATE_REVIEW_END =====
+```
+
+Copy the `approved_command` line verbatim (or otherwise pass `--approve
+<sha>`, which implies `--yes`) to apply that exact, already-reviewed
+commit. `--approve` is checked against the freshly-resolved target every
+time: if the upstream target moved since the block was generated,
+`server-update` refuses with a clear error rather than silently
+re-reviewing against the new commit -- get a fresh review instead.
+
+A review is required when the update between the current and target
+commit:
+
+- touches parser/model/serializer/validator code, config or workspace
+  resolution, atomic-write/mutation/transaction/archive-safety code,
+  schema or migration files (including the generated `dist/schemas/`
+  bundle), Remote Safe Mode (`remote_*` modules), calendar/ICS sync
+  (`ics.py`), or the `contrib/systemd/`/`contrib/nginx/` deployment files
+  themselves;
+- deletes any tracked file; or
+- has a commit message containing "breaking", "security", or "migration"
+  (case-insensitive).
+
+`changed_file_count`/`changed_line_count`/`binary_file_count` are always
+reported (even outside a triggered review, in the dry-run preview) as an
+additional signal -- a large diff is not by itself a trigger, and a bulk
+regeneration of `dist/schemas/` does not inflate `changed_line_count` (it
+is still flagged via the schema/migration category above). These trigger
+categories are fixed; they are not configurable through `--server-config`,
+so no flag other than exact-SHA `--approve` can bypass one.

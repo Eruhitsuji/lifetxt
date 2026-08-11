@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: server-update-review-gate
+  title: Risk classification and high-impact review gate for server-update
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/273
+  related_pull_request: []
+  base_commit: 4ac4374e250d2942cc48ccd422ee04577d64181a
+  target_release: null
+
+scope:
+  in_scope:
+    - "Compute changed_file_count, changed_line_count, binary_file_count, and per-category review reasons between the current and resolved target commit, before any backup/service/code mutation."
+    - "Fixed trigger categories (not configurable via --server-config): parser/model/serializer/validator, config/workspace resolution, atomic write/mutation/transaction/archive-safety, schema/migration (including the generated dist/schemas/ bundle), remote/authentication/authorization (remote_* modules), calendar/ICS sync (ics.py), and the contrib/systemd//contrib/nginx/ deployment files themselves; plus tracked file deletion and breaking/security/migration commit-message keywords."
+    - "When a trigger fires and --approve is not given, print a paste-friendly LIFETXT_UPDATE_REVIEW_BEGIN/END block (exact format from #260) and stop before any mutation."
+    - "--approve SHA (implies --yes) applies only when SHA matches the freshly-resolved target commit exactly; refuses with a clear message otherwise, whether or not a trigger fired."
+    - "dist/schemas/ regenerated output is excluded from changed_line_count (bulk regeneration should not dominate the number) while still being individually flagged via the schema/migration category."
+    - "docs/en/cli.md §22.1 and docs/deployment/ubuntu-server.md updated to describe the gate (replacing the 'no gate yet' caveat #272 shipped with)."
+  out_of_scope:
+    - Making trigger categories or keywords configurable through --server-config (deliberate: acceptance criteria require no flag other than exact-SHA --approve can bypass a trigger).
+    - Any change to #272's core update flow (backup, service stop/start, merge, reinstall, integrity checks, health check) beyond inserting the gate's own stop point before it.
+    - Persisting review state between the review run and the approve run (stateless by design -- --approve is validated by re-resolving the target at approve time, not by reading a saved record).
+  write_scope:
+    - lifetxt/server_update.py
+    - lifetxt/cli.py
+    - tests/test_server_update.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+  forbidden_scope:
+    - lifetxt/mutation.py
+    - lifetxt/transaction_journal.py
+    - contrib/systemd/**
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per ASSURANCE_LEVELS.md)
+  - Merge Authority approval before merge into main (gates a production git/service mutation path, same escalation basis as cap-lifetxt-self-update, cap-remote-single-worker-guard, and cap-ubuntu-server-deployment's #272)

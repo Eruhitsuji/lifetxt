@@ -48,6 +48,12 @@ class _FakeGit:
         merge_fails=False,
         ancestor=False,
         no_release=False,
+        numstat_files=(),
+        name_statuses=None,
+        commit_messages=(),
+        numstat_fails=False,
+        name_status_fails=False,
+        log_fails=False,
     ):
         self.current = current
         self.target = target
@@ -59,6 +65,16 @@ class _FakeGit:
         self.merge_fails = merge_fails
         self.ancestor = ancestor
         self.no_release = no_release
+        # Defaults to an empty (no-risk) diff so every pre-existing test in
+        # this file, none of which sets these, keeps exercising a diff with
+        # zero review_reasons -- matching the code/service behavior those
+        # tests were written to check.
+        self.numstat_files = list(numstat_files)
+        self.name_statuses = dict(name_statuses or {})
+        self.commit_messages = list(commit_messages)
+        self.numstat_fails = numstat_fails
+        self.name_status_fails = name_status_fails
+        self.log_fails = log_fails
         self.calls = []
 
     def install_root(self):
@@ -91,6 +107,26 @@ class _FakeGit:
                 return _FakeCompletedProcess(1, "", "not a fast-forward")
             self.current = self.target
             return _FakeCompletedProcess(0, "", "")
+        if args[:3] == ["diff", "--no-renames", "--numstat"]:
+            if self.numstat_fails:
+                return _FakeCompletedProcess(1, "", "numstat failed")
+            lines = [
+                "%s\t%s\t%s" % (added, removed, path)
+                for added, removed, path in self.numstat_files
+            ]
+            return _FakeCompletedProcess(0, "\n".join(lines + [""]), "")
+        if args[:3] == ["diff", "--no-renames", "--name-status"]:
+            if self.name_status_fails:
+                return _FakeCompletedProcess(1, "", "name-status failed")
+            lines = [
+                "%s\t%s" % (status, path) for path, status in self.name_statuses.items()
+            ]
+            return _FakeCompletedProcess(0, "\n".join(lines + [""]), "")
+        if args[:2] == ["log", "--format=%x1e%B"]:
+            if self.log_fails:
+                return _FakeCompletedProcess(1, "", "log failed")
+            text = "".join("\x1e%s\n" % message for message in self.commit_messages)
+            return _FakeCompletedProcess(0, text, "")
         raise AssertionError("unexpected git args: %r" % (args,))
 
     def reject_option_like_git_arg(self, value, label):
@@ -397,6 +433,301 @@ class CheckHealthTests(unittest.TestCase):
             result = server_update.check_health("http://127.0.0.1:8765/api/health", 5)
         self.assertFalse(result["ok"])
         self.assertIn("503", result["error"])
+
+
+class DiffSummaryParsingTests(unittest.TestCase):
+    def test_numstat_parses_added_removed_and_binary(self):
+        text = "10\t2\tlifetxt/parser.py\n-\t-\tlogo.png\n"
+        files = server_update._parse_numstat(text)
+        self.assertEqual(
+            [
+                {"path": "lifetxt/parser.py", "added": 10, "removed": 2},
+                {"path": "logo.png", "added": None, "removed": None},
+            ],
+            files,
+        )
+
+    def test_numstat_ignores_blank_lines(self):
+        self.assertEqual([], server_update._parse_numstat("\n\n"))
+
+    def test_name_status_maps_path_to_status_char(self):
+        text = "M\tlifetxt/parser.py\nD\tlifetxt/old.py\n"
+        self.assertEqual(
+            {"lifetxt/parser.py": "M", "lifetxt/old.py": "D"},
+            server_update._parse_name_status(text),
+        )
+
+    def test_gather_diff_summary_merges_numstat_and_deletion_status(self):
+        git = _FakeGit(
+            numstat_files=[
+                ("10", "2", "lifetxt/parser.py"),
+                ("0", "5", "lifetxt/old.py"),
+            ],
+            name_statuses={"lifetxt/parser.py": "M", "lifetxt/old.py": "D"},
+            commit_messages=["did a thing"],
+        )
+        summary = server_update.gather_diff_summary(
+            git.run_git, "/opt/lifetxt/src", "aaa", "bbb", 10
+        )
+        self.assertEqual(
+            [
+                {
+                    "path": "lifetxt/parser.py",
+                    "added": 10,
+                    "removed": 2,
+                    "deleted": False,
+                },
+                {"path": "lifetxt/old.py", "added": 0, "removed": 5, "deleted": True},
+            ],
+            summary["files"],
+        )
+        self.assertEqual(["did a thing"], summary["commit_messages"])
+
+    def test_gather_diff_summary_splits_multiline_commit_messages_correctly(self):
+        git = _FakeGit(commit_messages=["subject one\n\nbody line", "subject two"])
+        summary = server_update.gather_diff_summary(
+            git.run_git, "/opt/lifetxt/src", "aaa", "bbb", 10
+        )
+        self.assertEqual(
+            ["subject one\n\nbody line", "subject two"], summary["commit_messages"]
+        )
+
+    def test_gather_diff_summary_raises_on_numstat_failure(self):
+        git = _FakeGit(numstat_fails=True)
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.gather_diff_summary(
+                git.run_git, "/opt/lifetxt/src", "aaa", "bbb", 10
+            )
+        self.assertEqual("risk_classification", ctx.exception.step)
+
+    def test_gather_diff_summary_raises_on_name_status_failure(self):
+        git = _FakeGit(name_status_fails=True)
+        with self.assertRaises(server_update.ServerUpdateError):
+            server_update.gather_diff_summary(
+                git.run_git, "/opt/lifetxt/src", "aaa", "bbb", 10
+            )
+
+    def test_gather_diff_summary_raises_on_log_failure(self):
+        git = _FakeGit(log_fails=True)
+        with self.assertRaises(server_update.ServerUpdateError):
+            server_update.gather_diff_summary(
+                git.run_git, "/opt/lifetxt/src", "aaa", "bbb", 10
+            )
+
+
+class ClassifyRiskTests(unittest.TestCase):
+    """One test per DEFAULT_RISK_TRIGGER_PATHS category proving it fires,
+    plus one proving an unrelated change does not -- per #273's own
+    acceptance criteria."""
+
+    def _summary(self, files, commit_messages=()):
+        return {
+            "files": [
+                {
+                    "path": path,
+                    "added": added,
+                    "removed": removed,
+                    "deleted": deleted,
+                }
+                for path, added, removed, deleted in files
+            ],
+            "commit_messages": list(commit_messages),
+        }
+
+    def test_unrelated_change_has_no_reasons(self):
+        summary = self._summary([("readme.md", 3, 1, False)])
+        risk = server_update.classify_risk(summary)
+        self.assertEqual([], risk["reasons"])
+        self.assertEqual(1, risk["changed_file_count"])
+        self.assertEqual(4, risk["changed_line_count"])
+        self.assertEqual(0, risk["binary_file_count"])
+
+    def test_parser_model_serializer_category_fires(self):
+        summary = self._summary([("lifetxt/parser.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("parser/model/serializer" in r for r in reasons))
+
+    def test_parser_model_serializer_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("lifetxt/doctor.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("parser/model/serializer" in r for r in reasons))
+
+    def test_config_workspace_category_fires(self):
+        summary = self._summary([("lifetxt/workspace.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("config/workspace" in r for r in reasons))
+
+    def test_config_workspace_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("lifetxt/stats.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("config/workspace" in r for r in reasons))
+
+    def test_atomic_mutation_transaction_archive_category_fires(self):
+        summary = self._summary([("lifetxt/transaction_journal.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("atomic write" in r for r in reasons))
+
+    def test_atomic_mutation_transaction_archive_category_does_not_fire_for_unrelated_file(
+        self,
+    ):
+        summary = self._summary([("lifetxt/timer.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("atomic write" in r for r in reasons))
+
+    def test_schema_migration_category_fires_for_generator(self):
+        summary = self._summary([("lifetxt/schema_extensions_v5.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("schema/migration" in r for r in reasons))
+
+    def test_schema_migration_category_fires_for_generated_bundle(self):
+        summary = self._summary(
+            [("dist/schemas/config-v1.schema.json", 500, 500, False)]
+        )
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("schema/migration" in r for r in reasons))
+
+    def test_schema_migration_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("lifetxt/agenda.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("schema/migration" in r for r in reasons))
+
+    def test_generated_schema_bundle_is_excluded_from_changed_line_count(self):
+        summary = self._summary(
+            [
+                ("dist/schemas/config-v1.schema.json", 5000, 5000, False),
+                ("lifetxt/agenda.py", 3, 1, False),
+            ]
+        )
+        risk = server_update.classify_risk(summary)
+        self.assertEqual(4, risk["changed_line_count"])
+        self.assertEqual(2, risk["changed_file_count"])
+
+    def test_remote_auth_category_fires(self):
+        summary = self._summary([("lifetxt/remote_access.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("remote/authentication" in r for r in reasons))
+
+    def test_remote_auth_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("lifetxt/people.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("remote/authentication" in r for r in reasons))
+
+    def test_calendar_ics_category_fires(self):
+        summary = self._summary([("lifetxt/ics.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("calendar/ICS" in r for r in reasons))
+
+    def test_calendar_ics_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("lifetxt/notifier.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("calendar/ICS" in r for r in reasons))
+
+    def test_deployment_files_category_fires(self):
+        summary = self._summary([("contrib/systemd/lifetxt.service", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("deployment files" in r for r in reasons))
+
+    def test_deployment_files_category_does_not_fire_for_unrelated_file(self):
+        summary = self._summary([("docs/en/cli.md", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("deployment files" in r for r in reasons))
+
+    def test_tracked_file_deletion_fires(self):
+        summary = self._summary([("lifetxt/old_module.py", 0, 40, True)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("deletes tracked file" in r for r in reasons))
+
+    def test_non_deletion_does_not_fire_deletion_reason(self):
+        summary = self._summary([("lifetxt/agenda.py", 1, 1, False)])
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertFalse(any("deletes tracked file" in r for r in reasons))
+
+    def test_breaking_keyword_fires(self):
+        summary = self._summary(
+            [("readme.md", 1, 1, False)], commit_messages=["BREAKING: renamed a flag"]
+        )
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("'breaking'" in r for r in reasons))
+
+    def test_security_keyword_fires(self):
+        summary = self._summary(
+            [("readme.md", 1, 1, False)], commit_messages=["security: patch a hole"]
+        )
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("'security'" in r for r in reasons))
+
+    def test_migration_keyword_fires(self):
+        summary = self._summary(
+            [("readme.md", 1, 1, False)], commit_messages=["run the migration"]
+        )
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertTrue(any("'migration'" in r for r in reasons))
+
+    def test_unrelated_commit_message_does_not_fire_any_keyword(self):
+        summary = self._summary(
+            [("readme.md", 1, 1, False)], commit_messages=["fix a typo"]
+        )
+        reasons = server_update.classify_risk(summary)["reasons"]
+        self.assertEqual([], reasons)
+
+    def test_large_but_unmatched_diff_produces_no_reasons(self):
+        """Size alone is not a trigger -- #260 treats commit/line counts as
+        an additional signal shown alongside the block, not a threshold
+        that fires reviews on its own."""
+        summary = self._summary([("readme.md", 5000, 5000, False)])
+        risk = server_update.classify_risk(summary)
+        self.assertEqual([], risk["reasons"])
+        self.assertEqual(10000, risk["changed_line_count"])
+
+    def test_binary_file_is_excluded_from_line_count_and_counted_separately(self):
+        summary = self._summary([("logo.png", None, None, False)])
+        risk = server_update.classify_risk(summary)
+        self.assertEqual(0, risk["changed_line_count"])
+        self.assertEqual(1, risk["binary_file_count"])
+
+
+class ReviewBlockFormatTests(unittest.TestCase):
+    def _report(self, **overrides):
+        report = {
+            "current_commit": "a" * 40,
+            "target_commit": "b" * 40,
+            "commit_count": 1,
+            "changed_file_count": 1,
+            "changed_line_count": 2,
+            "binary_file_count": 0,
+            "review_reasons": ["touches parser/model/serializer: lifetxt/parser.py"],
+            "commits": ["abc1234 a commit"],
+            "changed_files": ["lifetxt/parser.py"],
+        }
+        report.update(overrides)
+        return report
+
+    def test_block_has_begin_end_markers_and_key_fields(self):
+        block = server_update.format_review_block(
+            self._report(), "/etc/lifetxt/server-update.json"
+        )
+        self.assertTrue(block.startswith("===== LIFETXT_UPDATE_REVIEW_BEGIN ====="))
+        self.assertTrue(block.endswith("===== LIFETXT_UPDATE_REVIEW_END ====="))
+        self.assertIn("current=%s" % ("a" * 40), block)
+        self.assertIn("target=%s" % ("b" * 40), block)
+        self.assertIn("touches parser/model/serializer: lifetxt/parser.py", block)
+
+    def test_approved_command_binds_to_the_exact_target_and_config_path(self):
+        block = server_update.format_review_block(
+            self._report(), "/etc/lifetxt/server-update.json"
+        )
+        self.assertIn(
+            "approved_command=lifetxt server-update "
+            "--server-config /etc/lifetxt/server-update.json --approve %s" % ("b" * 40),
+            block,
+        )
+
+    def test_empty_reasons_and_lists_do_not_crash_and_show_placeholders(self):
+        block = server_update.format_review_block(
+            self._report(review_reasons=[], commits=[], changed_files=[]),
+            "/etc/lifetxt/server-update.json",
+        )
+        self.assertIn("(none)", block)
 
 
 class RunServerUpdateDryRunTests(unittest.TestCase):
@@ -737,6 +1068,100 @@ class RunServerUpdateApplyTests(unittest.TestCase):
         self.assertFalse(os.path.exists(self.lock_path))
 
 
+class RunServerUpdateReviewGateTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.life_txt = os.path.join(self.tmp, "life.txt")
+        with open(self.life_txt, "w", encoding="utf-8") as handle:
+            handle.write("[ ] T Buy_Milk\n")
+        self.backup_dir = os.path.join(self.tmp, "backups")
+        self.lock_path = os.path.join(self.tmp, "server-update.lock")
+
+    def _config(self, **overrides):
+        config = dict(
+            server_update.DEFAULT_CONFIG,
+            python="python3",
+            services=["lifetxt.service"],
+            backup_paths=[self.life_txt],
+            backup_dir=self.backup_dir,
+            lock_path=self.lock_path,
+            life_txt_path=self.life_txt,
+            integrity_checks=["check"],
+        )
+        config.update(overrides)
+        return config
+
+    def _risky_git(self, **overrides):
+        return _FakeGit(
+            numstat_files=[("5", "1", "lifetxt/parser.py")],
+            name_statuses={"lifetxt/parser.py": "M"},
+            **overrides,
+        )
+
+    def test_no_risk_diff_with_yes_proceeds_normally(self):
+        git = _FakeGit()  # empty diff, no reasons
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(self._config(), yes=True)
+        self.assertEqual("updated", report["status"])
+        self.assertEqual([], report["review_reasons"])
+
+    def test_risky_diff_with_yes_and_no_approve_stops_before_any_mutation(self):
+        git = self._risky_git()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(), yes=True, server_config_path="/etc/lifetxt/su.json"
+            )
+        self.assertEqual("review_required", report["status"])
+        self.assertIn("review_block", report)
+        self.assertIn("LIFETXT_UPDATE_REVIEW_BEGIN", report["review_block"])
+        # Nothing was touched: no systemctl/pip/etc. calls, no lock file,
+        # no backup directory created.
+        self.assertEqual([], sub.calls)
+        self.assertFalse(os.path.exists(self.lock_path))
+        self.assertFalse(os.path.isdir(self.backup_dir))
+
+    def test_risky_diff_with_matching_approve_proceeds_to_mutate(self):
+        git = self._risky_git()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(), yes=True, approve=git.target
+            )
+        self.assertEqual("updated", report["status"])
+
+    def test_risky_diff_with_stale_approve_is_refused_without_mutating(self):
+        git = self._risky_git()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(
+                    self._config(), yes=True, approve="c" * 40
+                )
+        self.assertEqual("approve_mismatch", ctx.exception.step)
+        self.assertEqual([], sub.calls)
+        self.assertFalse(os.path.exists(self.lock_path))
+
+    def test_approve_mismatch_is_checked_even_without_any_risk_reasons(self):
+        git = _FakeGit()  # no risk reasons at all
+        with _patch_git(git):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(
+                    self._config(), yes=True, approve="c" * 40
+                )
+        self.assertEqual("approve_mismatch", ctx.exception.step)
+
+    def test_dry_run_on_risky_diff_still_only_previews(self):
+        git = self._risky_git()
+        with _patch_git(git):
+            report = server_update.run_server_update(self._config(), yes=False)
+        self.assertEqual("update_available_dry_run", report["status"])
+        self.assertNotIn("review_block", report)
+        self.assertNotEqual([], report["review_reasons"])
+
+
 class CommandServerUpdateCliTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -782,6 +1207,73 @@ class CommandServerUpdateCliTests(unittest.TestCase):
         )
         self.assertIs(cli.command_server_update, args.func)
         self.assertFalse(args.yes)
+        self.assertIsNone(args.approve)
+
+    def test_approve_flag_parses_and_is_distinct_from_yes(self):
+        parser = cli.build_parser()
+        args = parser.parse_args(
+            [
+                "server-update",
+                "--server-config",
+                "/tmp/does-not-matter.json",
+                "--approve",
+                "deadbeef",
+            ]
+        )
+        self.assertEqual("deadbeef", args.approve)
+        self.assertFalse(args.yes)
+
+    def test_approve_without_yes_still_applies_a_matching_update(self):
+        path = self._config_path(
+            {"python": "python3", "services": [], "integrity_checks": []}
+        )
+        git = _FakeGit(
+            numstat_files=[("5", "1", "lifetxt/parser.py")],
+            name_statuses={"lifetxt/parser.py": "M"},
+        )
+        sub = _FakeSubprocess()
+        args = argparse.Namespace(
+            server_config=path, yes=False, approve=git.target, format="json"
+        )
+        buf = io.StringIO()
+        with _patch_git(git), _patch_subprocess(sub), mock.patch("sys.stdout", buf):
+            code = cli.command_server_update(args)
+        self.assertEqual(0, code)
+        payload = json.loads(buf.getvalue())
+        self.assertEqual("updated", payload["status"])
+
+    def test_risky_diff_without_approve_prints_review_block_in_text_mode(self):
+        path = self._config_path({"python": "python3", "services": []})
+        git = _FakeGit(
+            numstat_files=[("5", "1", "lifetxt/parser.py")],
+            name_statuses={"lifetxt/parser.py": "M"},
+        )
+        args = argparse.Namespace(
+            server_config=path, yes=True, approve=None, format="text"
+        )
+        buf = io.StringIO()
+        with _patch_git(git), mock.patch("sys.stdout", buf):
+            code = cli.command_server_update(args)
+        self.assertEqual(1, code)
+        output = buf.getvalue()
+        self.assertIn("LIFETXT_UPDATE_REVIEW_BEGIN", output)
+        self.assertIn("--approve %s" % git.target, output)
+
+    def test_stale_approve_exits_nonzero_and_reports_the_mismatch(self):
+        path = self._config_path({"python": "python3", "services": []})
+        git = _FakeGit(
+            numstat_files=[("5", "1", "lifetxt/parser.py")],
+            name_statuses={"lifetxt/parser.py": "M"},
+        )
+        args = argparse.Namespace(
+            server_config=path, yes=False, approve="c" * 40, format="json"
+        )
+        buf = io.StringIO()
+        with _patch_git(git), mock.patch("sys.stdout", buf):
+            code = cli.command_server_update(args)
+        self.assertEqual(1, code)
+        payload = json.loads(buf.getvalue())
+        self.assertEqual("approve_mismatch", payload["step"])
 
 
 if __name__ == "__main__":

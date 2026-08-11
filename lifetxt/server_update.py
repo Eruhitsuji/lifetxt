@@ -24,6 +24,13 @@ Design, matching the safety rails `lifetxt update` already established
   names the exact backup directory and pre-update commit for manual
   recovery. A failure before the code update restores whatever service
   state existed before the attempt.
+- A high-impact update (touches parser/config/atomic-write/schema/remote/
+  ICS/deployment code, deletes a tracked file, or a commit message
+  mentions "breaking"/"security"/"migration") stops before any mutation
+  and reports a paste-friendly review block instead of proceeding. Only
+  ``approve`` matching the exact resolved target commit unblocks it -- no
+  other flag bypasses a fired trigger. See ``classify_risk``,
+  ``gather_diff_summary``, and ``format_review_block``.
 """
 
 import hashlib
@@ -88,6 +95,63 @@ _INTEGRITY_CHECK_BUILDERS = {
         ["ticket", "validate-history"] + ([life_txt_path] if life_txt_path else [])
     ),
 }
+
+#: Risk-trigger path categories for the high-impact review gate. Fixed
+#: Python constants, not read from --server-config: acceptance criteria for
+#: #273 require that no flag other than the exact-SHA --approve can bypass
+#: a trigger, and a config-editable trigger list would blur that line.
+#: Prefixes are matched against paths as git reports them (POSIX-style,
+#: relative to the repo root).
+DEFAULT_RISK_TRIGGER_PATHS = {
+    "parser/model/serializer": (
+        "lifetxt/parser.py",
+        "lifetxt/model.py",
+        "lifetxt/serializer.py",
+        "lifetxt/validator.py",
+    ),
+    "config/workspace resolution": (
+        "lifetxt/config.py",
+        "lifetxt/config_registry.py",
+        "lifetxt/config_writer.py",
+        "lifetxt/config_layers.py",
+        "lifetxt/config_migration.py",
+        "lifetxt/config_validation.py",
+        "lifetxt/workspace.py",
+        "lifetxt/workspace_diagnostics.py",
+    ),
+    "atomic write/mutation/transaction/archive-safety": (
+        "lifetxt/atomic.py",
+        "lifetxt/mutation.py",
+        "lifetxt/transaction_journal.py",
+        "lifetxt/transaction_policy.py",
+        "lifetxt/transaction_admin.py",
+        "lifetxt/archive_safety_v3.py",
+        "lifetxt/archive_plan_v1.py",
+        "lifetxt/multi_target.py",
+        "lifetxt/delegated_mutation.py",
+        "lifetxt/write_operations.py",
+    ),
+    "schema/migration": (
+        "lifetxt/schema_extensions_",
+        "lifetxt/schema_validation_v2.py",
+        "lifetxt/release_schema_extension.py",
+        "dist/schemas/",
+    ),
+    "remote/authentication/authorization": ("lifetxt/remote_",),
+    "calendar/ICS sync": ("lifetxt/ics.py",),
+    "deployment files": ("contrib/systemd/", "contrib/nginx/"),
+}
+
+#: Commit-message substrings (case-insensitive) that trigger review on
+#: their own, regardless of which files changed.
+DEFAULT_RISK_TRIGGER_KEYWORDS = ("breaking", "security", "migration")
+
+#: Paths excluded from the changed_line_count signal because they are bulk
+#: generated output (a schema regeneration can rewrite thousands of lines
+#: with no proportional review burden) -- still individually flagged via
+#: the "schema/migration" category above, just not allowed to dominate the
+#: line-count number the operator sees.
+_LINE_COUNT_EXCLUDED_PREFIXES = ("dist/schemas/",)
 
 
 def load_config(path):
@@ -360,6 +424,190 @@ class UpdateLock:
                 pass
 
 
+def _parse_numstat(text):
+    """Parse `git diff --numstat` output into [{"path", "added", "removed"}].
+
+    `added`/`removed` are `None` for a binary file (git prints "-" for
+    both), which is how binary files are distinguished from text files
+    below rather than a separate git call.
+    """
+    files = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        added_text, removed_text, path = parts
+        added = None if added_text == "-" else int(added_text)
+        removed = None if removed_text == "-" else int(removed_text)
+        files.append({"path": path, "added": added, "removed": removed})
+    return files
+
+
+def _parse_name_status(text):
+    """Parse `git diff --name-status` output into {path: status_char}."""
+    statuses = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        statuses[parts[-1]] = parts[0]
+    return statuses
+
+
+def gather_diff_summary(run_git, repo_root, current, target, timeout):
+    """Gather the raw material `classify_risk()` needs, via three git calls.
+
+    The only impure part of risk classification -- everything downstream
+    (`classify_risk`) is a pure function over the dict this returns, so it
+    can be unit-tested with fixture data instead of a real git repo.
+    `--no-renames` on both diff calls avoids parsing git's `{old => new}`
+    rename syntax entirely: a rename shows as a plain delete+add pair,
+    which the existing per-file logic already handles correctly.
+    """
+    range_spec = "%s..%s" % (current, target)
+
+    numstat = run_git(
+        ["diff", "--no-renames", "--numstat", range_spec],
+        cwd=repo_root,
+        timeout=timeout,
+    )
+    if numstat.returncode != 0:
+        raise ServerUpdateError(
+            "git diff --numstat failed: %s"
+            % ((numstat.stderr or numstat.stdout).strip()),
+            step="risk_classification",
+        )
+    name_status = run_git(
+        ["diff", "--no-renames", "--name-status", range_spec],
+        cwd=repo_root,
+        timeout=timeout,
+    )
+    if name_status.returncode != 0:
+        raise ServerUpdateError(
+            "git diff --name-status failed: %s"
+            % ((name_status.stderr or name_status.stdout).strip()),
+            step="risk_classification",
+        )
+    # \x1e (record separator) prefixes each commit's body so multi-line
+    # messages -- which may themselves contain blank lines -- can be split
+    # back apart reliably; plain blank-line splitting cannot do that.
+    log = run_git(
+        ["log", "--format=%x1e%B", range_spec], cwd=repo_root, timeout=timeout
+    )
+    if log.returncode != 0:
+        raise ServerUpdateError(
+            "git log failed: %s" % ((log.stderr or log.stdout).strip()),
+            step="risk_classification",
+        )
+
+    statuses = _parse_name_status(name_status.stdout)
+    files = [
+        {
+            "path": entry["path"],
+            "added": entry["added"],
+            "removed": entry["removed"],
+            "deleted": statuses.get(entry["path"]) == "D",
+        }
+        for entry in _parse_numstat(numstat.stdout)
+    ]
+    commit_messages = [
+        msg.rstrip("\n") for msg in log.stdout.split("\x1e") if msg.strip()
+    ]
+    return {"files": files, "commit_messages": commit_messages}
+
+
+def classify_risk(
+    diff_summary,
+    trigger_paths=DEFAULT_RISK_TRIGGER_PATHS,
+    trigger_keywords=DEFAULT_RISK_TRIGGER_KEYWORDS,
+):
+    """Pure function: diff_summary in, risk assessment out.
+
+    `diff_summary` is the dict `gather_diff_summary()` returns (or an
+    equivalent hand-built fixture in tests). An empty `reasons` list means
+    no review is required.
+    """
+    files = diff_summary.get("files") or []
+    commit_messages = diff_summary.get("commit_messages") or []
+
+    changed_file_count = len(files)
+    binary_file_count = sum(1 for entry in files if entry["added"] is None)
+    changed_line_count = sum(
+        (entry["added"] or 0) + (entry["removed"] or 0)
+        for entry in files
+        if entry["added"] is not None
+        and not entry["path"].startswith(_LINE_COUNT_EXCLUDED_PREFIXES)
+    )
+
+    reasons = []
+    for category, prefixes in trigger_paths.items():
+        matched = sorted(
+            entry["path"] for entry in files if entry["path"].startswith(prefixes)
+        )
+        if matched:
+            reasons.append("touches %s: %s" % (category, ", ".join(matched)))
+
+    deleted = sorted(entry["path"] for entry in files if entry["deleted"])
+    if deleted:
+        reasons.append("deletes tracked file(s): %s" % ", ".join(deleted))
+
+    for keyword in trigger_keywords:
+        if any(keyword.lower() in message.lower() for message in commit_messages):
+            reasons.append("commit message contains %r" % keyword)
+
+    return {
+        "changed_file_count": changed_file_count,
+        "changed_line_count": changed_line_count,
+        "binary_file_count": binary_file_count,
+        "reasons": reasons,
+    }
+
+
+def format_review_block(report, server_config_path):
+    """Render the paste-friendly LIFETXT_UPDATE_REVIEW block from `report`.
+
+    `report` must already carry current_commit/target_commit/commit_count/
+    changed_file_count/changed_line_count/binary_file_count/review_reasons/
+    commits/changed_files, as `run_server_update` sets them before calling
+    this. Pure formatting -- no git or filesystem access.
+    """
+    lines = [
+        "===== LIFETXT_UPDATE_REVIEW_BEGIN =====",
+        "status=REVIEW_REQUIRED",
+        "current=%s" % report["current_commit"],
+        "target=%s" % report["target_commit"],
+        "commit_count=%s" % report["commit_count"],
+        "changed_file_count=%s" % report["changed_file_count"],
+        "changed_line_count=%s" % report["changed_line_count"],
+        "binary_file_count=%s" % report["binary_file_count"],
+        "--- reasons ---",
+    ]
+    lines.extend(report["review_reasons"] or ["(none)"])
+    lines.append("--- commits ---")
+    lines.extend(report["commits"] or ["(none)"])
+    lines.append("--- changed files ---")
+    lines.extend(report["changed_files"] or ["(none)"])
+    lines.append("--- diff stat ---")
+    lines.append(
+        "%d file(s) changed, %d line(s) changed (%d binary file(s) excluded)"
+        % (
+            report["changed_file_count"],
+            report["changed_line_count"],
+            report["binary_file_count"],
+        )
+    )
+    lines.append(
+        "approved_command=lifetxt server-update --server-config %s --approve %s"
+        % (server_config_path or "<server-config-path>", report["target_commit"])
+    )
+    lines.append("===== LIFETXT_UPDATE_REVIEW_END =====")
+    return "\n".join(lines)
+
+
 def _git_helpers():
     # Deferred import: `cli.py` wires this module's orchestrator into its
     # own argparse subcommand, so importing `cli` at module load time here
@@ -382,9 +630,14 @@ def _git_helpers():
     )
 
 
-def run_server_update(config, yes=False):
+def run_server_update(config, yes=False, approve=None, server_config_path=None):
     """Run the guarded update flow. Returns a report dict; raises
     ``ServerUpdateError`` on any failure (with a partial report attached).
+
+    ``approve``, when given, must equal the freshly-resolved target commit
+    exactly (see the review-gate block below) -- it is how an operator
+    confirms they reviewed the specific commit this run is about to apply,
+    not a general "skip review" switch.
     """
     (
         lifetxt_install_root,
@@ -511,6 +764,14 @@ def run_server_update(config, yes=False):
     report["commits"] = commits
     report["commit_count"] = commit_count
 
+    diff_summary = gather_diff_summary(run_git, repo_root, current, target, git_timeout)
+    risk = classify_risk(diff_summary)
+    report["changed_file_count"] = risk["changed_file_count"]
+    report["changed_line_count"] = risk["changed_line_count"]
+    report["binary_file_count"] = risk["binary_file_count"]
+    report["review_reasons"] = risk["reasons"]
+    report["changed_files"] = [entry["path"] for entry in diff_summary["files"]]
+
     if not yes:
         report["status"] = "update_available_dry_run"
         report["message"] = (
@@ -522,6 +783,24 @@ def run_server_update(config, yes=False):
         report["would_stop_services"] = services
         report["would_run_integrity_checks"] = list(
             config.get("integrity_checks") or []
+        )
+        return report
+
+    # -- review gate: a risky update must be explicitly approved by exact
+    # target commit before any mutation is even considered --
+    if approve and approve != target:
+        raise ServerUpdateError(
+            "Refusing: --approve %s does not match the resolved target %s. "
+            "The target moved since this commit was reviewed; re-run "
+            "without --approve to generate a fresh review." % (approve, target),
+            step="approve_mismatch",
+        )
+    if risk["reasons"] and not approve:
+        report["status"] = "review_required"
+        report["review_block"] = format_review_block(report, server_config_path)
+        report["message"] = (
+            "High-impact update detected (%d reason(s)); review required "
+            "before applying. See review_block." % len(risk["reasons"])
         )
         return report
 

@@ -1,0 +1,52 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_server_update
+      requirement_ids:
+        - req-server-update-review-gate
+      result: 'Ran 90 tests -- OK (skipped=1, no symlink privilege on this Windows sandbox)'
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: 'live disposable git repository: server-update --yes against a commit touching lifetxt/parser.py and contrib/systemd/lifetxt.service with a "security:" commit message'
+      requirement_ids:
+        - req-server-update-review-gate
+      result: 'printed the exact LIFETXT_UPDATE_REVIEW_BEGIN/END block with correct reasons (2 path categories + 1 keyword), changed_file_count=2, changed_line_count=2, binary_file_count=0; checkout HEAD unchanged afterward'
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: 'live disposable git repository: server-update --approve <sha not matching the resolved target>'
+      requirement_ids:
+        - req-server-update-review-gate
+      result: 'refused with "Refusing: --approve ... does not match the resolved target ..."; checkout HEAD unchanged afterward'
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: 'live disposable git repository: server-update --approve <the correct resolved target sha>'
+      requirement_ids:
+        - req-server-update-review-gate
+      result: 'proceeded past the gate; checkout HEAD moved to the target commit (git merge --ff-only genuinely ran, confirmed via git rev-parse HEAD and the new file appearing on disk); failed afterward at pip install as expected given no real Python package existed at the disposable path (unmodified #272 behavior)'
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: PENDING
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: PENDING
+      commit: PENDING_COMMIT_SHA
+      executed_at: '2026-08-11'
+      status: passed
+
+  gaps: []

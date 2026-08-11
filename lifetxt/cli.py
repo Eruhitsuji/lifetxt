@@ -2799,6 +2799,17 @@ def build_parser():
         ),
     )
     server_update_cmd.add_argument(
+        "--approve",
+        metavar="SHA",
+        help=(
+            "Apply an update that server-update flagged as high-impact, "
+            "bound to the exact resolved target commit (copy-pasted from "
+            "the printed review block's approved_command line). Implies "
+            "--yes. Refused if the target has moved since the SHA was "
+            "reviewed."
+        ),
+    )
+    server_update_cmd.add_argument(
         "--format",
         choices=("text", "json"),
         default="text",
@@ -7313,16 +7324,27 @@ def command_server_update(args):
         )
 
     fmt = getattr(args, "format", "text")
+    approve = getattr(args, "approve", None)
+    # --approve is how an operator confirms a specific, already-reviewed
+    # commit; requiring --yes as well would just be re-typing the same
+    # intent, and the review block's own approved_command line (which
+    # operators are meant to copy-paste verbatim) does not include --yes.
+    yes = bool(getattr(args, "yes", False)) or bool(approve)
 
     def render(report):
         if fmt == "json":
             write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         else:
-            write_text(None, (report.get("message") or "") + "\n")
+            text = report.get("message") or ""
+            if report.get("review_block"):
+                text += "\n\n" + report["review_block"]
+            write_text(None, text + "\n")
 
     try:
         config = load_config(config_path)
-        report = run_server_update(config, yes=getattr(args, "yes", False))
+        report = run_server_update(
+            config, yes=yes, approve=approve, server_config_path=config_path
+        )
     except ServerUpdateError as exc:
         report = exc.report or OrderedDict(
             [("status", "failed"), ("step", exc.step), ("message", str(exc))]

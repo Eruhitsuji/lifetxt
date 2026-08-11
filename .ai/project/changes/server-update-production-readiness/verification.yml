@@ -1,0 +1,78 @@
+schema_version: 1
+
+verification:
+  planned:
+    []
+
+  executed:
+    - type: unit
+      command: '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest tests.test_server_update'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: Ran 105 tests, OK (skipped=1)
+      status: passed
+    - type: static
+      command: '.\.venv\Scripts\ruff.exe format --check lifetxt/server_update.py tests/test_server_update.py'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: 2 files already formatted
+      status: passed
+    - type: static
+      command: '.\.venv\Scripts\ruff.exe format --check lifetxt tests scripts'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: >-
+        Failed on 3 pre-existing out-of-scope files restored after Ruff's
+        mechanical formatting: lifetxt/safety_compat_v2.py,
+        tests/test_generated_record_capture_compat.py,
+        tests/test_project_archive_safety_v3.py. No #277 file was reported.
+      status: failed_pre_existing
+    - type: static
+      command: '.\.venv\Scripts\ruff.exe check lifetxt tests scripts'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: All checks passed
+      status: passed
+    - type: integration
+      command: '.\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: 'OK: 10 item(s)'
+      status: passed
+    - type: policy
+      command: '.\.venv\Scripts\python.exe -m unittest tests.test_traceability_gate tests.test_change_package_closeout'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: Ran 13 tests, OK
+      status: passed
+    - type: cli
+      command: '.\.venv\Scripts\python.exe -m lifetxt server-update --help'
+      requirement_ids:
+        - req-server-update-production-readiness
+      result: Help renders, including --server-config, --yes, --approve, and --format.
+      status: passed
+
+review_ledger:
+  - reviewer: Codex
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: human
+    review_type: security
+    target_commit: null
+    result: pending
+    finding_count: null
+    completed_at: null
+
+release_evidence:
+  migration_notes: >-
+    Existing server-update configs remain valid. Deployments that need uv,
+    service wrappers, per-check targets, or validation commands can add the new
+    optional keys.
+  rollback_plan: >-
+    Revert the server_update.py/docs/tests/traceability change; production data
+    is not migrated or rewritten by this change.
+  operations_evidence:
+    - No production host, data file, credential, private hostname, VPN address, or Calendar URL was touched.

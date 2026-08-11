@@ -1,0 +1,30 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-update-production-readiness
+    kind: MODIFIED
+    statement: >-
+      lifetxt server-update remains compatible with existing pip-based
+      deployments while supporting pip-less uv-managed virtual environments,
+      conda-managed environments with explicit environment selection,
+      least-privilege system service control, explicit integrity-check targets,
+      and optional post-reinstall validation before service restart.
+    acceptance_criteria:
+      - A pip-less venv managed by uv can reinstall through `uv pip install --python <python>` without requiring `python -m pip`.
+      - A conda-managed install can specify exactly one of `conda_env_name` or `conda_env_prefix`; setup/reinstall, sanity import, and built-in integrity checks run through that selected environment.
+      - Existing pip-based configs continue to use `<python> -m pip install <pip_install_args...>` by default.
+      - Dry-run and high-impact review output expose the selected installer and final install argv.
+      - Service actions may use a structured `service_command` wrapper or `service_manager: none`; no shell string is accepted.
+      - Optional `service_preflight_commands` run before lock, backup, service stop, or git mutation and report `failed_before_code_update` on failure.
+      - Integrity checks can be strings for backward compatibility or objects with per-check `path`, `application_config`, `workspace`, and result `id`.
+      - `workspace_validate` can run against an explicit application config and named workspace.
+      - Optional validation commands are disabled by default, structured argv only, timeout-bound, and run before service restart.
+      - Any reinstall, integrity-check, or validation-command failure after git merge leaves stopped services stopped.
+      - The Ubuntu Server runbook documents system-level unit authorization and a narrow sudo-wrapper pattern, not broad passwordless systemctl or root execution.
+    constraints:
+      - Preserve #272/#273 safety rails: one resolved target SHA, exact-SHA approval for high-impact updates, fast-forward-only git mutation, hash verification, and no automatic production-data rollback.
+      - Do not use `shell=True` or accept shell command strings for installer, service, preflight, or validation hooks.
+      - Do not require uv, conda, or sudo for existing pip/systemctl deployments.
+    owner: Eruhitsuji
+
+open_questions: []

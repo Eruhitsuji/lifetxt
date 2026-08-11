@@ -59,7 +59,9 @@ class ServerUpdateError(Exception):
 
 
 #: Config keys and their defaults. `python` has no default: it is the one
-#: required key, since every mutating step ultimately runs through it.
+#: required key for pip/uv installs, since every validation step ultimately
+#: runs through a Python interpreter. conda-pip may instead identify the
+#: interpreter by conda environment name/prefix.
 DEFAULT_CONFIG = {
     "install_root": None,
     "python": None,
@@ -73,26 +75,39 @@ DEFAULT_CONFIG = {
     "lock_path": None,
     "services": [],
     "service_manager": "systemctl",
+    "service_command": ["systemctl"],
+    "service_preflight_commands": [],
     "integrity_checks": ["check"],
     "health_url": None,
     "health_timeout": 10,
     "git_timeout": 10,
     "service_timeout": 30,
+    "installer": "pip",
     "pip_install_args": ["-e", "."],
+    "uv_executable": "uv",
+    "uv_install_args": ["-e", "."],
+    "conda_executable": "conda",
+    "conda_env_name": None,
+    "conda_env_prefix": None,
+    "conda_install_args": ["-e", "."],
+    "application_config": None,
+    "workspace": None,
+    "validation_commands": [],
 }
 
 #: Recognized values for the `integrity_checks` config list, mapped to the
-#: `lifetxt` CLI arguments each one runs. `life_txt_path` is threaded in at
-#: call time; checks that do not need it (workspace validate reads the
-#: active workspace instead) ignore the argument.
+#: `lifetxt` CLI arguments each one runs. A check entry may be the historical
+#: string form or an object with name/path/application_config/workspace.
 _INTEGRITY_CHECK_BUILDERS = {
-    "check": lambda life_txt_path: (
-        ["check"] + ([life_txt_path] if life_txt_path else [])
+    "check": lambda entry: ["check"] + ([entry["path"]] if entry.get("path") else []),
+    "workspace_validate": lambda entry: (
+        ["workspace", "validate", entry["workspace"]]
+        if entry.get("workspace")
+        else ["workspace", "validate", "--all"]
     ),
-    "workspace_validate": lambda life_txt_path: ["workspace", "validate", "--all"],
-    "ids": lambda life_txt_path: ["ids"] + ([life_txt_path] if life_txt_path else []),
-    "ticket_validate_history": lambda life_txt_path: (
-        ["ticket", "validate-history"] + ([life_txt_path] if life_txt_path else [])
+    "ids": lambda entry: ["ids"] + ([entry["path"]] if entry.get("path") else []),
+    "ticket_validate_history": lambda entry: (
+        ["ticket", "validate-history"] + ([entry["path"]] if entry.get("path") else [])
     ),
 }
 
@@ -176,32 +191,190 @@ def load_config(path):
         )
     config = dict(DEFAULT_CONFIG)
     config.update(data)
-    if not config.get("python"):
+    if not config.get("python") and config.get("installer") != "conda-pip":
         raise ServerUpdateError(
             'Config %s is missing required key "python" (path to the '
             "target environment's python executable)." % path,
             step="load_config",
         )
-    unknown_checks = sorted(
-        set(config.get("integrity_checks") or []) - set(_INTEGRITY_CHECK_BUILDERS)
-    )
-    if unknown_checks:
-        raise ServerUpdateError(
-            "Config %s names unknown integrity_checks: %s. Known checks: %s."
-            % (
-                path,
-                ", ".join(unknown_checks),
-                ", ".join(sorted(_INTEGRITY_CHECK_BUILDERS)),
-            ),
-            step="load_config",
-        )
+    _normalize_integrity_checks(config, source_path=path)
     if config.get("service_manager") not in ("systemctl", "none"):
         raise ServerUpdateError(
             'Config %s: service_manager must be "systemctl" or "none", got %r.'
             % (path, config.get("service_manager")),
             step="load_config",
         )
+    if config.get("installer") not in ("pip", "uv", "conda-pip"):
+        raise ServerUpdateError(
+            'Config %s: installer must be "pip", "uv", or "conda-pip", got %r.'
+            % (path, config.get("installer")),
+            step="load_config",
+        )
+    if config.get("conda_env_name") and config.get("conda_env_prefix"):
+        raise ServerUpdateError(
+            "Config %s: conda_env_name and conda_env_prefix are mutually exclusive."
+            % path,
+            step="load_config",
+        )
+    if config.get("installer") == "conda-pip" and not (
+        config.get("conda_env_name") or config.get("conda_env_prefix")
+    ):
+        raise ServerUpdateError(
+            "Config %s: installer conda-pip requires conda_env_name or "
+            "conda_env_prefix." % path,
+            step="load_config",
+        )
+    _validate_argv(config.get("service_command"), "service_command", path)
+    _validate_argv_list(
+        config.get("service_preflight_commands"),
+        "service_preflight_commands",
+        path,
+    )
+    _validate_argv_list(config.get("validation_commands"), "validation_commands", path)
+    _validate_string_list(config.get("pip_install_args"), "pip_install_args", path)
+    _validate_string_list(config.get("uv_install_args"), "uv_install_args", path)
+    _validate_string_list(config.get("conda_install_args"), "conda_install_args", path)
+    _validate_optional_string(config.get("uv_executable"), "uv_executable", path)
+    _validate_optional_string(config.get("conda_executable"), "conda_executable", path)
+    _validate_optional_string(config.get("conda_env_name"), "conda_env_name", path)
+    _validate_optional_string(config.get("conda_env_prefix"), "conda_env_prefix", path)
+    _validate_optional_string(
+        config.get("application_config"), "application_config", path
+    )
+    _validate_optional_string(config.get("workspace"), "workspace", path)
+    _validate_optional_string(config.get("life_txt_path"), "life_txt_path", path)
     return config
+
+
+def _validate_optional_string(value, key, source_path):
+    if value is not None and not isinstance(value, str):
+        raise ServerUpdateError(
+            "Config %s: %s must be a string." % (source_path, key),
+            step="load_config",
+        )
+
+
+def _validate_string_list(value, key, source_path):
+    if value is None:
+        return
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ServerUpdateError(
+            "Config %s: %s must be a JSON array of strings." % (source_path, key),
+            step="load_config",
+        )
+
+
+def _validate_argv(value, key, source_path):
+    _validate_string_list(value, key, source_path)
+    if value is not None and not value:
+        raise ServerUpdateError(
+            "Config %s: %s must not be empty." % (source_path, key),
+            step="load_config",
+        )
+
+
+def _validate_argv_list(value, key, source_path):
+    if value is None:
+        return
+    if not isinstance(value, list):
+        raise ServerUpdateError(
+            "Config %s: %s must be a JSON array." % (source_path, key),
+            step="load_config",
+        )
+    for index, entry in enumerate(value):
+        if isinstance(entry, list):
+            _validate_argv(entry, "%s[%d]" % (key, index), source_path)
+            continue
+        if isinstance(entry, dict):
+            _validate_argv(entry.get("argv"), "%s[%d].argv" % (key, index), source_path)
+            if "timeout" in entry and not isinstance(entry["timeout"], (int, float)):
+                raise ServerUpdateError(
+                    "Config %s: %s[%d].timeout must be a number."
+                    % (source_path, key, index),
+                    step="load_config",
+                )
+            if "cwd" in entry and not isinstance(entry["cwd"], str):
+                raise ServerUpdateError(
+                    "Config %s: %s[%d].cwd must be a string."
+                    % (source_path, key, index),
+                    step="load_config",
+                )
+            if "name" in entry and not isinstance(entry["name"], str):
+                raise ServerUpdateError(
+                    "Config %s: %s[%d].name must be a string."
+                    % (source_path, key, index),
+                    step="load_config",
+                )
+            continue
+        raise ServerUpdateError(
+            "Config %s: %s[%d] must be an argv array or object."
+            % (source_path, key, index),
+            step="load_config",
+        )
+
+
+def _normalize_integrity_checks(config, source_path="<config>"):
+    checks = config.get("integrity_checks") or []
+    if not isinstance(checks, list):
+        raise ServerUpdateError(
+            "Config %s: integrity_checks must be a JSON array." % source_path,
+            step="load_config",
+        )
+    normalized = []
+    unknown = []
+    for index, raw in enumerate(checks):
+        if isinstance(raw, str):
+            name = raw
+            entry = {
+                "name": name,
+                "path": config.get("life_txt_path"),
+                "application_config": config.get("application_config"),
+                "workspace": config.get("workspace"),
+            }
+        elif isinstance(raw, dict):
+            name = raw.get("name")
+            entry = {
+                "name": name,
+                "path": raw.get("path", config.get("life_txt_path")),
+                "application_config": raw.get(
+                    "application_config", config.get("application_config")
+                ),
+                "workspace": raw.get("workspace", config.get("workspace")),
+            }
+            if "id" in raw:
+                entry["id"] = raw["id"]
+        else:
+            raise ServerUpdateError(
+                "Config %s: integrity_checks[%d] must be a string or object."
+                % (source_path, index),
+                step="load_config",
+            )
+        if name not in _INTEGRITY_CHECK_BUILDERS:
+            unknown.append(str(name))
+            continue
+        for key in ("path", "application_config", "workspace", "id"):
+            if (
+                key in entry
+                and entry[key] is not None
+                and not isinstance(entry[key], str)
+            ):
+                raise ServerUpdateError(
+                    "Config %s: integrity_checks[%d].%s must be a string."
+                    % (source_path, index, key),
+                    step="load_config",
+                )
+        normalized.append(entry)
+    if unknown:
+        raise ServerUpdateError(
+            "Config %s names unknown integrity_checks: %s. Known checks: %s."
+            % (
+                source_path,
+                ", ".join(sorted(unknown)),
+                ", ".join(sorted(_INTEGRITY_CHECK_BUILDERS)),
+            ),
+            step="load_config",
+        )
+    return normalized
 
 
 def _run(cmd, step, cwd=None, timeout=30):
@@ -284,12 +457,16 @@ def create_backup(paths, backup_dir, timestamp):
     return destination
 
 
-def _service_action(manager, action, unit, timeout):
+def _service_command(config):
+    return list(config.get("service_command") or ["systemctl"])
+
+
+def _service_action(manager, service_command, action, unit, timeout):
     """Run one systemctl action. Returns (ok, message); never raises."""
     if manager == "none":
         return True, "service_manager=none (no-op)"
     result = _run(
-        ["systemctl", action, unit], step="service_%s" % action, timeout=timeout
+        service_command + [action, unit], step="service_%s" % action, timeout=timeout
     )
     if result is None:
         return False, "no result"
@@ -298,7 +475,7 @@ def _service_action(manager, action, unit, timeout):
     return ok, message
 
 
-def _service_is_active(manager, unit, timeout):
+def _service_is_active(manager, service_command, unit, timeout):
     """True only if systemctl reports this unit as currently active.
 
     Deliberately conservative: a unit that is already stopped, failed, or in
@@ -311,26 +488,81 @@ def _service_is_active(manager, unit, timeout):
     if manager == "none":
         return False
     result = _run(
-        ["systemctl", "is-active", unit], step="service_is_active", timeout=timeout
+        service_command + ["is-active", unit],
+        step="service_is_active",
+        timeout=timeout,
     )
     if result is None or result.returncode != 0:
         return False
     return (result.stdout or "").strip() == "active"
 
 
-def reinstall_package(python, install_root, pip_install_args, timeout):
-    cmd = [python, "-m", "pip", "install"] + list(pip_install_args)
+def _conda_run_prefix(config):
+    cmd = [config.get("conda_executable") or "conda", "run"]
+    if config.get("conda_env_prefix"):
+        cmd.extend(["--prefix", config["conda_env_prefix"]])
+    elif config.get("conda_env_name"):
+        cmd.extend(["--name", config["conda_env_name"]])
+    else:
+        raise ServerUpdateError(
+            "conda-pip requires conda_env_name or conda_env_prefix.",
+            step="reinstall",
+        )
+    return cmd
+
+
+def python_command_prefix(config):
+    if config.get("installer") == "conda-pip":
+        return _conda_run_prefix(config) + ["python"]
+    return [config["python"]]
+
+
+def install_command(config):
+    installer = config.get("installer") or "pip"
+    python = config.get("python")
+    if installer == "pip":
+        return [python, "-m", "pip", "install"] + list(
+            config.get("pip_install_args") or ["-e", "."]
+        )
+    if installer == "uv":
+        return [
+            config.get("uv_executable") or "uv",
+            "pip",
+            "install",
+            "--python",
+            python,
+        ] + list(config.get("uv_install_args") or ["-e", "."])
+    if installer == "conda-pip":
+        return (
+            python_command_prefix(config)
+            + ["-m", "pip", "install"]
+            + list(config.get("conda_install_args") or ["-e", "."])
+        )
+    raise ServerUpdateError(
+        "Unknown installer %r." % installer,
+        step="reinstall",
+    )
+
+
+def reinstall_package(config, install_root, timeout):
+    cmd = install_command(config)
     result = _run(cmd, step="reinstall", cwd=install_root, timeout=timeout)
     if result.returncode != 0:
         raise ServerUpdateError(
-            "pip install failed: %s" % ((result.stderr or result.stdout or "").strip()),
+            "%s install failed: %s"
+            % (
+                config.get("installer") or "pip",
+                (result.stderr or result.stdout or "").strip(),
+            ),
             step="reinstall",
         )
 
 
-def sanity_import_check(python, timeout):
+def sanity_import_check(python_prefix, timeout):
     result = _run(
-        [python, "-c", "import lifetxt"], step="sanity_import_check", timeout=timeout
+        python_prefix + ["-c", "import lifetxt"],
+        step="sanity_import_check",
+        timeout=timeout,
     )
     if result.returncode != 0:
         raise ServerUpdateError(
@@ -340,23 +572,84 @@ def sanity_import_check(python, timeout):
         )
 
 
-def run_integrity_checks(python, life_txt_path, checks, timeout):
+def _lifetxt_command_prefix(python_prefix, application_config=None):
+    cmd = list(python_prefix) + ["-m", "lifetxt"]
+    if application_config:
+        cmd.extend(["--config", application_config])
+    return cmd
+
+
+def _integrity_result_key(entry, index, used):
+    key = entry.get("id") or entry["name"]
+    if key not in used:
+        used.add(key)
+        return key
+    key = "%s#%d" % (entry["name"], index + 1)
+    used.add(key)
+    return key
+
+
+def run_integrity_checks(python_prefix, checks, timeout):
     results = OrderedDict()
     failed = []
-    for name in checks:
+    used_keys = set()
+    for index, entry in enumerate(checks):
+        name = entry["name"]
         builder = _INTEGRITY_CHECK_BUILDERS[name]
-        cmd = [python, "-m", "lifetxt"] + builder(life_txt_path)
+        cmd = _lifetxt_command_prefix(
+            python_prefix, entry.get("application_config")
+        ) + builder(entry)
         result = _run(cmd, step="integrity_checks", timeout=timeout)
         ok = result.returncode == 0
         output = (result.stdout or result.stderr or "").strip()
-        results[name] = OrderedDict([("ok", ok), ("output", output[-2000:])])
+        key = _integrity_result_key(entry, index, used_keys)
+        results[key] = OrderedDict(
+            [
+                ("ok", ok),
+                ("name", name),
+                ("command", cmd),
+                ("path", entry.get("path")),
+                ("application_config", entry.get("application_config")),
+                ("workspace", entry.get("workspace")),
+                ("output", output[-2000:]),
+            ]
+        )
         if not ok:
-            failed.append(name)
+            failed.append(key)
     if failed:
         raise ServerUpdateError(
             "Integrity check(s) failed: %s" % ", ".join(failed),
             step="integrity_checks",
             report=OrderedDict([("integrity_checks", results)]),
+        )
+    return results
+
+
+def _command_entry(entry, index):
+    if isinstance(entry, list):
+        return "validation_command_%d" % (index + 1), entry, None, None
+    name = entry.get("name") or "validation_command_%d" % (index + 1)
+    return name, list(entry["argv"]), entry.get("cwd"), entry.get("timeout")
+
+
+def run_command_entries(entries, step, default_timeout):
+    results = OrderedDict()
+    failed = []
+    for index, entry in enumerate(entries or []):
+        name, argv, cwd, timeout = _command_entry(entry, index)
+        result = _run(argv, step=step, cwd=cwd, timeout=timeout or default_timeout)
+        ok = result.returncode == 0
+        output = (result.stdout or result.stderr or "").strip()
+        results[name] = OrderedDict(
+            [("ok", ok), ("command", argv), ("cwd", cwd), ("output", output[-2000:])]
+        )
+        if not ok:
+            failed.append(name)
+    if failed:
+        raise ServerUpdateError(
+            "%s failed: %s" % (step.replace("_", " "), ", ".join(failed)),
+            step=step,
+            report=OrderedDict([(step, results)]),
         )
     return results
 
@@ -600,6 +893,15 @@ def format_review_block(report, server_config_path):
             report["binary_file_count"],
         )
     )
+    lines.append("--- execution plan ---")
+    lines.append("installer=%s" % report.get("installer", "pip"))
+    lines.append("install_command=%s" % " ".join(report.get("install_command") or []))
+    if report.get("service_manager") == "none":
+        lines.append("service_manager=none")
+    else:
+        lines.append(
+            "service_command=%s" % " ".join(report.get("service_command") or [])
+        )
     lines.append(
         "approved_command=lifetxt server-update --server-config %s --approve %s"
         % (server_config_path or "<server-config-path>", report["target_commit"])
@@ -651,8 +953,12 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
     service_timeout = config.get("service_timeout", 30)
     health_timeout = config.get("health_timeout", 10)
     manager = config.get("service_manager", "systemctl")
+    service_command = _service_command(config)
     services = list(config.get("services") or [])
     backup_paths = list(config.get("backup_paths") or [])
+    integrity_checks = _normalize_integrity_checks(config)
+    validation_commands = list(config.get("validation_commands") or [])
+    python_prefix = python_command_prefix(config)
 
     install_root = config.get("install_root") or lifetxt_install_root()
 
@@ -740,6 +1046,11 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
             ("ref", ref),
             ("current_commit", current),
             ("target_commit", target),
+            ("installer", config.get("installer") or "pip"),
+            ("install_command", install_command(config)),
+            ("python_command", python_prefix),
+            ("service_manager", manager),
+            ("service_command", service_command if manager != "none" else []),
         ]
     )
 
@@ -781,9 +1092,11 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         )
         report["would_backup_paths"] = backup_paths
         report["would_stop_services"] = services
-        report["would_run_integrity_checks"] = list(
-            config.get("integrity_checks") or []
+        report["would_run_service_preflight_commands"] = list(
+            config.get("service_preflight_commands") or []
         )
+        report["would_run_integrity_checks"] = integrity_checks
+        report["would_run_validation_commands"] = validation_commands
         return report
 
     # -- review gate: a risky update must be explicitly approved by exact
@@ -804,6 +1117,20 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         )
         return report
 
+    if manager != "none" and config.get("service_preflight_commands"):
+        try:
+            report["service_preflight"] = run_command_entries(
+                config.get("service_preflight_commands"),
+                "service_preflight",
+                service_timeout,
+            )
+        except ServerUpdateError as exc:
+            if exc.report:
+                report.update(exc.report)
+            report["status"] = "failed_before_code_update"
+            report["message"] = str(exc)
+            raise ServerUpdateError(str(exc), step=exc.step, report=report)
+
     # -- mutating path: everything from here on can change service/data state --
     lock = UpdateLock(config.get("lock_path"))
     lock.acquire()
@@ -819,11 +1146,13 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         active_services = [
             unit
             for unit in services
-            if _service_is_active(manager, unit, service_timeout)
+            if _service_is_active(manager, service_command, unit, service_timeout)
         ]
         report["services_active_before_update"] = active_services
         for unit in active_services:
-            ok, message = _service_action(manager, "stop", unit, service_timeout)
+            ok, message = _service_action(
+                manager, service_command, "stop", unit, service_timeout
+            )
             if not ok:
                 raise ServerUpdateError(
                     "Failed to stop %s: %s" % (unit, message), step="stop_services"
@@ -842,13 +1171,8 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
             )
         code_update_applied = True
 
-        reinstall_package(
-            config["python"],
-            repo_root,
-            config.get("pip_install_args") or ["-e", "."],
-            service_timeout,
-        )
-        sanity_import_check(config["python"], service_timeout)
+        reinstall_package(config, repo_root, service_timeout)
+        sanity_import_check(python_prefix, service_timeout)
 
         post_hashes = hash_paths(backup_paths)
         report["post_update_hashes"] = post_hashes
@@ -862,9 +1186,13 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
             )
 
         report["integrity_checks"] = run_integrity_checks(
-            config["python"],
-            config.get("life_txt_path"),
-            config.get("integrity_checks") or [],
+            python_prefix,
+            integrity_checks,
+            service_timeout,
+        )
+        report["validation_commands"] = run_command_entries(
+            validation_commands,
+            "validation_commands",
             service_timeout,
         )
     except ServerUpdateError as exc:
@@ -879,7 +1207,9 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
             )
         else:
             for unit in reversed(stopped_services):
-                _service_action(manager, "start", unit, service_timeout)
+                _service_action(
+                    manager, service_command, "start", unit, service_timeout
+                )
             report["status"] = "failed_before_code_update"
             report["message"] = str(exc)
         lock.release()
@@ -889,7 +1219,9 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
     started = []
     restart_failures = OrderedDict()
     for unit in stopped_services:
-        ok, message = _service_action(manager, "start", unit, service_timeout)
+        ok, message = _service_action(
+            manager, service_command, "start", unit, service_timeout
+        )
         if ok:
             started.append(unit)
         else:

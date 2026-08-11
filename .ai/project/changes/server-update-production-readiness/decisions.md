@@ -1,0 +1,10 @@
+# Decisions
+
+| Date | Decision | Owner | Alternatives | Reason | Follow-up |
+| --- | --- | --- | --- | --- | --- |
+| 2026-08-11 | Add explicit `installer: "pip" | "uv"` instead of arbitrary install command strings | Codex | `install_command: "..."` shell string; require pip in every venv | Preserves the safe pip default, supports uv-managed pip-less venvs, and keeps command execution structured argv only. | None |
+| 2026-08-11 | Add `installer: "conda-pip"` using `conda run --name/--prefix ... python -m pip install` | Codex | Require an activated shell; use a shell string; adopt conda-pypi as the primary path | `conda run` is the documented non-interactive way to target a conda environment by name or prefix. Keeping pip inside that environment preserves editable local-project install behavior and avoids relying on shell activation. | None |
+| 2026-08-11 | Add `service_command` and `service_preflight_commands` as structured argv | Codex | Broad passwordless systemctl; run all of server-update as root | Lets deployments use a narrow wrapper or sudo rule without expanding git/package/test execution privileges. | None |
+| 2026-08-11 | Do not use `systemctl --dry-run` as a start/stop permission probe | Codex | Run `systemctl --dry-run stop/start` in preflight | Ubuntu/systemd man pages document dry-run for power/session verbs, not service start/stop, so it is not a portable authorization check. | None |
+| 2026-08-11 | Keep string `integrity_checks` backward-compatible and add object entries for per-check context | Codex | Replace the existing list with a new required object schema | Existing server-update configs keep working while production deployments can target primary/archive/config/workspace separately. | None |
+| 2026-08-11 | Implement optional `validation_commands` in this issue | Codex | Split the full-suite step into a follow-up | The hook is small, naturally shares the post-code-update fail-safe path, and directly satisfies #277's high-impact update parity criterion. | None |

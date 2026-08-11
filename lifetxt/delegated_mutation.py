@@ -245,9 +245,20 @@ def prepare_delegated_mutation(
     adapter_id=None,
     adapter_kind=None,
     adapter_version=None,
+    expected_revision=None,
     now=None,
 ):
     source = mutation.read_text_snapshot(path)
+    if (
+        expected_revision not in (None, "")
+        and str(expected_revision) != source.content_hash
+    ):
+        raise mutation.MutationConflict(
+            source.path,
+            str(expected_revision),
+            source.content_hash,
+            operation=str(operation or "delegated.mutation"),
+        )
     temp_root = tempfile.mkdtemp(prefix="lifetxt-delegated-")
     temporary_path = os.path.join(
         temp_root, os.path.basename(source.path) or "life.txt"

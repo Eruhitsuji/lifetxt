@@ -177,11 +177,14 @@ capabilities:
     source_requirements:
       - req-delegated-mutation-provenance-permission-contract
       - req-delegated-mutation-lifecycle-retention-sandbox-policy
+      - req-stable-writable-adapters-use-delegated-proposal-contract
     implementation_locations:
       - lifetxt/delegated_mutation.py
       - lifetxt/schema_extensions_v13.py
       - dist/schemas/delegated-mutation-proposal-v1.schema.json
+      - lifetxt/fzf_helper.py
       - tests/test_delegated_mutation_v6.py
+      - tests/test_cui_extensions.py
       - tests/test_p0_cli_v6.py
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/CAPABILITIES.yml
@@ -200,10 +203,12 @@ capabilities:
       - ruff check/format on delegated mutation contract files
       - git diff --check
       - '#295 timeout, cleanup, retained proposal restart, and unsupported sandbox metadata tests'
+      - '#296 editor-session adapter tests verify delegated proposal routing, restart apply, and one-winner/one-conflict behavior'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/293
       - https://github.com/Eruhitsuji/lifetxt/issues/294
       - https://github.com/Eruhitsuji/lifetxt/issues/295
+      - https://github.com/Eruhitsuji/lifetxt/issues/296
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/333
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -221,6 +226,10 @@ capabilities:
       private-temporary-copy sandbox metadata. Timeout and cancellation are
       defined as abort-without-authoritative-write behavior; unsupported
       sandbox claims fail validation.
+      #296 routes the stable CLI/TUI/fzf/peco editor-session adapter through
+      delegated proposal preparation and revision-checked apply, so the stable
+      writable adapter classes selected by #293 now emit or consume the
+      versioned proposal format.
     replacement:
       replaces: []
       replaced_by: null
@@ -593,17 +602,24 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-durable-transaction-recovery
+      - req-transaction-crash-boundary-cleanup-restore-coverage
+      - req-corrupted-missing-recovery-artifact-safety
     implementation_locations:
       - lifetxt/transaction_journal.py
+      - lifetxt/multi_target.py
+      - lifetxt/fault_drill.py
     public_interfaces:
       - lifetxt.transaction_journal.prepare
       - lifetxt.transaction_journal.inspect_journal
       - lifetxt.transaction_journal.resume
       - lifetxt.transaction_journal.compensate
       - lifetxt.transaction_journal.abandon_with_backup
+      - lifetxt.fault_drill.run_fault_matrix
     tests_or_evidence:
       - tests/test_transaction_journal_v3.py replace PermissionError retry and recovery tests -> Ran 11 tests, OK
       - tests/test_fault_matrix_v6.py tests/test_fault_drill_v5.py -> Ran 5 tests, OK
+      - '#300 extends simulated subprocess crash-boundary matrix through delete, verification, compensation write/verify, terminal cleanup, backup copy, and restore-working-copy points'
+      - '#301 covers missing journal metadata, missing/corrupted recovery payloads, corrupted/missing backup manifests, deterministic repeated refusal, and inspect usefulness'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -612,8 +628,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/76
       - https://github.com/Eruhitsuji/lifetxt/issues/78
       - https://github.com/Eruhitsuji/lifetxt/issues/86
+      - https://github.com/Eruhitsuji/lifetxt/issues/300
+      - https://github.com/Eruhitsuji/lifetxt/issues/301
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
+      - https://github.com/Eruhitsuji/lifetxt/pull/334
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       `_write_bytes_durable` retries `PermissionError` only when `os.name` is
@@ -621,6 +640,14 @@ capabilities:
       0.05, 0.1, and 0.25 seconds. Exhausting that budget re-raises the
       `PermissionError`; the existing journal and target state remain available
       for inspect/resume/compensate/abandon instead of being silently swallowed.
+      #300 extends the subprocess fault drill beyond initial journal/commit
+      boundaries into delete, verification, compensation, terminal cleanup,
+      backup-copy, and restore-working-copy paths. The matrix scope remains
+      simulated subprocess termination and deliberately does not claim physical
+      power-loss portability.
+      #301 verifies that corrupted or missing journal/payload/backup evidence
+      is refused before authoritative recovery mutation, with deterministic
+      retry behavior and actionable transaction-journal diagnostics.
     replacement:
       replaces: []
       replaced_by: null

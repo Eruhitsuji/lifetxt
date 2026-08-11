@@ -430,20 +430,32 @@ def editor_command(editor, path, line=1):
 
 
 def open_editor(record, config=None):
+    result = prepare_editor_proposal(record, config=config)
+    from .delegated_mutation import apply_delegated_proposal
+
+    applied = apply_delegated_proposal(result)
+    return 0 if applied.get("applied") else 1
+
+
+def prepare_editor_proposal(
+    record, config=None, proposal_path=None, keep_temporary=False
+):
     editor = resolve_editor(config)
     if not editor:
         raise ValueError(editor_help_message())
-    from .editor_safety import safe_edit
+    from .delegated_mutation import prepare_delegated_mutation
 
     try:
-        result = safe_edit(
+        return prepare_delegated_mutation(
             record["source"],
-            editor,
-            line=record.get("line") or 1,
+            editor_command(editor, "{file}", record.get("line") or 1),
+            proposal_path=proposal_path,
+            keep_temporary=keep_temporary,
             expected_revision=record.get("revision") or None,
             operation="fzf.edit",
+            adapter_id="editor.session",
+            adapter_kind="editor_session",
         )
-        return 0 if result else 1
     except OSError as exc:
         raise ValueError(
             "Could not run editor %r: %s\n%s" % (editor, exc, editor_help_message())

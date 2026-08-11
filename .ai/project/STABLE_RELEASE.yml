@@ -417,6 +417,18 @@ stable_release:
           Authoritative write and recovery claims cannot be stable without
           crash-boundary, corrupted-artifact, adverse-filesystem, Windows, and
           documented support-limit evidence.
+        evidence_notes:
+          - >-
+            #300 extends the deterministic subprocess crash-boundary matrix
+            through delete, verification, compensation write/verify, terminal
+            cleanup, backup copy, and restore-working-copy paths. This evidence
+            is explicitly simulated subprocess termination, not physical
+            power-loss evidence.
+          - >-
+            #301 verifies corrupted or missing journal metadata, recovery
+            artifacts, and backup manifests fail safely before recovery mutates
+            authoritative targets, with deterministic repeat attempts and
+            inspect output retained where possible.
       - id: p0-protected-recovery-evidence-authorization
         todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
         classification: stable_release_blocker
@@ -576,17 +588,21 @@ stable_release:
           - tests/test_p0_cli_v6.py::test_delegated_prepare_inspect_and_apply_cli
           - https://github.com/Eruhitsuji/lifetxt/issues/294
           - https://github.com/Eruhitsuji/lifetxt/issues/295
+          - https://github.com/Eruhitsuji/lifetxt/issues/296
         related_issues:
           - https://github.com/Eruhitsuji/lifetxt/issues/293
           - https://github.com/Eruhitsuji/lifetxt/issues/294
           - https://github.com/Eruhitsuji/lifetxt/issues/295
+          - https://github.com/Eruhitsuji/lifetxt/issues/296
         notes: >-
           External programs receive only a private temporary copy. Applying the
           result requires a validated proposal object and an authoritative
           revision precondition. Proposal records include validated adapter,
           provenance, authorization, lifecycle, sandbox, and contract hash
           metadata from #294 and #295; unsafe override is present but not part
-          of the stable advertised path.
+          of the stable advertised path. #296 routes the stable editor-session
+          adapter path through the same delegated proposal prepare/apply
+          contract instead of calling a direct editor write path.
       - id: editor-session-contract
         surface: Existing CLI, TUI, fzf, and peco editor sessions
         implementation_paths:

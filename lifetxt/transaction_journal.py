@@ -469,7 +469,9 @@ def abandon_with_backup(path, backup_dir, now=None):
         raise TransactionJournalError(
             "Backup destination already exists: %s" % destination
         )
+    fault_point("before_backup_copy", path=path, backup_path=destination)
     shutil.copytree(journal.directory, destination)
+    fault_point("after_backup_copy", path=path, backup_path=destination)
     manifest_path, manifest = write_integrity_manifest(destination)
     _fsync_tree(destination)
     journal.set_state(
@@ -685,7 +687,12 @@ def restore_backup(
         config, operator, action="transaction backup restore"
     )
     source = os.path.abspath(backup_dir)
-    verification = verify_integrity_manifest(source)
+    try:
+        verification = verify_integrity_manifest(source)
+    except Exception as exc:
+        raise TransactionJournalError(
+            "Backup integrity verification failed: %s (%s)" % (source, exc)
+        )
     if not verification.get("ok"):
         raise TransactionJournalError(
             "Backup integrity verification failed: %s" % source
@@ -714,7 +721,13 @@ def restore_backup(
         raise TransactionJournalError(
             "Restore working directory already exists: %s" % destination
         )
+    fault_point(
+        "before_restore_working_copy", backup_dir=source, working_dir=destination
+    )
     shutil.copytree(source, destination)
+    fault_point(
+        "after_restore_working_copy", backup_dir=source, working_dir=destination
+    )
     manifest_path = os.path.join(destination, "integrity-manifest.json")
     try:
         os.unlink(manifest_path)
@@ -866,8 +879,14 @@ def _write_target(tx_dir, target, use_after):
         raise TransactionJournalError(
             "Missing recovery artifact for %s." % target["path"]
         )
-    with open(os.path.join(tx_dir, artifact), "rb") as handle:
-        payload = handle.read()
+    artifact_path = os.path.join(tx_dir, artifact)
+    try:
+        with open(artifact_path, "rb") as handle:
+            payload = handle.read()
+    except FileNotFoundError:
+        raise TransactionJournalError(
+            "Missing recovery artifact for %s." % target["path"]
+        )
     if mutation.hash_bytes(payload) != expected:
         raise TransactionJournalError(
             "Recovery artifact hash mismatch for %s." % target["path"]

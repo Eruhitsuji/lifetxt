@@ -1,0 +1,50 @@
+schema_version: 1
+
+change:
+  id: server-init-bootstrap
+  title: Guarded Ubuntu Server bootstrap command
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/279
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/280
+  base_commit: 7f540f21f355966c38512d0e8eab2114f9f42b9d
+  target_release: null
+
+scope:
+  in_scope:
+    - Add `lifetxt server-init --server-config PATH [--yes]`.
+    - Make dry-run/plan mode the default and non-mutating.
+    - Generate application config, server-update config, systemd artifacts, a narrow service-control wrapper/sudoers artifact, and an nginx artifact from explicit config.
+    - Refuse conflicting existing files and treat matching files as no-op.
+    - Use structured argv only for installer, integrity, validation, and optional systemd commands.
+    - Update CLI and Ubuntu Server operator documentation.
+  out_of_scope:
+    - Installing packages through apt, configuring firewalls, DNS, certificates, WireGuard, SSH, OS upgrades, or secret stores.
+    - Adopting or repairing an existing differing manual deployment.
+    - Running commands on a real production host during local verification.
+  write_scope:
+    - lifetxt/server_init.py
+    - lifetxt/cli.py
+    - tests/test_server_init.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/changes/server-init-bootstrap/
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - production host configuration or data
+    - secrets, VPN addresses, private hostnames, real Calendar URLs
+  shared_files:
+    - lifetxt/cli.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - independent implementation/security review
+  - merge authority approval

@@ -3794,6 +3794,37 @@ traceability:
         timeout/cancellation paths do not mutate the authoritative file.
       status: implemented
 
+    - requirement_id: req-stable-writable-adapters-use-delegated-proposal-contract
+      capability_id: cap-delegated-mutation-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/296
+      pull_request: null
+      changed_files_or_scope:
+        - Route stable editor-session adapter writes through delegated proposal prepare/apply
+        - Preserve temporary-copy editing and authoritative compare-and-swap apply
+        - Add editor-session restart and one-winner/one-conflict adapter tests
+        - Record unsupported adapters as remaining experimental/deferred through the stable-release inventory
+        - lifetxt/fzf_helper.py
+        - lifetxt/delegated_mutation.py
+        - tests/test_cui_extensions.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_cui_extensions.EditorResolutionTests, tests.test_delegated_mutation_v6, and delegated CLI smoke -> Ran 24 tests, OK
+        - ruff check lifetxt/fzf_helper.py lifetxt/delegated_mutation.py tests/test_cui_extensions.py tests/test_delegated_mutation_v6.py
+        - ruff format --check lifetxt/fzf_helper.py lifetxt/delegated_mutation.py tests/test_cui_extensions.py tests/test_delegated_mutation_v6.py
+        - python -m lifetxt check examples/minimal_life.txt
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because this removes the stable editor-session adapter's
+        direct safe-edit write path and uses the delegated proposal contract
+        hardened by #294 and #295. The low-level editor_safety.safe_edit helper
+        remains available for non-stable internal use, but the stable
+        fzf/TUI/CLI editor adapter path no longer calls it.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

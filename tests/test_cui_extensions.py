@@ -13,7 +13,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from lifetxt import cli, completion, fzf_helper, git_hook, stats, timer, tui, tui_app
+from lifetxt import cli, completion, editor_safety, fzf_helper, git_hook, stats, timer
+from lifetxt import tui, tui_app
 from lifetxt.interactive import DETAIL_DESCRIPTIONS, detail_candidates
 from lifetxt.parser import parse_text
 
@@ -591,6 +592,61 @@ class EditorResolutionTests(unittest.TestCase):
             fzf_helper.open_editor({"source": "life.txt", "line": 1})
 
         self.assertIn("Could not run editor", str(caught.exception))
+
+    def test_open_editor_uses_delegated_proposal_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            script = os.path.join(tmp, "editor.py")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Before id:t1\n")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write(
+                    "import pathlib,sys\n"
+                    "pathlib.Path(sys.argv[-1]).write_text('[x] T After id:t1\\n', encoding='utf-8')\n"
+                )
+            os.environ["EDITOR"] = "%s %s" % (sys.executable, script)
+
+            with patch.object(
+                editor_safety,
+                "safe_edit",
+                side_effect=AssertionError("stable editor path bypassed proposal"),
+            ):
+                code = fzf_helper.open_editor({"source": path, "line": 1})
+
+            self.assertEqual(0, code)
+            with open(path, encoding="utf-8") as handle:
+                self.assertIn("[x] T After", handle.read())
+
+    def test_editor_proposal_restart_and_conflict(self):
+        from lifetxt import mutation
+        from lifetxt.delegated_mutation import apply_delegated_proposal_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            script = os.path.join(tmp, "editor.py")
+            first = os.path.join(tmp, "first.json")
+            second = os.path.join(tmp, "second.json")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Before id:t1\n")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write(
+                    "import pathlib,sys\n"
+                    "pathlib.Path(sys.argv[-1]).write_text('[x] T After id:t1\\n', encoding='utf-8')\n"
+                )
+            os.environ["EDITOR"] = "%s %s" % (sys.executable, script)
+
+            fzf_helper.prepare_editor_proposal(
+                {"source": path, "line": 1},
+                proposal_path=first,
+            )
+            fzf_helper.prepare_editor_proposal(
+                {"source": path, "line": 1},
+                proposal_path=second,
+            )
+
+            self.assertTrue(apply_delegated_proposal_file(first)["applied"])
+            with self.assertRaises(mutation.MutationConflict):
+                apply_delegated_proposal_file(second)
 
 
 class WorkspaceEditSuspendTests(unittest.TestCase):

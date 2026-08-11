@@ -3605,7 +3605,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/284
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/329
       changed_files_or_scope:
         - Define the stable-release stabilization start point and branch pattern
         - Define allowed feature-freeze change classes

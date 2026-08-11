@@ -398,7 +398,7 @@ traceability:
       capability_id: cap-local-test-compatibility
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/72
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/278
       changed_files_or_scope:
         - Fail loudly instead of certifying the project on an interpreter below requires-python
         - tests/test_supported_runtime.py
@@ -3493,6 +3493,44 @@ traceability:
         Security/High assurance, matching cap-lifetxt-self-update's and
         #272's own escalation basis; requires independent security review
         and Merge Authority approval before merge to main.
+      status: implemented
+
+    - requirement_id: req-server-update-production-readiness
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/277
+      pull_request: null
+      changed_files_or_scope:
+        - Add structured pip/uv reinstall selection for `lifetxt server-update`
+        - Add conda-pip setup/reinstall support with explicit conda environment name/prefix
+        - Add structured service_command and service_preflight_commands support
+        - Allow per-integrity-check path/application_config/workspace targets
+        - Add optional validation_commands before service restart
+        - Document least-privilege systemd authorization and updated server-update config
+        - lifetxt/server_update.py
+        - tests/test_server_update.py
+        - docs/en/cli.md
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-update-production-readiness/
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest tests.test_server_update -> Ran 105 tests, OK (skipped=1)'
+        - '.\.venv\Scripts\ruff.exe format --check lifetxt/server_update.py tests/test_server_update.py -> 2 files already formatted'
+        - '.\.venv\Scripts\ruff.exe format --check lifetxt tests scripts -> failed on 3 pre-existing out-of-scope files only: lifetxt/safety_compat_v2.py, tests/test_generated_record_capture_compat.py, tests/test_project_archive_safety_v3.py'
+        - '.\.venv\Scripts\ruff.exe check lifetxt tests scripts -> All checks passed'
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 13 tests, OK'
+        - '.\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+        - '.\.venv\Scripts\python.exe -m lifetxt server-update --help -> help renders, including --approve'
+        - 'Horizontal environment review: pip remains the default installer; uv-managed pip-less venvs use `uv pip install --python`; conda-managed environments use `conda run --name/--prefix ... python -m pip install` so setup/reinstall, sanity import, and built-in checks target an explicit env without shell activation; non-systemd/external managers keep `service_manager: none`; least-privilege systemd uses a structured wrapper/preflight rather than broad passwordless systemctl/root; `systemctl --dry-run` is not used for start/stop authorization because current Ubuntu/systemd docs do not make it a portable service-management probe.'
+      release_or_deployment: null
+      notes: >-
+        Security/High assurance continues from #272/#273 because this still
+        gates production git/service/update validation behavior. No production
+        host or data was touched; every concrete value in docs is a placeholder
+        or example. Optional validation_commands are operator-trusted argv only,
+        disabled by default, timeout-bound, and share the existing fail-safe:
+        after code update, failure leaves affected services stopped.
       status: implemented
 
 required_chain:

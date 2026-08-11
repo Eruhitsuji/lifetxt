@@ -1,0 +1,50 @@
+schema_version: 1
+
+change:
+  id: server-update-production-readiness
+  title: Production-ready server-update for uv installs and least-privilege systemd
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/277
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/278
+  base_commit: cec0f21f85d9f7e4c1be5d354b1c1375303b6a5f
+  target_release: null
+
+scope:
+  in_scope:
+    - Add structured pip/uv reinstall selection for server-update.
+    - Add structured service command and preflight command support.
+    - Add per-integrity-check path/application-config/workspace targeting.
+    - Add optional validation commands before service restart.
+    - Document least-privilege systemd authorization and updated server-update config.
+  out_of_scope:
+    - Running or changing a real production server.
+    - Adding shell-string command execution.
+    - Replacing systemd with container/orchestrator integration.
+    - Automatic rollback of production data.
+  write_scope:
+    - lifetxt/server_update.py
+    - tests/test_server_update.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/changes/server-update-production-readiness/
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - production host configuration or data
+    - secrets, VPN addresses, private hostnames, real Calendar URLs
+  shared_files:
+    - lifetxt/server_update.py
+    - tests/test_server_update.py
+    - docs/en/cli.md
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - independent implementation/security review
+  - merge authority approval

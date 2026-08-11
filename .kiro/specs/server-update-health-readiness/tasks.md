@@ -4,14 +4,14 @@
 >
 > GitHub Issue #281 is the authoritative task contract for this implementation.
 
-- [ ] 1. Add server-update health readiness retry
+- [x] 1. Add server-update health readiness retry
   - Add health readiness timing defaults and normalize timing values inside `lifetxt/server_update.py`.
   - Add a deterministic `wait_for_health` helper around `check_health`.
   - Wire the helper into `run_server_update` after successful service restart and expose dry-run readiness fields.
   - _Requirements: 1, 2_
   - _Boundary: `lifetxt/server_update.py`_
 
-- [ ] 2. Cover readiness behavior with tests
+- [x] 2. Cover readiness behavior with tests
   - Add deterministic unit tests for immediate success, transient connection failure followed by success, repeated failure until deadline, and HTTP error followed by success.
   - Add or adjust orchestration tests so a transient post-restart health failure produces `updated`, while exhausted readiness still produces `validated_health_check_failed`.
   - Confirm restart failure still avoids health checks and returns `validated_restart_incomplete`.

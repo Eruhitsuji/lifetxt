@@ -29,61 +29,61 @@ verification:
       result: Ran 112 tests in 0.798s, OK (skipped=1)
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: full
       command: '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest discover'
       result: Ran 2331 tests in 477.227s, OK (skipped=9)
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: lint
       command: .\.venv\Scripts\ruff.exe check lifetxt tests scripts
       result: All checks passed!
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: format
       command: .\.venv\Scripts\ruff.exe format --check lifetxt\server_update.py tests\test_server_update.py
       result: 2 files already formatted
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: integration
       command: .\.venv\Scripts\python.exe -m lifetxt check examples\minimal_life.txt
       result: 'OK: 10 item(s)'
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: smoke
       command: .\.venv\Scripts\python.exe -m lifetxt server-update --help
       result: help renders successfully, including --server-config, --yes, --approve, and --format
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
     - type: review
       command: /security-review against full branch diff
       result: '2 findings found and fixed: `health_retry_interval=0` could create a tight retry loop until deadline; and full per-request `health_timeout` could overrun a shorter total readiness deadline. Fixed by clamping retry interval to a small positive floor and capping each attempt timeout to the remaining readiness deadline. Re-review found no remaining candidate findings in changed code. Secret scan found one pre-existing docs example outside changed lines, not introduced by this change.'
       requirement_ids:
         - req-server-update-health-readiness
-      commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+      commit: 5eceb863ea427bed27111132780b667e43e513c3
       completed_at: 2026-08-11
 
 review_ledger:
   - reviewer: Codex
     review_type: implementation
-    target_commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+    target_commit: 5eceb863ea427bed27111132780b667e43e513c3
     result: passed
     finding_count: 0
     completed_at: 2026-08-11
   - reviewer: Codex
     review_type: security
-    target_commit: 66ad8993571a64dfd886023d3871ceeb22de2a97
+    target_commit: 5eceb863ea427bed27111132780b667e43e513c3
     result: passed_after_fix
     finding_count: 2
     completed_at: 2026-08-11

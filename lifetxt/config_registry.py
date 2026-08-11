@@ -573,6 +573,46 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "transactions.require_authenticated_recovery_authorization",
+            _entry(
+                "boolean",
+                False,
+                "Require recovery authorization to come from an authenticated principal context instead of a caller-supplied operator string. Remote or multi-user configurations require this behavior automatically.",
+            ),
+        ),
+        (
+            "transactions.recovery_authorized_roles",
+            _entry(
+                "array<string>",
+                [],
+                "Authenticated principal roles allowed to perform transaction recovery administration. Empty means no role restriction.",
+            ),
+        ),
+        (
+            "transactions.recovery_required_scopes",
+            _entry(
+                "array<string>",
+                [],
+                "Scopes an authenticated principal must carry before recovery administration is authorized. Per-action recovery scopes are checked in addition to these values.",
+            ),
+        ),
+        (
+            "transactions.recovery_allowed_projects",
+            _entry(
+                "array<string>",
+                [],
+                "Project identifiers an authenticated recovery principal may administer. Empty means no project restriction.",
+            ),
+        ),
+        (
+            "transactions.require_destructive_recovery_approval",
+            _entry(
+                "boolean",
+                False,
+                "Require destructive recovery actions such as backup resume or compensate to carry approval from a different authenticated identity.",
+            ),
+        ),
+        (
             "projects",
             _entry(
                 "object",

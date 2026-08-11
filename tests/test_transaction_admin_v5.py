@@ -13,6 +13,7 @@ from lifetxt.transaction_admin import (
     append_admin_audit,
     migrate_policy_file,
     policy_document,
+    policy_version_matrix,
     preflight_report,
     read_policy_document,
     rotate_archives,
@@ -70,6 +71,19 @@ class TransactionAdminTests(unittest.TestCase):
         with self.assertRaises(TransactionPolicyVersionError):
             migrate_policy_file(self.policy_path)
 
+    def test_policy_version_matrix_is_explicit_and_refusal_preserves_revision(self):
+        matrix = policy_version_matrix()
+        self.assertEqual("supported", matrix[0]["migration"])
+        self.assertEqual("identity", matrix[POLICY_VERSION]["migration"])
+        self.assertEqual("refused", matrix["newer"]["mutation"])
+        self.assertEqual("unsupported", matrix["downgrade"]["migration"])
+        with open(self.policy_path, "w", encoding="utf-8") as handle:
+            json.dump({"policy_version": 99, "policy": {}}, handle)
+        revision = read_text_snapshot(self.policy_path).content_hash
+        with self.assertRaises(TransactionPolicyVersionError):
+            migrate_policy_file(self.policy_path, expected_revision=revision)
+        self.assertEqual(revision, read_text_snapshot(self.policy_path).content_hash)
+
     def test_preflight_reports_current_migration_and_capacity(self):
         missing = preflight_report(self.journal)
         self.assertTrue(missing["ok"])
@@ -81,6 +95,9 @@ class TransactionAdminTests(unittest.TestCase):
         migration = preflight_report(self.journal)
         self.assertFalse(migration["ok"])
         self.assertEqual("migration_required", migration["policy_file"]["state"])
+        self.assertEqual(
+            "refused", migration["policy_version_matrix"]["newer"]["migration"]
+        )
 
     def test_preflight_rejects_unsupported_evidence_storage_profile(self):
         report = preflight_report(

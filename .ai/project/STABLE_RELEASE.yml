@@ -460,6 +460,28 @@ stable_release:
             Encryption-at-rest is not advertised as supported; unsupported
             encrypted profiles fail preflight or journal preparation before
             authoritative mutation.
+          - >-
+            #306 requires authenticated principal-derived recovery
+            authorization for remote or multi-user recovery surfaces, enforces
+            configured role/scope/project restrictions before restore mutation,
+            and supports separate approval identity checks for destructive
+            backup restore actions. Local single-operator administration
+            remains a documented limitation when these settings are disabled.
+          - >-
+            #307 makes policy version 1 and journal schema version 1 migration
+            and refusal paths explicit. Newer policy/journal data is refused
+            before mutation, newer journals remain inspect/export-only, and
+            unsupported downgrade paths are documented rather than inferred.
+          - >-
+            #308 defines the shareable recovery-evidence boundary: transaction
+            identifiers, revision hashes, timestamps, and target relations are
+            retained; raw paths, error text, artifact payloads, authored content,
+            credentials, and tokens are redacted or prohibited.
+          - >-
+            #309 exercises the operator escalation path in a temporary
+            workspace: safe compensation, diverged-target refusal, immutable
+            backup handoff, manifest verification, and separate restore
+            inspection. No production data is used.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

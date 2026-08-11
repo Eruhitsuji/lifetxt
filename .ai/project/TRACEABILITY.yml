@@ -3413,10 +3413,11 @@ traceability:
         - tests/test_server_update.py
         - config/release/clock-boundary-baseline-v1.json
       tests_or_evidence:
-        - tests/test_server_update.py -> Ran 41 tests, OK (config validation, hashing, backup, locking, health check, dry-run, preflight refusals, full apply path including every documented failure state: before-code-update service restore, after-code-update stopped-not-restarted, hash-mismatch fail-loud, integrity-check failure, restart-incomplete, health-check-failed)
+        - tests/test_server_update.py -> Ran 44 tests, OK (skipped=1 on this Windows sandbox, no symlink privilege) (config validation, hashing, backup, locking, health check, dry-run, preflight refusals, full apply path including every documented failure state: before-code-update service restore, after-code-update stopped-not-restarted, hash-mismatch fail-loud, integrity-check failure, restart-incomplete, health-check-failed, service-already-inactive-is-left-alone, backup-refuses-pre-existing-destination, backup-does-not-follow-a-raced-symlink)
         - python -m unittest tests.test_server_update tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 75 tests, OK
         - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2252 tests, OK (skipped=4)'
         - python -m lifetxt server-update --help -> renders correctly
+        - 'live: python -m lifetxt server-update --config dummy.json reproduced CodeX''s finding exactly -- silently consumed by the global --config flag, failing with an unrelated "Config file does not exist" error rather than anything naming --server-config; confirmed the runbook fix (--config -> --server-config) addresses the documentation trap, no CLI-level flag-conflict guard was added since the correct flag already exists and works'
         - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
         - ruff format --check lifetxt tests scripts (pre-existing drift in 3 unrelated files confirmed present on origin/main already, not introduced by this change)
         - ruff check lifetxt tests scripts -> All checks passed
@@ -3437,6 +3438,25 @@ traceability:
         pre-mutation review/approval gate for high-impact updates) remains
         a separate, not-yet-implemented follow-up issue extending this same
         capability.
+
+        Independent review on PR #274 (CodeX plus this session's own
+        /security-review) found and this session fixed three real gaps
+        before merge: (1) `server-update` stopped and later restarted every
+        configured service unconditionally -- `systemctl stop` on an
+        already-inactive unit still exits 0, so a unit the operator had
+        intentionally left stopped would get silently started; fixed by
+        checking `systemctl is-active` first and only stopping/restarting
+        units that were actually active. (2) The runbook documented #273's
+        review gate and `--approve` flag as already shipped and used
+        `--config` instead of the real `--server-config`; corrected, and
+        added the `docs/en/cli.md` §22 reference this PR had linked to but
+        never written. (3) `create_backup()` lacked the symlink-safe
+        `O_CREAT|O_EXCL` pattern `UpdateLock` already used for its own lock
+        file; own `/security-review` scored this finding 3/10 (EXCLUDE,
+        requires a pre-existing directory-permission misconfiguration
+        outside this code) but it was fixed anyway as cheap, well-understood
+        hardening, per this project's standing practice of correcting
+        noticed insecure code regardless of report thresholds.
       status: implemented
 
 required_chain:

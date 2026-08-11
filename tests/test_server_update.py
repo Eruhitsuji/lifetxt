@@ -576,6 +576,28 @@ class CheckHealthTests(unittest.TestCase):
         self.assertEqual(0.8, result["elapsed_seconds"])
         self.assertEqual([0.5, 0.5], sleeps)
 
+    def test_wait_for_health_clamps_zero_retry_interval(self):
+        attempts = iter(
+            [
+                {"ok": False, "error": "connection refused"},
+                {"ok": True, "status_code": 200},
+            ]
+        )
+        sleeps = []
+        result = server_update.wait_for_health(
+            "http://127.0.0.1:8765/api/health",
+            request_timeout=5,
+            ready_timeout=1,
+            retry_interval=0,
+            health_checker=lambda _url, _timeout: next(attempts),
+            sleep=sleeps.append,
+            monotonic=iter([10.0, 10.0, 10.1]).__next__,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(0.1, result["retry_interval"])
+        self.assertEqual([0.1], sleeps)
+
     def test_wait_for_health_retries_http_error_until_success(self):
         attempts = iter(
             [

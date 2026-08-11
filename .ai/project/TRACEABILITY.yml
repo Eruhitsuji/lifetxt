@@ -3654,6 +3654,31 @@ traceability:
         and does not change runtime dependency declarations.
       status: implemented
 
+    - requirement_id: req-stable-release-gates
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/286
+      pull_request: null
+      changed_files_or_scope:
+        - Add RC entry criteria to .ai/project/STABLE_RELEASE.yml
+        - Add stable promotion criteria separately from RC entry
+        - Name CI, real-environment, migration, recovery, and documentation evidence
+        - Define failed, flaky, and stale required-check blocking behavior
+        - Define known-issue severity classes for release decisions
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - python -m lifetxt check examples/minimal_life.txt
+        - '#286 acceptance criteria mapped to stable_release.release_gates'
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This defines gate criteria only; it does not
+        run RC validation, create a tag, publish artifacts, or mark any later
+        child issue complete.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

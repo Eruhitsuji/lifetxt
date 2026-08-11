@@ -18,17 +18,32 @@ from lifetxt.timezone_policy import (
     resolve_timezone_name,
     timezone_context,
 )
+from tests.timezone_fixture_matrix import (
+    DATETIME_NORMALIZATION_CASES,
+    TIMEZONE_PRECEDENCE_CASES,
+    TIME_ONLY_CASES,
+    WALL_TIME_CASES,
+)
 
 
 class TimezonePolicyV2Tests(unittest.TestCase):
     def test_precedence_cli_file_config_host(self):
-        config = {"defaults": {"timezone": "UTC"}}
-        text = "#! timezone: Asia/Tokyo\n"
-        self.assertEqual(
-            "Europe/London", resolve_timezone_name(config, text, "Europe/London")
-        )
-        self.assertEqual("Asia/Tokyo", resolve_timezone_name(config, text))
-        self.assertEqual("UTC", resolve_timezone_name(config, ""))
+        for case in TIMEZONE_PRECEDENCE_CASES:
+            with self.subTest(case["name"]):
+                self.assertEqual(
+                    case["expected"],
+                    resolve_timezone_name(
+                        case["config"], case["text"], case["cli_timezone"]
+                    ),
+                )
+
+    def test_shared_datetime_normalization_cases(self):
+        for case in DATETIME_NORMALIZATION_CASES:
+            with self.subTest(case["name"]):
+                self.assertEqual(
+                    case["expected"],
+                    interpret_datetime(case["value"], case["timezone"]).isoformat(),
+                )
 
     def test_aware_datetime_converts_to_resolved_zone(self):
         value = interpret_datetime("2026-07-23T00:00:00+00:00", "Asia/Tokyo")
@@ -69,11 +84,41 @@ class TimezonePolicyV2Tests(unittest.TestCase):
         self.assertEqual(0, shifted.minute)
 
     def test_time_only_offset_is_anchored_before_conversion(self):
-        value = interpret_time("09:15+00:00", "2026-07-23", "Asia/Tokyo")
-        self.assertEqual(
-            (2026, 7, 23, 18, 15),
-            (value.year, value.month, value.day, value.hour, value.minute),
-        )
+        for case in TIME_ONLY_CASES:
+            with self.subTest(case["name"]):
+                self.assertEqual(
+                    case["expected"],
+                    interpret_time(
+                        case["value"], case["anchor_date"], case["timezone"]
+                    ).isoformat(),
+                )
+
+    def test_shared_wall_time_cases_are_reproducible(self):
+        for case in WALL_TIME_CASES:
+            with self.subTest(case["name"]):
+                naive = datetime.datetime.fromisoformat(case["value"])
+                self.assertEqual(
+                    case["state"], classify_wall_time(naive, case["timezone"])["state"]
+                )
+                if "error" in case:
+                    with self.assertRaisesRegex(TimezonePolicyError, case["error"]):
+                        interpret_datetime(naive, case["timezone"])
+                if "resolved" in case:
+                    for policy, expected_offset in case["resolved"].items():
+                        self.assertTrue(
+                            interpret_datetime(
+                                naive, case["timezone"], fold_policy=policy
+                            )
+                            .isoformat()
+                            .endswith(expected_offset)
+                        )
+                if "gap_next" in case:
+                    self.assertEqual(
+                        case["gap_next"],
+                        interpret_datetime(
+                            naive, case["timezone"], gap_policy="next"
+                        ).isoformat(),
+                    )
 
     def test_date_boundaries_are_timezone_aware(self):
         start, end = date_boundaries("2026-07-23", "Asia/Tokyo")

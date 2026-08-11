@@ -633,6 +633,7 @@ capabilities:
       - '#307 publishes explicit policy/journal version migration and refusal matrices; newer journals remain inspect/export-only and refused mutations preserve source revisions'
       - '#308 defines shareable recovery evidence redaction: identifiers and hashes remain, raw paths/errors/payloads/secrets do not'
       - '#309 runs an isolated end-to-end escalation drill covering inspect, safe compensate, diverged refusal, immutable backup handoff, and restore inspection'
+      - '#310 provides one fixture-driven timezone and remote-clock matrix for shared stable interpretation boundaries, including Windows tzdata-only resolution'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -650,6 +651,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/307
       - https://github.com/Eruhitsuji/lifetxt/issues/308
       - https://github.com/Eruhitsuji/lifetxt/issues/309
+      - https://github.com/Eruhitsuji/lifetxt/issues/310
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
       - https://github.com/Eruhitsuji/lifetxt/pull/334

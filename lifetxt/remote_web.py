@@ -42,6 +42,8 @@ from .remote_sessions import (
     validate_session_configuration,
     validate_single_worker_deployment,
 )
+from .clock_skew import ClockSkewError, clock_audit_evidence, require_acceptable_clock
+from .remote_contracts_v6 import remote_client_time_header, remote_clock_required
 
 _INSTALLED = False
 _LOGIN_PATH = "/api/remote/v1/browser/login"
@@ -153,6 +155,7 @@ def install_remote_web():
             principal = None
             auth_method = None
             session = None
+            clock_evidence = None
             try:
                 require_https(
                     request.headers, host, app.state.config, request.url.scheme
@@ -245,7 +248,43 @@ def install_remote_web():
                     request.state.remote_auth_method = auth_method
                     request.state.remote_session = session
 
+                    if (
+                        not app.state.read_only
+                        and remote_clock_required(app.state.config)
+                        and request.method.upper() in ("POST", "PUT", "PATCH", "DELETE")
+                    ):
+                        header = remote_client_time_header(app.state.config)
+                        value = request.headers.get(header)
+                        if not value:
+                            clock_evidence = clock_audit_evidence(
+                                value, app.state.config, outcome="CLIENT_TIME_REQUIRED"
+                            )
+                            raise RemoteAccessError(
+                                "CLIENT_TIME_REQUIRED",
+                                "%s is required for remote writes." % header,
+                                428,
+                            )
+                        try:
+                            clock = require_acceptable_clock(
+                                value, config=app.state.config
+                            )
+                        except (ClockSkewError, ValueError) as exc:
+                            clock_evidence = clock_audit_evidence(
+                                value, app.state.config, outcome="CLOCK_SKEW"
+                            )
+                            raise RemoteAccessError("CLOCK_SKEW", str(exc), 409)
+                        clock_evidence = clock_audit_evidence(
+                            value, app.state.config, clock, "allowed"
+                        )
+                        request.state.remote_clock = clock
+
                 response = await call_next(request)
+                clock = getattr(request.state, "remote_clock", None)
+                if clock is not None:
+                    response.headers["X-Lifetxt-Clock-State"] = clock["state"]
+                    response.headers["X-Lifetxt-Clock-Skew-Seconds"] = str(
+                        clock["skew_seconds"]
+                    )
                 for key, value in protocol_response_headers(
                     app.state.config, negotiated
                 ).items():
@@ -260,7 +299,12 @@ def install_remote_web():
                         response.status_code,
                         rid,
                         host,
-                        {"authentication": auth_method, "protocol": negotiated},
+                        {
+                            "authentication": auth_method,
+                            "protocol": negotiated,
+                            "session": "active" if session else "not_applicable",
+                            "clock": clock_evidence,
+                        },
                     ),
                 )
                 return response
@@ -273,7 +317,12 @@ def install_remote_web():
                         exc.code,
                         rid,
                         host,
-                        {"protocol": negotiated},
+                        {
+                            "authentication": auth_method,
+                            "protocol": negotiated,
+                            "session": "active" if session else "not_applicable",
+                            "clock": clock_evidence,
+                        },
                     ),
                 )
                 headers = {"X-Request-ID": rid}

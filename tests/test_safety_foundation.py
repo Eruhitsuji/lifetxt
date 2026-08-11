@@ -160,7 +160,10 @@ class SafetyFoundationTests(unittest.TestCase):
                     sys.modules[name] = module
 
         message = str(caught.exception)
+        from tests.timezone_fixture_matrix import WINDOWS_TZDATA_POLICY
+
         self.assertIn("tzdata", message)
+        self.assertEqual("tzdata", WINDOWS_TZDATA_POLICY["dependency"])
         self.assertNotIn("dateutil", message)
         self.assertNotIn("pytz", message)
 

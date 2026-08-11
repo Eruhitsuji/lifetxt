@@ -11,6 +11,7 @@ from lifetxt.clock_skew import (
     require_acceptable_clock,
 )
 from lifetxt.mcp import McpContext, call_tool
+from tests.timezone_fixture_matrix import CLOCK_SKEW_CASES
 
 
 class ClockSkewTests(unittest.TestCase):
@@ -19,16 +20,11 @@ class ClockSkewTests(unittest.TestCase):
 
     def test_ok_warning_and_reject(self):
         config = {"clock": {"skew_warning_seconds": 10, "skew_reject_seconds": 60}}
-        self.assertEqual(
-            "ok", clock_skew_report("2026-07-24T12:00:05Z", config, self.now)["state"]
-        )
-        self.assertEqual(
-            "warning",
-            clock_skew_report("2026-07-24T12:00:30Z", config, self.now)["state"],
-        )
-        rejected = clock_skew_report("2026-07-24T12:02:00Z", config, self.now)
-        self.assertEqual("reject", rejected["state"])
-        self.assertFalse(rejected["write_allowed"])
+        for case in CLOCK_SKEW_CASES:
+            with self.subTest(case["name"]):
+                report = clock_skew_report(case["client_time"], config, self.now)
+                self.assertEqual(case["state"], report["state"])
+                self.assertEqual(case["write_allowed"], report["write_allowed"])
         with self.assertRaises(ClockSkewError):
             require_acceptable_clock("2026-07-24T12:02:00Z", config, self.now)
 

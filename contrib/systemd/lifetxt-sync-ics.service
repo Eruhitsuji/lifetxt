@@ -1,0 +1,37 @@
+# Example systemd unit for periodic `lifetxt sync-ics` (Google Calendar /
+# ICS import). Triggered by the companion lifetxt-sync-ics.timer -- do not
+# `systemctl enable` this .service directly, only the .timer.
+#
+# EDIT the User=/Group=/WorkingDirectory=/paths below to match your
+# installation (see docs/deployment/ubuntu-server.md), and copy
+# lifetxt.env.example to /etc/lifetxt/lifetxt.env with your real Calendar
+# URL filled in (chmod 600 -- it is a secret, even though it is not a
+# password).
+#
+# Install:
+#   sudo mkdir -p /etc/lifetxt
+#   sudo cp contrib/systemd/lifetxt.env.example /etc/lifetxt/lifetxt.env
+#   sudo chmod 600 /etc/lifetxt/lifetxt.env
+#   sudo $EDITOR /etc/lifetxt/lifetxt.env
+#   sudo cp contrib/systemd/lifetxt-sync-ics.service /etc/systemd/system/
+#   sudo cp contrib/systemd/lifetxt-sync-ics.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lifetxt-sync-ics.timer
+
+[Unit]
+Description=lifetxt periodic Google Calendar / ICS sync
+Documentation=https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md
+
+[Service]
+Type=oneshot
+User=lifetxt
+Group=lifetxt
+WorkingDirectory=/srv/lifetxt
+EnvironmentFile=/etc/lifetxt/lifetxt.env
+ExecStart=/opt/lifetxt/venv/bin/lifetxt sync-ics --url-env LIFETXT_GOOGLE_CAL_ICS -o /srv/lifetxt/.generated/google_calendar.life.txt --cache-dir /srv/lifetxt/.cache/lifetxt --merge-existing --soft-delete-missing --tag google
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/lifetxt

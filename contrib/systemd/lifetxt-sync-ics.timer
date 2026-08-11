@@ -1,0 +1,19 @@
+# Runs lifetxt-sync-ics.service on a schedule. Adjust OnUnitActiveSec= to
+# taste; 15 minutes matches most Calendar feeds' effective update latency
+# without hammering the upstream ICS endpoint.
+#
+# Enable with `systemctl enable --now lifetxt-sync-ics.timer`, NOT the
+# .service directly -- the .service is oneshot and only runs when
+# triggered.
+
+[Unit]
+Description=Periodic timer for lifetxt-sync-ics.service
+Documentation=https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

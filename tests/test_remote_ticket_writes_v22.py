@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import tempfile
 import unittest
@@ -381,6 +383,134 @@ class RemoteTicketWritesV22Tests(unittest.TestCase):
             ["create", "edit", "transition", "comment", "log_time"],
             policy["operations"],
         )
+
+    def test_authenticated_clock_decisions_are_audited_without_credentials(self):
+        audit_path = os.path.join(self.temp.name, "remote-audit.jsonl")
+        config = dict(self.config)
+        config["remote"] = dict(self.config["remote"], audit_log=audit_path)
+        config["clock"] = {
+            "require_remote_write_time": True,
+            "client_time_header": "X-Example-Client-Time",
+            "skew_warning_seconds": 10,
+            "skew_reject_seconds": 60,
+        }
+        client = TestClient(
+            create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=config,
+                read_only=False,
+            )
+        )
+        headers = dict(self.editor)
+        revision = client.get("/api/remote/v1/snapshot", headers=headers).json()[
+            "revision"
+        ]
+        payload = {
+            "operation": "comment",
+            "transaction_id": "TX-CLOCK-AUDIT-1",
+            "ticket_id": "T-1",
+            "body": "Clock audit",
+        }
+        missing = client.post(
+            "/api/remote/v1/ticket-mutations",
+            headers=dict(headers, **{"If-Match": revision}),
+            json=payload,
+        )
+        self.assertEqual(428, missing.status_code, missing.text)
+        self.assertEqual("CLIENT_TIME_REQUIRED", missing.json()["error"])
+
+        accepted = client.post(
+            "/api/remote/v1/ticket-mutations",
+            headers=dict(
+                headers,
+                **{
+                    "If-Match": revision,
+                    "X-Example-Client-Time": datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                },
+            ),
+            json=payload,
+        )
+        self.assertEqual(200, accepted.status_code, accepted.text)
+        self.assertEqual("ok", accepted.headers["X-Lifetxt-Clock-State"])
+
+        with open(audit_path, encoding="utf-8") as handle:
+            events = [json.loads(line) for line in handle if line.strip()]
+        clock_events = [
+            row
+            for row in events
+            if row["action"] == "POST /api/remote/v1/ticket-mutations"
+        ]
+        self.assertEqual(
+            ["CLIENT_TIME_REQUIRED", 200], [row["outcome"] for row in clock_events]
+        )
+        self.assertEqual(["alice", "alice"], [row["principal"] for row in clock_events])
+        self.assertEqual(
+            ["missing", "ok"],
+            [row["detail"]["clock"]["state"] for row in clock_events],
+        )
+        self.assertEqual(
+            ["not_applicable", "not_applicable"],
+            [row["detail"]["session"] for row in clock_events],
+        )
+        self.assertNotIn("editor-v22", json.dumps(clock_events))
+
+    def test_clock_replay_window_boundary_is_explicit(self):
+        config = dict(self.config)
+        config["clock"] = {
+            "require_remote_write_time": True,
+            "skew_warning_seconds": 10,
+            "skew_reject_seconds": 60,
+        }
+        client = TestClient(
+            create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=config,
+                read_only=False,
+            )
+        )
+        revision = client.get("/api/remote/v1/snapshot", headers=self.editor).json()[
+            "revision"
+        ]
+        payload = {
+            "operation": "comment",
+            "transaction_id": "TX-CLOCK-WINDOW-1",
+            "ticket_id": "T-1",
+            "body": "Window boundary",
+        }
+        now = datetime.datetime.now(datetime.timezone.utc)
+        boundary = client.post(
+            "/api/remote/v1/ticket-mutations",
+            headers=dict(
+                self.editor,
+                **{
+                    "If-Match": revision,
+                    "X-Lifetxt-Client-Time": (
+                        now - datetime.timedelta(seconds=59)
+                    ).isoformat(),
+                },
+            ),
+            json=payload,
+        )
+        self.assertEqual(200, boundary.status_code, boundary.text)
+        rejected = client.post(
+            "/api/remote/v1/ticket-mutations",
+            headers=dict(
+                self.editor,
+                **{
+                    "If-Match": revision,
+                    "X-Lifetxt-Client-Time": (
+                        now - datetime.timedelta(seconds=61)
+                    ).isoformat(),
+                },
+            ),
+            json=dict(payload, transaction_id="TX-CLOCK-WINDOW-2"),
+        )
+        self.assertEqual(409, rejected.status_code, rejected.text)
+        self.assertEqual("CLOCK_SKEW", rejected.json()["error"])
 
 
 if __name__ == "__main__":

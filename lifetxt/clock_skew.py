@@ -100,3 +100,31 @@ def require_acceptable_clock(client_time, config=None, now=None):
             % (report["absolute_skew_seconds"], report["reject_seconds"])
         )
     return report
+
+
+def clock_audit_evidence(client_time=None, config=None, report=None, outcome=None):
+    """Return bounded clock-decision evidence suitable for an audit event."""
+    result = OrderedDict(
+        (
+            ("client_time_present", client_time not in (None, "")),
+            ("state", "missing"),
+            ("write_allowed", False),
+            ("absolute_skew_seconds", None),
+        )
+    )
+    if report is None and client_time not in (None, ""):
+        try:
+            report = clock_skew_report(client_time, config=config)
+        except (ClockSkewError, ValueError):
+            result["state"] = "invalid"
+    if report is not None:
+        result.update(
+            (
+                ("state", report.get("state")),
+                ("write_allowed", bool(report.get("write_allowed"))),
+                ("absolute_skew_seconds", report.get("absolute_skew_seconds")),
+            )
+        )
+    if outcome:
+        result["outcome"] = str(outcome)
+    return result

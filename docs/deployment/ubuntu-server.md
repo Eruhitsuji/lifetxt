@@ -115,6 +115,57 @@ sudo journalctl -u lifetxt.service -f
 sudo systemctl list-timers lifetxt-sync-ics.timer
 ```
 
+### Least-privilege service control for `server-update`
+
+The example units above are system-level units. A non-root `lifetxt` user
+can read some state with `systemctl`, but stopping or starting system
+units requires explicit authorization. Do not make the updater user
+passwordless for arbitrary `systemctl`, and do not run the whole updater as
+root just to cross this boundary: the updater also runs git, package
+installation, and validation commands against the application checkout.
+
+One narrow supported pattern is a root-owned wrapper that accepts only the
+actions and units used by this deployment, then a sudoers rule for that
+wrapper only:
+
+```sh
+sudo install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/lifetxt-systemctl <<'EOF'
+#!/bin/sh
+case "$1:$2" in
+  is-active:lifetxt.service|stop:lifetxt.service|start:lifetxt.service) ;;
+  is-active:lifetxt-sync-ics.timer|stop:lifetxt-sync-ics.timer|start:lifetxt-sync-ics.timer) ;;
+  *) echo "refusing service action: $1 $2" >&2; exit 64 ;;
+esac
+exec /bin/systemctl --no-ask-password "$1" "$2"
+EOF
+
+sudo visudo -f /etc/sudoers.d/lifetxt-server-update
+```
+
+`/etc/sudoers.d/lifetxt-server-update`:
+
+```text
+lifetxt ALL=(root) NOPASSWD: /usr/local/sbin/lifetxt-systemctl
+```
+
+Then set these keys in `/etc/lifetxt/server-update.json`:
+
+```json
+{
+  "service_command": ["sudo", "-n", "/usr/local/sbin/lifetxt-systemctl"],
+  "service_preflight_commands": [
+    ["sudo", "-n", "-l", "/usr/local/sbin/lifetxt-systemctl"]
+  ]
+}
+```
+
+`service_preflight_commands` run before backup, service stop, or git
+mutation, so a missing sudo rule fails early. This preflight cannot prove
+every future systemd action without performing that action; `systemctl
+--dry-run` is not a portable start/stop permission probe across supported
+Ubuntu/systemd versions. The wrapper allowlist is therefore the real
+authorization boundary.
+
 ## 4. Reverse proxy
 
 `lifetxt serve` binds `127.0.0.1` only by design
@@ -189,11 +240,14 @@ short:
 
 - A normal update backs up production files, stops whichever configured
   services/timers are currently active, fast-forwards to the exact SHA it
-  already resolved and inspected, reinstalls the package, verifies your
+  already resolved and inspected, reinstalls the package with either the
+  default pip backend, a configured `uv` backend, or a configured
+  `conda-pip` backend for conda-managed environments, verifies your
   data/config hashes are unchanged by the code update, runs `lifetxt check`
   / `lifetxt workspace validate` / `lifetxt ids` /
-  `lifetxt ticket validate-history`, restarts the services it stopped, and
-  checks `/api/health`.
+  `lifetxt ticket validate-history` against the configured per-check
+  files/config/workspace, runs any optional validation command, restarts
+  the services it stopped, and checks `/api/health`.
 - A failure before any mutation restores whatever service state existed
   before the attempt. A failure after the code update but before validation
   completes leaves services **stopped** rather than restarting a

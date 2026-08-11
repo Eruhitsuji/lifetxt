@@ -2947,34 +2947,112 @@ environment and the deployment's paths/services, not any life.txt content:
 | `lock_path` | Single-update lock file. Omitting it disables locking. |
 | `services` | systemd unit names to stop before updating and restart afterward. Only units already `active` are touched -- a unit you left stopped stays stopped. |
 | `service_manager` | `"systemctl"` (default) or `"none"` (no service management; useful for a non-systemd or manually-managed install). |
-| `integrity_checks` | Subset of `["check", "workspace_validate", "ids", "ticket_validate_history"]` to run after the code update. |
+| `service_command` | Structured argv prefix used for service actions. Defaults to `["systemctl"]`; a least-privilege wrapper can be named here instead of running the whole updater as root. |
+| `service_preflight_commands` | Optional structured argv commands run before lock/backup/service/code mutation. Use this to fail early when sudo/Polkit authorization is missing. |
+| `application_config` | Optional application `.lifetxt.json` passed as global `--config` to integrity checks. |
+| `workspace` | Optional named workspace used by `workspace_validate`. |
+| `integrity_checks` | Subset of `["check", "workspace_validate", "ids", "ticket_validate_history"]`, or objects with `name`, optional `path`, `application_config`, `workspace`, and `id`. |
 | `health_url` | `/api/health` URL checked after services restart. Omit to skip. |
+| `installer` | `"pip"` (default), `"uv"`, or `"conda-pip"`. |
 | `pip_install_args` | Arguments appended to `<python> -m pip install`. Defaults to `["-e", "."]`. |
+| `uv_executable`, `uv_install_args` | `uv` backend settings. The command is `<uv_executable> pip install --python <python> <uv_install_args...>`, so the venv does not need pip installed. |
+| `conda_executable`, `conda_env_name`, `conda_env_prefix`, `conda_install_args` | conda backend settings. The command is `<conda_executable> run --name NAME python -m pip install ...` or `--prefix PREFIX`; set exactly one of name/prefix. |
+| `validation_commands` | Optional structured argv commands run after reinstall/sanity/import/integrity validation and before services restart. Disabled by default. Each entry may be an argv array or an object with `name`, `argv`, optional `cwd`, and optional `timeout`. |
 | `health_timeout`, `git_timeout`, `service_timeout` | Per-category subprocess/network timeouts in seconds. |
+
+Example with a pip-less `uv`-managed venv, separate primary/archive
+life.txt targets, and an explicit application config/workspace:
+
+```json
+{
+  "install_root": "/opt/lifetxt/src",
+  "python": "/opt/lifetxt/venv/bin/python",
+  "installer": "uv",
+  "uv_executable": "uv",
+  "uv_install_args": ["-e", "/opt/lifetxt/src[web,tui,dev]"],
+  "application_config": "/srv/lifetxt/.lifetxt.json",
+  "workspace": "production",
+  "life_txt_path": "/srv/lifetxt/life.txt",
+  "backup_paths": [
+    "/srv/lifetxt/life.txt",
+    "/srv/lifetxt/archive/life.txt",
+    "/srv/lifetxt/.lifetxt.json"
+  ],
+  "backup_dir": "/srv/lifetxt/backups/server-update",
+  "lock_path": "/srv/lifetxt/.locks/server-update.lock",
+  "services": ["lifetxt.service", "lifetxt-sync-ics.timer"],
+  "service_command": ["sudo", "-n", "/usr/local/sbin/lifetxt-systemctl"],
+  "service_preflight_commands": [
+    ["sudo", "-n", "-l", "/usr/local/sbin/lifetxt-systemctl"]
+  ],
+  "integrity_checks": [
+    {"name": "workspace_validate"},
+    {"name": "check", "path": "/srv/lifetxt/life.txt"},
+    {"name": "ids", "path": "/srv/lifetxt/life.txt"},
+    {
+      "id": "archive_history",
+      "name": "ticket_validate_history",
+      "path": "/srv/lifetxt/archive/life.txt"
+    }
+  ],
+  "validation_commands": [
+    {
+      "name": "unit_suite",
+      "argv": ["/opt/lifetxt/venv/bin/python", "-m", "unittest", "discover"],
+      "cwd": "/opt/lifetxt/src",
+      "timeout": 900
+    }
+  ],
+  "health_url": "http://127.0.0.1:8765/api/health"
+}
+```
+
+Example for a conda-managed environment:
+
+```json
+{
+  "install_root": "/opt/lifetxt/src",
+  "installer": "conda-pip",
+  "conda_executable": "conda",
+  "conda_env_prefix": "/opt/conda/envs/lifetxt-prod",
+  "conda_install_args": ["-e", "/opt/lifetxt/src[web,tui,dev]"],
+  "integrity_checks": [
+    {"name": "check", "path": "/srv/lifetxt/life.txt"}
+  ]
+}
+```
+
+`conda-pip` deliberately uses `conda run ... python -m pip install` so setup,
+the sanity import, and built-in integrity checks all run in the selected conda
+environment. The target environment must contain `pip`; follow conda's normal
+practice of installing conda packages first and using pip as the last
+environment-building step.
 
 Without `--yes`, `server-update` fetches and reports the pending update
 (same preview shape as `update`) without touching anything. With `--yes`:
 
 1. Acquires the configured lock (refuses if another `server-update` is
    already running).
-2. Backs up `backup_paths` into a fresh timestamped directory under
+2. Runs configured `service_preflight_commands`, if any.
+3. Backs up `backup_paths` into a fresh timestamped directory under
    `backup_dir` and hashes them.
-3. Stops whichever configured `services` are currently active.
-4. Fast-forwards to the exact commit already resolved during the dry-run
+4. Stops whichever configured `services` are currently active.
+5. Fast-forwards to the exact commit already resolved during the dry-run
    preview -- no second, unreviewed fetch.
-5. Reinstalls the package (`pip install` with `pip_install_args`) and runs
-   a sanity `import lifetxt` check.
-6. Re-hashes `backup_paths` and refuses to continue if anything changed
+6. Reinstalls the package with the selected installer (`pip`, `uv`, or
+   `conda-pip`) and runs a sanity `import lifetxt` check.
+7. Re-hashes `backup_paths` and refuses to continue if anything changed
    during the code update.
-7. Runs the configured `integrity_checks`.
-8. Restarts the services it stopped and checks `health_url`.
+8. Runs the configured `integrity_checks`.
+9. Runs optional `validation_commands`.
+10. Restarts the services it stopped and checks `health_url`.
 
 Failure behavior:
 
-- A failure before the code update (steps 1-3) restores whatever service
+- A failure before the code update (steps 1-4) restores whatever service
   state existed before the attempt and releases the lock.
 - A failure after the code update but before validation completes (steps
-  4-7) leaves services **stopped** rather than restarting unvalidated code.
+  5-9) leaves services **stopped** rather than restarting unvalidated code.
   The report names the exact backup directory and pre-update commit for
   manual recovery.
 - A validated, applied update whose service restart or health check itself
@@ -3007,6 +3085,10 @@ binary_file_count=<n>
 ...
 --- diff stat ---
 ...
+--- execution plan ---
+installer=<pip-or-uv-or-conda-pip>
+install_command=<structured argv rendered for review>
+service_command=<structured argv rendered for review>
 approved_command=lifetxt server-update --server-config <path> --approve <exact-target-sha>
 ===== LIFETXT_UPDATE_REVIEW_END =====
 ```

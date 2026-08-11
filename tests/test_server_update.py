@@ -168,6 +168,17 @@ def _infer_check_name(argv_tail):
     raise AssertionError("unrecognized integrity-check argv: %r" % (argv_tail,))
 
 
+def _strip_lifetxt_global_args(cmd):
+    if cmd[:2] == ["conda", "run"]:
+        python_index = cmd.index("python")
+        tail = list(cmd[python_index + 3 :])
+    else:
+        tail = list(cmd[3:])
+    while tail[:1] == ["--config"]:
+        tail = tail[2:]
+    return tail
+
+
 class _FakeSubprocess:
     """Stand-in for subprocess.run covering systemctl/pip/sanity/integrity.
 
@@ -184,36 +195,56 @@ class _FakeSubprocess:
         sanity_fails=False,
         check_failures=None,
         inactive_services=None,
+        command_failures=None,
     ):
         self.service_failures = service_failures or set()
         self.pip_fails = pip_fails
         self.sanity_fails = sanity_fails
         self.check_failures = check_failures or set()
         self.inactive_services = inactive_services or set()
+        self.command_failures = command_failures or set()
         self.calls = []
 
     def run(self, cmd, cwd=None, timeout=None, **kwargs):
         self.calls.append(list(cmd))
-        if cmd[0] == "systemctl" and cmd[1] == "is-active":
-            unit = cmd[2]
+        command_key = tuple(cmd)
+        if command_key in self.command_failures:
+            return _FakeCompletedProcess(1, "", "configured command failed")
+        systemctl_index = cmd.index("systemctl") if "systemctl" in cmd else -1
+        if systemctl_index >= 0 and cmd[systemctl_index + 1] == "is-active":
+            unit = cmd[systemctl_index + 2]
             if unit in self.inactive_services:
                 return _FakeCompletedProcess(3, "inactive\n", "")
             return _FakeCompletedProcess(0, "active\n", "")
-        if cmd[0] == "systemctl":
-            action, unit = cmd[1], cmd[2]
+        if systemctl_index >= 0:
+            action, unit = cmd[systemctl_index + 1], cmd[systemctl_index + 2]
             if (action, unit) in self.service_failures:
                 return _FakeCompletedProcess(1, "", "failed to %s %s" % (action, unit))
             return _FakeCompletedProcess(0, "", "")
+        conda_python = cmd[:2] == ["conda", "run"] and "python" in cmd
+        conda_tail = cmd[cmd.index("python") + 1 :] if conda_python else []
         if len(cmd) >= 3 and cmd[1] == "-m" and cmd[2] == "pip":
             if self.pip_fails:
                 return _FakeCompletedProcess(1, "", "pip install failed")
             return _FakeCompletedProcess(0, "installed", "")
-        if len(cmd) >= 2 and cmd[1] == "-c":
+        if conda_tail[:3] == ["-m", "pip", "install"]:
+            if self.pip_fails:
+                return _FakeCompletedProcess(1, "", "conda pip install failed")
+            return _FakeCompletedProcess(0, "conda pip installed", "")
+        if len(cmd) >= 3 and cmd[1] == "-m" and cmd[2] == "unittest":
+            return _FakeCompletedProcess(0, "tests ok", "")
+        if len(cmd) >= 4 and cmd[:3] == ["uv", "pip", "install"]:
+            return _FakeCompletedProcess(0, "uv installed", "")
+        if cmd[-1:] == ["preflight"]:
+            return _FakeCompletedProcess(0, "preflight ok", "")
+        if (len(cmd) >= 2 and cmd[1] == "-c") or conda_tail[:1] == ["-c"]:
             if self.sanity_fails:
                 return _FakeCompletedProcess(1, "", "ImportError")
             return _FakeCompletedProcess(0, "", "")
-        if len(cmd) >= 3 and cmd[1] == "-m" and cmd[2] == "lifetxt":
-            name = _infer_check_name(cmd[3:])
+        if (len(cmd) >= 3 and cmd[1] == "-m" and cmd[2] == "lifetxt") or (
+            conda_tail[:2] == ["-m", "lifetxt"]
+        ):
+            name = _infer_check_name(_strip_lifetxt_global_args(cmd))
             if name in self.check_failures:
                 return _FakeCompletedProcess(1, "", "%s failed" % name)
             return _FakeCompletedProcess(0, "%s ok" % name, "")
@@ -280,6 +311,77 @@ class LoadConfigTests(unittest.TestCase):
         path = self._write({"python": "python3", "service_manager": "docker"})
         with self.assertRaises(server_update.ServerUpdateError):
             server_update.load_config(path)
+
+    def test_unknown_installer_is_rejected(self):
+        path = self._write({"python": "python3", "installer": "shell"})
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.load_config(path)
+        self.assertIn("installer", str(ctx.exception))
+
+    def test_conda_pip_requires_an_environment_selector(self):
+        path = self._write({"installer": "conda-pip"})
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.load_config(path)
+        self.assertIn("conda_env_name", str(ctx.exception))
+
+    def test_conda_environment_name_and_prefix_are_mutually_exclusive(self):
+        path = self._write(
+            {
+                "installer": "conda-pip",
+                "conda_env_name": "lifetxt-prod",
+                "conda_env_prefix": "/opt/conda/envs/lifetxt-prod",
+            }
+        )
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.load_config(path)
+        self.assertIn("mutually exclusive", str(ctx.exception))
+
+    def test_conda_pip_can_identify_python_by_environment_prefix(self):
+        path = self._write(
+            {
+                "installer": "conda-pip",
+                "conda_env_prefix": "/opt/conda/envs/lifetxt-prod",
+            }
+        )
+        config = server_update.load_config(path)
+        self.assertEqual(
+            ["conda", "run", "--prefix", "/opt/conda/envs/lifetxt-prod", "python"],
+            server_update.python_command_prefix(config),
+        )
+
+    def test_command_strings_are_rejected_for_injection_sensitive_hooks(self):
+        path = self._write(
+            {
+                "python": "python3",
+                "validation_commands": ["python -m unittest discover"],
+            }
+        )
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.load_config(path)
+        self.assertIn("validation_commands", str(ctx.exception))
+
+    def test_integrity_check_objects_are_accepted(self):
+        path = self._write(
+            {
+                "python": "python3",
+                "application_config": "/srv/lifetxt/.lifetxt.json",
+                "workspace": "prod",
+                "integrity_checks": [
+                    {"name": "check", "path": "/srv/lifetxt/life.txt"},
+                    {
+                        "name": "ticket_validate_history",
+                        "path": "/srv/lifetxt/archive/life.txt",
+                    },
+                    {"name": "workspace_validate"},
+                ],
+            }
+        )
+        config = server_update.load_config(path)
+        checks = server_update._normalize_integrity_checks(config)
+        self.assertEqual("/srv/lifetxt/life.txt", checks[0]["path"])
+        self.assertEqual("/srv/lifetxt/archive/life.txt", checks[1]["path"])
+        self.assertEqual("/srv/lifetxt/.lifetxt.json", checks[2]["application_config"])
+        self.assertEqual("prod", checks[2]["workspace"])
 
 
 class HashAndBackupTests(unittest.TestCase):
@@ -868,6 +970,230 @@ class RunServerUpdateApplyTests(unittest.TestCase):
         self.assertEqual(["systemctl", "stop", "lifetxt.service"], sub.calls[1])
         self.assertEqual(["systemctl", "start", "lifetxt.service"], sub.calls[-1])
 
+    def test_uv_installer_supports_pip_less_virtualenvs(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    installer="uv",
+                    uv_executable="uv",
+                    uv_install_args=["-e", "/opt/lifetxt/src[web,tui,dev]"],
+                    integrity_checks=[],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                "python3",
+                "-e",
+                "/opt/lifetxt/src[web,tui,dev]",
+            ],
+            report["install_command"],
+        )
+        self.assertIn(report["install_command"], sub.calls)
+        self.assertFalse(
+            any(call[:3] == ["python3", "-m", "pip"] for call in sub.calls)
+        )
+
+    def test_conda_pip_installer_can_target_an_environment_prefix(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    installer="conda-pip",
+                    python=None,
+                    conda_executable="conda",
+                    conda_env_prefix="/opt/conda/envs/lifetxt-prod",
+                    conda_install_args=["-e", "/opt/lifetxt/src[web,tui,dev]"],
+                    integrity_checks=[],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(
+            [
+                "conda",
+                "run",
+                "--prefix",
+                "/opt/conda/envs/lifetxt-prod",
+                "python",
+            ],
+            report["python_command"],
+        )
+        self.assertEqual(
+            report["python_command"]
+            + ["-m", "pip", "install", "-e", "/opt/lifetxt/src[web,tui,dev]"],
+            report["install_command"],
+        )
+        self.assertIn(report["install_command"], sub.calls)
+        self.assertIn(report["python_command"] + ["-c", "import lifetxt"], sub.calls)
+
+    def test_conda_pip_installer_can_target_an_environment_name(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    installer="conda-pip",
+                    python=None,
+                    conda_env_name="lifetxt-prod",
+                    integrity_checks=[],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(
+            ["conda", "run", "--name", "lifetxt-prod", "python"],
+            report["python_command"],
+        )
+
+    def test_integrity_checks_can_target_distinct_files_and_application_config(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        archive = os.path.join(self.tmp, "archive.life.txt")
+        with open(archive, "w", encoding="utf-8") as handle:
+            handle.write("[ ] T Archived id:archived\n")
+        app_config = os.path.join(self.tmp, ".lifetxt.json")
+
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    application_config=app_config,
+                    workspace="prod",
+                    integrity_checks=[
+                        {"name": "check", "path": self.life_txt},
+                        {"name": "ids", "path": self.life_txt},
+                        {
+                            "name": "ticket_validate_history",
+                            "path": archive,
+                            "id": "archive_history",
+                        },
+                        {"name": "workspace_validate"},
+                    ],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(archive, report["integrity_checks"]["archive_history"]["path"])
+        lifetxt_calls = [
+            call
+            for call in sub.calls
+            if len(call) >= 3 and call[1:3] == ["-m", "lifetxt"]
+        ]
+        self.assertIn(
+            [
+                "python3",
+                "-m",
+                "lifetxt",
+                "--config",
+                app_config,
+                "check",
+                self.life_txt,
+            ],
+            lifetxt_calls,
+        )
+        self.assertIn(
+            [
+                "python3",
+                "-m",
+                "lifetxt",
+                "--config",
+                app_config,
+                "ticket",
+                "validate-history",
+                archive,
+            ],
+            lifetxt_calls,
+        )
+        self.assertIn(
+            [
+                "python3",
+                "-m",
+                "lifetxt",
+                "--config",
+                app_config,
+                "workspace",
+                "validate",
+                "prod",
+            ],
+            lifetxt_calls,
+        )
+
+    def test_service_preflight_failure_stops_before_lock_backup_or_mutation(self):
+        git = _FakeGit()
+        preflight = ["sudo", "-n", "/usr/local/sbin/lifetxt-systemctl", "preflight"]
+        sub = _FakeSubprocess(command_failures={tuple(preflight)})
+
+        with _patch_git(git), _patch_subprocess(sub):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(
+                    self._config(service_preflight_commands=[preflight]), yes=True
+                )
+
+        self.assertEqual("service_preflight", ctx.exception.step)
+        self.assertEqual("failed_before_code_update", ctx.exception.report["status"])
+        self.assertEqual([preflight], sub.calls)
+        self.assertFalse(os.path.exists(self.lock_path))
+        self.assertFalse(os.path.isdir(self.backup_dir))
+        self.assertFalse(any(call[:2] == ["systemctl", "stop"] for call in sub.calls))
+
+    def test_service_command_can_use_a_structured_sudo_prefix(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    service_command=["sudo", "-n", "systemctl"],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(["sudo", "-n", "systemctl"], report["service_command"])
+        self.assertEqual(
+            ["sudo", "-n", "systemctl", "is-active", "lifetxt.service"],
+            sub.calls[0],
+        )
+
+    def test_validation_command_failure_after_code_update_leaves_services_stopped(self):
+        git = _FakeGit()
+        validation = ["python3", "-m", "unittest", "discover"]
+        sub = _FakeSubprocess(command_failures={tuple(validation)})
+
+        with _patch_git(git), _patch_subprocess(sub):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(
+                    self._config(
+                        validation_commands=[
+                            {"name": "full_suite", "argv": validation, "timeout": 120}
+                        ],
+                    ),
+                    yes=True,
+                )
+
+        report = ctx.exception.report
+        self.assertEqual("failed_after_code_update", report["status"])
+        self.assertEqual("validation_commands", ctx.exception.step)
+        start_calls = [c for c in sub.calls if "systemctl" in c and "start" in c]
+        self.assertEqual([], start_calls)
+
     def test_service_that_was_already_inactive_is_left_alone_and_not_started(self):
         """Regression test: `systemctl stop` on an already-inactive unit
         still exits 0, so without an is-active check first, an update would
@@ -1160,6 +1486,52 @@ class RunServerUpdateReviewGateTests(unittest.TestCase):
         self.assertEqual("update_available_dry_run", report["status"])
         self.assertNotIn("review_block", report)
         self.assertNotEqual([], report["review_reasons"])
+
+    def test_dry_run_reports_install_and_validation_plan(self):
+        git = _FakeGit()
+        config = self._config(
+            installer="uv",
+            uv_install_args=["-e", "/opt/lifetxt/src[web,tui,dev]"],
+            validation_commands=[
+                {
+                    "name": "full_suite",
+                    "argv": ["python3", "-m", "unittest", "discover"],
+                }
+            ],
+        )
+        with _patch_git(git):
+            report = server_update.run_server_update(config, yes=False)
+        self.assertEqual("uv", report["installer"])
+        self.assertEqual(
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                "python3",
+                "-e",
+                "/opt/lifetxt/src[web,tui,dev]",
+            ],
+            report["install_command"],
+        )
+        self.assertEqual(
+            config["validation_commands"], report["would_run_validation_commands"]
+        )
+
+    def test_review_block_reports_install_command(self):
+        git = self._risky_git()
+        with _patch_git(git):
+            report = server_update.run_server_update(
+                self._config(installer="uv"),
+                yes=True,
+                server_config_path="/etc/lifetxt/su.json",
+            )
+        self.assertEqual("review_required", report["status"])
+        self.assertIn("installer=uv", report["review_block"])
+        self.assertIn(
+            "install_command=uv pip install --python python3 -e .",
+            report["review_block"],
+        )
 
 
 class CommandServerUpdateCliTests(unittest.TestCase):

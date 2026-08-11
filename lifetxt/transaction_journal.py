@@ -11,6 +11,7 @@ the recorded before nor after revision.
 from __future__ import unicode_literals
 
 import datetime
+import hashlib
 import json
 import os
 import shutil
@@ -41,6 +42,33 @@ from .timeutil import parse_iso_datetime
 
 
 SCHEMA_VERSION = 1
+EVIDENCE_EXPORT_POLICY = OrderedDict(
+    (
+        (
+            "exportable",
+            (
+                "schema_version",
+                "transaction_id",
+                "operation",
+                "state",
+                "timestamps",
+                "revision_hashes",
+                "relations",
+            ),
+        ),
+        ("redactable", ("target_path", "last_error")),
+        (
+            "prohibited",
+            (
+                "artifact_payload",
+                "credentials",
+                "tokens",
+                "private_content",
+                "raw_absolute_path",
+            ),
+        ),
+    )
+)
 TERMINAL_STATES = frozenset(("committed", "compensated", "abandoned"))
 RECOVERY_STATES = frozenset(
     (
@@ -52,6 +80,50 @@ RECOVERY_STATES = frozenset(
         "compensation_failed",
     )
 )
+
+
+def journal_version_matrix():
+    """Return the explicit journal version paths supported by this build."""
+    return OrderedDict(
+        (
+            (
+                "older",
+                OrderedDict(
+                    (
+                        ("source", "released version below current"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "unsupported"),
+                        ("mutation", "refused"),
+                        ("recovery", "restore from exported evidence after upgrade"),
+                    )
+                ),
+            ),
+            (
+                SCHEMA_VERSION,
+                OrderedDict(
+                    (
+                        ("source", "current"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "identity"),
+                        ("mutation", "supported"),
+                        ("recovery", "resume/compensate/abandon/export"),
+                    )
+                ),
+            ),
+            (
+                "newer",
+                OrderedDict(
+                    (
+                        ("source", "future version"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "unsupported"),
+                        ("mutation", "refused"),
+                        ("recovery", "inspect/export only; upgrade to recover"),
+                    )
+                ),
+            ),
+        )
+    )
 
 
 class TransactionJournalError(RuntimeError):
@@ -374,7 +446,9 @@ def inspect_journal(path):
     compatibility = record.get("version_compatibility") or version_compatibility(
         record, SCHEMA_VERSION
     )
+    result["version_compatibility"] = compatibility
     result["read_only"] = not compatibility.get("writable", False)
+    result["journal_version_matrix"] = journal_version_matrix()
     result["permission_report"] = permission_report(
         os.path.dirname(path), require_private=True
     )
@@ -487,18 +561,42 @@ def abandon_with_backup(path, backup_dir, now=None):
 
 def export_evidence(path, output_path):
     report = inspect_journal(path)
+
+    def path_fingerprint(value):
+        normalized = os.path.normcase(os.path.abspath(str(value)))
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+    targets = []
+    for target, observed in zip(report["targets"], report["observed_targets"]):
+        targets.append(
+            OrderedDict(
+                (
+                    ("path", "<redacted>"),
+                    ("path_fingerprint", path_fingerprint(target["path"])),
+                    ("kind", target["kind"]),
+                    ("before_hash", target["before_hash"]),
+                    ("after_hash", target["after_hash"]),
+                    ("changed", target.get("changed", False)),
+                    ("relation", observed["relation"]),
+                    ("resume_safe", observed["resume_safe"]),
+                    ("compensate_safe", observed["compensate_safe"]),
+                )
+            )
+        )
     evidence = OrderedDict(
         (
             ("schema_version", 1),
+            ("redacted", True),
+            ("field_policy", EVIDENCE_EXPORT_POLICY),
             ("transaction_id", report["transaction_id"]),
             ("operation", report["operation"]),
             ("state", report["state"]),
             ("created_at_utc", report["created_at_utc"]),
             ("updated_at_utc", report["updated_at_utc"]),
             ("terminal_at_utc", report.get("terminal_at_utc")),
-            ("last_error", report.get("last_error")),
-            ("targets", report["targets"]),
-            ("observed_targets", report["observed_targets"]),
+            ("last_error", "<redacted>" if report.get("last_error") else None),
+            ("last_error_present", bool(report.get("last_error"))),
+            ("targets", targets),
             ("recovery_required", report["recovery_required"]),
         )
     )
@@ -682,13 +780,23 @@ def restore_backup(
     operator=None,
     config=None,
     audit_file=None,
+    authorization_context=None,
+    approval=None,
 ):
     """Verify immutable backup evidence and recover through a separate working copy."""
     from .transaction_admin import append_admin_audit, authorize_operator
     from .transaction_policy import write_integrity_manifest
 
+    if action not in ("inspect", "resume", "compensate"):
+        raise ValueError("restore action must be inspect, resume, or compensate.")
     authorization = authorize_operator(
-        config, operator, action="transaction backup restore"
+        config,
+        operator,
+        action="transaction backup restore.%s" % action,
+        authorization_context=authorization_context,
+        required_scopes=["recovery:%s" % action],
+        destructive=action in ("resume", "compensate"),
+        approval=approval,
     )
     source = os.path.abspath(backup_dir)
     ensure_evidence_storage_profile(
@@ -719,8 +827,6 @@ def restore_backup(
                 ("original_backup_unchanged", True),
             )
         )
-    if action not in ("resume", "compensate"):
-        raise ValueError("restore action must be inspect, resume, or compensate.")
     if working_dir is None:
         working_dir = source + ".restore-" + uuid.uuid4().hex[:8]
     destination = os.path.abspath(working_dir)
@@ -758,7 +864,7 @@ def restore_backup(
         append_admin_audit(
             audit_file,
             "backup.restore.%s" % action,
-            operator=operator,
+            operator=authorization.get("operator") or operator,
             details={
                 "backup_dir": source,
                 "working_dir": destination,
@@ -766,6 +872,7 @@ def restore_backup(
                 "result_state": report.get("state"),
             },
             config=config,
+            authorization_context=authorization_context,
         )
     return OrderedDict(
         (

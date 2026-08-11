@@ -170,6 +170,42 @@ pre-journal boundaries では、`auto` は both targets が unchanged である�
 
 ## Verified backup restoration
 
+## Policy / journal version refusal
+
+Transaction policy と recovery journal には明示的な compatibility matrix が
+あります。current release は unversioned legacy policy を policy version 1
+へ migration できます。policy version 1 だけが writable で、newer policy は
+rewrite 前に拒否され、legacy shape への downgrade は unsupported です。
+
+Journal schema version 1 が current / writable version です。older journal に
+implicit migration path はなく、newer journal は inspect と export のみ可能
+です。`resume`、`compensate`、その他の journal mutation は target や journal
+state を変更する前に拒否します。拒否された source は in-place で編集せず、
+revision と integrity evidence を保持してください。必要なら evidence を
+export し、記録された version を明示的に扱える build へ upgrade してから
+recovery を実行します。
+
+## Shareable recovery evidence
+
+通常の evidence export は shareable diagnostic bundle 用です。transaction ID、
+operation、timestamp、revision hash、observed relation は incident correlation
+のため保持します。target の raw absolute path は `<redacted>` と deterministic
+な fingerprint に置き換え、error text は presence marker のみ残します。
+artifact payload、authored content、credential、token は export しません。
+operator-local journal と共有 bundle の境界を確認し、bundle は共有前に内容を
+review してください。
+
+## End-to-end recovery drill
+
+drill は production data を使わず temporary workspace で実施します。incident
+owner と handoff reviewer を先に記録し、journal を inspect して before/after
+hash と target の状態を照合します。safe な場合だけ `resume` または
+`compensate` を実行します。target が diverged なら mutation action を使わず、
+`abandon --backup-dir` で immutable evidence を保全し、`restore --action inspect`
+で backup integrity を確認します。working copy を recovery する場合も original
+backup は変更しません。runbook の曖昧さは undocumented assumption で埋めず、
+blocking follow-up issue として記録します。
+
 abandoned transaction backups は immutable evidence として残ります。restoration はまず original integrity manifest を verify します。`inspect` は working copy を作らず evidence を読みます。`resume` と `compensate` は backup を separate working directory に copy し、その copy から recover します。
 
 ```bash
@@ -201,6 +237,22 @@ operation は recovery 後に original backup を再 verify し、working copy �
 ```
 
 これは local allow-list boundary であり、authenticated roles や OS access controls の代替ではありません。encrypted evidence profiles、key rotation、role-backed authorization、real incident handoff drills は今後の release work です。
+
+remote または multi-user recovery surface では、authorization は `--operator` ではなく authenticated principal context から derive します。recovery role、scope、project limit、destructive action の approval separation は次で設定します。
+
+```json
+{
+  "transactions": {
+    "require_authenticated_recovery_authorization": true,
+    "recovery_authorized_roles": ["recovery-admin"],
+    "recovery_required_scopes": ["recovery"],
+    "recovery_allowed_projects": ["default"],
+    "require_destructive_recovery_approval": true
+  }
+}
+```
+
+backup からの `resume` と `compensate` は destructive recovery action です。approval separation が有効な場合、approval identity は authenticated recovery operator と別でなければなりません。local single-operator use ではこれらの設定を disabled のままにできますが、それは local-only administration の stable-release limitation であり、remote authorization として扱ってはいけません。
 
 incident handling では、まず `inspect` を優先してください。これは working copy を作らず retained evidence を読むため、transaction を resume、compensate、abandon、または escalate すべきか判断する最も低 risk な方法です。
 

@@ -16,6 +16,7 @@ from lifetxt.transaction_journal import (
     compensate,
     export_evidence,
     inspect_journal,
+    journal_version_matrix,
     list_journals,
     resume,
 )
@@ -611,6 +612,91 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertNotIn("secret payload", text)
         self.assertIn("before_hash", text)
 
+    def test_export_evidence_redacts_paths_and_errors_deterministically(self):
+        path = self.write("private-secret.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.redacted-export",
+            journal_dir=self.journal_dir,
+        )
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+        record["last_error"] = "token=do-not-share path=%s" % path
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(record, handle)
+        first = export_evidence(result.journal_path, self.path("evidence-1.json"))
+        second = export_evidence(result.journal_path, self.path("evidence-2.json"))
+        self.assertTrue(first["redacted"])
+        self.assertEqual(first["targets"], second["targets"])
+        self.assertEqual("<redacted>", first["targets"][0]["path"])
+        self.assertNotIn(path, self.read(self.path("evidence-1.json")))
+        self.assertNotIn("do-not-share", self.read(self.path("evidence-1.json")))
+        self.assertEqual("<redacted>", first["last_error"])
+        self.assertTrue(first["last_error_present"])
+        self.assertIn(first["transaction_id"], self.read(self.path("evidence-1.json")))
+        self.assertIn(
+            first["targets"][0]["before_hash"], self.read(self.path("evidence-1.json"))
+        )
+
+    def test_end_to_end_recovery_escalation_drill_isolated_and_handoff_safe(self):
+        safe_path = self.write("drill-safe.txt", "safe-before\n")
+        safe_result = apply_multi_target(
+            [
+                text_plan(
+                    safe_path,
+                    lambda _text: "safe-after\n",
+                    mutation.read_text_snapshot(safe_path).content_hash,
+                )
+            ],
+            operation="drill.safe-compensate",
+            journal_dir=self.journal_dir,
+            transaction_id="drill-safe",
+        )
+        self.force_journal_state(safe_result.journal_path, "committing")
+        safe_inspection = inspect_journal(safe_result.journal_path)
+        self.assertEqual("after", safe_inspection["observed_targets"][0]["relation"])
+        self.assertIn("compensate", safe_inspection["available_actions"])
+        compensated = compensate(safe_result.journal_path)
+        self.assertEqual("compensated", compensated["state"])
+        self.assertEqual("safe-before\n", self.read(safe_path))
+
+        diverged_path = self.write("drill-diverged.txt", "before\n")
+        diverged = apply_multi_target(
+            [
+                text_plan(
+                    diverged_path,
+                    lambda _text: "after\n",
+                    mutation.read_text_snapshot(diverged_path).content_hash,
+                )
+            ],
+            operation="drill.diverged-escalation",
+            journal_dir=self.journal_dir,
+            transaction_id="drill-diverged",
+        )
+        self.force_journal_state(diverged.journal_path, "committing")
+        self.write("drill-diverged.txt", "operator-edit\n")
+        inspection = inspect_journal(diverged.journal_path)
+        self.assertEqual("diverged", inspection["observed_targets"][0]["relation"])
+        self.assertNotIn("resume", inspection["available_actions"])
+        self.assertNotIn("compensate", inspection["available_actions"])
+
+        abandoned = abandon_with_backup(
+            diverged.journal_path, self.path("drill-backups")
+        )
+        handoff = transaction_journal.restore_backup(
+            abandoned["backup_path"], action="inspect"
+        )
+        self.assertTrue(abandoned["backup_manifest_sha256"])
+        self.assertTrue(handoff["verification"]["ok"])
+        self.assertTrue(handoff["original_backup_unchanged"])
+        self.assertEqual("operator-edit\n", self.read(diverged_path))
+
     def test_cleanup_only_removes_old_terminal_journals_with_force(self):
         path = self.write("one.txt", "one\n")
         result = apply_multi_target(
@@ -719,6 +805,41 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertTrue(inspected["recovery_required"])
         self.assertEqual("before", inspected["observed_targets"][0]["relation"])
         self.assertIn("resume", inspected["available_actions"])
+
+    def test_journal_version_matrix_and_newer_refusal_are_explicit(self):
+        matrix = journal_version_matrix()
+        self.assertEqual("unsupported", matrix["older"]["migration"])
+        self.assertEqual("supported", matrix[1]["mutation"])
+        self.assertEqual(
+            ["inspect", "export"],
+            transaction_journal.available_actions({"schema_version": 99}),
+        )
+        path = self.write("versioned.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.newer-version",
+            journal_dir=self.journal_dir,
+        )
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+        record["schema_version"] = 99
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(record, handle)
+        inspected = inspect_journal(result.journal_path)
+        self.assertTrue(inspected["read_only"])
+        self.assertEqual("newer", inspected["version_compatibility"]["state"])
+        self.assertEqual(["inspect", "export"], inspected["available_actions"])
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError, "Unsupported"
+        ):
+            resume(result.journal_path)
+        self.assertEqual("ONE\n", self.read(path))
 
     def test_corrupted_compensation_artifact_keeps_committed_state_unchanged(self):
         path = self.write("one.txt", "one\n")

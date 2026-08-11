@@ -1,0 +1,83 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_server_update
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: 'Ran 44 tests -- OK (skipped=1, no symlink privilege on this Windows sandbox)'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: 'Ran 75 tests -- OK'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: unit
+      command: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: 'Ran 2252 tests -- OK (skipped=4)'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: python -m lifetxt server-update --help
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: renders the --server-config/--yes/--format flags correctly
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: python -m lifetxt server-update --config dummy.json
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: 'confirmed the --config flag is silently consumed by the global application-config flag, producing "ERROR: Config file does not exist: dummy-server-update.json" rather than anything naming --server-config -- reproduced CodeX''s finding exactly, validating the documentation fix'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: manual
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: []
+      result: 'OK: 10 item(s)'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: format
+      command: ruff format --check lifetxt tests scripts
+      requirement_ids: []
+      result: clean (3 pre-existing unrelated files' drift confirmed already present on origin/main, not introduced by this change)
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: lint
+      command: ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: All checks passed!
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: independent_review
+      command: CodeX independent review of PR #274
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: '2 P1 findings (service-state not restored; runbook overselling #273 plus wrong --config flag) and 1 P2 (env-file doc contradiction), all confirmed and fixed before merge'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+    - type: security_review
+      command: /security-review skill (research subagent + false-positive-filtering subagent) against the full branch diff
+      requirement_ids:
+        - req-server-update-guarded-core-flow
+      result: '1 candidate finding (create_backup symlink-following) scored 3/10 in filtering, EXCLUDE; no findings met the 8/10 report threshold; fixed the excluded finding anyway as hardening'
+      commit: 97b033004c6ec9fa326f1f6d66268e88f47acc69
+      executed_at: '2026-08-11'
+      status: passed
+
+  gaps: []

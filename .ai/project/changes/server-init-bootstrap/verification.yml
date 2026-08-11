@@ -1,0 +1,30 @@
+schema_version: 1
+
+verification:
+  planned: []
+
+  executed: []
+
+review_ledger:
+  - reviewer: Codex
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: null
+    completed_at: null
+  - reviewer: Codex
+    review_type: security
+    target_commit: null
+    result: pending
+    finding_count: null
+    completed_at: null
+
+release_evidence:
+  migration_notes: >-
+    `server-init` is additive. Existing lifetxt configs and server-update
+    configs are not migrated.
+  rollback_plan: >-
+    Revert the server_init.py, cli.py, tests, docs, and traceability changes.
+    No production data migration is performed by this change.
+  operations_evidence:
+    - No production host, data file, credential, private hostname, VPN address, or Calendar URL was touched.

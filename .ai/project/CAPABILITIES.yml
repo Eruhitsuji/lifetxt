@@ -2562,7 +2562,11 @@ capabilities:
       environment selectors, least-privilege structured service wrappers,
       explicit per-check life.txt/config/workspace targets, and optional
       post-reinstall validation commands -- all behind a
-      single-instance lock, dry-run by default.
+      single-instance lock, dry-run by default. `lifetxt server-init` adds the
+      plan-first initial-construction path for the same Ubuntu Server reference
+      deployment, generating application config, systemd/proxy/service-control
+      artifacts, and a matching `server-update.json` from explicit config while
+      refusing conflicting existing files.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -2571,6 +2575,7 @@ capabilities:
       - req-server-update-guarded-core-flow
       - req-server-update-review-gate
       - req-server-update-production-readiness
+      - req-server-init-bootstrap
     implementation_locations:
       - docs/deployment/ubuntu-server.md
       - contrib/README.md
@@ -2580,11 +2585,17 @@ capabilities:
       - contrib/systemd/lifetxt.env.example
       - contrib/nginx/lifetxt.conf.example
       - lifetxt/server_update.py
+      - lifetxt/server_init.py
       - lifetxt/cli.py
       - tests/test_server_update.py
+      - tests/test_server_init.py
       - config/release/clock-boundary-baseline-v1.json
       - .ai/project/changes/server-update-production-readiness/
+      - .ai/project/changes/server-init-bootstrap/
     public_interfaces:
+      - lifetxt server-init --server-config PATH [--yes] [--format text|json]
+      - lifetxt.server_init.run_server_init
+      - lifetxt.server_init.load_config
       - lifetxt server-update --server-config PATH [--yes] [--approve SHA] [--format text|json]
       - lifetxt.server_update.run_server_update
       - lifetxt.server_update.load_config
@@ -2596,7 +2607,9 @@ capabilities:
       - server-update config: service_command, service_preflight_commands
       - server-update config: integrity_checks object entries, application_config, workspace
       - server-update config: validation_commands
+      - server-init config: install_root, data_root, python, installer, extras, service_user, service_group, web, calendar_sync, systemd, service_control, reverse_proxy
     tests_or_evidence:
+      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, and CLI JSON output.
       - tests/test_server_update.py (conda-pip coverage added after the initial #277 slice: explicit name/prefix environment selectors, setup/reinstall through `conda run`, and the same environment used for sanity import)
       - tests/test_server_update.py (100 tests: prior guarded-update/review-gate coverage plus uv reinstall, argv-only hook validation, per-check targets/config/workspace, service preflight failure, structured service command, validation failure fail-safe, and dry-run/review install-plan visibility)
       - tests/test_server_update.py (90 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, the full apply path including every documented failure state, diff parsing, per-trigger-category risk classification, review-block formatting, and the review-gate/--approve integration flow)
@@ -2615,6 +2628,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/272
       - https://github.com/Eruhitsuji/lifetxt/issues/273
       - https://github.com/Eruhitsuji/lifetxt/issues/277
+      - https://github.com/Eruhitsuji/lifetxt/issues/279
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
       - https://github.com/Eruhitsuji/lifetxt/pull/276

@@ -178,6 +178,22 @@ The matrix proves behavior after abrupt Python interpreter termination through `
 
 ## Verified backup restoration
 
+## Policy and journal version refusal
+
+Transaction policy and recovery journals have explicit compatibility matrices.
+The current release supports policy migration from an unversioned legacy document
+to policy version 1. Policy version 1 is the only writable policy version; newer
+policy versions are refused before rewrite, and downgrade to the legacy shape is
+unsupported.
+
+Journal schema version 1 is the current and writable version. Older journal
+schemas have no implicit migration path, while newer schemas are inspectable and
+exportable only. `resume`, `compensate`, and other journal mutations refuse those
+versions before changing a target or journal state. Do not edit a refused source
+in place. Preserve its revision and integrity evidence, export the evidence when
+needed, and use a build that explicitly supports the recorded version before
+attempting recovery.
+
 Abandoned transaction backups remain immutable evidence. Restoration first verifies the original integrity manifest. `inspect` reads evidence without creating a working copy; `resume` and `compensate` copy the backup to a separate working directory and recover from that copy.
 
 ```bash

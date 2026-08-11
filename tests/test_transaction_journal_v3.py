@@ -16,6 +16,7 @@ from lifetxt.transaction_journal import (
     compensate,
     export_evidence,
     inspect_journal,
+    journal_version_matrix,
     list_journals,
     resume,
 )
@@ -719,6 +720,41 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertTrue(inspected["recovery_required"])
         self.assertEqual("before", inspected["observed_targets"][0]["relation"])
         self.assertIn("resume", inspected["available_actions"])
+
+    def test_journal_version_matrix_and_newer_refusal_are_explicit(self):
+        matrix = journal_version_matrix()
+        self.assertEqual("unsupported", matrix["older"]["migration"])
+        self.assertEqual("supported", matrix[1]["mutation"])
+        self.assertEqual(
+            ["inspect", "export"],
+            transaction_journal.available_actions({"schema_version": 99}),
+        )
+        path = self.write("versioned.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.newer-version",
+            journal_dir=self.journal_dir,
+        )
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+        record["schema_version"] = 99
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(record, handle)
+        inspected = inspect_journal(result.journal_path)
+        self.assertTrue(inspected["read_only"])
+        self.assertEqual("newer", inspected["version_compatibility"]["state"])
+        self.assertEqual(["inspect", "export"], inspected["available_actions"])
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError, "Unsupported"
+        ):
+            resume(result.journal_path)
+        self.assertEqual("ONE\n", self.read(path))
 
     def test_corrupted_compensation_artifact_keeps_committed_state_unchanged(self):
         path = self.write("one.txt", "one\n")

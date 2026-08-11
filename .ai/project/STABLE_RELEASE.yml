@@ -265,3 +265,97 @@ stable_release:
         limitation: >-
           These filesystem classes are not stable-supported until #304 records
           support limits or explicit refusal guidance.
+
+  release_gates:
+    rc_entry:
+      purpose: >-
+        Decide whether a reviewed commit may become a release candidate for the
+        first stable release.
+      required_evidence:
+        ci:
+          - required branch protection checks pass on the RC candidate commit
+          - project release-gate commands pass on a supported interpreter
+          - traceability and change-package close-out checks pass
+        real_environment:
+          - every support_matrix entry classified as supported has recorded the
+            minimum evidence named for that entry, or has an explicit limitation
+          - real Web, terminal, SMTP, Remote, and filesystem evidence is recorded
+            where those surfaces remain in the stable support matrix
+        migration:
+          - format, configuration, policy, journal, and Web revision migration or
+            refusal behavior is documented for the stable support surface
+          - downgrade inspection or limitation is recorded where downgrade is not
+            supported
+        recovery:
+          - transaction, attachment, archive, recovery-evidence, and filesystem
+            recovery procedures required by supported surfaces have recorded
+            evidence or documented limitations
+        documentation:
+          - release notes draft lists supported, experimental, deferred, and
+            unsupported surfaces from the support matrix
+          - upgrade, downgrade, known limitation, and installation guidance is
+            consistent with the support matrix
+          - English and Japanese documentation do not contradict the matrix for
+            release-critical support claims
+      blockers:
+        - open stable-release-blocker known issue
+        - missing required evidence for a supported matrix entry
+        - failed or flaky required check without resolution or accepted limitation
+        - unreviewed feature-freeze exception
+        - security, data-loss, migration, or recovery finding without explicit
+          human disposition
+
+    stable_promotion:
+      purpose: >-
+        Decide whether a validated release candidate may be promoted to the
+        first stable release.
+      required_evidence:
+        - all rc_entry evidence remains valid for the promoted commit
+        - the promoted commit is identical to the validated RC code, or differs
+          only by reviewed release-metadata-only changes with re-run smoke
+          evidence
+        - no open stable-release-blocker issue remains unresolved
+        - required RC-cycle findings are classified as stable-release blocker,
+          RC blocker, supported limitation, or post-stable
+        - final release notes, version metadata, artifact integrity evidence,
+          installation smoke evidence, and known limitations are linked from the
+          release record
+        - human release authority approves promotion after reviewing CI,
+          real-environment, migration, recovery, and documentation evidence
+      blockers:
+        - any unresolved stable-release blocker
+        - any required RC validation check failed, flaky, stale, or not run
+        - any accepted limitation missing from release notes or support docs
+        - artifact build or install evidence not tied to the promoted commit
+        - release authority approval missing
+
+    required_check_policy:
+      failed_check: >-
+        A failed required check blocks RC entry and stable promotion until the
+        underlying issue is fixed, the check is re-run successfully, or a human
+        maintainer records an explicit stable-release limitation or deferral.
+      flaky_check: >-
+        A flaky required check is treated as failed evidence. Promotion remains
+        blocked until the flake is diagnosed and resolved, or explicitly accepted
+        as a documented limitation with the affected support surface named.
+      stale_check: >-
+        Evidence collected against an older commit is stale when code,
+        dependencies, packaging, support classification, migration behavior, or
+        recovery behavior relevant to that evidence has changed.
+
+    known_issue_severity:
+      stable_release_blocker: >-
+        Must be fixed or explicitly removed from the stable support surface
+        before stable promotion.
+      rc_blocker: >-
+        Must be fixed or intentionally deferred before the first RC can be cut,
+        because it prevents meaningful RC validation.
+      supported_limitation: >-
+        May ship only when the limitation is user-facing, linked from release
+        notes, and does not contradict the support matrix.
+      post_stable: >-
+        Useful work outside the first stable-release promise; must remain
+        tracked without blocking RC or stable promotion.
+      not_release_relevant: >-
+        Does not affect supported stable behavior, release artifacts,
+        migration, recovery, security, or documentation claims.

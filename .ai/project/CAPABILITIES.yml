@@ -49,6 +49,7 @@ capabilities:
     source_requirements:
       - req-stable-release-feature-freeze
       - req-stable-release-support-matrix
+      - req-stable-release-gates
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -62,10 +63,12 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt
       - '#284 acceptance-criteria mapping reviewed in the pull request'
       - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
+      - '#286 release gates separately define RC entry and stable promotion criteria'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
       - https://github.com/Eruhitsuji/lifetxt/issues/285
+      - https://github.com/Eruhitsuji/lifetxt/issues/286
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/329
       - https://github.com/Eruhitsuji/lifetxt/pull/330
@@ -80,6 +83,8 @@ capabilities:
       stable support, experimental surfaces, deferred filesystem classes, and
       the minimum evidence required before release documentation can advertise a
       surface as stable.
+      #286 adds the RC entry and stable promotion gates, including failed,
+      flaky, and stale required-check handling plus known-issue severity classes.
     replacement:
       replaces: []
       replaced_by: null

@@ -144,6 +144,22 @@ Writable Web requests must include an offset-aware timestamp in the configured h
 
 Writable MCP calls use the same policy through the `client_time` argument. Capability documents report whether enforcement is enabled and which Web header is expected.
 
+For authenticated Remote Safe Mode Web writes, the clock decision is bound to
+the authenticated principal and, for browser authentication, the active session
+state in the remote audit log. The audit event stores only the presence of a
+client timestamp, decision state, write allowance, absolute skew, authentication
+method, and session state. It never stores the bearer token, browser cookie,
+CSRF token, session ID, or raw client timestamp. Custom client-time headers are
+enforced after trusted-proxy/authentication processing, so proxies do not supply
+an unauthenticated clock decision. The accepted replay window is bounded by the
+configured reject threshold: timestamps inside it are accepted; older or newer
+timestamps are rejected as `CLOCK_SKEW`.
+
+In-process MCP has no built-in session backend. When its host supplies an
+authenticated principal/session in `McpContext`, writable clock decisions are
+audited with the same bounded fields. Local MCP contexts without that identity
+remain local compatibility calls and do not claim remote session authentication.
+
 This check detects gross client/server clock disagreement. It does not replace exact resource revisions, transaction IDs, authentication, authorization, or transaction recovery.
 When enforcement is disabled, clients may still send the header or MCP
 `client_time`; the response clock report is diagnostic. When enforcement is

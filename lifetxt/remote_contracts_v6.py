@@ -23,7 +23,7 @@ from .attachment_transactions import (
     resolve_package_source,
 )
 from .attachments import DIR_KEY, FILE_KEY
-from .clock_skew import ClockSkewError, require_acceptable_clock
+from .clock_skew import ClockSkewError, clock_audit_evidence, require_acceptable_clock
 from .transaction_journal import inspect_journal, journal_directory, transaction_id
 
 _INSTALLED = False
@@ -406,6 +406,7 @@ def _patch_web():
                 and remote_clock_required(app.state.config)
                 and request.method.upper() in ("POST", "PUT", "PATCH", "DELETE")
                 and request.url.path.startswith("/api/")
+                and not request.url.path.startswith("/api/remote/v1/")
                 and not parser_only
             ):
                 header = remote_client_time_header(app.state.config)
@@ -623,25 +624,54 @@ def _patch_mcp():
         if name not in mcp.READ_ONLY_TOOLS and remote_clock_required(context.config):
             value = args.get("client_time")
             if not value:
-                return {
+                result = {
                     "error": "CLIENT_TIME_REQUIRED",
                     "message": "client_time is required for remote writes.",
                     "server_authoritative": True,
                 }
+                _audit_mcp_clock(context, name, value, None, "CLIENT_TIME_REQUIRED")
+                return result
             try:
                 clock = require_acceptable_clock(value, config=context.config)
             except (ClockSkewError, ValueError) as exc:
-                return {
+                result = {
                     "error": "CLOCK_SKEW",
                     "message": str(exc),
                     "server_authoritative": True,
                 }
+                _audit_mcp_clock(context, name, value, None, "CLOCK_SKEW")
+                return result
             result = original_call(name, args, context)
+            _audit_mcp_clock(context, name, value, clock, "allowed")
             if isinstance(result, dict):
                 result = dict(result)
                 result["clock"] = clock
             return result
         return original_call(name, args, context)
+
+    def _audit_mcp_clock(context, name, client_time, report, outcome):
+        principal = getattr(context, "remote_principal", None)
+        if not principal:
+            return
+        from .remote_access import append_audit, audit_event
+
+        session = getattr(context, "remote_session", None)
+        append_audit(
+            context.config,
+            audit_event(
+                principal,
+                "MCP " + str(name),
+                outcome,
+                "mcp-clock-" + str(name),
+                detail={
+                    "authentication": "mcp-context",
+                    "session": "active" if session else "not_applicable",
+                    "clock": clock_audit_evidence(
+                        client_time, context.config, report, outcome
+                    ),
+                },
+            ),
+        )
 
     def tool_schemas():
         schemas = list(original_schemas())

@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import tempfile
 import unittest
@@ -133,6 +135,59 @@ class RemoteWebV20Tests(unittest.TestCase):
                 "/api/remote/v1/browser/session", headers=self.v2
             ).status_code,
         )
+
+    def test_browser_session_clock_decision_is_audited(self):
+        audit_path = os.path.join(self.temp.name, "clock-audit.jsonl")
+        config = dict(self.config)
+        config["remote"] = dict(self.config["remote"], audit_log=audit_path)
+        config["clock"] = {
+            "require_remote_write_time": True,
+            "skew_warning_seconds": 10,
+            "skew_reject_seconds": 60,
+        }
+        client = TestClient(
+            create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=config,
+                read_only=False,
+            )
+        )
+        login = client.post(
+            "/api/remote/v1/browser/login",
+            headers=dict(self.v2, Origin=self.origin),
+            json={"token": "secret-v20"},
+        )
+        self.assertEqual(200, login.status_code, login.text)
+        csrf = login.json()["csrf_token"]
+        revision = client.get("/api/remote/v1/snapshot", headers=self.v2).json()[
+            "revision"
+        ]
+        response = client.post(
+            "/api/remote/v1/write-check",
+            headers=dict(
+                self.v2,
+                **{
+                    "If-Match": revision,
+                    "Origin": self.origin,
+                    "X-CSRF-Token": csrf,
+                    "X-Lifetxt-Client-Time": datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                },
+            ),
+            json={"operation": "session-clock"},
+        )
+        self.assertEqual(200, response.status_code, response.text)
+        with open(audit_path, encoding="utf-8") as handle:
+            events = [json.loads(line) for line in handle if line.strip()]
+        event = [
+            row for row in events if row["action"] == "POST /api/remote/v1/write-check"
+        ][-1]
+        self.assertEqual("alice", event["principal"])
+        self.assertEqual("browser-session", event["detail"]["authentication"])
+        self.assertEqual("active", event["detail"]["session"])
+        self.assertEqual("ok", event["detail"]["clock"]["state"])
 
     def test_relogin_rotates_and_revokes_the_previous_cookie(self):
         login_headers = dict(self.v2, Origin=self.origin)

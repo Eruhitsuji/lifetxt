@@ -1127,7 +1127,7 @@ traceability:
       status: implemented
 
     - requirement_id: req-remote-ticket-conflict-schema-conformance
-      capability_id: cap-remote-ticket-conflict-schema
+      capability_id: cap-authenticated-remote-clock-enforcement
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/122
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/123
@@ -4034,6 +4034,67 @@ traceability:
         handoff boundary rather than only individual recovery primitives. The
         scenario uses temporary data and bounds diverged-target restore to
         immutable evidence inspection.
+      status: implemented
+
+    - requirement_id: req-shared-deterministic-timezone-fixture-matrix
+      capability_id: cap-timezone-aware-runtime
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/310
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/338
+      changed_files_or_scope:
+        - Add one fixture source for timezone normalization, wall-time, and clock-skew cases
+        - Route timezone policy, CLI precedence, remote clock, and tzdata provider tests through shared cases
+        - Document stable-surface applicability and Windows tzdata-only resolution
+        - tests/timezone_fixture_matrix.py
+        - tests/test_timezone_policy_v2.py
+        - tests/test_clock_skew_v5.py
+        - tests/test_safety_foundation.py
+        - docs/en/timezone-revision-workspace-safety.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - fixture-driven timezone policy, clock skew, and tzdata provider tests
+        - ruff check and ruff format --check for changed Python files
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because these cases define shared public interpretation
+        behavior. Surface-specific session/audit enforcement remains #311.
+      status: implemented
+
+    - requirement_id: req-authenticated-remote-clock-audit-evidence
+      capability_id: cap-remote-ticket-conflict-schema
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/311
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/338
+      changed_files_or_scope:
+        - Bind remote Web clock decisions to authenticated principal and browser-session state
+        - Add bounded audit evidence for missing, invalid, rejected, and allowed clock decisions
+        - Preserve CLIENT_TIME_REQUIRED and CLOCK_SKEW behavior with custom client-time headers
+        - Add authenticated MCP context clock audit while preserving local MCP compatibility
+        - lifetxt/clock_skew.py
+        - lifetxt/remote_contracts_v6.py
+        - lifetxt/remote_web.py
+        - lifetxt/mcp.py
+        - tests/test_remote_web_v20.py
+        - tests/test_remote_ticket_writes_v22.py
+        - tests/test_remote_attachment_contracts_v6.py
+        - docs/en/delegated-remote-attachments-and-recovery.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - authenticated bearer and browser-session clock audit tests
+        - MCP authenticated-context audit and credential/session-ID redaction test
+        - replay-window and custom-header clock boundary tests
+        - ruff check and ruff format --check for changed Python files
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because remote time decisions gate writable operations
+        and must be attributable without exposing authentication material.
+        Direct local MCP remains explicitly outside remote-session claims.
       status: implemented
 
     - requirement_id: req-delegated-mutation-lifecycle-retention-sandbox-policy

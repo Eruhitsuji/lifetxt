@@ -2101,17 +2101,22 @@ capabilities:
       entity types -- so its fix reimplements the same
       exact-before-approximate ranking locally via the public
       fuzzy_search.fuzzy_contains/is_exact_match/similarity primitives
-      rather than delegating. TUI search was found to have no existing
-      item/entity search command to extend at all (the TUI's `/` row filter
-      is a different, pre-existing substring-only concept over already-
-      rendered rows, unrelated to lifetxt.fuzzy_search) -- per this
-      project's Horizontal Review Scope Discipline, building one is a new
-      feature, not a small same-root-cause fix, so it was filed as its own
-      follow-up (#253) rather than implemented here. TUI's own separate
-      row-filter fuzzy
-      helper in tui_app.py is a different, pre-existing, simpler concept --
-      client-side keystroke filtering of already-loaded rows -- and is
-      unrelated to this primitive). filter_items()'s fuzzy parameter is a
+      rather than delegating. TUI search was found to have no dedicated
+      command reaching entities outside `TUI_SECTIONS` (tasks/agenda/status)
+      -- per this project's Horizontal Review Scope Discipline, building one
+      is a new feature, not a small same-root-cause fix, so it was filed as
+      its own follow-up (#253) rather than implemented here. #253's own
+      closing investigation corrected an earlier mischaracterization here:
+      the TUI's `/search` command and live-typing filter (`tui_app.py`'s
+      `WorkspaceState.refresh()`, via `score_row()`/`fuzzy_match()`) already
+      perform genuine per-field-weighted, subsequence-tolerant fuzzy
+      matching over already-loaded rows -- not a "substring-only" or
+      "simpler" filter as originally described here. It is a separate,
+      independently-implemented matcher from `lifetxt.fuzzy_search`
+      (confirmed: `tui_app.py` does not import it) and #253 declined to
+      unify or replace it, since it is arguably more capable for its use
+      case (per-field weighting, match-span highlighting) than delegating to
+      the shared primitive would be. filter_items()'s fuzzy parameter is a
       pure pass/fail predicate preserving existing document order (no
       ranking added there or to /api/items, whose sort=/order= parameters
       are the existing, independent ordering contract); only

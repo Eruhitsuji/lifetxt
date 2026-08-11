@@ -631,6 +631,7 @@ capabilities:
       - '#305 defines stable `os-private-v1` recovery-evidence storage profile for transaction, backup, archive, and restore evidence; unsupported encryption profiles fail preflight before mutation'
       - '#306 requires authenticated principal-derived recovery authorization for remote/multi-user surfaces, scoped project checks, and approval separation for destructive backup restore actions'
       - '#307 publishes explicit policy/journal version migration and refusal matrices; newer journals remain inspect/export-only and refused mutations preserve source revisions'
+      - '#308 defines shareable recovery evidence redaction: identifiers and hashes remain, raw paths/errors/payloads/secrets do not'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -646,6 +647,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/305
       - https://github.com/Eruhitsuji/lifetxt/issues/306
       - https://github.com/Eruhitsuji/lifetxt/issues/307
+      - https://github.com/Eruhitsuji/lifetxt/issues/308
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
       - https://github.com/Eruhitsuji/lifetxt/pull/334

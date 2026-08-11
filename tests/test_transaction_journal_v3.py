@@ -612,6 +612,38 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertNotIn("secret payload", text)
         self.assertIn("before_hash", text)
 
+    def test_export_evidence_redacts_paths_and_errors_deterministically(self):
+        path = self.write("private-secret.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.redacted-export",
+            journal_dir=self.journal_dir,
+        )
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+        record["last_error"] = "token=do-not-share path=%s" % path
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(record, handle)
+        first = export_evidence(result.journal_path, self.path("evidence-1.json"))
+        second = export_evidence(result.journal_path, self.path("evidence-2.json"))
+        self.assertTrue(first["redacted"])
+        self.assertEqual(first["targets"], second["targets"])
+        self.assertEqual("<redacted>", first["targets"][0]["path"])
+        self.assertNotIn(path, self.read(self.path("evidence-1.json")))
+        self.assertNotIn("do-not-share", self.read(self.path("evidence-1.json")))
+        self.assertEqual("<redacted>", first["last_error"])
+        self.assertTrue(first["last_error_present"])
+        self.assertIn(first["transaction_id"], self.read(self.path("evidence-1.json")))
+        self.assertIn(
+            first["targets"][0]["before_hash"], self.read(self.path("evidence-1.json"))
+        )
+
     def test_cleanup_only_removes_old_terminal_journals_with_force(self):
         path = self.write("one.txt", "one\n")
         result = apply_multi_target(

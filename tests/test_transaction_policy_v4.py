@@ -1,4 +1,5 @@
 import os
+import errno
 import tempfile
 import unittest
 from unittest import mock
@@ -13,6 +14,8 @@ from lifetxt.transaction_policy import (
     journal_usage,
     permission_report,
     policy_from_config,
+    storage_access_failure_kind,
+    storage_access_diagnostic,
     verify_integrity_manifest,
     version_compatibility,
     write_integrity_manifest,
@@ -95,6 +98,21 @@ class TransactionPolicyV4Tests(unittest.TestCase):
             fault_point("before_file_replace", path="/tmp/a")
         self.assertEqual("before_file_replace", observed[0][0])
         self.assertEqual("/tmp/a", observed[0][1]["path"])
+
+    def test_storage_access_failure_diagnostics_distinguish_capacity_and_permission(
+        self,
+    ):
+        full = OSError(errno.ENOSPC, "simulated disk full")
+        quota = OSError(getattr(errno, "EDQUOT", errno.ENOSPC), "simulated quota")
+        denied = PermissionError(errno.EACCES, "simulated permission denied")
+        other = OSError(errno.EIO, "simulated io error")
+
+        self.assertEqual("capacity", storage_access_failure_kind(full))
+        self.assertEqual("capacity", storage_access_failure_kind(quota))
+        self.assertEqual("permission", storage_access_failure_kind(denied))
+        self.assertEqual("io", storage_access_failure_kind(other))
+        self.assertIn("Storage capacity failure", storage_access_diagnostic(full))
+        self.assertIn("Storage permission failure", storage_access_diagnostic(denied))
 
     def test_version_compatibility_is_read_only_for_noncurrent_versions(self):
         self.assertTrue(version_compatibility({"schema_version": 1}, 1)["writable"])

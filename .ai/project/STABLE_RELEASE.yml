@@ -429,6 +429,16 @@ stable_release:
             artifacts, and backup manifests fail safely before recovery mutates
             authoritative targets, with deterministic repeat attempts and
             inspect output retained where possible.
+          - >-
+            #302 verifies simulated disk-full, quota, and permission-denied
+            transaction failures before journal publication and during recovery,
+            distinguishing capacity from permission diagnostics without relying
+            on POSIX-only permission behavior.
+          - >-
+            #303 records real Windows 10.0.19045 / NTFS evidence using a safe
+            `msvcrt.locking` byte-range target-file lock: replace is refused
+            as PermissionError/WinError 5, no false committed state is reported,
+            and recovery succeeds after the lock is released.
       - id: p0-protected-recovery-evidence-authorization
         todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
         classification: stable_release_blocker

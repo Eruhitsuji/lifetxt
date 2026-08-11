@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import contextlib
 import contextvars
+import errno
 import hashlib
 import json
 import os
@@ -18,6 +19,31 @@ _FAULT_HANDLER = contextvars.ContextVar(
 
 class TransactionPolicyError(RuntimeError):
     pass
+
+
+CAPACITY_ERROR_CODES = frozenset((errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)))
+PERMISSION_ERROR_CODES = frozenset((errno.EACCES, errno.EPERM))
+
+
+def storage_access_failure_kind(exc):
+    """Classify common storage/access failures without relying on platform bits."""
+    code = getattr(exc, "errno", None)
+    if code in CAPACITY_ERROR_CODES:
+        return "capacity"
+    if code in PERMISSION_ERROR_CODES or isinstance(exc, PermissionError):
+        return "permission"
+    return "io"
+
+
+def storage_access_diagnostic(exc):
+    kind = storage_access_failure_kind(exc)
+    if kind == "capacity":
+        prefix = "Storage capacity failure"
+    elif kind == "permission":
+        prefix = "Storage permission failure"
+    else:
+        prefix = "Storage I/O failure"
+    return "%s: %s" % (prefix, exc)
 
 
 @contextlib.contextmanager

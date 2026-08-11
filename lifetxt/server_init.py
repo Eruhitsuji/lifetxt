@@ -95,6 +95,7 @@ def _validate_config(config, source_path):
                 "Config %s is missing required string key %r." % (source_path, key),
                 step="load_config",
             )
+    _validate_separate_roots(config["install_root"], config["data_root"], source_path)
     server_update_config = _server_update_config(config)
     try:
         server_update._validate_argv_list(
@@ -131,6 +132,27 @@ def _validate_config(config, source_path):
     ):
         raise ServerInitError(
             "Config %s: extras must be a JSON array of strings." % source_path,
+            step="load_config",
+        )
+
+
+def _validate_separate_roots(install_root, data_root, source_path):
+    install_abs = os.path.abspath(install_root)
+    data_abs = os.path.abspath(data_root)
+    if install_abs == data_abs:
+        raise ServerInitError(
+            "Config %s: install_root and data_root must be separate paths."
+            % source_path,
+            step="load_config",
+        )
+    try:
+        common = os.path.commonpath([install_abs, data_abs])
+    except ValueError:
+        return
+    if common == install_abs or common == data_abs:
+        raise ServerInitError(
+            "Config %s: install_root and data_root must not contain each other."
+            % source_path,
             step="load_config",
         )
 
@@ -560,7 +582,10 @@ def build_plan(config):
         steps.append(
             {"kind": "command", "name": "integrity:%s" % entry["name"], "argv": argv}
         )
-    if install_config.get("health_url"):
+    should_check_health = bool(config.get("health_url")) or bool(
+        config["systemd"].get("start")
+    )
+    if install_config.get("health_url") and should_check_health:
         steps.append({"kind": "health", "url": install_config["health_url"]})
     if config["systemd"].get("enabled") and config["systemd"].get("daemon_reload"):
         steps.append(

@@ -68,7 +68,15 @@ SERVER_VERSION = "0.1.0"
 
 
 class McpContext:
-    def __init__(self, paths=None, writable_path=None, config=None, read_only=False):
+    def __init__(
+        self,
+        paths=None,
+        writable_path=None,
+        config=None,
+        read_only=False,
+        remote_principal=None,
+        remote_session=None,
+    ):
         self.config = config or {}
         configured_paths = paths or config_paths(self.config) or ["life.txt"]
         self.paths = normalize_server_paths(configured_paths)
@@ -76,6 +84,8 @@ class McpContext:
             writable_path or config_write_file(self.config) or self.paths[0]
         )
         self.read_only = bool(read_only)
+        self.remote_principal = dict(remote_principal or {}) or None
+        self.remote_session = dict(remote_session or {}) or None
         transactions_config = (
             self.config.get("transactions")
             if isinstance(self.config.get("transactions"), dict)

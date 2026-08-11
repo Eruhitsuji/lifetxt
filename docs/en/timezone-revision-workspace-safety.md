@@ -86,6 +86,25 @@ The resolved timezone follows this precedence:
 
 CLI, extended CLI commands, Web requests, MCP JSON-RPC requests, and legacy comparison helpers share the resolved timezone context.
 
+### Shared deterministic fixture matrix
+
+`tests/timezone_fixture_matrix.py` is the single source for stable timezone and
+clock expectations. It covers CLI/file/config/host precedence, aware and naive
+values, time-only anchors, DST gaps and folds, non-hour offsets, local midnight,
+historical transition behavior, and positive/negative remote clock skew limits.
+
+CLI, TUI, Web, and MCP resolve timezone policy through `timezone_policy`; the
+fixture-driven core tests therefore cover their shared interpretation boundary.
+Notifications, import/export, projects, tickets, events, time entries, and work
+sessions consume timezone-aware parser/time utility values and do not maintain a
+second parser. Remote writable requests use the shared `clock_skew` boundary;
+authenticated session and audit binding is tracked separately in #311.
+
+On Windows, named IANA zones are resolved only through `zoneinfo` and the
+declared `tzdata` dependency. `dateutil` and `pytz` are deliberately not
+fallbacks, so a missing declared provider fails loudly instead of changing
+timezone behavior by accident.
+
 Inspect the policy:
 
 ```bash

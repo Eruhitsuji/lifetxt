@@ -491,6 +491,17 @@ stable_release:
         rationale: >-
           Stable public surfaces need shared timezone fixtures, and remote clock
           enforcement must bind to authenticated sessions and audit evidence.
+        evidence_notes:
+          - >-
+            #310 centralizes timezone and clock expectations for precedence,
+            normalization, DST behavior, historical rules, and skew boundaries.
+            Core CLI/TUI/Web/MCP interpretation shares timezone_policy; Windows
+            named-zone resolution is constrained to zoneinfo plus declared tzdata.
+          - >-
+            #311 moves Remote Safe Mode clock enforcement inside authenticated
+            Web request handling and records bounded principal/session clock
+            evidence for accepted and denied writes. MCP records the same
+            evidence only when its host supplies authenticated context.
       - id: p0-real-terminal-tui
         todo_summary: Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals.
         classification: stable_release_blocker

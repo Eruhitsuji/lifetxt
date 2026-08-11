@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import base64
+import json
 import os
 import tempfile
 import unittest
@@ -226,6 +227,47 @@ class RemoteAttachmentContractTests(unittest.TestCase):
             if name in mcp.READ_ONLY_TOOLS:
                 continue
             self.assertIn("client_time", properties, name)
+
+    def test_mcp_authenticated_context_audits_clock_without_token(self):
+        audit_path = os.path.join(self.root, "mcp-audit.jsonl")
+        config = dict(self.config)
+        config["remote"] = {"audit_log": audit_path}
+        config["clock"] = {
+            "require_remote_write_time": True,
+            "skew_warning_seconds": 10**10,
+            "skew_reject_seconds": 10**11,
+        }
+        context = McpContext(
+            paths=[self.life],
+            writable_path=self.life,
+            config=config,
+            remote_principal={
+                "id": "mcp-editor",
+                "role": "editor",
+                "scopes": ["write"],
+            },
+            remote_session={"session_id": "must-not-leak"},
+        )
+        result = mcp.call_tool(
+            "attachment_package",
+            {
+                "id": "t1",
+                "source": "./source",
+                "path": "./mcp-audited.zip",
+                "item_revision": mutation.read_text_snapshot(self.life).content_hash,
+                "attachment_revision": mutation.MISSING_HASH,
+                "transaction_id": "mcp-audit-1",
+                "client_time": "2026-07-25T03:00:00Z",
+            },
+            context,
+        )
+        self.assertEqual("package", result["action"])
+        with open(audit_path, encoding="utf-8") as handle:
+            event = json.loads(handle.readline())
+        self.assertEqual("mcp-editor", event["principal"])
+        self.assertEqual("active", event["detail"]["session"])
+        self.assertEqual("allowed", event["detail"]["clock"]["outcome"])
+        self.assertNotIn("must-not-leak", json.dumps(event))
 
     def test_remote_package_source_escape_is_rejected(self):
         outside = os.path.join(self.root, "..", "outside-source")

@@ -1,0 +1,30 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-update-review-gate
+    kind: ADDED
+    statement: >-
+      lifetxt server-update classifies the risk of a pending update before
+      touching backup, services, or code. A low-risk update proceeds
+      unattended under --yes as before; a high-impact one stops before any
+      mutation and prints a paste-friendly review block, unblocked only by
+      an --approve flag bound to the exact resolved target commit.
+    acceptance_criteria:
+      - "Risk classification (classify_risk) is a pure function of a diff summary (files with added/removed/deleted, commit messages), independently unit-testable with fixture data and no live git repository."
+      - "changed_file_count/changed_line_count/binary_file_count are always computed and reported, including in the --yes=False dry-run preview."
+      - "dist/schemas/ regenerated content is excluded from changed_line_count but still flagged via the schema/migration trigger category when touched."
+      - "Every trigger category (parser/model/serializer, config/workspace, atomic/mutation/transaction/archive, schema/migration, remote/auth, calendar/ICS, deployment files) has at least one test proving it fires and one proving an unrelated file does not."
+      - "Tracked file deletion and each of the breaking/security/migration commit-message keywords independently trigger review."
+      - "A diff with no matching trigger produces zero review reasons regardless of its size (commit/line counts are a reported signal, not a threshold)."
+      - "When any trigger fires and --approve is absent, server-update returns status=review_required with a review_block field, and touches no lock file, backup directory, or subprocess (systemctl/pip/etc.) at all."
+      - "--approve SHA succeeds only when SHA equals the freshly re-resolved target commit exactly; any mismatch (including no trigger having fired) raises step=approve_mismatch before any mutation."
+      - "--approve implies --yes at the CLI layer, so the review block's own approved_command line (which does not include --yes) is copy-pasteable verbatim."
+      - "The printed review block matches #260's specified LIFETXT_UPDATE_REVIEW_BEGIN/END format exactly, including an approved_command line naming the real --server-config path and the exact target SHA."
+    constraints:
+      - Trigger paths/keywords are fixed Python module constants, never read from --server-config, so no configuration edit can silently widen or bypass the gate.
+      - Must not add any flag that skips a fired trigger other than exact-SHA --approve (no --force/--skip-review).
+      - Must not persist review state between the review run and a later --approve run; approval is re-validated against the live-resolved target every time.
+      - Must not change #272's existing dry-run/--yes/failure-state behavior for an update that fires no trigger.
+    owner: Eruhitsuji
+
+open_questions: []

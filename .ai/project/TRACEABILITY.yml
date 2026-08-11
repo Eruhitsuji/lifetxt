@@ -3459,6 +3459,43 @@ traceability:
         noticed insecure code regardless of report thresholds.
       status: implemented
 
+    - requirement_id: req-server-update-review-gate
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/273
+      pull_request: null
+      changed_files_or_scope:
+        - Add risk classification (gather_diff_summary/classify_risk) and a pre-mutation high-impact review gate (--approve SHA) to `lifetxt server-update`
+        - lifetxt/server_update.py
+        - lifetxt/cli.py
+        - tests/test_server_update.py
+        - docs/en/cli.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - "tests/test_server_update.py -> 90 tests total, OK (skipped=1, no symlink privilege): diff numstat/name-status parsing, per-trigger-category classification (parser/model/serializer, config/workspace, atomic/mutation/transaction/archive, schema/migration, remote/auth, calendar/ICS, deployment files), tracked-deletion and breaking/security/migration keyword triggers, generated-bundle line-count exclusion, review-block formatting, and the full review-gate integration flow (no-risk pass-through, risk-without-approve stop, matching-approve proceed, stale-approve refusal, dry-run-still-previews)"
+        - python -m unittest tests.test_server_update tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_surface_runtime -> Ran 124 tests, OK
+        - 'live: real disposable bare-origin + checkout git repository -- a commit touching lifetxt/parser.py and contrib/systemd/lifetxt.service with a "security:" commit message produced the exact designed review block via a real `server-update --yes` run, with zero mutation'
+        - 'live: --approve <sha not matching the resolved target> refused with the exact designed message, checkout unchanged'
+        - 'live: --approve <matching target sha> proceeded past the gate -- checkout HEAD genuinely moved to the target commit via git merge --ff-only, then failed at the unrelated pip install step as expected'
+        - python -m lifetxt server-update --help -> renders correctly, including --approve
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - ruff format --check lifetxt tests scripts (pre-existing drift in 3 unrelated files confirmed present on origin/main already, not introduced by this change)
+        - ruff check lifetxt tests scripts -> All checks passed
+      release_or_deployment: null
+      notes: >-
+        Fourth and final implementation task of the ubuntu-server-deployment
+        epic (#260, decomposed into #270/#271/#272/#273). Landed in its own
+        PR after #272 (the core update flow) was independently reviewed and
+        merged separately, per the original decomposition's own reasoning.
+        Full change package at
+        .ai/project/changes/server-update-review-gate/, including a design.md
+        section transcribing the live disposable-git-repository verification.
+        Security/High assurance, matching cap-lifetxt-self-update's and
+        #272's own escalation basis; requires independent security review
+        and Merge Authority approval before merge to main. pull_request is
+        filled in once the pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -3359,7 +3359,7 @@ traceability:
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/260
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/270
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/274
       changed_files_or_scope:
         - Add the Ubuntu Server production deployment runbook
         - docs/deployment/ubuntu-server.md
@@ -3373,15 +3373,14 @@ traceability:
         (decomposed from #260 into #270/#271/#272/#273). English document
         only in this slice, matching the docs/design/ precedent for
         non-en/ja top-level documentation; Japanese translation recorded as
-        a follow-up candidate, not a gap in this entry. pull_request is
-        filled in once the integration branch's PR into main is opened.
+        a follow-up candidate, not a gap in this entry.
       status: implemented
 
     - requirement_id: req-ubuntu-server-deployment-examples
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/260
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/271
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/274
       changed_files_or_scope:
         - Add example systemd units, environment file, and an nginx reverse-proxy template
         - contrib/README.md
@@ -3400,15 +3399,13 @@ traceability:
         An Apache reverse-proxy example alongside the nginx one, and CI/
         packaging hooks that validate these example files, are recorded as
         explicit follow-up candidates on #260 rather than built here.
-        pull_request is filled in once the integration branch's PR into
-        main is opened.
       status: implemented
 
     - requirement_id: req-server-update-guarded-core-flow
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/260
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/272
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/274
       changed_files_or_scope:
         - Add `lifetxt server-update`, reusing `lifetxt update`'s git helpers, with lock/backup/service-stop/ff-only-merge/reinstall/sanity-check/hash-verification/integrity-checks/restart/health-check and documented failure-state handling
         - lifetxt/server_update.py
@@ -3439,8 +3436,7 @@ traceability:
         are unchanged, reused code. #273 (risk classification and a
         pre-mutation review/approval gate for high-impact updates) remains
         a separate, not-yet-implemented follow-up issue extending this same
-        capability. pull_request is filled in once the integration branch's
-        PR into main is opened.
+        capability.
       status: implemented
 
 required_chain:

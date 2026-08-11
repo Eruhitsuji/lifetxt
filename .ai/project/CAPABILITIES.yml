@@ -2589,7 +2589,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/271
       - https://github.com/Eruhitsuji/lifetxt/issues/272
       - https://github.com/Eruhitsuji/lifetxt/issues/273
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/274
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #260 was too large to implement directly (Task Decomposition Standard:

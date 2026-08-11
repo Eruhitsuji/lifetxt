@@ -299,6 +299,18 @@ Per #51:
 - `todo.md` remains the roadmap and the parking lot for ideas that are not yet
   actionable. It is not a task list and not a rules document.
 
+## Stable Release Stabilization
+
+The stable-release stabilization tracker is #283. During this phase,
+`.ai/project/STABLE_RELEASE.yml` is the repository-authoritative policy for the
+feature freeze, release-boundary classification, and exception path.
+
+This does not replace the existing task gates: GitHub Issues remain the source
+of truth for actionable work, and implementation must still not start from
+`status:inbox` or `status:blocked` issues. A feature-freeze exception is a
+reviewable issue or pull request decision, not a shortcut around security,
+migration, data, operations, release, or destructive-operation approvals.
+
 ## Design Principles
 
 Moved from `todo.md` by #54. These constrain what is acceptable, not what is

@@ -37,6 +37,58 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-stable-release-governance
+    name: Stable release governance
+    summary: >-
+      Repository-owned stable-release stabilization policy for #283, including
+      the feature-freeze start point, allowed stabilization change classes,
+      release-blocker versus post-stable classification, and the human-approved
+      exception path for genuinely necessary pre-stable feature work.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-stable-release-feature-freeze
+      - req-stable-release-support-matrix
+      - req-stable-release-gates
+    implementation_locations:
+      - .ai/project/STABLE_RELEASE.yml
+      - .ai/project/RULES.md
+      - .ai/project/CAPABILITIES.yml
+      - .ai/project/TRACEABILITY.yml
+    public_interfaces:
+      - .ai/project/STABLE_RELEASE.yml
+      - .ai/project/RULES.md
+    tests_or_evidence:
+      - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+      - python -m lifetxt check examples/minimal_life.txt
+      - '#284 acceptance-criteria mapping reviewed in the pull request'
+      - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
+      - '#286 release gates separately define RC entry and stable promotion criteria'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/283
+      - https://github.com/Eruhitsuji/lifetxt/issues/284
+      - https://github.com/Eruhitsuji/lifetxt/issues/285
+      - https://github.com/Eruhitsuji/lifetxt/issues/286
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/332
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      This capability deliberately extends existing project governance instead
+      of creating a second task-status source of truth. GitHub Issues and
+      status:* labels remain authoritative for actionable work. Later Phase 0
+      issues (#285, #286, #287) should reuse this boundary rather than
+      redefining feature-freeze rules.
+      #285 extends the same policy file with a support matrix that distinguishes
+      stable support, experimental surfaces, deferred filesystem classes, and
+      the minimum evidence required before release documentation can advertise a
+      surface as stable.
+      #286 adds the RC entry and stable promotion gates, including failed,
+      flaky, and stale required-check handling plus known-issue severity classes.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-local-test-compatibility
     name: Local test compatibility
     summary: Keep the local unittest suite runnable on the declared Python >=3.10 runtime, including Windows/PowerShell environments, without reducing the coverage that Linux CI executes.

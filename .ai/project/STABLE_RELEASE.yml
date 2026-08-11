@@ -424,6 +424,11 @@ stable_release:
             cleanup, backup copy, and restore-working-copy paths. This evidence
             is explicitly simulated subprocess termination, not physical
             power-loss evidence.
+          - >-
+            #301 verifies corrupted or missing journal metadata, recovery
+            artifacts, and backup manifests fail safely before recovery mutates
+            authoritative targets, with deterministic repeat attempts and
+            inspect output retained where possible.
       - id: p0-protected-recovery-evidence-authorization
         todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
         classification: stable_release_blocker

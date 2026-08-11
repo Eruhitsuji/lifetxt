@@ -637,6 +637,32 @@ traceability:
         platform-specific storage semantics.
       status: implemented
 
+    - requirement_id: req-corrupted-missing-recovery-artifact-safety
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/301
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/334
+      changed_files_or_scope:
+        - Add transaction journal tests for missing metadata versus missing payload artifacts
+        - Add recovery tests for corrupted after/before artifacts refusing resume and compensate before authoritative mutation
+        - Add backup restore tests for corrupted and missing integrity manifests
+        - Wrap missing recovery artifact and unreadable backup manifest failures in TransactionJournalError diagnostics
+        - lifetxt/transaction_journal.py
+        - tests/test_transaction_journal_v3.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_transaction_journal_v3 -> Ran 16 tests, OK
+      release_or_deployment: null
+      notes: >-
+        Standard assurance recovery-safety test hardening. Unsafe incomplete
+        evidence is refused before resume, compensate, or backup restore can
+        mutate authoritative targets; repeated resume failure on the same
+        corrupted artifact remains deterministic, and inspect remains useful
+        when journal metadata itself is still valid.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

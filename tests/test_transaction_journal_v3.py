@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -388,6 +389,178 @@ class TransactionJournalV3Tests(unittest.TestCase):
         removed = cleanup_terminal(self.journal_dir, older_than_days=0, force=True)
         self.assertEqual([result.journal_path], removed["removed"])
         self.assertFalse(os.path.exists(result.journal_path))
+
+    def test_missing_journal_metadata_is_distinct_from_missing_payload_artifact(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.missing-evidence",
+            journal_dir=self.journal_dir,
+        )
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            missing_metadata = json.load(handle)
+        missing_metadata.pop("state")
+        metadata_path = self.path("missing-state-journal.json")
+        with open(metadata_path, "w", encoding="utf-8") as handle:
+            json.dump(missing_metadata, handle)
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError, "missing state"
+        ):
+            inspect_journal(metadata_path)
+
+        report = inspect_journal(result.journal_path)
+        target = report["targets"][0]
+        before_path = os.path.join(
+            os.path.dirname(result.journal_path), target["before_artifact"]
+        )
+        with open(before_path, "rb") as handle:
+            mutation.atomic_write_bytes(path, handle.read())
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            recovery_record = json.load(handle)
+        recovery_record["state"] = "committing"
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(recovery_record, handle)
+        os.unlink(os.path.join(os.path.dirname(result.journal_path), "after-000.bin"))
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError, "Missing recovery artifact"
+        ):
+            resume(result.journal_path)
+        self.assertEqual("one\n", self.read(path))
+
+    def test_corrupted_recovery_artifacts_are_rejected_before_mutation(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.corrupt-artifact",
+            journal_dir=self.journal_dir,
+        )
+        report = inspect_journal(result.journal_path)
+        target = report["targets"][0]
+        tx_dir = os.path.dirname(result.journal_path)
+        before_path = os.path.join(tx_dir, target["before_artifact"])
+        after_path = os.path.join(tx_dir, target["after_artifact"])
+        with open(before_path, "rb") as handle:
+            mutation.atomic_write_bytes(path, handle.read())
+        with open(after_path, "wb") as handle:
+            handle.write(b"corrupted\n")
+        with open(result.journal_path, "r", encoding="utf-8") as handle:
+            recovery_record = json.load(handle)
+        recovery_record["state"] = "committing"
+        with open(result.journal_path, "w", encoding="utf-8") as handle:
+            json.dump(recovery_record, handle)
+
+        first_message = None
+        for _attempt in range(2):
+            with self.assertRaisesRegex(
+                transaction_journal.TransactionJournalError,
+                "Recovery artifact hash mismatch",
+            ) as caught:
+                resume(result.journal_path)
+            if first_message is None:
+                first_message = str(caught.exception)
+            else:
+                self.assertEqual(first_message, str(caught.exception))
+            self.assertEqual("one\n", self.read(path))
+
+        inspected = inspect_journal(result.journal_path)
+        self.assertTrue(inspected["recovery_required"])
+        self.assertEqual("before", inspected["observed_targets"][0]["relation"])
+        self.assertIn("resume", inspected["available_actions"])
+
+    def test_corrupted_compensation_artifact_keeps_committed_state_unchanged(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.corrupt-compensate",
+            journal_dir=self.journal_dir,
+        )
+        report = inspect_journal(result.journal_path)
+        before_path = os.path.join(
+            os.path.dirname(result.journal_path),
+            report["targets"][0]["before_artifact"],
+        )
+        with open(before_path, "wb") as handle:
+            handle.write(b"corrupted\n")
+
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError,
+            "Recovery artifact hash mismatch",
+        ):
+            compensate(result.journal_path)
+        self.assertEqual("ONE\n", self.read(path))
+
+    def test_corrupted_backup_manifest_is_rejected_before_restore_mutates_targets(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.corrupt-backup",
+            journal_dir=self.journal_dir,
+        )
+        backup_root = self.path("corrupt-backups")
+        backup = abandon_with_backup(result.journal_path, backup_root)
+        manifest = os.path.join(backup["backup_path"], "integrity-manifest.json")
+        with open(manifest, "a", encoding="utf-8") as handle:
+            handle.write("corrupted\n")
+
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError,
+            "Backup integrity verification failed",
+        ):
+            transaction_journal.restore_backup(
+                backup["backup_path"], action="compensate"
+            )
+        self.assertEqual("ONE\n", self.read(path))
+
+    def test_missing_backup_manifest_is_rejected_as_backup_integrity_failure(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.missing-backup-manifest",
+            journal_dir=self.journal_dir,
+        )
+        backup_root = self.path("missing-manifest-backups")
+        backup = abandon_with_backup(result.journal_path, backup_root)
+        os.unlink(os.path.join(backup["backup_path"], "integrity-manifest.json"))
+
+        with self.assertRaisesRegex(
+            transaction_journal.TransactionJournalError,
+            "Backup integrity verification failed",
+        ):
+            transaction_journal.restore_backup(
+                backup["backup_path"], action="compensate"
+            )
+        self.assertEqual("ONE\n", self.read(path))
+        shutil.rmtree(backup["backup_path"], ignore_errors=True)
 
 
 if __name__ == "__main__":

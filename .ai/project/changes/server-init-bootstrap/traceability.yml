@@ -1,0 +1,19 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-server-init-bootstrap
+    capability_id: cap-ubuntu-server-deployment
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/279
+    pull_request: null
+    tests_or_evidence:
+      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, uv installer selection, explicit systemd user requirement, generated server-update config, service wrapper, systemd unit, nginx artifact, and CLI JSON output.
+      - docs/en/cli.md and docs/deployment/ubuntu-server.md document the bootstrap command and boundaries.
+    release_or_deployment: null
+    status: proposed
+
+gaps:
+  - User-level/rootless systemd remains a follow-up candidate.
+  - Apache generation remains a follow-up candidate.
+  - Existing manual deployment adoption/repair remains a follow-up candidate.
+  - Deployment config schema/versioning remains a follow-up candidate.

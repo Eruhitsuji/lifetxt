@@ -3,6 +3,56 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "adapter": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "version"
+      ],
+      "type": "object"
+    },
+    "authorization": {
+      "additionalProperties": true,
+      "properties": {
+        "apply_requires_revision": {
+          "const": true
+        },
+        "direct_write_allowed": {
+          "const": false
+        },
+        "permission_model": {
+          "const": "local-user-invoked-proposal"
+        },
+        "required_permissions": {
+          "contains": {
+            "const": "write_source_via_revision_checked_apply"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "permission_model",
+        "required_permissions",
+        "direct_write_allowed",
+        "apply_requires_revision"
+      ],
+      "type": "object"
+    },
     "before_revision": {
       "pattern": "^(<missing>|[0-9a-f]{64})$",
       "type": "string"
@@ -19,6 +69,10 @@
       },
       "minItems": 1,
       "type": "array"
+    },
+    "contract_sha256": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
     },
     "created_at_utc": {
       "type": "string"
@@ -44,6 +98,41 @@
       "pattern": "^D-[0-9a-f]{12}$",
       "type": "string"
     },
+    "lifecycle": {
+      "additionalProperties": true,
+      "properties": {
+        "cancellation_behavior": {
+          "const": "abort_without_authoritative_write"
+        },
+        "process_timeout_seconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "proposal_retention": {
+          "enum": [
+            "persisted_if_proposal_path_supplied",
+            "not_persisted_without_proposal_path"
+          ]
+        },
+        "temporary_cleanup": {
+          "enum": [
+            "delete_after_prepare",
+            "retained_for_review"
+          ]
+        },
+        "timeout_behavior": {
+          "const": "abort_without_authoritative_write"
+        }
+      },
+      "required": [
+        "process_timeout_seconds",
+        "timeout_behavior",
+        "cancellation_behavior",
+        "proposal_retention",
+        "temporary_cleanup"
+      ],
+      "type": "object"
+    },
     "operation": {
       "type": "string"
     },
@@ -53,7 +142,73 @@
     "proposal_version": {
       "const": 1
     },
+    "provenance": {
+      "additionalProperties": true,
+      "properties": {
+        "command_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "prepared_by": {
+          "const": "lifetxt"
+        },
+        "source_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "source_revision": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "temporary_copy": {
+          "const": true
+        }
+      },
+      "required": [
+        "prepared_by",
+        "command_sha256",
+        "source_revision",
+        "source_path_sha256",
+        "temporary_copy"
+      ],
+      "type": "object"
+    },
     "result": {
+      "type": "object"
+    },
+    "sandbox": {
+      "additionalProperties": true,
+      "properties": {
+        "authoritative_path_exposed_to_adapter": {
+          "const": false
+        },
+        "authoritative_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "model": {
+          "const": "private_temporary_copy"
+        },
+        "private_temporary_copy": {
+          "const": true
+        },
+        "temporary_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "temporary_root_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "private_temporary_copy",
+        "authoritative_path_exposed_to_adapter",
+        "authoritative_path_sha256",
+        "temporary_path_sha256",
+        "temporary_root_sha256"
+      ],
       "type": "object"
     },
     "state": {
@@ -77,6 +232,12 @@
     "operation",
     "path",
     "command",
+    "adapter",
+    "provenance",
+    "authorization",
+    "lifecycle",
+    "sandbox",
+    "contract_sha256",
     "before_revision",
     "edited_revision",
     "diff_sha256",

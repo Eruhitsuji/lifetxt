@@ -3679,6 +3679,121 @@ traceability:
         child issue complete.
       status: implemented
 
+    - requirement_id: req-stable-release-roadmap-classification
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/287
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Classify every current P0 todo.md bullet against the stable-release boundary
+        - Classify Format 1.0 public compatibility work from P1
+        - Link actionable blockers to child issues #288-#324
+        - Record post-stable/deferred P1 groups without changing todo.md task status
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - python -m lifetxt check examples/minimal_life.txt
+        - '#287 classification completeness check covers 10 P0 entries and 5 Format 1.0 compatibility entries'
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This classifies roadmap work for release
+        planning only; GitHub Issues remain authoritative for task execution and
+        status. No runtime behavior or todo.md task status is changed.
+      status: implemented
+
+    - requirement_id: req-delegated-mutation-release-scope
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/293
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Inventory delegated and externally mediated writable surfaces
+        - Classify stable writable, experimental, read-only/disabled, and deferred surfaces
+        - Link unpromoted writable adapters to follow-up verification issues
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - delegated mutation inventory completeness check covers 8 entries and verifies stable_writable entries have evidence
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This is a release-boundary inventory only;
+        it does not enable new adapters, change runtime behavior, or advertise
+        unverified writable support. Existing CLI delegated proposals and
+        editor sessions are distinguished from MCP, Remote, Web, git, provider,
+        and future plugin surfaces, which remain experimental or deferred until
+        their linked evidence issues close.
+      status: implemented
+
+    - requirement_id: req-delegated-mutation-provenance-permission-contract
+      capability_id: cap-delegated-mutation-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/294
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Add adapter identity, provenance, authorization, and contract hash metadata to delegated proposals
+        - Validate metadata on prepare/read/apply/reject
+        - Preserve temporary-copy isolation and revision-checked authoritative apply
+        - Update delegated proposal public schema and generated bundle
+        - lifetxt/delegated_mutation.py
+        - lifetxt/schema_extensions_v13.py
+        - dist/schemas/delegated-mutation-proposal-v1.schema.json
+        - tests/test_delegated_mutation_v6.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_delegated_mutation_v6 and delegated CLI smoke -> Ran 11 tests, OK
+        - tests.test_schema_extensions_v2 -> included in targeted schema run
+        - ruff check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - ruff format --check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - python -m lifetxt check examples/minimal_life.txt
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because delegated mutation metadata controls which
+        adapter-originated writes may be treated as stable. The change does not
+        enable new adapters or provider side effects; it hardens the existing
+        CLI delegated proposal contract by rejecting missing, malformed, or
+        tampered adapter/provenance/authorization metadata and by retaining
+        proposal and source revision preconditions.
+      status: implemented
+
+    - requirement_id: req-delegated-mutation-lifecycle-retention-sandbox-policy
+      capability_id: cap-delegated-mutation-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/295
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Add lifecycle timeout, cancellation, retention, and cleanup metadata to delegated proposals
+        - Add private-temporary-copy sandbox metadata and validation
+        - Reject unsupported lifecycle or sandbox claims
+        - Cover timeout/no-write, cleanup, retained proposal restart, and invalid sandbox metadata
+        - lifetxt/delegated_mutation.py
+        - lifetxt/schema_extensions_v13.py
+        - dist/schemas/delegated-mutation-proposal-v1.schema.json
+        - tests/test_delegated_mutation_v6.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_delegated_mutation_v6 and delegated CLI/schema smoke -> Ran 17 tests, OK
+        - ruff check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - ruff format --check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because delegated process lifecycle and sandbox claims
+        bound whether external adapter writes can be stable-supported. The
+        implementation reuses the existing private temporary copy and timeout
+        mechanics, makes them explicit in the proposal contract, and verifies
+        timeout/cancellation paths do not mutate the authoritative file.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

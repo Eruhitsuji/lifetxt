@@ -50,6 +50,8 @@ capabilities:
       - req-stable-release-feature-freeze
       - req-stable-release-support-matrix
       - req-stable-release-gates
+      - req-stable-release-roadmap-classification
+      - req-delegated-mutation-release-scope
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -64,13 +66,18 @@ capabilities:
       - '#284 acceptance-criteria mapping reviewed in the pull request'
       - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
       - '#286 release gates separately define RC entry and stable promotion criteria'
+      - '#287 roadmap classification maps current P0 and Format 1.0 compatibility work to release severity and child issues'
+      - '#293 delegated mutation inventory classifies stable writable, experimental, read-only/disabled, and deferred adapter surfaces'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
       - https://github.com/Eruhitsuji/lifetxt/issues/285
       - https://github.com/Eruhitsuji/lifetxt/issues/286
+      - https://github.com/Eruhitsuji/lifetxt/issues/287
+      - https://github.com/Eruhitsuji/lifetxt/issues/293
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
+      - https://github.com/Eruhitsuji/lifetxt/pull/333
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       This capability deliberately extends existing project governance instead
@@ -84,6 +91,15 @@ capabilities:
       surface as stable.
       #286 adds the RC entry and stable promotion gates, including failed,
       flaky, and stale required-check handling plus known-issue severity classes.
+      #287 classifies the current P0 roadmap and public-compatibility Format
+      1.0 work against the stable-release boundary without turning todo.md into
+      a task-status source.
+      #293 freezes the delegated and externally mediated writable release scope:
+      the CLI proposal contract and existing editor-session contract are the
+      only stable-writable entries, while MCP write tools, Remote ticket writes,
+      Web writes, Web git routes, provider side effects, and future plugin
+      adapters remain experimental or deferred until their linked verification
+      issues close.
     replacement:
       replaces: []
       replaced_by: null
@@ -144,6 +160,67 @@ capabilities:
       find_spec("httpx"), which would have silently skipped their Web tests
       in the newly-clean [web,dev] environment; fixed to accept either
       package, since starlette.testclient itself accepts either.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-delegated-mutation-contract
+    name: Delegated mutation proposal contract
+    summary: >-
+      Restart-safe delegated mutation proposal records that isolate external
+      adapters to temporary copies, validate life.txt output, bind adapter
+      identity/provenance/authorization metadata with a contract hash, and
+      apply changes only through revision-checked authoritative writes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-delegated-mutation-provenance-permission-contract
+      - req-delegated-mutation-lifecycle-retention-sandbox-policy
+    implementation_locations:
+      - lifetxt/delegated_mutation.py
+      - lifetxt/schema_extensions_v13.py
+      - dist/schemas/delegated-mutation-proposal-v1.schema.json
+      - tests/test_delegated_mutation_v6.py
+      - tests/test_p0_cli_v6.py
+      - .ai/project/STABLE_RELEASE.yml
+      - .ai/project/CAPABILITIES.yml
+      - .ai/project/TRACEABILITY.yml
+    public_interfaces:
+      - lifetxt safety delegated prepare
+      - lifetxt safety delegated inspect
+      - lifetxt safety delegated apply
+      - lifetxt safety delegated reject
+      - dist/schemas/delegated-mutation-proposal-v1.schema.json
+    tests_or_evidence:
+      - tests.test_delegated_mutation_v6
+      - tests.test_p0_cli_v6.P0CliV6Tests.test_delegated_prepare_inspect_and_apply_cli
+      - tests.test_schema_extensions_v2
+      - python -m lifetxt check examples/minimal_life.txt
+      - ruff check/format on delegated mutation contract files
+      - git diff --check
+      - '#295 timeout, cleanup, retained proposal restart, and unsupported sandbox metadata tests'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/293
+      - https://github.com/Eruhitsuji/lifetxt/issues/294
+      - https://github.com/Eruhitsuji/lifetxt/issues/295
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/333
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #294 extends the existing proposal v1 record instead of introducing a
+      parallel adapter framework. The delegated process still edits only a
+      temporary copy. Stable metadata now records adapter id/kind/version,
+      lifetxt-generated provenance, required permission markers,
+      direct_write_allowed=false, apply_requires_revision=true, and a
+      contract_sha256 over the stable proposal contract fields. Apply/reject
+      update the contract hash after state changes, preserving restart-safe
+      proposal-file semantics and proposal-file revision checks.
+      #295 extends the same contract with process timeout/cancellation policy,
+      deterministic proposal-retention and temporary-cleanup metadata, and
+      private-temporary-copy sandbox metadata. Timeout and cancellation are
+      defined as abort-without-authoritative-write behavior; unsupported
+      sandbox claims fail validation.
     replacement:
       replaces: []
       replaced_by: null

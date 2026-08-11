@@ -72,6 +72,7 @@ capabilities:
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/329
       - https://github.com/Eruhitsuji/lifetxt/pull/330
+      - https://github.com/Eruhitsuji/lifetxt/pull/331
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       This capability deliberately extends existing project governance instead

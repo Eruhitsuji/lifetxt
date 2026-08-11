@@ -4006,6 +4006,36 @@ traceability:
         proposal and source revision preconditions.
       status: implemented
 
+    - requirement_id: req-end-to-end-recovery-escalation-drill
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/309
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/337
+      changed_files_or_scope:
+        - Run an isolated controlled recovery escalation drill using temporary data
+        - Exercise inspect and safe compensate for an after-state transaction
+        - Exercise diverged-target refusal, abandon backup handoff, and restore inspection
+        - Preserve immutable backup evidence and keep the working target separate
+        - Document ownership, handoff, evidence, and ambiguity handling
+        - tests/test_transaction_journal_v3.py
+        - docs/en/transaction-recovery-and-strict-timers.md
+        - docs/ja/delegated-remote-attachments-and-recovery.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - isolated end-to-end journal drill with safe compensation and diverged escalation
+        - backup manifest verification and original-backup-unchanged assertions
+        - ruff check and ruff format --check for changed Python files
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because this validates the operator decision path and
+        handoff boundary rather than only individual recovery primitives. The
+        scenario uses temporary data and bounds diverged-target restore to
+        immutable evidence inspection.
+      status: implemented
+
     - requirement_id: req-delegated-mutation-lifecycle-retention-sandbox-policy
       capability_id: cap-delegated-mutation-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283

@@ -156,6 +156,20 @@ credentials, tokens, and raw absolute paths are prohibited. The export includes
 its field policy so an incident reviewer can distinguish operator-local journal
 data from a shareable diagnostic bundle.
 
+## 6.1 End-to-end escalation drill
+
+Run recovery drills in a temporary workspace with a named incident owner and a
+separate handoff reviewer. First inspect the journal and compare every target to
+its recorded before/after hash. Use `resume` or `compensate` only when all targets
+are safe. A diverged target removes those actions; preserve the immutable journal,
+create a backup with `abandon --backup-dir`, and use `restore --action inspect`
+to verify the backup before any separate working-copy recovery.
+
+The drill records the transaction ID, journal revision, backup manifest hash,
+operator decision, handoff owner, and evidence location. It never uses production
+data. A runbook ambiguity is recorded as a blocking follow-up issue instead of
+being resolved by an undocumented operator assumption.
+
 ## 7. Strict timer revision contract
 
 Timer operations can touch both timer JSON state and life.txt. Start and stop therefore use two revisions. Pause, resume, and cancel use the timer-state revision.

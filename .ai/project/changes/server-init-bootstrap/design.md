@@ -22,6 +22,8 @@ present.
 
 - Dry-run is the default and only inspects the filesystem to classify planned
   paths.
+- Source and data roots are normalized and refused when equal or nested inside
+  each other.
 - `--yes` creates missing directories/files and runs planned structured argv
   commands. It does not overwrite differing existing files.
 - Generated files use exclusive create (`O_CREAT|O_EXCL`) so a late-created
@@ -33,6 +35,9 @@ present.
   `is-active`, `stop`, and `start` on the configured lifetxt units.
 - Nginx output keeps placeholder host/certificate values and proxies only to
   loopback.
+- Health verification is included in the apply plan only when explicitly
+  configured or when the same plan starts services; the generated
+  `server-update.json` still carries the default health URL for future updates.
 
 ## Alternatives
 

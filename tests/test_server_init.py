@@ -151,6 +151,30 @@ class ServerInitTests(unittest.TestCase):
             with self.assertRaisesRegex(server_init.ServerInitError, "service_user"):
                 server_init.load_config(_write_json(tmp, data))
 
+    def test_refuses_data_root_inside_install_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = _config(
+                tmp,
+                install_root=os.path.join(tmp, "src"),
+                data_root=os.path.join(tmp, "src", "data"),
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "contain"):
+                server_init.load_config(_write_json(tmp, data))
+
+    def test_health_check_runs_only_when_requested_or_service_started(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            report = server_init.run_server_init(config, yes=False)
+            self.assertFalse(any(step["kind"] == "health" for step in report["steps"]))
+
+            start_config = server_init.load_config(
+                _write_json(tmp, _config(tmp, systemd={"start": True}))
+            )
+            start_report = server_init.run_server_init(start_config, yes=False)
+            self.assertTrue(
+                any(step["kind"] == "health" for step in start_report["steps"])
+            )
+
     def test_cli_json_dry_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_path = _write_json(tmp, _config(tmp))

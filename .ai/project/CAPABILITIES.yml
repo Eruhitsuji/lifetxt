@@ -2609,7 +2609,7 @@ capabilities:
       - server-update config: validation_commands
       - server-init config: install_root, data_root, python, installer, extras, service_user, service_group, web, calendar_sync, systemd, service_control, reverse_proxy
     tests_or_evidence:
-      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, and CLI JSON output.
+      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, source/data root overlap refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, health-check planning, and CLI JSON output.
       - tests/test_server_update.py (conda-pip coverage added after the initial #277 slice: explicit name/prefix environment selectors, setup/reinstall through `conda run`, and the same environment used for sanity import)
       - tests/test_server_update.py (100 tests: prior guarded-update/review-gate coverage plus uv reinstall, argv-only hook validation, per-check targets/config/workspace, service preflight failure, structured service command, validation failure fail-safe, and dry-run/review install-plan visibility)
       - tests/test_server_update.py (90 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, the full apply path including every documented failure state, diff parsing, per-trigger-category risk classification, review-block formatting, and the review-gate/--approve integration flow)

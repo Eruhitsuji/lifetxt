@@ -2535,11 +2535,98 @@ capabilities:
       documented in docs/en|ja/projects.md and design.md's Security Review
       Finding after this was found by /security-review during
       implementation (original docs suggested a "share it" review/handoff
-      workflow that the mechanism does not actually protect). #183 itself
-      stays open: its own root-cause investigation goals are separate and
-      unresolved by this change, which implements only the "reviewable
-      plan workflow" item todo.md's P1 Project and Portfolio Management
-      section requests.
+      workflow that the mechanism does not actually protect). #183's own
+      root-cause investigation goals were separate from and unresolved by
+      this change, which implements only the "reviewable plan workflow"
+      item todo.md's P1 Project and Portfolio Management section requests;
+      #183 was later closed at its evidence ceiling (root cause unprovable,
+      recovery and preventive follow-up complete) once this capability had
+      shipped -- see its closing comment for the final disposition.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-ubuntu-server-deployment
+    name: Ubuntu Server production deployment reference and guarded update
+    summary: >-
+      A repository-owned, placeholder-only reference for running lifetxt
+      continuously on Ubuntu Server (systemd units, reverse-proxy example,
+      backup/restore/validation procedures), plus `lifetxt server-update`: a
+      guarded production-update CLI command wrapping `lifetxt update`'s
+      existing git fast-forward logic with backup, service stop/start,
+      dependency reinstall, pre/post-update data-hash verification, and
+      configurable integrity checks -- all behind a single-instance lock,
+      dry-run by default.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-ubuntu-server-deployment-runbook
+      - req-ubuntu-server-deployment-examples
+      - req-server-update-guarded-core-flow
+    implementation_locations:
+      - docs/deployment/ubuntu-server.md
+      - contrib/README.md
+      - contrib/systemd/lifetxt.service
+      - contrib/systemd/lifetxt-sync-ics.service
+      - contrib/systemd/lifetxt-sync-ics.timer
+      - contrib/systemd/lifetxt.env.example
+      - contrib/nginx/lifetxt.conf.example
+      - lifetxt/server_update.py
+      - lifetxt/cli.py
+      - tests/test_server_update.py
+      - config/release/clock-boundary-baseline-v1.json
+    public_interfaces:
+      - lifetxt server-update --server-config PATH [--yes] [--format text|json]
+      - lifetxt.server_update.run_server_update
+      - lifetxt.server_update.load_config
+    tests_or_evidence:
+      - tests/test_server_update.py (41 tests: config loading/validation, hashing, backup, locking, health check, dry-run, preflight refusals, and the full apply path including every documented failure state)
+      - python -m unittest tests.test_server_update tests.test_lifetxt.LifeTxtUpdateCommandCliTests tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation -> Ran 75 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2252 tests, OK (skipped=4)'
+      - python -m lifetxt server-update --help -> renders correctly
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check lifetxt tests scripts (pre-existing drift in 3 unrelated files confirmed present on origin/main already, not introduced by this change)
+      - ruff check lifetxt tests scripts -> All checks passed
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/260
+      - https://github.com/Eruhitsuji/lifetxt/issues/270
+      - https://github.com/Eruhitsuji/lifetxt/issues/271
+      - https://github.com/Eruhitsuji/lifetxt/issues/272
+      - https://github.com/Eruhitsuji/lifetxt/issues/273
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/274
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #260 was too large to implement directly (Task Decomposition Standard:
+      L/XL must be decomposed) and was split into an epic (#260) plus four
+      sub-issues; this entry covers #270 (runbook), #271 (systemd/nginx
+      examples), and #272 (the guarded core update flow) together, since
+      they are one coherent capability landing in the same batch. #273
+      (risk classification and a pre-mutation review/approval gate for
+      high-impact updates) is a planned, not-yet-implemented extension of
+      this same capability -- `server-update` today runs its full flow
+      unconditionally once invoked with --yes, with no risk-based stop
+      point. `command_server_update` reuses `command_update`'s git helpers
+      (`_run_git_for_update`, `_lifetxt_install_root`,
+      `_reject_option_like_git_arg`, `_git_commit_summary`,
+      `_github_latest_release_or_tag`) via a lazy import
+      (`server_update._git_helpers`) rather than reimplementing fetch/
+      fast-forward logic, per #260's own explicit preference for a Python
+      command over a shell script wrapper. Deployment config
+      (`--server-config PATH`) is a separate JSON file from the
+      application's own `.lifetxt.json`/`--config`, since it describes the
+      deployment (paths, services, backup policy) rather than workspace
+      content. Security/High assurance, matching `cap-lifetxt-self-update`'s
+      escalation basis (production git/service mutation automation);
+      requires independent security review and Merge Authority approval
+      before merge to main. Adding `datetime.now` to
+      config/release/clock-boundary-baseline-v1.json's allowed list
+      (classification `operational-recovery`, matching
+      `transaction_journal.py`'s existing entry) was required by the
+      pre-existing `tests.test_clock_contract_v4`/`tests.test_release_policy`
+      gate: the backup-directory timestamp is recovery-evidence naming, not
+      a life.txt workflow date choice.
     replacement:
       replaces: []
       replaced_by: null

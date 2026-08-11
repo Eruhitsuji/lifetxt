@@ -2772,6 +2772,40 @@ def build_parser():
     )
     update_cmd.set_defaults(func=command_update)
 
+    server_update_cmd = subparsers.add_parser(
+        "server-update",
+        help=(
+            "Guarded production update for a systemd-managed install: "
+            "backup, service stop/start, reinstall, hash/integrity "
+            "verification, health check. See docs/deployment/ubuntu-server.md."
+        ),
+    )
+    server_update_cmd.add_argument(
+        "--server-config",
+        metavar="PATH",
+        required=True,
+        help=(
+            "Deployment config JSON file (distinct from the global "
+            "--config application config.json) naming the target python "
+            "environment, backup paths, services, and integrity checks."
+        ),
+    )
+    server_update_cmd.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Actually apply the update. Without this, server-update only "
+            "fetches and reports what would happen."
+        ),
+    )
+    server_update_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    server_update_cmd.set_defaults(func=command_server_update)
+
     assign_cmd = subparsers.add_parser(
         "assign",
         help="Change the assignee: on an existing item.",
@@ -7078,9 +7112,11 @@ def _git_commit_summary(
 def command_update(args):
     """Fast-forward the running lifetxt install's git checkout.
 
-    Security/High: this is the only lifetxt command that mutates the git
-    working tree the running install lives in, and the project has no PyPI
-    distribution, so this is git-based rather than a package-manager update.
+    Security/High: this and `server-update` (`command_server_update`, which
+    reuses this function's git helpers rather than reimplementing them) are
+    the only lifetxt commands that mutate the git working tree the running
+    install lives in. The project has no PyPI distribution, so this is
+    git-based rather than a package-manager update.
 
     Safety rails, all fail-loud (raise ValueError, never silent):
       - Refuses when the install is not inside a git working tree.
@@ -7249,6 +7285,53 @@ def command_update(args):
     message_lines.extend(_commit_lines())
     emit("updated", "\n".join(message_lines))
     return 0
+
+
+#: `server-update` report statuses that represent a completed, non-broken
+#: run. Everything else (including a validated-but-incompletely-restarted
+#: update) exits non-zero so cron/systemd wrappers notice.
+_SERVER_UPDATE_SUCCESS_STATUSES = frozenset(
+    ("up_to_date", "update_available_dry_run", "updated")
+)
+
+
+def command_server_update(args):
+    """Guarded update flow for a systemd-managed production install.
+
+    Security/High: see `lifetxt.server_update` for the full design. This
+    function only loads the deployment config, calls the orchestrator, and
+    formats the result -- it holds no update logic of its own.
+    """
+    from .server_update import ServerUpdateError, load_config, run_server_update
+
+    config_path = getattr(args, "server_config", None)
+    if not config_path:
+        raise ValueError(
+            "server-update requires --server-config PATH (a deployment "
+            "config distinct from --config's application config.json; see "
+            "docs/deployment/ubuntu-server.md)."
+        )
+
+    fmt = getattr(args, "format", "text")
+
+    def render(report):
+        if fmt == "json":
+            write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, (report.get("message") or "") + "\n")
+
+    try:
+        config = load_config(config_path)
+        report = run_server_update(config, yes=getattr(args, "yes", False))
+    except ServerUpdateError as exc:
+        report = exc.report or OrderedDict(
+            [("status", "failed"), ("step", exc.step), ("message", str(exc))]
+        )
+        render(report)
+        return 1
+
+    render(report)
+    return 0 if report.get("status") in _SERVER_UPDATE_SUCCESS_STATUSES else 1
 
 
 def command_doctor(args):

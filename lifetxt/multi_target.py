@@ -148,7 +148,7 @@ def apply_multi_target(
                     index=index,
                     operation=operation,
                 )
-                _commit_staged(row)
+                _commit_staged(row, operation)
                 fault_point(
                     "after_target_commit",
                     path=row["plan"].path,
@@ -408,22 +408,29 @@ def _snapshot(plan):
     return BytesSnapshot(plan.path, data, mutation.hash_bytes(data), True)
 
 
-def _commit_staged(row):
+def _commit_staged(row, operation):
     if not row["changed"]:
         return
     plan = row["plan"]
     if plan.delete:
+        from .transaction_policy import fault_point
+
+        fault_point("before_target_delete", path=plan.path, operation=operation)
         try:
             os.unlink(plan.path)
         except FileNotFoundError:
             pass
         _fsync_parent(plan.path)
+        fault_point("after_target_delete", path=plan.path, operation=operation)
     else:
         mutation.atomic_write_bytes(plan.path, row["replacement_bytes"])
 
 
 def _verify_staged(row, operation):
     plan = row["plan"]
+    from .transaction_policy import fault_point
+
+    fault_point("before_target_verify", path=plan.path, operation=operation)
     latest = _snapshot(plan)
     if latest.content_hash != row["after_hash"]:
         raise MutationConflict(
@@ -432,6 +439,7 @@ def _verify_staged(row, operation):
             latest.content_hash,
             operation=operation + ".verification",
         )
+    fault_point("after_target_verify", path=plan.path, operation=operation)
 
 
 def _compensate(committed, journal_handle=None):
@@ -457,18 +465,42 @@ def _compensate(committed, journal_handle=None):
                     )
                 else:
                     payload = before.data
+                from .transaction_policy import fault_point
+
+                fault_point(
+                    "before_compensation_target_write",
+                    path=plan.path,
+                    operation="multi_target.compensate",
+                )
                 mutation.atomic_write_bytes(plan.path, payload)
+                fault_point(
+                    "after_compensation_target_write",
+                    path=plan.path,
+                    operation="multi_target.compensate",
+                )
             else:
                 try:
                     os.unlink(plan.path)
                 except FileNotFoundError:
                     pass
                 _fsync_parent(plan.path)
+            from .transaction_policy import fault_point
+
+            fault_point(
+                "before_compensation_verify",
+                path=plan.path,
+                operation="multi_target.compensate",
+            )
             restored = _snapshot(plan)
             if restored.content_hash != before.content_hash:
                 raise MultiTargetError(
                     "Compensation verification failed for %s." % plan.path
                 )
+            fault_point(
+                "after_compensation_verify",
+                path=plan.path,
+                operation="multi_target.compensate",
+            )
             if journal_handle is not None and index is not None:
                 journal_handle.mark_target(index, compensation_state="verified")
         except Exception as exc:

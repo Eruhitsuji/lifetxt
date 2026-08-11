@@ -469,7 +469,9 @@ def abandon_with_backup(path, backup_dir, now=None):
         raise TransactionJournalError(
             "Backup destination already exists: %s" % destination
         )
+    fault_point("before_backup_copy", path=path, backup_path=destination)
     shutil.copytree(journal.directory, destination)
+    fault_point("after_backup_copy", path=path, backup_path=destination)
     manifest_path, manifest = write_integrity_manifest(destination)
     _fsync_tree(destination)
     journal.set_state(
@@ -714,7 +716,13 @@ def restore_backup(
         raise TransactionJournalError(
             "Restore working directory already exists: %s" % destination
         )
+    fault_point(
+        "before_restore_working_copy", backup_dir=source, working_dir=destination
+    )
     shutil.copytree(source, destination)
+    fault_point(
+        "after_restore_working_copy", backup_dir=source, working_dir=destination
+    )
     manifest_path = os.path.join(destination, "integrity-manifest.json")
     try:
         os.unlink(manifest_path)

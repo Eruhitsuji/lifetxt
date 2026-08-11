@@ -19,6 +19,7 @@ current grammar of `life.txt`.
 - [Japanese editor support guide](./docs/ja/editor.md)
 - [English format specification](./docs/en/life_txt_format_spec.md)
 - [Japanese format specification](./docs/ja/life_txt_format_spec.md)
+- [Ubuntu Server production deployment runbook](./docs/deployment/ubuntu-server.md)
 
 Use the format specification for file grammar and key semantics. Use the CLI
 guide for command compatibility, filters, output formats, and conversion rules.

@@ -151,6 +151,21 @@ class ServerInitTests(unittest.TestCase):
             with self.assertRaisesRegex(server_init.ServerInitError, "service_user"):
                 server_init.load_config(_write_json(tmp, data))
 
+    def test_rejects_generated_unit_and_sudoers_injection_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad_user = _config(tmp, service_user="lifetxt\nroot")
+            with self.assertRaisesRegex(server_init.ServerInitError, "service_user"):
+                server_init.load_config(_write_json(tmp, bad_user))
+
+            bad_wrapper = _config(
+                tmp,
+                service_control={
+                    "wrapper_path": os.path.join(tmp, "bad path", "wrapper")
+                },
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "wrapper_path"):
+                server_init.load_config(_write_json(tmp, bad_wrapper))
+
     def test_refuses_data_root_inside_install_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             data = _config(

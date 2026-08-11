@@ -7,7 +7,7 @@ links:
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/279
     pull_request: null
     tests_or_evidence:
-      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, uv installer selection, explicit systemd user requirement, source/data root overlap refusal, generated server-update config, service wrapper, systemd unit, nginx artifact, health-check planning, and CLI JSON output.
+      - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, uv installer selection, explicit systemd user requirement, generated unit/sudoers injection-value refusal, source/data root overlap refusal, generated server-update config, service wrapper, systemd unit, nginx artifact, health-check planning, and CLI JSON output.
       - docs/en/cli.md and docs/deployment/ubuntu-server.md document the bootstrap command and boundaries.
     release_or_deployment: null
     status: proposed

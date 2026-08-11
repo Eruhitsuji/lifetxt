@@ -8,6 +8,7 @@ existing files by default.
 
 import json
 import os
+import re
 from collections import OrderedDict
 
 from . import server_update
@@ -62,6 +63,8 @@ DEFAULT_CONFIG = {
     "validation_commands": [],
     "health_url": None,
 }
+
+_POSIX_ACCOUNT_RE = re.compile(r"^[a-z_][a-z0-9_-]*[$]?$")
 
 
 def load_config(path):
@@ -121,6 +124,35 @@ def _validate_config(config, source_path):
             % source_path,
             step="load_config",
         )
+    if config.get("service_user"):
+        _validate_posix_account(config["service_user"], "service_user", source_path)
+    if config.get("service_group"):
+        _validate_posix_account(config["service_group"], "service_group", source_path)
+    if config["service_control"].get("sudo_user"):
+        _validate_posix_account(
+            config["service_control"]["sudo_user"],
+            "service_control.sudo_user",
+            source_path,
+        )
+    _validate_optional_safe_path(
+        config["systemd"].get("unit_dir"), "systemd.unit_dir", source_path
+    )
+    _validate_optional_safe_path(
+        config["reverse_proxy"].get("nginx_config_path"),
+        "reverse_proxy.nginx_config_path",
+        source_path,
+    )
+    if config["service_control"].get("enabled"):
+        _validate_required_absolute_nowhitespace_path(
+            config["service_control"].get("wrapper_path"),
+            "service_control.wrapper_path",
+            source_path,
+        )
+        _validate_required_absolute_nowhitespace_path(
+            config["service_control"].get("sudoers_path"),
+            "service_control.sudoers_path",
+            source_path,
+        )
     if config["reverse_proxy"].get("backend") not in ("none", "nginx"):
         raise ServerInitError(
             'Config %s: reverse_proxy.backend must be "none" or "nginx".' % source_path,
@@ -132,6 +164,49 @@ def _validate_config(config, source_path):
     ):
         raise ServerInitError(
             "Config %s: extras must be a JSON array of strings." % source_path,
+            step="load_config",
+        )
+
+
+def _validate_single_line(value, key, source_path):
+    if any(ch in value for ch in "\r\n\0"):
+        raise ServerInitError(
+            "Config %s: %s must not contain control characters." % (source_path, key),
+            step="load_config",
+        )
+
+
+def _validate_posix_account(value, key, source_path):
+    _validate_single_line(value, key, source_path)
+    if not _POSIX_ACCOUNT_RE.match(value):
+        raise ServerInitError(
+            "Config %s: %s must be an explicit POSIX account/group name."
+            % (source_path, key),
+            step="load_config",
+        )
+
+
+def _validate_optional_safe_path(value, key, source_path):
+    if value is None:
+        return
+    if not isinstance(value, str) or not value:
+        raise ServerInitError(
+            "Config %s: %s must be a non-empty string." % (source_path, key),
+            step="load_config",
+        )
+    _validate_single_line(value, key, source_path)
+
+
+def _validate_required_absolute_nowhitespace_path(value, key, source_path):
+    _validate_optional_safe_path(value, key, source_path)
+    if not os.path.isabs(value):
+        raise ServerInitError(
+            "Config %s: %s must be an absolute path." % (source_path, key),
+            step="load_config",
+        )
+    if any(ch.isspace() for ch in value):
+        raise ServerInitError(
+            "Config %s: %s must not contain whitespace." % (source_path, key),
             step="load_config",
         )
 

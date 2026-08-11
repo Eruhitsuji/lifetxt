@@ -19,4 +19,6 @@ The returned `health_check` object records:
 
 Dry-run reports include `would_check_health_url`, `would_use_health_timeout`, `would_use_health_ready_timeout`, and `would_use_health_retry_interval`.
 
+`health_retry_interval` is clamped to a small positive floor before retrying so an accidental zero value cannot create a tight request loop during the readiness window.
+
 Security boundary: readiness retry performs repeated HTTP reads and sleeps only. It does not introduce additional git commands, package installs, service actions, file writes, or data rollback.

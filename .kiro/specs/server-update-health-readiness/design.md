@@ -137,7 +137,7 @@ def wait_for_health(
 
 - A failed final health result remains non-raising and maps to `validated_health_check_failed`.
 - Restart failures short-circuit before health retry and remain `validated_restart_incomplete`.
-- Invalid or negative timing config is normalized conservatively by clamping to non-negative floats.
+- Invalid or negative timing config is normalized conservatively; retry interval has a small positive floor so a zero value cannot create a tight retry loop.
 
 ## Testing Strategy
 

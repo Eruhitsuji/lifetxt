@@ -685,6 +685,10 @@ def _non_negative_float(value, default):
     return max(0.0, number)
 
 
+def _retry_interval_seconds(value, default):
+    return max(0.1, _non_negative_float(value, default))
+
+
 def wait_for_health(
     url,
     request_timeout,
@@ -699,7 +703,7 @@ def wait_for_health(
 
     request_timeout = _non_negative_float(request_timeout, 10)
     ready_timeout = _non_negative_float(ready_timeout, request_timeout)
-    retry_interval = _non_negative_float(retry_interval, 0.5)
+    retry_interval = _retry_interval_seconds(retry_interval, 0.5)
     start = monotonic()
     attempts = 0
     last = None
@@ -720,8 +724,6 @@ def wait_for_health(
         result["retry_interval"] = retry_interval
         if result.get("ok") or elapsed >= ready_timeout:
             return result
-        if retry_interval <= 0:
-            continue
         remaining = ready_timeout - elapsed
         sleep(min(retry_interval, remaining))
 

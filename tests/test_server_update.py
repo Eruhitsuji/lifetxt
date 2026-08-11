@@ -133,7 +133,13 @@ def _infer_check_name(argv_tail):
 
 
 class _FakeSubprocess:
-    """Stand-in for subprocess.run covering systemctl/pip/sanity/integrity."""
+    """Stand-in for subprocess.run covering systemctl/pip/sanity/integrity.
+
+    Every configured service reports "active" via `systemctl is-active`
+    unless named in `inactive_services`, matching the common case exercised
+    by most tests (an update that stops and later restarts a running
+    service).
+    """
 
     def __init__(
         self,
@@ -141,15 +147,22 @@ class _FakeSubprocess:
         pip_fails=False,
         sanity_fails=False,
         check_failures=None,
+        inactive_services=None,
     ):
         self.service_failures = service_failures or set()
         self.pip_fails = pip_fails
         self.sanity_fails = sanity_fails
         self.check_failures = check_failures or set()
+        self.inactive_services = inactive_services or set()
         self.calls = []
 
     def run(self, cmd, cwd=None, timeout=None, **kwargs):
         self.calls.append(list(cmd))
+        if cmd[0] == "systemctl" and cmd[1] == "is-active":
+            unit = cmd[2]
+            if unit in self.inactive_services:
+                return _FakeCompletedProcess(3, "inactive\n", "")
+            return _FakeCompletedProcess(0, "active\n", "")
         if cmd[0] == "systemctl":
             action, unit = cmd[1], cmd[2]
             if (action, unit) in self.service_failures:
@@ -279,6 +292,55 @@ class HashAndBackupTests(unittest.TestCase):
 
     def test_create_backup_without_backup_dir_is_a_no_op(self):
         self.assertIsNone(server_update.create_backup(["/tmp/x"], None, "ts"))
+
+    def test_create_backup_refuses_a_pre_existing_destination(self):
+        """Regression test: a fresh, second-granularity-timestamped backup
+        directory should never already exist. If it does (including as a
+        symlink planted by another local process/user), create_backup must
+        refuse rather than writing through whatever is already there."""
+        backup_dir = os.path.join(self.tmp, "backups")
+        pre_existing = os.path.join(backup_dir, "20260101T000000Z")
+        os.makedirs(pre_existing)
+
+        with self.assertRaises(server_update.ServerUpdateError) as ctx:
+            server_update.create_backup([], backup_dir, "20260101T000000Z")
+        self.assertEqual("backup", ctx.exception.step)
+
+    def test_create_backup_does_not_follow_a_symlink_planted_after_the_directory_check(
+        self,
+    ):
+        """A symlink planted at the exact flattened destination filename,
+        in the window between create_backup's own pre-existence check and
+        its per-file write, must not be written through -- os.O_EXCL
+        refuses it outright rather than following it like shutil.copy2
+        would have."""
+        present = os.path.join(self.tmp, "life.txt")
+        with open(present, "w", encoding="utf-8") as handle:
+            handle.write("real data")
+        backup_dir = os.path.join(self.tmp, "backups")
+        destination = os.path.join(backup_dir, "20260101T000000Z")
+        flat_name = os.path.normpath(present).replace(os.sep, "__").lstrip("_")
+        decoy_target = os.path.join(self.tmp, "decoy-target.txt")
+        with open(decoy_target, "w", encoding="utf-8") as handle:
+            handle.write("do not overwrite me")
+
+        real_makedirs = os.makedirs
+
+        def plant_symlink_then_makedirs(path, *args, **kwargs):
+            real_makedirs(path, *args, **kwargs)
+            try:
+                os.symlink(decoy_target, os.path.join(destination, flat_name))
+            except (OSError, NotImplementedError, AttributeError) as exc:
+                self.skipTest("symlink fixture unavailable: %s" % exc)
+
+        with mock.patch.object(
+            server_update.os, "makedirs", plant_symlink_then_makedirs
+        ):
+            with self.assertRaises(FileExistsError):
+                server_update.create_backup([present], backup_dir, "20260101T000000Z")
+
+        with open(decoy_target, encoding="utf-8") as handle:
+            self.assertEqual("do not overwrite me", handle.read())
 
 
 class UpdateLockTests(unittest.TestCase):
@@ -471,8 +533,41 @@ class RunServerUpdateApplyTests(unittest.TestCase):
         self.assertTrue(report["integrity_checks"]["ids"]["ok"])
         self.assertTrue(report["health_check"]["ok"])
         self.assertFalse(os.path.exists(self.lock_path))
-        self.assertEqual(["systemctl", "stop", "lifetxt.service"], sub.calls[0])
+        self.assertEqual(["systemctl", "is-active", "lifetxt.service"], sub.calls[0])
+        self.assertEqual(["systemctl", "stop", "lifetxt.service"], sub.calls[1])
         self.assertEqual(["systemctl", "start", "lifetxt.service"], sub.calls[-1])
+
+    def test_service_that_was_already_inactive_is_left_alone_and_not_started(self):
+        """Regression test: `systemctl stop` on an already-inactive unit
+        still exits 0, so without an is-active check first, an update would
+        silently start a service the operator had intentionally left
+        stopped. Only units active before the run may be stopped/restarted."""
+        git = _FakeGit()
+        sub = _FakeSubprocess(inactive_services={"lifetxt-sync-ics.timer"})
+        response = mock.MagicMock()
+        response.read.return_value = b"ok"
+        response.status = 200
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+
+        with (
+            _patch_git(git),
+            _patch_subprocess(sub),
+            mock.patch("urllib.request.urlopen", return_value=response),
+        ):
+            report = server_update.run_server_update(
+                self._config(services=["lifetxt.service", "lifetxt-sync-ics.timer"]),
+                yes=True,
+            )
+
+        self.assertEqual("updated", report["status"])
+        self.assertEqual(["lifetxt.service"], report["services_active_before_update"])
+        self.assertEqual(["lifetxt.service"], report["services_stopped"])
+        self.assertEqual(["lifetxt.service"], report["services_restarted"])
+        stop_calls = [c for c in sub.calls if c[:2] == ["systemctl", "stop"]]
+        start_calls = [c for c in sub.calls if c[:2] == ["systemctl", "start"]]
+        self.assertEqual([["systemctl", "stop", "lifetxt.service"]], stop_calls)
+        self.assertEqual([["systemctl", "start", "lifetxt.service"]], start_calls)
 
     def test_service_manager_none_never_calls_systemctl(self):
         git = _FakeGit()

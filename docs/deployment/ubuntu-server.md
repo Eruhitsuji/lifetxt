@@ -80,18 +80,23 @@ Example unit files live in [`contrib/systemd/`](../../contrib/systemd/):
   — periodic `lifetxt sync-ics` for Google Calendar / ICS sources, if you use
   one. See [`cli.md` section 5.2](../en/cli.md#52-sync-ics).
 - [`lifetxt.env.example`](../../contrib/systemd/lifetxt.env.example) — the
-  environment file both units read via `EnvironmentFile=`. Copy it to
-  `/etc/lifetxt/lifetxt.env`, fill in your real values, and
-  `chmod 600` it (it may end up holding a Calendar URL, which is sensitive
-  even though it is not a password).
+  environment file `lifetxt-sync-ics.service` reads via `EnvironmentFile=`
+  for its Calendar URL. `lifetxt.service` does **not** read this file; its
+  paths/user/port are literal values in `lifetxt.service` itself, edited
+  directly (see below). Copy `lifetxt.env.example` to
+  `/etc/lifetxt/lifetxt.env`, fill in your real Calendar URL, and
+  `chmod 600` it (it is sensitive, even though it is not a password).
 
 Install:
 
 ```sh
+# Edit User=/Group=/WorkingDirectory=/ExecStart= paths directly in
+# lifetxt.service and lifetxt-sync-ics.service before copying them --
+# neither reads paths/user/port from an environment file.
 sudo mkdir -p /etc/lifetxt
 sudo cp contrib/systemd/lifetxt.env.example /etc/lifetxt/lifetxt.env
 sudo chmod 600 /etc/lifetxt/lifetxt.env
-sudo $EDITOR /etc/lifetxt/lifetxt.env   # fill in real paths/user/port/calendar URL
+sudo $EDITOR /etc/lifetxt/lifetxt.env   # fill in your real Calendar URL
 
 sudo cp contrib/systemd/lifetxt.service /etc/systemd/system/
 sudo cp contrib/systemd/lifetxt-sync-ics.service /etc/systemd/system/
@@ -171,35 +176,37 @@ for you — that is why the next option exists.
 **Guarded**, for routine production updates —
 [`lifetxt server-update`](../en/cli.md#22-server-update) wraps the same git
 logic with the full backup / service-stop / reinstall / hash-verification /
-health-check flow, plus a review gate that stops before touching anything
-when a change looks high-impact (parser/model changes, config/workspace
-resolution, atomic-write internals, schema/migration, security-sensitive
-surfaces, or the deployment files themselves):
+health-check flow:
 
 ```sh
-sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --config /etc/lifetxt/server-update.json
-sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --config /etc/lifetxt/server-update.json --yes
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --server-config /etc/lifetxt/server-update.json
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --server-config /etc/lifetxt/server-update.json --yes
 ```
 
 See [`cli.md` section 22](../en/cli.md#22-server-update) for the full flag
-reference, the review-block format, and every failure mode. In short:
+reference, the `--server-config` JSON contract, and every failure mode. In
+short:
 
-- A normal update backs up production files, stops configured
-  services/timers, fast-forwards to the exact SHA it already resolved and
-  inspected, reinstalls the package, verifies your data/config hashes are
-  unchanged by the code update, runs `lifetxt check` /
-  `lifetxt workspace validate` / `lifetxt ids` /
-  `lifetxt ticket validate-history`, restarts services, and checks
-  `/api/health`.
-- A high-impact update stops before any of that and prints a paste-friendly
-  review block. Re-run with `--approve <exact-sha>` (copy-pasted from the
-  block) to proceed against that exact reviewed commit — approval does not
-  carry over if the upstream target moves before you approve it.
+- A normal update backs up production files, stops whichever configured
+  services/timers are currently active, fast-forwards to the exact SHA it
+  already resolved and inspected, reinstalls the package, verifies your
+  data/config hashes are unchanged by the code update, runs `lifetxt check`
+  / `lifetxt workspace validate` / `lifetxt ids` /
+  `lifetxt ticket validate-history`, restarts the services it stopped, and
+  checks `/api/health`.
 - A failure before any mutation restores whatever service state existed
   before the attempt. A failure after the code update but before validation
   completes leaves services **stopped** rather than restarting a
   potentially broken install, and the report names the exact backup and
   pre-update commit to restore manually (section 5).
+- `server-update` has **no built-in high-impact-change review gate yet** --
+  with `--yes`, it runs the full flow above unconditionally once the
+  target is resolved. A pre-mutation risk classification and approval step
+  (stopping before any mutation when a change looks high-impact, with an
+  explicit `--approve <exact-sha>` step) is a tracked, not-yet-implemented
+  follow-up. Until it lands, review `server-update`'s dry-run output
+  (which lists the pending commits) yourself before passing `--yes` for
+  any update you have not already reviewed through your normal process.
 
 **Rollback**, if an update produces a broken state that `server-update`'s
 own failure handling did not already recover from: restore the backup

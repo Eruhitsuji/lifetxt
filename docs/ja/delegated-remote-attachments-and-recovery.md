@@ -185,6 +185,16 @@ revision と integrity evidence を保持してください。必要なら evide
 export し、記録された version を明示的に扱える build へ upgrade してから
 recovery を実行します。
 
+## Shareable recovery evidence
+
+通常の evidence export は shareable diagnostic bundle 用です。transaction ID、
+operation、timestamp、revision hash、observed relation は incident correlation
+のため保持します。target の raw absolute path は `<redacted>` と deterministic
+な fingerprint に置き換え、error text は presence marker のみ残します。
+artifact payload、authored content、credential、token は export しません。
+operator-local journal と共有 bundle の境界を確認し、bundle は共有前に内容を
+review してください。
+
 abandoned transaction backups は immutable evidence として残ります。restoration はまず original integrity manifest を verify します。`inspect` は working copy を作らず evidence を読みます。`resume` と `compensate` は backup を separate working directory に copy し、その copy から recover します。
 
 ```bash

@@ -11,6 +11,7 @@ the recorded before nor after revision.
 from __future__ import unicode_literals
 
 import datetime
+import hashlib
 import json
 import os
 import shutil
@@ -41,6 +42,33 @@ from .timeutil import parse_iso_datetime
 
 
 SCHEMA_VERSION = 1
+EVIDENCE_EXPORT_POLICY = OrderedDict(
+    (
+        (
+            "exportable",
+            (
+                "schema_version",
+                "transaction_id",
+                "operation",
+                "state",
+                "timestamps",
+                "revision_hashes",
+                "relations",
+            ),
+        ),
+        ("redactable", ("target_path", "last_error")),
+        (
+            "prohibited",
+            (
+                "artifact_payload",
+                "credentials",
+                "tokens",
+                "private_content",
+                "raw_absolute_path",
+            ),
+        ),
+    )
+)
 TERMINAL_STATES = frozenset(("committed", "compensated", "abandoned"))
 RECOVERY_STATES = frozenset(
     (
@@ -533,18 +561,42 @@ def abandon_with_backup(path, backup_dir, now=None):
 
 def export_evidence(path, output_path):
     report = inspect_journal(path)
+
+    def path_fingerprint(value):
+        normalized = os.path.normcase(os.path.abspath(str(value)))
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+    targets = []
+    for target, observed in zip(report["targets"], report["observed_targets"]):
+        targets.append(
+            OrderedDict(
+                (
+                    ("path", "<redacted>"),
+                    ("path_fingerprint", path_fingerprint(target["path"])),
+                    ("kind", target["kind"]),
+                    ("before_hash", target["before_hash"]),
+                    ("after_hash", target["after_hash"]),
+                    ("changed", target.get("changed", False)),
+                    ("relation", observed["relation"]),
+                    ("resume_safe", observed["resume_safe"]),
+                    ("compensate_safe", observed["compensate_safe"]),
+                )
+            )
+        )
     evidence = OrderedDict(
         (
             ("schema_version", 1),
+            ("redacted", True),
+            ("field_policy", EVIDENCE_EXPORT_POLICY),
             ("transaction_id", report["transaction_id"]),
             ("operation", report["operation"]),
             ("state", report["state"]),
             ("created_at_utc", report["created_at_utc"]),
             ("updated_at_utc", report["updated_at_utc"]),
             ("terminal_at_utc", report.get("terminal_at_utc")),
-            ("last_error", report.get("last_error")),
-            ("targets", report["targets"]),
-            ("observed_targets", report["observed_targets"]),
+            ("last_error", "<redacted>" if report.get("last_error") else None),
+            ("last_error_present", bool(report.get("last_error"))),
+            ("targets", targets),
             ("recovery_required", report["recovery_required"]),
         )
     )

@@ -148,6 +148,14 @@ lifetxt doctor --workspace-safety life.txt \
 
 Absolute paths are replaced with deterministic path pseudonyms. Review a bundle before sharing it because operational metadata can still reveal environment characteristics.
 
+The normal journal evidence export applies the same boundary: transaction IDs,
+operation names, timestamps, revision hashes, and observed relations remain
+shareable; target paths are replaced by a stable fingerprint; error text is
+replaced by a presence marker; and artifact payloads, authored content,
+credentials, tokens, and raw absolute paths are prohibited. The export includes
+its field policy so an incident reviewer can distinguish operator-local journal
+data from a shareable diagnostic bundle.
+
 ## 7. Strict timer revision contract
 
 Timer operations can touch both timer JSON state and life.txt. Start and stop therefore use two revisions. Pause, resume, and cancel use the timer-state revision.

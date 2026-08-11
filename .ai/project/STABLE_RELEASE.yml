@@ -472,6 +472,11 @@ stable_release:
             and refusal paths explicit. Newer policy/journal data is refused
             before mutation, newer journals remain inspect/export-only, and
             unsupported downgrade paths are documented rather than inferred.
+          - >-
+            #308 defines the shareable recovery-evidence boundary: transaction
+            identifiers, revision hashes, timestamps, and target relations are
+            retained; raw paths, error text, artifact payloads, authored content,
+            credentials, and tokens are redacted or prohibited.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

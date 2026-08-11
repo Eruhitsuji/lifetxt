@@ -2817,6 +2817,38 @@ def build_parser():
     )
     server_update_cmd.set_defaults(func=command_server_update)
 
+    server_init_cmd = subparsers.add_parser(
+        "server-init",
+        help=(
+            "Plan-first Ubuntu Server bootstrap for a production deployment. "
+            "Dry-run by default; use --yes to apply the generated plan."
+        ),
+    )
+    server_init_cmd.add_argument(
+        "--server-config",
+        metavar="PATH",
+        required=True,
+        help=(
+            "Deployment bootstrap JSON file (distinct from the global "
+            "--config application config.json)."
+        ),
+    )
+    server_init_cmd.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Apply the bootstrap plan. Without this, server-init only reports "
+            "what would be created or validated."
+        ),
+    )
+    server_init_cmd.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+    server_init_cmd.set_defaults(func=command_server_init)
+
     assign_cmd = subparsers.add_parser(
         "assign",
         help="Change the assignee: on an existing item.",
@@ -7354,6 +7386,63 @@ def command_server_update(args):
 
     render(report)
     return 0 if report.get("status") in _SERVER_UPDATE_SUCCESS_STATUSES else 1
+
+
+def _format_server_init_step(step):
+    if step["kind"] in ("directory", "file"):
+        return "%s %s %s" % (
+            step.get("action", "plan"),
+            step["kind"],
+            step["path"],
+        )
+    if step["kind"] == "command":
+        cwd = " cwd=%s" % step.get("cwd") if step.get("cwd") else ""
+        return "run %s:%s %s" % (
+            step.get("name", "command"),
+            cwd,
+            " ".join(step.get("argv") or []),
+        )
+    if step["kind"] == "health":
+        return "check health %s" % step["url"]
+    return "%s %s" % (step.get("kind", "step"), step)
+
+
+def command_server_init(args):
+    """Plan-first production bootstrap for an Ubuntu Server deployment."""
+    from .server_init import ServerInitError, load_config, run_server_init
+
+    config_path = getattr(args, "server_config", None)
+    if not config_path:
+        raise ValueError(
+            "server-init requires --server-config PATH (a deployment bootstrap "
+            "config distinct from --config's application config.json)."
+        )
+
+    fmt = getattr(args, "format", "text")
+
+    def render(report):
+        if fmt == "json":
+            write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+            return
+        lines = [report.get("message") or ""]
+        for step in report.get("steps") or []:
+            lines.append("- " + _format_server_init_step(step))
+        if report.get("conflicts"):
+            lines.append("conflicts: %s" % ", ".join(report["conflicts"]))
+        write_text(None, "\n".join(lines).rstrip() + "\n")
+
+    try:
+        config = load_config(config_path)
+        report = run_server_init(config, yes=bool(getattr(args, "yes", False)))
+    except ServerInitError as exc:
+        report = exc.report or OrderedDict(
+            [("status", "failed"), ("step", exc.step), ("message", str(exc))]
+        )
+        render(report)
+        return 1
+
+    render(report)
+    return 0 if report.get("status") in ("dry_run", "ready") else 1
 
 
 def command_doctor(args):

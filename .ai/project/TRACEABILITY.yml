@@ -607,6 +607,36 @@ traceability:
         inspect/resume/compensate/abandon contract.
       status: implemented
 
+    - requirement_id: req-transaction-crash-boundary-cleanup-restore-coverage
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/300
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/334
+      changed_files_or_scope:
+        - Extend transaction fault points around delete and target verification
+        - Extend compensation fault points around restore writes and verification
+        - Add backup-copy and restore-working-copy fault points to transaction journal operations
+        - Expand fault_drill subprocess scenarios for delete, compensation, terminal cleanup, backup, and restore paths
+        - Add targeted tests for delete recovery, terminal cleanup repeatability, and backup/restore incomplete-success evidence
+        - lifetxt/multi_target.py
+        - lifetxt/transaction_journal.py
+        - lifetxt/fault_drill.py
+        - tests/test_fault_matrix_v6.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_fault_matrix_v6 -> Ran 6 tests, OK
+        - fault matrix report scope strings identify simulated subprocess termination and explicitly exclude physical power-loss evidence
+      release_or_deployment: null
+      notes: >-
+        Standard assurance test-hardening change. The added matrix entries
+        prove deterministic subprocess interruption behavior for recovery-
+        critical cleanup and restore-adjacent paths without expanding stable
+        support claims to physical power loss, disk-full, permission failure, or
+        platform-specific storage semantics.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

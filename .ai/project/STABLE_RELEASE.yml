@@ -417,6 +417,13 @@ stable_release:
           Authoritative write and recovery claims cannot be stable without
           crash-boundary, corrupted-artifact, adverse-filesystem, Windows, and
           documented support-limit evidence.
+        evidence_notes:
+          - >-
+            #300 extends the deterministic subprocess crash-boundary matrix
+            through delete, verification, compensation write/verify, terminal
+            cleanup, backup copy, and restore-working-copy paths. This evidence
+            is explicitly simulated subprocess termination, not physical
+            power-loss evidence.
       - id: p0-protected-recovery-evidence-authorization
         todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
         classification: stable_release_blocker

@@ -3679,6 +3679,30 @@ traceability:
         child issue complete.
       status: implemented
 
+    - requirement_id: req-stable-release-roadmap-classification
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/287
+      pull_request: null
+      changed_files_or_scope:
+        - Classify every current P0 todo.md bullet against the stable-release boundary
+        - Classify Format 1.0 public compatibility work from P1
+        - Link actionable blockers to child issues #288-#324
+        - Record post-stable/deferred P1 groups without changing todo.md task status
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - python -m lifetxt check examples/minimal_life.txt
+        - '#287 classification completeness check covers 10 P0 entries and 5 Format 1.0 compatibility entries'
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This classifies roadmap work for release
+        planning only; GitHub Issues remain authoritative for task execution and
+        status. No runtime behavior or todo.md task status is changed.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

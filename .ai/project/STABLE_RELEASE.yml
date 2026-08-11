@@ -359,3 +359,186 @@ stable_release:
       not_release_relevant: >-
         Does not affect supported stable behavior, release artifacts,
         migration, recovery, security, or documentation claims.
+
+  roadmap_classification:
+    source: todo.md
+    classified_by_issue: https://github.com/Eruhitsuji/lifetxt/issues/287
+    authority_boundary: >-
+      These entries classify release relevance only. They do not replace
+      GitHub Issues as the source of truth for task execution, ownership,
+      review state, or completion status.
+    p0_items:
+      - id: p0-strict-web-revision-migration
+        todo_summary: Execute and finish the strict Web revision migration in a real deployment.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/288
+          - https://github.com/Eruhitsuji/lifetxt/issues/289
+          - https://github.com/Eruhitsuji/lifetxt/issues/290
+          - https://github.com/Eruhitsuji/lifetxt/issues/291
+          - https://github.com/Eruhitsuji/lifetxt/issues/292
+        rationale: >-
+          Stable writable Web support requires real observe-to-required revision
+          evidence, client preconditions, zero-legacy-write observation, strict
+          mode, and upgrade/rollback behavior before promotion.
+      - id: p0-delegated-mutation-contract-adoption
+        todo_summary: Finish adapter-specific adoption of the delegated-process mutation contract.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/293
+          - https://github.com/Eruhitsuji/lifetxt/issues/294
+          - https://github.com/Eruhitsuji/lifetxt/issues/295
+          - https://github.com/Eruhitsuji/lifetxt/issues/296
+        rationale: >-
+          No delegated adapter may be advertised as stable writable until its
+          writable scope, provenance, permission, lifecycle, sandbox, and
+          proposal-contract behavior are verified.
+      - id: p0-remote-attachment-recovery-evidence
+        todo_summary: Finish real-client and adverse-recovery evidence for remote directory/package attachments.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/297
+          - https://github.com/Eruhitsuji/lifetxt/issues/298
+          - https://github.com/Eruhitsuji/lifetxt/issues/299
+        rationale: >-
+          Remote attachment/package behavior affects privacy, authorization,
+          transaction recovery, and large-file bounds for supported Web/MCP
+          clients.
+      - id: p0-transaction-durability-filesystem-recovery
+        todo_summary: Prove durable recovery under real power, storage, and platform failures.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/300
+          - https://github.com/Eruhitsuji/lifetxt/issues/301
+          - https://github.com/Eruhitsuji/lifetxt/issues/302
+          - https://github.com/Eruhitsuji/lifetxt/issues/303
+          - https://github.com/Eruhitsuji/lifetxt/issues/304
+        rationale: >-
+          Authoritative write and recovery claims cannot be stable without
+          crash-boundary, corrupted-artifact, adverse-filesystem, Windows, and
+          documented support-limit evidence.
+      - id: p0-protected-recovery-evidence-authorization
+        todo_summary: Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/305
+          - https://github.com/Eruhitsuji/lifetxt/issues/306
+          - https://github.com/Eruhitsuji/lifetxt/issues/307
+          - https://github.com/Eruhitsuji/lifetxt/issues/308
+          - https://github.com/Eruhitsuji/lifetxt/issues/309
+        rationale: >-
+          Recovery evidence, destructive restore authority, policy/journal
+          migration, redaction/export, and drill evidence are release-critical
+          for safe recovery operations.
+      - id: p0-timezone-fixtures-remote-clock
+        todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/310
+          - https://github.com/Eruhitsuji/lifetxt/issues/311
+        rationale: >-
+          Stable public surfaces need shared timezone fixtures, and remote clock
+          enforcement must bind to authenticated sessions and audit evidence.
+      - id: p0-real-terminal-tui
+        todo_summary: Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/312
+          - https://github.com/Eruhitsuji/lifetxt/issues/313
+        rationale: >-
+          The support matrix classifies TUI as supported only with real-terminal
+          evidence; missing evidence blocks stable support or must become a
+          documented limitation.
+      - id: p0-fzf-peco-real-shells
+        todo_summary: Verify fzf and peco actions end to end on Windows PowerShell and Unix-like shells.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/314
+        rationale: >-
+          Supported selector/shell combinations need real-shell quoting,
+          stale-revision, all-or-none, and exit-code evidence.
+      - id: p0-smtp-safe-account-verification
+        todo_summary: Verify SMTP delivery with safe test accounts.
+        classification: supported_limitation
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/315
+          - https://github.com/Eruhitsuji/lifetxt/issues/316
+        rationale: >-
+          The support matrix keeps SMTP experimental until safe-provider
+          evidence exists. Stable promotion may proceed only if release
+          documentation does not advertise SMTP as stable before these issues
+          complete.
+      - id: p0-browser-engine-smoke-tests
+        todo_summary: Add browser-engine smoke tests for the Web UI.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/317
+          - https://github.com/Eruhitsuji/lifetxt/issues/318
+        rationale: >-
+          Stable Web support requires real browser-engine evidence for revision,
+          recovery, interaction, accessibility, and browser-specific failure
+          handling.
+    format_1_0_public_compatibility:
+      - id: p1-format-version-migration
+        todo_summary: Complete Format 1.0 enforcement beyond the mutation guard.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/319
+          - https://github.com/Eruhitsuji/lifetxt/issues/320
+        rationale: >-
+          Parser-authoritative format version metadata, unsupported-version
+          behavior, explicit migration, and downgrade inspection are public
+          compatibility boundaries.
+      - id: p1-canonical-serialization
+        todo_summary: Complete LIFETXT_CANON_V1.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/321
+        rationale: >-
+          Canonical serialization defines a stable byte-level contract that is
+          costly to change after the first stable release.
+      - id: p1-multi-file-semantics
+        todo_summary: Enforce documented multi-file semantics.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/322
+        rationale: >-
+          Deterministic source ordering, workspace-wide IDs, references, and
+          write targets affect stable reads and authoritative writes.
+      - id: p1-stable-schema-contracts
+        todo_summary: Expand the schema bundle where real contracts exist.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/323
+        rationale: >-
+          Stable public machine-readable contracts require versioned schemas or
+          explicit documented exceptions.
+      - id: p1-stable-diagnostics
+        todo_summary: Extend stable diagnostics and route legacy check --format json to the stable shape.
+        classification: stable_release_blocker
+        issue_links:
+          - https://github.com/Eruhitsuji/lifetxt/issues/324
+        rationale: >-
+          Release-critical validation and recovery failures need stable
+          diagnostic codes and compatibility expectations.
+    p1_deferred_groups:
+      - id: p1-remote-safe-mode-follow-up
+        classification: post_stable
+        limitation: >-
+          Remote hardening and richer Remote ticket/client views remain tracked
+          P1 work, but are not first-stable blockers unless #293-#311 or the
+          support matrix makes a specific writable or real-environment claim
+          release-critical.
+      - id: p1-project-ticket-timer-notification-workflow-ui
+        classification: post_stable
+        limitation: >-
+          Project, ticket, timer, notification, workflow, UI, integration, and
+          documentation expansion remains post-stable unless a child issue under
+          #283 explicitly classifies the work as a stable-release blocker.
+      - id: p1-format-adjacent-future-tools
+        classification: post_stable
+        limitation: >-
+          check --fix, second corpus versions, broad operation-registry
+          expansion, additional public-contract matrices, and direct-write
+          baseline reduction stay post-stable unless required to satisfy
+          #319-#324.

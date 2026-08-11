@@ -54,6 +54,50 @@ RECOVERY_STATES = frozenset(
 )
 
 
+def journal_version_matrix():
+    """Return the explicit journal version paths supported by this build."""
+    return OrderedDict(
+        (
+            (
+                "older",
+                OrderedDict(
+                    (
+                        ("source", "released version below current"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "unsupported"),
+                        ("mutation", "refused"),
+                        ("recovery", "restore from exported evidence after upgrade"),
+                    )
+                ),
+            ),
+            (
+                SCHEMA_VERSION,
+                OrderedDict(
+                    (
+                        ("source", "current"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "identity"),
+                        ("mutation", "supported"),
+                        ("recovery", "resume/compensate/abandon/export"),
+                    )
+                ),
+            ),
+            (
+                "newer",
+                OrderedDict(
+                    (
+                        ("source", "future version"),
+                        ("target", SCHEMA_VERSION),
+                        ("migration", "unsupported"),
+                        ("mutation", "refused"),
+                        ("recovery", "inspect/export only; upgrade to recover"),
+                    )
+                ),
+            ),
+        )
+    )
+
+
 class TransactionJournalError(RuntimeError):
     pass
 
@@ -374,7 +418,9 @@ def inspect_journal(path):
     compatibility = record.get("version_compatibility") or version_compatibility(
         record, SCHEMA_VERSION
     )
+    result["version_compatibility"] = compatibility
     result["read_only"] = not compatibility.get("writable", False)
+    result["journal_version_matrix"] = journal_version_matrix()
     result["permission_report"] = permission_report(
         os.path.dirname(path), require_private=True
     )

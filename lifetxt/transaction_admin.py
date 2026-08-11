@@ -22,6 +22,58 @@ POLICY_VERSION = 1
 DEFAULT_AUDIT_MAX_EVENTS = 1000
 
 
+def policy_version_matrix():
+    """Return the explicit policy version paths supported by this build."""
+    return OrderedDict(
+        (
+            (
+                0,
+                OrderedDict(
+                    (
+                        ("source", "unversioned/legacy"),
+                        ("target", POLICY_VERSION),
+                        ("migration", "supported"),
+                        ("mutation", "migrate-only"),
+                    )
+                ),
+            ),
+            (
+                POLICY_VERSION,
+                OrderedDict(
+                    (
+                        ("source", "current"),
+                        ("target", POLICY_VERSION),
+                        ("migration", "identity"),
+                        ("mutation", "supported"),
+                    )
+                ),
+            ),
+            (
+                "newer",
+                OrderedDict(
+                    (
+                        ("source", "future"),
+                        ("target", POLICY_VERSION),
+                        ("migration", "refused"),
+                        ("mutation", "refused"),
+                    )
+                ),
+            ),
+            (
+                "downgrade",
+                OrderedDict(
+                    (
+                        ("source", POLICY_VERSION),
+                        ("target", 0),
+                        ("migration", "unsupported"),
+                        ("mutation", "refused"),
+                    )
+                ),
+            ),
+        )
+    )
+
+
 class TransactionPolicyVersionError(TransactionPolicyError):
     pass
 
@@ -362,6 +414,7 @@ def preflight_report(journal_dir, config=None, create=False):
             ("usage", usage),
             ("permissions", permissions),
             ("evidence_storage", evidence_storage),
+            ("policy_version_matrix", policy_version_matrix()),
             ("warnings", warnings),
             ("errors", errors),
         )

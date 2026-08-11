@@ -170,6 +170,21 @@ pre-journal boundaries では、`auto` は both targets が unchanged である�
 
 ## Verified backup restoration
 
+## Policy / journal version refusal
+
+Transaction policy と recovery journal には明示的な compatibility matrix が
+あります。current release は unversioned legacy policy を policy version 1
+へ migration できます。policy version 1 だけが writable で、newer policy は
+rewrite 前に拒否され、legacy shape への downgrade は unsupported です。
+
+Journal schema version 1 が current / writable version です。older journal に
+implicit migration path はなく、newer journal は inspect と export のみ可能
+です。`resume`、`compensate`、その他の journal mutation は target や journal
+state を変更する前に拒否します。拒否された source は in-place で編集せず、
+revision と integrity evidence を保持してください。必要なら evidence を
+export し、記録された version を明示的に扱える build へ upgrade してから
+recovery を実行します。
+
 abandoned transaction backups は immutable evidence として残ります。restoration はまず original integrity manifest を verify します。`inspect` は working copy を作らず evidence を読みます。`resume` と `compensate` は backup を separate working directory に copy し、その copy から recover します。
 
 ```bash

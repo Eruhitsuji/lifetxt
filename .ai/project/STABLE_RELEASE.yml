@@ -467,6 +467,11 @@ stable_release:
             and supports separate approval identity checks for destructive
             backup restore actions. Local single-operator administration
             remains a documented limitation when these settings are disabled.
+          - >-
+            #307 makes policy version 1 and journal schema version 1 migration
+            and refusal paths explicit. Newer policy/journal data is refused
+            before mutation, newer journals remain inspect/export-only, and
+            unsupported downgrade paths are documented rather than inferred.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

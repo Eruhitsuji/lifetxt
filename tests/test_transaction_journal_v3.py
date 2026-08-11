@@ -11,6 +11,7 @@ from lifetxt.multi_target import MultiTargetCommitError, apply_multi_target, tex
 from lifetxt.transaction_journal import (
     TransactionJournalConflict,
     abandon_with_backup,
+    archive_terminal,
     cleanup_terminal,
     compensate,
     export_evidence,
@@ -538,6 +539,57 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertTrue(
             os.path.isfile(os.path.join(report["backup_path"], "journal.json"))
         )
+        if os.name != "nt":
+            self.assertEqual(0, os.stat(report["backup_path"]).st_mode & 0o077)
+
+    def test_archive_backup_and_restore_use_declared_evidence_storage_boundary(self):
+        path = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    path,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(path).content_hash,
+                )
+            ],
+            operation="journal.profile-boundary",
+            journal_dir=self.journal_dir,
+        )
+        archive_root = self.path("archives")
+        archived = archive_terminal(
+            self.journal_dir, archive_root, older_than_days=0, force=True
+        )
+        self.assertEqual(1, len(archived["archived"]))
+        backup_dir = archived["archived"][0]["archive_path"]
+        if os.name != "nt":
+            self.assertEqual(0, os.stat(archive_root).st_mode & 0o077)
+        report = transaction_journal.restore_backup(backup_dir, action="inspect")
+        self.assertTrue(report["ok"])
+        self.assertTrue(report["verification"]["ok"])
+
+    def test_unsupported_evidence_storage_profile_refuses_before_journal_mutation(self):
+        path = self.write("one.txt", "one\n")
+        with self.assertRaisesRegex(
+            TransactionPolicyError, "Unusable evidence storage profile"
+        ):
+            apply_multi_target(
+                [
+                    text_plan(
+                        path,
+                        lambda _text: "ONE\n",
+                        mutation.read_text_snapshot(path).content_hash,
+                    )
+                ],
+                operation="journal.unsupported-profile",
+                journal_dir=self.journal_dir,
+                transaction_policy=dict(
+                    transaction_journal.policy_from_config(
+                        {"transactions": {"evidence_storage_profile": "encrypted-v1"}}
+                    )
+                ),
+            )
+        self.assertEqual("one\n", self.read(path))
+        self.assertEqual([], list_journals(self.journal_dir))
 
     def test_export_evidence_excludes_artifact_payloads(self):
         path = self.write("one.txt", "secret payload\n")

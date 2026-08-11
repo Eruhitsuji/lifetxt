@@ -11,6 +11,7 @@ from collections import OrderedDict
 from .mutation import MISSING_HASH, mutate_json, read_text_snapshot
 from .transaction_policy import (
     TransactionPolicyError,
+    evidence_storage_profile_report,
     ensure_private_tree,
     journal_usage,
     permission_report,
@@ -303,8 +304,13 @@ def preflight_report(journal_dir, config=None, create=False):
     permissions = permission_report(
         root, require_private=policy["require_private_permissions"]
     )
+    evidence_storage = evidence_storage_profile_report(
+        root, policy=policy, create=create
+    )
     if permissions.get("problems"):
         errors.extend(permissions["problems"])
+    if evidence_storage.get("problems"):
+        errors.extend(evidence_storage["problems"])
     usage = journal_usage(root)
     if usage["transactions"] >= policy["max_transactions"]:
         errors.append("transaction count is at or above max_transactions")
@@ -351,6 +357,7 @@ def preflight_report(journal_dir, config=None, create=False):
             ("policy_file", policy_state),
             ("usage", usage),
             ("permissions", permissions),
+            ("evidence_storage", evidence_storage),
             ("warnings", warnings),
             ("errors", errors),
         )

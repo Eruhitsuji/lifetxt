@@ -606,11 +606,13 @@ capabilities:
       - req-corrupted-missing-recovery-artifact-safety
       - req-storage-access-failure-transaction-recovery
       - req-windows-file-interference-transaction-recovery
+      - req-protected-recovery-evidence-storage-profile
     implementation_locations:
       - lifetxt/transaction_journal.py
       - lifetxt/multi_target.py
       - lifetxt/fault_drill.py
       - lifetxt/transaction_policy.py
+      - lifetxt/transaction_admin.py
     public_interfaces:
       - lifetxt.transaction_journal.prepare
       - lifetxt.transaction_journal.inspect_journal
@@ -625,6 +627,7 @@ capabilities:
       - '#301 covers missing journal metadata, missing/corrupted recovery payloads, corrupted/missing backup manifests, deterministic repeated refusal, and inspect usefulness'
       - '#302 covers simulated ENOSPC/EDQUOT/EACCES transaction failures before publication and during recovery, with capacity versus permission diagnostics'
       - '#303 records Windows 10.0.19045 / NTFS evidence for byte-range locked target interference refusing replace, then recovering after lock release'
+      - '#305 defines stable `os-private-v1` recovery-evidence storage profile for transaction, backup, archive, and restore evidence; unsupported encryption profiles fail preflight before mutation'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -637,6 +640,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/301
       - https://github.com/Eruhitsuji/lifetxt/issues/302
       - https://github.com/Eruhitsuji/lifetxt/issues/303
+      - https://github.com/Eruhitsuji/lifetxt/issues/305
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
       - https://github.com/Eruhitsuji/lifetxt/pull/334
@@ -664,6 +668,11 @@ capabilities:
       for transient file-preview/indexer-style target interference. The locked
       replace fails as PermissionError/WinError 5 without reporting committed
       state, then resumes successfully after the lock is released.
+      #305 defines `os-private-v1` as the stable protected recovery-evidence
+      profile: current OS-user private permissions plus integrity manifests.
+      Encryption is intentionally not advertised as supported; an unsupported
+      encrypted profile fails startup/preflight or journal preparation before
+      mutating authoritative targets.
     replacement:
       replaces: []
       replaced_by: null

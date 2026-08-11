@@ -452,6 +452,14 @@ stable_release:
           Recovery evidence, destructive restore authority, policy/journal
           migration, redaction/export, and drill evidence are release-critical
           for safe recovery operations.
+        evidence_notes:
+          - >-
+            #305 defines `os-private-v1` as the stable recovery-evidence
+            storage profile: OS current-user private permissions plus integrity
+            manifests for transaction, backup, archive, and restore evidence.
+            Encryption-at-rest is not advertised as supported; unsupported
+            encrypted profiles fail preflight or journal preparation before
+            authoritative mutation.
       - id: p0-timezone-fixtures-remote-clock
         todo_summary: Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition.
         classification: stable_release_blocker

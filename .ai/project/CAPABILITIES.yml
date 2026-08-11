@@ -51,6 +51,7 @@ capabilities:
       - req-stable-release-support-matrix
       - req-stable-release-gates
       - req-stable-release-roadmap-classification
+      - req-delegated-mutation-release-scope
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -66,12 +67,14 @@ capabilities:
       - '#285 support matrix classifies runtime, OS, CLI, TUI, Web, browser, MCP, Remote, fzf/peco, SMTP, and filesystem entries'
       - '#286 release gates separately define RC entry and stable promotion criteria'
       - '#287 roadmap classification maps current P0 and Format 1.0 compatibility work to release severity and child issues'
+      - '#293 delegated mutation inventory classifies stable writable, experimental, read-only/disabled, and deferred adapter surfaces'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
       - https://github.com/Eruhitsuji/lifetxt/issues/285
       - https://github.com/Eruhitsuji/lifetxt/issues/286
       - https://github.com/Eruhitsuji/lifetxt/issues/287
+      - https://github.com/Eruhitsuji/lifetxt/issues/293
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333
@@ -91,6 +94,12 @@ capabilities:
       #287 classifies the current P0 roadmap and public-compatibility Format
       1.0 work against the stable-release boundary without turning todo.md into
       a task-status source.
+      #293 freezes the delegated and externally mediated writable release scope:
+      the CLI proposal contract and existing editor-session contract are the
+      only stable-writable entries, while MCP write tools, Remote ticket writes,
+      Web writes, Web git routes, provider side effects, and future plugin
+      adapters remain experimental or deferred until their linked verification
+      issues close.
     replacement:
       replaces: []
       replaced_by: null

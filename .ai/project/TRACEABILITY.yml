@@ -3703,6 +3703,32 @@ traceability:
         status. No runtime behavior or todo.md task status is changed.
       status: implemented
 
+    - requirement_id: req-delegated-mutation-release-scope
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/293
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Inventory delegated and externally mediated writable surfaces
+        - Classify stable writable, experimental, read-only/disabled, and deferred surfaces
+        - Link unpromoted writable adapters to follow-up verification issues
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - delegated mutation inventory completeness check covers 8 entries and verifies stable_writable entries have evidence
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance. This is a release-boundary inventory only;
+        it does not enable new adapters, change runtime behavior, or advertise
+        unverified writable support. Existing CLI delegated proposals and
+        editor sessions are distinguished from MCP, Remote, Web, git, provider,
+        and future plugin surfaces, which remain experimental or deferred until
+        their linked evidence issues close.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

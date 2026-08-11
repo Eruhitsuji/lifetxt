@@ -3729,6 +3729,40 @@ traceability:
         their linked evidence issues close.
       status: implemented
 
+    - requirement_id: req-delegated-mutation-provenance-permission-contract
+      capability_id: cap-delegated-mutation-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/294
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/333
+      changed_files_or_scope:
+        - Add adapter identity, provenance, authorization, and contract hash metadata to delegated proposals
+        - Validate metadata on prepare/read/apply/reject
+        - Preserve temporary-copy isolation and revision-checked authoritative apply
+        - Update delegated proposal public schema and generated bundle
+        - lifetxt/delegated_mutation.py
+        - lifetxt/schema_extensions_v13.py
+        - dist/schemas/delegated-mutation-proposal-v1.schema.json
+        - tests/test_delegated_mutation_v6.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_delegated_mutation_v6 and delegated CLI smoke -> Ran 11 tests, OK
+        - tests.test_schema_extensions_v2 -> included in targeted schema run
+        - ruff check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - ruff format --check lifetxt/delegated_mutation.py lifetxt/schema_extensions_v13.py tests/test_delegated_mutation_v6.py
+        - python -m lifetxt check examples/minimal_life.txt
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        High assurance because delegated mutation metadata controls which
+        adapter-originated writes may be treated as stable. The change does not
+        enable new adapters or provider side effects; it hardens the existing
+        CLI delegated proposal contract by rejecting missing, malformed, or
+        tampered adapter/provenance/authorization metadata and by retaining
+        proposal and source revision preconditions.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

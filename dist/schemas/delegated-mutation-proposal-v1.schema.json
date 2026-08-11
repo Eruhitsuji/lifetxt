@@ -3,6 +3,56 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "adapter": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "version"
+      ],
+      "type": "object"
+    },
+    "authorization": {
+      "additionalProperties": true,
+      "properties": {
+        "apply_requires_revision": {
+          "const": true
+        },
+        "direct_write_allowed": {
+          "const": false
+        },
+        "permission_model": {
+          "const": "local-user-invoked-proposal"
+        },
+        "required_permissions": {
+          "contains": {
+            "const": "write_source_via_revision_checked_apply"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "permission_model",
+        "required_permissions",
+        "direct_write_allowed",
+        "apply_requires_revision"
+      ],
+      "type": "object"
+    },
     "before_revision": {
       "pattern": "^(<missing>|[0-9a-f]{64})$",
       "type": "string"
@@ -19,6 +69,10 @@
       },
       "minItems": 1,
       "type": "array"
+    },
+    "contract_sha256": {
+      "pattern": "^(<missing>|[0-9a-f]{64})$",
+      "type": "string"
     },
     "created_at_utc": {
       "type": "string"
@@ -53,6 +107,37 @@
     "proposal_version": {
       "const": 1
     },
+    "provenance": {
+      "additionalProperties": true,
+      "properties": {
+        "command_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "prepared_by": {
+          "const": "lifetxt"
+        },
+        "source_path_sha256": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "source_revision": {
+          "pattern": "^(<missing>|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "temporary_copy": {
+          "const": true
+        }
+      },
+      "required": [
+        "prepared_by",
+        "command_sha256",
+        "source_revision",
+        "source_path_sha256",
+        "temporary_copy"
+      ],
+      "type": "object"
+    },
     "result": {
       "type": "object"
     },
@@ -77,6 +162,10 @@
     "operation",
     "path",
     "command",
+    "adapter",
+    "provenance",
+    "authorization",
+    "contract_sha256",
     "before_revision",
     "edited_revision",
     "diff_sha256",

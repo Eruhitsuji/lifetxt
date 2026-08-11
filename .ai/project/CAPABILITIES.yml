@@ -165,6 +165,59 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-delegated-mutation-contract
+    name: Delegated mutation proposal contract
+    summary: >-
+      Restart-safe delegated mutation proposal records that isolate external
+      adapters to temporary copies, validate life.txt output, bind adapter
+      identity/provenance/authorization metadata with a contract hash, and
+      apply changes only through revision-checked authoritative writes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-delegated-mutation-provenance-permission-contract
+    implementation_locations:
+      - lifetxt/delegated_mutation.py
+      - lifetxt/schema_extensions_v13.py
+      - dist/schemas/delegated-mutation-proposal-v1.schema.json
+      - tests/test_delegated_mutation_v6.py
+      - tests/test_p0_cli_v6.py
+      - .ai/project/STABLE_RELEASE.yml
+      - .ai/project/CAPABILITIES.yml
+      - .ai/project/TRACEABILITY.yml
+    public_interfaces:
+      - lifetxt safety delegated prepare
+      - lifetxt safety delegated inspect
+      - lifetxt safety delegated apply
+      - lifetxt safety delegated reject
+      - dist/schemas/delegated-mutation-proposal-v1.schema.json
+    tests_or_evidence:
+      - tests.test_delegated_mutation_v6
+      - tests.test_p0_cli_v6.P0CliV6Tests.test_delegated_prepare_inspect_and_apply_cli
+      - tests.test_schema_extensions_v2
+      - python -m lifetxt check examples/minimal_life.txt
+      - ruff check/format on delegated mutation contract files
+      - git diff --check
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/293
+      - https://github.com/Eruhitsuji/lifetxt/issues/294
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/333
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #294 extends the existing proposal v1 record instead of introducing a
+      parallel adapter framework. The delegated process still edits only a
+      temporary copy. Stable metadata now records adapter id/kind/version,
+      lifetxt-generated provenance, required permission markers,
+      direct_write_allowed=false, apply_requires_revision=true, and a
+      contract_sha256 over the stable proposal contract fields. Apply/reject
+      update the contract hash after state changes, preserving restart-safe
+      proposal-file semantics and proposal-file revision checks.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-config-safe-writes
     name: Safe configuration writes
     summary: >-

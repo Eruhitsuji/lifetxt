@@ -26,6 +26,12 @@ def schema_bundle_v13():
                         "operation",
                         "path",
                         "command",
+                        "adapter",
+                        "provenance",
+                        "authorization",
+                        "lifecycle",
+                        "sandbox",
+                        "contract_sha256",
                         "before_revision",
                         "edited_revision",
                         "diff_sha256",
@@ -44,6 +50,116 @@ def schema_bundle_v13():
                             "items": {"type": "string"},
                             "minItems": 1,
                         },
+                        "adapter": {
+                            "type": "object",
+                            "required": ["id", "kind", "version"],
+                            "properties": {
+                                "id": {"type": "string"},
+                                "kind": {"type": "string"},
+                                "version": {"type": "string"},
+                            },
+                            "additionalProperties": True,
+                        },
+                        "provenance": {
+                            "type": "object",
+                            "required": [
+                                "prepared_by",
+                                "command_sha256",
+                                "source_revision",
+                                "source_path_sha256",
+                                "temporary_copy",
+                            ],
+                            "properties": {
+                                "prepared_by": {"const": "lifetxt"},
+                                "command_sha256": HASH,
+                                "source_revision": HASH,
+                                "source_path_sha256": HASH,
+                                "temporary_copy": {"const": True},
+                            },
+                            "additionalProperties": True,
+                        },
+                        "authorization": {
+                            "type": "object",
+                            "required": [
+                                "permission_model",
+                                "required_permissions",
+                                "direct_write_allowed",
+                                "apply_requires_revision",
+                            ],
+                            "properties": {
+                                "permission_model": {
+                                    "const": "local-user-invoked-proposal"
+                                },
+                                "required_permissions": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "contains": {
+                                        "const": "write_source_via_revision_checked_apply"
+                                    },
+                                },
+                                "direct_write_allowed": {"const": False},
+                                "apply_requires_revision": {"const": True},
+                            },
+                            "additionalProperties": True,
+                        },
+                        "lifecycle": {
+                            "type": "object",
+                            "required": [
+                                "process_timeout_seconds",
+                                "timeout_behavior",
+                                "cancellation_behavior",
+                                "proposal_retention",
+                                "temporary_cleanup",
+                            ],
+                            "properties": {
+                                "process_timeout_seconds": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0,
+                                },
+                                "timeout_behavior": {
+                                    "const": "abort_without_authoritative_write"
+                                },
+                                "cancellation_behavior": {
+                                    "const": "abort_without_authoritative_write"
+                                },
+                                "proposal_retention": {
+                                    "enum": [
+                                        "persisted_if_proposal_path_supplied",
+                                        "not_persisted_without_proposal_path",
+                                    ]
+                                },
+                                "temporary_cleanup": {
+                                    "enum": [
+                                        "delete_after_prepare",
+                                        "retained_for_review",
+                                    ]
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
+                        "sandbox": {
+                            "type": "object",
+                            "required": [
+                                "model",
+                                "private_temporary_copy",
+                                "authoritative_path_exposed_to_adapter",
+                                "authoritative_path_sha256",
+                                "temporary_path_sha256",
+                                "temporary_root_sha256",
+                            ],
+                            "properties": {
+                                "model": {"const": "private_temporary_copy"},
+                                "private_temporary_copy": {"const": True},
+                                "authoritative_path_exposed_to_adapter": {
+                                    "const": False
+                                },
+                                "authoritative_path_sha256": HASH,
+                                "temporary_path_sha256": HASH,
+                                "temporary_root_sha256": HASH,
+                            },
+                            "additionalProperties": True,
+                        },
+                        "contract_sha256": HASH,
                         "created_at_utc": {"type": "string"},
                         "before_revision": HASH,
                         "edited_revision": HASH,
@@ -255,6 +371,44 @@ def schema_samples_v13():
                     "operation": "delegated.mutation",
                     "path": "/tmp/life.txt",
                     "command": ["plugin", "/tmp/copy.txt"],
+                    "adapter": {
+                        "id": "cli.delegated",
+                        "kind": "local_process",
+                        "version": "1",
+                    },
+                    "provenance": {
+                        "prepared_by": "lifetxt",
+                        "command_sha256": h,
+                        "source_revision": h,
+                        "source_path_sha256": h,
+                        "temporary_copy": True,
+                    },
+                    "authorization": {
+                        "permission_model": "local-user-invoked-proposal",
+                        "required_permissions": [
+                            "read_source_snapshot",
+                            "run_local_adapter_on_temporary_copy",
+                            "write_source_via_revision_checked_apply",
+                        ],
+                        "direct_write_allowed": False,
+                        "apply_requires_revision": True,
+                    },
+                    "lifecycle": {
+                        "process_timeout_seconds": 300.0,
+                        "timeout_behavior": "abort_without_authoritative_write",
+                        "cancellation_behavior": "abort_without_authoritative_write",
+                        "proposal_retention": "persisted_if_proposal_path_supplied",
+                        "temporary_cleanup": "delete_after_prepare",
+                    },
+                    "sandbox": {
+                        "model": "private_temporary_copy",
+                        "private_temporary_copy": True,
+                        "authoritative_path_exposed_to_adapter": False,
+                        "authoritative_path_sha256": h,
+                        "temporary_path_sha256": h,
+                        "temporary_root_sha256": h,
+                    },
+                    "contract_sha256": h,
                     "created_at_utc": "2026-07-25T00:00:00Z",
                     "before_revision": h,
                     "edited_revision": h,

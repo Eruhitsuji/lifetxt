@@ -10,6 +10,7 @@ from lifetxt import mutation
 from lifetxt.delegated_mutation import (
     DelegatedMutationError,
     apply_delegated_proposal_file,
+    delegated_contract_hash,
     normalize_command,
     prepare_delegated_mutation,
     read_delegated_proposal,
@@ -48,6 +49,30 @@ class DelegatedMutationTests(unittest.TestCase):
         self.assertFalse(os.path.exists(report.get("temporary_path") or ""))
         proposal, snapshot = read_delegated_proposal(proposal_path)
         self.assertEqual("prepared", proposal["state"])
+        self.assertEqual("cli.delegated", proposal["adapter"]["id"])
+        self.assertEqual("local_process", proposal["adapter"]["kind"])
+        self.assertEqual("1", proposal["adapter"]["version"])
+        self.assertEqual("lifetxt", proposal["provenance"]["prepared_by"])
+        self.assertEqual(
+            proposal["before_revision"], proposal["provenance"]["source_revision"]
+        )
+        self.assertTrue(proposal["provenance"]["temporary_copy"])
+        self.assertFalse(proposal["authorization"]["direct_write_allowed"])
+        self.assertTrue(proposal["authorization"]["apply_requires_revision"])
+        self.assertEqual(
+            "abort_without_authoritative_write",
+            proposal["lifecycle"]["timeout_behavior"],
+        )
+        self.assertEqual(
+            "persisted_if_proposal_path_supplied",
+            proposal["lifecycle"]["proposal_retention"],
+        )
+        self.assertEqual(
+            "delete_after_prepare", proposal["lifecycle"]["temporary_cleanup"]
+        )
+        self.assertEqual("private_temporary_copy", proposal["sandbox"]["model"])
+        self.assertFalse(proposal["sandbox"]["authoritative_path_exposed_to_adapter"])
+        self.assertEqual(proposal["contract_sha256"], delegated_contract_hash(proposal))
         applied = apply_delegated_proposal_file(
             proposal_path,
             expected_proposal_revision=snapshot.content_hash,
@@ -104,6 +129,107 @@ class DelegatedMutationTests(unittest.TestCase):
             json.dump(payload, handle)
         with self.assertRaises(DelegatedMutationError):
             read_delegated_proposal(proposal_path)
+
+    def test_tampered_metadata_is_rejected(self):
+        proposal_path = os.path.join(self.root, "proposal.json")
+        prepare_delegated_mutation(
+            self.path,
+            [sys.executable, self.script, "{file}"],
+            proposal_path=proposal_path,
+        )
+        cases = (
+            ("adapter", "id", "other.adapter"),
+            ("provenance", "prepared_by", "other"),
+            ("provenance", "command_sha256", "0" * 64),
+            ("authorization", "direct_write_allowed", True),
+            ("authorization", "apply_requires_revision", False),
+            ("lifecycle", "timeout_behavior", "continue_after_timeout"),
+            ("lifecycle", "temporary_cleanup", "unknown"),
+            ("sandbox", "model", "shared_source"),
+            ("sandbox", "authoritative_path_exposed_to_adapter", True),
+        )
+        for section, key, value in cases:
+            with self.subTest(section=section, key=key):
+                with open(proposal_path, encoding="utf-8") as handle:
+                    payload = json.load(handle)
+                payload[section][key] = value
+                with open(proposal_path, "w", encoding="utf-8") as handle:
+                    json.dump(payload, handle)
+                with self.assertRaises(DelegatedMutationError):
+                    read_delegated_proposal(proposal_path)
+
+    def test_custom_adapter_identity_is_recorded_and_validated(self):
+        proposal_path = os.path.join(self.root, "proposal.json")
+        proposal = prepare_delegated_mutation(
+            self.path,
+            [sys.executable, self.script, "{file}"],
+            proposal_path=proposal_path,
+            adapter_id="stable.editor",
+            adapter_kind="editor_session",
+            adapter_version="2",
+        )
+        self.assertEqual("stable.editor", proposal["adapter"]["id"])
+        self.assertEqual("editor_session", proposal["adapter"]["kind"])
+        stored, _snapshot = read_delegated_proposal(proposal_path)
+        self.assertEqual(proposal["contract_sha256"], stored["contract_sha256"])
+
+    def test_one_winner_one_conflict_with_metadata(self):
+        first_path = os.path.join(self.root, "first.json")
+        second_path = os.path.join(self.root, "second.json")
+        prepare_delegated_mutation(
+            self.path,
+            [sys.executable, self.script, "{file}"],
+            proposal_path=first_path,
+        )
+        prepare_delegated_mutation(
+            self.path,
+            [sys.executable, self.script, "{file}"],
+            proposal_path=second_path,
+        )
+        self.assertTrue(apply_delegated_proposal_file(first_path)["applied"])
+        with self.assertRaises(mutation.MutationConflict):
+            apply_delegated_proposal_file(second_path)
+
+    def test_timeout_does_not_write_or_persist_successful_proposal(self):
+        script = os.path.join(self.root, "slow.py")
+        with open(script, "w", encoding="utf-8") as handle:
+            handle.write(
+                "import pathlib,sys,time\n"
+                "time.sleep(1)\n"
+                "pathlib.Path(sys.argv[1]).write_text('[ ] T Late id:t1\\n', encoding='utf-8')\n"
+            )
+        proposal_path = os.path.join(self.root, "timeout.json")
+        with self.assertRaises(DelegatedMutationError):
+            prepare_delegated_mutation(
+                self.path,
+                [sys.executable, script, "{file}"],
+                proposal_path=proposal_path,
+                timeout=0.01,
+            )
+        self.assertFalse(os.path.exists(proposal_path))
+        with open(self.path, encoding="utf-8") as handle:
+            self.assertIn("Before", handle.read())
+
+    def test_temporary_copy_cleanup_and_retention_policy_are_deterministic(self):
+        proposal_path = os.path.join(self.root, "retained.json")
+        report = prepare_delegated_mutation(
+            self.path,
+            [sys.executable, self.script, "{file}"],
+            proposal_path=proposal_path,
+            keep_temporary=True,
+        )
+        self.assertTrue(os.path.exists(report["temporary_path"]))
+        proposal, snapshot = read_delegated_proposal(proposal_path)
+        self.assertEqual(
+            "retained_for_review", proposal["lifecycle"]["temporary_cleanup"]
+        )
+        self.assertEqual("prepared", proposal["state"])
+        # Simulate a restart by applying only from the retained proposal file.
+        applied = apply_delegated_proposal_file(
+            proposal_path,
+            expected_proposal_revision=snapshot.content_hash,
+        )
+        self.assertTrue(applied["applied"])
 
     def test_reject_is_revision_checked(self):
         proposal_path = os.path.join(self.root, "proposal.json")

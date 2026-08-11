@@ -27,6 +27,26 @@ from .timezone_policy import utcnow
 
 PROPOSAL_VERSION = 1
 PROPOSAL_STATES = frozenset(("prepared", "applied", "rejected"))
+DEFAULT_ADAPTER_ID = "cli.delegated"
+DEFAULT_ADAPTER_KIND = "local_process"
+DEFAULT_ADAPTER_VERSION = "1"
+CONTRACT_HASH_FIELDS = (
+    "proposal_version",
+    "id",
+    "state",
+    "operation",
+    "path",
+    "command",
+    "before_revision",
+    "edited_revision",
+    "diff_sha256",
+    "changed",
+    "adapter",
+    "provenance",
+    "authorization",
+    "lifecycle",
+    "sandbox",
+)
 
 
 class DelegatedMutationError(ValueError):
@@ -98,6 +118,122 @@ def validate_lifetxt_text(text):
     return True
 
 
+def _stable_json(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _sha256_json(value):
+    return hashlib.sha256(_stable_json(value).encode("utf-8")).hexdigest()
+
+
+def _validate_identifier(name, value):
+    if not isinstance(value, str) or not value:
+        raise DelegatedMutationError("%s must be a non-empty string." % name)
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-")
+    if any(char not in allowed for char in value):
+        raise DelegatedMutationError("%s contains unsupported characters." % name)
+    return value
+
+
+def delegated_contract_hash(proposal):
+    payload = OrderedDict(
+        (key, proposal.get(key)) for key in CONTRACT_HASH_FIELDS if key in proposal
+    )
+    return _sha256_json(payload)
+
+
+def _adapter_metadata(adapter_id=None, adapter_kind=None, adapter_version=None):
+    adapter_id = _validate_identifier("adapter.id", adapter_id or DEFAULT_ADAPTER_ID)
+    adapter_kind = _validate_identifier(
+        "adapter.kind", adapter_kind or DEFAULT_ADAPTER_KIND
+    )
+    adapter_version = _validate_identifier(
+        "adapter.version", adapter_version or DEFAULT_ADAPTER_VERSION
+    )
+    return OrderedDict(
+        (
+            ("id", adapter_id),
+            ("kind", adapter_kind),
+            ("version", adapter_version),
+        )
+    )
+
+
+def _provenance_metadata(argv, source):
+    return OrderedDict(
+        (
+            ("prepared_by", "lifetxt"),
+            ("command_sha256", _sha256_json([str(value) for value in argv])),
+            ("source_revision", source.content_hash),
+            (
+                "source_path_sha256",
+                hashlib.sha256(source.path.encode("utf-8")).hexdigest(),
+            ),
+            ("temporary_copy", True),
+        )
+    )
+
+
+def _authorization_metadata():
+    return OrderedDict(
+        (
+            ("permission_model", "local-user-invoked-proposal"),
+            (
+                "required_permissions",
+                [
+                    "read_source_snapshot",
+                    "run_local_adapter_on_temporary_copy",
+                    "write_source_via_revision_checked_apply",
+                ],
+            ),
+            ("direct_write_allowed", False),
+            ("apply_requires_revision", True),
+        )
+    )
+
+
+def _lifecycle_metadata(timeout, keep_temporary, proposal_path=None):
+    return OrderedDict(
+        (
+            ("process_timeout_seconds", float(timeout)),
+            ("timeout_behavior", "abort_without_authoritative_write"),
+            ("cancellation_behavior", "abort_without_authoritative_write"),
+            (
+                "proposal_retention",
+                "persisted_if_proposal_path_supplied"
+                if proposal_path
+                else "not_persisted_without_proposal_path",
+            ),
+            (
+                "temporary_cleanup",
+                "retained_for_review" if keep_temporary else "delete_after_prepare",
+            ),
+        )
+    )
+
+
+def _sandbox_metadata(source, temporary_path, temp_root):
+    return OrderedDict(
+        (
+            ("model", "private_temporary_copy"),
+            ("private_temporary_copy", True),
+            ("authoritative_path_exposed_to_adapter", False),
+            (
+                "authoritative_path_sha256",
+                hashlib.sha256(source.path.encode("utf-8")).hexdigest(),
+            ),
+            (
+                "temporary_path_sha256",
+                hashlib.sha256(temporary_path.encode("utf-8")).hexdigest(),
+            ),
+            (
+                "temporary_root_sha256",
+                hashlib.sha256(temp_root.encode("utf-8")).hexdigest(),
+            ),
+        )
+    )
+
+
 def prepare_delegated_mutation(
     path,
     command,
@@ -106,6 +242,9 @@ def prepare_delegated_mutation(
     keep_temporary=False,
     environment=None,
     operation="delegated.mutation",
+    adapter_id=None,
+    adapter_kind=None,
+    adapter_version=None,
     now=None,
 ):
     source = mutation.read_text_snapshot(path)
@@ -113,6 +252,10 @@ def prepare_delegated_mutation(
     temporary_path = os.path.join(
         temp_root, os.path.basename(source.path) or "life.txt"
     )
+    if os.path.abspath(temporary_path) == os.path.abspath(source.path):
+        raise DelegatedMutationError(
+            "Delegated temporary copy must not be the authoritative source."
+        )
     try:
         # The handoff copy is non-authoritative. Copy exact bytes, then verify
         # them against the captured snapshot so a concurrent source change can
@@ -193,8 +336,24 @@ def prepare_delegated_mutation(
                 ("stderr", completed.stderr),
                 ("exit_code", completed.returncode),
                 ("temporary_path", temporary_path if keep_temporary else None),
+                (
+                    "adapter",
+                    _adapter_metadata(
+                        adapter_id=adapter_id,
+                        adapter_kind=adapter_kind,
+                        adapter_version=adapter_version,
+                    ),
+                ),
+                ("provenance", _provenance_metadata(argv, source)),
+                ("authorization", _authorization_metadata()),
+                (
+                    "lifecycle",
+                    _lifecycle_metadata(timeout, keep_temporary, proposal_path),
+                ),
+                ("sandbox", _sandbox_metadata(source, temporary_path, temp_root)),
             )
         )
+        proposal["contract_sha256"] = delegated_contract_hash(proposal)
         validate_delegated_proposal(proposal)
         result = OrderedDict(proposal)
         if proposal_path:
@@ -231,6 +390,7 @@ def validate_delegated_proposal(proposal):
         "diff_sha256",
         "edited_text",
         "diff",
+        "contract_sha256",
     ):
         if not isinstance(proposal.get(key), str) or (
             key not in ("edited_text", "diff") and not proposal.get(key)
@@ -252,8 +412,143 @@ def validate_delegated_proposal(proposal):
         raise DelegatedMutationError(
             "Delegated proposal diff hash does not match diff_sha256."
         )
+    _validate_metadata(proposal)
+    _validate_lifecycle(proposal)
+    _validate_sandbox(proposal)
+    expected_contract = delegated_contract_hash(proposal)
+    if expected_contract != proposal["contract_sha256"]:
+        raise DelegatedMutationError(
+            "Delegated proposal contract metadata hash does not match contract_sha256."
+        )
     validate_lifetxt_text(proposal["edited_text"])
     return proposal
+
+
+def _require_object(proposal, key):
+    value = proposal.get(key)
+    if not isinstance(value, dict):
+        raise DelegatedMutationError(
+            "Delegated proposal requires object field %s." % key
+        )
+    return value
+
+
+def _validate_metadata(proposal):
+    adapter = _require_object(proposal, "adapter")
+    _validate_identifier("adapter.id", adapter.get("id"))
+    _validate_identifier("adapter.kind", adapter.get("kind"))
+    _validate_identifier("adapter.version", adapter.get("version"))
+
+    provenance = _require_object(proposal, "provenance")
+    if provenance.get("prepared_by") != "lifetxt":
+        raise DelegatedMutationError("Delegated proposal provenance must be lifetxt.")
+    expected_command = _sha256_json(
+        [str(value) for value in proposal.get("command") or []]
+    )
+    if provenance.get("command_sha256") != expected_command:
+        raise DelegatedMutationError(
+            "Delegated proposal command provenance does not match command."
+        )
+    if provenance.get("source_revision") != proposal.get("before_revision"):
+        raise DelegatedMutationError(
+            "Delegated proposal source provenance does not match before_revision."
+        )
+    if (
+        not isinstance(provenance.get("source_path_sha256"), str)
+        or len(provenance.get("source_path_sha256")) != 64
+    ):
+        raise DelegatedMutationError(
+            "Delegated proposal source_path_sha256 must be a SHA-256 string."
+        )
+    if provenance.get("temporary_copy") is not True:
+        raise DelegatedMutationError(
+            "Delegated proposal provenance must record temporary_copy=true."
+        )
+
+    authorization = _require_object(proposal, "authorization")
+    if authorization.get("permission_model") != "local-user-invoked-proposal":
+        raise DelegatedMutationError(
+            "Delegated proposal permission_model is unsupported."
+        )
+    required = authorization.get("required_permissions")
+    if not isinstance(required, list):
+        raise DelegatedMutationError(
+            "Delegated proposal required_permissions must be a list."
+        )
+    required_set = set(str(value) for value in required)
+    expected_permissions = {
+        "read_source_snapshot",
+        "run_local_adapter_on_temporary_copy",
+        "write_source_via_revision_checked_apply",
+    }
+    if not expected_permissions.issubset(required_set):
+        raise DelegatedMutationError(
+            "Delegated proposal required_permissions are incomplete."
+        )
+    if authorization.get("direct_write_allowed") is not False:
+        raise DelegatedMutationError(
+            "Delegated proposals must not allow direct authoritative writes."
+        )
+    if authorization.get("apply_requires_revision") is not True:
+        raise DelegatedMutationError(
+            "Delegated proposal apply_requires_revision must be true."
+        )
+
+
+def _validate_lifecycle(proposal):
+    lifecycle = _require_object(proposal, "lifecycle")
+    try:
+        timeout = float(lifecycle.get("process_timeout_seconds"))
+    except (TypeError, ValueError):
+        timeout = 0.0
+    if timeout <= 0:
+        raise DelegatedMutationError(
+            "Delegated proposal process_timeout_seconds must be positive."
+        )
+    if lifecycle.get("timeout_behavior") != "abort_without_authoritative_write":
+        raise DelegatedMutationError("Delegated proposal timeout_behavior is unsafe.")
+    if lifecycle.get("cancellation_behavior") != "abort_without_authoritative_write":
+        raise DelegatedMutationError(
+            "Delegated proposal cancellation_behavior is unsafe."
+        )
+    if lifecycle.get("proposal_retention") not in (
+        "persisted_if_proposal_path_supplied",
+        "not_persisted_without_proposal_path",
+    ):
+        raise DelegatedMutationError(
+            "Delegated proposal retention policy is unsupported."
+        )
+    if lifecycle.get("temporary_cleanup") not in (
+        "delete_after_prepare",
+        "retained_for_review",
+    ):
+        raise DelegatedMutationError(
+            "Delegated proposal cleanup policy is unsupported."
+        )
+
+
+def _validate_sandbox(proposal):
+    sandbox = _require_object(proposal, "sandbox")
+    if sandbox.get("model") != "private_temporary_copy":
+        raise DelegatedMutationError("Delegated proposal sandbox model is unsupported.")
+    if sandbox.get("private_temporary_copy") is not True:
+        raise DelegatedMutationError(
+            "Delegated proposal must use a private temporary copy."
+        )
+    if sandbox.get("authoritative_path_exposed_to_adapter") is not False:
+        raise DelegatedMutationError(
+            "Delegated proposal must not expose the authoritative path to adapters."
+        )
+    for key in (
+        "authoritative_path_sha256",
+        "temporary_path_sha256",
+        "temporary_root_sha256",
+    ):
+        value = sandbox.get(key)
+        if not isinstance(value, str) or len(value) != 64:
+            raise DelegatedMutationError(
+                "Delegated proposal %s must be a SHA-256 string." % key
+            )
 
 
 def write_delegated_proposal(path, proposal, expected_revision=None):
@@ -349,6 +644,7 @@ def apply_delegated_proposal_file(
     updated["state"] = "applied"
     updated["applied_at_utc"] = utc_now_text(now)
     updated["result"] = applied
+    updated["contract_sha256"] = delegated_contract_hash(updated)
     saved = write_delegated_proposal(
         snapshot.path, updated, expected_revision=snapshot.content_hash
     )
@@ -379,6 +675,7 @@ def reject_delegated_proposal_file(
     updated["state"] = "rejected"
     updated["rejected_at_utc"] = utc_now_text(now)
     updated["rejection_reason"] = None if reason is None else str(reason)
+    updated["contract_sha256"] = delegated_contract_hash(updated)
     saved = write_delegated_proposal(
         snapshot.path, updated, expected_revision=snapshot.content_hash
     )

@@ -33,6 +33,9 @@ First paragraph.\n\nThird line after a blank line.
 ```
 
 The serializer uses this continuation form when an item has exactly one `body:` value containing a newline.
+Indentation is preserved at the item level: a child item with a multiline body
+serializes the same item indentation before each `|` continuation line, so the
+body stays attached to that child rather than becoming a sibling item.
 
 For backward compatibility, one inline `body:` value may be followed by continuation lines:
 
@@ -77,3 +80,17 @@ Use one of these forms:
 - one continuation block for one multiline value.
 
 A single inline value followed by continuation lines remains accepted for compatibility and canonicalizes to the continuation-only form. Never add a continuation block after repeated `body:` values. This fail-loud boundary prevents a formatter, converter, editor integration, or future LSP action from silently changing the data model.
+
+## Verification checklist for integrations
+
+When building an editor formatter, importer, exporter, or AI tool around
+life.txt, test these cases before writing user data:
+
+- parse and re-serialize `tests/golden/roundtrip_cases.json`;
+- keep JSON/JSONL detail values as arrays even when a key appears once;
+- preserve explicit timezone-offset strings during interchange;
+- reject `body:first body:second` followed by `| continuation` with `E022`;
+- raise rather than serialize a repeated `body:` set containing any multiline value.
+
+The important rule is not that every surface prints identical whitespace; it is
+that no surface silently merges, drops, or retargets an authored value.

@@ -1,12 +1,10 @@
-# ライフハブ: 日次コマンドセンター・エリア・被参照リンク
+# Life Hub: Daily Command Center, Areas, and Backlinks
 
-ライフハブのコマンドは、life.txt ワークスペースを「今日やるべきこと」「エリア別の
-整理」「アイテム同士のつながり」を一望できる場所に変えます。すべてのコマンドは
-共有の集約を読み取るため、CLI・MCP・将来の Web で同じ内容を見られます。
+Life Hub commands は life.txt workspace を、今日 attention が必要なもの、area ごとの work organization、items 同士の connection を見る command center にします。すべての command は shared aggregation を読むため、CLI、MCP、future Web surfaces が同じ picture を見ます。
 
-## 日次コマンドセンター
+## Daily command center
 
-`today` は一日を決定的に集約します。
+`today` は 1 日分を deterministic に aggregate します。
 
 ```console
 $ lifetxt today
@@ -14,50 +12,49 @@ $ lifetxt today --mode morning --horizon 5
 $ lifetxt today --person self --json
 ```
 
-バケット:
+`--mode` は presentation emphasis を変えるだけで、underlying records は変えません。morning planning、midday re-check、evening review に使っても、JSON と MCP clients に渡る deterministic buckets は同じです。
 
-- **overdue** — `due:` が今日より前のタスク/締切
-- **due today** — `due:` が今日
-- **upcoming** — `due:` が期間内（既定3日）
-- **blocked** — `depends_on:` の対象が未完了
-- **waiting** — ステータス `[?]`
-- **messages** — 未処理の `M` アイテム（`--person` で絞り込み可）
-- **habits** — 未処理の `H` アイテム
-- **captures** — `project:`・`due:`・`assignee:` の無い未整理タスク（インボックス）
-- **project attention** — green 以外のプロジェクトと健全性の理由
-- **safety** — 設定の妥当性の簡易シグナル
+Buckets:
 
-同じ集約は MCP ツール `get_command_center` からも利用できます。
+- **overdue**: `due:` が today より前の tasks/deadlines
+- **due today**: `due:` が today
+- **upcoming**: horizon 内の `due:`。default は 3 days
+- **blocked**: `depends_on:` target がまだ done ではない
+- **waiting**: status `[?]`
+- **messages**: open `M` items。`--person` で scope 可能
+- **habits**: open `H` items
+- **captures**: `project:`、`due:`、`assignee:` がない open tasks。inbox
+- **project attention**: non-green projects と health reasons
+- **safety**: configuration-validity の quick signal
 
-## エリア
+同じ aggregation は MCP tool `get_command_center` からも使えます。
 
-`area:` は `project:` の上位にある任意の整理軸です。アイテムのエリアは自身の
-`area:` 詳細から、プロジェクトのエリアはレコードまたはレジストリの `default_area`
-から決まります。エリアはデータに現れる値そのものであり、`work`・`research`・
-`health`・`home`・`finance`・`family`・`learning` はあくまで例で、強制ではありません。
+## Areas
+
+`area:` は `project:` の上に置ける optional organizing dimension です。item の area は item 自身の `area:` detail から、project の area は project record または registry の `default_area` から決まります。areas は data に現れる values であり、`work`、`research`、`health`、`home`、`finance`、`family`、`learning` は examples であって required taxonomy ではありません。
 
 ```console
 $ lifetxt area list
 $ lifetxt area show work
 ```
 
-MCP: `get_areas`。
+MCP: `get_areas`.
 
-## 被参照リンク（backlinks）
+areas は data-derived です。area を rename するには、relevant `area:` details または project registry records を変更します。hidden area database はありません。
 
-`backlinks` は「このアイテムを何が参照しているか」— リンクグラフの入力側 — を
-関係（`parent`・`ref`・`depends_on`・`blocks`・`related`・`duplicate_of`・`replaced_by`）ごとに表示します。
+## Backlinks
+
+`backlinks` は「この item を何が指しているか」を答えます。link graph の incoming half を、relation (`parent`, `ref`, `depends_on`, `blocks`, `related`, `duplicate_of`, `replaced_by`) ごとに group します。
 
 ```console
 $ lifetxt backlinks T-1
 $ lifetxt backlinks T-1 --json
 ```
 
-MCP: `get_backlinks`。
+MCP: `get_backlinks`.
 
-## MCP でのプロジェクト参照
+backlinks は read-only です。source item を edit する前に、incoming relationships を見て change が safe か判断するための report です。
 
-プロジェクトとポートフォリオの集約は、読み取り専用ツール `get_projects`・
-`get_project`・`get_portfolio` として AI クライアントに公開されます。CLI の
-`project`/`portfolio` と同じ `lifetxt/projects.py` を再利用するため、透明な進捗・
-健全性の算出式を含め、人が見る内容とモデルが見る内容が一致します。
+## Projects over MCP
+
+project と portfolio aggregations は read-only tools として AI clients に公開されます。`get_projects`、`get_project`、`get_portfolio` です。CLI の `project`/`portfolio` commands と同じ `lifetxt/projects.py` logic を再利用するため、model は transparent progress/health formulas を含めて human と同じ view を見ます。

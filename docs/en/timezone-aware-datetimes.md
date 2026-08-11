@@ -58,3 +58,7 @@ Mixed aware/naive ordering and subtraction remain supported for existing agenda,
 ## Time-only values
 
 This batch is intentionally scoped to full datetime values. Time-only values such as `at:09:30+09:00` retain the existing local-comparison behavior until the broader timezone-precedence policy is finalized.
+
+## Authoring guidance
+
+Use explicit offsets on datetimes that refer to a real instant shared across machines, services, or collaborators. Use naive values only when the intended meaning is wall time in the workspace timezone policy described in [timezone-revision-workspace-safety.md](./timezone-revision-workspace-safety.md).

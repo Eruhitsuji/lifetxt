@@ -1,12 +1,12 @@
-# 委譲変更・リモート添付・復旧証跡
+# Delegated mutations, remote attachment contracts, and recovery evidence
 
-このリリースでは、P0の安全基盤を、再起動可能な委譲変更、Web/MCPのdirectory/package attachment、subprocess fault drill、検証済みbackup復元へ拡張します。また、書き込み可能なWeb/MCP操作へserver-authoritativeなclock preconditionを任意で適用できます。
+この release は P0 safety foundation を 4 つの連動した領域へ拡張します。restart-safe delegated mutations、Web/MCP directory-package attachment parity、より広い subprocess fault drills、verified backup restoration です。また writable Web/MCP operations に対して、任意で server-authoritative clock precondition を追加します。
 
-## 再起動可能な委譲変更
+## Restart-safe delegated mutations
 
-Pluginや外部programがlife.txtの変更を提案するときに使用します。外部commandへ渡すのはprivateな一時copyであり、authoritative fileではありません。Proposalには元revision、編集後content hash、diff hash、command引数、標準出力、標準error、検証結果が保存されます。
+plugin や他の program が life.txt への変更を提案する必要がある場合は、この flow を使います。delegated command が受け取るのは private temporary copy であり、authoritative file ではありません。prepared proposal は exact source revision、edited content hash、diff hash、command arguments、output、validation result を保存します。
 
-Proposalを作成します。
+proposal を prepare します。
 
 ```bash
 lifetxt safety delegated prepare \
@@ -16,7 +16,7 @@ lifetxt safety delegated prepare \
   --pretty
 ```
 
-元processやsessionの終了後にも内容を確認できます。
+元の process や machine session が終了した後でも inspect できます。
 
 ```bash
 lifetxt safety delegated inspect \
@@ -24,7 +24,7 @@ lifetxt safety delegated inspect \
   --pretty
 ```
 
-Proposal fileとauthoritative life.txtのrevisionが一致する場合だけ適用します。
+proposal file と authoritative life.txt revisions がまだ一致する場合だけ apply します。
 
 ```bash
 lifetxt safety delegated apply \
@@ -33,7 +33,7 @@ lifetxt safety delegated apply \
   --pretty
 ```
 
-life.txtを変更せず却下します。
+life.txt を変えずに reject します。
 
 ```bash
 lifetxt safety delegated reject \
@@ -43,24 +43,26 @@ lifetxt safety delegated reject \
   --pretty
 ```
 
-Platformが対応する場合、proposal fileはowner-private permissionで保存されます。保存された編集textとunified diffはinspect・apply前にhash検証されます。Authoritative fileが同時に変更された場合は通常のrevision conflictになり、自動rebaseや上書きはしません。`--unsafe`は意図的なlocal recovery用であり、integrationから使用すべきではありません。
+prepared proposal files は、platform が対応している場合 owner-private permissions で書かれます。保存された edited text と unified diff は inspect/apply 前に hash-check されます。concurrent authoritative edit は通常の revision conflict になり、proposal は silent rebase も overwrite もされません。`--unsafe` は意図的な local recovery 用ですが、保存された source revision を bypass するため integrations から使うべきではありません。
 
-## リモートattachment契約
+重要な境界は、delegated command が real authoritative path を受け取らないことです。command が crash した場合、invalid life.txt を書いた場合、output 後に temporary copy をさらに編集した場合、または approval 前に user が real file を編集した場合でも、`inspect` と `apply` には推測で merge せず fail loudly するための hashes が記録されています。
 
-WebとMCPから、CLIと同じrevision-awareなdirectory/package操作を利用できます。契約は`/api/attachments/contract`、`/api/capabilities`、`get_capabilities`、`lifetxt://capabilities`で公開されます。
+## Remote attachment contract
 
-契約に含まれる内容は次のとおりです。
+Web と MCP surfaces は、CLI と同じ revision-aware directory/package operations を公開します。server は `/api/attachments/contract`、`/api/capabilities`、`get_capabilities`、`lifetxt://capabilities` で contract を publish します。
 
-- item・attachment・metadataのexact revision
-- Package retry用のcaller-supplied transaction ID
-- Server-side package source confinement
-- 決定的ZIPと埋め込みintegrity manifest
-- 最大1 MiBのbounded chunk read
-- Package manifest検証
-- Transaction statusと利用可能なrecovery action
-- Remoteからplatform openerを実行しない制約
+contract には次が含まれます。
 
-### Web操作
+- exact item、attachment、metadata revisions
+- package retries 用の stable caller-provided transaction ID
+- server-side package source confinement
+- deterministic ZIP generation と embedded integrity manifests
+- 1 MiB capped bounded chunk reads
+- package-manifest inspection
+- transaction status と permitted recovery actions
+- platform attachment open commands の remote execution はしない
+
+### Web operations
 
 ```text
 GET  /api/attachments/contract
@@ -73,7 +75,7 @@ POST /api/attachments/reconcile
 POST /api/attachments/open
 ```
 
-Package request例です。
+package request は server-confined source path を使います。
 
 ```json
 {
@@ -86,27 +88,27 @@ Package request例です。
 }
 ```
 
-Sourceは`attachments.remote_source_root`以下でなければなりません。別のremote source rootを設定していない場合は通常のattachment rootが使用されます。明示的なlocal policyがない限り、symlinkとnon-regular entryは拒否されます。
+source は `attachments.remote_source_root` の下、または separate remote source root が未設定の場合は通常の attachment root の下に resolve されなければなりません。explicit local policy が許可しない限り、symlink と non-regular entries は拒否されます。
 
-同じtransaction IDを再利用すると、新しいtransactionを開始せず、現在のjournal stateとrecovery actionを含む`DUPLICATE_TRANSACTION_ID`を返します。
+existing transaction ID を retry すると、新しい transaction を開始せず、current journal state と supported recovery actions を含む `DUPLICATE_TRANSACTION_ID` を返します。
 
-Bounded chunkを読みます。
+bounded package/attachment chunk を読む例です。
 
 ```text
 GET /api/attachments/chunk?path=./attachments/specs.zip&offset=0&limit=65536&attachment_revision=SHA256
 ```
 
-埋め込みmanifestと各package memberを検証します。
+embedded manifest と package members を inspect します。
 
 ```text
 GET /api/attachments/package-manifest?path=./attachments/specs.zip&attachment_revision=SHA256
 ```
 
-Remote openはattachmentを検証し、revision-checkedなopen metadataを更新できますが、OS command planを返すだけです。Web/MCP serverがopenerを実行することはありません。
+remote open operation は attachment を validate し、revision-checked open metadata を update できますが、返すのは operating-system command plan だけです。Web server と MCP server は opener を execute しません。その plan は trusted client side でのみ使ってください。remote attachment API は何を開く予定かを伝えますが、remote command-execution channel ではありません。
 
-### MCP tool
+### MCP tools
 
-対応するMCP toolは次のとおりです。
+対応する MCP tools は次の通りです。
 
 - `attachment_directory_reference`
 - `attachment_package`
@@ -116,11 +118,11 @@ Remote openはattachmentを検証し、revision-checkedなopen metadataを更新
 - `attachment_inspect_package`
 - `attachment_transaction_status`
 
-すべてのwritable MCP toolは任意の`client_time`入力を公開し、clock preconditionがrequiredになる前からclientが契約を検出できます。
+すべての writable MCP tool は optional `client_time` input を publish します。これにより clients は clock precondition が required になる前から contract を discover できます。
 
-## リモート書き込みclock precondition
+## Remote write clock precondition
 
-次の設定で有効化します。
+server-authoritative clock enforcement は次で有効にします。
 
 ```json
 {
@@ -133,17 +135,17 @@ Remote openはattachmentを検証し、revision-checkedなopen metadataを更新
 }
 ```
 
-Writable Web requestにはoffset-aware timestampをconfigured headerで指定します。Headerがない場合はHTTP 428 `CLIENT_TIME_REQUIRED`、timestampが無効またはskewが大きすぎる場合はHTTP 409 `CLOCK_SKEW`を返します。成功responseにはclock stateとskew headerが付与されます。Parser-only endpointはauthoritative stateを書き換えないため、clock headerなしで利用できます。
+writable Web requests は configured header に offset-aware timestamp を含める必要があります。missing timestamp は HTTP 428 `CLIENT_TIME_REQUIRED`、invalid timestamp または excessive skew は HTTP 409 `CLOCK_SKEW` を返します。successful responses には measured clock state と skew headers が含まれます。parser-only endpoints は authoritative state を mutate しないため clock header なしで利用できます。
 
-Writable MCP callでは同じpolicyを`client_time`引数で適用します。Capability documentはenforcementの有無とWeb header名を公開します。
+writable MCP calls は `client_time` argument で同じ policy を使います。capability documents は enforcement が enabled かどうかと expected Web header を report します。
 
-このcheckはclient/server間の大きな時刻差を検出します。Exact resource revision、transaction ID、authentication、authorization、transaction recoveryの代わりではありません。
+この check は client/server 間の大きな clock disagreement を検出します。exact resource revisions、transaction IDs、authentication、authorization、transaction recovery の代替ではありません。enforcement が disabled の場合でも、clients は header または MCP `client_time` を送れます。その場合の response clock report は diagnostic です。enforcement が enabled の場合、offset-aware timestamp のない writable calls は mutation 前に失敗します。
 
-## 拡張subprocess fault matrix
+## Expanded subprocess fault matrix
 
-Transaction directory作成、before/after artifact、journal publish、target commit、file fsync、replace、parent-directory fsyncの前後を含む16境界を検証できます。
+drill は transaction-directory creation、before/after artifact persistence、journal publication、target commit、file fsync、replace、parent-directory fsync の周辺にある 16 named boundaries を cover します。
 
-全matrixを実行します。
+full deterministic subprocess matrix を実行します。
 
 ```bash
 lifetxt safety transactions drill \
@@ -152,7 +154,7 @@ lifetxt safety transactions drill \
   --pretty
 ```
 
-1境界を実行し、terminal recoveryの再実行も確認します。
+1 つの boundary を実行し、recovery を繰り返して idempotent terminal behavior を示します。
 
 ```bash
 lifetxt safety transactions drill \
@@ -162,13 +164,13 @@ lifetxt safety transactions drill \
   --pretty
 ```
 
-Pre-journal境界では、`auto`が両targetの未変更を確認してからunpublished orphan transaction directoryを削除します。Journal publish後は通常のstale-lock処理を使用してresumeします。Compensationは明示的に選択できます。
+pre-journal boundaries では、`auto` は both targets が unchanged であることを確認してから unpublished orphan transaction directory を remove します。published journals では normal stale-lock handling を使って journal を resume します。compensation は明示的に選べます。
 
-このmatrixが証明するのは`os._exit`によるPython interpreterの突然の終了です。物理的電源断、storage controller、disk-full、Windows replace、antivirus/indexer、cloud sync、removable media、network filesystemを証明するものではありません。
+この matrix が証明するのは `os._exit` による abrupt Python interpreter termination 後の behavior です。physical power-loss durability、storage-controller ordering、disk-full handling、Windows replacement behavior、antivirus/indexer interaction、cloud synchronization、removable media、network filesystem behavior は証明しません。
 
-## 検証済みbackup復元
+## Verified backup restoration
 
-Abandonされたtransaction backupはimmutable evidenceとして保持されます。復元前に元backupのintegrity manifestを検証します。`inspect`はworking copyを作らず証跡だけを読み、`resume`と`compensate`は別のworking directoryへcopyしてから復旧します。
+abandoned transaction backups は immutable evidence として残ります。restoration はまず original integrity manifest を verify します。`inspect` は working copy を作らず evidence を読みます。`resume` と `compensate` は backup を separate working directory に copy し、その copy から recover します。
 
 ```bash
 lifetxt safety transactions restore-backup \
@@ -187,7 +189,7 @@ lifetxt safety transactions restore-backup \
   --pretty
 ```
 
-復旧後に元backupを再検証し、working copy用の新しいintegrity manifestを作成します。Operator allow-listは次の設定で有効化できます。
+operation は recovery 後に original backup を再 verify し、working copy 用に fresh integrity manifest を書きます。optional operator authorization は次で有効にできます。
 
 ```json
 {
@@ -198,11 +200,13 @@ lifetxt safety transactions restore-backup \
 }
 ```
 
-これはlocal allow-list境界であり、authenticated roleやOS access controlの代替ではありません。Encrypted evidence、key rotation、role-backed authorization、実際のincident handoff drillは今後のrelease作業です。
+これは local allow-list boundary であり、authenticated roles や OS access controls の代替ではありません。encrypted evidence profiles、key rotation、role-backed authorization、real incident handoff drills は今後の release work です。
 
-## 公開schema
+incident handling では、まず `inspect` を優先してください。これは working copy を作らず retained evidence を読むため、transaction を resume、compensate、abandon、または escalate すべきか判断する最も低 risk な方法です。
 
-次のschemaを追加します。
+## Published schemas
+
+schema bundle は次を追加します。
 
 - `delegated-mutation-proposal-v1.schema.json`
 - `attachment-remote-operation-v1.schema.json`

@@ -187,7 +187,7 @@ diagnostics for every relation key on a ticket the same as it would for any
 other item: missing references (`W215`), self references (`W216`), `parent:`
 cycles (`W217`), ambiguous references (`W218`), combined `depends_on:`/`blocks:`
 cycles (`W227`), `duplicate_of:` cycles (`W228`), and `replaced_by:` cycles
-(`W229`). See docs/en/cli.md's `links` section (3.2) for the complete
+(`W229`). See [cli.md](./cli.md)'s `links` section (3.2) for the complete
 reference/cycle-diagnostic catalog. `ticket validate` does not duplicate this
 check; run plain `check` (or `links`) alongside `ticket validate` to catch a
 relation cycle among tickets.
@@ -535,7 +535,7 @@ boundaries.
 
 ## Archiving a ticket's history
 
-`lifetxt project archive NAME` (see docs/en/projects.md's Archiving section)
+`lifetxt project archive NAME` (see [projects.md](./projects.md)'s Archiving section)
 follows a done/canceled ticket's `record:ticket_event` and `record:time_entry`
 Notes via their `parent:` reference and moves them to the configured archive
 source in the same transaction as the ticket -- unconditionally, since history

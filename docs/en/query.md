@@ -32,6 +32,9 @@ ORed.
 
 Unknown fields produce a `Q001` warning and are ignored; invalid dates produce a
 `Q002` error.
+Warnings are returned with the result set; errors stop the query. This is why a
+misspelled field does not silently narrow your result to zero, while a malformed
+date comparison cannot pretend to be valid.
 
 ## CLI
 
@@ -39,6 +42,7 @@ Unknown fields produce a `Q001` warning and are ignored; invalid dates produce a
 $ lifetxt query "open project:web tag:urgent due<2026-08-01"
 $ lifetxt query "area:work" --sort due --limit 10 --format table
 $ lifetxt query "status:done project:web" --format json
+$ lifetxt query "open text:\"release plan\""
 ```
 
 ## Saved views
@@ -67,6 +71,8 @@ $ lifetxt view run web_open --format table
 
 Saved views are validated against `saved-view-v1.schema.json`; `view validate`
 reports empty (`V001`) or malformed (`V002`) queries.
+`view run` applies the saved query first, then optional sort, order, and limit.
+That keeps one saved definition reusable across table, JSON, and MCP output.
 
 ## MCP
 

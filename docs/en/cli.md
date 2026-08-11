@@ -164,7 +164,7 @@ python -m lifetxt remote profile-list
 | `share` | Export a self-contained HTML or Markdown report (filter + review + chart) |
 | `digest` | Send a `review` summary to Slack, email, or a local file |
 | `template` | List and apply reusable named item templates |
-| `workspace` | Inspect and validate named workspaces and their source manifests (see [config.md](config.md#workspaces)) |
+| `workspace` | Inspect and validate named workspaces and their source manifests (see [config.md](config.md#named-workspaces)) |
 | `project` | List, inspect, and manage projects built from `project:` records (see [projects.md](projects.md)) |
 | `portfolio` | Compare projects by state, progress, risk, and workload (see [projects.md](projects.md)) |
 | `today` | Daily command center: overdue, due, blocked, messages, and project attention (see [life-hub.md](life-hub.md)) |
@@ -213,7 +213,7 @@ Three options are recognized before the subcommand name, for every command:
 |---|---|
 | `--version`, `-V` | Print `lifetxt VERSION` and exit 0. Ignores every other argument |
 | `--config FILE` | External JSON config file (see below) |
-| `--workspace NAME` | Named workspace to resolve inputs and the write target from (see [config.md](config.md#workspaces)) |
+| `--workspace NAME` | Named workspace to resolve inputs and the write target from (see [config.md](config.md#named-workspaces)) |
 
 ```sh
 python -m lifetxt --version
@@ -2846,7 +2846,7 @@ python -m lifetxt ticket log-time WEB-1 90m --activity development
 Ticket release versions and sprints are managed with the sibling `version`
 and `sprint` commands (`version new|list|show|close|release|lock|reopen`,
 `sprint new|list|show|start|close|reopen`); see
-[tickets.md](tickets.md#versions-and-sprints).
+[tickets.md](tickets.md#versions-sprints-backlog-and-roadmap).
 
 ## 20. Remote Safe Mode Client (`remote`)
 
@@ -2902,7 +2902,7 @@ warrant a dedicated guide:
 |---|---|
 | `next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo` | [new-cli-workflows.md](new-cli-workflows.md) |
 | `safety locks\|serve-target\|timezone\|revisions\|transactions\|write-routes\|release-gate`, `attachment put\|reference\|delete\|status`, `format info\|check\|canon\|schemas`, `capabilities` | [release-safety-foundations.md](release-safety-foundations.md) |
-| `workspace` (in depth), named-workspace configuration | [config.md](config.md#workspaces) |
+| `workspace` (in depth), named-workspace configuration | [config.md](config.md#named-workspaces) |
 | `project`, `portfolio`, `project archive`, `project tickets` | [projects.md](projects.md), [ticket-projects.md](ticket-projects.md) |
 | `query`, `view` (saved queries) | [query.md](query.md) |
 | `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |

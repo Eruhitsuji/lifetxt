@@ -260,3 +260,11 @@ This batch does not claim completion of:
 - durable crash-recovery journals for multi-target commits;
 - real terminal, browser-engine, fzf/peco, or SMTP verification;
 - full replacement of every direct `datetime.now()` boundary in recurrence, timer, notification, and completion code.
+
+## Practical migration sequence
+
+1. Run `lifetxt safety timezone` to confirm the resolved timezone source.
+2. Run `lifetxt safety revisions` while Web revision mode is still `observe`.
+3. Migrate clients to revision discovery and `If-Match`.
+4. Wait for a complete zero-fallback observation window.
+5. Switch Web revision mode to `required` only after the report says `ready_to_require_revisions`.

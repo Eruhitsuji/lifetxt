@@ -34,7 +34,7 @@ profile of this specification.
 | Multiline body | Continuation lines beginning with `|` become one `body:` value with embedded newlines. |
 
 For command behavior, filters, and conversion formats, see
-[`docs/en/cli.md`](./cli.md).
+[`cli.md`](./cli.md).
 
 ## 2. Status Values
 

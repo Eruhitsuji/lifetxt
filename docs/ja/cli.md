@@ -2427,3 +2427,13 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 (今日 + 7日)。`H` habit と異なり、template の内容は自動で
 再スケジュールされません — `apply` を再実行すると、新しく解決された
 日付で同じ行がもう一度追記されます。
+
+## 19. 最近追加されたコマンド範囲
+
+この節は英語版の追加内容に合わせた要約です。既存のコマンド表や TUI のキー表は、実装から生成されるテスト対象なのでここでは編集しません。
+
+- `remote` 系のコマンドは、チケット作成、read-only クライアント操作、Remote Safe Mode、添付ファイルの分離保存を扱います。安全な書き込みの詳細は `remote-ticket-writes.md` と `delegated-remote-attachments-and-recovery.md` を参照してください。
+- `update-check` と `doctor --check-update` は、ローカルの実行版と GitHub release/tag の比較を行います。fork で運用する場合は `update.repository` または `--repo OWNER/NAME` で比較先を明示します。
+- `project archive --dry-run --emit-plan` は移動計画だけを出力し、`project archive --apply-plan` は同じ計画を検証して適用します。workspace 外への移動、重複 destination、古い計画は拒否されます。
+- `--version` は CLI の実行版確認に使います。release gate や baseline 記録では、この値と `doctor --check-update` の結果を併記します。
+- 共通オプションのうち、入力ファイル、workspace、設定ファイル、出力形式に関わる指定は、設定解決順序と同じ優先順位で評価されます。詳細は `config.md` と `release-baselines.md` を参照してください。

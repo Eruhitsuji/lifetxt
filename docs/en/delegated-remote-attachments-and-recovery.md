@@ -44,6 +44,11 @@ lifetxt safety delegated reject \
 ```
 
 Prepared proposal files are written with owner-private permissions where the platform supports them. Their stored edited text and unified diff are hash-checked before inspection or apply. A concurrent authoritative edit produces a normal revision conflict; the proposal is not silently rebased or overwritten. `--unsafe` exists for deliberate local recovery but bypasses the stored source revision and should not be used by integrations.
+The important boundary is that the delegated command never receives the real
+authoritative path. If the command crashes, writes invalid life.txt, edits the
+temporary copy after producing output, or the user edits the real file before
+approval, `inspect` and `apply` have enough recorded hashes to fail loudly
+instead of guessing how to merge the result.
 
 ## Remote attachment contract
 
@@ -103,6 +108,8 @@ GET /api/attachments/package-manifest?path=./attachments/specs.zip&attachment_re
 ```
 
 The remote open operation validates the attachment and can update revision-checked open metadata, but it only returns an operating-system command plan. The Web server and MCP server do not execute the opener.
+Use that plan on the trusted client side only. A remote attachment API can tell
+you what would be opened, but it is not a remote command-execution channel.
 
 ### MCP tools
 
@@ -138,6 +145,9 @@ Writable Web requests must include an offset-aware timestamp in the configured h
 Writable MCP calls use the same policy through the `client_time` argument. Capability documents report whether enforcement is enabled and which Web header is expected.
 
 This check detects gross client/server clock disagreement. It does not replace exact resource revisions, transaction IDs, authentication, authorization, or transaction recovery.
+When enforcement is disabled, clients may still send the header or MCP
+`client_time`; the response clock report is diagnostic. When enforcement is
+enabled, writable calls without an offset-aware timestamp fail before mutation.
 
 ## Expanded subprocess fault matrix
 
@@ -199,6 +209,9 @@ The operation verifies the original backup again after recovery and writes a fre
 ```
 
 This is a local allow-list boundary, not a replacement for authenticated roles or OS access controls. Encrypted evidence profiles, key rotation, role-backed authorization, and real incident handoff drills remain release work.
+For incident handling, prefer `inspect` first. It reads the retained evidence
+without creating a working copy, which makes it the lowest-risk way to decide
+whether a transaction should be resumed, compensated, abandoned, or escalated.
 
 ## Published schemas
 

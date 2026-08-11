@@ -1,30 +1,27 @@
 # AI 連携
 
-lifetxt は stdio 経由の MCP (Model Context Protocol) server を同梱しています。
-AI client は file format を推測することなく、型付きの tool を通じて `life.txt` を
-読み書きできます。この文書では設定、tool 一覧、安全性のモデル、
-そしてデータを手元に保つための local-first な使い方を説明します。
+lifetxt は stdio 上の MCP (Model Context Protocol) server を同梱しています。AI client は file format を推測するのではなく、型付き tool を通じて `life.txt` を読み書きできます。この文書では setup、tool surface、安全 model、data を local-first に保つ使い方を説明します。
 
-- [1. クイックスタート](#1-クイックスタート)
-- [2. client 設定](#2-client-設定)
-- [3. tool 一覧](#3-tool-一覧)
-- [4. 書き込みの安全性](#4-書き込みの安全性)
-- [5. prompts](#5-prompts)
-- [6. read-only とプライバシー](#6-read-only-とプライバシー)
-- [7. MCP を使わない場合](#7-mcp-を使わない場合)
+- [1. Quick Start](#1-quick-start)
+- [2. Client Configuration](#2-client-configuration)
+- [3. Tool Reference](#3-tool-reference)
+- [4. Write Safety](#4-write-safety)
+- [5. Prompts](#5-prompts)
+- [6. Read-Only And Privacy](#6-read-only-and-privacy)
+- [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
+- [8. Without MCP](#8-without-mcp)
 
 ---
 
-## 1. クイックスタート
+## 1. Quick Start
 
 ```sh
 python -m lifetxt mcp life.txt
 ```
 
-server は stdin/stdout で JSON-RPC を話します。network port は開かず、
-file をどこにも送信しません。model に何が渡るかは接続する client が決めます。
+server は stdin/stdout で JSON-RPC を話します。network port は開かず、file を外部へ送信しません。model に何が届くかは、接続する MCP client が決めます。
 
-手動での確認:
+手元で確認する例:
 
 ```sh
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifetxt mcp life.txt
@@ -32,7 +29,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 
 ---
 
-## 2. client 設定
+## 2. Client Configuration
 
 ### Claude Desktop
 
@@ -49,9 +46,9 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 }
 ```
 
-### read-only 構成
+### Read-only variant
 
-書き込みを許可せずに model にデータを見せる場合:
+model に data は見せるが書き込みは許可しない設定です。
 
 ```json
 {
@@ -66,7 +63,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 
 ### Cursor / VS Code
 
-`.cursor/mcp.json` または editor の MCP 設定:
+`.cursor/mcp.json` または editor の MCP settings:
 
 ```json
 {
@@ -81,8 +78,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 
 ### 複数 file
 
-複数の path を渡せます。`write_file` が設定されていなければ最初の path が
-書き込み先になります:
+複数 path を渡せます。`write_file` が設定されていなければ、最初の path が default write target です。
 
 ```json
 {
@@ -100,77 +96,73 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 }
 ```
 
-path は絶対パスにしてください。client は通常無関係な作業ディレクトリから
-server を起動し、`.lifetxt.json` はカレントディレクトリ基準でしか探索されません。
+path は absolute path にしてください。client は通常、無関係な working directory から server を起動します。`.lifetxt.json` も current directory 基準でしか探索されません。
 
 ---
 
-## 3. tool 一覧
+## 3. Tool Reference
 
-すべての tool は MCP annotation (`readOnlyHint`、`destructiveHint`) を持つため、
-client は確認が必要かどうかを判断できます。
+すべての tool は MCP annotations (`readOnlyHint`, `destructiveHint`) を持つため、client は確認が必要かを判断できます。
 
-### 読み取り
+### Reading
 
-| tool | 用途 |
+| Tool | Purpose |
 | --- | --- |
-| `list_items` | filter 付きの item 一覧。`GET /api/items` と同じ filter |
-| `get_item` | `id:` で 1 件取得 |
-| `search_items` | title、id、detail 値を横断する fuzzy 検索 |
-| `get_next_actions` | 未完了・blocked でない・parked でない作業を priority 順に |
-| `get_agenda` | 日時範囲の item |
-| `get_review` | 期間の完了項目と経過時間 |
-| `get_stats` | task、habit、mood、project の統計 |
-| `get_habit_streaks` | habit ごとの完了数と streak |
-| `get_workload` | assignee ごとの open / actionable / due-soon / overdue 件数 |
-| `get_graph` | 依存グラフの node と edge |
-| `get_blockers` | item を blocking しているもの |
+| `list_items` | `GET /api/items` と同じ filters を使う item list |
+| `get_item` | `id:` で 1 item を取得 |
+| `search_items` | title、id、detail value の fuzzy search |
+| `get_next_actions` | open、unblocked、non-parked work を priority と due date 順に返す |
+| `get_agenda` | datetime range 内の items |
+| `get_review` | period 内の completions と elapsed time |
+| `get_stats` | task、habit、mood、project statistics |
+| `get_habit_streaks` | habit ごとの completion count と streak |
+| `get_workload` | assignee ごとの open/actionable/due-soon/overdue counts |
+| `get_graph` | dependency graph の nodes と edges |
+| `get_blockers` | item を block しているもの |
 | `list_links` | `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` |
-| `get_status` | presence record と、現在 open なもの |
-| `list_notifications` | 期限が来た message 通知 |
-| `list_messages` | `M` record |
-| `check_line` / `parse_item` | 書き込まずに行を検証・解析 |
-| `parse_shorthand` | 記号と日付トークンの展開を事前確認 |
-| `complete` | その kind でファイルが既に使っている値。新語を作らず再利用するため |
-| `get_file_state` | path、書き込み先、read-only、content hash |
-| `check_files` | `file:`/`dir:` attachment の存在・種別・hash・移植性を検証 |
-| `timer_status` | 実行中の timer |
+| `get_status` | presence records と open record |
+| `list_notifications` | due message notifications |
+| `list_messages` | `M` records |
+| `check_line` / `parse_item` | 書き込まずに 1 line を validate/parse |
+| `parse_shorthand` | sigil と date-token expansion の preview |
+| `complete` | file が既に使っている value を kind ごとに返す |
+| `get_file_state` | paths、write target、read-only flag、content hashes |
+| `check_files` | `file:`/`dir:` attachment の存在、type、hash、portability を確認 |
+| `timer_status` | running timer |
+| `remote_list_profiles` | local Remote Safe Mode profile の name と URL。secret は返さない |
+| `remote_test_connection` | 1 profile の connectivity と capability negotiation |
+| `remote_list_resources` | remote lifetxt server が publish する read-only resources |
+| `remote_get_resource` | `next`、`tickets`、`agenda`、`search` などの permission-filtered remote resource |
 
-### 書き込み
+### Writing
 
-| tool | 用途 |
+| Tool | Purpose |
 | --- | --- |
-| `capture_item` | `@project #tag !priority ^due` を含む plain text から task 作成 |
-| `create_item` | 明示的な field から record 作成 |
-| `update_item` | 既存 record の field を変更 |
-| `mark_done` | task を完了して `done:` を書く |
-| `complete_item` | 繰り返し instance を完了し次回を生成 |
+| `capture_item` | `@project #tag !priority ^due` を含む plain text から task を作る |
+| `create_item` | explicit fields から record を作る |
+| `update_item` | existing record の fields を変更 |
+| `mark_done` | task を close し `done:` を書く |
+| `complete_item` | repeat instance を complete し next instance を materialize |
 | `delete_item` | record を削除 |
-| `set_status` | 直前の status を閉じて presence を記録 |
-| `attach_file` | file やディレクトリを item に関連付け、hash を記録 |
-| `timer_start` / `timer_stop` / `timer_cancel` | 共有 timer の操作 |
-| `start_work` / `stop_work` | 作業セッションを 1 回の呼び出しで開始・終了 |
-| `create_message` / `reply_message` / `ack_message` / `snooze_message` | `M` record の流れ |
+| `set_status` | presence を記録し、以前の open status を close |
+| `attach_file` | file/directory を item に関連付け hash を記録 |
+| `timer_start` / `timer_stop` / `timer_cancel` | shared timer を操作 |
+| `start_work` / `stop_work` | work session を 1 call で開始/終了 |
+| `create_message` / `reply_message` / `ack_message` / `snooze_message` | `M` record flow |
 
-### 省略記法の対応
+### Shorthand parity
 
-CLI や TUI と同じ省略記法が使えます:
+CLI と TUI が受け付ける shorthand は MCP でも使えます。
 
 ```json
 {"name": "capture_item", "arguments": {"text": "Buy milk @home #errand !high ^tomorrow"}}
 ```
 
-は `[ ] T "Buy milk" project:home tag:errand priority:high due:2026-07-20
-source:mcp id:task_...` を生成します。
-`parse_shorthand` を引数なしで呼ぶと全トークン一覧が得られるため、
-system prompt に含めると有用です。
+これは `[ ] T "Buy milk" project:home tag:errand priority:high due:2026-07-20 source:mcp id:task_...` を生成します。`parse_shorthand` を argument なしで呼ぶと token list が返るため、system prompt に含めると便利です。
 
-### 既存の値の再利用
+### Existing values の再利用
 
-agent がファイルを劣化させる最も多いパターンは、ごく近い別語を作ってしまう
-ことです。`project:research` の隣に `project:reserach` を作る、既に記録済みの
-人物に別表記の `assignee:` を与える、といった例です。`complete` は
-ファイルが既に使っている値を返します:
+agent が file を劣化させる典型例は、`project:research` の横に `project:reserach` を作るような近似 duplicate です。`complete` は file が既に使っている値を返します。
 
 ```json
 {"name": "complete", "arguments": {"kind": "project", "prefix": "re"}}
@@ -180,25 +172,17 @@ agent がファイルを劣化させる最も多いパターンは、ごく近�
 {"kind": "project", "prefix": "re", "count": 1, "values": ["research"]}
 ```
 
-`kind` なしで呼ぶと対応 kind の一覧が得られます: `state`、`project`、`tag`、
-`person`、`id`、`type`、`status`、`context`、`priority`、`key`、`team`、
-`service`、`channel`。`person` は人物系の key をまとめて対象にし、`state` と
-`priority` は文書化された値をファイル固有の値より先に並べます。
-
-そのセッションで実際に読んでいない名前を detail の値として書く場合は、
-先に `complete` で確認することを推奨します。
+`kind` なしで呼ぶと対応 kind が返ります。`state`、`project`、`tag`、`person`、`id`、`type`、`status`、`context`、`priority`、`key`、`team`、`service`、`channel` です。今の session で読んでいない名前を detail value として書く前に、まず `complete` で確認してください。
 
 ---
 
-## 4. 書き込みの安全性
+## 4. Write Safety
 
-model は有能だが誤りうる協力者だと想定し、危険な部分は注意書きではなく
-構造で防いでいます。
+server は model を有能だが間違える collaborator として扱うため、危険な部分は助言ではなく構造で守ります。
 
-### proposal モード
+### Proposal mode
 
-すべての書き込み tool は `dry_run: true` を受け付け、書き込む代わりに
-unified diff を返します:
+すべての write tool は `dry_run: true` を受け付け、書き込みの代わりに unified diff を返します。
 
 ```json
 {"name": "mark_done", "arguments": {"id": "t1", "dry_run": true}}
@@ -213,36 +197,27 @@ unified diff を返します:
 }
 ```
 
-実行後の file は 1 byte も変わりません。
-model にはまず提案させ、確認してから適用させてください。
-`inbox_triage` prompt はこの流れを前提に書かれています。
+この後も file は byte-identical です。model にはまず proposal を出させ、確認後だけ apply してください。`inbox_triage` prompt もこの流れを前提にしています。
 
-### 競合検出
+### Conflict detection
 
-読み取りで content hash を返し、書き込みでそれを受け取ります:
+read は content hash を返し、write はそれを受け取れます。
 
-1. `get_file_state` → `file_hash`
-2. 書き込み tool に `expected_file_hash: "<その hash>"` を渡す
-3. その間に file が変わっていれば conflict error で拒否
+1. `get_file_state` -> `file_hash`
+2. write tool に `expected_file_hash: "<that hash>"` を渡す
+3. その間に file が変わっていれば conflict error で拒否される
 
-成功した書き込みは新しい `file_hash` を返すため、連続した編集で引き継げます。
-hash を省略すると検査は行われません。単一利用者の session では問題ありませんが、
-Web UI や別の agent が同時に書く場合は渡してください。
+成功した write は新しい `file_hash` を返すため、連続 edit ではそれを引き継げます。hash を省略すると check は行われません。single-user session では問題ない場合もありますが、Web UI や別の agent が同時に書く可能性があるなら渡してください。
 
-### id は server が生成
+### Server-generated ids
 
-`create_item` と `capture_item` は client 指定の `id:` を拒否し、server 側で生成します。
-id を創作する model はいずれ同じ id を再利用し、次の更新で無関係な 2 件の record が
-静かに統合されてしまうためです。
-response から id を読み取り、後続の呼び出しに使ってください。
+`create_item` と `capture_item` は client-supplied `id:` を拒否し、server 側で生成します。model が id を作ると再利用事故を起こし、後続 update で無関係な 2 records を同一視する危険があります。response から id を読み取り、後続 call に使ってください。
 
-これは config の `ids.auto` に関係なく適用されます。
-`ids.auto` は手書きのキャプチャを対象とした設定です。
+これは config の `ids.auto` とは別です。`ids.auto` は hand-written capture を対象にします。
 
-### 由来の記録
+### Provenance
 
-MCP 経由で作成された record は `source:mcp` を持つため、
-model が書いたものを常に判別できます:
+MCP 経由で作られた records は `source:mcp` を持つため、model が書いたものを後から識別できます。
 
 ```sh
 lifetxt filter life.txt --detail source=mcp
@@ -250,82 +225,91 @@ lifetxt filter life.txt --detail source=mcp
 
 `{"mcp": {"source_metadata": false}}` で無効化できます。
 
-### presence の整合性
+### Presence integrity
 
-`set_status` は「open な record を閉じる」「新しい record を開く」を
-1 回の書き込みで行うため、現在有効に見える record が 2 つ残ることはありません。
-すでに開いている状態と同じ状態を指定した場合は何も書き込みません。
-書き込むと長い 1 区間が切れ端と新 record に分割され、本当の開始時刻が失われるためです。
+`set_status` は open record を close し、新しい record を open する transition を 1 write で行います。同じ state が既に open なら何も書きません。長い 1 block を stub と新 record に分けて本当の start time を失うことを避けるためです。
 
-### 完了時刻
+### Completion time
 
-`mark_done` は CLI と同じ `done.precision` 設定に従い、`now: true` で時刻付きになります。
-habit のログは日付のみのままです。
+`mark_done` は CLI と同じ `done.precision` config に従い、`now: true` で timestamp を使えます。habit logs は date-only のままです。
 
 ---
 
-## 5. prompts
+## 5. Prompts
 
-server は MCP の prompts capability で再利用可能なワークフローを公開します。
-client 側では slash command として提示できます:
+server は MCP prompts capability で再利用可能な workflows を公開します。client は slash command として表示できます。
 
-| prompt | 用途 |
+| Prompt | Purpose |
 | --- | --- |
-| `daily_review` | 今日の期限、着手可能なもの、遅れているもの |
-| `weekly_review` | 完了、時間、habit、停滞している作業 |
-| `standup` | Done / Today / Blocked を 120 語以内で |
-| `inbox_triage` | 未整理のキャプチャに project・due・priority を提案 |
-| `start_focus` | 最良の next action を選んで作業セッションを開始 |
+| `daily_review` | due、actionable、slipped items の確認 |
+| `weekly_review` | completions、time、habits、stalled work |
+| `standup` | Done / Today / Blocked を 120 words 未満でまとめる |
+| `inbox_triage` | untriaged captures に project、due、priority を提案 |
+| `start_focus` | best next action を選び work session を開始 |
 
-いずれも呼ぶべき tool を明示し、必要な場面では書き込み前に `dry_run` で
-提案するよう model に指示しています。
+各 prompt は呼ぶべき tool を示し、必要な場面では書き込み前に `dry_run` で proposal を出すよう model に指示します。
 
 ---
 
-## 6. read-only とプライバシー
+## 6. Read-Only And Privacy
 
-`--read-only` はすべての書き込み tool を明確な error で拒否し、
-読み取り tool は動作させます。
-model は要約や計画はできますが、何も変更できません。
+`--read-only` はすべての write tool を明確な error で拒否し、read tool は動作させます。model は要約や計画を作れますが、変更はできません。
 
-server は local かつ stdio のみです:
+server は local かつ stdio-only です。
 
-- network listener なし、telemetry なし、外部通信なし
-- MCP client が model に送らない限り、file は machine から出ません
-- local model (Ollama、LM Studio、llama.cpp) と MCP 対応 client を使えば
-  全体を offline に保てます
+- network listener、telemetry、outbound calls はない
+- MCP client が model に送らない限り、file は machine から出ない
+- local model (Ollama、LM Studio、llama.cpp) と MCP-capable client を使えば loop 全体を offline に保てる
 
-`life.txt` は plain text なので、何が変わったかを常に監査できます:
+`life.txt` は plain text なので、何が変わったかは常に audit できます。
 
 ```sh
 git diff life.txt
 lifetxt undo life.txt
 ```
 
-秘密情報は file に入れないでください。
-file の内容は client が話している model から見えます。
-literal な token ではなく `--url-env` や `--key-env` の方式を使ってください。
+secret は file に入れないでください。file 内のものは client が話している model から見えます。literal token ではなく、`--url-env` や `--key-env` の pattern を使ってください。
 
 ---
 
-## 7. MCP を使わない場合
+## 7. Remote Safe Mode Client Tools
 
-MCP は必須ではありません。CLI は command を実行できる model と組み合わせられます:
+MCP server は、Remote Safe Mode で動く別の lifetxt server の read-only client としても使えます。これらの tool は CLI の `lifetxt remote profile-*` commands と同じ profile store を再利用します。
+
+```json
+{"name": "remote_list_profiles", "arguments": {}}
+```
+
+これは profile name と URL だけを返します。secret は返しません。他の remote tool はその profile name を受け取ります。
+
+```json
+{"name": "remote_test_connection", "arguments": {"profile": "home"}}
+{"name": "remote_list_resources", "arguments": {"profile": "home"}}
+{"name": "remote_get_resource", "arguments": {"profile": "home", "resource": "next", "params": {"project": "web"}}}
+```
+
+`remote_get_resource` は query parameters を server resource に渡します。そのため model は CLI remote client と同じ filtered slice を要求できます。permission enforcement は remote server 上の principal に従います。MCP tool は Remote Safe Mode を迂回しません。
+
+これら 4 tools は MCP client から見て read-only です。設定済み remote URL へ HTTP request は行いますが、remote `life.txt` は mutate しません。AI client は local にあり、authoritative workspace が別 machine にある場合に使います。write は MCP ではなく CLI remote write flow で、proposal と explicit confirmation を伴って行ってください。
+
+---
+
+## 8. Without MCP
+
+MCP は必須ではありません。command を実行できる model なら CLI と組み合わせられます。
 
 ```sh
-# filter した一部を model に渡す
+# filtered slice を model に渡す
 lifetxt filter life.txt --open --project work --format json | llm "what should I do first?"
 
 # JSON で review
 lifetxt review life.txt --week --format json | llm "summarise my week in 5 bullets"
 
-# model に下書きさせ、検証してから書き込む
+# model に draft させ、validate してから書く
 llm "3 tasks for launching the docs site, one per line" \
   | while read -r line; do lifetxt q "$line @docs"; done
 ```
 
-`lifetxt check` は書き込み前の検証に使え、`lifetxt q` は MCP server と同じ
-安全な追記経路を通ります。
+`lifetxt check` は landing 前の validation に使えます。`lifetxt q` は MCP server と同じ safe append path を通ります。
 
-CI では `lifetxt review --format markdown` が job summary や
-pull request comment に適した要約を出力します。
+CI では `lifetxt review --format markdown` が job summary や pull request comment に適した summary を出力します。

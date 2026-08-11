@@ -816,3 +816,13 @@ text              = ? 行末までの任意の文字 ? ;
 [ ] M "Review slides" sender:self recipient:alice notify_at:2026-06-06T09:00 channel:teams
 [N] N "Use more figures in the next presentation" project:research
 ```
+
+## 18. 最近の仕様互換メモ
+
+この節は英語版の追加内容に合わせた要約です。
+
+- `record:` はシステム用途の detail key です。外部システム、remote ticket、または処理済みレコードを識別するために使い、通常の利用者向け分類には使いません。
+- `duplicate_of:` と `replaced_by:` は ID 参照です。`depends_on:`、`blocks:`、`parent:` と同様にリンクグラフへ反映され、循環や存在しない参照は診断対象になります。
+- JSON/JSONL では、同じ detail key の複数値を配列として扱えます。life.txt へ戻すときは、同じ key を複数回出力して順序を保持します。
+- 複数行 body は item の直後に続く `|` 行として表します。JSON/CSV から戻す場合、複数行の `body` は continuation line に展開されます。
+- bare string に空白、二重引用符、制御文字が必要な場合は quoted string を使います。serializer は roundtrip できる表現を優先します。

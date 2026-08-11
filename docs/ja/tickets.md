@@ -176,7 +176,7 @@ $ lifetxt ticket link BUG-4 blocks BUG-1
 他のitemと同様にreference/cycle診断を報告します。missing reference（`W215`）、
 self reference（`W216`）、`parent:`のcycle（`W217`）、ambiguous reference（`W218`）、
 `depends_on:`/`blocks:`を統合したcycle（`W227`）、`duplicate_of:`のcycle（`W228`）、
-`replaced_by:`のcycle（`W229`）です。完全なreference/cycle診断カタログはdocs/ja/cli.md
+`replaced_by:`のcycle（`W229`）です。完全なreference/cycle診断カタログは[cli.md](./cli.md)
 の`links`セクション（3.2）を参照してください。`ticket validate`はこの検証を重複して
 行わないため、ticket間のrelation cycleを検出するにはplainな`check`（または`links`）を
 `ticket validate`と併用します。
@@ -513,7 +513,7 @@ event／time／planning schemaと、exact-revision・同一ファイルcompound�
 
 ## チケット履歴のアーカイブ
 
-`lifetxt project archive NAME`（docs/ja/projects.mdのArchivingセクション参照）
+`lifetxt project archive NAME`（[projects.md](./projects.md)のArchivingセクション参照）
 は、done／canceledなticketの`record:ticket_event`／`record:time_entry` Noteを
 `parent:`参照経由でたどり、ticketと同一のtransaction内でarchive先へ移動します。
 履歴recordはそれ自体のstatusを持たないためarchive候補フィルタに一致せず、

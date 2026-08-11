@@ -176,3 +176,9 @@ They are not evidence of real power-loss portability. Real process termination, 
 Release policy scans Python source for direct host-clock calls. Every retained call must appear in `config/release/clock-boundary-baseline-v1.json` with a classification, reason, and removal condition. New unclassified uses fail the release gate.
 
 Current retained categories include monotonic/operational timing, lock age, UTC audit and telemetry timestamps, time-only compatibility parsing, transaction retention, and TUI animation. Workflow date/time decisions must use the shared context-local timezone clock.
+
+## Verified operator notes
+
+- A revision precondition is meaningful only when it is captured from the same source set the write will later mutate.
+- Attachment writes that touch both bytes and life.txt metadata should be treated as transactions, not as a file copy followed by a best-effort note update.
+- `--allow-symlink`, `--allow-executable`, and similar flags are local policy overrides, not safe defaults for content received from another person or system.

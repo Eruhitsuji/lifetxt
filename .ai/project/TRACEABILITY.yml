@@ -419,7 +419,7 @@ traceability:
       capability_id: cap-supported-platform-install
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/73
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/280
       changed_files_or_scope:
         - Declare tzdata for Windows so a clean install can resolve timezones
         - pyproject.toml
@@ -3531,6 +3531,40 @@ traceability:
         or example. Optional validation_commands are operator-trusted argv only,
         disabled by default, timeout-bound, and share the existing fail-safe:
         after code update, failure leaves affected services stopped.
+      status: implemented
+
+    - requirement_id: req-server-init-bootstrap
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/260
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/279
+      pull_request: null
+      changed_files_or_scope:
+        - Add `lifetxt server-init --server-config PATH [--yes] [--format text|json]`
+        - Add plan-first bootstrap config loading, artifact generation, idempotence/conflict handling, structured installer/integrity command planning, and guarded apply
+        - Generate application `.lifetxt.json`, `server-update.json`, systemd units, narrow service-control wrapper/sudoers artifact, and nginx proxy artifact from explicit deployment config
+        - Document guarded bootstrap in the CLI guide and Ubuntu Server runbook
+        - lifetxt/server_init.py
+        - lifetxt/cli.py
+        - tests/test_server_init.py
+        - docs/en/cli.md
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-init-bootstrap/
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - '.\.venv\Scripts\python.exe -m unittest tests.test_server_init -> Ran 9 tests, OK'
+        - '.\.venv\Scripts\ruff.exe format --check lifetxt/server_init.py tests/test_server_init.py lifetxt/cli.py -> 3 files already formatted'
+        - '.\.venv\Scripts\ruff.exe check lifetxt/server_init.py tests/test_server_init.py lifetxt/cli.py -> All checks passed'
+      release_or_deployment: null
+      notes: >-
+        Security/High assurance because this generates production deployment,
+        systemd, sudoers, and service-control artifacts. The first slice is a
+        guarded bootstrap/planning command, not a general-purpose OS manager:
+        no apt/firewall/DNS/certificate/VPN/SSH/OS-upgrade management is added,
+        dry-run is default, mutation requires --yes, existing differing files
+        are refused, Web/API bind stays loopback-only, and external commands
+        remain structured argv. Follow-up candidates are recorded in
+        .ai/project/changes/server-init-bootstrap/design.md.
       status: implemented
 
 required_chain:

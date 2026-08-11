@@ -95,6 +95,8 @@ python -m lifetxt sprint list [path ...]
 python -m lifetxt rrule daily
 python -m lifetxt update-check
 python -m lifetxt update
+python -m lifetxt server-init --server-config server-init.json
+python -m lifetxt server-update --server-config server-update.json
 python -m lifetxt remote profile-list
 ```
 
@@ -182,6 +184,8 @@ python -m lifetxt remote profile-list
 | `rrule` | Expand a recurrence rule into concrete occurrences (see [13.10](#1310-rrule-expanding-a-recurrence)) |
 | `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-init-and-doctor)) |
 | `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-init-and-doctor)) |
+| `server-init` | Plan-first Ubuntu Server production bootstrap (see [22](#22-server-init)) |
+| `server-update` | Guarded production update for a systemd-managed install (see [23](#23-server-update)) |
 | `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
 
 lifetxt also has a small set of workflow and format-1.0 commands not detailed
@@ -2914,7 +2918,81 @@ warrant a dedicated guide:
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.
 
-## 22. `server-update`
+## 22. `server-init`
+
+Plan-first bootstrap for a reference Ubuntu Server production deployment. See
+[docs/deployment/ubuntu-server.md](../deployment/ubuntu-server.md) for the
+manual runbook this command automates into a reviewable plan.
+
+```sh
+python -m lifetxt server-init --server-config server-init.json
+python -m lifetxt server-init --server-config server-init.json --yes
+```
+
+| Option | Meaning |
+|---|---|
+| `--server-config PATH` | Required. Bootstrap config JSON file -- distinct from the global `--config` application config.json. |
+| `--yes` | Apply the plan. Without this, `server-init` only reports what would be created, left unchanged, or validated. |
+| `--format text\|json` | Output format. |
+
+Dry-run is the default. The command resolves the deployment into explicit
+directory, file, command, and health-check steps. A real run creates only
+missing matching artifacts, treats byte-identical existing artifacts as no-op,
+and refuses differing existing files rather than overwriting production data,
+systemd units, sudoers files, or reverse-proxy configuration.
+
+The bootstrap config must name the source and data roots explicitly:
+
+```json
+{
+  "install_root": "/opt/lifetxt/src",
+  "data_root": "/srv/lifetxt",
+  "python": "/opt/lifetxt/venv/bin/python",
+  "installer": "uv",
+  "uv_executable": "/home/lifetxt/.local/bin/uv",
+  "extras": ["web", "tui"],
+  "service_user": "lifetxt",
+  "service_group": "lifetxt",
+  "systemd": {
+    "enabled": true,
+    "unit_dir": "/etc/systemd/system",
+    "daemon_reload": false,
+    "enable": false,
+    "start": false
+  },
+  "service_control": {
+    "enabled": true,
+    "wrapper_path": "/usr/local/sbin/lifetxt-systemctl",
+    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update"
+  },
+  "reverse_proxy": {
+    "backend": "nginx",
+    "nginx_config_path": "/etc/nginx/sites-available/lifetxt.conf"
+  }
+}
+```
+
+Important boundaries:
+
+- `web.bind` must remain `127.0.0.1`; generated systemd and nginx artifacts keep
+  `lifetxt serve` behind loopback.
+- `service_user` and `service_group` are required when systemd artifacts are
+  generated; the command does not assume a username.
+- `service_control.enabled` generates a narrow wrapper/sudoers artifact for
+  `is-active`, `stop`, and `start` on the configured lifetxt units only.
+- Installer, validation, and service commands are structured argv arrays. The
+  command does not add a shell-string escape hatch.
+- Calendar URLs, Basic Auth credentials, real hostnames, VPN details, and other
+  secrets must stay outside repository-tracked files. Generated nginx output
+  keeps placeholder host/certificate values.
+
+The generated `server-update.json` matches the selected installer (`pip`,
+`uv`, or `conda-pip`), source/data layout, service wrapper, integrity checks,
+backup directory, update lock, and health URL so future
+[`server-update`](#23-server-update) runs start from the same deployment
+contract.
+
+## 23. `server-update`
 
 Guarded production update for a systemd-managed install, wrapping
 `update`'s git fast-forward logic (see [§16](#16-init-and-doctor)) with
@@ -3060,7 +3138,7 @@ Failure behavior:
   `validated_health_check_failed`) rather than silently claiming full
   success -- both still exit non-zero.
 
-### 22.1 High-impact review gate
+### 23.1 High-impact review gate
 
 Before touching backup, services, or code, `server-update` classifies how
 risky the pending update looks. If nothing about it looks high-impact,

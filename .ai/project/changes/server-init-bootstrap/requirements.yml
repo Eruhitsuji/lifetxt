@@ -1,0 +1,30 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-init-bootstrap
+    kind: ADDED
+    statement: >-
+      lifetxt provides a guarded, plan-first Ubuntu Server bootstrap command
+      that turns an explicit deployment JSON file into reproducible production
+      setup artifacts and future-compatible server-update configuration without
+      silently overwriting data or expanding privilege boundaries.
+    acceptance_criteria:
+      - A repository-owned `lifetxt server-init --server-config PATH` command exists.
+      - Dry-run is the default and performs no filesystem, service, or command mutation.
+      - `--yes` is required before creating files, directories, or running configured commands.
+      - Source and production data roots are explicit and separate.
+      - Existing files are only no-op when byte-identical and are refused when different.
+      - Generated Web/API systemd config binds `lifetxt serve` to `127.0.0.1`.
+      - Optional Calendar/ICS systemd service/timer artifacts are generated when enabled.
+      - Least-privilege service-control wrapper and sudoers artifacts can be generated explicitly.
+      - Generated `server-update.json` matches the selected installer, paths, services, integrity checks, service command, lock, backup, and health URL.
+      - Reverse-proxy support generates nginx configuration with loopback proxying and placeholders rather than secrets.
+      - External commands are structured argv; no shell-string execution is introduced.
+      - Tests cover dry-run non-mutation, existing-file refusal, installer selection, generated server-update config, service asset generation, privilege boundaries, idempotence, and CLI JSON output.
+    constraints:
+      - Do not make lifetxt a general-purpose OS configuration manager.
+      - Do not assume `/opt/lifetxt`, `/srv/lifetxt`, or a specific service username.
+      - Do not commit real deployment secrets, hostnames, Calendar URLs, VPN details, or production data.
+    owner: Eruhitsuji
+
+open_questions: []

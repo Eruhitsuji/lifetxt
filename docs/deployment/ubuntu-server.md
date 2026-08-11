@@ -24,6 +24,66 @@ this repository.
   port (`8765`), and the sample unit/environment file names. Change these
   freely; nothing in `lifetxt` itself assumes them.
 
+## Guarded bootstrap or manual setup
+
+You can either follow the sections below by hand or ask lifetxt to resolve the
+same reference deployment into an explicit plan first:
+
+```sh
+lifetxt server-init --server-config server-init.json
+lifetxt server-init --server-config server-init.json --yes
+```
+
+Dry-run is the default. The first command prints the directories, files,
+systemd artifacts, least-privilege service-control wrapper, nginx artifact,
+install command, generated `server-update.json`, integrity checks, and health
+check that would be used. The second command applies the plan, creating only
+missing artifacts and treating matching existing artifacts as no-op. If an
+existing production file, unit, sudoers file, or reverse-proxy file differs,
+`server-init` refuses rather than overwriting it; use a deliberate adoption or
+repair task for existing manual deployments.
+
+The bootstrap config is a deployment config, not the application
+`.lifetxt.json`. It must name `install_root`, `data_root`, installer/Python
+environment details, and the service user/group explicitly:
+
+```json
+{
+  "install_root": "/opt/lifetxt/src",
+  "data_root": "/srv/lifetxt",
+  "python": "/opt/lifetxt/venv/bin/python",
+  "installer": "uv",
+  "uv_executable": "/home/lifetxt/.local/bin/uv",
+  "extras": ["web", "tui"],
+  "service_user": "lifetxt",
+  "service_group": "lifetxt",
+  "systemd": {
+    "enabled": true,
+    "unit_dir": "/etc/systemd/system",
+    "daemon_reload": false,
+    "enable": false,
+    "start": false
+  },
+  "service_control": {
+    "enabled": true,
+    "wrapper_path": "/usr/local/sbin/lifetxt-systemctl",
+    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update"
+  },
+  "reverse_proxy": {
+    "backend": "nginx",
+    "nginx_config_path": "/etc/nginx/sites-available/lifetxt.conf"
+  }
+}
+```
+
+Keep privileged targets (`/etc/systemd/system`, `/usr/local/sbin`,
+`/etc/sudoers.d`, `/etc/nginx`) explicit. A plan can be reviewed before an
+operator runs it with privileges, while the unprivileged git/package/data
+workflow remains separate from broad root command execution. The generated
+`server-update.json` uses the same installer backend, service wrapper,
+backup/update-lock paths, integrity checks, and health URL so the server is
+ready for future guarded `server-update` runs.
+
 ## 1. Environment
 
 `lifetxt` requires Python 3.10+ (see `pyproject.toml`'s `requires-python`).
@@ -225,7 +285,7 @@ sudo systemctl restart lifetxt.service
 for you — that is why the next option exists.
 
 **Guarded**, for routine production updates —
-[`lifetxt server-update`](../en/cli.md#22-server-update) wraps the same git
+[`lifetxt server-update`](../en/cli.md#23-server-update) wraps the same git
 logic with the full backup / service-stop / reinstall / hash-verification /
 health-check flow:
 
@@ -234,7 +294,7 @@ sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --server-config /etc
 sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update --server-config /etc/lifetxt/server-update.json --yes
 ```
 
-See [`cli.md` section 22](../en/cli.md#22-server-update) for the full flag
+See [`cli.md` section 23](../en/cli.md#23-server-update) for the full flag
 reference, the `--server-config` JSON contract, and every failure mode. In
 short:
 

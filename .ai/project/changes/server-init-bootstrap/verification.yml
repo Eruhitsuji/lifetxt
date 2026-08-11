@@ -1,0 +1,72 @@
+schema_version: 1
+
+verification:
+  planned: []
+
+  executed:
+    - type: unit
+      command: '.\.venv\Scripts\python.exe -m unittest tests.test_server_init tests.test_server_update'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: Ran 114 tests, OK (skipped=1)
+      status: passed
+    - type: policy
+      command: '.\.venv\Scripts\python.exe -m unittest tests.test_traceability_gate tests.test_change_package_closeout'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: Ran 13 tests, OK
+      status: passed
+    - type: static
+      command: '.\.venv\Scripts\ruff.exe format --check lifetxt/server_init.py tests/test_server_init.py lifetxt/cli.py'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: 3 files already formatted
+      status: passed
+    - type: static
+      command: '.\.venv\Scripts\ruff.exe check lifetxt tests scripts'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: All checks passed
+      status: passed
+    - type: cli
+      command: '.\.venv\Scripts\python.exe -m lifetxt server-init --help'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: Help renders with --server-config, --yes, and --format.
+      status: passed
+    - type: integration
+      command: '.\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: 'OK: 10 item(s)'
+      status: passed
+    - type: full-unit
+      command: '$env:MPLBACKEND="Agg"; .\.venv\Scripts\python.exe -W ignore::ResourceWarning -m unittest discover'
+      requirement_ids:
+        - req-server-init-bootstrap
+      result: Timed out after 600 seconds in this environment before completion; no failing assertion was reported before timeout.
+      status: timed_out
+
+review_ledger:
+  - reviewer: Codex
+    review_type: implementation
+    target_commit: 2179c92490ee18a1bbf00d27ec97f73296f4c98a
+    result: completed
+    finding_count: 1
+    completed_at: 2026-08-11
+  - reviewer: Codex
+    review_type: security
+    target_commit: 2179c92490ee18a1bbf00d27ec97f73296f4c98a
+    result: completed
+    finding_count: 1
+    completed_at: 2026-08-11
+
+release_evidence:
+  migration_notes: >-
+    `server-init` is additive. Existing lifetxt configs and server-update
+    configs are not migrated.
+  rollback_plan: >-
+    Revert the server_init.py, cli.py, tests, docs, and traceability changes.
+    No production data migration is performed by this change.
+  operations_evidence:
+    - No production host, data file, credential, private hostname, VPN address, or Calendar URL was touched.

@@ -692,6 +692,35 @@ traceability:
         the injected capacity or permission fault is removed.
       status: implemented
 
+    - requirement_id: req-windows-file-interference-transaction-recovery
+      capability_id: cap-durable-transaction-recovery
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/303
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/335
+      changed_files_or_scope:
+        - Add real Windows target-file interference test using msvcrt byte-range locking
+        - Verify normal authoritative replace succeeds before the interference scenario
+        - Verify locked-target recovery fails as permission refusal without reporting committed state
+        - Verify recovery succeeds after the interfering lock is released
+        - Record Windows version, filesystem, and interference method in release/capability evidence
+        - tests/test_transaction_journal_v3.py
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_transaction_journal_v3.TransactionJournalV3Tests.test_windows_locked_target_refuses_replace_then_recovers_after_release -> Ran 1 test, OK on Microsoft Windows NT 10.0.19045.0 / NTFS fixed E drive
+        - 'manual environment probe: `[System.Environment]::OSVersion.VersionString` -> Microsoft Windows NT 10.0.19045.0'
+        - 'manual environment probe: `[System.IO.DriveInfo]::GetDrives()` for `E:\` -> DriveFormat NTFS, DriveType Fixed'
+        - 'manual interference probe: `msvcrt.locking` target byte-range lock caused `os.replace` to raise PermissionError / WinError 5'
+      release_or_deployment: null
+      notes: >-
+        Standard assurance real-environment recovery evidence. The interference
+        method uses only a temporary workspace file and a byte-range lock, which
+        is a safe reproducible stand-in for transient file-preview,
+        indexer-style, or background scanner target interference. Cloud-sync
+        and network filesystem semantics remain out of scope for #304.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

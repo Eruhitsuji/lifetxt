@@ -605,6 +605,7 @@ capabilities:
       - req-transaction-crash-boundary-cleanup-restore-coverage
       - req-corrupted-missing-recovery-artifact-safety
       - req-storage-access-failure-transaction-recovery
+      - req-windows-file-interference-transaction-recovery
     implementation_locations:
       - lifetxt/transaction_journal.py
       - lifetxt/multi_target.py
@@ -623,6 +624,7 @@ capabilities:
       - '#300 extends simulated subprocess crash-boundary matrix through delete, verification, compensation write/verify, terminal cleanup, backup copy, and restore-working-copy points'
       - '#301 covers missing journal metadata, missing/corrupted recovery payloads, corrupted/missing backup manifests, deterministic repeated refusal, and inspect usefulness'
       - '#302 covers simulated ENOSPC/EDQUOT/EACCES transaction failures before publication and during recovery, with capacity versus permission diagnostics'
+      - '#303 records Windows 10.0.19045 / NTFS evidence for byte-range locked target interference refusing replace, then recovering after lock release'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1786 tests, OK (skipped=14)'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts -> 245 files already formatted
@@ -634,6 +636,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/300
       - https://github.com/Eruhitsuji/lifetxt/issues/301
       - https://github.com/Eruhitsuji/lifetxt/issues/302
+      - https://github.com/Eruhitsuji/lifetxt/issues/303
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/94
       - https://github.com/Eruhitsuji/lifetxt/pull/334
@@ -656,6 +659,11 @@ capabilities:
       coverage using explicit errno fixtures. It confirms pre-publication
       failure does not claim success, post-publication recovery remains
       inspectable, and retry after restored capacity/access is deterministic.
+      #303 adds real Windows evidence on this local Windows 10.0.19045 / NTFS
+      workspace using an `msvcrt.locking` byte-range lock as a safe stand-in
+      for transient file-preview/indexer-style target interference. The locked
+      replace fails as PermissionError/WinError 5 without reporting committed
+      state, then resumes successfully after the lock is released.
     replacement:
       replaces: []
       replaced_by: null

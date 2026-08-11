@@ -315,6 +315,51 @@ class TransactionJournalV3Tests(unittest.TestCase):
         self.assertEqual("one\n", self.read(target))
         self.assertEqual(2, len(failures))
 
+    @unittest.skipUnless(os.name == "nt", "Windows byte-range locking evidence only")
+    def test_windows_locked_target_refuses_replace_then_recovers_after_release(self):
+        import msvcrt
+
+        target = self.write("one.txt", "one\n")
+        result = apply_multi_target(
+            [
+                text_plan(
+                    target,
+                    lambda _text: "ONE\n",
+                    mutation.read_text_snapshot(target).content_hash,
+                )
+            ],
+            operation="journal.windows-lock-interference",
+            journal_dir=self.journal_dir,
+        )
+        self.assertEqual("ONE\n", self.read(target))
+
+        report = inspect_journal(result.journal_path)
+        before_path = os.path.join(
+            os.path.dirname(result.journal_path),
+            report["targets"][0]["before_artifact"],
+        )
+        with open(before_path, "rb") as handle:
+            mutation.atomic_write_bytes(target, handle.read())
+        self.force_journal_state(result.journal_path, "committing")
+
+        with open(target, "r+b") as locked:
+            msvcrt.locking(locked.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                with self.assertRaises(PermissionError):
+                    resume(result.journal_path)
+            finally:
+                msvcrt.locking(locked.fileno(), msvcrt.LK_UNLCK, 1)
+
+        failed = inspect_journal(result.journal_path)
+        self.assertEqual("resume_failed", failed["state"])
+        self.assertIn("Storage permission failure", failed["last_error"])
+        self.assertEqual("before", failed["observed_targets"][0]["relation"])
+        self.assertEqual("one\n", self.read(target))
+
+        recovered = resume(result.journal_path)
+        self.assertEqual("committed", recovered["state"])
+        self.assertEqual("ONE\n", self.read(target))
+
     def test_successful_transaction_records_exact_artifacts_and_terminal_state(self):
         first = self.write("one.txt", "one\n")
         second = self.write("two.txt", "two\n")

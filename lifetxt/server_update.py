@@ -706,11 +706,14 @@ def wait_for_health(
     retry_interval = _retry_interval_seconds(retry_interval, 0.5)
     start = monotonic()
     attempts = 0
+    elapsed = 0.0
     last = None
 
     while True:
         attempts += 1
-        last = health_checker(url, request_timeout)
+        remaining_before_attempt = max(0.0, ready_timeout - elapsed)
+        attempt_timeout = min(request_timeout, remaining_before_attempt)
+        last = health_checker(url, attempt_timeout)
         elapsed = max(0.0, monotonic() - start)
         if last is None:
             last = OrderedDict(
@@ -720,6 +723,7 @@ def wait_for_health(
         result["attempts"] = attempts
         result["elapsed_seconds"] = round(elapsed, 3)
         result["request_timeout"] = request_timeout
+        result["attempt_timeout"] = attempt_timeout
         result["ready_timeout"] = ready_timeout
         result["retry_interval"] = retry_interval
         if result.get("ok") or elapsed >= ready_timeout:

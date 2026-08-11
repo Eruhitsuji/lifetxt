@@ -1,0 +1,69 @@
+# Example nginx reverse-proxy site for lifetxt.serve's loopback-only bind
+# (contrib/systemd/lifetxt.service, 127.0.0.1:8765 by default).
+#
+# This is a documented EXAMPLE, not a ready-to-use file. Replace every
+# REPLACE_ME placeholder below -- the hostname, the TLS certificate paths,
+# and the auth mechanism -- with your own values before use. Never commit a
+# filled-in copy of this file: it can end up naming a real hostname and
+# certificate location, and if you enable the Basic Auth block, a real
+# credentials file path.
+#
+# lifetxt has no built-in authentication for the plain Web UI. Do not expose
+# this reverse proxy publicly without an access-control layer of some kind
+# (the Basic Auth block below, an IP allowlist, a VPN-only listener, or an
+# authenticating proxy in front of this one). If you need per-user
+# authenticated API access instead of protecting the whole UI behind one
+# shared credential, see docs/en/remote.md for Remote Safe Mode's own
+# bearer-token auth, which is a separate, opt-in surface.
+#
+# Install (adjust paths for your distribution):
+#   sudo cp contrib/nginx/lifetxt.conf.example /etc/nginx/sites-available/lifetxt.conf
+#   sudo $EDITOR /etc/nginx/sites-available/lifetxt.conf
+#   sudo ln -s /etc/nginx/sites-available/lifetxt.conf /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name REPLACE_ME.example.com;
+
+    # TLS certificate. Use your own certificate/key (certbot, an existing
+    # wildcard cert, etc.) -- these paths are placeholders.
+    ssl_certificate     /etc/letsencrypt/live/REPLACE_ME.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/REPLACE_ME.example.com/privkey.pem;
+
+    # Access control: uncomment and configure ONE of these before exposing
+    # this server block beyond localhost/VPN testing.
+    #
+    # Option A -- Basic Auth (create the password file with:
+    #   sudo htpasswd -c /etc/nginx/lifetxt.htpasswd REPLACE_ME_USERNAME):
+    # auth_basic "lifetxt";
+    # auth_basic_user_file /etc/nginx/lifetxt.htpasswd;
+    #
+    # Option B -- IP allowlist:
+    # allow 203.0.113.0/24;   # REPLACE_ME: your real allowed range
+    # deny all;
+
+    location / {
+        proxy_pass http://127.0.0.1:8765;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # The Web UI's Server-Sent Events / live-update connections are
+        # long-lived; do not let a default proxy timeout cut them off.
+        proxy_read_timeout 1h;
+        proxy_buffering off;
+    }
+}
+
+# Redirect plain HTTP to HTTPS. If you terminate TLS somewhere else (a CDN,
+# a different load balancer), drop this block instead of doubling up.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name REPLACE_ME.example.com;
+    return 301 https://$host$request_uri;
+}

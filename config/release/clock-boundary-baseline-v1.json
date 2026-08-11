@@ -31,6 +31,13 @@
       "removal_condition": "Split lock inspection and host-zone discovery into injectable platform adapters."
     },
     {
+      "path": "lifetxt/server_update.py",
+      "call": "datetime.now",
+      "classification": "operational-recovery",
+      "reason": "Timestamps the pre-update backup directory name for the guarded production update flow; it is recovery evidence naming, not a life.txt workflow date choice.",
+      "removal_condition": "Route through a shared operational UTC clock when a common operational-clock helper is introduced, matching transaction_journal.py."
+    },
+    {
       "path": "lifetxt/surface_runtime_compat.py",
       "call": "datetime.datetime.now",
       "classification": "operational-compatibility",

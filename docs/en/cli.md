@@ -2913,3 +2913,75 @@ warrant a dedicated guide:
 
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.
+
+## 22. `server-update`
+
+Guarded production update for a systemd-managed install, wrapping
+`update`'s git fast-forward logic (see [§16](#16-init-and-doctor)) with
+backup, service stop/start, dependency reinstall, and verification. See
+[docs/deployment/ubuntu-server.md](../deployment/ubuntu-server.md) for the
+full operator-facing runbook this command is designed for.
+
+```sh
+python -m lifetxt server-update --server-config /etc/lifetxt/server-update.json
+python -m lifetxt server-update --server-config /etc/lifetxt/server-update.json --yes
+```
+
+| Option | Meaning |
+|---|---|
+| `--server-config PATH` | Required. Deployment config JSON file -- distinct from the global `--config` application config.json. |
+| `--yes` | Actually apply the update. Without this, `server-update` only fetches and reports what would happen. |
+| `--format text\|json` | Output format. |
+
+`--server-config` points at a JSON file naming the target Python
+environment and the deployment's paths/services, not any life.txt content:
+
+| Key | Meaning |
+|---|---|
+| `python` | Required. Path to the target environment's `python` executable (reinstall, sanity check, and integrity checks all run through it). |
+| `remote`, `branch`, `ref`, `repo` | Same meaning as `update`'s `--remote`/`--ref`/`--repo`; `branch` additionally refuses the run if the current branch does not match. |
+| `life_txt_path` | Primary life.txt path passed to the `check`/`ids`/`ticket validate-history` integrity checks. |
+| `backup_paths` | Files backed up (and hashed before/after the code update) -- typically the primary, config, and archive files. |
+| `backup_dir` | Directory timestamped backups are written under. Omitting it disables this command's own backup step; hash verification still runs. |
+| `lock_path` | Single-update lock file. Omitting it disables locking. |
+| `services` | systemd unit names to stop before updating and restart afterward. Only units already `active` are touched -- a unit you left stopped stays stopped. |
+| `service_manager` | `"systemctl"` (default) or `"none"` (no service management; useful for a non-systemd or manually-managed install). |
+| `integrity_checks` | Subset of `["check", "workspace_validate", "ids", "ticket_validate_history"]` to run after the code update. |
+| `health_url` | `/api/health` URL checked after services restart. Omit to skip. |
+| `pip_install_args` | Arguments appended to `<python> -m pip install`. Defaults to `["-e", "."]`. |
+| `health_timeout`, `git_timeout`, `service_timeout` | Per-category subprocess/network timeouts in seconds. |
+
+Without `--yes`, `server-update` fetches and reports the pending update
+(same preview shape as `update`) without touching anything. With `--yes`:
+
+1. Acquires the configured lock (refuses if another `server-update` is
+   already running).
+2. Backs up `backup_paths` into a fresh timestamped directory under
+   `backup_dir` and hashes them.
+3. Stops whichever configured `services` are currently active.
+4. Fast-forwards to the exact commit already resolved during the dry-run
+   preview -- no second, unreviewed fetch.
+5. Reinstalls the package (`pip install` with `pip_install_args`) and runs
+   a sanity `import lifetxt` check.
+6. Re-hashes `backup_paths` and refuses to continue if anything changed
+   during the code update.
+7. Runs the configured `integrity_checks`.
+8. Restarts the services it stopped and checks `health_url`.
+
+Failure behavior:
+
+- A failure before the code update (steps 1-3) restores whatever service
+  state existed before the attempt and releases the lock.
+- A failure after the code update but before validation completes (steps
+  4-7) leaves services **stopped** rather than restarting unvalidated code.
+  The report names the exact backup directory and pre-update commit for
+  manual recovery.
+- A validated, applied update whose service restart or health check itself
+  fails is reported as a distinct status (`validated_restart_incomplete` /
+  `validated_health_check_failed`) rather than silently claiming full
+  success -- both still exit non-zero.
+
+`server-update` has no built-in high-impact-change review gate today: with
+`--yes`, it runs the full flow above unconditionally once the target is
+resolved. A pre-mutation risk classification and approval step is tracked
+as a separate, not-yet-implemented follow-up.

@@ -104,6 +104,49 @@ jobs:
           python -m lifetxt summary examples/minimal_life.txt
           python -m lifetxt completion powershell > /tmp/lifetxt-completion.ps1
 
+  windows-core-smoke:
+    name: Windows core CLI smoke
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency-free package
+        shell: pwsh
+        run: python -m pip install -e . 2>&1 | Tee-Object windows-install.log
+
+      - name: Verify Windows timezone data and stable entry points
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          import tzdata
+
+          root = Path("windows smoke \u65e5\u672c\u8a9e")
+          root.mkdir()
+          source = root / "\u5165\u529b life.txt"
+          source.write_text('# [ ] T "Windows smoke"\\n', encoding="utf-8")
+          ZoneInfo("Asia/Tokyo")
+          print(tzdata.__version__)
+          '@ | python 2>&1 | Tee-Object windows-python.log
+          python -m lifetxt check "windows smoke $([char]0x65e5)$([char]0x672c)$([char]0x8a9e)/$([char]0x5165)$([char]0x529b) life.txt" 2>&1 | Tee-Object windows-module.log
+          lifetxt summary "windows smoke $([char]0x65e5)$([char]0x672c)$([char]0x8a9e)/$([char]0x5165)$([char]0x529b) life.txt" 2>&1 | Tee-Object windows-console.log
+
+      - name: Upload Windows smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-core-smoke
+          if-no-files-found: warn
+          path: windows-*.log
+
   release-gate:
     name: Required release policy and clean wheel
     runs-on: ubuntu-latest

@@ -255,6 +255,11 @@ files. Multiple inputs are read in order. Paths may be glob patterns such as
 `*.life.txt` or `projects/**/*.life.txt`. When a directory is passed, the CLI
 reads life.txt-like `.txt` files in that directory.
 
+Multi-file input expansion is deterministic: explicit paths retain caller
+order; glob matches are sorted by path; directory matches use the fixed pattern
+priority `life.txt`, `*.life.txt`, `*_life.txt`, `*.txt`, with names sorted
+within each pattern; duplicate paths are removed by absolute-path identity.
+
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check work.life.txt home.life.txt

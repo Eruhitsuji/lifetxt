@@ -1127,7 +1127,7 @@ traceability:
       status: implemented
 
     - requirement_id: req-remote-ticket-conflict-schema-conformance
-      capability_id: cap-authenticated-remote-clock-enforcement
+      capability_id: cap-remote-ticket-conflict-schema
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/122
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/123
@@ -1166,7 +1166,10 @@ traceability:
         a written split-justification). Discovered mid-implementation that the existing
         regression test exercised require_exact_revision's aggregate precondition, not
         mutation.MutationConflict as the issue originally assumed -- both sources are now
-        covered. Part of the feature/dev-remote batch alongside #120.
+        covered. Part of the feature/dev-remote batch alongside #120. Audit #340 confirmed
+        this requirement retains cap-remote-ticket-conflict-schema; a later Phase 6
+        traceability insertion had unintentionally overwritten this association and the
+        authenticated-clock association below.
       status: implemented
 
     - requirement_id: req-remote-tickets-bounded-pagination
@@ -4064,7 +4067,7 @@ traceability:
       status: implemented
 
     - requirement_id: req-authenticated-remote-clock-audit-evidence
-      capability_id: cap-remote-ticket-conflict-schema
+      capability_id: cap-authenticated-remote-clock-enforcement
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/311
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/338

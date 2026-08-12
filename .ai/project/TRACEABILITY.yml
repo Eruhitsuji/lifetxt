@@ -4270,7 +4270,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/349
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/380
       changed_files_or_scope:
         - pyproject.toml
         - tests/test_release_policy.py
@@ -4292,7 +4292,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/352
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/380
       changed_files_or_scope:
         - scripts/release_evidence.py
         - docs/en/release-artifact-evidence.md

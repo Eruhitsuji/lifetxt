@@ -37,6 +37,66 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-stable-external-verification-preparation
+    name: Stable external verification preparation
+    summary: >-
+      Issue-scoped runbooks and evidence formats for Web revision, remote
+      attachment, filesystem recovery, terminal, and CUI test-boundary work.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-stable-cui-test-decomposition-audit
+      - req-stable-web-revision-observe-verification
+      - req-stable-web-client-revision-verification
+      - req-stable-zero-legacy-write-window
+      - req-stable-required-revision-cutover
+      - req-stable-web-revision-lifecycle
+      - req-stable-attachment-restart-recovery
+      - req-stable-attachment-replay-recovery
+      - req-stable-attachment-bounds
+      - req-stable-filesystem-recovery-support
+      - req-stable-windows-terminal-tui-verification
+    implementation_locations:
+      - docs/en/cui-test-decomposition-audit.md
+      - docs/en/stable-verification-288-web-revision-observe.md
+      - docs/en/stable-verification-289-web-client-revisions.md
+      - docs/en/stable-verification-290-zero-legacy-window.md
+      - docs/en/stable-verification-291-required-revision-cutover.md
+      - docs/en/stable-verification-292-revision-lifecycle.md
+      - docs/en/stable-verification-297-attachment-restart.md
+      - docs/en/stable-verification-298-attachment-replay.md
+      - docs/en/stable-verification-299-attachment-bounds.md
+      - docs/en/stable-verification-304-filesystem-support.md
+      - docs/en/stable-verification-312-windows-terminals.md
+    public_interfaces:
+      - redacted external verification record format
+      - CUI completion-test extraction boundary #395
+    tests_or_evidence:
+      - issue-scoped runbooks identify environment, procedure, observations, and redaction rules
+      - #373 inventory selects a bounded completion-test extraction
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/373
+      - https://github.com/Eruhitsuji/lifetxt/issues/288
+      - https://github.com/Eruhitsuji/lifetxt/issues/289
+      - https://github.com/Eruhitsuji/lifetxt/issues/290
+      - https://github.com/Eruhitsuji/lifetxt/issues/291
+      - https://github.com/Eruhitsuji/lifetxt/issues/292
+      - https://github.com/Eruhitsuji/lifetxt/issues/297
+      - https://github.com/Eruhitsuji/lifetxt/issues/298
+      - https://github.com/Eruhitsuji/lifetxt/issues/299
+      - https://github.com/Eruhitsuji/lifetxt/issues/304
+      - https://github.com/Eruhitsuji/lifetxt/issues/312
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/396
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Preparation and investigation only for external environments. No real
+      deployment, external account, filesystem, or terminal result is claimed.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-stable-maintainability-followthrough
     name: Maintainability extraction follow-through
     summary: >-

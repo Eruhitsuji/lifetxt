@@ -5262,6 +5262,27 @@ traceability:
         claimed by the matrix.
       status: implemented
 
+    - requirement_id: req-stable-parser-end-span
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - lifetxt/model.py
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_diagnostic_contract.py
+        - tests/test_safety_cli.py
+      tests_or_evidence:
+        - E018 unclosed quoted string reports deterministic start/end span
+        - format check JSON preserves the parser end span
+        - shared diagnostic output preserves optional span fields
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S implementation for one quoted-string syntax family;
+        unrelated diagnostic families retain their existing span behavior.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -62,7 +62,16 @@ PARSER_DIAGNOSTIC_HINTS = {
 }
 
 
-def _diagnostic(severity, code, message, line=None, column=None, source=None):
+def _diagnostic(
+    severity,
+    code,
+    message,
+    line=None,
+    column=None,
+    source=None,
+    end_line=None,
+    end_column=None,
+):
     return Diagnostic(
         severity,
         code,
@@ -71,6 +80,8 @@ def _diagnostic(severity, code, message, line=None, column=None, source=None):
         column=column,
         source=source,
         hint=PARSER_DIAGNOSTIC_HINTS[code],
+        end_line=end_line,
+        end_column=end_column,
     )
 
 
@@ -685,6 +696,8 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
             "Unclosed quoted %s." % role,
             line_no,
             column_offset + start + 1,
+            end_line=line_no,
+            end_column=column_offset + len(text) + 1,
         )
     )
     return "".join(chars), len(text)

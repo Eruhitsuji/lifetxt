@@ -4894,6 +4894,55 @@ traceability:
         server_update.py.
       status: implemented
 
+    - requirement_id: req-stable-web-read-service-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/385
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_read_service.py
+      tests_or_evidence:
+        - tests.test_surface_runtime
+        - tests.test_completion_surfaces
+        - tests.test_lifetxt.LifeTxtParserTests
+      release_or_deployment: null
+      notes: >-
+        Compatibility wrappers retain the existing Web helper surface while
+        pure read logic is independently importable.
+      status: implemented
+
+    - requirement_id: req-stable-web-route-decomposition-audit
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/371
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - docs/en/web-route-decomposition-audit.md
+      tests_or_evidence:
+        - route inventory and first extraction issue #393
+      release_or_deployment: null
+      notes: >-
+        Audit-only slice; no route behavior changes.
+      status: implemented
+
+    - requirement_id: req-stable-server-review-helper-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/389
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - lifetxt/server_update.py
+        - lifetxt/server_update_review.py
+      tests_or_evidence:
+        - tests.test_server_update.DiffSummaryParsingTests
+        - tests.test_server_update.ClassifyRiskTests
+        - tests.test_server_update.ReviewBlockFormatTests
+      release_or_deployment: null
+      notes: >-
+        Pure review helpers extracted without changing update orchestration.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

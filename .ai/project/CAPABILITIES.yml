@@ -108,9 +108,12 @@ capabilities:
       - req-stable-web-read-service-extraction
       - req-stable-web-route-decomposition-audit
       - req-stable-server-review-helper-extraction
+      - req-stable-web-analytics-route-extraction
     implementation_locations:
       - lifetxt/web_read_service.py
       - lifetxt/webapp.py
+      - lifetxt/web_routes_analytics.py
+      - tests/test_web_routes_analytics.py
       - docs/en/web-route-decomposition-audit.md
       - lifetxt/server_update_review.py
       - lifetxt/server_update.py
@@ -122,12 +125,15 @@ capabilities:
     tests_or_evidence:
       - focused Web surface and server-update helper tests pass
       - route inventory records follow-up issue #393
+      - analytics route path, payload, read-only, and bearer-auth tests pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/371
       - https://github.com/Eruhitsuji/lifetxt/issues/385
       - https://github.com/Eruhitsuji/lifetxt/issues/389
+      - https://github.com/Eruhitsuji/lifetxt/issues/393
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/394
+      - https://github.com/Eruhitsuji/lifetxt/pull/397
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Standard assurance XS/S bounded slices. Route and server mutation

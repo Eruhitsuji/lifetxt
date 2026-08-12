@@ -20,6 +20,7 @@ traceability:
         - git diff --check
       release_or_deployment: null
       status: implemented
+
     - requirement_id: req-local-unittest-compatibility
       capability_id: cap-local-test-compatibility
       epic: null
@@ -4237,6 +4238,32 @@ traceability:
         High-assurance release evidence. The procedure uses a disposable local
         server profile for reproducibility and maps the same commands to a
         supported deployed profile without recording its URL or credentials.
+      status: implemented
+
+    - requirement_id: req-stable-mcp-read-artifact-evidence
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/360
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/mcp_artifact_smoke.py
+        - docs/en/stable-mcp-read-artifact-smoke.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - wheel and sdist built with isolated artifact output
+        - clean virtual environment installed from the wheel without editable source checkout
+        - MCP initialize, resources/list, resources/read, and stable read tool checks
+        - malformed request containment and read-only write rejection
+        - artifact hash/version/environment recorded without source paths or credentials
+        - YAML parse and git diff --check
+      release_or_deployment: >-
+        Evidence record for the stable mcp-client-read support-matrix entry;
+        MCP write tools are not promoted by this task.
+      notes: >-
+        High-assurance subprocess evidence. The smoke uses a disposable
+        environment and removes its build/install directories on completion.
       status: implemented
 
 required_chain:

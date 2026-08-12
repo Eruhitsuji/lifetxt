@@ -256,6 +256,7 @@ stable_release:
           - MCP read-only resource smoke against installed release artifacts
           - schema/capability contract validation for stable MCP responses
         evidence_type: simulated_or_subprocess
+        evidence_reference: docs/en/stable-mcp-read-artifact-smoke.md
         limitation: >-
           MCP write surfaces are not stable-supported unless selected and
           verified through the delegated proposal contract.

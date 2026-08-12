@@ -1,0 +1,84 @@
+{
+  "schema": "lifetxt-core-benchmark-v1",
+  "python": "3.12.3",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "interpreter": "C:\\Users\\CodexSandboxOffline\\.codex\\.sandbox\\cwd\\bb54800020e77a4d\\.venv\\Scripts\\python.exe",
+  "fixture_sizes": {
+    "small": 100,
+    "medium": 1000,
+    "large": 5000
+  },
+  "results": {
+    "small": {
+      "check": {
+        "elapsed_seconds": 0.651556,
+        "stdout_bytes": 15,
+        "stderr_bytes": 0
+      },
+      "json": {
+        "elapsed_seconds": 0.652355,
+        "stdout_bytes": 4,
+        "stderr_bytes": 0
+      },
+      "filter": {
+        "elapsed_seconds": 0.619948,
+        "stdout_bytes": 0,
+        "stderr_bytes": 0
+      },
+      "summary": {
+        "elapsed_seconds": 0.623894,
+        "stdout_bytes": 187,
+        "stderr_bytes": 0
+      }
+    },
+    "medium": {
+      "check": {
+        "elapsed_seconds": 0.663658,
+        "stdout_bytes": 15,
+        "stderr_bytes": 0
+      },
+      "json": {
+        "elapsed_seconds": 0.769617,
+        "stdout_bytes": 4,
+        "stderr_bytes": 0
+      },
+      "filter": {
+        "elapsed_seconds": 0.632615,
+        "stdout_bytes": 0,
+        "stderr_bytes": 0
+      },
+      "summary": {
+        "elapsed_seconds": 0.612695,
+        "stdout_bytes": 188,
+        "stderr_bytes": 0
+      }
+    },
+    "large": {
+      "check": {
+        "elapsed_seconds": 0.633214,
+        "stdout_bytes": 15,
+        "stderr_bytes": 0
+      },
+      "json": {
+        "elapsed_seconds": 0.684659,
+        "stdout_bytes": 4,
+        "stderr_bytes": 0
+      },
+      "filter": {
+        "elapsed_seconds": 0.678323,
+        "stdout_bytes": 0,
+        "stderr_bytes": 0
+      },
+      "summary": {
+        "elapsed_seconds": 0.76698,
+        "stdout_bytes": 188,
+        "stderr_bytes": 0
+      }
+    }
+  },
+  "measurement": {
+    "metric": "wall_clock_seconds",
+    "repeat_policy": "single deterministic run per case; compare trends, not one-run thresholds",
+    "resource_proxy": "stdout and stderr byte counts"
+  }
+}

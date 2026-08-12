@@ -161,6 +161,11 @@ capabilities:
       - req-stable-oversized-file-audit
       - req-stable-web-mcp-boundary-audit
       - req-stable-oversized-file-report
+      - req-stable-mcp-decomposition-audit
+      - req-stable-tui-decomposition-audit
+      - req-stable-test-suite-decomposition-audit
+      - req-stable-server-update-decomposition-audit
+      - req-stable-cli-completion-boundary
     implementation_locations:
       - .github/workflows/ci.yml
       - pyproject.toml
@@ -181,6 +186,10 @@ capabilities:
       - docs/en/oversized-file-decomposition-audit.md
       - docs/en/oversized-file-report.md
       - docs/en/release-security-review.md
+      - docs/en/mcp-decomposition-audit.md
+      - docs/en/tui-decomposition-audit.md
+      - docs/en/test-suite-decomposition-audit.md
+      - docs/en/server-update-decomposition-audit.md
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
@@ -196,6 +205,8 @@ capabilities:
       - GitHub Actions uses the current Node 24 action majors
       - oversized-file classification and informational reporting remain reproducible
       - Web/MCP shared helper ownership and compatibility boundaries are recorded
+      - MCP, TUI, test-suite, and server-update responsibility maps select bounded follow-ups
+      - CLI completion parser registration is delegated without changing command contracts
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339
@@ -218,6 +229,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/366
       - https://github.com/Eruhitsuji/lifetxt/issues/368
       - https://github.com/Eruhitsuji/lifetxt/issues/375
+      - https://github.com/Eruhitsuji/lifetxt/issues/369
+      - https://github.com/Eruhitsuji/lifetxt/issues/370
+      - https://github.com/Eruhitsuji/lifetxt/issues/372
+      - https://github.com/Eruhitsuji/lifetxt/issues/374
+      - https://github.com/Eruhitsuji/lifetxt/issues/384
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

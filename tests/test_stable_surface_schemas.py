@@ -36,7 +36,10 @@ class StableSurfaceSchemaTests(unittest.TestCase):
             create_app(paths=[self.path], writable_path=self.path)
         )
         bundle = schema_bundle()
-        self.item_validator = Draft202012Validator(bundle["item-v1.schema.json"])
+        item_schema = bundle["item-v1.schema.json"]
+        self.assertTrue(item_schema["$id"].endswith("item-v1.schema.json"))
+        self.assertEqual("lifetxt item v1", item_schema["title"])
+        self.item_validator = Draft202012Validator(item_schema)
 
     def tearDown(self):
         self.temp_dir.cleanup()

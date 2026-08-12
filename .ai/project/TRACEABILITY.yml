@@ -5189,6 +5189,79 @@ traceability:
         the aggregate test module; assertion bodies and test names are unchanged.
       status: implemented
 
+    - requirement_id: req-stable-format-migration-contract
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/320
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_safety.py
+        - lifetxt/entrypoint.py
+        - tests/test_safety_cli.py
+        - docs/en/format-migration.md
+      tests_or_evidence:
+        - unversioned to Format 1.0 preview/write and idempotent no-op are covered
+        - unsupported source versions are rejected without mutation
+        - downgrade inspection is explicitly non-writing until a loss matrix exists
+      release_or_deployment: null
+      notes: >-
+        Bounded migration slice. Automatic downgrade and legacy-version
+        transformations remain intentionally unsupported until separately specified.
+      status: implemented
+
+    - requirement_id: req-stable-canonical-corpus-freeze
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/321
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - tests/golden/policy-v1.json
+        - lifetxt/release_policy.py
+        - tests/test_roundtrip_golden.py
+        - docs/en/release-safety-foundations.md
+      tests_or_evidence:
+        - golden policy pins LIFETXT_CANON_V1
+        - canonical corpus outputs are checked for idempotency
+        - roundtrip, release policy, and safety foundation tests pass
+      release_or_deployment: null
+      notes: >-
+        Canonical output changes require both a corpus-version bump and an
+        explicit migration note.
+      status: implemented
+
+    - requirement_id: req-stable-stable-contract-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/323
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-contract-matrix.md
+      tests_or_evidence:
+        - stable machine-readable contract families, schema evidence, and explicit exceptions are inventoried
+        - release schema bundle and policy validation pass
+      release_or_deployment: null
+      notes: >-
+        Matrix establishes the support boundary; route-by-route Web and MCP
+        envelope validation remains a follow-up where marked partial.
+      status: implemented
+
+    - requirement_id: req-stable-diagnostic-matrix
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/324
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-diagnostics-matrix.md
+      tests_or_evidence:
+        - parser, canonical policy, mutation, configuration, and remote diagnostic boundaries are classified
+        - remaining message-only and real-environment gaps are explicitly recorded
+      release_or_deployment: null
+      notes: >-
+        Documentation slice only; no unsupported remote or release evidence is
+        claimed by the matrix.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

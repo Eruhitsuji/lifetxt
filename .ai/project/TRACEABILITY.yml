@@ -4465,6 +4465,108 @@ traceability:
         repository changes materially.
       status: implemented
 
+    - requirement_id: req-stable-static-typing-ci
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/346
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - lifetxt/diagnostic_contract.py
+      tests_or_evidence:
+        - mypy boundary command passes
+        - type-check CI job installs dev-only tooling and blocks only the approved module
+        - focused contract behavior remains covered by the existing suite
+      release_or_deployment: >-
+        Non-blocking maintainability gate for a stable internal contract; no
+        runtime dependency or public behavior change.
+      notes: >-
+        The boundary follows #345 and remains intentionally limited until a new
+        issue expands it.
+      status: implemented
+
+    - requirement_id: req-stable-ruff-e741-gate
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/348
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
+      changed_files_or_scope:
+        - pyproject.toml
+        - lifetxt/cli.py
+        - tests/test_inbox.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - only E741 was enabled from the #347 audit recommendation
+        - nine ambiguous variable findings were renamed without behavior changes
+        - focused tests and the configured Ruff gate pass
+      release_or_deployment: >-
+        Incremental maintainability lint gate; deferred Ruff families remain
+        disabled.
+      notes: >-
+        No repository-wide formatting or unrelated modernization was included.
+      status: implemented
+
+    - requirement_id: req-stable-optional-dependency-compatibility
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/350
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - Web and TUI minimum and upper bands are independently matrixed
+        - each band installs its declared range and runs focused smoke tests
+        - pip freeze evidence is uploaded for resolver review
+      release_or_deployment: >-
+        RC compatibility evidence for the ranges defined by #349; no runtime
+        dependency surface expansion.
+      notes: >-
+        The matrix does not attempt every historical patch version.
+      status: implemented
+
+    - requirement_id: req-stable-release-doc-validation
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/355
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
+      changed_files_or_scope:
+        - scripts/validate_release_docs.py
+        - docs/en/release-doc-validation.md
+        - docs/en/release-doc-validation.json
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - 69 internal links and anchors validate successfully
+        - documented CLI help commands validate successfully without executing arbitrary shell blocks
+        - external or secret-dependent examples are explicitly not executed
+        - JSON report is uploaded as a CI artifact
+      release_or_deployment: >-
+        Non-blocking documentation drift detection; it complements the #354
+        semantic parity audit.
+      notes: >-
+        The validator is deterministic and network-free.
+      status: implemented
+
+    - requirement_id: req-stable-core-performance-baseline
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/357
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
+      changed_files_or_scope:
+        - scripts/benchmark_core.py
+        - docs/en/core-performance-baseline.md
+        - docs/en/core-performance-baseline.json
+      tests_or_evidence:
+        - deterministic 100/1000/5000 record fixtures benchmark check, JSON, filter, and summary
+        - output sizes and wall-clock metadata are retained with environment metadata
+        - benchmark uses standard library only and is outside the default CI gate
+      release_or_deployment: >-
+        Non-blocking trend evidence; it does not define a public performance SLO
+        or a portable single-run threshold.
+      notes: >-
+        Future comparisons must preserve fixture and command policy before
+        treating scaling changes as actionable.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

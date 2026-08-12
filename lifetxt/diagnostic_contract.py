@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 from collections import OrderedDict
+from typing import Any, Dict, Iterable, List
 
 
 DIAGNOSTIC_CATEGORIES = (
@@ -22,7 +23,7 @@ DIAGNOSTIC_CATEGORIES = (
 )
 
 
-def diagnostic_category(diagnostic):
+def diagnostic_category(diagnostic: Any) -> str:
     code = str(getattr(diagnostic, "code", "") or "").upper()
     if code.startswith("E0"):
         return "syntax"
@@ -51,7 +52,7 @@ def diagnostic_category(diagnostic):
     return "semantic"
 
 
-def diagnostic_to_output_dict(diagnostic):
+def diagnostic_to_output_dict(diagnostic: Any) -> Dict[str, Any]:
     data = diagnostic.to_dict()
     output = OrderedDict()
     for key, value in data.items():
@@ -61,5 +62,5 @@ def diagnostic_to_output_dict(diagnostic):
     return output
 
 
-def diagnostics_to_output(diagnostics):
+def diagnostics_to_output(diagnostics: Iterable[Any]) -> List[Dict[str, Any]]:
     return [diagnostic_to_output_dict(diagnostic) for diagnostic in diagnostics]

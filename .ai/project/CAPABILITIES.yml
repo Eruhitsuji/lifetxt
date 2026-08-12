@@ -146,22 +146,35 @@ capabilities:
       - req-stable-ci-coverage-baseline
       - req-stable-static-typing-boundary
       - req-stable-ruff-rule-audit
+      - req-stable-static-typing-ci
+      - req-stable-ruff-e741-gate
+      - req-stable-optional-dependency-compatibility
+      - req-stable-release-doc-validation
+      - req-stable-core-performance-baseline
     implementation_locations:
       - .github/workflows/ci.yml
       - pyproject.toml
       - .ai/project/COMMANDS.yml
       - scripts/audit_ruff_rules.py
+      - scripts/validate_release_docs.py
+      - scripts/benchmark_core.py
       - docs/en/
     public_interfaces:
       - .ai/project/COMMANDS.yml
       - docs/en/ci-coverage-baseline.md
       - docs/en/static-typing-boundary.md
       - docs/en/ruff-rule-audit.md
+      - docs/en/release-doc-validation.md
+      - docs/en/core-performance-baseline.md
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
       - mypy boundary command passes with imports outside the selected module excluded
       - Ruff rule audit records point-in-time counts and a bounded E741 recommendation
+      - type-check CI blocks regressions in the approved diagnostic contract boundary
+      - optional Web/TUI minimum and upper dependency bands run focused smoke tests
+      - release-document validator checks 69 internal links and safe CLI help examples
+      - core benchmark records deterministic small/medium/large workflow trends
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339
@@ -170,6 +183,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/344
       - https://github.com/Eruhitsuji/lifetxt/issues/345
       - https://github.com/Eruhitsuji/lifetxt/issues/347
+      - https://github.com/Eruhitsuji/lifetxt/issues/346
+      - https://github.com/Eruhitsuji/lifetxt/issues/348
+      - https://github.com/Eruhitsuji/lifetxt/issues/350
+      - https://github.com/Eruhitsuji/lifetxt/issues/355
+      - https://github.com/Eruhitsuji/lifetxt/issues/357
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

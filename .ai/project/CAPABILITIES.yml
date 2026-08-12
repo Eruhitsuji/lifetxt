@@ -698,6 +698,7 @@ capabilities:
       - req-diagnostic-hint-content
       - req-stable-parser-format-metadata
       - req-stable-diagnostic-matrix
+      - req-stable-parser-end-span
     implementation_locations:
       - lifetxt/parser.py
       - lifetxt/validator.py
@@ -710,6 +711,8 @@ capabilities:
       - tests/test_diagnostic_contract.py
       - tests/test_parser_format_metadata.py
       - docs/en/stable-diagnostics-matrix.md
+      - lifetxt/model.py
+      - tests/test_diagnostic_contract.py
       - docs/en/cli.md
       - docs/ja/cli.md
     public_interfaces:

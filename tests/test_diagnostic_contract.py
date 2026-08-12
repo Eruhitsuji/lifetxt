@@ -24,6 +24,17 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class DiagnosticContractTests(unittest.TestCase):
+    def test_parser_end_span_is_preserved_in_shared_output(self):
+        from lifetxt.parser import parse_text
+
+        _items, diagnostics = parse_text('[ ] T "Unclosed title\n')
+        diagnostic = next(item for item in diagnostics if item.code == "E018")
+        output = diagnostic_to_output_dict(diagnostic)
+
+        self.assertEqual(1, output["span"]["start"]["line"])
+        self.assertEqual(7, output["span"]["start"]["column"])
+        self.assertEqual(22, output["span"]["end"]["column"])
+
     def _cli_env(self):
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"

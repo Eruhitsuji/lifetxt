@@ -5193,7 +5193,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/320
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
       changed_files_or_scope:
         - lifetxt/extra_cli.py
         - lifetxt/extra_safety.py
@@ -5214,7 +5214,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/321
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
       changed_files_or_scope:
         - tests/golden/policy-v1.json
         - lifetxt/release_policy.py
@@ -5234,7 +5234,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/323
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
       changed_files_or_scope:
         - docs/en/stable-contract-matrix.md
       tests_or_evidence:
@@ -5250,7 +5250,7 @@ traceability:
       capability_id: cap-stable-diagnostics
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/324
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
       changed_files_or_scope:
         - docs/en/stable-diagnostics-matrix.md
       tests_or_evidence:

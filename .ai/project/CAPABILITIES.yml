@@ -60,6 +60,7 @@ capabilities:
       - req-stable-release-artifact-evidence
       - req-stable-dependency-security-audit
       - req-stable-release-doc-parity
+      - req-stable-release-security-review
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -151,6 +152,15 @@ capabilities:
       - req-stable-optional-dependency-compatibility
       - req-stable-release-doc-validation
       - req-stable-core-performance-baseline
+      - req-stable-cli-decomposition-plan
+      - req-stable-deterministic-roundtrip
+      - req-stable-resource-warning-cleanup
+      - req-stable-resource-warning-gate
+      - req-stable-ast-modernization
+      - req-stable-actions-runtime-refresh
+      - req-stable-oversized-file-audit
+      - req-stable-web-mcp-boundary-audit
+      - req-stable-oversized-file-report
     implementation_locations:
       - .github/workflows/ci.yml
       - pyproject.toml
@@ -166,6 +176,11 @@ capabilities:
       - docs/en/ruff-rule-audit.md
       - docs/en/release-doc-validation.md
       - docs/en/core-performance-baseline.md
+      - docs/en/cli-decomposition-plan.md
+      - docs/en/web-mcp-service-boundary-audit.md
+      - docs/en/oversized-file-decomposition-audit.md
+      - docs/en/oversized-file-report.md
+      - docs/en/release-security-review.md
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
@@ -175,6 +190,12 @@ capabilities:
       - optional Web/TUI minimum and upper dependency bands run focused smoke tests
       - release-document validator checks 69 internal links and safe CLI help examples
       - core benchmark records deterministic small/medium/large workflow trends
+      - deterministic generated life.txt records reparse to identical canonical lines
+      - focused ResourceWarning gate passes with warnings promoted to errors
+      - deprecated AST string nodes are excluded by focused safety-foundation tests
+      - GitHub Actions uses the current Node 24 action majors
+      - oversized-file classification and informational reporting remain reproducible
+      - Web/MCP shared helper ownership and compatibility boundaries are recorded
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339
@@ -188,6 +209,15 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/350
       - https://github.com/Eruhitsuji/lifetxt/issues/355
       - https://github.com/Eruhitsuji/lifetxt/issues/357
+      - https://github.com/Eruhitsuji/lifetxt/issues/353
+      - https://github.com/Eruhitsuji/lifetxt/issues/358
+      - https://github.com/Eruhitsuji/lifetxt/issues/362
+      - https://github.com/Eruhitsuji/lifetxt/issues/363
+      - https://github.com/Eruhitsuji/lifetxt/issues/364
+      - https://github.com/Eruhitsuji/lifetxt/issues/365
+      - https://github.com/Eruhitsuji/lifetxt/issues/366
+      - https://github.com/Eruhitsuji/lifetxt/issues/368
+      - https://github.com/Eruhitsuji/lifetxt/issues/375
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

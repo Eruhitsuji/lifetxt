@@ -4469,7 +4469,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/346
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
       changed_files_or_scope:
         - .github/workflows/ci.yml
         - lifetxt/diagnostic_contract.py
@@ -4489,7 +4489,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/348
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
       changed_files_or_scope:
         - pyproject.toml
         - lifetxt/cli.py
@@ -4510,7 +4510,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/350
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
       changed_files_or_scope:
         - .github/workflows/ci.yml
       tests_or_evidence:
@@ -4528,7 +4528,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/355
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
       changed_files_or_scope:
         - scripts/validate_release_docs.py
         - docs/en/release-doc-validation.md
@@ -4550,7 +4550,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/357
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/383
       changed_files_or_scope:
         - scripts/benchmark_core.py
         - docs/en/core-performance-baseline.md

@@ -252,6 +252,53 @@ def _values_from_items(items, kind):
     return _unique_ordered(value for value in values if value)
 
 
+def add_completion_parsers(subparsers, handler):
+    """Register the completion command group without owning CLI parsing."""
+    completion = subparsers.add_parser(
+        "completion",
+        help="Generate shell completion scripts.",
+    )
+    completion_subparsers = completion.add_subparsers(dest="completion_command")
+    for shell in ("bash", "zsh", "fish"):
+        shell_parser = completion_subparsers.add_parser(
+            shell, help="Generate %s completion." % shell
+        )
+        shell_parser.add_argument(
+            "-o", "--output", help="Output file. Defaults to stdout."
+        )
+        shell_parser.set_defaults(func=handler)
+    completion_install = completion_subparsers.add_parser(
+        "install", help="Print installation instructions."
+    )
+    completion_install.add_argument(
+        "--shell",
+        choices=("bash", "zsh", "fish", "powershell"),
+        help="Shell to show instructions for.",
+    )
+    completion_install.add_argument(
+        "-o", "--output", help="Output file. Defaults to stdout."
+    )
+    completion_install.set_defaults(func=handler)
+    completion_values = completion_subparsers.add_parser(
+        "values",
+        help="Print completion candidates read from a life.txt file.",
+    )
+    completion_values.add_argument(
+        "--kind",
+        choices=VALUE_KINDS,
+        required=True,
+        help="Candidate kind to print, one per line.",
+    )
+    completion_values.add_argument(
+        "path", nargs="*", help="life.txt file(s) to read. Defaults to config paths."
+    )
+    completion_values.add_argument(
+        "-o", "--output", help="Output file. Defaults to stdout."
+    )
+    completion_values.set_defaults(func=handler)
+    return completion
+
+
 def cmd_completion(args):
     command = args.completion_command
     if command == "install":

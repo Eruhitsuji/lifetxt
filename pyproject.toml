@@ -41,7 +41,8 @@ tui = [
 ]
 dev = [
   "ruff>=0.16.1",
-  "httpx2"
+  "httpx2",
+  "tomli; python_version < '3.11'"
 ]
 
 [tool.setuptools]

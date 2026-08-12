@@ -75,6 +75,25 @@ traceability:
         remain outside this bounded contract slice.
       status: partial
 
+    - requirement_id: req-stable-multi-file-input-order
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/415
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/415
+      changed_files_or_scope:
+        - lifetxt/paths.py
+        - tests/test_paths.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - glob and directory expansion order is fixed by focused tests
+        - explicit caller order is preserved
+        - duplicate paths are removed by absolute identity
+      release_or_deployment: null
+      notes: >-
+        Existing deterministic expansion behavior is documented and locked;
+        write target and workspace ID semantics remain #416/#417.
+      status: implemented
+
     - requirement_id: req-local-unittest-compatibility
       capability_id: cap-local-test-compatibility
       epic: null

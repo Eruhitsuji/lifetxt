@@ -179,6 +179,7 @@ capabilities:
       - req-stable-external-environment-verification-plan
       - req-stable-web-mcp-schema-validation
       - req-stable-single-item-schema-validation
+      - req-stable-multi-file-input-order
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md

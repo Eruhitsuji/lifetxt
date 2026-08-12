@@ -64,6 +64,8 @@ from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
 from .web_read_service import find_item_by_id as _service_find_item_by_id
+from .web_read_service import assert_unique_ids
+from .web_read_service import assert_unique_workspace_ids
 from .web_read_service import limit_items as _service_limit_items
 from .web_read_service import read_life_inputs as _service_read_life_inputs
 from .web_read_service import sort_items as _service_sort_items
@@ -153,9 +155,22 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         description="life.txt REST API" + (" — read-only demo" if read_only else ""),
     )
     app.state.paths = normalize_server_paths(paths)
-    app.state.writable_path = writable_path or app.state.paths[0]
+    if read_only:
+        app.state.writable_path = writable_path or app.state.paths[0]
+    else:
+        from .paths import resolve_write_target
+
+        app.state.writable_path = resolve_write_target(app.state.paths, writable_path)
     app.state.config = config or {}
     app.state.read_only = read_only
+    if not read_only:
+        assert_unique_workspace_ids(
+            app.state.paths,
+            app.state.config,
+            normalize_server_paths,
+            read_text,
+            is_generated_path,
+        )
     transactions_config = (
         app.state.config.get("transactions")
         if isinstance(app.state.config.get("transactions"), dict)
@@ -2145,10 +2160,14 @@ def item_from_payload(payload):
 
 
 def assign_auto_id_from_paths(item, config=None, paths=None, now=None):
-    if not auto_ids_enabled(config or {}):
-        return None
     items, _diagnostics = read_life_inputs(paths, config)
-    return assign_auto_id(item, config=config, existing_items=items, now=now)
+    assert_unique_ids(items, key=id_key_from_config(config or {}))
+    if not auto_ids_enabled(config or {}):
+        assert_unique_ids(items + [item], key=id_key_from_config(config or {}))
+        return None
+    result = assign_auto_id(item, config=config, existing_items=items, now=now)
+    assert_unique_ids(items + [item], key=id_key_from_config(config or {}))
+    return result
 
 
 def assign_auto_id(item, config=None, existing_items=None, now=None):

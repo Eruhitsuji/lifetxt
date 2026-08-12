@@ -55,12 +55,14 @@ from .webapp import (
     normalize_server_paths,
     read_life_inputs,
     read_text,
+    is_generated_path,
     snooze_message_in_file,
     sort_items,
     update_item_by_id_in_file,
     write_text,
     _subgraph,
 )
+from .web_read_service import assert_unique_workspace_ids
 from .mcp_resources import resource_list as _resource_list
 from .mcp_resources import resource_read as _resource_read
 
@@ -82,10 +84,24 @@ class McpContext:
         self.config = config or {}
         configured_paths = paths or config_paths(self.config) or ["life.txt"]
         self.paths = normalize_server_paths(configured_paths)
-        self.writable_path = (
-            writable_path or config_write_file(self.config) or self.paths[0]
-        )
         self.read_only = bool(read_only)
+        if self.read_only:
+            self.writable_path = (
+                writable_path or config_write_file(self.config) or self.paths[0]
+            )
+        else:
+            from .paths import resolve_write_target
+
+            self.writable_path = resolve_write_target(
+                self.paths, writable_path or config_write_file(self.config)
+            )
+            assert_unique_workspace_ids(
+                self.paths,
+                self.config,
+                normalize_server_paths,
+                read_text,
+                is_generated_path,
+            )
         self.remote_principal = dict(remote_principal or {}) or None
         self.remote_session = dict(remote_session or {}) or None
         transactions_config = (

@@ -2,6 +2,28 @@ import glob
 import os
 
 
+def resolve_write_target(paths, explicit=None):
+    """Resolve a write target without guessing across multiple inputs."""
+    if explicit:
+        return str(explicit)
+    candidates = []
+    seen = set()
+    for path in paths or []:
+        value = str(path)
+        key = os.path.normcase(os.path.abspath(value))
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(value)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise ValueError(
+            "Multiple input sources require an explicit write target."
+        )
+    raise ValueError("No input source is available for writing.")
+
+
 def expand_paths(paths, default=None, stdin_when_empty=False):
     if paths is None:
         paths = default

@@ -101,6 +101,14 @@ under `workspaces` and pick a default with `default_workspace`:
 }
 ```
 
+When a workspace has more than one writable source, every writable Web, MCP,
+or multi-file server operation must name `write_file` explicitly. lifetxt does
+not guess the first source, because that can silently write to the wrong file.
+Single-source workspaces remain implicit, and read-only operations may still
+inspect multiple sources. Authoritative writes are also rejected before
+mutation when duplicate IDs exist across the loaded sources; repair the IDs
+first so each workspace ID is unique.
+
 Select a workspace for any command with the global `--workspace` flag:
 
 ```console

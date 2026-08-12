@@ -180,6 +180,8 @@ capabilities:
       - req-stable-web-mcp-schema-validation
       - req-stable-single-item-schema-validation
       - req-stable-multi-file-input-order
+      - req-stable-multi-file-write-target
+      - req-stable-workspace-id-uniqueness
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -188,6 +190,11 @@ capabilities:
       - docs/en/format-migration.md
       - docs/en/stable-contract-matrix.md
       - docs/en/external-environment-verification.md
+      - lifetxt/paths.py
+      - lifetxt/web_read_service.py
+      - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - tests/test_multi_file_write_guards.py
     public_interfaces:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md

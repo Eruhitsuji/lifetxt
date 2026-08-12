@@ -84,6 +84,14 @@ commands:
     values:
       - mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
 
+  oversized_file_report:
+    status: configured
+    description: >-
+      Report classified oversized source/test files for review. The report is
+      informational and never fails solely on file size.
+    values:
+      - python scripts/report_oversized_files.py --output .cache/oversized-file-report.json
+
   unit_test:
     status: configured
     values:

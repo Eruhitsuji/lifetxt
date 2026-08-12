@@ -266,6 +266,7 @@ stable_release:
           - remote read client smoke against a supported server setup
           - revision-aware pagination and resource response contract evidence
         evidence_type: real_environment
+        evidence_reference: docs/en/stable-remote-read-smoke.md
         limitation: null
       - id: remote-write-client
         category: client

@@ -31,7 +31,7 @@ class StableSurfaceSchemaTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory(prefix="lifetxt-schema-")
         self.path = os.path.join(self.temp_dir.name, "life.txt")
         with open(self.path, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write("[ ] T Alpha\n")
+            handle.write("[ ] T Alpha id:alpha\n")
         self.client = TestClient(
             create_app(paths=[self.path], writable_path=self.path)
         )
@@ -102,6 +102,19 @@ class StableSurfaceSchemaTests(unittest.TestCase):
             handle.write('[ ] T "Unclosed title\n')
         invalid = call_tool("list_items", {}, context)
         self.assertTrue(any(row["severity"] == "error" for row in invalid["diagnostics"]))
+
+    def test_web_and_mcp_single_item_reads_validate_item_v1(self):
+        web = self.client.get("/api/items/1")
+        self.assertEqual(200, web.status_code)
+        web_item = web.json()["item"]
+        self.assertIsNone(next(iter(self.item_validator.iter_errors(web_item)), None))
+
+        context = McpContext(paths=[self.path], writable_path=self.path)
+        mcp = call_tool("get_item", {"id": "alpha"}, context)
+        self.assertIsNone(
+            next(iter(self.item_validator.iter_errors(mcp["item"])), None)
+        )
+        self.assertEqual("alpha", mcp["item"]["id"])
 
 
 if __name__ == "__main__":

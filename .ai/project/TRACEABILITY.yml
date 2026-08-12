@@ -42,7 +42,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/413
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/414
       changed_files_or_scope:
         - tests/test_stable_surface_schemas.py
         - docs/en/stable-web-mcp-schema-validation.md
@@ -51,10 +51,28 @@ traceability:
         - item payloads validate against item-v1.schema.json
         - existing diagnostic key variants and remaining schema mismatch are explicit
         - tests/test_stable_surface_schemas.py asserts the item-v1 schema id and title
+        - Web line-item and MCP get_item responses validate against item-v1
       release_or_deployment: null
       notes: >-
         Bounded read-only slice only. Writable, browser, Remote, and deferred
         surfaces remain outside stable coverage.
+      status: partial
+
+    - requirement_id: req-stable-single-item-schema-validation
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/414
+      changed_files_or_scope:
+        - tests/test_stable_surface_schemas.py
+      tests_or_evidence:
+        - Web GET /api/items/{line_no} item response validates against item-v1
+        - MCP get_item item response validates against item-v1
+        - focused stable surface schema suite passes
+      release_or_deployment: null
+      notes: >-
+        Read-only item retrieval extension; writable and deferred surfaces
+        remain outside this bounded contract slice.
       status: partial
 
     - requirement_id: req-local-unittest-compatibility

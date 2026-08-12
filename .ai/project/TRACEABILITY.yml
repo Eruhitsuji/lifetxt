@@ -4266,6 +4266,53 @@ traceability:
         environment and removes its build/install directories on completion.
       status: implemented
 
+    - requirement_id: req-stable-optional-dependency-ranges
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/349
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/380
+      changed_files_or_scope:
+        - pyproject.toml
+        - tests/test_release_policy.py
+        - docs/en/optional-dependency-compatibility.md
+      tests_or_evidence:
+        - metadata test asserts the authoritative Web/TUI ranges
+        - release policy tests pass
+        - core dependency-free boundary remains unchanged
+        - git diff --check
+      release_or_deployment: >-
+        Range policy is the authoritative input for the follow-up #350 CI
+        compatibility environments.
+      notes: >-
+        Standard assurance packaging-policy change; no application runtime
+        behavior or core dependency policy is changed.
+      status: implemented
+
+    - requirement_id: req-stable-release-artifact-evidence
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/352
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/380
+      changed_files_or_scope:
+        - scripts/release_evidence.py
+        - docs/en/release-artifact-evidence.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - one wheel and one sdist generated into a disposable build directory
+        - SHA256SUMS matches both copied artifacts
+        - CycloneDX 1.5 dependency manifest covers runtime and extra policy
+        - provenance records source commit, environment, build tools, and hashes
+        - output contains no credentials or absolute paths
+        - Ruff and git diff --check
+      release_or_deployment: >-
+        Evidence generated from the exact artifact pair produced by the release
+        evidence command and ready for RC publication.
+      notes: >-
+        High-assurance supply-chain evidence. The script uses only the Python
+        standard library plus the repository's configured build backend.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

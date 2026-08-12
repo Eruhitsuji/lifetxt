@@ -310,6 +310,9 @@ capabilities:
       - docs/en/web-asset-resource-migration.md
       - docs/en/test-archive-config-extraction.md
       - docs/en/server-update-review-extraction.md
+      - lifetxt/web_assets.py
+      - lifetxt/web_assets.html
+      - tests/test_web_assets.py
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
@@ -330,6 +333,7 @@ capabilities:
       - MCP resource validation and TUI layout helpers have compatibility-preserving module boundaries
       - Web asset, test extraction, and server review migration contracts are recorded
       - archive CLI tests are independently discovered with the aggregate suite reduced by the moved cluster
+      - web asset byte parity and wheel package-data inclusion are verified
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339

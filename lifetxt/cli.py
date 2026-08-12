@@ -4827,7 +4827,11 @@ def command_serve(args):
         _config(args),
         stdin_when_empty=False,
     )
-    writable_path = args.write_file or config_write_file(_config(args)) or paths[0]
+    from .paths import resolve_write_target
+
+    writable_path = resolve_write_target(
+        paths, args.write_file or config_write_file(_config(args))
+    )
     host = args.host or web_config.get("host") or "127.0.0.1"
     port = args.port or int(web_config.get("port") or 8000)
     read_only = getattr(args, "read_only", False) or _truthy_config(

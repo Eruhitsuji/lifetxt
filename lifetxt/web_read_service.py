@@ -1,10 +1,38 @@
 """Protocol-neutral read helpers shared by Web and MCP surfaces."""
 
+import os
+
 from .diagnostic_contract import diagnostics_to_output
 from .ids import duplicate_id_diagnostics, id_key_from_config
 from .links import reference_diagnostics
 from .parser import parse_text
 from .timeutil import format_datetime, parse_date_or_datetime
+
+
+def assert_unique_ids(items, key="id"):
+    """Reject authoritative writes when a workspace contains duplicate IDs."""
+    duplicates = duplicate_id_diagnostics(items, key=key)
+    if any(row.code == "W213" for row in duplicates):
+        raise ValueError(
+            "Authoritative write rejected: workspace IDs must be unique."
+        )
+
+
+def assert_unique_workspace_ids(
+    paths, config, normalize_server_paths, read_text, is_generated_path
+):
+    """Validate existing source IDs before a Web or MCP write is exposed."""
+    existing = [
+        path
+        for path in normalize_server_paths(paths)
+        if path != "-" and os.path.isfile(path)
+    ]
+    if not existing:
+        return
+    items, _diagnostics = read_life_inputs(
+        existing, config, normalize_server_paths, read_text, is_generated_path
+    )
+    assert_unique_ids(items, key=id_key_from_config(config or {}))
 
 
 def read_life_inputs(

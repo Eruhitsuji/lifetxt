@@ -21,6 +21,141 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-stable-external-environment-verification-plan
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/407
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/408
+      changed_files_or_scope:
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - procedure defines Windows, WSL, Linux, and macOS real-environment evidence
+        - evidence records commit, artifact hash, command, result, and sanitized metadata
+        - CI/subprocess evidence cannot satisfy OS support claims
+      release_or_deployment: null
+      notes: >-
+        Procedure definition only. Execution evidence remains a separate
+        release-gate activity.
+      status: planned
+
+    - requirement_id: req-stable-web-mcp-schema-validation
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/414
+      changed_files_or_scope:
+        - tests/test_stable_surface_schemas.py
+        - docs/en/stable-web-mcp-schema-validation.md
+      tests_or_evidence:
+        - GET /api/items and MCP list_items success/error responses are exercised
+        - item payloads validate against item-v1.schema.json
+        - existing diagnostic key variants and remaining schema mismatch are explicit
+        - tests/test_stable_surface_schemas.py asserts the item-v1 schema id and title
+        - Web line-item and MCP get_item responses validate against item-v1
+      release_or_deployment: null
+      notes: >-
+        Bounded read-only slice only. Writable, browser, Remote, and deferred
+        surfaces remain outside stable coverage.
+      status: partial
+
+    - requirement_id: req-stable-single-item-schema-validation
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/414
+      changed_files_or_scope:
+        - tests/test_stable_surface_schemas.py
+      tests_or_evidence:
+        - Web GET /api/items/{line_no} item response validates against item-v1
+        - MCP get_item item response validates against item-v1
+        - focused stable surface schema suite passes
+      release_or_deployment: null
+      notes: >-
+        Read-only item retrieval extension; writable and deferred surfaces
+        remain outside this bounded contract slice.
+      status: partial
+
+    - requirement_id: req-stable-multi-file-input-order
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/415
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/418
+      changed_files_or_scope:
+        - lifetxt/paths.py
+        - tests/test_paths.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - glob and directory expansion order is fixed by focused tests
+        - explicit caller order is preserved
+        - duplicate paths are removed by absolute identity
+      release_or_deployment: null
+      notes: >-
+        Existing deterministic expansion behavior is documented and locked;
+        write target and workspace ID semantics remain #416/#417.
+      status: implemented
+
+    - requirement_id: req-stable-multi-file-write-target
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/417
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - lifetxt/paths.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - lifetxt/cli.py
+        - tests/test_multi_file_write_guards.py
+        - docs/en/config.md
+      tests_or_evidence:
+        - multiple-source Web and MCP startup without an explicit target is rejected
+        - explicit target and single-source workflows remain supported
+        - focused multi-file write guard tests pass
+      release_or_deployment: null
+      notes: >-
+        Authoritative writes no longer infer the first source when multiple
+        sources are available.
+      status: implemented
+
+    - requirement_id: req-stable-workspace-id-uniqueness
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/416
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - lifetxt/web_read_service.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - tests/test_multi_file_write_guards.py
+      tests_or_evidence:
+        - duplicate IDs across sources reject writable Web and MCP startup before mutation
+        - generated IDs are checked against the complete loaded source set
+        - focused duplicate-workspace-ID test passes
+      release_or_deployment: null
+      notes: >-
+        Duplicate workspace IDs remain inspectable by read-only surfaces, while
+        authoritative writes fail before any source can be changed.
+      status: implemented
+
+    - requirement_id: req-stable-stabilization-batch-integration
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/339
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - Record the stabilization parent branch integration into main as one final PR
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - focused stabilization and workspace compatibility tests pass
+        - ruff check passes for all changed implementation and test files
+        - final PR #419 CI is required to validate the complete consolidated branch
+      release_or_deployment: null
+      notes: >-
+        This is the final integration record for stabilize/issue-339-final. It
+        preserves the existing sub-PR records and documents the single main-bound
+        PR requested for the stabilization batch.
+      status: implemented
+
     - requirement_id: req-local-unittest-compatibility
       capability_id: cap-local-test-compatibility
       epic: null
@@ -4820,15 +4955,21 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/367
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
       changed_files_or_scope:
         - docs/en/web-asset-resource-migration.md
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets.html
+        - pyproject.toml
+        - tests/test_web_assets.py
       tests_or_evidence:
-        - packaged-resource, compatibility-value, runtime-rebinding, and artifact requirements recorded
+        - packaged resource bytes match the pristine imported HTML value
+        - webapp compatibility export and surface runtime rebinding remain covered
+        - built wheel contains lifetxt/web_assets.html with matching bytes
       release_or_deployment: null
       notes: >-
-        Preparation record; the large literal is not removed until artifact
-        inclusion and pristine/rebound parity are tested.
+        The large literal is extracted into a packaged resource while
+        webapp.HTML_PAGE remains the compatibility/rebinding surface.
       status: implemented
 
     - requirement_id: req-stable-mcp-resource-boundary
@@ -5144,6 +5285,192 @@ traceability:
         Archive CLI cluster moved with shared run_cli helper retained in the
         aggregate test module; config cluster remains for a follow-up slice.
       status: implemented
+
+    - requirement_id: req-stable-parser-format-metadata
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/319
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/401
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_parser_format_metadata.py
+      tests_or_evidence:
+        - current, unversioned, and unsupported format states are exposed by ParseResult
+        - existing tuple-unpacking parser callers remain compatible
+        - focused parser, safety foundation, runtime, and diagnostic tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S slice of #319. Parser metadata is authoritative for the
+        declared format state; mutation refusal and surface error behavior remain
+        on the existing safety/runtime contract.
+      status: implemented
+
+    - requirement_id: req-stable-config-test-extraction
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
+      changed_files_or_scope:
+        - tests/test_config_cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests.test_config_cli -> 9 tests passed
+        - tests.test_lifetxt -> 618 tests remain discovered after the move
+        - aggregate plus destination discovery preserves all 627 tests
+      release_or_deployment: null
+      notes: >-
+        Configuration CLI cluster moved with shared run_cli helper retained in
+        the aggregate test module; assertion bodies and test names are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-format-migration-contract
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/320
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_safety.py
+        - lifetxt/entrypoint.py
+        - tests/test_safety_cli.py
+        - docs/en/format-migration.md
+      tests_or_evidence:
+        - unversioned to Format 1.0 preview/write and idempotent no-op are covered
+        - unsupported source versions are rejected without mutation
+        - downgrade inspection is explicitly non-writing until a loss matrix exists
+      release_or_deployment: null
+      notes: >-
+        Bounded migration slice. Automatic downgrade and legacy-version
+        transformations remain intentionally unsupported until separately specified.
+      status: implemented
+
+    - requirement_id: req-stable-format-compatibility-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/403
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/410
+      changed_files_or_scope:
+        - docs/en/format-compatibility-matrix.md
+        - docs/en/format-migration.md
+      tests_or_evidence:
+        - matrix explicitly classifies unversioned, current, legacy, future, and downgrade paths
+        - stable loss category names and examples are defined
+        - refusal-before-write and maintainer approval gates are stated
+      release_or_deployment: null
+      notes: >-
+        Decision/documentation slice. No legacy transformation or writable
+        downgrade is introduced.
+      status: implemented
+
+    - requirement_id: req-stable-release-notes-boundary
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/412
+      changed_files_or_scope:
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+      tests_or_evidence:
+        - stable boundary and known limitations are documented without selecting a release version
+        - installation smoke uses clean release artifacts rather than editable checkouts
+        - English and Japanese release-note boundaries are aligned
+      release_or_deployment: null
+      notes: >-
+        Version/tag selection and final publication remain release-authority
+        decisions; this is a pre-release documentation slice.
+      status: partial
+
+    - requirement_id: req-stable-canonical-corpus-freeze
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/321
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - tests/golden/policy-v1.json
+        - lifetxt/release_policy.py
+        - tests/test_roundtrip_golden.py
+        - docs/en/release-safety-foundations.md
+      tests_or_evidence:
+        - golden policy pins LIFETXT_CANON_V1
+        - canonical corpus outputs are checked for idempotency
+        - roundtrip, release policy, and safety foundation tests pass
+      release_or_deployment: null
+      notes: >-
+        Canonical output changes require both a corpus-version bump and an
+        explicit migration note.
+      status: implemented
+
+    - requirement_id: req-stable-stable-contract-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/323
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - docs/en/stable-contract-matrix.md
+      tests_or_evidence:
+        - stable machine-readable contract families, schema evidence, and explicit exceptions are inventoried
+        - release schema bundle and policy validation pass
+      release_or_deployment: null
+      notes: >-
+        Matrix establishes the support boundary; route-by-route Web and MCP
+        envelope validation remains a follow-up where marked partial.
+      status: implemented
+
+    - requirement_id: req-stable-diagnostic-matrix
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/324
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - docs/en/stable-diagnostics-matrix.md
+      tests_or_evidence:
+        - parser, canonical policy, mutation, configuration, and remote diagnostic boundaries are classified
+        - remaining message-only and real-environment gaps are explicitly recorded
+      release_or_deployment: null
+      notes: >-
+        Documentation slice only; no unsupported remote or release evidence is
+        claimed by the matrix.
+      status: implemented
+
+    - requirement_id: req-stable-parser-end-span
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/406
+      changed_files_or_scope:
+        - lifetxt/model.py
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_diagnostic_contract.py
+        - tests/test_safety_cli.py
+      tests_or_evidence:
+        - E018 unclosed quoted string reports deterministic start/end span
+        - format check JSON preserves the parser end span
+        - shared diagnostic output preserves optional span fields
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S implementation for one quoted-string syntax family;
+        unrelated diagnostic families retain their existing span behavior.
+      status: implemented
+
+    - requirement_id: req-stable-parser-structural-spans
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/411
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - tests/test_diagnostic_contract.py
+      tests_or_evidence:
+        - E019, E020, E021, and E022 report deterministic end spans
+        - shared diagnostic output preserves structural parser spans
+        - focused diagnostic and safety CLI tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded parser-only extension. Validator, remote, and unrelated
+        message-only diagnostic families remain outside this slice.
+      status: partial
 
 required_chain:
   - Requirement

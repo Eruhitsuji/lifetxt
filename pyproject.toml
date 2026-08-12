@@ -50,6 +50,9 @@ dev = [
 [tool.setuptools]
 packages = ["lifetxt"]
 
+[tool.setuptools.package-data]
+lifetxt = ["web_assets.html"]
+
 [tool.ruff]
 required-version = ">=0.16.1"
 target-version = "py310"

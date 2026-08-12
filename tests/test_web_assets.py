@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import io
 import os
 import unittest
+from importlib import resources
 
 from lifetxt import web_assets, webapp
 
@@ -44,6 +45,10 @@ class WebAssetExtractionTests(unittest.TestCase):
     def test_asset_module_keeps_the_pristine_value(self):
         """The bridge is applied to what `webapp` exposes, not to the source."""
         self.assertNotIn(REVISION_BRIDGE_MARKER, web_assets.HTML_PAGE)
+
+    def test_packaged_resource_matches_pristine_value(self):
+        resource = resources.files("lifetxt").joinpath("web_assets.html")
+        self.assertEqual(web_assets.HTML_PAGE.encode("utf-8"), resource.read_bytes())
 
     def test_route_serves_what_webapp_exposes(self):
         try:

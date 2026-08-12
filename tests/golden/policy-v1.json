@@ -1,6 +1,7 @@
 {
   "policy_version": 1,
   "corpus_version": 1,
+  "canonical_version": "LIFETXT_CANON_V1",
   "minimum_cases": 9,
   "required_fields": ["name", "input", "canonical", "csv_roundtrip"],
   "required_cases": [

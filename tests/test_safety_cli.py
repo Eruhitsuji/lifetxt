@@ -62,6 +62,18 @@ class SafetyCliTests(unittest.TestCase):
         self.assertTrue(report["ok"])
         self.assertEqual(1, report["item_count"])
 
+    def test_format_check_preserves_parser_end_span(self):
+        path = self.path("life.txt")
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write('[ ] T "Unclosed title\n')
+        code, stdout, stderr = self.run_command(["format", "check", path, "--pretty"])
+        self.assertEqual(1, code)
+        diagnostic = next(
+            item for item in json.loads(stdout)["diagnostics"] if item["code"] == "E018"
+        )
+        self.assertEqual("E018", diagnostic["code"])
+        self.assertEqual(22, diagnostic["span"]["end"]["column"])
+
     def test_format_canon_writes_with_revision_precondition(self):
         path = self.path("life.txt")
         with open(path, "wb") as handle:
@@ -73,6 +85,45 @@ class SafetyCliTests(unittest.TestCase):
         self.assertTrue(json.loads(stdout)["written"])
         with open(path, "rb") as handle:
             self.assertEqual(b"#! format_version: 1\n[ ] T Task\n", handle.read())
+
+    def test_format_migrate_previews_and_writes_unversioned_files(self):
+        path = self.path("life.txt")
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write("#! timezone: UTC\n[ ] T Task\n")
+        code, stdout, stderr = self.run_command(["format", "migrate", path, "--pretty"])
+        self.assertEqual(0, code, stderr)
+        report = json.loads(stdout)
+        self.assertEqual("add-format-version", report["action"])
+        self.assertFalse(report["written"])
+        with open(path, encoding="utf-8") as handle:
+            self.assertFalse(handle.read().startswith("#! format_version"))
+        code, stdout, stderr = self.run_command(
+            ["format", "migrate", path, "--write", "--pretty"]
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertTrue(json.loads(stdout)["written"])
+        code, stdout, stderr = self.run_command(
+            ["format", "migrate", path, "--write", "--pretty"]
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertEqual("noop", json.loads(stdout)["action"])
+
+    def test_format_migrate_refuses_unsupported_and_downgrade_is_inspection_only(self):
+        path = self.path("future.txt")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("#! format_version: 2\n[ ] T Future\n")
+        code, stdout, stderr = self.run_command(
+            ["format", "migrate", path, "--write", "--pretty"]
+        )
+        self.assertEqual(1, code)
+        self.assertFalse(json.loads(stdout)["written"])
+        with open(path, encoding="utf-8") as handle:
+            self.assertIn("format_version: 2", handle.read())
+        code, stdout, stderr = self.run_command(
+            ["format", "downgrade", path, "--to", "0", "--pretty"]
+        )
+        self.assertEqual(1, code)
+        self.assertFalse(json.loads(stdout)["writable"])
 
     def test_safety_timezone_and_serve_target_commands(self):
         path = self.path("life.txt")

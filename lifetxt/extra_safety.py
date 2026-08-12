@@ -488,6 +488,68 @@ def command_format(args, _config_data):
         return _output(
             report, args, failure=bool(issues and args.strict and not args.write)
         )
+    if action == "migrate":
+        text, _raw, _bom = read_text_exact(args.path)
+        version = format_version_report(text)
+        if version["state"] == "unsupported":
+            report = {
+                "path": args.path,
+                "source": version,
+                "target": FORMAT_VERSION,
+                "action": "refuse",
+                "changed": False,
+                "written": False,
+                "reason": "Unsupported source format must be migrated explicitly.",
+            }
+            return _output(report, args, failure=True)
+        if version["state"] == "current":
+            replacement = text
+            action_name = "noop"
+        else:
+            replacement = "#! format_version: %s\n%s" % (FORMAT_VERSION, text)
+            action_name = "add-format-version"
+        changed = replacement != text
+        written = False
+        if args.write and changed:
+            from .mutation import read_text_snapshot, write_text
+
+            snapshot = read_text_snapshot(args.path)
+            write_text(
+                args.path,
+                replacement,
+                expected_hash=snapshot.content_hash,
+                operation="format.migrate",
+                create=False,
+            )
+            written = True
+        if args.output and not args.write:
+            _write_output(replacement, args.output)
+        return _output(
+            {
+                "path": args.path,
+                "source": version,
+                "target": FORMAT_VERSION,
+                "action": action_name,
+                "changed": changed,
+                "written": written,
+            },
+            args,
+        )
+    if action == "downgrade":
+        text, _raw, _bom = read_text_exact(args.path)
+        version = format_version_report(text)
+        supported = args.target_version == FORMAT_VERSION
+        report = {
+            "path": args.path,
+            "source": version,
+            "target": args.target_version,
+            "supported": supported,
+            "writable": False,
+            "losses": []
+            if supported
+            else ["No Format 1.0 downgrade mapping is defined."],
+        }
+        return _output(report, args, failure=not supported)
     if action == "schemas":
         names = write_schema_bundle(args.directory)
         return _output(

@@ -7,6 +7,25 @@ from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
 
 
+FORMAT_VERSION = "1"
+
+
+class ParseResult(tuple):
+    """Tuple-compatible parser result with authoritative document metadata."""
+
+    def __new__(cls, items, diagnostics, directives):
+        result = tuple.__new__(cls, (items, diagnostics))
+        result.directives = OrderedDict(directives)
+        result.format_version = result.directives.get("format_version")
+        if result.format_version is None:
+            result.format_version_state = "unversioned"
+        elif result.format_version == FORMAT_VERSION:
+            result.format_version_state = "current"
+        else:
+            result.format_version_state = "unsupported"
+        return result
+
+
 _DIRECTIVE_RE = re.compile(r"^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$")
 _KNOWN_DIRECTIVE_KEYS = frozenset(("self", "timezone", "project"))
 
@@ -86,6 +105,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
     implicit ``parent:`` detail that points to the nearest less-indented
     ancestor's ID.
     """
+    directives = parse_directives(text)
     items = []
     diagnostics = []
     current_item = None
@@ -164,7 +184,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
         diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
     if check_references:
         diagnostics.extend(reference_diagnostics(items, key=id_key))
-    return items, diagnostics
+    return ParseResult(items, diagnostics, directives)
 
 
 def _logical_lines(text):

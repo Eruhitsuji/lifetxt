@@ -1,0 +1,19 @@
+{
+  "schema": "lifetxt-oversized-file-classification-v1",
+  "review_threshold_bytes": 50000,
+  "review_threshold_lines": 1500,
+  "files": [
+    {"path":"lifetxt/cli.py","bytes":506764,"lines":14595,"classification":"split","priority":"high","follow_up":"#353"},
+    {"path":"lifetxt/web_assets.py","bytes":448120,"lines":9308,"classification":"extract_resource","priority":"high","follow_up":"#367"},
+    {"path":"lifetxt/mcp.py","bytes":116228,"lines":3293,"classification":"split","priority":"high","follow_up":"#368/#369"},
+    {"path":"lifetxt/tui_app.py","bytes":104774,"lines":3177,"classification":"split","priority":"medium","follow_up":"#370"},
+    {"path":"lifetxt/webapp.py","bytes":98184,"lines":2830,"classification":"split","priority":"high","follow_up":"#368/#371"},
+    {"path":"lifetxt/tui.py","bytes":50462,"lines":1505,"classification":"reassess_later","priority":"medium","follow_up":null},
+    {"path":"lifetxt/server_update.py","bytes":49971,"lines":1327,"classification":"reassess_later","priority":"medium","follow_up":"#374"},
+    {"path":"lifetxt/agenda.py","bytes":49526,"lines":1581,"classification":"reassess_later","priority":"medium","follow_up":null},
+    {"path":"tests/test_lifetxt.py","bytes":429840,"lines":10866,"classification":"split","priority":"high","follow_up":"#372"},
+    {"path":"tests/test_cui_extensions.py","bytes":99248,"lines":2582,"classification":"split","priority":"medium","follow_up":"#373"},
+    {"path":"tests/test_server_update.py","bytes":76183,"lines":1820,"classification":"split","priority":"medium","follow_up":"#374"}
+  ],
+  "policy": "size is a review signal, never an automatic failure; responsibility and coupling determine priority"
+}

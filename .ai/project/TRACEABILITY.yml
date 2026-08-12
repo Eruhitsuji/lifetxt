@@ -4191,7 +4191,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/356
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/378
       changed_files_or_scope:
         - Define stable package version semantics and the 1.0.0 compatibility boundary
         - Inventory covered format, CLI, schema, diagnostic, configuration, and supported read-client contracts

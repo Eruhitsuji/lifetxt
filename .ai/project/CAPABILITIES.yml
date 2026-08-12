@@ -87,7 +87,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/304
       - https://github.com/Eruhitsuji/lifetxt/issues/312
     related_pull_requests:
-      - pending-final-pr
+      - https://github.com/Eruhitsuji/lifetxt/pull/396
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Preparation and investigation only for external environments. No real

@@ -22,11 +22,10 @@ from collections import OrderedDict
 
 from .model import Diagnostic
 from .mutation import MutationConflict, read_text_snapshot, write_text
-from .parser import parse_text
+from .parser import FORMAT_VERSION, parse_text
 from .timeutil import format_datetime, parse_datetime
 
 
-FORMAT_VERSION = "1"
 CANON_VERSION = "LIFETXT_CANON_V1"
 CAPABILITY_VERSION = "1"
 SCHEMA_VERSION = "1"

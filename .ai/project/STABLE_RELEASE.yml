@@ -47,6 +47,56 @@ stable_release:
       blocker; it must state why the work is outside the first stable support
       surface or why the limitation is acceptable.
 
+  compatibility_policy:
+    document: docs/en/release-compatibility-policy.md
+    initial_stable_version: 1.0.0
+    versioning:
+      pre_stable: >-
+        0.y.z is development software. It may change public behavior without
+        the stable compatibility promise, but compatibility-impacting changes
+        must still be documented and tested under the stabilization rules.
+      patch: >-
+        X.Y.Z patch releases preserve documented stable contracts and contain
+        compatible fixes, security fixes, and documentation corrections.
+      minor: >-
+        X.Y.0 minor releases preserve existing stable contracts and may add
+        backward-compatible commands, fields, or capabilities.
+      major: >-
+        A new major version may remove or alter stable contracts only after the
+        deprecation and migration process has been completed.
+    covered_contracts:
+      - life.txt format and declared format-version behavior
+      - LIFETXT_CANON_V1 canonical serialization rules
+      - stable CLI command names, flags, output modes, and exit semantics
+      - versioned machine-readable schemas, capability documents, and diagnostic codes
+      - stable configuration keys, types, defaults, and documented migration behavior
+      - surfaces classified supported in support_matrix, including read-only clients
+    not_byte_stable_by_default:
+      - human-readable diagnostic messages
+      - terminal layouts, colors, glyph choices, and interactive presentation
+      - Web visual layout and non-contractual accessibility wording
+    deprecation_lifecycle:
+      announce: >-
+        Mark the contract deprecated in release notes and the relevant English
+        and Japanese documentation, and link the replacement or migration path.
+      warn: >-
+        Emit a stable diagnostic or warning when the deprecated behavior is
+        used, without exposing secrets or changing the successful result solely
+        because the warning is present.
+      remove: >-
+        Remove or change the behavior only in a later major version after at
+        least one minor release has carried the deprecation, unless the unsafe
+        compatibility exception applies.
+    unsafe_compatibility_exception: >-
+      A security or data-loss risk may shorten the normal deprecation lifecycle.
+      The issue and release notes must explain the risk, affected contracts,
+      migration or mitigation, and required human approval before release.
+    excluded_until_promoted:
+      - experimental surfaces
+      - deferred surfaces
+      - unsupported surfaces
+      - writable Remote and MCP operations without stable-release evidence
+
   exception_path:
     required_for:
       - new_feature

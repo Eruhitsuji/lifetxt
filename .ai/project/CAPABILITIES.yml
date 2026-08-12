@@ -37,6 +37,46 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-stable-maintainability-followthrough
+    name: Maintainability extraction follow-through
+    summary: >-
+      Bounded follow-through for the Web read-service, Web route audit, and
+      server-update review-helper decomposition slices.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-stable-web-read-service-extraction
+      - req-stable-web-route-decomposition-audit
+      - req-stable-server-review-helper-extraction
+    implementation_locations:
+      - lifetxt/web_read_service.py
+      - lifetxt/webapp.py
+      - docs/en/web-route-decomposition-audit.md
+      - lifetxt/server_update_review.py
+      - lifetxt/server_update.py
+    public_interfaces:
+      - lifetxt.web_read_service
+      - lifetxt.server_update.gather_diff_summary
+      - lifetxt.server_update.classify_risk
+      - lifetxt.server_update.format_review_block
+    tests_or_evidence:
+      - focused Web surface and server-update helper tests pass
+      - route inventory records follow-up issue #393
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/371
+      - https://github.com/Eruhitsuji/lifetxt/issues/385
+      - https://github.com/Eruhitsuji/lifetxt/issues/389
+    related_pull_requests:
+      - pending-final-pr
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Standard assurance XS/S bounded slices. Route and server mutation
+      orchestration remain in their existing owners.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-stable-release-governance
     name: Stable release governance
     summary: >-

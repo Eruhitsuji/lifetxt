@@ -4362,6 +4362,109 @@ traceability:
         release claims, commands, boundaries, and safety guidance.
       status: implemented
 
+    - requirement_id: req-stable-windows-core-ci-smoke
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/342
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - Windows clean core install verifies tzdata, module/console entry points, and Unicode paths
+        - Windows smoke failure logs are uploaded as an artifact
+        - workflow YAML and git diff --check pass
+      release_or_deployment: >-
+        Non-blocking native Windows CI visibility; it does not replace Windows
+        terminal or artifact evidence.
+      notes: >-
+        Dependency-free core smoke only; TUI and file-interference recovery stay
+        with #312 and #303.
+      status: implemented
+
+    - requirement_id: req-stable-macos-core-ci-smoke
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/343
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - macOS clean core install verifies Unicode/space paths, module/console commands, and disposable config output
+        - macOS smoke failure logs are uploaded as an artifact
+        - workflow YAML and git diff --check pass
+      release_or_deployment: >-
+        Non-blocking native macOS CI visibility; it does not replace real terminal
+        or release-artifact evidence.
+      notes: >-
+        The job exercises a small stable surface and does not duplicate the full
+        Linux suite.
+      status: implemented
+
+    - requirement_id: req-stable-ci-coverage-baseline
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/344
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - pyproject.toml
+        - docs/en/ci-coverage-baseline.md
+      tests_or_evidence:
+        - coverage run --branch over unittest discover produces text and JSON artifacts
+        - the initial coverage job is visibility-only and has no arbitrary percentage gate
+        - coverage remains a dev-only dependency
+        - focused local coverage run and workflow YAML parsing pass
+      release_or_deployment: >-
+        CI artifact provides a comparison baseline for future maintenance review,
+        not a stable performance or coverage promise.
+      notes: >-
+        Full local coverage discovery exceeded the interactive time budget once;
+        the targeted release-policy coverage run passed and CI remains the
+        authoritative full-suite producer.
+      status: implemented
+
+    - requirement_id: req-stable-static-typing-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/345
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - pyproject.toml
+        - .ai/project/COMMANDS.yml
+        - docs/en/static-typing-boundary.md
+      tests_or_evidence:
+        - mypy >=1.13,<2 is dev-only and the diagnostic_contract boundary command passes
+        - the boundary, legacy interaction, strictness plan, and #346 implementation target are documented
+        - command YAML and git diff --check pass
+      release_or_deployment: >-
+        This establishes a future CI boundary and does not change runtime
+        behavior or the dependency-free install.
+      notes: >-
+        #346 must add annotations and blocking CI only inside the approved first
+        boundary before any expansion is considered.
+      status: implemented
+
+    - requirement_id: req-stable-ruff-rule-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/347
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - scripts/audit_ruff_rules.py
+        - docs/en/ruff-rule-audit.md
+        - docs/en/ruff-rule-audit.json
+      tests_or_evidence:
+        - read-only Ruff audit records counts by candidate family and code
+        - E741 is recommended as the only first implementation batch
+        - larger or behavior-sensitive families are explicitly deferred
+        - audit script Ruff checks and git diff --check pass
+      release_or_deployment: >-
+        The audit is input to #348 and does not change the current lint gate.
+      notes: >-
+        The JSON is a dated snapshot and should be regenerated before #348 if the
+        repository changes materially.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

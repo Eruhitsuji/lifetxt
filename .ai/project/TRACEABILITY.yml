@@ -4816,6 +4816,84 @@ traceability:
         output, and completion behavior.
       status: implemented
 
+    - requirement_id: req-stable-web-asset-resource-contract
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/367
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - docs/en/web-asset-resource-migration.md
+      tests_or_evidence:
+        - packaged-resource, compatibility-value, runtime-rebinding, and artifact requirements recorded
+      release_or_deployment: null
+      notes: >-
+        Preparation record; the large literal is not removed until artifact
+        inclusion and pristine/rebound parity are tested.
+      status: implemented
+
+    - requirement_id: req-stable-mcp-resource-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/387
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - lifetxt/mcp_resources.py
+      tests_or_evidence:
+        - resource list/read validation moved behind a compatibility wrapper
+        - focused MCP read contract remains covered
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction; protocol negotiation, schemas, and
+        write behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-tui-layout-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/390
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - lifetxt/tui_app.py
+        - lifetxt/tui_layout.py
+      tests_or_evidence:
+        - pure display-width, fitting, padding, span, and frame helpers extracted
+        - focused TUI/completion compatibility tests pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction; Unicode/ASCII and terminal behavior
+        remain unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-test-extraction-preparation
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - docs/en/test-archive-config-extraction.md
+      tests_or_evidence:
+        - first archive/config cluster and discovery/count preservation rules recorded
+      release_or_deployment: null
+      notes: >-
+        Preparation record; no tests are deleted or moved by this batch.
+      status: implemented
+
+    - requirement_id: req-stable-server-review-extraction-preparation
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/389
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - docs/en/server-update-review-extraction.md
+      tests_or_evidence:
+        - pure diff/risk review seam and safety compatibility requirements recorded
+      release_or_deployment: null
+      notes: >-
+        Preparation record; update orchestration and service safety remain in
+        server_update.py.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

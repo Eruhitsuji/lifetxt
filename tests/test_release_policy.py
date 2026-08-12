@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import tomllib
 import unittest
 
 from lifetxt.release_policy import (
@@ -21,6 +22,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class ReleasePolicyTests(unittest.TestCase):
+    def test_optional_dependency_ranges_match_supported_api_policy(self):
+        with open(os.path.join(ROOT, "pyproject.toml"), "rb") as handle:
+            project = tomllib.load(handle)["project"]
+        extras = project["optional-dependencies"]
+        self.assertEqual(
+            extras["web"], ["fastapi>=0.95,<1.0", "uvicorn[standard]>=0.22,<1.0"]
+        )
+        self.assertEqual(extras["tui"], ["textual>=0.24,<1.0", "watchdog>=3,<7"])
+
     def test_repository_packaging_metadata_matches_runtime_version_and_script(self):
         report = packaging_metadata_report(ROOT)
         self.assertTrue(report["ok"], report)

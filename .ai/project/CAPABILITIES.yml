@@ -282,6 +282,7 @@ capabilities:
       - req-stable-tui-layout-boundary
       - req-stable-test-extraction-preparation
       - req-stable-archive-test-extraction
+      - req-stable-config-test-extraction
       - req-stable-server-review-extraction-preparation
     implementation_locations:
       - .github/workflows/ci.yml

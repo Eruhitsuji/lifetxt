@@ -132,6 +132,55 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-stable-maintainability
+    name: Stable maintainability safeguards
+    summary: >-
+      Keep platform smoke coverage, coverage visibility, incremental typing, and
+      lint policy reviewable without expanding the stable runtime dependency or
+      support surface.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-stable-windows-core-ci-smoke
+      - req-stable-macos-core-ci-smoke
+      - req-stable-ci-coverage-baseline
+      - req-stable-static-typing-boundary
+      - req-stable-ruff-rule-audit
+    implementation_locations:
+      - .github/workflows/ci.yml
+      - pyproject.toml
+      - .ai/project/COMMANDS.yml
+      - scripts/audit_ruff_rules.py
+      - docs/en/
+    public_interfaces:
+      - .ai/project/COMMANDS.yml
+      - docs/en/ci-coverage-baseline.md
+      - docs/en/static-typing-boundary.md
+      - docs/en/ruff-rule-audit.md
+    tests_or_evidence:
+      - native Windows and macOS core smoke jobs retain failure logs as artifacts
+      - coverage job publishes human-readable and JSON evidence without a percentage gate
+      - mypy boundary command passes with imports outside the selected module excluded
+      - Ruff rule audit records point-in-time counts and a bounded E741 recommendation
+      - workflow/project YAML and Ruff checks pass
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/339
+      - https://github.com/Eruhitsuji/lifetxt/issues/342
+      - https://github.com/Eruhitsuji/lifetxt/issues/343
+      - https://github.com/Eruhitsuji/lifetxt/issues/344
+      - https://github.com/Eruhitsuji/lifetxt/issues/345
+      - https://github.com/Eruhitsuji/lifetxt/issues/347
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      These safeguards are non-blocking maintainability work. They do not
+      replace real terminal, filesystem, or release-artifact evidence tracked by
+      the stable-release roadmap.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-local-test-compatibility
     name: Local test compatibility
     summary: Keep the local unittest suite runnable on the declared Python >=3.10 runtime, including Windows/PowerShell environments, without reducing the coverage that Linux CI executes.

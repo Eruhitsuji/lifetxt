@@ -686,6 +686,7 @@ capabilities:
     source_requirements:
       - req-diagnostic-contract-stability
       - req-diagnostic-hint-content
+      - req-stable-parser-format-metadata
     implementation_locations:
       - lifetxt/parser.py
       - lifetxt/validator.py
@@ -696,6 +697,7 @@ capabilities:
       - lifetxt/mcp.py
       - tests/diagnostic_contract_fixtures.py
       - tests/test_diagnostic_contract.py
+      - tests/test_parser_format_metadata.py
       - docs/en/cli.md
       - docs/ja/cli.md
     public_interfaces:
@@ -707,6 +709,7 @@ capabilities:
       - tests/test_diagnostic_contract.py
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
       - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+      - parser results expose format directive metadata without breaking tuple unpacking
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/49
       - https://github.com/Eruhitsuji/lifetxt/issues/65

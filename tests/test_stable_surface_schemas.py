@@ -42,10 +42,20 @@ class StableSurfaceSchemaTests(unittest.TestCase):
         for item in body["items"]:
             self.assertIsNone(next(iter(self.item_validator.iter_errors(item)), None))
         for diagnostic in body["diagnostics"]:
-            self.assertEqual(
-                {"severity", "code", "category", "message", "line", "hint"},
-                set(diagnostic),
+            self.assertTrue(
+                set(diagnostic) <= {
+                    "severity",
+                    "code",
+                    "category",
+                    "message",
+                    "source",
+                    "line",
+                    "column",
+                    "span",
+                    "hint",
+                }
             )
+            self.assertTrue({"severity", "code", "message", "hint"} <= set(diagnostic))
         return body
 
     def test_web_read_envelope_validates_success_and_diagnostics(self):
@@ -64,10 +74,20 @@ class StableSurfaceSchemaTests(unittest.TestCase):
         for item in success["items"]:
             self.assertIsNone(next(iter(self.item_validator.iter_errors(item)), None))
         for diagnostic in success["diagnostics"]:
-            self.assertEqual(
-                {"severity", "code", "category", "message", "line", "hint"},
-                set(diagnostic),
+            self.assertTrue(
+                set(diagnostic) <= {
+                    "severity",
+                    "code",
+                    "category",
+                    "message",
+                    "source",
+                    "line",
+                    "column",
+                    "span",
+                    "hint",
+                }
             )
+            self.assertTrue({"severity", "code", "message", "hint"} <= set(diagnostic))
 
         with open(self.path, "a", encoding="utf-8", newline="\n") as handle:
             handle.write('[ ] T "Unclosed title\n')

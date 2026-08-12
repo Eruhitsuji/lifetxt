@@ -1,0 +1,347 @@
+{
+  "schema": "lifetxt-release-doc-validation-v1",
+  "documents": [
+    "cli.md",
+    "config.md",
+    "release-baselines.md",
+    "release-compatibility-policy.md",
+    "release-policy-gates.md",
+    "release-safety-foundations.md",
+    "release-artifact-evidence.md",
+    "remote.md",
+    "remote-compatibility.md",
+    "transaction-recovery-and-strict-timers.md",
+    "timezone-revision-workspace-safety.md",
+    "public-surface-revisions.md"
+  ],
+  "checked_internal_links": 69,
+  "checked_cli_help_commands": [
+    {
+      "command": "agenda",
+      "returncode": 0
+    },
+    {
+      "command": "archive",
+      "returncode": 0
+    },
+    {
+      "command": "area",
+      "returncode": 0
+    },
+    {
+      "command": "assign",
+      "returncode": 0
+    },
+    {
+      "command": "assist",
+      "returncode": 0
+    },
+    {
+      "command": "backlinks",
+      "returncode": 0
+    },
+    {
+      "command": "batch",
+      "returncode": 0
+    },
+    {
+      "command": "check",
+      "returncode": 0
+    },
+    {
+      "command": "cleanup",
+      "returncode": 0
+    },
+    {
+      "command": "complete",
+      "returncode": 0
+    },
+    {
+      "command": "completion",
+      "returncode": 0
+    },
+    {
+      "command": "config",
+      "returncode": 0
+    },
+    {
+      "command": "decrypt",
+      "returncode": 0
+    },
+    {
+      "command": "demo",
+      "returncode": 0
+    },
+    {
+      "command": "deps",
+      "returncode": 0
+    },
+    {
+      "command": "diff",
+      "returncode": 0
+    },
+    {
+      "command": "digest",
+      "returncode": 0
+    },
+    {
+      "command": "doctor",
+      "returncode": 0
+    },
+    {
+      "command": "done",
+      "returncode": 0
+    },
+    {
+      "command": "encrypt",
+      "returncode": 0
+    },
+    {
+      "command": "export-heatmap",
+      "returncode": 0
+    },
+    {
+      "command": "filter",
+      "returncode": 0
+    },
+    {
+      "command": "find",
+      "returncode": 0
+    },
+    {
+      "command": "from-csv",
+      "returncode": 0
+    },
+    {
+      "command": "from-json",
+      "returncode": 0
+    },
+    {
+      "command": "from-jsonl",
+      "returncode": 0
+    },
+    {
+      "command": "from-markdown",
+      "returncode": 0
+    },
+    {
+      "command": "fzf",
+      "returncode": 0
+    },
+    {
+      "command": "git-hook",
+      "returncode": 0
+    },
+    {
+      "command": "group",
+      "returncode": 0
+    },
+    {
+      "command": "health",
+      "returncode": 0
+    },
+    {
+      "command": "ids",
+      "returncode": 0
+    },
+    {
+      "command": "import-ics",
+      "returncode": 0
+    },
+    {
+      "command": "inbox",
+      "returncode": 0
+    },
+    {
+      "command": "init",
+      "returncode": 0
+    },
+    {
+      "command": "links",
+      "returncode": 0
+    },
+    {
+      "command": "lint",
+      "returncode": 0
+    },
+    {
+      "command": "markdown",
+      "returncode": 0
+    },
+    {
+      "command": "mcp",
+      "returncode": 0
+    },
+    {
+      "command": "message",
+      "returncode": 0
+    },
+    {
+      "command": "migrate",
+      "returncode": 0
+    },
+    {
+      "command": "notify",
+      "returncode": 0
+    },
+    {
+      "command": "person",
+      "returncode": 0
+    },
+    {
+      "command": "plot",
+      "returncode": 0
+    },
+    {
+      "command": "portfolio",
+      "returncode": 0
+    },
+    {
+      "command": "project",
+      "returncode": 0
+    },
+    {
+      "command": "proposal",
+      "returncode": 0
+    },
+    {
+      "command": "query",
+      "returncode": 0
+    },
+    {
+      "command": "quick",
+      "returncode": 0
+    },
+    {
+      "command": "remote",
+      "returncode": 0
+    },
+    {
+      "command": "review",
+      "returncode": 0
+    },
+    {
+      "command": "rrule",
+      "returncode": 0
+    },
+    {
+      "command": "search",
+      "returncode": 0
+    },
+    {
+      "command": "serve",
+      "returncode": 0
+    },
+    {
+      "command": "server-init",
+      "returncode": 0
+    },
+    {
+      "command": "server-update",
+      "returncode": 0
+    },
+    {
+      "command": "share",
+      "returncode": 0
+    },
+    {
+      "command": "snapshot",
+      "returncode": 0
+    },
+    {
+      "command": "sources",
+      "returncode": 0
+    },
+    {
+      "command": "sprint",
+      "returncode": 0
+    },
+    {
+      "command": "stats",
+      "returncode": 0
+    },
+    {
+      "command": "status",
+      "returncode": 0
+    },
+    {
+      "command": "summary",
+      "returncode": 0
+    },
+    {
+      "command": "sync-ics",
+      "returncode": 0
+    },
+    {
+      "command": "tag",
+      "returncode": 0
+    },
+    {
+      "command": "template",
+      "returncode": 0
+    },
+    {
+      "command": "ticket",
+      "returncode": 0
+    },
+    {
+      "command": "timer",
+      "returncode": 0
+    },
+    {
+      "command": "to-csv",
+      "returncode": 0
+    },
+    {
+      "command": "to-json",
+      "returncode": 0
+    },
+    {
+      "command": "to-jsonl",
+      "returncode": 0
+    },
+    {
+      "command": "today",
+      "returncode": 0
+    },
+    {
+      "command": "tui",
+      "returncode": 0
+    },
+    {
+      "command": "undo",
+      "returncode": 0
+    },
+    {
+      "command": "update",
+      "returncode": 0
+    },
+    {
+      "command": "update-check",
+      "returncode": 0
+    },
+    {
+      "command": "version",
+      "returncode": 0
+    },
+    {
+      "command": "view",
+      "returncode": 0
+    },
+    {
+      "command": "watch",
+      "returncode": 0
+    },
+    {
+      "command": "who",
+      "returncode": 0
+    },
+    {
+      "command": "workspace",
+      "returncode": 0
+    }
+  ],
+  "external_or_sensitive_examples": "not executed",
+  "errors": [],
+  "ok": true
+}

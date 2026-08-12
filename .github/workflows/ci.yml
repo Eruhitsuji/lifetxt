@@ -298,6 +298,29 @@ jobs:
           name: optional-${{ matrix.extra }}-${{ matrix.band }}
           path: optional-${{ matrix.extra }}-${{ matrix.band }}.txt
 
+  release-document-validation:
+    name: Validate release documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate internal links and safe CLI help examples
+        run: python scripts/validate_release_docs.py --output docs/en/release-doc-validation.json
+
+      - name: Upload documentation validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-document-validation
+          path: docs/en/release-doc-validation.json
+
   release-gate:
     name: Required release policy and clean wheel
     runs-on: ubuntu-latest

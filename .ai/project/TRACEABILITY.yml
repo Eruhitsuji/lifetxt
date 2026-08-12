@@ -5336,6 +5336,24 @@ traceability:
         unrelated diagnostic families retain their existing span behavior.
       status: implemented
 
+    - requirement_id: req-stable-parser-structural-spans
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/411
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - tests/test_diagnostic_contract.py
+      tests_or_evidence:
+        - E019, E020, E021, and E022 report deterministic end spans
+        - shared diagnostic output preserves structural parser spans
+        - focused diagnostic and safety CLI tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded parser-only extension. Validator, remote, and unrelated
+        message-only diagnostic families remain outside this slice.
+      status: partial
+
 required_chain:
   - Requirement
   - Capability

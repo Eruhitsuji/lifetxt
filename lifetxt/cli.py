@@ -7614,8 +7614,8 @@ def command_doctor(args):
     _pretty = getattr(args, "pretty", False)
     if _fmt == "json":
         records = [
-            OrderedDict([("status", s), ("check", l), ("message", m)])
-            for s, l, m in checks
+            OrderedDict([("status", s), ("check", check_name), ("message", m)])
+            for s, check_name, m in checks
         ]
         write_text(
             None,

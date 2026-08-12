@@ -2336,7 +2336,7 @@ class LifeTxtArchiveCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             with open(dest, "r", encoding="utf-8") as f:
                 dest_content = f.read()
-            items_in_dest = [l for l in dest_content.splitlines() if l.strip()]
+            items_in_dest = [line for line in dest_content.splitlines() if line.strip()]
             self.assertEqual(1, len(items_in_dest))
 
     def test_archive_no_match_exits_zero(self):
@@ -7747,9 +7747,9 @@ class LifeTxtHealthExtTests(unittest.TestCase):
                 f.write("[ ] T Old_task due:2020-01-01\n")
             stdout, stderr, code = run_cli("health", life_file, "--format", "jsonl")
             self.assertEqual(1, code)
-            lines = [l for l in normalize_newlines(stdout).splitlines() if l.strip()]
+            lines = [line for line in normalize_newlines(stdout).splitlines() if line.strip()]
             self.assertGreater(len(lines), 0)
-            records = [json.loads(l) for l in lines]
+            records = [json.loads(line) for line in lines]
             codes = [r["code"] for r in records]
             self.assertIn("W303", codes)
 
@@ -7787,7 +7787,7 @@ class LifeTxtReviewJsonlTests(unittest.TestCase):
                 f.write("[x] T Done_task done:2026-06-01\n")
             stdout, stderr, code = run_cli("review", life_file, "--format", "jsonl")
             self.assertEqual(0, code, stderr)
-            lines = [l for l in normalize_newlines(stdout).splitlines() if l.strip()]
+            lines = [line for line in normalize_newlines(stdout).splitlines() if line.strip()]
             self.assertEqual(1, len(lines))
             record = json.loads(lines[0])
             self.assertIn("range", record)
@@ -9992,7 +9992,7 @@ class LifeTxtFilterLimitTests(unittest.TestCase):
         try:
             out, err, rc = run_cli("filter", path, "--limit", "3")
             self.assertEqual(rc, 0)
-            lines = [l for l in out.strip().splitlines() if l.startswith("[")]
+            lines = [line for line in out.strip().splitlines() if line.startswith("[")]
             self.assertLessEqual(len(lines), 3)
         finally:
             os.unlink(path)
@@ -10003,7 +10003,7 @@ class LifeTxtFilterLimitTests(unittest.TestCase):
         try:
             out, err, rc = run_cli("filter", path, "--limit", "0")
             self.assertEqual(rc, 0)
-            lines = [l for l in out.strip().splitlines() if l.startswith("[")]
+            lines = [line for line in out.strip().splitlines() if line.startswith("[")]
             self.assertEqual(len(lines), 5)
         finally:
             os.unlink(path)
@@ -10109,7 +10109,7 @@ class LifeTxtFromMarkdownTests(unittest.TestCase):
         text = "# Heading\nSome paragraph.\n- [ ] Real task\n- Note without checkbox\n"
         out, err, rc = run_cli("from-markdown", "-", input_text=text)
         self.assertEqual(rc, 0)
-        items = [l for l in out.strip().splitlines() if l.startswith("[")]
+            items = [line for line in out.strip().splitlines() if line.startswith("[")]
         self.assertEqual(len(items), 1)
 
     def test_asterisk_bullet_supported(self):

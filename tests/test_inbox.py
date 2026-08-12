@@ -80,7 +80,7 @@ class InboxTests(unittest.TestCase):
         self.assertEqual(3, report["applied"])
         self.assertEqual(3, report["total"])
         with open(self.target, "r", encoding="utf-8") as handle:
-            lines = [l for l in handle.read().splitlines() if l.strip()]
+            lines = [line for line in handle.read().splitlines() if line.strip()]
         self.assertEqual(3, len(lines))
 
     def test_batch_apply_reports_unknown(self):

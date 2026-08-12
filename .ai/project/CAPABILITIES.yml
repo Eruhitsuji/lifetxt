@@ -172,11 +172,30 @@ capabilities:
       - req-stable-dependency-security-audit
       - req-stable-release-doc-parity
       - req-stable-release-security-review
+      - req-stable-format-migration-contract
+      - req-stable-format-compatibility-matrix
+      - req-stable-release-notes-boundary
+      - req-stable-stable-contract-matrix
+      - req-stable-external-environment-verification-plan
+      - req-stable-web-mcp-schema-validation
+      - req-stable-single-item-schema-validation
+      - req-stable-multi-file-input-order
+      - req-stable-multi-file-write-target
+      - req-stable-workspace-id-uniqueness
+      - req-stable-stabilization-batch-integration
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
       - .ai/project/CAPABILITIES.yml
       - .ai/project/TRACEABILITY.yml
+      - docs/en/format-migration.md
+      - docs/en/stable-contract-matrix.md
+      - docs/en/external-environment-verification.md
+      - lifetxt/paths.py
+      - lifetxt/web_read_service.py
+      - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - tests/test_multi_file_write_guards.py
     public_interfaces:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -196,6 +215,8 @@ capabilities:
       - '#352 release artifacts have checksum, SBOM, and provenance evidence from one build'
       - '#351 direct stable dependencies have point-in-time license and vulnerability evidence with scanner limitations'
       - '#354 release-critical English and Japanese documentation has a recorded semantic-parity audit'
+      - format migration preview/write and downgrade inspection are explicit and revision-checked
+      - stable machine-readable contract coverage and exceptions are inventoried
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -282,6 +303,8 @@ capabilities:
       - req-stable-tui-layout-boundary
       - req-stable-test-extraction-preparation
       - req-stable-archive-test-extraction
+      - req-stable-config-test-extraction
+      - req-stable-canonical-corpus-freeze
       - req-stable-server-review-extraction-preparation
     implementation_locations:
       - .github/workflows/ci.yml
@@ -310,6 +333,12 @@ capabilities:
       - docs/en/web-asset-resource-migration.md
       - docs/en/test-archive-config-extraction.md
       - docs/en/server-update-review-extraction.md
+      - lifetxt/web_assets.py
+      - lifetxt/web_assets.html
+      - tests/test_web_assets.py
+      - tests/golden/policy-v1.json
+      - tests/test_roundtrip_golden.py
+      - docs/en/release-safety-foundations.md
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
@@ -330,6 +359,7 @@ capabilities:
       - MCP resource validation and TUI layout helpers have compatibility-preserving module boundaries
       - Web asset, test extraction, and server review migration contracts are recorded
       - archive CLI tests are independently discovered with the aggregate suite reduced by the moved cluster
+      - web asset byte parity and wheel package-data inclusion are verified
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339
@@ -681,6 +711,10 @@ capabilities:
     source_requirements:
       - req-diagnostic-contract-stability
       - req-diagnostic-hint-content
+      - req-stable-parser-format-metadata
+      - req-stable-diagnostic-matrix
+      - req-stable-parser-end-span
+      - req-stable-parser-structural-spans
     implementation_locations:
       - lifetxt/parser.py
       - lifetxt/validator.py
@@ -690,6 +724,10 @@ capabilities:
       - lifetxt/webapp.py
       - lifetxt/mcp.py
       - tests/diagnostic_contract_fixtures.py
+      - tests/test_diagnostic_contract.py
+      - tests/test_parser_format_metadata.py
+      - docs/en/stable-diagnostics-matrix.md
+      - lifetxt/model.py
       - tests/test_diagnostic_contract.py
       - docs/en/cli.md
       - docs/ja/cli.md
@@ -702,6 +740,8 @@ capabilities:
       - tests/test_diagnostic_contract.py
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
       - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
+      - parser results expose format directive metadata without breaking tuple unpacking
+      - diagnostic stability and remaining message-only gaps are inventoried
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/49
       - https://github.com/Eruhitsuji/lifetxt/issues/65

@@ -250,7 +250,16 @@ class Diagnostic(object):
     """A parser or validator message."""
 
     def __init__(
-        self, severity, code, message, line=None, column=None, source=None, hint=""
+        self,
+        severity,
+        code,
+        message,
+        line=None,
+        column=None,
+        source=None,
+        hint="",
+        end_line=None,
+        end_column=None,
     ):
         self.severity = severity
         self.code = code
@@ -259,6 +268,8 @@ class Diagnostic(object):
         self.column = column
         self.source = source
         self.hint = hint or ""
+        self.end_line = end_line
+        self.end_column = end_column
 
     def to_dict(self):
         data = OrderedDict()
@@ -271,6 +282,24 @@ class Diagnostic(object):
             data["line"] = self.line
         if self.column is not None:
             data["column"] = self.column
+        if self.end_line is not None or self.end_column is not None:
+            data["span"] = OrderedDict(
+                (
+                    (
+                        "start",
+                        OrderedDict((("line", self.line), ("column", self.column))),
+                    ),
+                    (
+                        "end",
+                        OrderedDict(
+                            (
+                                ("line", self.end_line or self.line),
+                                ("column", self.end_column or self.column),
+                            )
+                        ),
+                    ),
+                )
+            )
         data["hint"] = self.hint
         return data
 

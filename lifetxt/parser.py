@@ -7,6 +7,25 @@ from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
 
 
+FORMAT_VERSION = "1"
+
+
+class ParseResult(tuple):
+    """Tuple-compatible parser result with authoritative document metadata."""
+
+    def __new__(cls, items, diagnostics, directives):
+        result = tuple.__new__(cls, (items, diagnostics))
+        result.directives = OrderedDict(directives)
+        result.format_version = result.directives.get("format_version")
+        if result.format_version is None:
+            result.format_version_state = "unversioned"
+        elif result.format_version == FORMAT_VERSION:
+            result.format_version_state = "current"
+        else:
+            result.format_version_state = "unsupported"
+        return result
+
+
 _DIRECTIVE_RE = re.compile(r"^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$")
 _KNOWN_DIRECTIVE_KEYS = frozenset(("self", "timezone", "project"))
 
@@ -43,7 +62,16 @@ PARSER_DIAGNOSTIC_HINTS = {
 }
 
 
-def _diagnostic(severity, code, message, line=None, column=None, source=None):
+def _diagnostic(
+    severity,
+    code,
+    message,
+    line=None,
+    column=None,
+    source=None,
+    end_line=None,
+    end_column=None,
+):
     return Diagnostic(
         severity,
         code,
@@ -52,6 +80,8 @@ def _diagnostic(severity, code, message, line=None, column=None, source=None):
         column=column,
         source=source,
         hint=PARSER_DIAGNOSTIC_HINTS[code],
+        end_line=end_line,
+        end_column=end_column,
     )
 
 
@@ -86,6 +116,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
     implicit ``parent:`` detail that points to the nearest less-indented
     ancestor's ID.
     """
+    directives = parse_directives(text)
     items = []
     diagnostics = []
     current_item = None
@@ -119,6 +150,8 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                         "Continuation lines must follow a life.txt item.",
                         line_no,
                         1,
+                        end_line=line_no,
+                        end_column=len(line) + 1,
                     )
                 )
                 continue
@@ -131,6 +164,8 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                         "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
                         line_no,
                         leading_spaces + 1,
+                        end_line=line_no,
+                        end_column=len(line) + 1,
                     )
                 )
                 current_has_error = True
@@ -164,7 +199,7 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
         diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
     if check_references:
         diagnostics.extend(reference_diagnostics(items, key=id_key))
-    return items, diagnostics
+    return ParseResult(items, diagnostics, directives)
 
 
 def _logical_lines(text):
@@ -190,6 +225,8 @@ def _logical_lines(text):
                             "Line continuation backslash must be followed by another line.",
                             end_line,
                             len(stripped_trailing),
+                            end_line=end_line,
+                            end_column=len(stripped_trailing) + 1,
                         )
                     )
                     break
@@ -205,6 +242,8 @@ def _logical_lines(text):
                             "Line continuation cannot continue into a body continuation line.",
                             end_line,
                             1,
+                            end_line=end_line,
+                            end_column=len(current) + 1,
                         )
                     )
                 continue
@@ -665,6 +704,8 @@ def _parse_quoted_string(text, pos, line_no, diagnostics, role, column_offset=0)
             "Unclosed quoted %s." % role,
             line_no,
             column_offset + start + 1,
+            end_line=line_no,
+            end_column=column_offset + len(text) + 1,
         )
     )
     return "".join(chars), len(text)

@@ -22,11 +22,10 @@ from collections import OrderedDict
 
 from .model import Diagnostic
 from .mutation import MutationConflict, read_text_snapshot, write_text
-from .parser import parse_text
+from .parser import FORMAT_VERSION, parse_text
 from .timeutil import format_datetime, parse_datetime
 
 
-FORMAT_VERSION = "1"
 CANON_VERSION = "LIFETXT_CANON_V1"
 CAPABILITY_VERSION = "1"
 SCHEMA_VERSION = "1"
@@ -236,7 +235,10 @@ def stable_diagnostics(path):
         data.setdefault("source", path)
         data["span"] = {
             "start": {"line": data.get("line"), "column": data.get("column")},
-            "end": {"line": data.get("line"), "column": data.get("column")},
+            "end": {
+                "line": getattr(diagnostic, "end_line", None) or data.get("line"),
+                "column": getattr(diagnostic, "end_column", None) or data.get("column"),
+            },
         }
         data["hint"] = ""
         result.append(data)

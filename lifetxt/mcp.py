@@ -61,6 +61,8 @@ from .webapp import (
     write_text,
     _subgraph,
 )
+from .mcp_resources import resource_list as _resource_list
+from .mcp_resources import resource_read as _resource_read
 
 
 SERVER_NAME = "lifetxt-mcp"
@@ -1164,39 +1166,11 @@ def prompt_get(name, arguments=None):
 
 
 def resource_list(context):
-    resources = []
-    for index, path in enumerate(context.paths):
-        resources.append(
-            {
-                "uri": "lifetxt://source/%d" % index,
-                "name": path,
-                "description": "life.txt input source",
-                "mimeType": "text/plain",
-            }
-        )
-    return resources
+    return _resource_list(context)
 
 
 def resource_read(context, uri):
-    prefix = "lifetxt://source/"
-    if not str(uri).startswith(prefix):
-        raise ValueError("Unsupported resource URI: %s" % uri)
-    try:
-        index = int(str(uri)[len(prefix) :])
-    except ValueError:
-        raise ValueError("Invalid resource index in URI: %s" % uri)
-    if index < 0 or index >= len(context.paths):
-        raise ValueError("Resource index is out of range: %s" % uri)
-    path = context.paths[index]
-    return {
-        "contents": [
-            {
-                "uri": uri,
-                "mimeType": "text/plain",
-                "text": read_text(path),
-            }
-        ]
-    }
+    return _resource_read(context, uri, read_text)
 
 
 def _tool(

@@ -75,6 +75,15 @@ commands:
     values:
       - ruff check lifetxt tests scripts
 
+  type_check:
+    status: configured
+    description: >-
+      Run the first approved static-typing boundary. The boundary is limited to
+      the stable diagnostic JSON contract until a follow-up issue explicitly
+      expands it.
+    values:
+      - mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+
   unit_test:
     status: configured
     values:

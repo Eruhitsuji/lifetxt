@@ -359,6 +359,8 @@ def golden_policy_report(root):
         return OrderedDict((("ok", False), ("errors", [str(exc)])))
     if str(policy.get("policy_version")) != POLICY_VERSION:
         errors.append("Golden policy_version must be %s." % POLICY_VERSION)
+    if str(policy.get("canonical_version") or "") != "LIFETXT_CANON_V1":
+        errors.append("Golden policy canonical_version must be LIFETXT_CANON_V1.")
     if int(policy.get("corpus_version") or 0) != int(corpus.get("version") or 0):
         errors.append("Golden policy corpus_version does not match the corpus.")
     cases = corpus.get("cases") or []

@@ -182,6 +182,7 @@ capabilities:
       - req-stable-multi-file-input-order
       - req-stable-multi-file-write-target
       - req-stable-workspace-id-uniqueness
+      - req-stable-stabilization-batch-integration
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md

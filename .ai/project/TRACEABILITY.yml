@@ -94,6 +94,68 @@ traceability:
         write target and workspace ID semantics remain #416/#417.
       status: implemented
 
+    - requirement_id: req-stable-multi-file-write-target
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/417
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - lifetxt/paths.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - lifetxt/cli.py
+        - tests/test_multi_file_write_guards.py
+        - docs/en/config.md
+      tests_or_evidence:
+        - multiple-source Web and MCP startup without an explicit target is rejected
+        - explicit target and single-source workflows remain supported
+        - focused multi-file write guard tests pass
+      release_or_deployment: null
+      notes: >-
+        Authoritative writes no longer infer the first source when multiple
+        sources are available.
+      status: implemented
+
+    - requirement_id: req-stable-workspace-id-uniqueness
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/416
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - lifetxt/web_read_service.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - tests/test_multi_file_write_guards.py
+      tests_or_evidence:
+        - duplicate IDs across sources reject writable Web and MCP startup before mutation
+        - generated IDs are checked against the complete loaded source set
+        - focused duplicate-workspace-ID test passes
+      release_or_deployment: null
+      notes: >-
+        Duplicate workspace IDs remain inspectable by read-only surfaces, while
+        authoritative writes fail before any source can be changed.
+      status: implemented
+
+    - requirement_id: req-stable-stabilization-batch-integration
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/339
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/419
+      changed_files_or_scope:
+        - Record the stabilization parent branch integration into main as one final PR
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - focused stabilization and workspace compatibility tests pass
+        - ruff check passes for all changed implementation and test files
+        - final PR #419 CI is required to validate the complete consolidated branch
+      release_or_deployment: null
+      notes: >-
+        This is the final integration record for stabilize/issue-339-final. It
+        preserves the existing sub-PR records and documents the single main-bound
+        PR requested for the stabilization batch.
+      status: implemented
+
     - requirement_id: req-local-unittest-compatibility
       capability_id: cap-local-test-compatibility
       epic: null

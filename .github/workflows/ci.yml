@@ -227,6 +227,25 @@ jobs:
             coverage-summary.txt
             coverage.json
 
+  type-check:
+    name: Static type check stable diagnostic contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install development tools
+        run: python -m pip install -e ".[dev]"
+
+      - name: Check approved typing boundary
+        run: mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+
   release-gate:
     name: Required release policy and clean wheel
     runs-on: ubuntu-latest

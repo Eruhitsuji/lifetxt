@@ -170,7 +170,7 @@ def _print_help():
         "Release-safety and Format 1.0 commands:\n"
         "  safety locks|serve-target|timezone|revisions|transactions|write-routes|release-gate\n"
         "  attachment put|reference|delete|status\n"
-        "  format info|check|canon|schemas, capabilities\n"
+        "  format info|check|canon|migrate|downgrade|schemas, capabilities\n"
         "  doctor --workspace-safety\n"
         "Additional flags:\n"
         "  review --last-week|--last-month|--year [YYYY]|--someday\n"

@@ -4166,7 +4166,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/341
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/377
       changed_files_or_scope:
         - Extend the offline traceability gate to compare existing requirement-to-capability associations between base and head
         - Require capability_remap_reason for intentional remaps while allowing new requirement chains

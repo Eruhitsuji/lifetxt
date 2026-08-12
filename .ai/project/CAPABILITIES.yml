@@ -55,6 +55,7 @@ capabilities:
       - req-traceability-capability-mapping-drift-guard
       - req-stable-public-compatibility-policy
       - req-stable-remote-read-client-evidence
+      - req-stable-mcp-read-artifact-evidence
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -74,6 +75,7 @@ capabilities:
       - '#341 traceability gate rejects unapproved existing requirement-to-capability remaps while allowing new chains and declared remaps'
       - '#356 compatibility policy defines stable versioning, public contract coverage, deprecation, and unsafe-compatibility exceptions'
       - '#359 installed Remote read smoke evidence covers authz, pagination, revision consistency, and restart diagnostics'
+      - '#360 clean installed artifact MCP smoke covers read resources, JSON-RPC errors, and write-surface rejection'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -84,6 +86,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/341
       - https://github.com/Eruhitsuji/lifetxt/issues/356
       - https://github.com/Eruhitsuji/lifetxt/issues/359
+      - https://github.com/Eruhitsuji/lifetxt/issues/360
+      - https://github.com/Eruhitsuji/lifetxt/issues/360
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333

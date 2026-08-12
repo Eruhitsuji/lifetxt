@@ -107,7 +107,9 @@ The current directive is:
 
 Unversioned files remain readable in compatibility mode. Unsupported versions are reported and must not be rewritten before migration.
 
-The draft canonical form is named `LIFETXT_CANON_V1`:
+The normative canonical form is named `LIFETXT_CANON_V1`. The golden policy
+pins this name and its corpus version; changing canonical output requires a
+corpus version bump and an explicit migration note:
 
 - UTF-8 without BOM;
 - LF line endings;

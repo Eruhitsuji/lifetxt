@@ -1,0 +1,141 @@
+{
+  "schema": "lifetxt-ruff-rule-audit-v1",
+  "audit_date": "2026-08-12",
+  "command_scope": [
+    "lifetxt",
+    "tests",
+    "scripts"
+  ],
+  "results": [
+    {
+      "group": "pycodestyle-correctness",
+      "rules": [
+        "E4",
+        "E7",
+        "E9"
+      ],
+      "finding_count": 61,
+      "codes": {
+        "E401": 6,
+        "E402": 42,
+        "E731": 4,
+        "E741": 9
+      }
+    },
+    {
+      "group": "pyflakes",
+      "rules": [
+        "F"
+      ],
+      "finding_count": 320,
+      "codes": {
+        "F401": 143,
+        "F403": 6,
+        "F405": 161,
+        "F811": 1,
+        "F841": 9
+      }
+    },
+    {
+      "group": "modernization",
+      "rules": [
+        "UP"
+      ],
+      "finding_count": 2409,
+      "codes": {
+        "UP004": 25,
+        "UP006": 6,
+        "UP008": 1,
+        "UP010": 121,
+        "UP012": 2,
+        "UP015": 153,
+        "UP020": 8,
+        "UP021": 10,
+        "UP022": 17,
+        "UP024": 1,
+        "UP030": 1,
+        "UP031": 2045,
+        "UP032": 2,
+        "UP035": 8,
+        "UP036": 2,
+        "UP045": 7
+      }
+    },
+    {
+      "group": "simplification",
+      "rules": [
+        "SIM"
+      ],
+      "finding_count": 185,
+      "codes": {
+        "SIM102": 10,
+        "SIM103": 7,
+        "SIM105": 31,
+        "SIM108": 11,
+        "SIM109": 2,
+        "SIM110": 9,
+        "SIM114": 3,
+        "SIM115": 60,
+        "SIM117": 48,
+        "SIM118": 4
+      }
+    },
+    {
+      "group": "bugbear",
+      "rules": [
+        "B"
+      ],
+      "finding_count": 189,
+      "codes": {
+        "B007": 1,
+        "B008": 50,
+        "B009": 2,
+        "B010": 3,
+        "B017": 1,
+        "B028": 1,
+        "B904": 123,
+        "B905": 8
+      }
+    },
+    {
+      "group": "ruff-specific",
+      "rules": [
+        "RUF"
+      ],
+      "finding_count": 377,
+      "codes": {
+        "RUF001": 21,
+        "RUF005": 69,
+        "RUF007": 1,
+        "RUF013": 2,
+        "RUF015": 5,
+        "RUF019": 1,
+        "RUF022": 2,
+        "RUF034": 2,
+        "RUF046": 4,
+        "RUF059": 260,
+        "RUF100": 10
+      }
+    }
+  ],
+  "recommendation": {
+    "first_batch": [
+      "E741"
+    ],
+    "reason": "Nine ambiguous-variable findings are bounded and reviewable.",
+    "defer": [
+      "E4",
+      "E731",
+      "UP",
+      "SIM",
+      "B",
+      "RUF"
+    ],
+    "defer_reason": "Current finding volume or import/behavior risk is too high for a stabilization batch."
+  },
+  "limitations": [
+    "The audit is read-only and does not apply Ruff fixes.",
+    "Counts are a point-in-time snapshot and include existing repository findings.",
+    "A later implementation issue must review each E741 finding before enabling it as a gate."
+  ]
+}

@@ -104,6 +104,129 @@ jobs:
           python -m lifetxt summary examples/minimal_life.txt
           python -m lifetxt completion powershell > /tmp/lifetxt-completion.ps1
 
+  windows-core-smoke:
+    name: Windows core CLI smoke
+    runs-on: windows-latest
+    env:
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency-free package
+        shell: pwsh
+        run: python -m pip install -e . 2>&1 | Tee-Object windows-install.log
+
+      - name: Verify Windows timezone data and stable entry points
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          import tzdata
+
+          root = Path("windows smoke \u65e5\u672c\u8a9e")
+          root.mkdir()
+          source = root / "\u5165\u529b life.txt"
+          source.write_text('# [ ] T "Windows smoke"\\n', encoding="utf-8")
+          ZoneInfo("Asia/Tokyo")
+          print(tzdata.__version__)
+          '@ | python 2>&1 | Tee-Object windows-python.log
+          python -m lifetxt check "windows smoke $([char]0x65e5)$([char]0x672c)$([char]0x8a9e)/$([char]0x5165)$([char]0x529b) life.txt" 2>&1 | Tee-Object windows-module.log
+          lifetxt summary "windows smoke $([char]0x65e5)$([char]0x672c)$([char]0x8a9e)/$([char]0x5165)$([char]0x529b) life.txt" 2>&1 | Tee-Object windows-console.log
+
+      - name: Upload Windows smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-core-smoke
+          if-no-files-found: warn
+          path: windows-*.log
+
+  macos-core-smoke:
+    name: macOS core CLI smoke
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency-free package
+        shell: bash
+        run: python -m pip install -e . 2>&1 | tee macos-install.log
+
+      - name: Verify stable module and console entry points
+        shell: bash
+        run: |
+          python - <<'PY' 2>&1 | tee macos-python.log
+          from pathlib import Path
+
+          root = Path("macos smoke \u65e5\u672c\u8a9e")
+          root.mkdir()
+          source = root / "input with spaces.life.txt"
+          source.write_text('# [ ] T "macOS smoke"\\n', encoding="utf-8")
+          print(source)
+          PY
+          python -m lifetxt check "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-module.log
+          python -m lifetxt summary "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-console.log
+          python -m lifetxt config init -o "macos smoke 日本語/config.json" 2>&1 | tee macos-write-surface.log
+          test -f "macos smoke 日本語/config.json"
+
+      - name: Upload macOS smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-core-smoke
+          if-no-files-found: warn
+          path: macos-*.log
+
+  coverage-baseline:
+    name: Publish stable coverage baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and coverage tooling
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run tests and write coverage evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          coverage run --branch -m unittest discover 2>&1 | tee coverage-tests.log
+          coverage report -m | tee coverage-summary.txt
+          coverage json -o coverage.json
+
+      - name: Upload coverage baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stable-coverage-baseline
+          if-no-files-found: warn
+          path: |
+            .coverage
+            coverage-tests.log
+            coverage-summary.txt
+            coverage.json
+
   release-gate:
     name: Required release policy and clean wheel
     runs-on: ubuntu-latest

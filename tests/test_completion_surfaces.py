@@ -5,6 +5,8 @@ shell offers is a value the Web UI and the TUI offer too.
 """
 
 import argparse
+from contextlib import redirect_stdout
+from io import StringIO
 import os
 import shutil
 import sys
@@ -13,7 +15,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lifetxt import completion, tui_app
+from lifetxt import cli, completion, tui_app
+from lifetxt.interactive import DETAIL_DESCRIPTIONS, detail_candidates
 from lifetxt.parser import parse_text
 from lifetxt.presence import COMMON_STATES
 
@@ -26,6 +29,162 @@ SAMPLE = (
 
 def _items():
     return parse_text(SAMPLE)[0]
+
+
+class CompletionTests(unittest.TestCase):
+    def test_every_shell_generator_runs(self):
+        """Every supported shell generator produces a concrete script."""
+        for name in ("bash", "zsh", "fish"):
+            script = getattr(completion, "%s_completion" % name)()
+            self.assertTrue(script.strip(), name)
+            self.assertNotIn(
+                "%(", script, "%s left an unsubstituted placeholder" % name
+            )
+
+    def test_shell_generators_include_the_shared_option_values(self):
+        for name in ("bash", "zsh"):
+            script = getattr(completion, "%s_completion" % name)()
+            self.assertIn(completion.OPTION_VALUES["--theme"], script, name)
+            self.assertIn(completion.OPTION_VALUES["--keymap"], script, name)
+
+    def test_completion_command_writes_each_shell(self):
+        for shell in ("bash", "zsh", "fish"):
+            args = argparse.Namespace(completion_command=shell, output=None)
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                code = completion.cmd_completion(args)
+            self.assertEqual(0, code, shell)
+            self.assertTrue(buffer.getvalue().strip(), shell)
+
+    def test_generates_completion_for_new_commands(self):
+        script = completion.bash_completion()
+        for value in (
+            "sources",
+            "timer",
+            "stats",
+            "git-hook",
+            "--type",
+            "--body-file",
+            "--body-stdin",
+            "--rrule",
+            "--notify-at",
+            "--occurrences",
+            "--theme",
+            "--keymap",
+            "auto dark light mono",
+            "vim arrows",
+        ):
+            self.assertIn(value, script)
+
+    def test_prints_fish_install_instructions(self):
+        text = completion.install_instructions("fish")
+        self.assertIn("lifetxt.fish", text)
+        self.assertIn("lifetxt completion fish", text)
+
+    def test_interactive_detail_candidates_include_multiline_body(self):
+        self.assertIn("body<<", detail_candidates("J"))
+        self.assertIn("elapsed", DETAIL_DESCRIPTIONS)
+
+    def test_completion_commands_match_argparse_subcommands(self):
+        parser = cli.build_parser()
+        commands = _subcommand_names(parser)
+        offered = completion._command_names()
+        self.assertEqual([], sorted(set(commands) - set(offered)))
+        allowed = set(commands) | set(completion._extra_command_names())
+        self.assertEqual([], sorted(set(offered) - allowed))
+
+    def test_completion_offers_commands_routed_outside_the_parser(self):
+        offered = completion._command_names()
+        for command in (
+            "next",
+            "show",
+            "edit",
+            "path",
+            "count",
+            "invoice",
+            "standup",
+            "to-ics",
+            "from-todo",
+        ):
+            self.assertIn(command, offered)
+
+    def test_completion_options_cover_argparse_long_options(self):
+        parser = cli.build_parser()
+        self.assertEqual(
+            [], sorted(_long_options(parser) - set(completion._all_options()))
+        )
+
+
+class CliParserConsistencyTests(unittest.TestCase):
+    def test_filter_based_commands_share_item_filter_options(self):
+        parser = cli.build_parser()
+        expected = {
+            "--open",
+            "--status",
+            "--type",
+            "--project",
+            "--tag",
+            "--tag-all",
+            "--exclude-tag",
+            "--user",
+            "--team",
+            "--person",
+            "--owner",
+            "--assignee",
+            "--attendee",
+            "--sender",
+            "--recipient",
+            "--detail",
+            "--text",
+            "--after",
+            "--before",
+        }
+        for command in (
+            "filter",
+            "agenda",
+            "stats",
+            "to-json",
+            "to-jsonl",
+            "to-csv",
+            "markdown",
+        ):
+            subparser = _subparser(parser, command)
+            options = {
+                option
+                for action in subparser._actions
+                for option in action.option_strings
+            }
+            self.assertEqual([], sorted(expected - options), command)
+
+
+def _subparser(parser, name):
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices[name]
+    raise AssertionError("parser has no subcommands")
+
+
+def _subcommand_names(parser):
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return tuple(action.choices.keys())
+    raise AssertionError("parser has no subcommands")
+
+
+def _long_options(parser):
+    options = set()
+
+    def walk(arg_parser):
+        for action in arg_parser._actions:
+            for option in action.option_strings:
+                if option.startswith("--"):
+                    options.add(option)
+            if isinstance(action, argparse._SubParsersAction):
+                for subparser in action.choices.values():
+                    walk(subparser)
+
+    walk(parser)
+    return options
 
 
 class SharedCandidateTests(unittest.TestCase):

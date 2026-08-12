@@ -5109,6 +5109,24 @@ traceability:
         remain stable.
       status: implemented
 
+    - requirement_id: req-stable-cui-completion-test-extraction
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/395
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/398
+      changed_files_or_scope:
+        - tests/test_completion_surfaces.py
+        - tests/test_cui_extensions.py
+      tests_or_evidence:
+        - tests.test_completion_surfaces -> 41 tests passed
+        - tests.test_cui_extensions -> 141 tests passed
+        - combined discovery -> 182 tests passed
+      release_or_deployment: null
+      notes: >-
+        CompletionTests and CliParserConsistencyTests moved without assertion
+        or production-code changes; shared helper ownership moved with them.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -808,14 +808,7 @@ def _call_label(func):
 
 
 def _ast_string_value(node):
-    if isinstance(node, ast.Str):
-        return str(node.s)
-    constant = getattr(ast, "Constant", None)
-    if (
-        constant is not None
-        and isinstance(node, constant)
-        and isinstance(node.value, str)
-    ):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return str(node.value)
     return None
 

@@ -172,11 +172,15 @@ capabilities:
       - req-stable-dependency-security-audit
       - req-stable-release-doc-parity
       - req-stable-release-security-review
+      - req-stable-format-migration-contract
+      - req-stable-stable-contract-matrix
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
       - .ai/project/CAPABILITIES.yml
       - .ai/project/TRACEABILITY.yml
+      - docs/en/format-migration.md
+      - docs/en/stable-contract-matrix.md
     public_interfaces:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -196,6 +200,8 @@ capabilities:
       - '#352 release artifacts have checksum, SBOM, and provenance evidence from one build'
       - '#351 direct stable dependencies have point-in-time license and vulnerability evidence with scanner limitations'
       - '#354 release-critical English and Japanese documentation has a recorded semantic-parity audit'
+      - format migration preview/write and downgrade inspection are explicit and revision-checked
+      - stable machine-readable contract coverage and exceptions are inventoried
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -283,6 +289,7 @@ capabilities:
       - req-stable-test-extraction-preparation
       - req-stable-archive-test-extraction
       - req-stable-config-test-extraction
+      - req-stable-canonical-corpus-freeze
       - req-stable-server-review-extraction-preparation
     implementation_locations:
       - .github/workflows/ci.yml
@@ -314,6 +321,9 @@ capabilities:
       - lifetxt/web_assets.py
       - lifetxt/web_assets.html
       - tests/test_web_assets.py
+      - tests/golden/policy-v1.json
+      - tests/test_roundtrip_golden.py
+      - docs/en/release-safety-foundations.md
     tests_or_evidence:
       - native Windows and macOS core smoke jobs retain failure logs as artifacts
       - coverage job publishes human-readable and JSON evidence without a percentage gate
@@ -687,6 +697,7 @@ capabilities:
       - req-diagnostic-contract-stability
       - req-diagnostic-hint-content
       - req-stable-parser-format-metadata
+      - req-stable-diagnostic-matrix
     implementation_locations:
       - lifetxt/parser.py
       - lifetxt/validator.py
@@ -698,6 +709,7 @@ capabilities:
       - tests/diagnostic_contract_fixtures.py
       - tests/test_diagnostic_contract.py
       - tests/test_parser_format_metadata.py
+      - docs/en/stable-diagnostics-matrix.md
       - docs/en/cli.md
       - docs/ja/cli.md
     public_interfaces:
@@ -710,6 +722,7 @@ capabilities:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1758 tests, OK (skipped=18)'
       - 'python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)'
       - parser results expose format directive metadata without breaking tuple unpacking
+      - diagnostic stability and remaining message-only gaps are inventoried
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/49
       - https://github.com/Eruhitsuji/lifetxt/issues/65

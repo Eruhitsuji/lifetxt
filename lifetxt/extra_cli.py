@@ -428,6 +428,18 @@ def _build_parser(command):
         canon.add_argument("--write", action="store_true")
         canon.add_argument("--strict", action="store_true")
         _add_output(canon)
+        migrate = subparsers.add_parser(
+            "migrate", help="Preview or apply the explicit Format 1.0 migration."
+        )
+        migrate.add_argument("path")
+        migrate.add_argument("--write", action="store_true")
+        _add_output(migrate)
+        downgrade = subparsers.add_parser(
+            "downgrade", help="Inspect downgrade compatibility without writing."
+        )
+        downgrade.add_argument("path")
+        downgrade.add_argument("--to", required=True, dest="target_version")
+        _add_output(downgrade)
         schemas = subparsers.add_parser("schemas")
         schemas.add_argument("directory", nargs="?", default="dist/schemas")
         _add_output(schemas)

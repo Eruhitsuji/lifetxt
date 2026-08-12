@@ -153,6 +153,15 @@ class GoldenRoundTripTests(unittest.TestCase):
         self.assertEqual(1, self.corpus["version"])
         self.assertGreaterEqual(len(self.corpus["cases"]), 9)
 
+    def test_canonical_output_is_idempotent(self):
+        for case in self.corpus["cases"]:
+            with self.subTest(case=case["name"]):
+                items, diagnostics = parse_text(case["canonical"])
+                self.assertEqual([], _error_codes(diagnostics))
+                canonical = _canonical_text(items)
+                self.assertEqual(case["canonical"], canonical)
+                self.assertEqual(canonical, canonical.replace("\r\n", "\n"))
+
     def test_parse_serialize_parse_corpus(self):
         for case in self.corpus["cases"]:
             with self.subTest(case=case["name"]):

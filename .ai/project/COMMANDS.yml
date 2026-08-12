@@ -106,15 +106,6 @@ commands:
     values:
       - python -W error::ResourceWarning -m unittest tests.test_config_validation tests.test_archive_plan_v1 tests.test_safety_foundation
 
-  resource_warning_gate:
-    status: configured
-    description: >-
-      Run the focused configuration and safety tests with ResourceWarning
-      promoted to an error, preventing regressions in test and runtime file
-      handle cleanup.
-    values:
-      - python -W error::ResourceWarning -m unittest tests.test_config_validation tests.test_archive_plan_v1 tests.test_safety_foundation
-
   unit_test_windows_powershell:
     status: configured
     values:

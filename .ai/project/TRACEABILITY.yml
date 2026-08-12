@@ -4910,6 +4910,7 @@ traceability:
       notes: >-
         Compatibility wrappers retain the existing Web helper surface while
         pure read logic is independently importable.
+      status: implemented
 
     - requirement_id: req-stable-web-route-decomposition-audit
       capability_id: cap-stable-maintainability-followthrough
@@ -4923,6 +4924,7 @@ traceability:
       release_or_deployment: null
       notes: >-
         Audit-only slice; no route behavior changes.
+      status: implemented
 
     - requirement_id: req-stable-server-review-helper-extraction
       capability_id: cap-stable-maintainability-followthrough
@@ -4939,6 +4941,7 @@ traceability:
       release_or_deployment: null
       notes: >-
         Pure review helpers extracted without changing update orchestration.
+      status: implemented
 
 required_chain:
   - Requirement

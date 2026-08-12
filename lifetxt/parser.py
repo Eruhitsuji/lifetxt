@@ -150,6 +150,8 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                         "Continuation lines must follow a life.txt item.",
                         line_no,
                         1,
+                        end_line=line_no,
+                        end_column=len(line) + 1,
                     )
                 )
                 continue
@@ -162,6 +164,8 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                         "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
                         line_no,
                         leading_spaces + 1,
+                        end_line=line_no,
+                        end_column=len(line) + 1,
                     )
                 )
                 current_has_error = True
@@ -221,6 +225,8 @@ def _logical_lines(text):
                             "Line continuation backslash must be followed by another line.",
                             end_line,
                             len(stripped_trailing),
+                            end_line=end_line,
+                            end_column=len(stripped_trailing) + 1,
                         )
                     )
                     break
@@ -236,6 +242,8 @@ def _logical_lines(text):
                             "Line continuation cannot continue into a body continuation line.",
                             end_line,
                             1,
+                            end_line=end_line,
+                            end_column=len(current) + 1,
                         )
                     )
                 continue

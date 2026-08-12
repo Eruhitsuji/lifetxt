@@ -35,6 +35,22 @@ class DiagnosticContractTests(unittest.TestCase):
         self.assertEqual(7, output["span"]["start"]["column"])
         self.assertEqual(22, output["span"]["end"]["column"])
 
+    def test_structural_parser_diagnostics_report_end_spans(self):
+        from lifetxt.parser import parse_text
+
+        cases = (
+            ("| orphan", "E019", 1, 9),
+            ("[ ] T A body:x body:y\\\n", "E020", 1, 23),
+            ("[ ] T A \\\n| body", "E021", 2, 7),
+            ("[ ] T A body:x body:y\n| body", "E022", 2, 7),
+        )
+        for text, code, end_line, end_column in cases:
+            _items, diagnostics = parse_text(text)
+            diagnostic = next(item for item in diagnostics if item.code == code)
+            output = diagnostic_to_output_dict(diagnostic)
+            self.assertEqual(end_line, output["span"]["end"]["line"], code)
+            self.assertEqual(end_column, output["span"]["end"]["column"], code)
+
     def _cli_env(self):
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"

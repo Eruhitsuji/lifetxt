@@ -4820,15 +4820,21 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/367
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
       changed_files_or_scope:
         - docs/en/web-asset-resource-migration.md
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets.html
+        - pyproject.toml
+        - tests/test_web_assets.py
       tests_or_evidence:
-        - packaged-resource, compatibility-value, runtime-rebinding, and artifact requirements recorded
+        - packaged resource bytes match the pristine imported HTML value
+        - webapp compatibility export and surface runtime rebinding remain covered
+        - built wheel contains lifetxt/web_assets.html with matching bytes
       release_or_deployment: null
       notes: >-
-        Preparation record; the large literal is not removed until artifact
-        inclusion and pristine/rebound parity are tested.
+        The large literal is extracted into a packaged resource while
+        webapp.HTML_PAGE remains the compatibility/rebinding surface.
       status: implemented
 
     - requirement_id: req-stable-mcp-resource-boundary
@@ -5143,6 +5149,24 @@ traceability:
       notes: >-
         Archive CLI cluster moved with shared run_cli helper retained in the
         aggregate test module; config cluster remains for a follow-up slice.
+      status: implemented
+
+    - requirement_id: req-stable-config-test-extraction
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
+      changed_files_or_scope:
+        - tests/test_config_cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests.test_config_cli -> 9 tests passed
+        - tests.test_lifetxt -> 618 tests remain discovered after the move
+        - aggregate plus destination discovery preserves all 627 tests
+      release_or_deployment: null
+      notes: >-
+        Configuration CLI cluster moved with shared run_cli helper retained in
+        the aggregate test module; assertion bodies and test names are unchanged.
       status: implemented
 
 required_chain:

@@ -4571,7 +4571,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/353
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - docs/en/cli-decomposition-plan.md
       tests_or_evidence:
@@ -4588,7 +4588,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/358
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - tests/test_randomized_roundtrip.py
       tests_or_evidence:
@@ -4605,7 +4605,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/362
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - tests/test_config_validation.py
       tests_or_evidence:
@@ -4620,7 +4620,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/363
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - .github/workflows/ci.yml
         - .ai/project/COMMANDS.yml
@@ -4637,7 +4637,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/364
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - lifetxt/safety_foundation.py
         - tests/test_safety_foundation.py
@@ -4654,7 +4654,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/365
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - .github/workflows/ci.yml
       tests_or_evidence:
@@ -4669,7 +4669,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/366
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - config/maintainability/oversized-file-classification-v1.json
         - docs/en/oversized-file-decomposition-audit.md
@@ -4687,7 +4687,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/368
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - docs/en/web-mcp-service-boundary-audit.md
       tests_or_evidence:
@@ -4704,7 +4704,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/375
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - scripts/report_oversized_files.py
         - .ai/project/COMMANDS.yml
@@ -4724,7 +4724,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/361
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
       changed_files_or_scope:
         - docs/en/release-security-review.md
       tests_or_evidence:

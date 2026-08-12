@@ -40,6 +40,7 @@ tui = [
   "watchdog>=3,<7"
 ]
 dev = [
+  "coverage>=7,<8",
   "ruff>=0.16.1",
   "httpx2",
   "tomli; python_version < '3.11'"

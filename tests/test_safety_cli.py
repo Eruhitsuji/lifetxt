@@ -62,6 +62,18 @@ class SafetyCliTests(unittest.TestCase):
         self.assertTrue(report["ok"])
         self.assertEqual(1, report["item_count"])
 
+    def test_format_check_preserves_parser_end_span(self):
+        path = self.path("life.txt")
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write('[ ] T "Unclosed title\n')
+        code, stdout, stderr = self.run_command(["format", "check", path, "--pretty"])
+        self.assertEqual(1, code)
+        diagnostic = next(
+            item for item in json.loads(stdout)["diagnostics"] if item["code"] == "E018"
+        )
+        self.assertEqual("E018", diagnostic["code"])
+        self.assertEqual(22, diagnostic["span"]["end"]["column"])
+
     def test_format_canon_writes_with_revision_precondition(self):
         path = self.path("life.txt")
         with open(path, "wb") as handle:

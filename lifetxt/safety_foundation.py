@@ -235,7 +235,10 @@ def stable_diagnostics(path):
         data.setdefault("source", path)
         data["span"] = {
             "start": {"line": data.get("line"), "column": data.get("column")},
-            "end": {"line": data.get("line"), "column": data.get("column")},
+            "end": {
+                "line": getattr(diagnostic, "end_line", None) or data.get("line"),
+                "column": getattr(diagnostic, "end_column", None) or data.get("column"),
+            },
         }
         data["hint"] = ""
         result.append(data)

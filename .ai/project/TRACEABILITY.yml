@@ -4366,7 +4366,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/342
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/382
       changed_files_or_scope:
         - .github/workflows/ci.yml
       tests_or_evidence:
@@ -4385,7 +4385,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/343
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/382
       changed_files_or_scope:
         - .github/workflows/ci.yml
       tests_or_evidence:
@@ -4404,7 +4404,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/344
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/382
       changed_files_or_scope:
         - .github/workflows/ci.yml
         - pyproject.toml
@@ -4427,7 +4427,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/345
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/382
       changed_files_or_scope:
         - pyproject.toml
         - .ai/project/COMMANDS.yml
@@ -4448,7 +4448,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/347
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/382
       changed_files_or_scope:
         - scripts/audit_ruff_rules.py
         - docs/en/ruff-rule-audit.md

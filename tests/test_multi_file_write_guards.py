@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import tempfile
 import unittest
@@ -9,6 +10,8 @@ from lifetxt.webapp import create_app
 
 class MultiFileWriteGuardTests(unittest.TestCase):
     def setUp(self):
+        if importlib.util.find_spec("fastapi") is None:
+            self.skipTest("FastAPI is required for Web/MCP write guard tests")
         self.root = tempfile.mkdtemp()
         self.first = os.path.join(self.root, "first.life.txt")
         self.second = os.path.join(self.root, "second.life.txt")

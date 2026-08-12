@@ -4162,6 +4162,31 @@ traceability:
         fzf/TUI/CLI editor adapter path no longer calls it.
       status: implemented
 
+    - requirement_id: req-traceability-capability-mapping-drift-guard
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/341
+      pull_request: null
+      changed_files_or_scope:
+        - Extend the offline traceability gate to compare existing requirement-to-capability associations between base and head
+        - Require capability_remap_reason for intentional remaps while allowing new requirement chains
+        - tests/test_traceability_gate.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - accidental capability remap is rejected
+        - intentional remap with an explicit reason is accepted
+        - new requirement chains remain accepted
+        - capability association removal is rejected
+        - tests.test_traceability_gate
+        - tests.test_change_package_closeout
+      release_or_deployment: null
+      notes: >-
+        High assurance because this guard protects release evidence integrity.
+        It reuses cap-stable-release-governance and remains offline/deterministic;
+        it does not attempt semantic similarity checks for arbitrary prose.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

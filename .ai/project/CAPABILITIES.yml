@@ -281,6 +281,7 @@ capabilities:
       - req-stable-mcp-resource-boundary
       - req-stable-tui-layout-boundary
       - req-stable-test-extraction-preparation
+      - req-stable-archive-test-extraction
       - req-stable-server-review-extraction-preparation
     implementation_locations:
       - .github/workflows/ci.yml
@@ -328,6 +329,7 @@ capabilities:
       - CLI completion parser registration is delegated without changing command contracts
       - MCP resource validation and TUI layout helpers have compatibility-preserving module boundaries
       - Web asset, test extraction, and server review migration contracts are recorded
+      - archive CLI tests are independently discovered with the aggregate suite reduced by the moved cluster
       - workflow/project YAML and Ruff checks pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/339

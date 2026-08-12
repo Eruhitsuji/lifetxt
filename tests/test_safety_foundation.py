@@ -1,4 +1,5 @@
 import codecs
+import ast
 import json
 import os
 import socket
@@ -36,6 +37,17 @@ class SafetyFoundationTests(unittest.TestCase):
 
     def path(self, name):
         return os.path.join(self.temp_dir.name, name)
+
+    def test_ast_string_value_accepts_only_string_constants(self):
+        self.assertEqual(
+            "hello",
+            safety_foundation_module._ast_string_value(
+                ast.parse("'hello'", mode="eval").body
+            ),
+        )
+        self.assertIsNone(
+            safety_foundation_module._ast_string_value(ast.parse("1", mode="eval").body)
+        )
 
     def write(self, name, text, raw=False):
         path = self.path(name)

@@ -567,10 +567,10 @@ class ConfigRevisionTests(unittest.TestCase):
         first = self.seed()
         self.seed(port=9999)
         backups = sorted(n for n in os.listdir(self.temp.name) if ".bak" in n)
-        payloads = {
-            name: open(os.path.join(self.temp.name, name), "rb").read()
-            for name in backups
-        }
+        payloads = {}
+        for name in backups:
+            with open(os.path.join(self.temp.name, name), "rb") as handle:
+                payloads[name] = handle.read()
         with self.assertRaises(StaleConfigRevision):
             write_config(
                 self.path,
@@ -580,9 +580,8 @@ class ConfigRevisionTests(unittest.TestCase):
         after = sorted(n for n in os.listdir(self.temp.name) if ".bak" in n)
         self.assertEqual(backups, after)
         for name in backups:
-            self.assertEqual(
-                payloads[name], open(os.path.join(self.temp.name, name), "rb").read()
-            )
+            with open(os.path.join(self.temp.name, name), "rb") as handle:
+                self.assertEqual(payloads[name], handle.read())
 
     def test_non_ascii_round_trips(self):
         """The write bypasses atomic_write_text, so encoding is worth pinning."""

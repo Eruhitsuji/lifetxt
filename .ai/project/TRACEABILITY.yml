@@ -4567,6 +4567,177 @@ traceability:
         treating scaling changes as actionable.
       status: implemented
 
+    - requirement_id: req-stable-cli-decomposition-plan
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/353
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - docs/en/cli-decomposition-plan.md
+      tests_or_evidence:
+        - command-family inventory and coupling classification
+        - XS/S completion-command seam selected as follow-up #384
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        Standard assurance planning record; no CLI code movement or behavior
+        change is included in this batch.
+      status: implemented
+
+    - requirement_id: req-stable-deterministic-roundtrip
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/358
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - tests/test_randomized_roundtrip.py
+      tests_or_evidence:
+        - fixed random.Random(358) generates 128 records
+        - parser errors are rejected and canonical lines are stable after reparse
+        - tests.test_randomized_roundtrip and tests.test_roundtrip_golden pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance regression coverage; generation remains deterministic
+        and uses the existing strict parser and serializer contracts.
+      status: implemented
+
+    - requirement_id: req-stable-resource-warning-cleanup
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/362
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - tests/test_config_validation.py
+      tests_or_evidence:
+        - backup payload reads use context managers
+        - ResourceWarning-promoted focused tests pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance test hygiene fix with no runtime behavior change.
+      status: implemented
+
+    - requirement_id: req-stable-resource-warning-gate
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/363
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - .ai/project/COMMANDS.yml
+      tests_or_evidence:
+        - focused CI job promotes ResourceWarning to an error
+        - YAML parse and 98-test local focused run pass
+      release_or_deployment: null
+      notes: >-
+        Non-blocking regression gate that prevents recurrence in the selected
+        configuration, archive, and safety-foundation test scope.
+      status: implemented
+
+    - requirement_id: req-stable-ast-modernization
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/364
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - lifetxt/safety_foundation.py
+        - tests/test_safety_foundation.py
+      tests_or_evidence:
+        - AST string handling accepts only ast.Constant string values
+        - tests.test_safety_foundation passes
+      release_or_deployment: null
+      notes: >-
+        Standard assurance Python modernization with a focused compatibility
+        test and no supported input contract change.
+      status: implemented
+
+    - requirement_id: req-stable-actions-runtime-refresh
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/365
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - checkout/setup-python/upload-artifact/github-script action majors refreshed
+        - workflow YAML parses successfully
+      release_or_deployment: null
+      notes: >-
+        CI maintenance only; runtime package and support surface are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-oversized-file-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/366
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - config/maintainability/oversized-file-classification-v1.json
+        - docs/en/oversized-file-decomposition-audit.md
+      tests_or_evidence:
+        - current byte/line classification covers source and test hotspots
+        - decomposition owners and follow-up issues are recorded
+        - JSON parses and git diff --check passes
+      release_or_deployment: null
+      notes: >-
+        Informational maintainability inventory; no source movement or runtime
+        behavior change is included.
+      status: implemented
+
+    - requirement_id: req-stable-web-mcp-boundary-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/368
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - docs/en/web-mcp-service-boundary-audit.md
+      tests_or_evidence:
+        - every mcp.py webapp import is classified
+        - protocol-neutral ownership and compatibility rules are recorded
+        - follow-up #385 defines the first extraction seam
+      release_or_deployment: null
+      notes: >-
+        Standard assurance architecture inventory; no Web/MCP route, schema, or
+        write behavior is changed by this task.
+      status: implemented
+
+    - requirement_id: req-stable-oversized-file-report
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/375
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - scripts/report_oversized_files.py
+        - .ai/project/COMMANDS.yml
+        - docs/en/oversized-file-report.md
+        - docs/en/oversized-file-report.json
+      tests_or_evidence:
+        - report recomputes current bytes/lines and emits deltas
+        - report is informational and never fails solely on size
+        - Ruff and JSON/YAML checks pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance maintenance report; thresholds remain review inputs,
+        not a CI size gate.
+      status: implemented
+
+    - requirement_id: req-stable-release-security-review
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/361
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - docs/en/release-security-review.md
+      tests_or_evidence:
+        - bounded review covers release policy, dependencies, artifacts, remote/MCP, and write safety
+        - residual risks and follow-up issues are explicitly recorded
+        - limitations state that this is not a penetration test
+      release_or_deployment: null
+      notes: >-
+        High assurance review record. It identifies no new release-blocking
+        finding in the bounded repository review while retaining the need for
+        dependency refresh and real-environment evidence before release.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

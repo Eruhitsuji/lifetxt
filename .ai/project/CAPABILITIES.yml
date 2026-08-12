@@ -175,6 +175,7 @@ capabilities:
       - req-stable-format-migration-contract
       - req-stable-stable-contract-matrix
       - req-stable-external-environment-verification-plan
+      - req-stable-web-mcp-schema-validation
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md

@@ -42,7 +42,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/409
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/413
       changed_files_or_scope:
         - tests/test_stable_surface_schemas.py
         - docs/en/stable-web-mcp-schema-validation.md

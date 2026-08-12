@@ -2,6 +2,11 @@
 
 This batch adds dependency-free safety services before remote writes and Format 1.0 are declared stable.
 
+For the versioning, deprecation, migration, and stable-support boundary, see
+the [Stable compatibility policy](release-compatibility-policy.md). Format 1.0
+and `LIFETXT_CANON_V1` are covered contracts; experimental and deferred
+surfaces remain outside the stable promise.
+
 ## Revision-required operations
 
 `lifetxt.safe_ops` exposes seven operation contracts:

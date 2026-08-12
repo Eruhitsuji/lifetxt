@@ -4,7 +4,10 @@ import os
 import tempfile
 import unittest
 
-from jsonschema import Draft202012Validator
+try:
+    from jsonschema import Draft202012Validator
+except Exception:
+    Draft202012Validator = None
 
 from lifetxt.mcp import McpContext, call_tool
 from lifetxt.safety_foundation import schema_bundle
@@ -15,7 +18,10 @@ except Exception:
     TestClient = None
 
 
-@unittest.skipIf(TestClient is None, "web extras unavailable")
+@unittest.skipIf(
+    TestClient is None or Draft202012Validator is None,
+    "Web extras or jsonschema unavailable",
+)
 class StableSurfaceSchemaTests(unittest.TestCase):
     """Validate the bounded read-only Web/MCP envelope slice for #404."""
 

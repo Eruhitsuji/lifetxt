@@ -41,6 +41,9 @@ import subprocess
 import time
 from collections import OrderedDict
 from datetime import datetime, timezone
+from .server_update_review import classify_risk as _review_classify_risk
+from .server_update_review import format_review_block as _review_format_review_block
+from .server_update_review import gather_diff_summary as _review_gather_diff_summary
 
 
 class ServerUpdateError(Exception):
@@ -809,7 +812,7 @@ def _parse_name_status(text):
     return statuses
 
 
-def gather_diff_summary(run_git, repo_root, current, target, timeout):
+def _legacy_gather_diff_summary(run_git, repo_root, current, target, timeout):
     """Gather the raw material `classify_risk()` needs, via three git calls.
 
     The only impure part of risk classification -- everything downstream
@@ -871,7 +874,7 @@ def gather_diff_summary(run_git, repo_root, current, target, timeout):
     return {"files": files, "commit_messages": commit_messages}
 
 
-def classify_risk(
+def _legacy_classify_risk(
     diff_summary,
     trigger_paths=DEFAULT_RISK_TRIGGER_PATHS,
     trigger_keywords=DEFAULT_RISK_TRIGGER_KEYWORDS,
@@ -918,7 +921,7 @@ def classify_risk(
     }
 
 
-def format_review_block(report, server_config_path):
+def _legacy_format_review_block(report, server_config_path):
     """Render the paste-friendly LIFETXT_UPDATE_REVIEW block from `report`.
 
     `report` must already carry current_commit/target_commit/commit_count/
@@ -966,6 +969,29 @@ def format_review_block(report, server_config_path):
     )
     lines.append("===== LIFETXT_UPDATE_REVIEW_END =====")
     return "\n".join(lines)
+
+
+def gather_diff_summary(run_git, repo_root, current, target, timeout):
+    return _review_gather_diff_summary(
+        run_git, repo_root, current, target, timeout, ServerUpdateError
+    )
+
+
+def classify_risk(
+    diff_summary,
+    trigger_paths=DEFAULT_RISK_TRIGGER_PATHS,
+    trigger_keywords=DEFAULT_RISK_TRIGGER_KEYWORDS,
+):
+    return _review_classify_risk(
+        diff_summary,
+        trigger_paths,
+        trigger_keywords,
+        _LINE_COUNT_EXCLUDED_PREFIXES,
+    )
+
+
+def format_review_block(report, server_config_path):
+    return _review_format_review_block(report, server_config_path)
 
 
 def _git_helpers():

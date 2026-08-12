@@ -4738,6 +4738,84 @@ traceability:
         dependency refresh and real-environment evidence before release.
       status: implemented
 
+    - requirement_id: req-stable-mcp-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/369
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/mcp-decomposition-audit.md
+      tests_or_evidence:
+        - MCP responsibility clusters and compatibility risks are inventoried
+        - #387 selects the first read-resource extraction seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; protocol behavior and MCP write scope are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-tui-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/370
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/tui-decomposition-audit.md
+      tests_or_evidence:
+        - pure layout, state, rendering, and event-loop responsibilities are classified
+        - #390 selects the first pure helper extraction seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; Unicode/ASCII and terminal behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-test-suite-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/372
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/test-suite-decomposition-audit.md
+      tests_or_evidence:
+        - test responsibilities and existing focused module overlap are inventoried
+        - #388 selects the archive/config first extraction cluster
+      release_or_deployment: null
+      notes: >-
+        Investigation only; discovery and test semantics remain unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-server-update-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/374
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/server-update-decomposition-audit.md
+      tests_or_evidence:
+        - update phases, safety coupling, and test ownership are inventoried
+        - #389 selects pure diff/risk-review parsing as the first seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; update safety, diagnostics, and approval behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-cli-completion-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/384
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+      tests_or_evidence:
+        - completion parser registration is delegated to completion.py
+        - completion surfaces and parser-focused tests pass
+        - Ruff checks pass for changed Python files
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction preserving command names, flags,
+        output, and completion behavior.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

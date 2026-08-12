@@ -63,6 +63,11 @@ from .status_summary import latest_status_records
 from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
+from .web_read_service import find_item_by_id as _service_find_item_by_id
+from .web_read_service import limit_items as _service_limit_items
+from .web_read_service import read_life_inputs as _service_read_life_inputs
+from .web_read_service import sort_items as _service_sort_items
+from .web_read_service import sort_key_for_item as _service_sort_key_for_item
 from .web_assets import HTML_PAGE
 from .web_routes_git import register_git_routes
 
@@ -1937,7 +1942,7 @@ def auto_id_paths(paths, writable_path=None):
     return normalized
 
 
-def read_life_inputs(paths, config=None):
+def _legacy_read_life_inputs(paths, config=None):
     normalized = normalize_server_paths(paths)
     include_source = len(normalized) > 1
     id_key = id_key_from_config(config or {})
@@ -2244,7 +2249,7 @@ def public_tags_config(config):
     return data
 
 
-def sort_items(items, sort_key="line", order="asc"):
+def _legacy_sort_items(items, sort_key="line", order="asc"):
     reverse = str(order).lower() in ("desc", "descending", "-1")
     key_name = str(sort_key or "line").lower().replace("-", "_")
     supported = {
@@ -2275,7 +2280,7 @@ def sort_items(items, sort_key="line", order="asc"):
     return [entry[1] for entry in present + missing]
 
 
-def limit_items(items, limit):
+def _legacy_limit_items(items, limit):
     if limit in (None, ""):
         return items
     try:
@@ -2287,7 +2292,7 @@ def limit_items(items, limit):
     return items[:amount]
 
 
-def sort_key_for_item(item, key_name):
+def _legacy_sort_key_for_item(item, key_name):
     if key_name == "line":
         return (0, item.line if item.line is not None else 999999999)
     if key_name == "status":
@@ -2502,7 +2507,7 @@ def resolve_web_repeat_base(item, config):
     return str(repeat_base).strip().lower()
 
 
-def find_item_by_id(items, item_id, kind=None, key="id"):
+def _legacy_find_item_by_id(items, item_id, kind=None, key="id"):
     matches = []
     for item in items:
         if kind is not None and item.kind != kind:
@@ -2514,6 +2519,28 @@ def find_item_by_id(items, item_id, kind=None, key="id"):
     if len(matches) > 1:
         raise ValueError("Multiple items found with id:%s." % item_id)
     return matches[0]
+
+
+def read_life_inputs(paths, config=None):
+    return _service_read_life_inputs(
+        paths, config, normalize_server_paths, read_text, is_generated_path
+    )
+
+
+def sort_items(items, sort_key="line", order="asc"):
+    return _service_sort_items(items, sort_key, order)
+
+
+def sort_key_for_item(item, key_name):
+    return _service_sort_key_for_item(item, key_name)
+
+
+def limit_items(items, limit):
+    return _service_limit_items(items, limit)
+
+
+def find_item_by_id(items, item_id, kind=None, key="id"):
+    return _service_find_item_by_id(items, item_id, kind=kind, key=key)
 
 
 def append_item_to_file(path, item):

@@ -24,6 +24,15 @@ class TraceabilityGateResult:
 
 def evaluate_traceability_gate(root, base, head="HEAD", pr_url=None):
     changed_files = _changed_files(root, base, head)
+    drifted_requirement = _mapping_drift_without_reason(root, base, head)
+    if drifted_requirement:
+        return TraceabilityGateResult(
+            False,
+            "Existing traceability mapping changed without a "
+            "capability_remap_reason: "
+            + drifted_requirement,
+            changed_files=changed_files,
+        )
     code_changed = tuple(
         path for path in changed_files if path.startswith(CODE_CHANGE_PREFIXES)
     )
@@ -89,6 +98,49 @@ def _changed_files(root, base, head):
     return tuple(
         line.strip().replace("\\", "/") for line in output.splitlines() if line.strip()
     )
+
+
+def _traceability_mapping_records(root, revision):
+    """Read first-level requirement/capability records from one revision."""
+    output = _git(root, "show", "%s:%s" % (revision, TRACEABILITY_PATH))
+    records = {}
+    current = None
+    for line in output.splitlines():
+        if line.startswith("    - requirement_id:"):
+            requirement_id = line.split(":", 1)[1].strip()
+            current = {"capability_id": None, "remap_reason": ""}
+            records.setdefault(requirement_id, []).append(current)
+            continue
+        if current is None:
+            continue
+        if line.startswith("      capability_id:"):
+            current["capability_id"] = line.split(":", 1)[1].strip()
+        elif line.startswith("      capability_remap_reason:"):
+            current["remap_reason"] = line.split(":", 1)[1].strip()
+    return records
+
+
+def _mapping_drift_without_reason(root, base, head):
+    """Return the first changed requirement lacking an explicit remap reason."""
+    baseline = _traceability_mapping_records(root, base)
+    current = _traceability_mapping_records(root, head)
+    for requirement_id in sorted(set(baseline) & set(current)):
+        old_capabilities = {
+            record["capability_id"] for record in baseline[requirement_id]
+        }
+        new_records = current[requirement_id]
+        new_capabilities = {record["capability_id"] for record in new_records}
+        if old_capabilities == new_capabilities:
+            continue
+        for record in new_records:
+            if (
+                record["capability_id"] not in old_capabilities
+                and not record["remap_reason"]
+            ):
+                return requirement_id
+        if not new_records:
+            return requirement_id
+    return None
 
 
 def _added_traceability_lines(root, base, head):
@@ -211,7 +263,13 @@ class TraceabilityGatePolicyTests(unittest.TestCase):
         _git(self.root, "config", "user.email", "test@example.invalid")
         _git(self.root, "config", "user.name", "Traceability Gate Test")
         self.write(
-            TRACEABILITY_PATH, "schema_version: 1\ntraceability:\n  chains: []\n"
+            TRACEABILITY_PATH,
+            "schema_version: 1\n"
+            "traceability:\n"
+            "  chains:\n"
+            "    - requirement_id: req-existing\n"
+            "      capability_id: cap-original\n"
+            "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88\n"
         )
         self.write("lifetxt/__init__.py", "\n")
         self.write("tests/__init__.py", "\n")
@@ -250,6 +308,67 @@ class TraceabilityGatePolicyTests(unittest.TestCase):
 
         self.assertFalse(result.ok)
         self.assertIn("Code changed without updating", result.reason)
+
+    def test_existing_capability_remap_without_reason_fails(self):
+        self.write(
+            TRACEABILITY_PATH,
+            "schema_version: 1\n"
+            "traceability:\n"
+            "  chains:\n"
+            "    - requirement_id: req-existing\n"
+            "      capability_id: cap-replaced\n"
+            "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88\n",
+        )
+        self.commit("accidental capability remap")
+
+        result = self.evaluate()
+
+        self.assertFalse(result.ok)
+        self.assertIn("capability_remap_reason", result.reason)
+
+    def test_existing_capability_remap_with_reason_passes(self):
+        self.write(
+            TRACEABILITY_PATH,
+            "schema_version: 1\n"
+            "traceability:\n"
+            "  chains:\n"
+            "    - requirement_id: req-existing\n"
+            "      capability_id: cap-replaced\n"
+            "      capability_remap_reason: Approved by #341 after capability audit\n"
+            "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88\n",
+        )
+        self.commit("intentional capability remap")
+
+        result = self.evaluate()
+
+        self.assertTrue(result.ok, result)
+
+    def test_new_requirement_chain_does_not_require_remap_reason(self):
+        self.append(
+            TRACEABILITY_PATH,
+            "    - requirement_id: req-new\n"
+            "      capability_id: cap-new\n"
+            "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/89\n",
+        )
+        self.commit("add capability chain")
+
+        result = self.evaluate()
+
+        self.assertTrue(result.ok, result)
+
+    def test_existing_capability_removal_fails(self):
+        self.write(
+            TRACEABILITY_PATH,
+            "schema_version: 1\ntraceability:\n  chains:\n"
+            "    - requirement_id: req-existing\n"
+            "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/88\n",
+        )
+        self.commit("remove capability association")
+
+        result = self.evaluate()
+
+        self.assertFalse(result.ok)
+        self.assertIn("capability_remap_reason", result.reason)
 
     def test_deleted_code_without_traceability_update_fails(self):
         self.delete("lifetxt/__init__.py")

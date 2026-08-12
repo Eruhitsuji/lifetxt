@@ -58,6 +58,8 @@ capabilities:
       - req-stable-mcp-read-artifact-evidence
       - req-stable-optional-dependency-ranges
       - req-stable-release-artifact-evidence
+      - req-stable-dependency-security-audit
+      - req-stable-release-doc-parity
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -80,6 +82,8 @@ capabilities:
       - '#360 clean installed artifact MCP smoke covers read resources, JSON-RPC errors, and write-surface rejection'
       - '#349 optional Web/TUI ranges are documented and protected by metadata tests'
       - '#352 release artifacts have checksum, SBOM, and provenance evidence from one build'
+      - '#351 direct stable dependencies have point-in-time license and vulnerability evidence with scanner limitations'
+      - '#354 release-critical English and Japanese documentation has a recorded semantic-parity audit'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -93,6 +97,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/360
       - https://github.com/Eruhitsuji/lifetxt/issues/349
       - https://github.com/Eruhitsuji/lifetxt/issues/352
+      - https://github.com/Eruhitsuji/lifetxt/issues/351
+      - https://github.com/Eruhitsuji/lifetxt/issues/354
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333

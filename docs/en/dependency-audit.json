@@ -1,0 +1,87 @@
+{
+  "schema": "lifetxt-dependency-audit-v1",
+  "audit_date": "2026-08-12",
+  "package": {
+    "name": "lifetxt",
+    "version": "0.1.0"
+  },
+  "scope": {
+    "direct_requirements": [
+      "fastapi",
+      "textual",
+      "tzdata",
+      "uvicorn",
+      "watchdog"
+    ],
+    "optional_extras": [
+      "tui",
+      "web"
+    ],
+    "scanner_is_dev_only": true
+  },
+  "direct_dependencies": [
+    {
+      "requirement": "tzdata; sys_platform == 'win32'",
+      "name": "tzdata",
+      "installed_version": "2026.3",
+      "license": "Apache-2.0",
+      "url": "https://github.com/python/tzdata",
+      "license_disposition": "metadata indicates no release-blocking permissive license finding; retain legal review",
+      "status": "present"
+    },
+    {
+      "requirement": "fastapi>=0.95,<1.0",
+      "name": "fastapi",
+      "installed_version": "0.141.1",
+      "license": "MIT",
+      "url": "https://github.com/fastapi/fastapi",
+      "license_disposition": "metadata indicates no release-blocking permissive license finding; retain legal review",
+      "status": "present"
+    },
+    {
+      "requirement": "uvicorn[standard]>=0.22,<1.0",
+      "name": "uvicorn",
+      "installed_version": "0.52.1",
+      "license": "BSD-3-Clause",
+      "url": "https://uvicorn.dev/",
+      "license_disposition": "metadata indicates no release-blocking permissive license finding; retain legal review",
+      "status": "present"
+    },
+    {
+      "requirement": "textual>=0.24,<1.0",
+      "name": "textual",
+      "installed_version": "0.89.1",
+      "license": "MIT License",
+      "url": "https://github.com/Textualize/textual",
+      "license_disposition": "metadata indicates no release-blocking permissive license finding; retain legal review",
+      "status": "present"
+    },
+    {
+      "requirement": "watchdog>=3,<7",
+      "name": "watchdog",
+      "installed_version": "6.0.0",
+      "license": "Apache Software License",
+      "url": "https://github.com/gorakhargosh/watchdog",
+      "license_disposition": "metadata indicates no release-blocking permissive license finding; retain legal review",
+      "status": "present"
+    }
+  ],
+  "vulnerability_scan": {
+    "tool": "pip-audit",
+    "tool_version": "2.10.1",
+    "vulnerable_packages": [],
+    "vulnerable_package_count": 0,
+    "unscanned_packages": [
+      {
+        "name": "lifetxt",
+        "skip_reason": "Dependency not found on PyPI and could not be audited: lifetxt (0.1.0)"
+      }
+    ],
+    "unscanned_package_count": 1
+  },
+  "limitations": [
+    "The scan reports advisories known to the selected pip-audit service at audit time.",
+    "The local lifetxt package is not published to PyPI and is therefore unscanned by pip-audit.",
+    "License values are package metadata declarations, not legal advice."
+  ]
+}

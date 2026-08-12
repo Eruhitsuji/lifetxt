@@ -1,7 +1,11 @@
 import json
 import os
 import tempfile
-import tomllib
+
+try:
+    import tomllib
+except ImportError:  # Python 3.10 compatibility
+    import tomli as tomllib
 import unittest
 
 from lifetxt.release_policy import (

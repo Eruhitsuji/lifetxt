@@ -11,9 +11,13 @@ import platform
 import subprocess
 import sys
 import tempfile
-import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # Python 3.10 compatibility
+    import tomli as tomllib
 
 
 def _run(command, cwd):

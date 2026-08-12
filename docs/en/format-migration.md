@@ -17,3 +17,6 @@ Canonical whitespace, encoding, and Unicode normalization remain the separate
 responsibility of `format canon`. A future migration may add a source-version
 mapping only with representative fixtures, an explicit loss report, and a
 corpus/migration version decision.
+
+The current version decision and downgrade/legacy boundaries are recorded in
+the [Format 1.0 compatibility matrix](format-compatibility-matrix.md).

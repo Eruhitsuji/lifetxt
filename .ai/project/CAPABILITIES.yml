@@ -173,6 +173,7 @@ capabilities:
       - req-stable-release-doc-parity
       - req-stable-release-security-review
       - req-stable-format-migration-contract
+      - req-stable-format-compatibility-matrix
       - req-stable-stable-contract-matrix
       - req-stable-external-environment-verification-plan
       - req-stable-web-mcp-schema-validation

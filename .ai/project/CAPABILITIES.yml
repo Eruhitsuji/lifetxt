@@ -52,6 +52,7 @@ capabilities:
       - req-stable-release-gates
       - req-stable-release-roadmap-classification
       - req-delegated-mutation-release-scope
+      - req-traceability-capability-mapping-drift-guard
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -68,6 +69,7 @@ capabilities:
       - '#286 release gates separately define RC entry and stable promotion criteria'
       - '#287 roadmap classification maps current P0 and Format 1.0 compatibility work to release severity and child issues'
       - '#293 delegated mutation inventory classifies stable writable, experimental, read-only/disabled, and deferred adapter surfaces'
+      - '#341 traceability gate rejects unapproved existing requirement-to-capability remaps while allowing new chains and declared remaps'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -75,6 +77,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/286
       - https://github.com/Eruhitsuji/lifetxt/issues/287
       - https://github.com/Eruhitsuji/lifetxt/issues/293
+      - https://github.com/Eruhitsuji/lifetxt/issues/341
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333
@@ -99,7 +102,8 @@ capabilities:
       only stable-writable entries, while MCP write tools, Remote ticket writes,
       Web writes, Web git routes, provider side effects, and future plugin
       adapters remain experimental or deferred until their linked verification
-      issues close.
+      issues close. #341 extends this governance capability with an offline
+      guard against silent requirement-to-capability mapping drift.
     replacement:
       replaces: []
       replaced_by: null

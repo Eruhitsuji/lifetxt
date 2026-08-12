@@ -703,6 +703,7 @@ capabilities:
       - req-stable-parser-format-metadata
       - req-stable-diagnostic-matrix
       - req-stable-parser-end-span
+      - req-stable-parser-structural-spans
     implementation_locations:
       - lifetxt/parser.py
       - lifetxt/validator.py

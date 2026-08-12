@@ -5127,6 +5127,24 @@ traceability:
         or production-code changes; shared helper ownership moved with them.
       status: implemented
 
+    - requirement_id: req-stable-archive-test-extraction
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - tests/test_archive_cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests.test_archive_cli -> 7 tests passed
+        - tests.test_lifetxt.LifeTxtDirectiveTests -> 9 tests passed
+        - source suite discovery count reduced from 634 to 627; destination owns 7 archive tests
+      release_or_deployment: null
+      notes: >-
+        Archive CLI cluster moved with shared run_cli helper retained in the
+        aggregate test module; config cluster remains for a follow-up slice.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

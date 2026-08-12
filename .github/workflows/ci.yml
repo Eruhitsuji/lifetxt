@@ -147,6 +147,48 @@ jobs:
           if-no-files-found: warn
           path: windows-*.log
 
+  macos-core-smoke:
+    name: macOS core CLI smoke
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency-free package
+        shell: bash
+        run: python -m pip install -e . 2>&1 | tee macos-install.log
+
+      - name: Verify stable module and console entry points
+        shell: bash
+        run: |
+          python - <<'PY' 2>&1 | tee macos-python.log
+          from pathlib import Path
+
+          root = Path("macos smoke \u65e5\u672c\u8a9e")
+          root.mkdir()
+          source = root / "input with spaces.life.txt"
+          source.write_text('# [ ] T "macOS smoke"\\n', encoding="utf-8")
+          print(source)
+          PY
+          python -m lifetxt check "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-module.log
+          python -m lifetxt summary "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-console.log
+          python -m lifetxt config init -o "macos smoke 日本語/config.json" 2>&1 | tee macos-write-surface.log
+          test -f "macos smoke 日本語/config.json"
+
+      - name: Upload macOS smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-core-smoke
+          if-no-files-found: warn
+          path: macos-*.log
+
   release-gate:
     name: Required release policy and clean wheel
     runs-on: ubuntu-latest

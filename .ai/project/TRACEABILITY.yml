@@ -5088,6 +5088,27 @@ traceability:
       notes: No WSL or native Terminal result is claimed.
       status: implemented
 
+    - requirement_id: req-stable-web-analytics-route-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/393
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - lifetxt/web_routes_analytics.py
+        - lifetxt/webapp.py
+        - tests/test_web_routes_analytics.py
+      tests_or_evidence:
+        - tests.test_web_routes_analytics
+        - tests.test_lifetxt.LifeTxtWebApiTests
+        - tests.test_surface_runtime
+        - tests.test_web_assets
+      release_or_deployment: null
+      notes: >-
+        Six read-only analytics routes moved behind a registration boundary;
+        create_app, route contracts, middleware, and dependency-free imports
+        remain stable.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

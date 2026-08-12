@@ -4943,6 +4943,151 @@ traceability:
         Pure review helpers extracted without changing update orchestration.
       status: implemented
 
+    - requirement_id: req-stable-cui-test-decomposition-audit
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/373
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/cui-test-decomposition-audit.md
+      tests_or_evidence:
+        - CUI test responsibility inventory
+        - follow-up issue #395
+      release_or_deployment: null
+      notes: >-
+        Investigation record; no tests moved in this batch.
+      status: implemented
+
+    - requirement_id: req-stable-web-revision-observe-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/288
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-288-web-revision-observe.md
+      tests_or_evidence:
+        - redacted external observe-mode procedure and evidence format
+      release_or_deployment: null
+      notes: Real deployment evidence remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-web-client-revision-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/289
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-289-web-client-revisions.md
+      tests_or_evidence:
+        - client inventory and redacted precondition evidence format
+      release_or_deployment: null
+      notes: Supported client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-zero-legacy-write-window
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/290
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-290-zero-legacy-window.md
+      tests_or_evidence:
+        - observation-window pass/reset/blocked gate definition
+      release_or_deployment: null
+      notes: No qualifying external window is claimed.
+      status: implemented
+
+    - requirement_id: req-stable-required-revision-cutover
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/291
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-291-required-revision-cutover.md
+      tests_or_evidence:
+        - strict-mode pre-cutover and rollback checklist
+      release_or_deployment: null
+      notes: No production cutover is claimed.
+      status: implemented
+
+    - requirement_id: req-stable-web-revision-lifecycle
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/292
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-292-revision-lifecycle.md
+      tests_or_evidence:
+        - upgrade/rollback scenario matrix
+      release_or_deployment: null
+      notes: External lifecycle results remain outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-restart-recovery
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/297
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-297-attachment-restart.md
+      tests_or_evidence:
+        - interruption/chunk/retry observation matrix
+      release_or_deployment: null
+      notes: Real remote-client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-replay-recovery
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/298
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-298-attachment-replay.md
+      tests_or_evidence:
+        - crash/replay/compensation observation matrix
+      release_or_deployment: null
+      notes: Real remote-client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-bounds
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/299
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-299-attachment-bounds.md
+      tests_or_evidence:
+        - authorization/retention/size-bound evidence format
+      release_or_deployment: null
+      notes: Large-file and real-client coverage remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-filesystem-recovery-support
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/304
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-304-filesystem-support.md
+      tests_or_evidence:
+        - filesystem environment and interruption matrix
+      release_or_deployment: null
+      notes: No filesystem support claim is made before real testing.
+      status: implemented
+
+    - requirement_id: req-stable-windows-terminal-tui-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/312
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/stable-verification-312-windows-terminals.md
+      tests_or_evidence:
+        - WSL/Windows Terminal scenario and redaction rules
+      release_or_deployment: null
+      notes: No WSL or native Terminal result is claimed.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

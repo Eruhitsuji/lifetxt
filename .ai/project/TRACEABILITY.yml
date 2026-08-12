@@ -5151,6 +5151,26 @@ traceability:
         aggregate test module; config cluster remains for a follow-up slice.
       status: implemented
 
+    - requirement_id: req-stable-parser-format-metadata
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/319
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/401
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_parser_format_metadata.py
+      tests_or_evidence:
+        - current, unversioned, and unsupported format states are exposed by ParseResult
+        - existing tuple-unpacking parser callers remain compatible
+        - focused parser, safety foundation, runtime, and diagnostic tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S slice of #319. Parser metadata is authoritative for the
+        declared format state; mutation refusal and surface error behavior remain
+        on the existing safety/runtime contract.
+      status: implemented
+
     - requirement_id: req-stable-config-test-extraction
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339

@@ -21,6 +21,23 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-stable-external-environment-verification-plan
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/407
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/408
+      changed_files_or_scope:
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - procedure defines Windows, WSL, Linux, and macOS real-environment evidence
+        - evidence records commit, artifact hash, command, result, and sanitized metadata
+        - CI/subprocess evidence cannot satisfy OS support claims
+      release_or_deployment: null
+      notes: >-
+        Procedure definition only. Execution evidence remains a separate
+        release-gate activity.
+      status: planned
+
     - requirement_id: req-local-unittest-compatibility
       capability_id: cap-local-test-compatibility
       epic: null

@@ -4947,7 +4947,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/339
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/373
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/cui-test-decomposition-audit.md
       tests_or_evidence:
@@ -4962,7 +4962,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/288
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-288-web-revision-observe.md
       tests_or_evidence:
@@ -4975,7 +4975,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/289
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-289-web-client-revisions.md
       tests_or_evidence:
@@ -4988,7 +4988,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/290
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-290-zero-legacy-window.md
       tests_or_evidence:
@@ -5001,7 +5001,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/291
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-291-required-revision-cutover.md
       tests_or_evidence:
@@ -5014,7 +5014,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/292
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-292-revision-lifecycle.md
       tests_or_evidence:
@@ -5027,7 +5027,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/297
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-297-attachment-restart.md
       tests_or_evidence:
@@ -5040,7 +5040,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/298
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-298-attachment-replay.md
       tests_or_evidence:
@@ -5053,7 +5053,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/299
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-299-attachment-bounds.md
       tests_or_evidence:
@@ -5066,7 +5066,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/304
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-304-filesystem-support.md
       tests_or_evidence:
@@ -5079,7 +5079,7 @@ traceability:
       capability_id: cap-stable-external-verification-preparation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/312
-      pull_request: pending-final-pr
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
       changed_files_or_scope:
         - docs/en/stable-verification-312-windows-terminals.md
       tests_or_evidence:

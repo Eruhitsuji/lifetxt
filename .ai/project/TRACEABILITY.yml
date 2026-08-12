@@ -4313,6 +4313,55 @@ traceability:
         standard library plus the repository's configured build backend.
       status: implemented
 
+    - requirement_id: req-stable-dependency-security-audit
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/351
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - scripts/dependency_audit.py
+        - docs/en/dependency-security-audit.md
+        - docs/en/dependency-audit.json
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - pip-audit reports zero known vulnerable packages for the audited environment
+        - all stable direct requirements have installed version, declared license, and project URL evidence
+        - the local lifetxt package is retained as an explicit unscanned disposition
+        - Python 3.10-compatible TOML parsing and Ruff checks pass
+        - git diff --check and YAML parsing pass
+      release_or_deployment: >-
+        The JSON record is a dated RC input and must be regenerated when the
+        audited dependency environment changes.
+      notes: >-
+        High-assurance point-in-time evidence. pip-audit and pip-licenses are
+        development-only audit tools and their service or metadata limitations
+        remain recorded in the evidence document.
+      status: implemented
+
+    - requirement_id: req-stable-release-doc-parity
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/354
+      pull_request: pending-final-pr
+      changed_files_or_scope:
+        - docs/en/release-doc-parity-audit.md
+        - docs/en/
+        - docs/ja/
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - release-critical English/Japanese document pairs are enumerated and compared by claim category
+        - intentional non-parity for internal evidence records is recorded with rationale
+        - UTF-8 reads, YAML parsing, and git diff --check pass
+      release_or_deployment: >-
+        The parity audit is a release-documentation review record; it does not
+        translate internal design or machine-generated evidence verbatim.
+      notes: >-
+        Standard assurance documentation audit focused on stable user-facing
+        release claims, commands, boundaries, and safety guidance.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

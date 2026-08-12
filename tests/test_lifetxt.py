@@ -10109,7 +10109,7 @@ class LifeTxtFromMarkdownTests(unittest.TestCase):
         text = "# Heading\nSome paragraph.\n- [ ] Real task\n- Note without checkbox\n"
         out, err, rc = run_cli("from-markdown", "-", input_text=text)
         self.assertEqual(rc, 0)
-            items = [line for line in out.strip().splitlines() if line.startswith("[")]
+        items = [line for line in out.strip().splitlines() if line.startswith("[")]
         self.assertEqual(len(items), 1)
 
     def test_asterisk_bullet_supported(self):

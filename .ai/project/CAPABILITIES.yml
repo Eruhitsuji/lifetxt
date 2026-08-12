@@ -53,6 +53,7 @@ capabilities:
       - req-stable-release-roadmap-classification
       - req-delegated-mutation-release-scope
       - req-traceability-capability-mapping-drift-guard
+      - req-stable-public-compatibility-policy
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -70,6 +71,7 @@ capabilities:
       - '#287 roadmap classification maps current P0 and Format 1.0 compatibility work to release severity and child issues'
       - '#293 delegated mutation inventory classifies stable writable, experimental, read-only/disabled, and deferred adapter surfaces'
       - '#341 traceability gate rejects unapproved existing requirement-to-capability remaps while allowing new chains and declared remaps'
+      - '#356 compatibility policy defines stable versioning, public contract coverage, deprecation, and unsafe-compatibility exceptions'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -78,6 +80,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/287
       - https://github.com/Eruhitsuji/lifetxt/issues/293
       - https://github.com/Eruhitsuji/lifetxt/issues/341
+      - https://github.com/Eruhitsuji/lifetxt/issues/356
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333
@@ -103,7 +106,9 @@ capabilities:
       Web writes, Web git routes, provider side effects, and future plugin
       adapters remain experimental or deferred until their linked verification
       issues close. #341 extends this governance capability with an offline
-      guard against silent requirement-to-capability mapping drift.
+      guard against silent requirement-to-capability mapping drift. #356 adds
+      the first explicit stable compatibility promise, including versioning,
+      deprecation, migration, and experimental/deferred boundaries.
     replacement:
       replaces: []
       replaced_by: null

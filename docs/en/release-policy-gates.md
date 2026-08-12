@@ -2,6 +2,11 @@
 
 lifetxt releases are validated by a versioned, executable policy rather than by a collection of undocumented CI commands.
 
+The public compatibility promise is defined in
+[Stable compatibility policy](release-compatibility-policy.md). Release notes,
+upgrade guidance, and release-candidate reviews must use that policy together
+with the support matrix in `.ai/project/STABLE_RELEASE.yml`.
+
 ## Required GitHub Actions job
 
 The CI workflow contains the required job:

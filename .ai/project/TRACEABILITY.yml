@@ -4187,6 +4187,33 @@ traceability:
         it does not attempt semantic similarity checks for arbitrary prose.
       status: implemented
 
+    - requirement_id: req-stable-public-compatibility-policy
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/356
+      pull_request: null
+      changed_files_or_scope:
+        - Define stable package version semantics and the 1.0.0 compatibility boundary
+        - Inventory covered format, CLI, schema, diagnostic, configuration, and supported read-client contracts
+        - Define non-byte-stable human presentation and the deprecation lifecycle
+        - Record security/data-loss exceptions and experimental/deferred exclusions
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - docs/en/release-compatibility-policy.md
+        - docs/en/release-policy-gates.md
+        - docs/en/release-safety-foundations.md
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml, .ai/project/CAPABILITIES.yml, and .ai/project/TRACEABILITY.yml
+        - release policy check command
+        - documentation references point to release-compatibility-policy.md
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        Standard assurance documentation and governance change. The policy
+        defines the compatibility boundary without changing current public
+        behavior; English/Japanese semantic parity remains tracked by #354.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

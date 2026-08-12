@@ -99,6 +99,12 @@ def generate(root, output):
                 "installed_version": installed,
                 "license": row.get("License") if row else None,
                 "url": row.get("URL") if row else None,
+                "license_disposition": (
+                    "metadata indicates no release-blocking permissive license finding;"
+                    " retain legal review"
+                    if row
+                    else "pending until package is installed"
+                ),
                 "status": "present" if row else "not-installed",
             }
         )

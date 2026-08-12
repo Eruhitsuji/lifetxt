@@ -50,6 +50,7 @@ traceability:
         - GET /api/items and MCP list_items success/error responses are exercised
         - item payloads validate against item-v1.schema.json
         - existing diagnostic key variants and remaining schema mismatch are explicit
+        - tests/test_stable_surface_schemas.py asserts the item-v1 schema id and title
       release_or_deployment: null
       notes: >-
         Bounded read-only slice only. Writable, browser, Remote, and deferred

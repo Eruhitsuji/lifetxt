@@ -59,6 +59,7 @@ capabilities:
       - req-stable-windows-terminal-tui-verification
       - req-stable-external-verification-automation
       - req-external-verification-redaction-hardening
+      - req-verification-python-bootstrap
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -76,11 +77,19 @@ capabilities:
       - scripts/run_external_verification.py
       - tests/test_external_verification.py
       - .ai/project/changes/issue-425-external-verification-automation/
+      - scripts/verification_python_bootstrap.py
+      - tests/test_verification_python_bootstrap.py
+      - scripts/verify-external.ps1
+      - scripts/verify-external.sh
     public_interfaces:
       - redacted external verification record format
       - CUI completion-test extraction boundary #395
       - python scripts/run_external_verification.py
       - one-file sanitized external-verification JSON bundle
+      - .\scripts\verify-external.ps1
+      - ./scripts/verify-external.sh
+      - lifetxt.verification_python_bootstrap.ensure_verification_python
+      - lifetxt.verification_python_bootstrap.create_verification_venv
     tests_or_evidence:
       - issue-scoped runbooks identify environment, procedure, observations, and redaction rules
       - #373 inventory selects a bounded completion-test extraction
@@ -95,6 +104,13 @@ capabilities:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2427 tests, 1 pre-existing unrelated failure (the separately-tracked/fixed #432 git-encoding test bug, not present on this branch since #432 landed separately), all other 2426 tests OK'
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff check scripts/run_external_verification.py tests/test_external_verification.py -> All checks passed
+      - "tests/test_verification_python_bootstrap.py: host_key normalization, existing-interpreter discovery priority (3.12 preferred over 3.10) and rejection of unsupported-only versions, Windows py-launcher probing, managed-Python provision (verified download+extract, reuse-without-redownload, checksum-mismatch rejection before extraction, unsupported host/arch and download-failure both return blocked without a crash), venv creation/reuse, and bootstrap-path redaction under the existing <repo> marker -> 18 tests, OK"
+      - "live end-to-end on this Windows host: gh api against astral-sh/python-build-standalone's real latest release resolved tag 20260807; downloaded the real Windows 3.12.13 install_only asset via provision_managed_python() itself (not raw curl/tar), confirmed its SHA256 matched the manifest exactly, extracted it, and ran the resulting python.exe --version -> Python 3.12.13; a second call reused the install (0.0s, reused: true) instead of re-downloading"
+      - "live on WSL: find_existing_interpreter() correctly discovered python3.10 on PATH; create_verification_venv() surfaced a real CalledProcessError from a host missing python3-venv's ensurepip support; the wrapped try/except in build_bundle() correctly degraded to a blocked release-profile check with the real redacted ensurepip error message instead of crashing the collector (release_profile=blocked, exit=0, valid evidence JSON written)"
+      - "found and fixed three real defects during this live testing: _managed_python_executable() assumed a flat archive layout instead of python-build-standalone's python/ wrapper directory (also caused reuse-check to always miss and re-download every call); two test assertions checked Path.exists() after their tempfile.TemporaryDirectory() context had already deleted the directory (always-false tautologies); an uncaught subprocess.CalledProcessError from venv creation on a real ensurepip-less host would have crashed the entire collector before writing any evidence"
+      - python -m unittest tests.test_verification_python_bootstrap tests.test_external_verification -> Ran 31 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2453 tests, OK (skipped=5)'
+      - scripts/validate_release_docs.py passes against the updated external-environment-verification.md
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -110,10 +126,12 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/312
       - https://github.com/Eruhitsuji/lifetxt/issues/425
       - https://github.com/Eruhitsuji/lifetxt/issues/430
+      - https://github.com/Eruhitsuji/lifetxt/issues/435
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
       - https://github.com/Eruhitsuji/lifetxt/pull/434
+      - https://github.com/Eruhitsuji/lifetxt/pull/436
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       External-environment preparation now includes dependency-free host evidence
@@ -137,6 +155,38 @@ capabilities:
       before the write. Regenerating fresh Windows/WSL bundles after this fix
       (#430's own last acceptance criterion) is external-environment work outside
       this sandbox and remains open.
+      #435 found that #429's native-Ubuntu discovery generalizes beyond a single
+      cp932-style encoding defect: the collector's release-profile invocation
+      always used sys.executable, so a host whose only available Python was not
+      one of the stable-release matrix's three supported versions (3.10/3.11/3.12)
+      could not run the flow at all, and a venv does not fix this since it
+      inherits its creator's version. Fixed with a new pure-stdlib
+      scripts/verification_python_bootstrap.py module (no new runtime
+      dependency, since it must run under any host Python including unsupported
+      ones): it prefers an already-installed supported interpreter (search order
+      3.12 -> 3.11 -> 3.10, via the Windows py launcher or PATH probing, always
+      checking the *reported* version rather than trusting the executable name),
+      and otherwise provisions a verification-only interpreter from a pinned,
+      SHA256-verified python-build-standalone release into
+      .cache/lifetxt-verify-python/ -- never touching the host's system Python
+      and never requiring administrator/root privileges on the normal path.
+      Checksum verification happens strictly before any archive extraction; a
+      mismatch is rejected and nothing is extracted. Two new one-command entry
+      scripts (scripts/verify-external.ps1, scripts/verify-external.sh) find any
+      Python 3 on the host to hand off to the collector, which then bootstraps a
+      supported interpreter itself; a host with literally no Python 3 remains an
+      explicit blocked/manual case. Escalated from the issue's preferred S size
+      to M with justification recorded in the PR, per the issue's own explicit
+      allowance, given the genuine cross-platform download/verify/extract scope.
+      Real end-to-end verification (not mocked) was performed on this Windows
+      host (actual download, checksum match, extraction, and python.exe
+      --version) and on real WSL (actual interpreter discovery and a genuine
+      ensurepip-less venv-creation failure correctly degrading to blocked rather
+      than crashing the collector, matching this capability's established
+      graceful-degradation design). Real re-verification on native Linux and
+      macOS after merge remains external-environment work outside this sandbox
+      and is recorded as open, matching the pattern already established for
+      #429/#430/#432.
     replacement:
       replaces: []
       replaced_by: null

@@ -1,6 +1,11 @@
+import contextlib
+import io
 import json
+import os
+import tempfile
 import unittest
 
+from lifetxt import entrypoint
 from lifetxt.parser import parse_text
 from lifetxt.links import (
     backlink_records,
@@ -368,6 +373,131 @@ class LinkGraphExportTests(unittest.TestCase):
         self.assertEqual(len(records), len(lines))
         for line, record in zip(lines, records):
             self.assertEqual(record, json.loads(line))
+
+
+class CrossFileLinkIntegrityTests(unittest.TestCase):
+    """Cross-file parent/link resolution, cycle detection, and source-metadata
+    preservation (#421, the remaining scope from #322 after #415/#416/#417
+    shipped).
+
+    `link_records`/`reference_diagnostics` operate on the merged item list
+    the CLI already builds from every loaded file (`cli.py::_parse_life_inputs`
+    calls `_set_source` per file, then extends one combined `items` list), so
+    they have no per-file boundary to begin with -- verified live against two
+    real files via `lifetxt links` before writing these tests. These tests
+    exercise the same mechanism directly against two independently-parsed
+    item lists carrying distinct `.source` values, matching how the CLI
+    actually tags multi-file input.
+    """
+
+    def _two_files(self, text_a, text_b, source_a="a.life.txt", source_b="b.life.txt"):
+        items_a, _diagnostics_a = parse_text(text_a)
+        items_b, _diagnostics_b = parse_text(text_b)
+        for item in items_a:
+            item.source = source_a
+        for item in items_b:
+            item.source = source_b
+        return items_a + items_b
+
+    def test_cross_file_parent_reference_resolves_and_preserves_source(self):
+        items = self._two_files(
+            "[ ] T Parent id:parent\n",
+            "[ ] T Child id:child parent:parent\n",
+        )
+        records = link_records(items, relations=["parent"])
+        self.assertEqual(1, len(records))
+        record = records[0]
+        self.assertEqual("ok", record["status"])
+        self.assertEqual("child", record["source_id"])
+        self.assertEqual("parent", record["target_id"])
+        # The explicit source-metadata-preservation assertion #421 asks for:
+        # each side of the cross-file link carries its own originating file,
+        # not the other side's or a shared/blank value.
+        self.assertEqual("b.life.txt:1", record["source_location"])
+        self.assertEqual("a.life.txt:1", record["target_location"])
+
+    def test_cross_file_parent_cycle_is_detected(self):
+        items = self._two_files(
+            "[ ] T A id:a parent:b\n",
+            "[ ] T B id:b parent:a\n",
+        )
+        diagnostics = reference_diagnostics(items)
+        matches = [d for d in diagnostics if d.code == "W217"]
+        self.assertEqual(1, len(matches))
+        self.assertIn("a -> b -> a", matches[0].message)
+
+    def test_cross_file_depends_on_cycle_is_detected(self):
+        items = self._two_files(
+            "[ ] T A id:a depends_on:b\n",
+            "[ ] T B id:b depends_on:a\n",
+        )
+        diagnostics = reference_diagnostics(items)
+        self.assertTrue(any(d.code == "W227" for d in diagnostics))
+
+    def test_cross_file_missing_reference_names_the_referencing_source(self):
+        items = self._two_files(
+            "[ ] T A id:a\n",
+            "[ ] T B id:b depends_on:nope\n",
+        )
+        diagnostics = reference_diagnostics(items)
+        matches = [d for d in diagnostics if d.code == "W215"]
+        self.assertEqual(1, len(matches))
+        self.assertEqual("b.life.txt", matches[0].source)
+
+
+class TicketEventCrossFileResolutionTests(unittest.TestCase):
+    """Direct (non-archive) ticket/event cross-file `parent:` resolution
+    (#421's last remaining criterion). `tests/test_project_archive.py`
+    already covers this relationship, but only inside the `project archive`
+    workflow; this drives an ordinary multi-file `lifetxt links` invocation
+    over two real files with no archiving involved, matching the live CLI
+    verification done before writing this test.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="lifetxt-links-")
+        self.root = self.temp.name
+        self.addCleanup(self.temp.cleanup)
+
+    def write(self, name, text):
+        path = os.path.join(self.root, name)
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        return path
+
+    def run_command(self, argv):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = entrypoint.main(argv)
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    def test_ticket_event_parent_resolves_across_files_without_archive(self):
+        tickets = self.write(
+            "tickets.life.txt",
+            "[ ] T Fix_the_bug id:TK-1 tracker:bug project:Web\n",
+        )
+        history = self.write(
+            "history.life.txt",
+            "[N] N Investigated_root_cause record:ticket_event id:EV-1 "
+            "parent:TK-1 event:comment author:local at:2026-01-01T00:00:00Z "
+            "sequence:1 transaction:tx1 ticket_revision:1\n",
+        )
+
+        code, stdout, stderr = self.run_command(
+            ["links", tickets, history, "--relation", "parent", "--format", "json"]
+        )
+
+        self.assertEqual(0, code, stderr)
+        records = json.loads(stdout)
+        self.assertEqual(1, len(records))
+        record = records[0]
+        self.assertEqual("parent", record["relation"])
+        self.assertEqual("ok", record["status"])
+        self.assertEqual("EV-1", record["source_id"])
+        self.assertEqual("TK-1", record["target_id"])
+        self.assertTrue(record["source_location"].endswith("history.life.txt:1"))
+        self.assertTrue(record["target_location"].endswith("tickets.life.txt:1"))
 
 
 if __name__ == "__main__":

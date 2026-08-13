@@ -279,6 +279,20 @@ references. `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`,
 Commands such as `check`, `links`, `ids`,
 `to-json`, and `to-jsonl` use this same input set, so pass every related file
 or configure shared paths when you want cross-file references to resolve.
+Reference cycle detection (`parent:`, `depends_on:`/`blocks:`,
+`duplicate_of:`, `replaced_by:`) also spans every loaded file, not just the
+file the cycle happens to start in.
+
+A missing or permission-denied file among multiple input sources fails the
+entire operation before any output is produced. The error names the failing
+path (via the underlying OS error) and the command exits non-zero; the
+remaining, readable sources are never partially read or reported on. This is
+enforced once, uniformly, for every command by `lifetxt`'s top-level entry
+point rather than per command. A symlinked input file is read like any other
+file rather than silently skipped; because path deduplication compares
+absolute paths rather than resolving symlinks, a symlink and the real file it
+points at are treated as two distinct sources if both are passed, which
+correctly produces a duplicate-ID warning rather than silently merging them.
 
 ### 2.2 Output Paths
 

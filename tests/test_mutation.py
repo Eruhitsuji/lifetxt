@@ -443,5 +443,60 @@ class AtomicReplaceRetryTests(unittest.TestCase):
         sleep.assert_not_called()
 
 
+class _FakeConsoleStream:
+    """Mimics a real TextIOWrapper: raises UnicodeEncodeError like a narrow
+    console codec. Matches tests/test_check_release_policy_cli.py's fixture
+    for the same _write_stdout pattern (#95), now shared via
+    atomic.write_console_text (#429)."""
+
+    def __init__(self, encoding):
+        self.encoding = encoding
+        self.written = []
+
+    def write(self, text):
+        text.encode(self.encoding)
+        self.written.append(text)
+        return len(text)
+
+
+class WriteConsoleTextTests(unittest.TestCase):
+    """atomic.write_console_text: degrade gracefully on a narrow console
+    codec instead of crashing the command (#429)."""
+
+    def test_utf8_stream_receives_text_unchanged(self):
+        stream = _FakeConsoleStream("utf-8")
+        atomic.write_console_text(stream, "note ↵ end\n")
+        self.assertEqual(stream.written, ["note ↵ end\n"])
+
+    def test_narrow_codec_stream_falls_back_instead_of_raising(self):
+        stream = _FakeConsoleStream("cp932")
+        atomic.write_console_text(stream, "note ↵ end\n")
+        self.assertEqual(1, len(stream.written))
+        written = stream.written[0]
+        self.assertNotIn("↵", written)
+        self.assertIn("note ", written)
+        self.assertIn(" end\n", written)
+
+    def test_narrow_codec_stream_leaves_encodable_text_unchanged(self):
+        stream = _FakeConsoleStream("cp932")
+        atomic.write_console_text(stream, "plain ascii text\n")
+        self.assertEqual(stream.written, ["plain ascii text\n"])
+
+    def test_stream_with_no_encoding_attribute_falls_back_to_ascii(self):
+        class _NoEncodingStream:
+            def __init__(self):
+                self.written = []
+
+            def write(self, text):
+                text.encode("ascii")
+                self.written.append(text)
+                return len(text)
+
+        stream = _NoEncodingStream()
+        atomic.write_console_text(stream, "note ↵ end\n")
+        self.assertEqual(1, len(stream.written))
+        self.assertNotIn("↵", stream.written[0])
+
+
 if __name__ == "__main__":
     unittest.main()

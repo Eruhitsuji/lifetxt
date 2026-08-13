@@ -1,0 +1,24 @@
+schema_version: 1
+
+requirements:
+  - id: req-stable-external-verification-automation
+    kind: ADDED
+    statement: >-
+      A supported host operator can run one dependency-free Python command that
+      executes the existing mechanical release verification, captures complete
+      output and sanitized host evidence, and writes one self-contained JSON
+      bundle without falsely satisfying interactive or external evidence gates.
+    acceptance_criteria:
+      - Windows, WSL, Linux, and macOS use the same Python runner on Python 3.10 or newer.
+      - The default run reuses scripts/run_ci_like.py --profile release.
+      - One JSON file contains metadata, command stdout/stderr, exit codes, durations, tool probes, artifact hashes, and incomplete external scenarios.
+      - Usernames, home paths, repository paths, temporary paths, credentials, tokens, and secret-bearing values are redacted before persistence.
+      - Missing tools and non-automatable scenarios remain blocked, skipped, or manual_required rather than passed by inference.
+      - The runner adds no lifetxt runtime dependency.
+    constraints:
+      - Python standard library only.
+      - subprocess argument lists only; no untrusted shell interpolation.
+      - evidence semantics from issue #407 remain authoritative.
+    owner: Eruhitsuji
+
+open_questions: []

@@ -1,0 +1,118 @@
+name: Issue 427 closeout
+
+on:
+  push:
+    branches:
+      - agent/issue-427-closeout-425
+    paths:
+      - .github/workflows/issue-427-closeout.yml
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/issue-427-closeout-425
+          fetch-depth: 0
+      - name: Apply closeout metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          change_path = Path('.ai/project/changes/issue-425-external-verification-automation/change.yml')
+          change = change_path.read_text(encoding='utf-8')
+          old_status = '  status: in_review\n'
+          if old_status not in change:
+              raise SystemExit('expected in_review status not found')
+          change_path.write_text(change.replace(old_status, '  status: implemented\n', 1), encoding='utf-8')
+
+          verification_path = Path('.ai/project/changes/issue-425-external-verification-automation/verification.yml')
+          verification = '''schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest -v /mnt/data/lifetxt425/test_external_verification.py
+      requirement_ids:
+        - req-stable-external-verification-automation
+      status: passed
+      result: Ran 6 tests; OK.
+      commit: local-draft-before-repository-commit
+    - type: integration
+      command: python scripts/run_external_verification.py --skip-release --output .cache/bundle.json in a disposable local git fixture
+      requirement_ids:
+        - req-stable-external-verification-automation
+      status: passed
+      result: One JSON bundle written; 40-character git SHA recorded; fixture path redacted; external scenarios remained blocked/manual_required.
+      commit: local-draft-before-repository-commit
+    - type: ci
+      command: GitHub Actions CI run 31668500738 on PR #426 final head
+      requirement_ids:
+        - req-stable-external-verification-automation
+      status: passed
+      result: >-
+        Final PR-head CI completed successfully. Windows and macOS core smoke,
+        Python 3.10/3.11/3.12 Web-extra jobs, Python 3.12 no-Web coverage,
+        Web/TUI dependency compatibility bands, static typing, release docs,
+        ResourceWarning, coverage, and required release-policy/clean-wheel gates
+        all passed.
+      commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
+      executed_at: '2026-08-13'
+  gaps:
+    - >-
+      PR #426 has no submitted GitHub pull-request reviews. Separate independent
+      implementation and integration review evidence therefore was not captured
+      before merge. Merge authority approval is evidenced by merge commit
+      f9e5255e2256dba4d74d9f787b1a0e1781c51417, but it is not substituted for
+      independent review evidence.
+
+review_ledger:
+  - reviewer: not-recorded-before-merge
+    review_type: implementation
+    target_commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
+    result: not_recorded
+    finding_count: null
+    completed_at: null
+    notes: No submitted GitHub PR review exists on PR #426.
+  - reviewer: not-recorded-before-merge
+    review_type: integration
+    target_commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
+    result: not_recorded
+    finding_count: null
+    completed_at: null
+    notes: No submitted GitHub PR review exists on PR #426.
+
+release_evidence:
+  migration_notes: No runtime or data migration.
+  rollback_plan: Revert PR #426; generated `.cache/` evidence files are disposable and ignored.
+  operations_evidence:
+    - PR #426 merged as f9e5255e2256dba4d74d9f787b1a0e1781c51417.
+    - Final PR-head GitHub Actions CI run 31668500738 passed on 6482ddaf886020260b2c2148f52d830fa63c70f5.
+    - The tool deliberately cannot approve release/deployment/support classification.
+    - Real environment executions remain tracked by the dedicated stabilization issues.
+'''
+          verification_path.write_text(verification, encoding='utf-8')
+
+          todo_path = Path('todo.md')
+          todo = todo_path.read_text(encoding='utf-8')
+          old_header = 'Last updated: 2026-08-13 (updated x131)'
+          new_header = 'Last updated: 2026-08-13 (updated x132)'
+          if old_header not in todo:
+              raise SystemExit('expected todo.md update header not found')
+          todo_path.write_text(todo.replace(old_header, new_header, 1), encoding='utf-8')
+
+          Path('.github/workflows/issue-427-closeout.yml').unlink()
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .ai/project/changes/issue-425-external-verification-automation/change.yml \
+            .ai/project/changes/issue-425-external-verification-automation/verification.yml \
+            todo.md .github/workflows/issue-427-closeout.yml
+          git diff --cached --check
+          git commit -m "Close out issue 425 verification record (#427)"
+          git push origin HEAD:agent/issue-427-closeout-425

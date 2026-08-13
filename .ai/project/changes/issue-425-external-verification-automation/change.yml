@@ -3,13 +3,13 @@ schema_version: 1
 change:
   id: issue-425-external-verification-automation
   title: Automate cross-platform external verification evidence collection
-  status: in_progress
+  status: in_review
   change_type: Operations
   assurance_level: High
   owner: Codex
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/425
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/426
   base_commit: c8c82b9416de189e7de9aefecd06f9bc7a6e8e88
   target_release: first-stable
 

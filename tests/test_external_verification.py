@@ -29,7 +29,7 @@ class PlatformClassificationTests(unittest.TestCase):
 
 
 class RedactionTests(unittest.TestCase):
-    def test_redacts_repo_home_temp_and_secrets(self):
+    def test_redacts_repo_home_temp_usernames_and_secrets(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
             repo.mkdir()
@@ -41,16 +41,20 @@ class RedactionTests(unittest.TestCase):
             redact = module.make_redactor(repo, env=env)
             text = (
                 f"{repo}/file /home/alice/x {tempfile.gettempdir()}/work "
+                "user=alice C:\\Users\\alice\\work "
                 "Authorization: Bearer xyz token=abc super-secret-token"
             )
             result = redact(text)
             self.assertNotIn(str(repo), result)
             self.assertNotIn("/home/alice", result)
+            self.assertNotIn("user=alice", result)
+            self.assertNotIn("\\alice\\", result)
             self.assertNotIn("super-secret-token", result)
             self.assertNotIn("Bearer xyz", result)
             self.assertNotIn("token=abc", result)
             self.assertIn("<repo>", result)
             self.assertIn("<home>", result)
+            self.assertIn("<redacted-user>", result)
             self.assertIn("<redacted-secret>", result)
 
 

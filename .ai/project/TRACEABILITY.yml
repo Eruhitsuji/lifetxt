@@ -5700,6 +5700,73 @@ traceability:
         remains open.
       status: implemented
 
+    - requirement_id: req-verification-python-bootstrap
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/435
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/verification_python_bootstrap.py
+        - tests/test_verification_python_bootstrap.py
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - scripts/verify-external.ps1
+        - scripts/verify-external.sh
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - tests/test_verification_python_bootstrap.py (18 tests: host_key normalization, existing-interpreter discovery priority and unsupported-only rejection, Windows py-launcher probing, managed-Python provision including verified download+extract/reuse/checksum-mismatch-rejection-before-extraction/unsupported-host/download-failure, venv creation/reuse, bootstrap-path redaction under the existing <repo> marker)
+        - tests/test_external_verification.py: two new tests asserting a venv-creation failure degrades to a blocked release-profile check rather than crashing the collector, and that a bootstrap failure blocks the release profile without a fabricated pass
+        - python -m unittest tests.test_verification_python_bootstrap tests.test_external_verification -> Ran 31 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2453 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check / ruff format --check on every new and changed file -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - scripts/validate_release_docs.py passes against the updated docs/en/external-environment-verification.md
+        - 'live end-to-end on this Windows host: gh api resolved astral-sh/python-build-standalone''s real latest release tag (20260807); provision_managed_python() itself (not raw curl/tar) downloaded the real Windows 3.12.13 install_only asset, confirmed its SHA256 matched the manifest, extracted it, and ran the resulting python.exe --version -> Python 3.12.13; a second call reused the install (reused: true) instead of re-downloading'
+        - 'live on WSL: find_existing_interpreter() discovered a real python3.10 on PATH; create_verification_venv() surfaced a real CalledProcessError from this host''s missing python3-venv ensurepip support; the wrapped try/except in build_bundle() correctly degraded to a blocked release-profile check with the real redacted error message instead of crashing, and the collector still wrote valid evidence JSON (exit=0)'
+      release_or_deployment: null
+      notes: >-
+        Generalizes #429's finding: the collector's release-profile invocation
+        always used sys.executable, so a host whose only available Python was
+        not one of the stable-release matrix's three supported versions
+        (3.10/3.11/3.12) could not run the flow at all, and a venv does not fix
+        this since it inherits its creator's version. scripts/verification_python_bootstrap.py
+        is pure stdlib (no new runtime dependency) since it must run under any
+        host Python, including unsupported ones, to find or provision a
+        supported one. It prefers an already-installed supported interpreter
+        (search order 3.12 -> 3.11 -> 3.10, checking the *reported* version
+        rather than trusting the executable name) and otherwise provisions a
+        verification-only interpreter from a pinned, SHA256-verified
+        python-build-standalone release into .cache/lifetxt-verify-python/ --
+        checksum verification happens strictly before any archive extraction,
+        and a mismatch is rejected without extracting anything. No new
+        redaction category was needed: .cache/ lives inside repo_root, which
+        the existing <repo> marker from #430 already covers, verified by a
+        dedicated regression test rather than assumed. Two new one-command
+        entry scripts (scripts/verify-external.ps1, scripts/verify-external.sh)
+        find any Python 3 already on the host to hand off to the collector,
+        which then bootstraps a supported interpreter itself; a host with
+        literally no Python 3 remains an explicit blocked/manual case.
+        Escalated from the issue's preferred S size to M, per the issue's own
+        explicit allowance, given the genuine cross-platform download/verify/
+        extract scope; justification recorded here and in the PR rather than
+        forced smaller. Three real defects were found and fixed during live
+        (non-mocked) testing rather than by inspection alone:
+        _managed_python_executable() assumed a flat archive layout instead of
+        python-build-standalone's python/ wrapper directory (which had also
+        broken the reuse check, causing a re-download on every call); two test
+        assertions checked Path.exists() after their own
+        tempfile.TemporaryDirectory() context had already deleted the
+        directory (always-false tautologies); and an uncaught
+        subprocess.CalledProcessError from venv creation on a real
+        ensurepip-less host would have crashed the entire collector before any
+        evidence was written, fixed by wrapping that call site in build_bundle()
+        with a try/except that degrades to a blocked check, matching this
+        capability's established graceful-degradation design. Real
+        re-verification on native Linux and macOS after merge remains
+        external-environment work outside this sandbox and is recorded as
+        open, matching the pattern already established for #429/#430/#432.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

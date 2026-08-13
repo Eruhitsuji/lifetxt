@@ -1694,12 +1694,14 @@ capabilities:
       - req-reference-keys-duplicate-replaced-coverage
       - req-extended-reference-cycle-detection
       - req-links-module-test-coverage
+      - req-multi-file-link-metadata-missing-source-integrity
     implementation_locations:
       - lifetxt/model.py
       - lifetxt/links.py
       - lifetxt/diagnostic_contract.py
       - lifetxt/validator.py
       - tests/test_links.py
+      - tests/test_paths.py
       - docs/en/ai-integration.md
       - docs/en/cli.md
       - docs/en/life-hub.md
@@ -1732,14 +1734,21 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check lifetxt tests scripts
       - ruff check lifetxt tests scripts -> All checks passed
+      - "tests/test_links.py CrossFileLinkIntegrityTests (4 tests): cross-file parent: resolution with explicit per-side source_location/target_location assertions, cross-file parent: and depends_on: cycle detection, cross-file missing-reference diagnostics naming the referencing file"
+      - "tests/test_links.py TicketEventCrossFileResolutionTests (1 test): direct (non-archive) record:ticket_event parent: resolution across two real files via lifetxt links, distinct from tests/test_project_archive.py's archive-workflow-scoped coverage of the same relation"
+      - "tests/test_paths.py MultiFileSourceIntegrityTests (4 tests): a missing or permission-denied file among several input sources fails the whole operation loudly (naming the path, non-zero exit, zero stdout) for both legacy (check) and extended (next) command dispatch; a symlinked input file is read as a distinct source, correctly producing a W213 duplicate-id warning rather than being silently skipped"
+      - "live: icacls /deny reproduced permission-denied refusal on a real Windows-locked file, matching the automated test"
+      - python -m unittest tests.test_links tests.test_paths -> Ran 53 tests, OK
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/161
       - https://github.com/Eruhitsuji/lifetxt/issues/162
       - https://github.com/Eruhitsuji/lifetxt/issues/163
+      - https://github.com/Eruhitsuji/lifetxt/issues/421
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/164
       - https://github.com/Eruhitsuji/lifetxt/pull/165
       - https://github.com/Eruhitsuji/lifetxt/pull/166
+      - https://github.com/Eruhitsuji/lifetxt/pull/423
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered lifetxt/links.py before this change. Reciprocal-
@@ -1755,6 +1764,21 @@ capabilities:
       .ai/project/changes/README.md change-package threshold: Standard assurance,
       XS/S-sized each), self-scoped and implemented autonomously per repository owner
       authorization (feature/graph-link-foundation batch).
+      #421 (the remaining scope from #322 after #415/#416/#417 shipped separately)
+      found, by live verification against real multi-file fixtures before writing
+      any test, that cross-file parent:/depends_on: resolution and cycle detection,
+      source-metadata (item.source) preservation through link_records, and the
+      missing/permission-denied/symlinked-input policy were all already correct --
+      the gap was missing regression coverage, not a defect. No production code
+      in lifetxt/links.py, lifetxt/paths.py, lifetxt/cli.py, or lifetxt/entrypoint.py
+      changed for #421; the missing/permission-denied fail-loudly policy (routed
+      through entrypoint.main's top-level OSError handling) is now documented in
+      docs/en/cli.md rather than left as unstated, correct-by-accident behavior.
+      docs/ja/cli.md's Input Paths section was found already out of sync with
+      docs/en/cli.md predating #421 (missing the #415/#418 deterministic-order
+      and cross-file-reference paragraphs); rather than silently deepen that gap
+      with an English-only addition, the whole-section sync was filed separately
+      as #422 instead of folded into this capability's own change.
     replacement:
       replaces: []
       replaced_by: null

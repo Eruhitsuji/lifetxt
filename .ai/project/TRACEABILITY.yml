@@ -5524,6 +5524,45 @@ traceability:
         message-only diagnostic families remain outside this slice.
       status: partial
 
+    - requirement_id: req-multi-file-link-metadata-missing-source-integrity
+      capability_id: cap-graph-link-foundation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/322
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/421
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/423
+      changed_files_or_scope:
+        - tests/test_links.py
+        - tests/test_paths.py
+        - docs/en/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_links.py CrossFileLinkIntegrityTests (4 tests) and TicketEventCrossFileResolutionTests (1 test)
+        - tests/test_paths.py MultiFileSourceIntegrityTests (4 tests)
+        - python -m unittest tests.test_links tests.test_paths -> Ran 53 tests, OK
+        - 'live: icacls /deny on a real Windows file reproduces the permission-denied refusal the automated test encodes'
+        - 'live: lifetxt links against two real files with a cross-file record:ticket_event parent: reference resolves with status ok, matching the direct (non-archive) test'
+      release_or_deployment: null
+      notes: >-
+        #421 is the follow-up filed when #322 was decomposed (#415 input
+        order, #416 workspace ID uniqueness, and #417 explicit write target
+        shipped separately; see #322's closing comment). Every one of #421's
+        five acceptance criteria was found, by live verification against
+        real multi-file fixtures before any code was written, to already be
+        correct existing behavior (cross-file parent:/depends_on: resolution
+        and cycle detection via the merged item list lifetxt/cli.py already
+        builds before lifetxt/links.py runs; item.source preservation
+        through link_records; missing/permission-denied/symlinked-input
+        handling via lifetxt/entrypoint.py's top-level OSError catch). No
+        production code changed in lifetxt/links.py, lifetxt/paths.py,
+        lifetxt/cli.py, or lifetxt/entrypoint.py -- this closes a test-
+        coverage and documentation gap, not a behavior gap. The
+        missing/permission-denied policy, previously correct but unstated,
+        is now documented in docs/en/cli.md. A pre-existing, unrelated
+        docs/ja/cli.md drift (missing the #415/#418 paragraphs entirely)
+        was found while documenting this and filed separately as #422
+        rather than folded in here.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

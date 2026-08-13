@@ -6,12 +6,14 @@ verification:
       command: python -m unittest tests.test_external_verification tests.test_traceability_gate tests.test_change_package_closeout
       requirement_ids:
         - req-stable-external-verification-automation
-      status: planned
+      status: pending_ci
+      result: Final PR-head GitHub Actions validation is required before merge.
     - type: repository
       command: ruff check scripts/run_external_verification.py tests/test_external_verification.py
       requirement_ids:
         - req-stable-external-verification-automation
-      status: planned
+      status: pending_ci
+      result: Final PR-head GitHub Actions validation is required before merge.
   executed:
     - type: unit
       command: python -m unittest -v /mnt/data/lifetxt425/test_external_verification.py
@@ -27,6 +29,13 @@ verification:
       status: passed
       result: One JSON bundle written; 40-character git SHA recorded; fixture path redacted; external scenarios remained blocked/manual_required.
       commit: local-draft-before-repository-commit
+    - type: ci_diagnostic
+      command: GitHub Actions CI run 31667352630 on the initial PR implementation head
+      requirement_ids:
+        - req-stable-external-verification-automation
+      status: partial
+      result: Windows/macOS, Python 3.10/3.11/3.12, optional dependency bands, typing, docs, ResourceWarning, and coverage jobs passed; the release-policy job correctly failed only because the main TRACEABILITY.yml update was still missing. That traceability gap has since been repaired.
+      commit: 48b67f917901b431b9e6a6e51b8bb720a36e1f76
 
 review_ledger:
   - reviewer: pending-independent-review

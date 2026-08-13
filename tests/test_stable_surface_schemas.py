@@ -116,6 +116,22 @@ class StableSurfaceSchemaTests(unittest.TestCase):
         )
         self.assertEqual("alpha", mcp["item"]["id"])
 
+    def test_schema_version_and_compatibility_boundary_are_explicit(self):
+        bundle = schema_bundle()
+        diagnostic_schema = bundle["diagnostic-v1.schema.json"]
+        self.assertTrue(diagnostic_schema["$id"].endswith("diagnostic-v1.schema.json"))
+        self.assertEqual("lifetxt diagnostic v1", diagnostic_schema["title"])
+        self.assertFalse(diagnostic_schema["additionalProperties"])
+        self.assertEqual("1", bundle["item-v1.schema.json"]["$id"].rsplit("-v", 1)[1].split(".", 1)[0])
+
+    def test_web_read_error_envelope_is_stable(self):
+        response = self.client.get("/api/items/id/missing")
+        self.assertEqual(404, response.status_code)
+        self.assertEqual(
+            {"error": "NOT_FOUND", "message": "Item id:missing was not found.", "detail": None},
+            response.json(),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

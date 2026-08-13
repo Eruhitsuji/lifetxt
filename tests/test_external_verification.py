@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "run_external_verification.py"
@@ -56,6 +57,63 @@ class RedactionTests(unittest.TestCase):
             self.assertIn("<home>", result)
             self.assertIn("<redacted-user>", result)
             self.assertIn("<redacted-secret>", result)
+
+
+class RedactionHardeningTests(unittest.TestCase):
+    """Case-insensitivity, overlap ordering, and idempotency (#430).
+
+    Reproduced two real defects before fixing them: a case-sensitive
+    str.replace() never matched a differently-cased path a child tool (e.g.
+    pip) emitted, and a fixed repo/home/temp processing order let a shorter
+    path (home) consume a longer, more specific one's shared prefix (%TEMP%
+    nested inside %USERPROFILE% on a normal Windows host) before the longer
+    one's own marker had a chance to apply.
+    """
+
+    def _windows_redactor(self):
+        env = {"USERPROFILE": r"C:\Users\tester", "USERNAME": "tester"}
+        return module.make_redactor(repo_root=r"C:\repo", env=env)
+
+    def test_windows_path_redaction_is_case_insensitive(self):
+        redact = self._windows_redactor()
+        for text in (
+            r"C:\Users\tester\file.txt",
+            r"c:\users\tester\file.txt",
+            r"C:\USERS\TESTER\file.txt",
+            r"c:/users/tester/file.txt",
+        ):
+            result = redact(text)
+            self.assertNotIn("tester", result.lower(), msg=text)
+            self.assertIn("<home>", result, msg=text)
+
+    def test_longer_nested_path_wins_over_a_shorter_containing_one(self):
+        # %TEMP% is nested inside %USERPROFILE% on a normal Windows host --
+        # the longer, more specific temp path must win, not be silently
+        # absorbed into a bare <home>\AppData\Local\Temp\... remnant.
+        home = r"C:\Users\tester"
+        temp = home + r"\AppData\Local\Temp"
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=temp):
+            redact = module.make_redactor(
+                repo_root=r"C:\repo",
+                env={"USERPROFILE": home, "USERNAME": "tester"},
+            )
+            result = redact(temp + r"\pip-req-build-0")
+        self.assertEqual(r"<temp>\pip-req-build-0", result)
+        self.assertNotIn("AppData", result)
+        self.assertNotIn("<home>", result)
+
+    def test_redaction_is_idempotent(self):
+        redact = self._windows_redactor()
+        inputs = (
+            r"C:\Users\tester\AppData\Local\Temp\pip-req-build-0",
+            "user=tester token=abc123 Authorization: Bearer xyz",
+            "already <home>\\AppData\\Local\\Temp\\<repo> plain text",
+            r"c:/users/TESTER/mixed/Case/Path",
+        )
+        for text in inputs:
+            once = redact(text)
+            twice = redact(once)
+            self.assertEqual(once, twice, msg=text)
 
 
 class CommandCaptureTests(unittest.TestCase):
@@ -144,6 +202,64 @@ class BundleTests(unittest.TestCase):
             ),
             0,
         )
+
+
+class WriteBundleSafetyNetTests(unittest.TestCase):
+    """Persistence-time rescan-and-refuse defense in depth (#430).
+
+    Even if a future redaction-rule change misses a case, write_bundle must
+    refuse to persist a bundle where a raw candidate value survived, rather
+    than silently writing partially-redacted evidence.
+    """
+
+    def test_refuses_to_write_a_bundle_still_containing_a_raw_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            bundle = {"note": "leaked C:\\Users\\tester\\secret-looking-path"}
+
+            with self.assertRaises(RuntimeError) as caught:
+                module.write_bundle(
+                    bundle, output, redaction_candidates=[r"C:\Users\tester"]
+                )
+
+            self.assertNotIn("tester", str(caught.exception))
+            self.assertFalse(output.exists())
+
+    def test_json_escaped_backslash_form_of_a_candidate_is_also_detected(self):
+        # json.dumps() escapes "\" as "\\", so a raw Windows path candidate
+        # would never match the serialized text unless the rescan also
+        # checks the JSON-escaped form -- this is the exact bug found and
+        # fixed while implementing the safety net.
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            bundle = {"note": r"C:\Users\tester\secret-looking-path"}
+
+            with self.assertRaises(RuntimeError):
+                module.write_bundle(
+                    bundle, output, redaction_candidates=[r"C:\Users\tester"]
+                )
+
+    def test_a_properly_redacted_bundle_writes_normally(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            bundle = {"note": "<home>\\secret-looking-path"}
+
+            module.write_bundle(
+                bundle, output, redaction_candidates=[r"C:\Users\tester"]
+            )
+
+            self.assertTrue(output.exists())
+            loaded = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(bundle, loaded)
+
+    def test_no_redaction_candidates_preserves_prior_behavior(self):
+        # Backward compatible default: existing callers that don't pass
+        # redaction_candidates (e.g. tests.test_external_verification's own
+        # pre-#430 BundleTests) still write unconditionally.
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            module.write_bundle({"note": "anything at all"}, output)
+            self.assertTrue(output.exists())
 
 
 if __name__ == "__main__":

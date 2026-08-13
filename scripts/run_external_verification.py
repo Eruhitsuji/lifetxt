@@ -106,20 +106,75 @@ def _username_values(env):
     return sorted(set(values), key=len, reverse=True)
 
 
-def make_redactor(repo_root=None, env=None):
+def _home_value(env):
+    return env.get("USERPROFILE") or env.get("HOME") or str(Path.home())
+
+
+def _redaction_candidates(repo_root=None, env=None):
+    """Raw values that must never survive redaction (#430).
+
+    Shared by ``make_redactor`` (what gets replaced) and the
+    persistence-time rescan in ``write_bundle`` (what must be *gone* before
+    a bundle is written), so the two checks cannot silently drift apart.
+    """
     env = os.environ if env is None else env
-    replacements = []
-    home = env.get("USERPROFILE") or env.get("HOME") or str(Path.home())
+    home = _home_value(env)
     temp = tempfile.gettempdir()
+    candidates = []
+    for value in (str(repo_root) if repo_root else "", home, temp):
+        if value and len(value) >= 3:
+            candidates.append(value)
+    candidates.extend(_username_values(env))
+    return candidates
+
+
+def _path_replacement_entries(repo_root, home, temp):
+    """(path variant, marker) pairs, longest variant first.
+
+    Sorting by length descending (rather than the previous fixed repo/home/
+    temp order) means a longer, more specific path -- such as %TEMP% nested
+    inside %USERPROFILE% on a normal Windows host -- is always matched and
+    replaced before a shorter path that would otherwise consume its shared
+    prefix and swallow its marker (#430).
+    """
+    entries = []
+    seen = set()
     for value, marker in (
         (str(repo_root) if repo_root else "", "<repo>"),
-        (home, "<home>"),
-        (temp, "<temp>"),
+        (home or "", "<home>"),
+        (temp or "", "<temp>"),
     ):
-        if value and len(value) >= 3:
-            replacements.append((value, marker))
-            replacements.append((value.replace("\\", "/"), marker))
-            replacements.append((value.replace("/", "\\"), marker))
+        if not value or len(value) < 3:
+            continue
+        for variant in (value, value.replace("\\", "/"), value.replace("/", "\\")):
+            key = variant.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append((variant, marker))
+    entries.sort(key=lambda pair: len(pair[0]), reverse=True)
+    return entries
+
+
+def make_redactor(repo_root=None, env=None):
+    env = os.environ if env is None else env
+    home = _home_value(env)
+    temp = tempfile.gettempdir()
+    path_entries = _path_replacement_entries(repo_root, home, temp)
+    marker_by_lower_variant = {
+        variant.lower(): marker for variant, marker in path_entries
+    }
+    path_pattern = None
+    if path_entries:
+        # A single case-insensitive alternation, longest branch first, so
+        # Python's left-to-right "first alternative that matches" semantics
+        # give the same longest-match-wins guarantee as the sort above, in
+        # one pass rather than N sequential str.replace() calls (#430: the
+        # old sequential design let a differently-cased path silently miss,
+        # and let a shorter candidate consume a longer one's prefix).
+        alternation = "|".join(re.escape(variant) for variant, _marker in path_entries)
+        path_pattern = re.compile(alternation, re.IGNORECASE)
+
     secrets = _secret_values(env)
     usernames = _username_values(env)
 
@@ -133,7 +188,7 @@ def make_redactor(repo_root=None, env=None):
         username_patterns.extend(
             (
                 re.compile(rf"(?i)(\b(?:user|username|login|owner)\s*[:=]\s*){escaped}\b"),
-                re.compile(rf"(?<=[/\\]){escaped}(?=[/\\])"),
+                re.compile(rf"(?i)(?<=[/\\]){escaped}(?=[/\\])"),
             )
         )
 
@@ -143,8 +198,10 @@ def make_redactor(repo_root=None, env=None):
         text = str(value)
         for secret in secrets:
             text = text.replace(secret, "<redacted-secret>")
-        for raw, marker in replacements:
-            text = text.replace(raw, marker)
+        if path_pattern is not None:
+            text = path_pattern.sub(
+                lambda m: marker_by_lower_variant[m.group(0).lower()], text
+            )
         for pattern in token_patterns:
             text = pattern.sub(lambda m: f"{m.group(1)}<redacted-secret>", text)
         for pattern in username_patterns:
@@ -155,6 +212,31 @@ def make_redactor(repo_root=None, env=None):
         return text
 
     return redact
+
+
+def _unredacted_candidate_count(text, candidates):
+    """Count how many raw redaction candidates still appear in ``text``.
+
+    ``text`` is expected to be JSON, where a path's backslashes are encoded
+    as ``\\\\``, so each candidate is checked both as written and in its
+    JSON-escaped form -- checking only the raw form would silently never
+    match a leaked Windows path and defeat the whole safety net. Returns a
+    count rather than the matched values themselves, so a caller can refuse
+    to persist without the refusal error itself leaking the raw value it is
+    refusing over.
+    """
+    lowered_text = text.lower()
+    hits = 0
+    for value in candidates:
+        if not value:
+            continue
+        if value.lower() in lowered_text:
+            hits += 1
+            continue
+        escaped = value.replace("\\", "\\\\").lower()
+        if escaped != value.lower() and escaped in lowered_text:
+            hits += 1
+    return hits
 
 
 def _decode_timeout_output(value):
@@ -488,13 +570,28 @@ def build_bundle(root, args):
     return _redact_structure(bundle, redact)
 
 
-def write_bundle(bundle, output_path):
+def write_bundle(bundle, output_path, redaction_candidates=()):
+    """Serialize and persist a bundle, refusing to write if anything raw survived.
+
+    ``redaction_candidates`` should be the same repo/home/temp/username
+    values ``make_redactor`` was built from (see ``_redaction_candidates``).
+    This is a persistence-time defense-in-depth check (#430): even if a
+    future redaction-rule change misses a case, the fully-serialized JSON is
+    rescanned case-insensitively immediately before the write, and the write
+    is refused -- loudly, but without repeating the raw value in the error --
+    rather than silently persisting a partially-redacted bundle.
+    """
+    text = json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    leaked = _unredacted_candidate_count(text, redaction_candidates)
+    if leaked:
+        raise RuntimeError(
+            "Refusing to write external-verification evidence: %d raw "
+            "redaction candidate value(s) are still present in the "
+            "serialized bundle. This bundle was not written." % leaked
+        )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    output_path.write_text(text, encoding="utf-8")
 
 
 def bundle_exit_code(bundle):
@@ -546,7 +643,7 @@ def main(argv=None):
     host_class = classify_platform()
     output = Path(args.output) if args.output else default_output_path(root, host_class)
     bundle = build_bundle(root, args)
-    write_bundle(bundle, output)
+    write_bundle(bundle, output, redaction_candidates=_redaction_candidates(root))
     code = bundle_exit_code(bundle)
     release_status = next(
         (item.get("status") for item in bundle["checks"] if item.get("scenario") == "release-profile"),

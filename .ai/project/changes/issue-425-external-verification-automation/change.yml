@@ -1,0 +1,50 @@
+schema_version: 1
+
+change:
+  id: issue-425-external-verification-automation
+  title: Automate cross-platform external verification evidence collection
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Codex
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/425
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/426
+  base_commit: c8c82b9416de189e7de9aefecd06f9bc7a6e8e88
+  target_release: first-stable
+
+scope:
+  in_scope:
+    - dependency-free cross-platform external-verification evidence runner
+    - reuse of scripts/run_ci_like.py release profile
+    - sanitized one-file JSON evidence aggregation
+    - explicit manual_required and blocked records for non-automatable evidence
+    - focused tests, command registration, docs, capability, traceability, and roadmap updates
+  out_of_scope:
+    - production Web revision cutover
+    - Remote, SMTP, browser, cloud-sync, removable-media, or network-share infrastructure
+    - physical power-loss automation
+    - release, deployment, rollback, or stable-support classification decisions
+  write_scope:
+    - scripts/run_external_verification.py
+    - tests/test_external_verification.py
+    - docs/en/external-environment-verification.md
+    - .ai/project/COMMANDS.yml
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - todo.md
+    - .ai/project/changes/issue-425-external-verification-automation/
+  forbidden_scope:
+    - lifetxt runtime behavior
+    - scripts/run_ci_like.py behavior
+    - .ai/managed/
+    - release/deployment execution
+  shared_files:
+    - .ai/project/COMMANDS.yml
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - todo.md
+
+human_approvals_required:
+  - merge_authority_approval
+  - release_and_support_classification_remain_separate_human_decisions

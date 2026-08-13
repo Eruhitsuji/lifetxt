@@ -1,0 +1,131 @@
+name: Issue 425 metadata finalize
+
+on:
+  push:
+    branches:
+      - agent/issue-425-external-verification-automation
+    paths:
+      - .github/workflows/issue-425-metadata-finalize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/issue-425-external-verification-automation
+          fetch-depth: 0
+      - name: Update capability and roadmap metadata and remove helper
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cap_path = Path('.ai/project/CAPABILITIES.yml')
+          cap_text = cap_path.read_text(encoding='utf-8')
+          start_marker = '  - id: cap-stable-external-verification-preparation\n'
+          end_marker = '\n  - id: cap-stable-maintainability-followthrough\n'
+          start = cap_text.index(start_marker)
+          end = cap_text.index(end_marker, start)
+          block = cap_text[start:end]
+
+          def add_after_once(text, anchor, addition):
+              if addition.strip() in text:
+                  return text
+              if anchor not in text:
+                  raise SystemExit(f'capability anchor not found: {anchor!r}')
+              return text.replace(anchor, anchor + addition, 1)
+
+          block = add_after_once(
+              block,
+              '      - req-stable-windows-terminal-tui-verification\n',
+              '      - req-stable-external-verification-automation\n',
+          )
+          block = add_after_once(
+              block,
+              '      - docs/en/stable-verification-312-windows-terminals.md\n',
+              '      - scripts/run_external_verification.py\n'
+              '      - tests/test_external_verification.py\n'
+              '      - .ai/project/changes/issue-425-external-verification-automation/\n',
+          )
+          block = add_after_once(
+              block,
+              '      - CUI completion-test extraction boundary #395\n',
+              '      - python scripts/run_external_verification.py\n'
+              '      - one-file sanitized external-verification JSON bundle\n',
+          )
+          block = add_after_once(
+              block,
+              '      - completion-test discovery remains 182 tests across source and destination modules\n',
+              '      - tests.test_external_verification covers platform classification, redaction, command capture, aggregation, and evidence-state semantics\n'
+              '      - PR #426 CI validates the collector across the repository release gates\n',
+          )
+          block = add_after_once(
+              block,
+              '      - https://github.com/Eruhitsuji/lifetxt/issues/312\n',
+              '      - https://github.com/Eruhitsuji/lifetxt/issues/425\n',
+          )
+          block = add_after_once(
+              block,
+              '      - https://github.com/Eruhitsuji/lifetxt/pull/396\n',
+              '      - https://github.com/Eruhitsuji/lifetxt/pull/426\n',
+          )
+          old_notes = (
+              '    notes: >-\n'
+              '      Preparation and investigation only for external environments. No real\n'
+              '      deployment, external account, filesystem, or terminal result is claimed.\n'
+          )
+          new_notes = (
+              '    notes: >-\n'
+              '      External-environment preparation now includes dependency-free host evidence\n'
+              '      collection that aggregates mechanical release checks into one sanitized JSON\n'
+              '      bundle. Interactive terminal, browser, Remote, SMTP, external filesystem,\n'
+              '      deployment, rollback, and release decisions remain dedicated real-environment\n'
+              '      or human-authority work and are never inferred passed by the collector.\n'
+          )
+          if old_notes in block:
+              block = block.replace(old_notes, new_notes, 1)
+          elif new_notes not in block:
+              raise SystemExit('capability notes anchor not found')
+
+          cap_path.write_text(cap_text[:start] + block + cap_text[end:], encoding='utf-8')
+
+          todo_path = Path('todo.md')
+          todo = todo_path.read_text(encoding='utf-8')
+          old_stamp = 'Last updated: 2026-08-09 (updated x130)'
+          new_stamp = 'Last updated: 2026-08-13 (updated x131)'
+          if old_stamp in todo:
+              todo = todo.replace(old_stamp, new_stamp, 1)
+          elif new_stamp not in todo:
+              raise SystemExit('todo update stamp not found')
+
+          p0_anchor = '## P0: Release Safety and Correctness\n\n'
+          p0_item = (
+              '- [ ] Run `scripts/run_external_verification.py` on real Windows, WSL, Linux, and macOS hosts and attach the resulting one-file sanitized JSON bundles to the relevant release-evidence issues. Treat the automated host/release-profile results as host-scoped evidence only; complete interactive TUI, selector, browser, Web rollout, Remote, SMTP, external-filesystem, physical-interruption, and human release-decision scenarios through their dedicated procedures before claiming those surfaces verified.\n'
+          )
+          if p0_item not in todo:
+              if p0_anchor not in todo:
+                  raise SystemExit('P0 roadmap anchor not found')
+              todo = todo.replace(p0_anchor, p0_anchor + p0_item, 1)
+
+          p2_anchor = '## P2: CLI, Packaging, and Distribution\n\n'
+          p2_item = (
+              '- [ ] After the per-host external-verification JSON format has proven stable across the supported environment matrix, add a deterministic RC evidence-dossier aggregator that consumes those bundles, rejects stale/mismatched commit or artifact identities, preserves `manual_required`/`blocked` gaps, and produces one reviewable release-evidence index without upgrading support classifications automatically.\n'
+          )
+          if p2_item not in todo:
+              if p2_anchor not in todo:
+                  raise SystemExit('P2 roadmap anchor not found')
+              todo = todo.replace(p2_anchor, p2_anchor + p2_item, 1)
+
+          todo_path.write_text(todo, encoding='utf-8')
+          Path('.github/workflows/issue-425-metadata-finalize.yml').unlink()
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .ai/project/CAPABILITIES.yml todo.md .github/workflows/issue-425-metadata-finalize.yml
+          git diff --cached --check
+          git commit -m "Finalize issue 425 capability and roadmap metadata"
+          git push origin HEAD:agent/issue-425-external-verification-automation

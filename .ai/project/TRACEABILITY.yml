@@ -5620,6 +5620,48 @@ traceability:
         inference.
       status: implemented
 
+    - requirement_id: req-external-verification-redaction-hardening
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/430
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - tests/test_external_verification.py RedactionHardeningTests (3 tests)
+        - tests/test_external_verification.py WriteBundleSafetyNetTests (4 tests)
+        - 'git stash confirmed all 5 new tests reproduce the original defects against the pre-fix code'
+        - python -m unittest tests.test_external_verification -> Ran 13 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2427 tests, 2426 OK plus 1 pre-existing unrelated failure (separately tracked/fixed as #432, not present on this branch)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Real Windows/WSL external-verification bundles collected under
+        #425/#426 exposed two sanitizer defects before this fix: a Windows
+        account-name path segment survived redaction (case-sensitive
+        str.replace() missed a differently-cased path emitted by a child
+        tool such as pip), and temp paths were repeatedly normalized as
+        `<temp><temp>...` (56 occurrences in the supplied bundle), showing
+        redaction was not idempotent/canonical. Root-caused by empirical
+        reproduction rather than by guessing: (1) case-sensitive exact-match
+        replacement, and (2) a fixed repo/home/temp processing order that let
+        the shorter `home` path consume `temp`'s shared prefix when `%TEMP%`
+        is nested inside `%USERPROFILE%` (the normal Windows layout), so
+        `temp`'s own marker never had a chance to apply. Rewritten as one
+        case-insensitive, longest-candidate-first, single-pass regex
+        substitution, plus a persistence-time rescan-and-refuse safety net in
+        `write_bundle()` as explicit defense in depth. The literal reported
+        `<temp><temp>` byte sequence could not be reproduced without the
+        original bundle (never pasted, per #430's own security note); the
+        fix addresses the underlying ordering/case defect class it points at
+        and adds the persistence-time safety net regardless. Regenerating
+        fresh Windows/WSL bundles after this fix (#430's own last acceptance
+        criterion) is external-environment work outside this sandbox and
+        remains open.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

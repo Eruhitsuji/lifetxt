@@ -22,6 +22,7 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
+          import base64
           from pathlib import Path
 
           change_path = Path('.ai/project/changes/issue-425-external-verification-automation/change.yml')
@@ -31,72 +32,9 @@ jobs:
               raise SystemExit('expected in_review status not found')
           change_path.write_text(change.replace(old_status, '  status: implemented\n', 1), encoding='utf-8')
 
+          encoded = 'c2NoZW1hX3ZlcnNpb246IDEKCnZlcmlmaWNhdGlvbjoKICBleGVjdXRlZDoKICAgIC0gdHlwZTogdW5pdAogICAgICBjb21tYW5kOiBweXRob24gLW0gdW5pdHRlc3QgLXYgL21udC9kYXRhL2xpZmV0eHQ0MjUvdGVzdF9leHRlcm5hbF92ZXJpZmljYXRpb24ucHkKICAgICAgcmVxdWlyZW1lbnRfaWRzOgogICAgICAgIC0gcmVxLXN0YWJsZS1leHRlcm5hbC12ZXJpZmljYXRpb24tYXV0b21hdGlvbgogICAgICBzdGF0dXM6IHBhc3NlZAogICAgICByZXN1bHQ6IFJhbiA2IHRlc3RzOyBPSy4KICAgICAgY29tbWl0OiBsb2NhbC1kcmFmdC1iZWZvcmUtcmVwb3NpdG9yeS1jb21taXQKICAgIC0gdHlwZTogaW50ZWdyYXRpb24KICAgICAgY29tbWFuZDogcHl0aG9uIHNjcmlwdHMvcnVuX2V4dGVybmFsX3ZlcmlmaWNhdGlvbi5weSAtLXNraXAtcmVsZWFzZSAtLW91dHB1dCAuY2FjaGUvYnVuZGxlLmpzb24gaW4gYSBkaXNwb3NhYmxlIGxvY2FsIGdpdCBmaXh0dXJlCiAgICAgIHJlcXVpcmVtZW50X2lkczoKICAgICAgICAtIHJlcS1zdGFibGUtZXh0ZXJuYWwtdmVyaWZpY2F0aW9uLWF1dG9tYXRpb24KICAgICAgc3RhdHVzOiBwYXNzZWQKICAgICAgcmVzdWx0OiBPbmUgSlNPTiBidW5kbGUgd3JpdHRlbjsgNDAtY2hhcmFjdGVyIGdpdCBTSEEgcmVjb3JkZWQ7IGZpeHR1cmUgcGF0aCByZWRhY3RlZDsgZXh0ZXJuYWwgc2NlbmFyaW9zIHJlbWFpbmVkIGJsb2NrZWQvbWFudWFsX3JlcXVpcmVkLgogICAgICBjb21taXQ6IGxvY2FsLWRyYWZ0LWJlZm9yZS1yZXBvc2l0b3J5LWNvbW1pdAogICAgLSB0eXBlOiBjaQogICAgICBjb21tYW5kOiBHaXRIdWIgQWN0aW9ucyBDSSBydW4gMzE2Njg1MDA3Mzggb24gUFIgIzQyNiBmaW5hbCBoZWFkCiAgICAgIHJlcXVpcmVtZW50X2lkczoKICAgICAgICAtIHJlcS1zdGFibGUtZXh0ZXJuYWwtdmVyaWZpY2F0aW9uLWF1dG9tYXRpb24KICAgICAgc3RhdHVzOiBwYXNzZWQKICAgICAgcmVzdWx0OiA+LQogICAgICAgIEZpbmFsIFBSLWhlYWQgQ0kgY29tcGxldGVkIHN1Y2Nlc3NmdWxseS4gV2luZG93cyBhbmQgbWFjT1MgY29yZSBzbW9rZSwKICAgICAgICBQeXRob24gMy4xMC8zLjExLzMuMTIgV2ViLWV4dHJhIGpvYnMsIFB5dGhvbiAzLjEyIG5vLVdlYiBjb3ZlcmFnZSwKICAgICAgICBXZWIvVFVJIGRlcGVuZGVuY3kgY29tcGF0aWJpbGl0eSBiYW5kcywgc3RhdGljIHR5cGluZywgcmVsZWFzZSBkb2NzLAogICAgICAgIFJlc291cmNlV2FybmluZywgY292ZXJhZ2UsIGFuZCByZXF1aXJlZCByZWxlYXNlLXBvbGljeS9jbGVhbi13aGVlbCBnYXRlcwogICAgICAgIGFsbCBwYXNzZWQuCiAgICAgIGNvbW1pdDogNjQ4MmRkYWY4ODYwMjAyNjBiMmMyMTQ4ZjUyZDgzMGZhNjNjNzBmNQogICAgICBleGVjdXRlZF9hdDogJzIwMjYtMDgtMTMnCiAgZ2FwczoKICAgIC0gPi0KICAgICAgUFIgIzQyNiBoYXMgbm8gc3VibWl0dGVkIEdpdEh1YiBwdWxsLXJlcXVlc3QgcmV2aWV3cy4gU2VwYXJhdGUgaW5kZXBlbmRlbnQKICAgICAgaW1wbGVtZW50YXRpb24gYW5kIGludGVncmF0aW9uIHJldmlldyBldmlkZW5jZSB0aGVyZWZvcmUgd2FzIG5vdCBjYXB0dXJlZAogICAgICBiZWZvcmUgbWVyZ2UuIE1lcmdlIGF1dGhvcml0eSBhcHByb3ZhbCBpcyBldmlkZW5jZWQgYnkgbWVyZ2UgY29tbWl0CiAgICAgIGY5ZTUyNTVlMjI1NmRiYTRkNzRkOWY3ODdiMWEwZTE3ODFjNTE0MTcsIGJ1dCBpdCBpcyBub3Qgc3Vic3RpdHV0ZWQgZm9yCiAgICAgIGluZGVwZW5kZW50IHJldmlldyBldmlkZW5jZS4KCnJldmlld19sZWRnZXI6CiAgLSByZXZpZXdlcjogbm90LXJlY29yZGVkLWJlZm9yZS1tZXJnZQogICAgcmV2aWV3X3R5cGU6IGltcGxlbWVudGF0aW9uCiAgICB0YXJnZXRfY29tbWl0OiA2NDgyZGRhZjg4NjAyMDI2MGIyYzIxNDhmNTJkODMwZmE2M2M3MGY1CiAgICByZXN1bHQ6IG5vdF9yZWNvcmRlZAogICAgZmluZGluZ19jb3VudDogbnVsbAogICAgY29tcGxldGVkX2F0OiBudWxsCiAgICBub3RlczogTm8gc3VibWl0dGVkIEdpdEh1YiBQUiByZXZpZXcgZXhpc3RzIG9uIFBSICM0MjYuCiAgLSByZXZpZXdlcjogbm90LXJlY29yZGVkLWJlZm9yZS1tZXJnZQogICAgcmV2aWV3X3R5cGU6IGludGVncmF0aW9uCiAgICB0YXJnZXRfY29tbWl0OiA2NDgyZGRhZjg4NjAyMDI2MGIyYzIxNDhmNTJkODMwZmE2M2M3MGY1CiAgICByZXN1bHQ6IG5vdF9yZWNvcmRlZAogICAgZmluZGluZ19jb3VudDogbnVsbAogICAgY29tcGxldGVkX2F0OiBudWxsCiAgICBub3RlczogTm8gc3VibWl0dGVkIEdpdEh1YiBQUiByZXZpZXcgZXhpc3RzIG9uIFBSICM0MjYuCgpyZWxlYXNlX2V2aWRlbmNlOgogIG1pZ3JhdGlvbl9ub3RlczogTm8gcnVudGltZSBvciBkYXRhIG1pZ3JhdGlvbi4KICByb2xsYmFja19wbGFuOiBSZXZlcnQgUFIgIzQyNjsgZ2VuZXJhdGVkIGAuY2FjaGUvYCBldmlkZW5jZSBmaWxlcyBhcmUgZGlzcG9zYWJsZSBhbmQgaWdub3JlZC4KICBvcGVyYXRpb25zX2V2aWRlbmNlOgogICAgLSBQUiAjNDI2IG1lcmdlZCBhcyBmOWU1MjU1ZTIyNTZkYmE0ZDc0ZDlmNzg3YjFhMGUxNzgxYzUxNDE3LgogICAgLSBGaW5hbCBQUi1oZWFkIEdpdEh1YiBBY3Rpb25zIENJIHJ1biAzMTY2ODUwMDczOCBwYXNzZWQgb24gNjQ4MmRkYWY4ODYwMjAyNjBiMmMyMTQ4ZjUyZDgzMGZhNjNjNzBmNS4KICAgIC0gVGhlIHRvb2wgZGVsaWJlcmF0ZWx5IGNhbm5vdCBhcHByb3ZlIHJlbGVhc2UvZGVwbG95bWVudC9zdXBwb3J0IGNsYXNzaWZpY2F0aW9uLgogICAgLSBSZWFsIGVudmlyb25tZW50IGV4ZWN1dGlvbnMgcmVtYWluIHRyYWNrZWQgYnkgdGhlIGRlZGljYXRlZCBzdGFiaWxpemF0aW9uIGlzc3Vlcy4K'
           verification_path = Path('.ai/project/changes/issue-425-external-verification-automation/verification.yml')
-          verification = '''schema_version: 1
-
-verification:
-  executed:
-    - type: unit
-      command: python -m unittest -v /mnt/data/lifetxt425/test_external_verification.py
-      requirement_ids:
-        - req-stable-external-verification-automation
-      status: passed
-      result: Ran 6 tests; OK.
-      commit: local-draft-before-repository-commit
-    - type: integration
-      command: python scripts/run_external_verification.py --skip-release --output .cache/bundle.json in a disposable local git fixture
-      requirement_ids:
-        - req-stable-external-verification-automation
-      status: passed
-      result: One JSON bundle written; 40-character git SHA recorded; fixture path redacted; external scenarios remained blocked/manual_required.
-      commit: local-draft-before-repository-commit
-    - type: ci
-      command: GitHub Actions CI run 31668500738 on PR #426 final head
-      requirement_ids:
-        - req-stable-external-verification-automation
-      status: passed
-      result: >-
-        Final PR-head CI completed successfully. Windows and macOS core smoke,
-        Python 3.10/3.11/3.12 Web-extra jobs, Python 3.12 no-Web coverage,
-        Web/TUI dependency compatibility bands, static typing, release docs,
-        ResourceWarning, coverage, and required release-policy/clean-wheel gates
-        all passed.
-      commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
-      executed_at: '2026-08-13'
-  gaps:
-    - >-
-      PR #426 has no submitted GitHub pull-request reviews. Separate independent
-      implementation and integration review evidence therefore was not captured
-      before merge. Merge authority approval is evidenced by merge commit
-      f9e5255e2256dba4d74d9f787b1a0e1781c51417, but it is not substituted for
-      independent review evidence.
-
-review_ledger:
-  - reviewer: not-recorded-before-merge
-    review_type: implementation
-    target_commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
-    result: not_recorded
-    finding_count: null
-    completed_at: null
-    notes: No submitted GitHub PR review exists on PR #426.
-  - reviewer: not-recorded-before-merge
-    review_type: integration
-    target_commit: 6482ddaf886020260b2c2148f52d830fa63c70f5
-    result: not_recorded
-    finding_count: null
-    completed_at: null
-    notes: No submitted GitHub PR review exists on PR #426.
-
-release_evidence:
-  migration_notes: No runtime or data migration.
-  rollback_plan: Revert PR #426; generated `.cache/` evidence files are disposable and ignored.
-  operations_evidence:
-    - PR #426 merged as f9e5255e2256dba4d74d9f787b1a0e1781c51417.
-    - Final PR-head GitHub Actions CI run 31668500738 passed on 6482ddaf886020260b2c2148f52d830fa63c70f5.
-    - The tool deliberately cannot approve release/deployment/support classification.
-    - Real environment executions remain tracked by the dedicated stabilization issues.
-'''
-          verification_path.write_text(verification, encoding='utf-8')
+          verification_path.write_bytes(base64.b64decode(encoded))
 
           todo_path = Path('todo.md')
           todo = todo_path.read_text(encoding='utf-8')

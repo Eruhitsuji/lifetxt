@@ -170,6 +170,87 @@ class BundleTests(unittest.TestCase):
             self.assertEqual(loaded["schema_version"], 1)
             self.assertEqual(loaded["metadata"]["package_version"], "0.1.0")
 
+    def test_bootstrap_venv_creation_failure_is_blocked_not_a_crash(self):
+        # Found live on a real WSL host (#435): an interpreter can be
+        # discovered successfully but its own `-m venv` can still fail
+        # (e.g. missing ensurepip support). That must degrade to a blocked
+        # release-profile check with the evidence bundle still written,
+        # never an uncaught exception that loses the whole run.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "scripts").mkdir()
+            (root / "pyproject.toml").write_text(
+                '[project]\nname = "lifetxt"\nversion = "0.1.0"\n',
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                skip_release=False,
+                artifact=[],
+                probe_timeout=1,
+                release_timeout=1,
+            )
+            with (
+                mock.patch.object(
+                    module.verification_python_bootstrap,
+                    "ensure_verification_python",
+                    return_value={
+                        "status": "passed",
+                        "category": "existing",
+                        "executable": "/usr/bin/python3.10",
+                        "version": "3.10",
+                    },
+                ),
+                mock.patch.object(
+                    module.verification_python_bootstrap,
+                    "create_verification_venv",
+                    side_effect=module.subprocess.CalledProcessError(
+                        1, ["python3.10", "-m", "venv"]
+                    ),
+                ),
+            ):
+                bundle = module.build_bundle(root, args)
+
+        release = next(
+            item for item in bundle["checks"] if item["scenario"] == "release-profile"
+        )
+        self.assertEqual("blocked", release["status"])
+        self.assertIn("isolated verification environment", release["reason"])
+
+    def test_bootstrap_failure_blocks_release_profile_without_a_fabricated_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "scripts").mkdir()
+            (root / "pyproject.toml").write_text(
+                '[project]\nname = "lifetxt"\nversion = "0.1.0"\n',
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                skip_release=False,
+                artifact=[],
+                probe_timeout=1,
+                release_timeout=1,
+            )
+            with mock.patch.object(
+                module.verification_python_bootstrap,
+                "ensure_verification_python",
+                return_value={
+                    "status": "blocked",
+                    "category": "managed",
+                    "reason": "No network access to provision a managed Python runtime.",
+                },
+            ):
+                bundle = module.build_bundle(root, args)
+
+        bootstrap = next(
+            item for item in bundle["checks"] if item["scenario"] == "python-bootstrap"
+        )
+        release = next(
+            item for item in bundle["checks"] if item["scenario"] == "release-profile"
+        )
+        self.assertEqual("blocked", bootstrap["status"])
+        self.assertEqual("blocked", release["status"])
+        self.assertNotEqual("passed", release["status"])
+
     def test_source_pyproject_version_precedes_installed_distribution(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -24,6 +24,13 @@ import tempfile
 import time
 from pathlib import Path
 
+# Required so `import verification_python_bootstrap` resolves both when this
+# script is run directly (its own directory is already on sys.path in that
+# case) and when tests load it via importlib.util.spec_from_file_location,
+# which does not add the script's directory automatically.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import verification_python_bootstrap  # noqa: E402
+
 SCHEMA_VERSION = 1
 SUPPORTED_HOSTS = {"windows", "wsl", "linux", "macos"}
 SECRET_KEY_MARKERS = ("TOKEN", "PASSWORD", "PASSWD", "SECRET", "API_KEY", "APIKEY", "AUTH")
@@ -537,16 +544,50 @@ def build_bundle(root, args):
             }
         )
     else:
-        command = [
-            sys.executable,
-            str(root / "scripts" / "run_ci_like.py"),
-            "--profile",
-            "release",
-            "--python",
-            sys.executable,
-        ]
-        result = run_command(command, root, redact, args.release_timeout)
-        checks.append({"scenario": "release-profile", **result})
+        cache_dir = root / ".cache" / "lifetxt-verify-python"
+        bootstrap = verification_python_bootstrap.ensure_verification_python(cache_dir)
+        checks.append({"scenario": "python-bootstrap", **bootstrap})
+        if bootstrap["status"] != "passed":
+            checks.append(
+                {
+                    "scenario": "release-profile",
+                    "status": "blocked",
+                    "reason": "No supported Python (3.10-3.12) available for the release "
+                    "profile: " + bootstrap.get("reason", "bootstrap did not succeed."),
+                }
+            )
+        else:
+            try:
+                venv_python = verification_python_bootstrap.create_verification_venv(
+                    bootstrap["executable"], cache_dir
+                )
+            except (OSError, subprocess.SubprocessError) as exc:
+                # A host can have a discoverable/provisioned interpreter
+                # whose own `-m venv` still fails (e.g. a system missing
+                # ensurepip support) -- record that as blocked rather than
+                # crashing the whole collector before any evidence is
+                # written.
+                checks.append(
+                    {
+                        "scenario": "release-profile",
+                        "status": "blocked",
+                        "reason": redact(
+                            "Failed to create the isolated verification environment: "
+                            "%s: %s" % (type(exc).__name__, exc)
+                        ),
+                    }
+                )
+            else:
+                command = [
+                    sys.executable,
+                    str(root / "scripts" / "run_ci_like.py"),
+                    "--profile",
+                    "release",
+                    "--python",
+                    venv_python,
+                ]
+                result = run_command(command, root, redact, args.release_timeout)
+                checks.append({"scenario": "release-profile", **result})
 
     tools = _tool_records(root, redact, args.probe_timeout)
     artifacts = _artifact_records(args.artifact, root, redact)

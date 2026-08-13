@@ -92,6 +92,20 @@ commands:
     values:
       - python scripts/report_oversized_files.py --output .cache/oversized-file-report.json
 
+  external_verification:
+    status: configured
+    description: >-
+      Run mechanically verifiable release checks on the current Windows, WSL,
+      Linux, or macOS host and aggregate sanitized environment metadata,
+      stdout/stderr, exit codes, tool probes, and incomplete external scenarios
+      into one JSON evidence bundle. Interactive/browser/Remote/SMTP/filesystem
+      evidence remains manual_required or blocked rather than inferred passed.
+    values:
+      - python scripts/run_external_verification.py
+    windows_powershell:
+      - py -3.12 scripts/run_external_verification.py
+    output: .cache/external-verification-<host>-<UTC>.json
+
   unit_test:
     status: configured
     values:

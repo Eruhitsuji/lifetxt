@@ -184,5 +184,52 @@ class SafetyCliTests(unittest.TestCase):
         self.assertEqual("lifetxt release manifest v1", schema["title"])
 
 
+class _NarrowConsoleStream:
+    """Simulates a real Windows cp932-console stdout: raises UnicodeEncodeError
+    on write, like the host that surfaced #429."""
+
+    def __init__(self, encoding="cp932"):
+        self.encoding = encoding
+        self.written = []
+
+    def write(self, text):
+        text.encode(self.encoding)
+        self.written.append(text)
+        return len(text)
+
+
+class ConsoleEncodingSafetyTests(unittest.TestCase):
+    """Every stdout write boundary must survive a narrow console codec
+    rather than crashing with UnicodeEncodeError (#429). Covers both write
+    boundaries directly with representative non-ASCII content: extended
+    commands via extra_common._write_output and legacy commands via
+    cli.write_text -- the two call sites wired to atomic.write_console_text.
+    """
+
+    NON_ASCII_TEXT = '{"note": "record ↵ arrow"}\n'
+
+    def test_extra_common_write_output_survives_narrow_console_codec(self):
+        from lifetxt.extra_common import _write_output
+
+        stream = _NarrowConsoleStream()
+        with contextlib.redirect_stdout(stream):
+            _write_output(self.NON_ASCII_TEXT)
+
+        self.assertEqual(1, len(stream.written))
+        self.assertNotIn("↵", stream.written[0])
+        self.assertIn("record ", stream.written[0])
+
+    def test_cli_write_text_survives_narrow_console_codec(self):
+        from lifetxt import cli
+
+        stream = _NarrowConsoleStream()
+        with contextlib.redirect_stdout(stream):
+            cli.write_text(None, self.NON_ASCII_TEXT)
+
+        self.assertEqual(1, len(stream.written))
+        self.assertNotIn("↵", stream.written[0])
+        self.assertIn("record ", stream.written[0])
+
+
 if __name__ == "__main__":
     unittest.main()

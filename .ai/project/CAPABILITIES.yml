@@ -58,6 +58,7 @@ capabilities:
       - req-stable-filesystem-recovery-support
       - req-stable-windows-terminal-tui-verification
       - req-stable-external-verification-automation
+      - req-external-verification-redaction-hardening
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -86,6 +87,14 @@ capabilities:
       - completion-test discovery remains 182 tests across source and destination modules
       - tests.test_external_verification covers platform classification, redaction, command capture, aggregation, and evidence-state semantics
       - PR #426 CI validates the collector across the repository release gates
+      - "tests/test_external_verification.py RedactionHardeningTests (3 tests): case-insensitive Windows path redaction across lower/mixed case and slash direction; a longer nested path (e.g. %TEMP% under %USERPROFILE%) wins over a shorter containing one instead of being silently swallowed; redact(redact(x)) == redact(x) across representative inputs including already-redacted text"
+      - "tests/test_external_verification.py WriteBundleSafetyNetTests (4 tests): write_bundle refuses (without leaking the raw value in its own error) to persist a bundle where a raw redaction candidate survived, including the JSON-backslash-escaped form; a properly redacted bundle still writes; omitting redaction_candidates preserves prior unconditional-write behavior"
+      - "confirmed via git stash that all 5 new hardening/safety-net tests reproduce the original defects (case-sensitivity miss, home/temp overlap swallowing, and the safety net not existing at all) against the pre-fix code, then pass once restored"
+      - "found and fixed a defect in the safety net itself while writing its test: json.dumps() escapes path backslashes as double-backslashes, so the initial rescan implementation checking only the raw candidate string never matched a leaked Windows path in the serialized JSON and silently never refused; fixed by also checking the JSON-escaped form"
+      - python -m unittest tests.test_external_verification -> Ran 13 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2427 tests, 1 pre-existing unrelated failure (the separately-tracked/fixed #432 git-encoding test bug, not present on this branch since #432 landed separately), all other 2426 tests OK'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff check scripts/run_external_verification.py tests/test_external_verification.py -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -100,9 +109,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/304
       - https://github.com/Eruhitsuji/lifetxt/issues/312
       - https://github.com/Eruhitsuji/lifetxt/issues/425
+      - https://github.com/Eruhitsuji/lifetxt/issues/430
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
+      - https://github.com/Eruhitsuji/lifetxt/pull/434
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       External-environment preparation now includes dependency-free host evidence
@@ -110,6 +121,22 @@ capabilities:
       bundle. Interactive terminal, browser, Remote, SMTP, external filesystem,
       deployment, rollback, and release decisions remain dedicated real-environment
       or human-authority work and are never inferred passed by the collector.
+      #430 found two real defects in real Windows/WSL evidence bundles collected
+      under #425/#426: make_redactor()'s sequential str.replace() calls were
+      case-sensitive (missing a differently-cased path a child tool such as pip
+      emitted) and processed repo/home/temp in a fixed order, so %TEMP% nested
+      inside %USERPROFILE% on a normal Windows host had its home prefix consumed
+      first, silently absorbing temp's own marker. Rewritten as one case-insensitive,
+      length-sorted-longest-first single-pass regex substitution
+      (_path_replacement_entries/make_redactor), which is provably idempotent by
+      construction and regression-tested as such. Added a persistence-time
+      rescan-and-refuse safety net in write_bundle() (_redaction_candidates/
+      _unredacted_candidate_count) as the defense-in-depth layer #430 explicitly
+      asked for: even a future redaction-rule regression cannot silently persist
+      leaked evidence, since the fully-serialized JSON is rescanned immediately
+      before the write. Regenerating fresh Windows/WSL bundles after this fix
+      (#430's own last acceptance criterion) is external-environment work outside
+      this sandbox and remains open.
     replacement:
       replaces: []
       replaced_by: null

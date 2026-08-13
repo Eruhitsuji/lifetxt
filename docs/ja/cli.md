@@ -185,6 +185,12 @@ calendar sync の default source / output を指定します。
 `*.life.txt` や `projects/**/*.life.txt` のような glob も指定できます。
 ディレクトリを指定した場合は、その直下の life.txt 風 `.txt` ファイルを読み込みます。
 
+複数ファイルの展開は決定論的です。明示的に指定した path は呼び出し順を保持し、
+glob に一致した path は path 順にソートされ、ディレクトリに一致した path は
+`life.txt`、`*.life.txt`、`*_life.txt`、`*.txt` という固定の pattern 優先順位を
+使用し、各 pattern 内では名前順にソートされます。重複する path は絶対 path の
+同一性で除去されます。
+
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check work.life.txt home.life.txt
@@ -197,6 +203,27 @@ type life.txt | python -m lifetxt check
 path を省略するか `-` を指定した場合、標準入力から読み込みます。
 ファイル入力の場合、診断には line / column の前に source path が付きます。
 stdin のみの場合は source path を省略します。
+
+1 つのコマンドで読み込んだすべての file は、ID check と参照検査において
+1 つの論理集合として扱われます。`parent:`、`ref:`、`depends_on:`、`blocks:`、
+`related:`、`duplicate_of:`、`replaced_by:` は読み込んだどの file の ID も
+参照できます。`check`、`links`、`ids`、`to-json`、`to-jsonl` などのコマンドは
+同じ入力集合を使うため、file をまたぐ参照を解決したい場合は関連する file を
+すべて渡すか、共有 path を設定してください。参照 cycle 検出
+（`parent:`、`depends_on:`/`blocks:`、`duplicate_of:`、`replaced_by:`）も
+読み込んだすべての file にまたがり、cycle が始まった file だけには限定され
+ません。
+
+複数の入力 source の中に存在しない file や権限のない file がある場合、
+出力が行われる前に操作全体が明示的に失敗します。エラーには失敗した path が
+（元になった OS エラーを通じて）含まれ、コマンドは非ゼロで終了します。残りの
+読み取り可能な source が部分的に読み込まれたり報告されたりすることはありませ
+ん。これはコマンドごとではなく、`lifetxt` の最上位の entry point で一律に
+強制されます。symlink の入力 file は黙ってスキップされるのではなく、通常の
+file と同様に読み込まれます。path の重複除去は symlink を解決せず絶対 path
+を比較するため、symlink とその参照先の実 file が両方渡された場合は 2 つの
+別々の source として扱われ、黙って統合されるのではなく正しく重複 ID の
+warning が発生します。
 
 ### 2.2 出力 path
 

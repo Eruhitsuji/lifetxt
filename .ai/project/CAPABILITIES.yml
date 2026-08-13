@@ -1748,6 +1748,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/164
       - https://github.com/Eruhitsuji/lifetxt/pull/165
       - https://github.com/Eruhitsuji/lifetxt/pull/166
+      - https://github.com/Eruhitsuji/lifetxt/pull/423
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered lifetxt/links.py before this change. Reciprocal-

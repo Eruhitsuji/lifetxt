@@ -44,26 +44,46 @@ Run exactly one command from the repository root:
 
 | Environment | Command |
 | --- | --- |
-| Windows PowerShell | `py -3.12 scripts/run_external_verification.py` |
-| WSL | `python3 scripts/run_external_verification.py` |
-| Linux | `python3 scripts/run_external_verification.py` |
-| macOS Terminal | `python3 scripts/run_external_verification.py` |
+| Windows PowerShell | `.\scripts\verify-external.ps1` |
+| WSL | `./scripts/verify-external.sh` |
+| Linux | `./scripts/verify-external.sh` |
+| macOS Terminal | `./scripts/verify-external.sh` |
 
-If `python` is already the supported interpreter, it may be used instead. The
-command prints only a short result summary and the final `evidence=...` path;
-the complete command output is embedded in that one JSON bundle, so there are
-no separate log files to collect.
+These entry scripts do not need a pre-installed supported Python. Their only
+job is finding *any* Python 3 already on the host -- even an unsupported
+version -- to hand off to `scripts/run_external_verification.py`, which then
+bootstraps a supported interpreter (3.10-3.12) itself: it prefers an
+already-installed one (checked in priority order 3.12 -> 3.11 -> 3.10), and
+otherwise provisions a verification-only interpreter from a pinned,
+checksum-verified [python-build-standalone][pbs] release under
+`.cache/lifetxt-verify-python/` -- never touching the host's system Python and
+never requiring administrator/root privileges on the normal path. See
+`scripts/verification_python_bootstrap.py` for the exact search order,
+manifest, and verification logic. The bootstrap outcome (an already-installed
+interpreter vs. a managed one, and its version) is recorded as its own
+`python-bootstrap` entry in the evidence bundle's `checks`; a bootstrap or
+isolated-environment-creation failure is recorded as `blocked` with an
+actionable reason rather than crashing the collector or fabricating a release-
+profile pass.
+
+[pbs]: https://github.com/astral-sh/python-build-standalone
+
+If a supported interpreter is already active in your shell, calling
+`scripts/run_external_verification.py` directly still works exactly as
+before. The command prints only a short result summary and the final
+`evidence=...` path; the complete command output is embedded in that one JSON
+bundle, so there are no separate log files to collect.
 
 Use an explicit filename when transferring evidence between machines:
 
 ```text
-python3 scripts/run_external_verification.py --output .cache/external-verification.json
+./scripts/verify-external.sh --output .cache/external-verification.json
 ```
 
 On Windows PowerShell:
 
 ```text
-py -3.12 scripts/run_external_verification.py --output .cache/external-verification.json
+.\scripts\verify-external.ps1 --output .cache/external-verification.json
 ```
 
 Optional already-built artifacts or evidence inputs can be hashed into the same
@@ -80,9 +100,13 @@ their dedicated procedures run. A non-CI host run may record
 `evidence_scope` remains `host_execution_only`.
 
 Prerequisites are intentionally not installed automatically because OS package
-installation may require administrator authority. If Python, `venv`, `pip`,
-`git`, `fzf`, or `peco` is unavailable, the collector or the reused release
-profile fails/blocks explicitly and retains the reason in the same JSON file.
+installation may require administrator authority. A host with literally no
+Python 3 at all remains an explicit `blocked`/manual case -- install any
+Python 3 to let the entry scripts bootstrap a supported one, as above. If
+`venv`, `pip`, `git`, `fzf`, or `peco` is unavailable or fails (for example, a
+Linux host missing `python3-venv`'s `ensurepip` support), the collector or the
+reused release profile blocks/fails explicitly and retains the reason in the
+same JSON file rather than silently skipping it.
 
 ## Required scenarios
 

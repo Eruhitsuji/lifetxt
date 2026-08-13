@@ -19,6 +19,8 @@ CI covers the supported Python range, release policy, clean wheel smoke, and
 native Windows/macOS core CLI smoke. External support requires the real-host
 procedure in [External Environment Verification](external-environment-verification.md).
 The four OS rows are not considered verified merely because CI passes.
+The reproducible artifact command and evidence fields are documented in
+[Stable Release Artifact Verification](stable-release-artifact-verification.md).
 
 ## Known limitations
 
@@ -32,6 +34,8 @@ The four OS rows are not considered verified merely because CI passes.
 - Diagnostic spans are complete only for the parser families covered by the
   linked issues; diagnostics without source boundaries retain their existing
   representation.
+- The version/tag is intentionally unset in this draft. Release authority must
+  select it after the artifact and external-environment gates pass.
 
 ## Installation smoke
 

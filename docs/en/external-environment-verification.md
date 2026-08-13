@@ -32,6 +32,58 @@ are intentionally installed. On Windows PowerShell, `python` may be replaced
 by `py -3.12`; on WSL, Linux, and macOS use `python3` when needed. Record
 output and exit code for every command.
 
+## Low-friction automated collection
+
+For the mechanically verifiable host portion, prefer the external-verification
+collector. It reuses `scripts/run_ci_like.py --profile release`, captures the
+complete stdout/stderr and exit status, records sanitized host/git/Python/
+terminal/filesystem metadata, probes `fzf` and `peco`, and writes everything to
+one JSON file under `.cache/` by default.
+
+Run exactly one command from the repository root:
+
+| Environment | Command |
+| --- | --- |
+| Windows PowerShell | `py -3.12 scripts/run_external_verification.py` |
+| WSL | `python3 scripts/run_external_verification.py` |
+| Linux | `python3 scripts/run_external_verification.py` |
+| macOS Terminal | `python3 scripts/run_external_verification.py` |
+
+If `python` is already the supported interpreter, it may be used instead. The
+command prints only a short result summary and the final `evidence=...` path;
+the complete command output is embedded in that one JSON bundle, so there are
+no separate log files to collect.
+
+Use an explicit filename when transferring evidence between machines:
+
+```text
+python3 scripts/run_external_verification.py --output .cache/external-verification.json
+```
+
+On Windows PowerShell:
+
+```text
+py -3.12 scripts/run_external_verification.py --output .cache/external-verification.json
+```
+
+Optional already-built artifacts or evidence inputs can be hashed into the same
+bundle by repeating `--artifact PATH`. `--skip-release` exists only for a quick
+collector/debug run; it records the release profile as `skipped` and is not
+release evidence.
+
+The collector does **not** synthesize evidence it cannot observe. Interactive
+TUI checks, real selector actions, browser-engine behavior, Web deployment
+cutover, Remote clients, SMTP providers, external filesystem classes, physical
+power loss, release, and rollback remain `manual_required` or `blocked` until
+their dedicated procedures run. A non-CI host run may record
+`evidence_type: real_environment` for facts observed on that host, but its
+`evidence_scope` remains `host_execution_only`.
+
+Prerequisites are intentionally not installed automatically because OS package
+installation may require administrator authority. If Python, `venv`, `pip`,
+`git`, `fzf`, or `peco` is unavailable, the collector or the reused release
+profile fails/blocks explicitly and retains the reason in the same JSON file.
+
 ## Required scenarios
 
 For every environment record OS/build, kernel where applicable, terminal,
@@ -67,7 +119,9 @@ its reason, never `passed`.
 
 ## Evidence record
 
-Store one record per command in reviewable Markdown or JSON:
+The automated collector writes one self-contained versioned JSON document. For
+manually executed scenarios, retain equivalent fields so the records remain
+reviewable and mergeable into the same release evidence model:
 
 ```json
 {

@@ -5624,7 +5624,7 @@ traceability:
       capability_id: cap-supported-platform-install
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/432
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/433
       changed_files_or_scope:
         - tests/test_traceability_gate.py
       tests_or_evidence:

@@ -75,6 +75,58 @@ traceability:
         remain outside this bounded contract slice.
       status: partial
 
+    - requirement_id: req-stable-schema-compatibility-boundary
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/404
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/420
+      changed_files_or_scope:
+        - tests/test_stable_surface_schemas.py
+        - docs/en/stable-contract-matrix.md
+      tests_or_evidence:
+        - selected Web /api/items and MCP list_items/get_item read responses validate against item-v1
+        - stable Web NOT_FOUND error envelope is asserted
+        - diagnostic-v1 schema identity and strict compatibility boundary are asserted
+      release_or_deployment: null
+      notes: >-
+        Completes the bounded read-only compatibility slice. Route groups,
+        writable operations, and deferred surfaces remain explicitly outside
+        this claim.
+      status: implemented
+
+    - requirement_id: req-stable-release-artifact-verification-procedure
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/326
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/420
+      changed_files_or_scope:
+        - docs/en/stable-release-artifact-verification.md
+        - docs/en/stable-release-notes-draft.md
+      tests_or_evidence:
+        - existing scripts/run_ci_like.py release profile documents wheel/sdist, fresh-venv, entry-point, and smoke checks
+        - local build --sdist --wheel --no-isolation completed successfully
+      release_or_deployment: null
+      notes: >-
+        Procedure and local mechanical build are complete. Required real-host
+        OS matrix evidence remains an external release gate.
+      status: partial
+
+    - requirement_id: req-stable-release-note-boundary-refresh
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/420
+      changed_files_or_scope:
+        - docs/en/stable-release-notes-draft.md
+      tests_or_evidence:
+        - release draft links the reproducible artifact verification procedure
+        - release version/tag selection and external evidence remain explicitly human-gated
+      release_or_deployment: null
+      notes: >-
+        Documentation boundary is updated; package version selection and final
+        publication are intentionally not automated.
+      status: partial
+
     - requirement_id: req-stable-multi-file-input-order
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283

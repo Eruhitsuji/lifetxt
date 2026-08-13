@@ -97,6 +97,15 @@ def _secret_values(env):
     return sorted(set(values), key=len, reverse=True)
 
 
+def _username_values(env):
+    values = []
+    for key in ("USER", "USERNAME", "LOGNAME"):
+        value = env.get(key)
+        if value and len(value) >= 2:
+            values.append(value)
+    return sorted(set(values), key=len, reverse=True)
+
+
 def make_redactor(repo_root=None, env=None):
     env = os.environ if env is None else env
     replacements = []
@@ -112,11 +121,21 @@ def make_redactor(repo_root=None, env=None):
             replacements.append((value.replace("\\", "/"), marker))
             replacements.append((value.replace("/", "\\"), marker))
     secrets = _secret_values(env)
+    usernames = _username_values(env)
 
     token_patterns = (
         re.compile(r"(?i)(authorization\s*:\s*bearer\s+)([^\s]+)"),
         re.compile(r"(?i)\b(token|password|passwd|secret|api[_-]?key)\s*=\s*([^\s]+)"),
     )
+    username_patterns = []
+    for username in usernames:
+        escaped = re.escape(username)
+        username_patterns.extend(
+            (
+                re.compile(rf"(?i)(\b(?:user|username|login|owner)\s*[:=]\s*){escaped}\b"),
+                re.compile(rf"(?<=[/\\]){escaped}(?=[/\\])"),
+            )
+        )
 
     def redact(value):
         if value is None:
@@ -128,6 +147,11 @@ def make_redactor(repo_root=None, env=None):
             text = text.replace(raw, marker)
         for pattern in token_patterns:
             text = pattern.sub(lambda m: f"{m.group(1)}<redacted-secret>", text)
+        for pattern in username_patterns:
+            if pattern.groups:
+                text = pattern.sub(lambda m: f"{m.group(1)}<redacted-user>", text)
+            else:
+                text = pattern.sub("<redacted-user>", text)
         return text
 
     return redact

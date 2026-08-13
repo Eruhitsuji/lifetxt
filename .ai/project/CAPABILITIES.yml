@@ -179,6 +179,9 @@ capabilities:
       - req-stable-external-environment-verification-plan
       - req-stable-web-mcp-schema-validation
       - req-stable-single-item-schema-validation
+      - req-stable-schema-compatibility-boundary
+      - req-stable-release-artifact-verification-procedure
+      - req-stable-release-note-boundary-refresh
       - req-stable-multi-file-input-order
       - req-stable-multi-file-write-target
       - req-stable-workspace-id-uniqueness

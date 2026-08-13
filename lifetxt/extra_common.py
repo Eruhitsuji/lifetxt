@@ -18,7 +18,7 @@ import unicodedata
 from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from .atomic import atomic_write_text
+from .atomic import atomic_write_text, write_console_text
 from .config import (
     config_paths,
     config_section,
@@ -251,7 +251,7 @@ def _write_output(text, output=None, append=False):
         else:
             atomic_write_text(output, text)
     else:
-        sys.stdout.write(text)
+        write_console_text(sys.stdout, text)
 
 
 def _json_text(data, pretty=False):

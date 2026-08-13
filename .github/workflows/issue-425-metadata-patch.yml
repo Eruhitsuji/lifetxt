@@ -28,7 +28,7 @@ jobs:
           text = path.read_text(encoding='utf-8')
           requirement = 'req-stable-external-verification-automation'
           if requirement not in text:
-              marker = '\n  required_chain:'
+              marker = '\nrequired_chain:'
               if marker not in text:
                   raise SystemExit('required_chain marker not found')
               lines = [

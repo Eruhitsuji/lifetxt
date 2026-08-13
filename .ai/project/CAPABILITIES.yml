@@ -834,6 +834,7 @@ capabilities:
       - req-clean-install-runtime
       - req-release-policy-cli-console-encoding-safety
       - req-release-gate-console-encoding-safety
+      - req-traceability-gate-test-git-utf8-decoding
     implementation_locations:
       - pyproject.toml
       - lifetxt/safety_foundation.py
@@ -845,6 +846,7 @@ capabilities:
       - scripts/check_release_policy.py
       - tests/test_mutation.py
       - tests/test_safety_cli.py
+      - tests/test_traceability_gate.py
     public_interfaces:
       - pyproject.toml project.dependencies
       - lifetxt.atomic.write_console_text
@@ -862,15 +864,20 @@ capabilities:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2426 tests, OK (skipped=5)'
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on all changed files -> clean
+      - 'tests/test_traceability_gate.py RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known now passes on a real cp932-locale Windows host from a feature branch with origin/main fetched; reproduced the UnicodeDecodeError/None-stdout failure directly against a bare subprocess.run call before the fix, confirmed encoding="utf-8" resolves it'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2420 tests, OK (skipped=5)'
+      - ruff check tests/test_traceability_gate.py -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/73
       - https://github.com/Eruhitsuji/lifetxt/issues/76
       - https://github.com/Eruhitsuji/lifetxt/issues/95
       - https://github.com/Eruhitsuji/lifetxt/issues/429
+      - https://github.com/Eruhitsuji/lifetxt/issues/432
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/75
       - https://github.com/Eruhitsuji/lifetxt/pull/137
       - https://github.com/Eruhitsuji/lifetxt/pull/431
+      - https://github.com/Eruhitsuji/lifetxt/pull/433
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Linux CI cannot detect a regression here: the marker excludes tzdata there and the
@@ -895,6 +902,22 @@ capabilities:
       deliberately left untouched -- it lives outside the `lifetxt` package
       boundary and already works; refactoring it to import the package was
       judged unnecessary risk for this fix.
+      #432 found the same encoding-locale theme in test infrastructure itself:
+      tests/test_traceability_gate.py::_git()'s subprocess.run used text=True
+      with no explicit encoding, so Python decoded git subprocess output using
+      the host's locale-preferred encoding (cp932 here) rather than UTF-8.
+      .ai/project/TRACEABILITY.yml already contains non-ASCII typographic
+      characters valid in UTF-8 but not cp932, which crashed the background
+      reader thread and silently left completed.stdout as None (returncode
+      still 0) rather than raising, so the failure surfaced as an unrelated
+      AttributeError deep in _traceability_mapping_records. Invisible in CI
+      (shallow checkouts typically lack a fetchable origin/main, so
+      infer_local_base() returns None and the test no-ops) and invisible on
+      UTF-8-locale hosts -- reproducible only on this project's own local
+      non-UTF-8-locale Windows development environment. Fixed with one
+      explicit encoding="utf-8" argument; no other git-subprocess helper in
+      tests/*.py matched this text=True-without-encoding pattern at
+      investigation time, so no broader audit was undertaken.
     replacement:
       replaces: []
       replaced_by: null

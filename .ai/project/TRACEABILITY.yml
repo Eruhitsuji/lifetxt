@@ -5658,6 +5658,30 @@ traceability:
         remains open.
       status: implemented
 
+    - requirement_id: req-traceability-gate-test-git-utf8-decoding
+      capability_id: cap-supported-platform-install
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/432
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/433
+      changed_files_or_scope:
+        - tests/test_traceability_gate.py
+      tests_or_evidence:
+        - 'reproduced directly: subprocess.run(["git", "show", "origin/main:.ai/project/TRACEABILITY.yml"], text=True) with no explicit encoding raised UnicodeDecodeError in the background reader thread on this cp932-locale host, leaving stdout None despite returncode 0'
+        - 'confirmed the same call with encoding="utf-8" returns the full file content'
+        - tests/test_traceability_gate.py RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known -> passes (previously AttributeError on this host from a feature branch)
+        - python -m unittest tests.test_traceability_gate -> Ran 14 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2420 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check tests/test_traceability_gate.py -> All checks passed (pre-existing unrelated formatting drift in this file confirmed present on main already, not introduced by this one-line change)
+      release_or_deployment: null
+      notes: >-
+        Found while locally verifying #429's traceability update on this
+        project's own Windows/cp932-locale development host. One-line fix:
+        _git()'s subprocess.run() call gained an explicit encoding="utf-8".
+        No epic: this is a test-infrastructure fix discovered during that
+        session's own verification pass, not decomposed from #283/#339.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

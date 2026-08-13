@@ -1739,11 +1739,15 @@ capabilities:
       - "tests/test_paths.py MultiFileSourceIntegrityTests (4 tests): a missing or permission-denied file among several input sources fails the whole operation loudly (naming the path, non-zero exit, zero stdout) for both legacy (check) and extended (next) command dispatch; a symlinked input file is read as a distinct source, correctly producing a W213 duplicate-id warning rather than being silently skipped"
       - "live: icacls /deny reproduced permission-denied refusal on a real Windows-locked file, matching the automated test"
       - python -m unittest tests.test_links tests.test_paths -> Ran 53 tests, OK
+      - 'docs/ja/cli.md translation: scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - git diff --check docs/ja/cli.md -> no whitespace errors
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> pass
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/161
       - https://github.com/Eruhitsuji/lifetxt/issues/162
       - https://github.com/Eruhitsuji/lifetxt/issues/163
       - https://github.com/Eruhitsuji/lifetxt/issues/421
+      - https://github.com/Eruhitsuji/lifetxt/issues/422
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/164
       - https://github.com/Eruhitsuji/lifetxt/pull/165
@@ -1779,6 +1783,13 @@ capabilities:
       and cross-file-reference paragraphs); rather than silently deepen that gap
       with an English-only addition, the whole-section sync was filed separately
       as #422 instead of folded into this capability's own change.
+      #422 closes that drift: docs/ja/cli.md's "2.1 入力 path" section now
+      carries the same three paragraphs docs/en/cli.md's "2.1 Input Paths"
+      does (deterministic multi-file expansion order, cross-file reference/
+      cycle-detection scope, and the missing/permission-denied/symlinked-
+      input policy). No English content changed, and per #422's own scope a
+      broader audit of the rest of docs/ja/cli.md against docs/en/cli.md was
+      not attempted.
     replacement:
       replaces: []
       replaced_by: null

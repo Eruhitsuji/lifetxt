@@ -5563,6 +5563,37 @@ traceability:
         rather than folded in here.
       status: implemented
 
+    - requirement_id: req-cli-docs-ja-input-paths-parity
+      capability_id: cap-graph-link-foundation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/322
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/422
+      pull_request: null
+      changed_files_or_scope:
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - git diff --check docs/ja/cli.md -> no whitespace errors
+        - code-fence count in docs/ja/cli.md remains even (balanced) after the edit
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> pass
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2414 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Documentation-only translation fix. Translates the three paragraphs
+        docs/en/cli.md's "2.1 Input Paths" section carried that
+        docs/ja/cli.md's "2.1 入力 path" lacked entirely (deterministic
+        multi-file expansion order from #415/#418; the one-logical-input-set
+        cross-file reference and cycle-detection rule; the missing/
+        permission-denied/symlinked-input policy from #421). No English
+        content changed. Terminology matches this document's existing
+        mixed English/Japanese technical-term style (e.g. "明示的に失敗",
+        "非ゼロで終了", "黙って" for "silently", keeping cycle/symlink/OS
+        error as English/loanwords where the surrounding document already
+        does). Per #422's own scope, a broader audit of the rest of
+        docs/ja/cli.md against docs/en/cli.md for unrelated drift was not
+        attempted here.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

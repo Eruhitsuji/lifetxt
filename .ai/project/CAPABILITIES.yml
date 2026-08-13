@@ -57,6 +57,7 @@ capabilities:
       - req-stable-attachment-bounds
       - req-stable-filesystem-recovery-support
       - req-stable-windows-terminal-tui-verification
+      - req-stable-external-verification-automation
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -71,13 +72,20 @@ capabilities:
       - docs/en/stable-verification-299-attachment-bounds.md
       - docs/en/stable-verification-304-filesystem-support.md
       - docs/en/stable-verification-312-windows-terminals.md
+      - scripts/run_external_verification.py
+      - tests/test_external_verification.py
+      - .ai/project/changes/issue-425-external-verification-automation/
     public_interfaces:
       - redacted external verification record format
       - CUI completion-test extraction boundary #395
+      - python scripts/run_external_verification.py
+      - one-file sanitized external-verification JSON bundle
     tests_or_evidence:
       - issue-scoped runbooks identify environment, procedure, observations, and redaction rules
       - #373 inventory selects a bounded completion-test extraction
       - completion-test discovery remains 182 tests across source and destination modules
+      - tests.test_external_verification covers platform classification, redaction, command capture, aggregation, and evidence-state semantics
+      - PR #426 CI validates the collector across the repository release gates
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -91,12 +99,17 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/299
       - https://github.com/Eruhitsuji/lifetxt/issues/304
       - https://github.com/Eruhitsuji/lifetxt/issues/312
+      - https://github.com/Eruhitsuji/lifetxt/issues/425
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
+      - https://github.com/Eruhitsuji/lifetxt/pull/426
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
-      Preparation and investigation only for external environments. No real
-      deployment, external account, filesystem, or terminal result is claimed.
+      External-environment preparation now includes dependency-free host evidence
+      collection that aggregates mechanical release checks into one sanitized JSON
+      bundle. Interactive terminal, browser, Remote, SMTP, external filesystem,
+      deployment, rollback, and release decisions remain dedicated real-environment
+      or human-authority work and are never inferred passed by the collector.
     replacement:
       replaces: []
       replaced_by: null

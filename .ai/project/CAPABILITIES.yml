@@ -833,12 +833,14 @@ capabilities:
     source_requirements:
       - req-clean-install-runtime
       - req-release-policy-cli-console-encoding-safety
+      - req-traceability-gate-test-git-utf8-decoding
     implementation_locations:
       - pyproject.toml
       - lifetxt/safety_foundation.py
       - readme.md
       - .ai/project/RULES.md
       - scripts/check_release_policy.py
+      - tests/test_traceability_gate.py
     public_interfaces:
       - pyproject.toml project.dependencies
     tests_or_evidence:
@@ -848,10 +850,15 @@ capabilities:
       - 'resolution must use only the declared source: tests/test_safety_foundation.py fails if an undeclared dateutil or pytz fallback is reintroduced'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1765 tests, OK (skipped=14)'
       - 'tests/test_check_release_policy_cli.py: the release-policy CLI falls back instead of crashing when stdout cannot encode a manifest character (e.g. Windows cp932), verified against a real io.TextIOWrapper'
+      - 'tests/test_traceability_gate.py RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known now passes on a real cp932-locale Windows host from a feature branch with origin/main fetched; reproduced the UnicodeDecodeError/None-stdout failure directly against a bare subprocess.run call before the fix, confirmed encoding="utf-8" resolves it'
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2420 tests, OK (skipped=5)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff check tests/test_traceability_gate.py -> All checks passed
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/73
       - https://github.com/Eruhitsuji/lifetxt/issues/76
       - https://github.com/Eruhitsuji/lifetxt/issues/95
+      - https://github.com/Eruhitsuji/lifetxt/issues/432
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/75
       - https://github.com/Eruhitsuji/lifetxt/pull/137
@@ -865,6 +872,22 @@ capabilities:
       but is otherwise unrelated to the timezone dependency; see
       .ai/project/changes/release-policy-cli-console-encoding/ for that change's own
       requirements, design, and verification record.
+      #432 found the same encoding-locale theme in test infrastructure itself:
+      tests/test_traceability_gate.py::_git()'s subprocess.run used text=True
+      with no explicit encoding, so Python decoded git subprocess output using
+      the host's locale-preferred encoding (cp932 here) rather than UTF-8.
+      .ai/project/TRACEABILITY.yml already contains non-ASCII typographic
+      characters valid in UTF-8 but not cp932, which crashed the background
+      reader thread and silently left completed.stdout as None (returncode
+      still 0) rather than raising, so the failure surfaced as an unrelated
+      AttributeError deep in _traceability_mapping_records. Invisible in CI
+      (shallow checkouts typically lack a fetchable origin/main, so
+      infer_local_base() returns None and the test no-ops) and invisible on
+      UTF-8-locale hosts -- reproducible only on this project's own local
+      non-UTF-8-locale Windows development environment. Fixed with one
+      explicit encoding="utf-8" argument; no other git-subprocess helper in
+      tests/*.py matched this text=True-without-encoding pattern at
+      investigation time, so no broader audit was undertaken.
     replacement:
       replaces: []
       replaced_by: null

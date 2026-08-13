@@ -1,0 +1,71 @@
+name: Issue 425 metadata patch
+
+on:
+  push:
+    branches:
+      - agent/issue-425-external-verification-automation
+    paths:
+      - .github/workflows/issue-425-metadata-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/issue-425-external-verification-automation
+          fetch-depth: 0
+      - name: Patch traceability and remove helper
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.ai/project/TRACEABILITY.yml')
+          text = path.read_text(encoding='utf-8')
+          requirement = 'req-stable-external-verification-automation'
+          if requirement not in text:
+              marker = '\n  required_chain:'
+              if marker not in text:
+                  raise SystemExit('required_chain marker not found')
+              block = '''
+    - requirement_id: req-stable-external-verification-automation
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/425
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/426
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+        - .ai/project/COMMANDS.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/issue-425-external-verification-automation/
+        - todo.md
+      tests_or_evidence:
+        - tests.test_external_verification covers platform classification, redaction, command capture, aggregation, and source package-version identity
+        - disposable local git fixture writes one sanitized JSON bundle while preserving manual_required/blocked external scenarios
+        - GitHub Actions CI on PR #426
+      release_or_deployment: null
+      notes: >-
+        High-assurance release-evidence tooling only. The collector reuses
+        scripts/run_ci_like.py and does not satisfy interactive, browser,
+        Remote, SMTP, filesystem, deployment, release, or rollback gates by
+        inference.
+      status: implemented
+'''
+              text = text.replace(marker, block + marker, 1)
+              path.write_text(text, encoding='utf-8')
+
+          Path('.github/workflows/issue-425-metadata-patch.yml').unlink()
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .ai/project/TRACEABILITY.yml .github/workflows/issue-425-metadata-patch.yml
+          git diff --cached --check
+          git commit -m "Record issue 425 traceability chain"
+          git push origin HEAD:agent/issue-425-external-verification-automation

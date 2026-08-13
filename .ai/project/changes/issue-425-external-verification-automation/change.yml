@@ -3,7 +3,7 @@ schema_version: 1
 change:
   id: issue-425-external-verification-automation
   title: Automate cross-platform external verification evidence collection
-  status: in_review
+  status: implemented
   change_type: Operations
   assurance_level: High
   owner: Codex

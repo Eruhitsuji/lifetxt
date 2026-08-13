@@ -833,14 +833,21 @@ capabilities:
     source_requirements:
       - req-clean-install-runtime
       - req-release-policy-cli-console-encoding-safety
+      - req-release-gate-console-encoding-safety
     implementation_locations:
       - pyproject.toml
       - lifetxt/safety_foundation.py
+      - lifetxt/atomic.py
+      - lifetxt/cli.py
+      - lifetxt/extra_common.py
       - readme.md
       - .ai/project/RULES.md
       - scripts/check_release_policy.py
+      - tests/test_mutation.py
+      - tests/test_safety_cli.py
     public_interfaces:
       - pyproject.toml project.dependencies
+      - lifetxt.atomic.write_console_text
     tests_or_evidence:
       - 'a clean environment built by the recorded setup command must pass integration_test on every supported platform'
       - 'the tzdata marker must evaluate true only on win32; verified by evaluating the PEP 508 marker, not by assuming it'
@@ -848,13 +855,22 @@ capabilities:
       - 'resolution must use only the declared source: tests/test_safety_foundation.py fails if an undeclared dateutil or pytz fallback is reintroduced'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1765 tests, OK (skipped=14)'
       - 'tests/test_check_release_policy_cli.py: the release-policy CLI falls back instead of crashing when stdout cannot encode a manifest character (e.g. Windows cp932), verified against a real io.TextIOWrapper'
+      - 'tests/test_mutation.py WriteConsoleTextTests (4 tests): atomic.write_console_text falls back to backslashreplace on a narrow-codec (cp932) fake TextIOWrapper, leaves UTF-8/ASCII-safe text unchanged, and defaults to ascii when the stream has no encoding attribute'
+      - 'tests/test_safety_cli.py ConsoleEncodingSafetyTests (2 tests): both stdout write boundaries (extra_common._write_output and cli.write_text) survive a narrow-codec stream with representative non-ASCII content'
+      - 'confirmed via git stash that both ConsoleEncodingSafetyTests cases reproduce the original UnicodeEncodeError crash against the pre-fix code, then pass once the fix is restored'
+      - python -m unittest tests.test_mutation tests.test_safety_cli -> pass
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2426 tests, OK (skipped=5)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on all changed files -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/73
       - https://github.com/Eruhitsuji/lifetxt/issues/76
       - https://github.com/Eruhitsuji/lifetxt/issues/95
+      - https://github.com/Eruhitsuji/lifetxt/issues/429
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/75
       - https://github.com/Eruhitsuji/lifetxt/pull/137
+      - https://github.com/Eruhitsuji/lifetxt/pull/431
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Linux CI cannot detect a regression here: the marker excludes tzdata there and the
@@ -865,6 +881,20 @@ capabilities:
       but is otherwise unrelated to the timezone dependency; see
       .ai/project/changes/release-policy-cli-console-encoding/ for that change's own
       requirements, design, and verification record.
+      #429 found the identical defect class recurring inside the `lifetxt`
+      package itself: `lifetxt safety release-gate` (via
+      extra_common.py::_write_output) and every legacy command writing to
+      stdout without -o (via cli.py::write_text, e.g. `check`) both had the
+      same unguarded `sys.stdout.write(text)` that #95 already fixed once in
+      the standalone `scripts/check_release_policy.py`. Since the fix was now
+      needed a second and third time inside the package, it was consolidated
+      into one shared `lifetxt.atomic.write_console_text` helper (reusing the
+      exact `_write_stdout` fallback pattern from #95) rather than a third
+      copy-paste, so a fourth unguarded site cannot silently reappear.
+      `scripts/check_release_policy.py`'s own standalone `_write_stdout` was
+      deliberately left untouched -- it lives outside the `lifetxt` package
+      boundary and already works; refactoring it to import the package was
+      judged unnecessary risk for this fix.
     replacement:
       replaces: []
       replaced_by: null

@@ -5620,6 +5620,44 @@ traceability:
         inference.
       status: implemented
 
+    - requirement_id: req-release-gate-console-encoding-safety
+      capability_id: cap-supported-platform-install
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/429
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/431
+      changed_files_or_scope:
+        - lifetxt/atomic.py
+        - lifetxt/cli.py
+        - lifetxt/extra_common.py
+        - tests/test_mutation.py
+        - tests/test_safety_cli.py
+      tests_or_evidence:
+        - tests/test_mutation.py WriteConsoleTextTests (4 tests)
+        - tests/test_safety_cli.py ConsoleEncodingSafetyTests (2 tests)
+        - 'git stash confirmed both ConsoleEncodingSafetyTests cases reproduce the original UnicodeEncodeError crash against the pre-fix code'
+        - python -m unittest tests.test_mutation tests.test_safety_cli -> pass
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2426 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check -> clean
+      release_or_deployment: null
+      notes: >-
+        Real Windows external verification (#429's own report, commit
+        ae9d8ee) hit this exact crash after the full unit suite and release
+        manifest already succeeded: `lifetxt safety release-gate`'s
+        machine-readable output embeds ensure_ascii=False translation-
+        coverage strings, and a bare sys.stdout.write crashed on a cp932
+        console encountering U+21B5. Fixed at the shared write boundary
+        (lifetxt.atomic.write_console_text, reused by both
+        extra_common.py::_write_output and cli.py::write_text) rather than
+        only the one reported command, since cli.py::write_text (used by
+        check/links/etc.) had the byte-identical unguarded call. Does not
+        modify scripts/check_release_policy.py, which already had its own
+        working fix from #95. Regenerating a fresh Windows external-
+        verification bundle after this fix (#429's last acceptance
+        criterion) is external-environment work outside this sandbox and
+        remains open.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

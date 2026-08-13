@@ -58,6 +58,28 @@ def replace_with_retry(source, destination):
             time.sleep(float(retry_delays[attempt]))
 
 
+def write_console_text(stream, text):
+    """Write text to a console stream, degrading gracefully on a narrow codec.
+
+    Machine-readable CLI output (release-gate reports, translation-coverage
+    data, and similar) is emitted with ``ensure_ascii=False``, so it can
+    contain characters a legacy console codec such as Windows ``cp932``
+    cannot encode. A bare ``stream.write(text)`` then raises
+    ``UnicodeEncodeError`` and crashes the command outright, even though the
+    underlying work already succeeded (#429). Falling back to
+    backslash-escaped output keeps the command from crashing there; UTF-8
+    terminals are unaffected because the first write already succeeds for
+    them. Mirrors the same pattern already used by
+    ``scripts/check_release_policy.py::_write_stdout`` (#95), now shared so a
+    third unguarded ``sys.stdout.write`` site cannot silently reappear.
+    """
+    try:
+        stream.write(text)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "ascii"
+        stream.write(text.encode(encoding, errors="backslashreplace").decode(encoding))
+
+
 def atomic_write_text(path, text, encoding="utf-8", newline="\n"):
     """Replace a text file through the shared mutation layer.
 

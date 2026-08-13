@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 
 from .atomic import atomic_write_bytes as _shared_atomic_write_bytes
 from .atomic import atomic_write_text as _shared_atomic_write_text
+from .atomic import write_console_text as _write_console_text
 from .config import (
     config_notification_recipient,
     config_paths,
@@ -13405,7 +13406,7 @@ def read_text(path):
 
 def write_text(path, text):
     if path is None:
-        sys.stdout.write(text)
+        _write_console_text(sys.stdout, text)
         return
     atomic_write_text(path, text)
 

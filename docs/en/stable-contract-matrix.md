@@ -13,9 +13,11 @@ as exceptions rather than inferred to be stable from a partial schema.
 | configuration and conflict responses | `config_writer`, mutation contract | `config-v1`, `conflict-v1` | covered |
 | archive, attachment, and transaction operations | archive/attachment/transaction modules | corresponding `*-v1` schemas | covered |
 | ticket, workflow, event, time-entry, version, and sprint records | ticket registries and surfaces | corresponding `ticket-*-v1` schemas | covered where the support matrix advertises the surface |
-| Web endpoint-specific envelopes | `lifetxt.webapp` and route modules | endpoint-specific schema required per route audit | partial; route-by-route validation remains follow-up work |
-| MCP tool result envelopes | `lifetxt.mcp` tool registry | tool schemas and MCP contract extensions | partial; deferred/write tools are not stable by default |
+| Web endpoint-specific envelopes | `lifetxt.webapp` and route modules | `item-v1` for `/api/items` and `/api/items/{line_no}`; stable error envelope is asserted by focused tests | bounded read slice covered; other route groups remain follow-up work |
+| MCP tool result envelopes | `lifetxt.mcp` tool registry | `item-v1` for `list_items` and `get_item` results | bounded read slice covered; deferred/write tools are not stable by default |
 | experimental or deferred features | support matrix classification | no stable schema promised | explicit exception |
 
-The schema version is `1`. Adding a stable contract or changing a response
-shape requires a versioned schema decision and a compatibility-policy update.
+The schema version is `1`. The selected Web/MCP read slice tolerates additive
+producer fields and preserves the stable error keys `error`, `message`, and
+`detail`. Adding a stable contract or changing a response shape requires a
+versioned schema decision and a compatibility-policy update.

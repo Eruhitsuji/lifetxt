@@ -5767,6 +5767,51 @@ traceability:
         open, matching the pattern already established for #429/#430/#432.
       status: implemented
 
+    - requirement_id: req-external-verification-timeout-resilience
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/437
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/440
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "tests/test_external_verification.py: run_command() records a real subprocess timeout as status \"timeout\" (never \"failed\"/\"passed\"), with timeout_seconds and retained partial stdout; bundle_exit_code() fails the run on a release-profile or git-identity timeout exactly like a failure; the default release_timeout has real headroom (>= 2x) over the highest confirmed real-host duration; --release-timeout/--probe-timeout parse and override independently; a bash-gated end-to-end test invokes scripts/verify-external.sh for real and asserts the printed summary and evidence bundle reflect the overridden --release-timeout"
+        - python -m unittest tests.test_external_verification -> Ran 24 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 5 of the new/changed tests fail against the pre-#437 code, then pass once the fix is restored"
+        - "live end-to-end on this Windows host: run_command() against a real slow subprocess with a 2s timeout recorded status=timeout, exit_code=null, timeout_seconds=2, and retained the real partial stdout the process had already printed"
+        - "live: real .\\scripts\\verify-external.ps1 --release-timeout 8765 --skip-release run printed release_timeout=8765 and wrote a real evidence bundle; real ./scripts/verify-external.sh with --release-timeout 4321 --skip-release did the same over a real bash subprocess, proving wrapper argv forwarding without needing to invoke the internal Python script directly"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2462 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true} against the updated docs/en/external-environment-verification.md'
+      release_or_deployment: null
+      notes: >-
+        Real supported-host runs at commit b57aa84 (#435's own merge) showed
+        the fixed 7200-second release-profile timeout was too tight: Windows
+        completed in ~5316s, WSL in ~4959s, and native Linux/macOS both
+        reached the full test run but were cut off by the collector itself at
+        the boundary with no compatibility failure observed before the
+        cutoff -- the timeout was stopping the run, not the run failing.
+        Fixed by raising the default to 14400s (roughly 2.7x headroom over the
+        highest confirmed real duration) and by making a timeout a distinct,
+        unambiguous result: run_command() records status "timeout" (never
+        "failed"/"passed") with an explicit timeout_seconds field and
+        retained partial stdout/stderr; bundle_exit_code() fails the
+        collector's exit code on a release-profile or git-identity timeout
+        exactly like it already did for "failed". The independent, much
+        shorter --probe-timeout (default 30s) is unchanged.
+        verify-external.ps1/verify-external.sh already forwarded all
+        arguments unconditionally, so no wrapper-script code change was
+        needed for --release-timeout to reach them -- verified live on both
+        Windows (PowerShell) and via a real bash-gated automated test rather
+        than assumed from reading the forwarding code alone. Real Linux/macOS
+        reruns beyond the previous 7200s boundary, per the issue's own
+        acceptance criterion, remain external-environment work outside this
+        sandbox and are recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

@@ -126,6 +126,30 @@ def _home_value(env):
     return env.get("USERPROFILE") or env.get("HOME") or str(Path.home())
 
 
+# macOS resolves several of its default temp/home roots through a
+# "/private" symlink (e.g. "/tmp" -> "/private/tmp", and thus
+# tempfile.gettempdir()'s "/var/folders/..." result -> "/private/var/
+# folders/..."). A tool that reports the resolved form -- for example via
+# realpath() -- produces a path this process's own unresolved
+# os.environ/tempfile.gettempdir() value never textually matches (#438).
+# Hardcoded rather than resolved via a live os.path.realpath() call so the
+# mapping is deterministic and testable on any host, not only real macOS.
+_MACOS_PRIVATE_ALIASES = ("/tmp", "/var", "/etc")
+
+
+def _expanded_path_variants(value):
+    """Slash-style and known symlink-aliased forms of one candidate path."""
+    variants = {value, value.replace("\\", "/"), value.replace("/", "\\")}
+    for alias in _MACOS_PRIVATE_ALIASES:
+        if value == alias or value.startswith(alias + "/"):
+            variants.add("/private" + value)
+        elif value.startswith("/private" + alias) and (
+            value == "/private" + alias or value[len("/private" + alias)] == "/"
+        ):
+            variants.add(value[len("/private") :])
+    return variants
+
+
 def _redaction_candidates(repo_root=None, env=None):
     """Raw values that must never survive redaction (#430).
 
@@ -140,6 +164,7 @@ def _redaction_candidates(repo_root=None, env=None):
     for value in (str(repo_root) if repo_root else "", home, temp):
         if value and len(value) >= 3:
             candidates.append(value)
+            candidates.extend(v for v in _expanded_path_variants(value) if v != value)
     candidates.extend(_username_values(env))
     return candidates
 
@@ -162,7 +187,7 @@ def _path_replacement_entries(repo_root, home, temp):
     ):
         if not value or len(value) < 3:
             continue
-        for variant in (value, value.replace("\\", "/"), value.replace("/", "\\")):
+        for variant in _expanded_path_variants(value):
             key = variant.lower()
             if key in seen:
                 continue
@@ -170,6 +195,36 @@ def _path_replacement_entries(repo_root, home, temp):
             entries.append((variant, marker))
     entries.sort(key=lambda pair: len(pair[0]), reverse=True)
     return entries
+
+
+# #438: adjacent repeats of the *same* marker (e.g. from a raw temp value
+# that recurs as a substring immediately next to itself, such as
+# "/tmp/tmp/subdir") collapse to one. A redacted account name immediately
+# followed by the well-known Windows temp-directory suffix collapses to
+# <temp> even when the raw path didn't textually match this process's own
+# home/tempfile.gettempdir() value -- for example a WSL "/mnt/c/Users/..."
+# mount view of a Windows home directory that the collector's own HOME
+# reports as a POSIX path, so only the generic username pattern (not the
+# home/temp path pattern) catches the account name, leaving the surrounding
+# structure unredacted.
+_MARKER_RUN_PATTERN = re.compile(r"(<repo>|<home>|<temp>)(?:[/\\]*\1)+")
+_WINDOWS_USER_TEMP_PATTERN = re.compile(
+    r"(?:/mnt/[A-Za-z]|[A-Za-z]:)?[\\/]Users[\\/]<redacted-user>[\\/]AppData[\\/]Local[\\/]Temp",
+    re.IGNORECASE,
+)
+
+
+def _canonicalize_markers(text):
+    """Collapse repeated/structural redaction artifacts to one marker (#438).
+
+    Applied as the final step of every ``redact()`` call so re-sanitizing
+    already-redacted or nested/previously-sanitized subprocess output always
+    converges to the same canonical placeholder instead of accumulating
+    duplicates such as ``<temp><temp>...``.
+    """
+    text = _WINDOWS_USER_TEMP_PATTERN.sub("<temp>", text)
+    text = _MARKER_RUN_PATTERN.sub(r"\1", text)
+    return text
 
 
 def make_redactor(repo_root=None, env=None):
@@ -225,7 +280,7 @@ def make_redactor(repo_root=None, env=None):
                 text = pattern.sub(lambda m: f"{m.group(1)}<redacted-user>", text)
             else:
                 text = pattern.sub("<redacted-user>", text)
-        return text
+        return _canonicalize_markers(text)
 
     return redact
 

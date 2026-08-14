@@ -1,7 +1,12 @@
 import argparse
+import contextlib
 import importlib.util
+import io
 import json
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +17,35 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "run_external_verific
 spec = importlib.util.spec_from_file_location("external_verification", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
+
+REPO_ROOT = SCRIPT.parents[1]
+BASH_EXECUTABLE = shutil.which("bash")
+
+
+def _bash_skip_reason():
+    """Probe bash the same way tests.test_roundtrip_golden does: some launchers
+    found on PATH (e.g. the WSL wrapper at C:\\Windows\\System32\\bash.exe) do
+    not behave as a usable POSIX shell for a plain subprocess invocation."""
+    if not BASH_EXECUTABLE:
+        return "bash was not found on PATH"
+    try:
+        probe = subprocess.run(
+            [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", "echo lifetxt-bash-probe"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except OSError as exc:
+        return f"{BASH_EXECUTABLE} could not be executed: {exc}"
+    if probe.returncode != 0 or "lifetxt-bash-probe" not in probe.stdout:
+        return (
+            f"{BASH_EXECUTABLE} does not behave as a usable POSIX shell here; "
+            "run this test on Linux/macOS or with Git Bash ahead of it on PATH."
+        )
+    return None
+
+
+BASH_SKIP_REASON = _bash_skip_reason()
 
 
 class PlatformClassificationTests(unittest.TestCase):
@@ -134,6 +168,30 @@ class CommandCaptureTests(unittest.TestCase):
         self.assertIn("out", record["stdout"])
         self.assertIn("err", record["stderr"])
         self.assertGreaterEqual(record["duration_seconds"], 0)
+
+    def test_timeout_is_a_distinct_status_from_failed_with_retained_partial_output(
+        self,
+    ):
+        # #437: a timeout must be distinguishable from a command that ran and
+        # returned a non-zero exit code, must record the configured limit,
+        # and must retain whatever output was already produced.
+        redact = lambda value: str(value)
+        record = module.run_command(
+            [
+                sys.executable,
+                "-c",
+                "import time; print('partial-output', flush=True); time.sleep(5)",
+            ],
+            Path.cwd(),
+            redact,
+            1,
+        )
+        self.assertEqual(record["status"], "timeout")
+        self.assertNotEqual(record["status"], "failed")
+        self.assertIsNone(record["exit_code"])
+        self.assertEqual(record["timeout_seconds"], 1)
+        self.assertIn("timeout after 1 seconds", record["error"])
+        self.assertIn("partial-output", record["stdout"])
 
 
 class BundleTests(unittest.TestCase):
@@ -283,6 +341,127 @@ class BundleTests(unittest.TestCase):
             ),
             0,
         )
+
+    def test_bundle_exit_code_fails_on_release_profile_timeout_not_a_pass(self):
+        # #437: a timeout must fail the collector's own exit code exactly
+        # like "failed" -- it is never mistaken for a pass.
+        self.assertEqual(
+            module.bundle_exit_code(
+                {
+                    "checks": [
+                        {"scenario": "git-identity", "status": "passed"},
+                        {"scenario": "release-profile", "status": "timeout"},
+                    ]
+                }
+            ),
+            1,
+        )
+
+    def test_bundle_exit_code_fails_on_git_identity_timeout(self):
+        self.assertEqual(
+            module.bundle_exit_code(
+                {
+                    "checks": [
+                        {"scenario": "git-identity", "status": "timeout"},
+                        {"scenario": "release-profile", "status": "skipped"},
+                    ]
+                }
+            ),
+            1,
+        )
+
+
+class ReleaseTimeoutConfigurationTests(unittest.TestCase):
+    """#437: real supported-host runs at commit b57aa84 showed the previous
+    fixed 7200-second release-profile timeout was too tight for slower hosts,
+    and Linux/macOS reached the full test run without demonstrating an actual
+    incompatibility before the collector cut them off."""
+
+    def test_default_release_timeout_has_headroom_over_observed_real_host_durations(
+        self,
+    ):
+        args = module.build_parser().parse_args([])
+        self.assertEqual(args.release_timeout, module.DEFAULT_RELEASE_TIMEOUT_SECONDS)
+        # Highest confirmed real-host release-profile duration was ~5316s
+        # (Windows). The default must retain real headroom above it, not
+        # just nominally exceed it, while still bounding a hung process.
+        self.assertGreaterEqual(module.DEFAULT_RELEASE_TIMEOUT_SECONDS, 5316 * 2)
+
+    def test_probe_timeout_stays_independently_short_by_default(self):
+        args = module.build_parser().parse_args([])
+        self.assertEqual(args.probe_timeout, 30)
+        self.assertLess(args.probe_timeout, module.DEFAULT_RELEASE_TIMEOUT_SECONDS)
+
+    def test_release_timeout_cli_override_propagates_to_parsed_args(self):
+        args = module.build_parser().parse_args(["--release-timeout", "1234"])
+        self.assertEqual(args.release_timeout, 1234)
+
+    def test_probe_timeout_cli_override_is_independent_of_release_timeout(self):
+        args = module.build_parser().parse_args(
+            ["--release-timeout", "1234", "--probe-timeout", "5"]
+        )
+        self.assertEqual(args.release_timeout, 1234)
+        self.assertEqual(args.probe_timeout, 5)
+
+    def test_summary_line_reports_the_configured_release_timeout(self):
+        # main() always runs against the real repository root, so this exercises
+        # the actual collector end to end (skip-release keeps it fast/offline)
+        # rather than a synthetic fixture -- proving the CLI value that was
+        # parsed is the value actually used and surfaced as evidence.
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = module.main(
+                    [
+                        "--skip-release",
+                        "--probe-timeout",
+                        "1",
+                        "--release-timeout",
+                        "9999",
+                        "--output",
+                        str(output),
+                    ]
+                )
+        self.assertEqual(0, code)
+        self.assertIn("release_timeout=9999", buffer.getvalue())
+
+
+@unittest.skipIf(BASH_SKIP_REASON is not None, BASH_SKIP_REASON or "")
+class VerifyExternalShWrapperTests(unittest.TestCase):
+    """#437 acceptance criterion: verify-external.sh must be able to pass an
+    explicit release-profile timeout without requiring direct invocation of
+    scripts/run_external_verification.py."""
+
+    def test_release_timeout_flag_propagates_through_the_wrapper(self):
+        wrapper = REPO_ROOT / "scripts" / "verify-external.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            result = subprocess.run(
+                [
+                    BASH_EXECUTABLE,
+                    str(wrapper),
+                    "--skip-release",
+                    "--probe-timeout",
+                    "1",
+                    "--release-timeout",
+                    "4321",
+                    "--output",
+                    str(output),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
+            self.assertIn("release_timeout=4321", result.stdout)
+            self.assertTrue(output.exists())
+            bundle = json.loads(output.read_text(encoding="utf-8"))
+        release = next(
+            item for item in bundle["checks"] if item["scenario"] == "release-profile"
+        )
+        self.assertEqual("skipped", release["status"])
 
 
 class WriteBundleSafetyNetTests(unittest.TestCase):

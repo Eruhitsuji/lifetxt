@@ -60,6 +60,7 @@ capabilities:
       - req-stable-external-verification-automation
       - req-external-verification-redaction-hardening
       - req-verification-python-bootstrap
+      - req-external-verification-timeout-resilience
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -81,6 +82,7 @@ capabilities:
       - tests/test_verification_python_bootstrap.py
       - scripts/verify-external.ps1
       - scripts/verify-external.sh
+      - docs/en/external-environment-verification.md
     public_interfaces:
       - redacted external verification record format
       - CUI completion-test extraction boundary #395
@@ -90,6 +92,8 @@ capabilities:
       - ./scripts/verify-external.sh
       - lifetxt.verification_python_bootstrap.ensure_verification_python
       - lifetxt.verification_python_bootstrap.create_verification_venv
+      - scripts/run_external_verification.py --release-timeout SECONDS
+      - scripts/run_external_verification.py --probe-timeout SECONDS
     tests_or_evidence:
       - issue-scoped runbooks identify environment, procedure, observations, and redaction rules
       - #373 inventory selects a bounded completion-test extraction
@@ -111,6 +115,11 @@ capabilities:
       - python -m unittest tests.test_verification_python_bootstrap tests.test_external_verification -> Ran 31 tests, OK
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2453 tests, OK (skipped=5)'
       - scripts/validate_release_docs.py passes against the updated external-environment-verification.md
+      - "tests/test_external_verification.py: run_command() records a real subprocess timeout as status \"timeout\" (never \"failed\"/\"passed\"), with timeout_seconds and partial stdout retained; bundle_exit_code() fails the run on a release-profile or git-identity timeout exactly like a failure; the default release_timeout carries real headroom (>= 2x) over the highest confirmed real-host duration; --release-timeout/--probe-timeout parse and override independently; a bash-gated end-to-end test invokes scripts/verify-external.sh for real and asserts the printed summary and evidence bundle reflect the overridden --release-timeout, proving wrapper argv forwarding without needing to invoke the internal Python script directly -> tests.test_external_verification 24 tests, OK"
+      - "confirmed via git stash (production code only, tests kept) that 5 of the new/changed tests fail against the pre-#437 code, then pass once the fix is restored"
+      - "live end-to-end on this Windows host: run_command() against a real slow subprocess with a 2s timeout recorded status=timeout, exit_code=null, timeout_seconds=2, and retained the real partial stdout the process had already printed"
+      - "live: real .\\scripts\\verify-external.ps1 --release-timeout 8765 --skip-release run printed release_timeout=8765 and wrote a real evidence bundle; real ./scripts/verify-external.sh with --release-timeout 4321 --skip-release did the same over a real bash subprocess"
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2462 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -127,6 +136,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/425
       - https://github.com/Eruhitsuji/lifetxt/issues/430
       - https://github.com/Eruhitsuji/lifetxt/issues/435
+      - https://github.com/Eruhitsuji/lifetxt/issues/437
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -187,6 +197,30 @@ capabilities:
       macOS after merge remains external-environment work outside this sandbox
       and is recorded as open, matching the pattern already established for
       #429/#430/#432.
+      #437 found that #435's fixed 7200-second release-profile timeout was too
+      tight for real supported hosts: fresh runs at commit b57aa84 observed
+      Windows completing in ~5316s and WSL in ~4959s, while native Linux and
+      macOS both reached the full test run but were cut off by the collector
+      itself at the 7200s boundary with no compatibility failure observed --
+      the timeout was stopping the run, not the run failing. Fixed by raising
+      the default to 14400s (roughly 2.7x headroom over the highest confirmed
+      real duration) and, more importantly, by making a timeout a distinct,
+      unambiguous result: run_command() now records status "timeout" (never
+      "failed" or "passed") with an explicit timeout_seconds field and
+      whatever partial stdout/stderr the process had already produced;
+      bundle_exit_code() fails the collector's own exit code on a release-
+      profile or git-identity timeout exactly like it already did for
+      "failed", so a timeout can never be mistaken for a pass downstream. The
+      independent, much shorter --probe-timeout (default 30s, for git
+      rev-parse and fzf/peco version probes) is unchanged. verify-external.ps1
+      and verify-external.sh already forwarded all arguments unconditionally
+      (`@args`/`"$@"`), so no wrapper-script code change was needed for
+      --release-timeout to reach them -- this was verified live on both
+      Windows (PowerShell) and via a real bash-gated automated test, not
+      merely assumed from reading the forwarding code. Real Linux/macOS
+      reruns beyond the previous 7200s boundary, per the issue's own
+      acceptance criterion, remain external-environment work outside this
+      sandbox and are recorded as open.
     replacement:
       replaces: []
       replaced_by: null

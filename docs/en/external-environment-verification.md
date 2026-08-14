@@ -91,6 +91,40 @@ bundle by repeating `--artifact PATH`. `--skip-release` exists only for a quick
 collector/debug run; it records the release profile as `skipped` and is not
 release evidence.
 
+### Release-profile timeout
+
+The release profile (`scripts/run_ci_like.py --profile release`) is bounded by
+`--release-timeout SECONDS`, forwarded unchanged by both entry scripts:
+
+```text
+./scripts/verify-external.sh --release-timeout 21600
+```
+
+```text
+.\scripts\verify-external.ps1 --release-timeout 21600
+```
+
+The default is 14400 seconds (4 hours). Real supported-host runs observed
+release-profile durations of about 5316 seconds on Windows and 4959 seconds
+on WSL; native Linux and macOS both reached the full test run but were cut
+off by the collector's previous 7200-second boundary before finishing, with
+no compatibility failure observed before the cutoff. The new default gives
+roughly 2.7x headroom over the highest confirmed real duration while still
+bounding a genuinely hung process within one collector invocation. Raise it
+further with `--release-timeout` on a host that is slower still; a timeout is
+never treated as a passing result regardless of the configured limit.
+
+A run that exceeds `--release-timeout` is recorded with `"status": "timeout"`
+on the `release-profile` check -- distinct from `"failed"` (the command ran
+and returned a non-zero exit code) and from `"blocked"` (the command could
+not start at all). The record also carries `"timeout_seconds"` with the
+configured limit and retains whatever partial `stdout`/`stderr` the process
+had already produced. A `timeout` status fails the collector's own exit code
+exactly like `failed`, so it is never mistaken for a pass. Short metadata and
+tool probes (`git rev-parse`, `fzf`/`peco` version checks) use the
+independent, much shorter `--probe-timeout SECONDS` (default: 30) and are
+unaffected by `--release-timeout`.
+
 The collector does **not** synthesize evidence it cannot observe. Interactive
 TUI checks, real selector actions, browser-engine behavior, Web deployment
 cutover, Remote clients, SMTP providers, external filesystem classes, physical

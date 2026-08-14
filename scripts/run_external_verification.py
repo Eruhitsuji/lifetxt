@@ -33,6 +33,15 @@ import verification_python_bootstrap  # noqa: E402
 
 SCHEMA_VERSION = 1
 SUPPORTED_HOSTS = {"windows", "wsl", "linux", "macos"}
+# #437: real supported-host runs at commit b57aa84 observed release-profile
+# durations of ~5316s (Windows) and ~4959s (WSL); native Linux and macOS both
+# exceeded the prior 7200s boundary without a compatibility failure -- the
+# collector itself cut them off. 14400s (4h) gives roughly 2.7x headroom over
+# the highest confirmed real duration and room for the not-yet-measured
+# Linux/macOS completion time, while still bounding a genuinely hung process
+# within one collector invocation. See
+# docs/en/external-environment-verification.md for the full rationale.
+DEFAULT_RELEASE_TIMEOUT_SECONDS = 14400
 SECRET_KEY_MARKERS = ("TOKEN", "PASSWORD", "PASSWD", "SECRET", "API_KEY", "APIKEY", "AUTH")
 MANUAL_SCENARIOS = (
     {
@@ -280,7 +289,11 @@ def run_command(command, cwd, redact, timeout):
         record["stdout"] = redact(completed.stdout)
         record["stderr"] = redact(completed.stderr)
     except subprocess.TimeoutExpired as exc:
-        record["status"] = "failed"
+        # A distinct status from "failed": a timeout means the collector cut
+        # the command off at a configured boundary, not that the command
+        # itself reported a non-zero result. Never represented as passed.
+        record["status"] = "timeout"
+        record["timeout_seconds"] = timeout
         record["stdout"] = redact(_decode_timeout_output(exc.stdout))
         record["stderr"] = redact(_decode_timeout_output(exc.stderr))
         record["error"] = f"timeout after {timeout} seconds"
@@ -637,9 +650,16 @@ def write_bundle(bundle, output_path, redaction_candidates=()):
 
 def bundle_exit_code(bundle):
     for check in bundle.get("checks", []):
-        if check.get("scenario") == "release-profile" and check.get("status") == "failed":
+        if check.get("scenario") == "release-profile" and check.get("status") in {
+            "failed",
+            "timeout",
+        }:
             return 1
-        if check.get("scenario") == "git-identity" and check.get("status") in {"failed", "blocked"}:
+        if check.get("scenario") == "git-identity" and check.get("status") in {
+            "failed",
+            "blocked",
+            "timeout",
+        }:
             return 1
     return 0
 
@@ -666,8 +686,12 @@ def build_parser():
     parser.add_argument(
         "--release-timeout",
         type=int,
-        default=7200,
-        help="Timeout in seconds for scripts/run_ci_like.py --profile release (default: 7200).",
+        default=DEFAULT_RELEASE_TIMEOUT_SECONDS,
+        help="Timeout in seconds for scripts/run_ci_like.py --profile release "
+        f"(default: {DEFAULT_RELEASE_TIMEOUT_SECONDS}). A run that exceeds this "
+        'is recorded with status "timeout" and retained partial output, '
+        "never as passed. Increase this for a slower real host, for example "
+        "--release-timeout 21600.",
     )
     parser.add_argument(
         "--probe-timeout",
@@ -691,7 +715,10 @@ def main(argv=None):
         "unknown",
     )
     print(f"evidence={output}")
-    print(f"host={bundle['metadata']['host_class']} release_profile={release_status} exit={code}")
+    print(
+        f"host={bundle['metadata']['host_class']} release_profile={release_status} "
+        f"release_timeout={args.release_timeout} exit={code}"
+    )
     return code
 
 

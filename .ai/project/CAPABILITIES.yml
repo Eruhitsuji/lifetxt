@@ -62,6 +62,7 @@ capabilities:
       - req-verification-python-bootstrap
       - req-external-verification-timeout-resilience
       - req-external-verification-temp-redaction-canonicalization
+      - req-external-verification-macos-filesystem-type
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -130,6 +131,12 @@ capabilities:
       - python -m unittest tests.test_external_verification -> Ran 34 tests, OK
       - "live: a real ./scripts/verify-external.sh --skip-release --probe-timeout 1 run wrote a real evidence bundle whose serialized JSON contains zero <temp><temp>/<repo><repo>/<home><home> doubled-marker sequences and zero private<temp> remnants"
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2472 tests, OK (skipped=5)'
+      - "tests/test_external_verification.py MacosFilesystemTypeTests (11 tests): mount-output parsing returns a filesystem type (not the mount path), picks the longest matching mountpoint over a shorter parent, resolves a non-apfs external volume, tolerates a multi-word device name (\"map auto_home on ...\"), returns None on no matching line/missing mount binary/non-zero exit/OSError/TimeoutExpired (never a path value), a real subprocess-mocked success path, and dispatch routing confirming Linux/WSL/Windows detectors are unchanged"
+      - python -m unittest tests.test_external_verification.MacosFilesystemTypeTests -> Ran 11 tests, OK
+      - "confirmed via git stash (production code only, tests kept) that 10 of the 11 new tests error/fail against the pre-#439 code (AttributeError: no _parse_macos_mount_type/_macos_filesystem_type), then pass once the fix is restored"
+      - python -m unittest tests.test_external_verification -> Ran 45 tests, OK
+      - "live: a real (non-mocked) --skip-release run on this Windows host confirms metadata.filesystem_type is still NTFS (a type, not a path), proving the Windows dispatch branch is unaffected by the macOS-only fix"
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2483 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -148,6 +155,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/435
       - https://github.com/Eruhitsuji/lifetxt/issues/437
       - https://github.com/Eruhitsuji/lifetxt/issues/438
+      - https://github.com/Eruhitsuji/lifetxt/issues/439
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -155,6 +163,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/436
       - https://github.com/Eruhitsuji/lifetxt/pull/440
       - https://github.com/Eruhitsuji/lifetxt/pull/441
+      - https://github.com/Eruhitsuji/lifetxt/pull/442
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       External-environment preparation now includes dependency-free host evidence
@@ -265,6 +274,26 @@ capabilities:
       issue's exact described malformed forms before passing with the fix
       restored. A real (non-mocked) --skip-release run's serialized evidence
       bundle was also checked and contains zero doubled-marker sequences.
+      #439 found a real macOS bundle recorded metadata.filesystem_type as
+      "/" -- the mount path, not a filesystem type/class. The previous
+      implementation called `stat -f "%T" root`, which does not reliably
+      yield the filesystem type on BSD/macOS stat, whose "-f FORMAT"
+      conversions describe *file* attributes (e.g. "Regular File",
+      "Directory"), not filesystem attributes -- unlike GNU coreutils'
+      stat, where "-f" has a different, filesystem-status meaning. Fixed by
+      replacing it with `mount` output parsing (well-documented and
+      portable across BSD/macOS mount implementations), mirroring
+      _linux_filesystem_type()'s existing longest-matching-mountpoint
+      algorithm over /proc/mounts so a nested mount (e.g. an external
+      volume) correctly wins over its shorter parent. Failure at any stage
+      (missing mount binary, non-zero exit, OSError, timeout, or no
+      matching line) returns None explicitly, never a path value. Linux,
+      WSL, and Windows filesystem-type detection are untouched; a live,
+      non-mocked --skip-release run on this Windows host confirmed
+      metadata.filesystem_type is still correctly "NTFS". Real macOS
+      re-verification with the normal one-command entry path, per the
+      issue's own last acceptance criterion, remains external-environment
+      work outside this sandbox and is recorded as open.
     replacement:
       replaces: []
       replaced_by: null

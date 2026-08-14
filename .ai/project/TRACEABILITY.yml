@@ -5872,6 +5872,47 @@ traceability:
         sandbox and is recorded as open.
       status: implemented
 
+    - requirement_id: req-external-verification-macos-filesystem-type
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/439
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "tests/test_external_verification.py MacosFilesystemTypeTests (11 tests): mount-output parsing returns a filesystem type (not the mount path), picks the longest matching mountpoint over a shorter parent, resolves a non-apfs external volume, tolerates a multi-word device name (\"map auto_home on ...\"), returns None on no matching line/missing mount binary/non-zero exit/OSError/TimeoutExpired (never a path value), a real subprocess-mocked success path, and dispatch routing confirming Linux/WSL/Windows detectors are unchanged"
+        - python -m unittest tests.test_external_verification.MacosFilesystemTypeTests -> Ran 11 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 10 of the 11 new tests error/fail against the pre-#439 code (AttributeError: no _parse_macos_mount_type/_macos_filesystem_type), then pass once the fix is restored"
+        - python -m unittest tests.test_external_verification -> Ran 45 tests, OK
+        - "live: a real (non-mocked) --skip-release run on this Windows host confirms metadata.filesystem_type is still NTFS (a type, not a path), proving the Windows dispatch branch is unaffected"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2483 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        A real macOS bundle recorded metadata.filesystem_type as "/" -- the
+        mount path, not a filesystem type/class. The previous implementation
+        called `stat -f "%T" root`, which does not reliably yield the
+        filesystem type on BSD/macOS stat, whose "-f FORMAT" conversions
+        describe *file* attributes (e.g. "Regular File", "Directory"), not
+        filesystem attributes -- unlike GNU coreutils' stat, where "-f" has a
+        different, filesystem-status meaning. Fixed by replacing it with
+        `mount` output parsing (well-documented and portable across
+        BSD/macOS mount implementations), mirroring
+        _linux_filesystem_type()'s existing longest-matching-mountpoint
+        algorithm over /proc/mounts so a nested mount (e.g. an external
+        volume) correctly wins over its shorter parent. Failure at any stage
+        (missing mount binary, non-zero exit, OSError, timeout, or no
+        matching line) returns None explicitly, never a path value. Linux,
+        WSL, and Windows filesystem-type detection are untouched; a live,
+        non-mocked --skip-release run on this Windows host confirmed
+        metadata.filesystem_type is still correctly "NTFS". Real macOS
+        re-verification with the normal one-command entry path, per the
+        issue's own last acceptance criterion, remains external-environment
+        work outside this sandbox and is recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

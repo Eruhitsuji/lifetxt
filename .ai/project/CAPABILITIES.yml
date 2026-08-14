@@ -61,6 +61,7 @@ capabilities:
       - req-external-verification-redaction-hardening
       - req-verification-python-bootstrap
       - req-external-verification-timeout-resilience
+      - req-external-verification-temp-redaction-canonicalization
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -120,6 +121,15 @@ capabilities:
       - "live end-to-end on this Windows host: run_command() against a real slow subprocess with a 2s timeout recorded status=timeout, exit_code=null, timeout_seconds=2, and retained the real partial stdout the process had already printed"
       - "live: real .\\scripts\\verify-external.ps1 --release-timeout 8765 --skip-release run printed release_timeout=8765 and wrote a real evidence bundle; real ./scripts/verify-external.sh with --release-timeout 4321 --skip-release did the same over a real bash subprocess"
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2462 tests, OK (skipped=5)'
+      - "reproduced the exact <temp><temp>... symptom with a synthetic path against the pre-#438 code: a temp root recurring as a substring immediately next to itself (e.g. /tmp/tmp/subdir, matching Python tempfile.mkdtemp()'s own default \"tmp\" prefix convention) made re.sub's left-to-right non-overlapping match scan replace two adjacent occurrences independently with no separator between the two markers"
+      - "reproduced the macOS /private<temp> malformation with a synthetic path: tempfile.gettempdir()'s unresolved /var/folders/... value never textually matched a tool-reported /private/var/folders/... resolved form"
+      - "reproduced the Windows/WSL <redacted-user>-only-match residue with a synthetic path: a WSL HOME (POSIX) never matches a captured /mnt/c/Users/... or C:\\Users\\... path, so only the generic username pattern fires, leaving Users/<redacted-user>/AppData/Local/Temp structure instead of one <temp> marker"
+      - "tests/test_external_verification.py TempPathCanonicalizationTests (10 tests, synthetic paths only, no real account names): adjacent-raw-temp collapse (double and triple occurrence), re-sanitizing already-canonical/nested marker text stays one root, macOS /private/var and /private/tmp alias canonicalization, Windows backslash and WSL /mnt/c username-only-match structural collapse, repeated recursive redact() passes stay stable, overlap with genuinely distinct repo/home paths is preserved while a genuinely repeated repo occurrence still collapses, and the persistence-time leak-scan safety net (#430) now also covers the macOS alias variant"
+      - python -m unittest tests.test_external_verification.TempPathCanonicalizationTests -> Ran 10 tests, OK
+      - "confirmed via git stash (production code only, tests kept) that all 10 new tests fail against the pre-#438 code with the exact malformed output described in the issue (<temp><temp>..., /private<temp>, /mnt/c/Users/<redacted-user>/AppData/Local/Temp/...), then pass once the fix is restored"
+      - python -m unittest tests.test_external_verification -> Ran 34 tests, OK
+      - "live: a real ./scripts/verify-external.sh --skip-release --probe-timeout 1 run wrote a real evidence bundle whose serialized JSON contains zero <temp><temp>/<repo><repo>/<home><home> doubled-marker sequences and zero private<temp> remnants"
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2472 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -137,6 +147,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/430
       - https://github.com/Eruhitsuji/lifetxt/issues/435
       - https://github.com/Eruhitsuji/lifetxt/issues/437
+      - https://github.com/Eruhitsuji/lifetxt/issues/438
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -222,6 +233,37 @@ capabilities:
       reruns beyond the previous 7200s boundary, per the issue's own
       acceptance criterion, remain external-environment work outside this
       sandbox and are recorded as open.
+      #438 found that #430's exact-value path matching was still not
+      idempotent end to end: fresh real-host bundles collected after #430/
+      #434 kept showing "<temp><temp>..." (WSL/Linux), "/private<temp>"
+      (macOS), and residual "C:\Users\<redacted-user>\...\Temp" structure
+      (Windows). Root-caused, not merely patched around, with three
+      independent synthetic reproductions of the pre-fix code before writing
+      any fix: (1) a raw temp-root value recurring as a substring immediately
+      next to itself (e.g. "/tmp/tmp/subdir" -- matching Python's own
+      tempfile.mkdtemp() default "tmp" prefix convention) makes re.sub's
+      left-to-right non-overlapping match scan replace two adjacent
+      occurrences independently with nothing between the two markers; (2)
+      macOS resolves several default temp/home roots through a "/private"
+      symlink, so a tool reporting the resolved form never textually matches
+      this process's own unresolved tempfile.gettempdir() value; (3) a WSL
+      collector's own POSIX HOME never matches a captured "/mnt/c/Users/..."
+      or "C:\Users\..." path, so only the generic username pattern fires,
+      leaving structure around <redacted-user> instead of one <temp> marker.
+      Fixed with a new _canonicalize_markers() pass applied as the final step
+      of every redact() call: an adjacent-same-marker collapse regex
+      (handles case 1, and makes re-sanitizing already-canonical or nested
+      subprocess output converge to one root regardless of how many times it
+      recurs), a deterministic (not live-filesystem-realpath-dependent, so
+      testable on any host) "/private" alias registered as an additional
+      variant of each candidate (handles case 2), and a structural regex
+      recognizing <redacted-user> immediately followed by the well-known
+      Windows/WSL temp-directory suffix (handles case 3). All three fixes
+      are exercised with synthetic paths only, per the issue's own scope, and
+      confirmed via git stash to fail against the pre-fix code with the
+      issue's exact described malformed forms before passing with the fix
+      restored. A real (non-mocked) --skip-release run's serialized evidence
+      bundle was also checked and contains zero doubled-marker sequences.
     replacement:
       replaces: []
       replaced_by: null

@@ -391,20 +391,7 @@ def _filesystem_type(root, host_class):
     if host_class in {"linux", "wsl"}:
         return _linux_filesystem_type(root)
     if host_class == "macos":
-        stat_bin = shutil.which("stat")
-        if not stat_bin:
-            return None
-        completed = subprocess.run(
-            [stat_bin, "-f", "%T", str(root)],
-            text=True,
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if completed.returncode == 0:
-            return completed.stdout.strip() or None
-        return None
+        return _macos_filesystem_type(root)
     if host_class == "windows":
         return _windows_filesystem_type(root)
     return None
@@ -427,6 +414,65 @@ def _linux_filesystem_type(root):
                 best = parts[2]
                 best_len = len(mountpoint)
     return best
+
+
+# #439: matches a `mount` command output line such as
+# "/dev/disk3s1s1 on / (apfs, sealed, local, read-only, journaled)" -- the
+# well-documented, portable way to read the filesystem type on BSD/macOS,
+# where "stat"'s "-f FORMAT" conversions describe *file* attributes, not
+# filesystem attributes (unlike GNU coreutils' stat, whose "-f" flag has a
+# different, filesystem-status meaning). Uses a greedy, anchored-at-the-end
+# match so a mountpoint containing spaces or the literal substring " on "
+# (e.g. an automount device name) is still captured correctly.
+_MACOS_MOUNT_LINE_PATTERN = re.compile(
+    r"\son\s(?P<mountpoint>.+)\s\((?P<opts>[^)]*)\)\s*$"
+)
+
+
+def _parse_macos_mount_type(mount_output, resolved_root):
+    """Extract the filesystem type covering ``resolved_root`` from ``mount``
+    output text, choosing the longest matching mountpoint so a nested mount
+    (e.g. an external volume under a parent filesystem) wins over its
+    shorter parent -- mirroring ``_linux_filesystem_type``'s algorithm.
+    """
+    best = None
+    best_len = -1
+    for line in mount_output.splitlines():
+        match = _MACOS_MOUNT_LINE_PATTERN.search(line)
+        if not match:
+            continue
+        mountpoint = match.group("mountpoint")
+        if resolved_root == mountpoint or resolved_root.startswith(
+            mountpoint.rstrip("/") + "/"
+        ):
+            if len(mountpoint) > best_len:
+                opts = match.group("opts")
+                fs_type = opts.split(",", 1)[0].strip() if opts else ""
+                best = fs_type or None
+                best_len = len(mountpoint)
+    return best
+
+
+def _macos_filesystem_type(root):
+    mount_bin = shutil.which("mount")
+    if not mount_bin:
+        return None
+    try:
+        completed = subprocess.run(
+            [mount_bin],
+            text=True,
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    resolved = os.path.realpath(root)
+    return _parse_macos_mount_type(completed.stdout, resolved)
 
 
 def _windows_filesystem_type(root):

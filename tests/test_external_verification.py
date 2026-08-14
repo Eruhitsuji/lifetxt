@@ -63,6 +63,126 @@ class PlatformClassificationTests(unittest.TestCase):
         )
 
 
+class MacosFilesystemTypeTests(unittest.TestCase):
+    """#439: a real macOS run recorded metadata.filesystem_type as "/" --
+    the mount path, not a filesystem type/class. The previous
+    implementation used `stat -f "%T" root`, which does not reliably yield
+    the filesystem type on BSD/macOS stat (whose "-f FORMAT" conversions
+    describe *file* attributes, not filesystem attributes, unlike GNU
+    coreutils' stat). Replaced with `mount` output parsing, which is
+    well-documented and portable across BSD/macOS mount implementations.
+    """
+
+    SAMPLE_MOUNT_OUTPUT = (
+        "/dev/disk3s1s1 on / (apfs, sealed, local, read-only, journaled)\n"
+        "devfs on /dev (devfs, local, nobrowse)\n"
+        "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse)\n"
+        "map auto_home on /System/Volumes/Data/home (autofs, automounted, nobrowse)\n"
+        "/dev/disk4s1 on /Volumes/MyExternalDrive (exfat, local, nodev, nosuid, noowners)\n"
+    )
+
+    def test_parse_returns_type_not_the_mount_path(self):
+        result = module._parse_macos_mount_type(
+            self.SAMPLE_MOUNT_OUTPUT, "/Users/tester/project"
+        )
+        self.assertEqual("apfs", result)
+        self.assertNotEqual("/", result)
+
+    def test_parse_picks_the_longest_matching_mountpoint(self):
+        # A nested mount (here, /System/Volumes/Data under the root "/")
+        # must win over its shorter parent -- mirroring
+        # _linux_filesystem_type's /proc/mounts algorithm.
+        result = module._parse_macos_mount_type(
+            self.SAMPLE_MOUNT_OUTPUT, "/System/Volumes/Data/checkout/lifetxt"
+        )
+        self.assertEqual("apfs", result)
+
+    def test_parse_finds_a_non_apfs_external_volume_type(self):
+        result = module._parse_macos_mount_type(
+            self.SAMPLE_MOUNT_OUTPUT, "/Volumes/MyExternalDrive/work"
+        )
+        self.assertEqual("exfat", result)
+
+    def test_parse_handles_a_device_name_containing_the_word_on(self):
+        # "map auto_home on ..." -- the device name itself is two words;
+        # the parser must not require the device to be a single token.
+        result = module._parse_macos_mount_type(
+            self.SAMPLE_MOUNT_OUTPUT, "/System/Volumes/Data/home/tester"
+        )
+        self.assertEqual("autofs", result)
+
+    def test_parse_returns_none_when_no_line_matches(self):
+        self.assertIsNone(
+            module._parse_macos_mount_type("garbage with no mount lines", "/tmp/x")
+        )
+        self.assertIsNone(module._parse_macos_mount_type("", "/tmp/x"))
+
+    def test_filesystem_type_returns_none_when_mount_binary_is_unavailable(self):
+        with mock.patch.object(module.shutil, "which", return_value=None):
+            self.assertIsNone(module._macos_filesystem_type("/tmp/x"))
+
+    def test_filesystem_type_returns_none_on_nonzero_exit_not_a_path_value(self):
+        with (
+            mock.patch.object(module.shutil, "which", return_value="/sbin/mount"),
+            mock.patch.object(
+                module.subprocess,
+                "run",
+                return_value=mock.Mock(returncode=1, stdout=""),
+            ),
+        ):
+            result = module._macos_filesystem_type("/tmp/x")
+        self.assertIsNone(result)
+        self.assertNotEqual("/", result)
+
+    def test_filesystem_type_returns_none_on_subprocess_error(self):
+        for side_effect in (
+            OSError("mount not executable"),
+            subprocess.TimeoutExpired(cmd=["mount"], timeout=10),
+        ):
+            with (
+                mock.patch.object(module.shutil, "which", return_value="/sbin/mount"),
+                mock.patch.object(module.subprocess, "run", side_effect=side_effect),
+            ):
+                self.assertIsNone(module._macos_filesystem_type("/tmp/x"))
+
+    def test_filesystem_type_success_end_to_end_through_subprocess(self):
+        with (
+            mock.patch.object(module.shutil, "which", return_value="/sbin/mount"),
+            mock.patch.object(
+                module.subprocess,
+                "run",
+                return_value=mock.Mock(returncode=0, stdout=self.SAMPLE_MOUNT_OUTPUT),
+            ),
+            mock.patch.object(module.os.path, "realpath", return_value="/"),
+        ):
+            result = module._macos_filesystem_type("/")
+        self.assertEqual("apfs", result)
+
+    def test_dispatch_routes_macos_to_the_mount_based_detector(self):
+        with mock.patch.object(
+            module, "_macos_filesystem_type", return_value="apfs"
+        ) as detector:
+            result = module._filesystem_type("/some/root", "macos")
+        self.assertEqual("apfs", result)
+        detector.assert_called_once_with("/some/root")
+
+    def test_dispatch_does_not_regress_linux_wsl_or_windows(self):
+        # #439 is scoped to macOS only; the other host classes must keep
+        # calling their own existing detectors unchanged.
+        with mock.patch.object(
+            module, "_linux_filesystem_type", return_value="ext4"
+        ) as linux_detector:
+            self.assertEqual("ext4", module._filesystem_type("/root", "linux"))
+            self.assertEqual("ext4", module._filesystem_type("/root", "wsl"))
+        self.assertEqual(2, linux_detector.call_count)
+        with mock.patch.object(
+            module, "_windows_filesystem_type", return_value="NTFS"
+        ) as windows_detector:
+            result = module._filesystem_type("C:\\root", "windows")
+        self.assertEqual("NTFS", result)
+        windows_detector.assert_called_once_with("C:\\root")
+
+
 class RedactionTests(unittest.TestCase):
     def test_redacts_repo_home_temp_usernames_and_secrets(self):
         with tempfile.TemporaryDirectory() as tmp:

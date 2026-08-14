@@ -150,6 +150,156 @@ class RedactionHardeningTests(unittest.TestCase):
             self.assertEqual(once, twice, msg=text)
 
 
+class TempPathCanonicalizationTests(unittest.TestCase):
+    """#438: end-to-end canonicalization was not idempotent when a raw
+    candidate value recurs adjacent to itself, or when a subprocess reports
+    an OS-specific alias/mount view #430's exact-value matching never
+    textually equals. Reproduced with synthetic paths only.
+    """
+
+    def test_adjacent_raw_temp_occurrences_collapse_to_one_marker(self):
+        # A temp directory containing another directory literally named
+        # "tmp" (a real, plausible shape -- Python's own tempfile.mkdtemp()
+        # default prefix is "tmp") makes the raw temp value recur as a
+        # substring immediately next to itself in the raw text.
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+            result = redact("/tmp/tmp/subdir/file.txt")
+        self.assertEqual("<temp>/subdir/file.txt", result)
+        self.assertNotIn("<temp><temp>", result)
+
+    def test_three_adjacent_raw_temp_occurrences_still_collapse_to_one(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+            result = redact("before /tmp/tmp/tmp/nested after")
+        self.assertEqual("before <temp>/nested after", result)
+
+    def test_resanitizing_already_canonical_or_nested_marker_text_stays_one_root(self):
+        # AC: re-sanitizing a string containing <temp>/..., <temp>\\..., or
+        # another already-canonical placeholder leaves exactly one root.
+        redact = module.make_redactor(
+            repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+        )
+        for already_sanitized in (
+            "<temp><temp>/subdir",
+            "<temp>/<temp>\\subdir",
+            "prefix <temp><temp><temp> suffix",
+            "<repo><repo>/file",
+            "<home><home>\\file",
+        ):
+            result = redact(already_sanitized)
+            for marker in ("<temp>", "<repo>", "<home>"):
+                self.assertNotIn(marker + marker, result, msg=already_sanitized)
+
+    def test_macos_private_temp_alias_canonicalizes_without_a_malformed_prefix(self):
+        # macOS resolves tempfile.gettempdir()'s "/var/folders/..." result
+        # through a "/private" symlink; a tool reporting the resolved form
+        # must not leave a "/private<temp>" remnant.
+        temp = "/var/folders/xx/yyyyzzzz/T"
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=temp):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/Users/alice", "USER": "alice"}
+            )
+            result = redact("/private" + temp + "/subdir/file.txt")
+        self.assertEqual("<temp>/subdir/file.txt", result)
+        self.assertNotIn("/private", result)
+        self.assertNotIn("private<temp>", result)
+
+    def test_macos_private_tmp_alias_canonicalizes(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/Users/alice", "USER": "alice"}
+            )
+            result = redact("/private/tmp/subdir/file.txt")
+        self.assertEqual("<temp>/subdir/file.txt", result)
+        self.assertNotIn("private", result)
+
+    def test_windows_username_only_match_collapses_known_temp_suffix(self):
+        # WSL's own HOME (a POSIX path) never textually matches a captured
+        # Windows-side path reported through WSL's "/mnt/c" mount view --
+        # only the generic username pattern catches the account name,
+        # leaving a structurally-recognizable temp path around it.
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/bob", "USER": "bob"}
+            )
+            result = redact(
+                "/mnt/c/Users/bob/AppData/Local/Temp/pip-build-xyz/file.txt"
+            )
+        self.assertEqual("<temp>/pip-build-xyz/file.txt", result)
+        self.assertNotIn("bob", result)
+        self.assertNotIn("<redacted-user>", result)
+
+    def test_windows_backslash_username_only_match_collapses_known_temp_suffix(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/bob", "USER": "bob"}
+            )
+            result = redact(r"C:\Users\bob\AppData\Local\Temp\pip-build-xyz\file.txt")
+        self.assertEqual(r"<temp>\pip-build-xyz\file.txt", result)
+        self.assertNotIn("bob", result)
+        self.assertNotIn("<redacted-user>", result)
+
+    def test_repeated_recursive_passes_stay_canonical(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+            once = redact("/tmp/tmp/subdir/file.txt")
+            twice = redact(once)
+            thrice = redact(twice)
+        self.assertEqual(once, twice)
+        self.assertEqual(twice, thrice)
+        self.assertEqual("<temp>/subdir/file.txt", thrice)
+
+    def test_overlap_with_repo_and_home_paths_still_canonicalizes(self):
+        # repo nested inside home, itself nested inside temp -- the
+        # longest-match-wins ordering (#430) plus the new collapse pass
+        # (#438) must still pick the correct, most specific marker for
+        # each segment rather than merging genuinely distinct roots.
+        home = "/home/alice"
+        temp = home + "/tmp"
+        repo = temp + "/checkout/lifetxt"
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=temp):
+            redact = module.make_redactor(
+                repo_root=repo, env={"HOME": home, "USER": "alice"}
+            )
+            result = redact(repo + "/tests/fixture.txt " + home + "/notes.txt")
+        self.assertEqual("<repo>/tests/fixture.txt <home>/notes.txt", result)
+        self.assertNotIn(repo, result)
+        self.assertNotIn(home, result)
+        self.assertNotIn("<repo><repo>", result)
+        self.assertNotIn("<home><home>", result)
+
+        # A genuinely repeated repo occurrence (e.g. the same checkout path
+        # mentioned twice back to back) is exactly the #438 case and must
+        # still canonicalize to one marker, not double up.
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=temp):
+            redact = module.make_redactor(
+                repo_root=repo, env={"HOME": home, "USER": "alice"}
+            )
+            doubled = redact(repo + "/" + repo + "/tests/fixture.txt")
+        self.assertEqual("<repo>/tests/fixture.txt", doubled)
+        self.assertNotIn("<repo><repo>", doubled)
+
+    def test_write_bundle_safety_net_catches_the_macos_private_alias_too(self):
+        # The persistence-time leak scan (#430) must know about the
+        # macOS-alias variant registered for redaction, or a bundle that
+        # somehow still carried the raw "/private/..." form would silently
+        # pass the safety net that #430 built specifically to catch this
+        # class of gap.
+        temp = "/var/folders/xx/yyyyzzzz/T"
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=temp):
+            candidates = module._redaction_candidates(
+                repo_root=None, env={"HOME": "/Users/alice", "USER": "alice"}
+            )
+        self.assertIn("/private" + temp, candidates)
+
+
 class CommandCaptureTests(unittest.TestCase):
     def test_captures_stdout_stderr_and_exit_code(self):
         redact = lambda value: str(value)

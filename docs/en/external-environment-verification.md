@@ -204,6 +204,39 @@ secret-bearing URLs, and raw life entries. Keep artifact hash, commit SHA,
 exit code, and failure summary. Apply a timeout and cleanup to every scenario;
 failed cleanup is a failed result requiring review.
 
+### Progress evidence and persistence refusal
+
+A full-profile run can take hours, and the final JSON bundle is written only
+once, at the very end. The collector also writes two sanitized, incrementally
+flushed progress artifacts alongside it, sharing the same name stem:
+
+```text
+.cache/
+├─ external-verification-windows-<UTC>.log
+├─ external-verification-windows-<UTC>.progress.jsonl
+└─ external-verification-windows-<UTC>.json
+```
+
+`.log` is a human-readable line per lifecycle event (collector start, host
+classification, git identity, Python bootstrap, release-profile start and
+result, tool probes, final-evidence persistence, collector completion).
+`.progress.jsonl` records the same events as one JSON object per line
+(`run_id`, `timestamp`, `event`, `status`, and event-specific fields). Every
+field in both files is redacted through the same sanitizer the final JSON
+uses *before* it is ever written -- never write-then-sanitize -- and every
+write is flushed and fsynced immediately, so a process kill, a timeout, or a
+persistence refusal leaves the latest completed event durable on disk even
+though the final JSON was never produced.
+
+The final JSON is refused, not silently written, if a raw repo/home/temp/
+username value survives sanitization (a persistence-time defense-in-depth
+rescan). The refusal names only the candidate *category*
+(`repo`/`home`/`temp`/`username`), never the raw value, and both progress
+artifacts still contain a `final_evidence_persistence`/`refused` event with
+that category. The progress artifacts are diagnostic only: an
+incomplete/refused/interrupted run is never treated as passing
+release-profile evidence, and the collector's own exit code stays non-zero.
+
 ## Release decision
 
 An environment may be called stable only when its row has all required

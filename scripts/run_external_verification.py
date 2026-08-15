@@ -150,23 +150,43 @@ def _expanded_path_variants(value):
     return variants
 
 
-def _redaction_candidates(repo_root=None, env=None):
-    """Raw values that must never survive redaction (#430).
-
-    Shared by ``make_redactor`` (what gets replaced) and the
-    persistence-time rescan in ``write_bundle`` (what must be *gone* before
-    a bundle is written), so the two checks cannot silently drift apart.
+def _categorized_redaction_candidates(repo_root=None, env=None):
+    """Raw ``(value, category)`` pairs that must never survive redaction
+    (#430, #443). category is one of "repo", "home", "temp", "username" --
+    used only for privacy-safe persistence-refusal diagnostics (#443),
+    never to expose the value itself.
     """
     env = os.environ if env is None else env
     home = _home_value(env)
     temp = tempfile.gettempdir()
     candidates = []
-    for value in (str(repo_root) if repo_root else "", home, temp):
+    for value, category in (
+        (str(repo_root) if repo_root else "", "repo"),
+        (home, "home"),
+        (temp, "temp"),
+    ):
         if value and len(value) >= 3:
-            candidates.append(value)
-            candidates.extend(v for v in _expanded_path_variants(value) if v != value)
-    candidates.extend(_username_values(env))
+            candidates.append((value, category))
+            candidates.extend(
+                (v, category) for v in _expanded_path_variants(value) if v != value
+            )
+    candidates.extend((v, "username") for v in _username_values(env))
     return candidates
+
+
+def _redaction_candidates(repo_root=None, env=None):
+    """Flat raw values that must never survive redaction (#430).
+
+    Shared by ``make_redactor`` (what gets replaced) and the
+    persistence-time rescan in ``write_bundle`` (what must be *gone* before
+    a bundle is written), so the two checks cannot silently drift apart.
+    Derived from ``_categorized_redaction_candidates`` so both share one
+    source of truth; kept as a flat list for existing callers/tests that
+    don't need category information.
+    """
+    return [
+        value for value, _category in _categorized_redaction_candidates(repo_root, env)
+    ]
 
 
 def _path_replacement_entries(repo_root, home, temp):
@@ -285,28 +305,68 @@ def make_redactor(repo_root=None, env=None):
     return redact
 
 
+# #443: a real Windows full-profile run refused to persist evidence that
+# make_redactor() had already fully and correctly sanitized. Root cause: the
+# persistence-time scan below used an *unconditional* substring check for
+# every candidate, including usernames as short as two characters
+# (_username_values), while make_redactor()'s own username_patterns only
+# ever redact a username in a *bounded* context (a labeled "user=" field, or
+# a path segment between "/"/"\\"). Across a full release profile's
+# stdout/stderr -- easily megabytes, the entire test suite's own output -- a
+# short username coincidentally appears as a substring of ordinary words
+# (e.g. "an" inside "handle", "plan", "scan"), which redact() correctly
+# leaves untouched since it is not a real username occurrence, but the old
+# unconditional scan still flagged and refused it: a false positive, not a
+# true redaction miss. _username_leak_pattern mirrors username_patterns'
+# exact two bounded contexts so the persistence-time scan and the redactor
+# agree on what counts as a real leak.
+def _username_leak_pattern(username):
+    escaped = re.escape(username)
+    return re.compile(
+        rf"(?i)(?:\b(?:user|username|login|owner)\s*[:=]\s*{escaped}\b)"
+        rf"|(?:(?<=[/\\]){escaped}(?=[/\\]))"
+    )
+
+
 def _unredacted_candidate_count(text, candidates):
-    """Count how many raw redaction candidates still appear in ``text``.
+    """Return a ``{category: count}`` mapping of raw redaction candidates
+    still present in ``text``, so a caller can report which candidate
+    categories remain without revealing the raw value (#443).
 
     ``text`` is expected to be JSON, where a path's backslashes are encoded
     as ``\\\\``, so each candidate is checked both as written and in its
     JSON-escaped form -- checking only the raw form would silently never
-    match a leaked Windows path and defeat the whole safety net. Returns a
-    count rather than the matched values themselves, so a caller can refuse
-    to persist without the refusal error itself leaking the raw value it is
-    refusing over.
+    match a leaked Windows path and defeat the whole safety net.
+
+    Each item in ``candidates`` may be a bare string (checked with the
+    original strict, unconditional substring match -- category "path") or a
+    ``(value, category)`` pair. category "username" is matched only in the
+    same bounded contexts ``redact()`` itself treats as a real occurrence
+    (see ``_username_leak_pattern``); every other category keeps the
+    original unconditional substring check, since repo/home/temp paths are
+    long/specific enough that coincidental collision is not a realistic
+    concern -- the defense-in-depth strictness #430 established for those
+    categories is unchanged.
     """
     lowered_text = text.lower()
-    hits = 0
-    for value in candidates:
+    hits = {}
+    for item in candidates:
+        if isinstance(item, tuple):
+            value, category = item
+        else:
+            value, category = item, "path"
         if not value:
             continue
+        if category == "username":
+            if _username_leak_pattern(value).search(text):
+                hits[category] = hits.get(category, 0) + 1
+            continue
         if value.lower() in lowered_text:
-            hits += 1
+            hits[category] = hits.get(category, 0) + 1
             continue
         escaped = value.replace("\\", "\\\\").lower()
         if escaped != value.lower() and escaped in lowered_text:
-            hits += 1
+            hits[category] = hits.get(category, 0) + 1
     return hits
 
 
@@ -594,6 +654,104 @@ def default_output_path(root, host_class):
     return Path(root) / ".cache" / f"external-verification-{host_class}-{stamp}.json"
 
 
+def _progress_artifact_paths(output_path):
+    """Derive the shared progress-log/event-stream paths from the final
+    JSON evidence path (#443), so the three artifacts from one run are
+    deterministically associated by name, e.g.
+    ".../external-verification-windows-<UTC>.json" ->
+    ".../external-verification-windows-<UTC>.log" and
+    ".../external-verification-windows-<UTC>.progress.jsonl".
+    """
+    output_path = Path(output_path)
+    stem = output_path.name
+    if stem.endswith(".json"):
+        stem = stem[: -len(".json")]
+    base = output_path.with_name(stem)
+    return (
+        base.with_name(base.name + ".log"),
+        base.with_name(base.name + ".progress.jsonl"),
+    )
+
+
+class ProgressRecorder:
+    """Incrementally writes sanitized human-readable (``.log``) and
+    machine-readable (``.progress.jsonl``) lifecycle events for one
+    external-verification run (#443).
+
+    A multi-hour full-profile run has no durable progress record separate
+    from the final JSON bundle today: a persistence-time refusal, a
+    timeout, or a host interruption discards all diagnostic context. Every
+    event payload is sanitized through the same ``redact()`` closure the
+    final JSON bundle uses *before* it is ever written -- never write-then-
+    sanitize. Each write is flushed and fsynced immediately so a process
+    kill leaves the latest completed event durable on disk.
+    """
+
+    def __init__(self, log_path, jsonl_path, redact, run_id):
+        self.log_path = Path(log_path)
+        self.jsonl_path = Path(jsonl_path)
+        self._redact = redact
+        self._run_id = run_id
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _sanitize(self, value):
+        if value is None or isinstance(value, (bool, int, float)):
+            return value
+        if isinstance(value, dict):
+            return {str(key): self._sanitize(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [self._sanitize(item) for item in value]
+        return self._redact(str(value))
+
+    def record(self, event, status, **fields):
+        timestamp = (
+            dt.datetime.now(dt.timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        safe_fields = {key: self._sanitize(value) for key, value in fields.items()}
+        entry = {
+            "run_id": self._run_id,
+            "timestamp": timestamp,
+            "event": event,
+            "status": status,
+            **safe_fields,
+        }
+        self._append_jsonl(entry)
+        self._append_log(timestamp, event, status, safe_fields)
+
+    def _append_jsonl(self, entry):
+        line = json.dumps(entry, ensure_ascii=False, sort_keys=True)
+        with open(self.jsonl_path, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def _append_log(self, timestamp, event, status, safe_fields):
+        extra = " ".join(
+            f"{key}={value}" for key, value in safe_fields.items() if value is not None
+        )
+        line = f"{timestamp} {event} {status}"
+        if extra:
+            line += " " + extra
+        with open(self.log_path, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+
+class _NullProgressRecorder:
+    """No-op stand-in so callers can invoke ``progress.record(...)``
+    unconditionally without constructing a real ``ProgressRecorder``."""
+
+    def record(self, *args, **kwargs):
+        pass
+
+
+_NULL_PROGRESS = _NullProgressRecorder()
+
+
 def _locale_language():
     try:
         return locale.getlocale()[0]
@@ -611,11 +769,20 @@ def _redact_structure(value, redact):
     return value
 
 
-def build_bundle(root, args):
+def build_bundle(root, args, progress=None):
+    if progress is None:
+        progress = _NULL_PROGRESS
     root = Path(root).resolve()
     redact = make_redactor(root)
     host_class = classify_platform()
+    progress.record("host_classification", "completed", host_class=host_class)
+    progress.record("git_identity", "started")
     git_sha, git_record = _read_git_sha(root, redact, args.probe_timeout)
+    progress.record(
+        "git_identity",
+        git_record.get("status", "unknown"),
+        exit_code=git_record.get("exit_code"),
+    )
     is_ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
     evidence_type = (
         "real_environment"
@@ -658,9 +825,16 @@ def build_bundle(root, args):
             }
         )
     else:
+        progress.record("python_bootstrap", "started")
         cache_dir = root / ".cache" / "lifetxt-verify-python"
         bootstrap = verification_python_bootstrap.ensure_verification_python(cache_dir)
         checks.append({"scenario": "python-bootstrap", **bootstrap})
+        progress.record(
+            "python_bootstrap",
+            bootstrap.get("status", "unknown"),
+            category=bootstrap.get("category"),
+            version=bootstrap.get("version"),
+        )
         if bootstrap["status"] != "passed":
             checks.append(
                 {
@@ -700,10 +874,25 @@ def build_bundle(root, args):
                     "--python",
                     venv_python,
                 ]
+                progress.record(
+                    "release_profile", "started", timeout_seconds=args.release_timeout
+                )
                 result = run_command(command, root, redact, args.release_timeout)
                 checks.append({"scenario": "release-profile", **result})
+                progress.record(
+                    "release_profile",
+                    result.get("status", "unknown"),
+                    exit_code=result.get("exit_code"),
+                    duration_seconds=result.get("duration_seconds"),
+                    timeout_seconds=result.get("timeout_seconds"),
+                )
 
     tools = _tool_records(root, redact, args.probe_timeout)
+    progress.record(
+        "tool_probes",
+        "completed",
+        tools={item["tool"]: item["status"] for item in tools},
+    )
     artifacts = _artifact_records(args.artifact, root, redact)
     bundle = {
         "schema_version": SCHEMA_VERSION,
@@ -725,28 +914,43 @@ def build_bundle(root, args):
     return _redact_structure(bundle, redact)
 
 
-def write_bundle(bundle, output_path, redaction_candidates=()):
+def write_bundle(bundle, output_path, redaction_candidates=(), progress=None):
     """Serialize and persist a bundle, refusing to write if anything raw survived.
 
     ``redaction_candidates`` should be the same repo/home/temp/username
-    values ``make_redactor`` was built from (see ``_redaction_candidates``).
-    This is a persistence-time defense-in-depth check (#430): even if a
-    future redaction-rule change misses a case, the fully-serialized JSON is
-    rescanned case-insensitively immediately before the write, and the write
-    is refused -- loudly, but without repeating the raw value in the error --
-    rather than silently persisting a partially-redacted bundle.
+    values ``make_redactor`` was built from -- either the flat form from
+    ``_redaction_candidates`` or the categorized ``(value, category)`` form
+    from ``_categorized_redaction_candidates`` (#443). This is a
+    persistence-time defense-in-depth check (#430): even if a future
+    redaction-rule change misses a case, the fully-serialized JSON is
+    rescanned immediately before the write, and the write is refused --
+    loudly, but without repeating the raw value in the error -- rather than
+    silently persisting a partially-redacted bundle.
     """
+    if progress is None:
+        progress = _NULL_PROGRESS
+    progress.record("final_evidence_persistence", "started")
     text = json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    leaked = _unredacted_candidate_count(text, redaction_candidates)
-    if leaked:
+    hits = _unredacted_candidate_count(text, redaction_candidates)
+    if hits:
+        total = sum(hits.values())
+        categories = sorted(hits)
+        progress.record(
+            "final_evidence_persistence",
+            "refused",
+            candidate_categories=categories,
+            total_hits=total,
+        )
         raise RuntimeError(
             "Refusing to write external-verification evidence: %d raw "
             "redaction candidate value(s) are still present in the "
-            "serialized bundle. This bundle was not written." % leaked
+            "serialized bundle (candidate categories: %s). This bundle "
+            "was not written." % (total, ", ".join(categories))
         )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(text, encoding="utf-8")
+    progress.record("final_evidence_persistence", "completed")
 
 
 def bundle_exit_code(bundle):
@@ -808,14 +1012,37 @@ def main(argv=None):
     root = Path(__file__).resolve().parents[1]
     host_class = classify_platform()
     output = Path(args.output) if args.output else default_output_path(root, host_class)
-    bundle = build_bundle(root, args)
-    write_bundle(bundle, output, redaction_candidates=_redaction_candidates(root))
+    log_path, jsonl_path = _progress_artifact_paths(output)
+    progress = ProgressRecorder(
+        log_path, jsonl_path, make_redactor(root), run_id=output.stem
+    )
+    progress.record("collector_start", "started")
+    bundle = build_bundle(root, args, progress=progress)
+    try:
+        write_bundle(
+            bundle,
+            output,
+            redaction_candidates=_categorized_redaction_candidates(root),
+            progress=progress,
+        )
+    except RuntimeError as exc:
+        # Every progress event up to this point is already flushed and
+        # fsynced (#443): a persistence refusal must not discard the whole
+        # run's diagnostic context the way an uncaught traceback would.
+        progress.record("collector_complete", "failed")
+        print(f"progress_log={log_path}")
+        print(f"progress_events={jsonl_path}")
+        print(str(exc))
+        return 1
+    progress.record("collector_complete", "completed")
     code = bundle_exit_code(bundle)
     release_status = next(
         (item.get("status") for item in bundle["checks"] if item.get("scenario") == "release-profile"),
         "unknown",
     )
     print(f"evidence={output}")
+    print(f"progress_log={log_path}")
+    print(f"progress_events={jsonl_path}")
     print(
         f"host={bundle['metadata']['host_class']} release_profile={release_status} "
         f"release_timeout={args.release_timeout} exit={code}"

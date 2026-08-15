@@ -5913,6 +5913,68 @@ traceability:
         work outside this sandbox and is recorded as open.
       status: implemented
 
+    - requirement_id: req-external-verification-windows-redaction-refusal-progress-evidence
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/443
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/444
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "reproduced the exact real-host false positive with a synthetic short username ('an') and 5000-repetition large text: make_redactor() correctly left the text untouched (no real username occurrence), yet the old unconditional persistence-time substring scan still reported it present -> confirmed false positive, not a true redaction miss"
+        - "tests/test_external_verification.py UsernameLeakPatternTests (3 tests): the persistence-time username match now agrees exactly with make_redactor()'s own bounded username_patterns"
+        - "tests/test_external_verification.py PersistenceCategoryLeakScanTests (7 tests): the reproduced false positive is fixed; a sanitized full-profile-shaped bundle with 20000 lines of stdout writes successfully; a genuine boundary-matched username leak and a genuine repo leak are both still refused unchanged; the refusal message names the candidate category, never the raw value; JSON-escaped/backslash Windows paths remain covered; bare flat-string candidates keep the original strict unconditional substring check"
+        - "tests/test_external_verification.py ProgressRecorderTests (7 tests): sanitized JSONL + human-readable log line shape; every field (including nested dicts/lists) sanitized before writing, never after; a comprehensive scan against real repo/home/temp/username/secret-token fixtures finds zero raw values; durability across calls with no special close; null-recorder no-op; _progress_artifact_paths derives .log/.progress.jsonl from the .json path"
+        - "tests/test_external_verification.py MainProgressAndRefusalIntegrationTests (2 tests): a real module.main() --skip-release run writes all three artifacts with the full expected lifecycle event sequence; a forced final-evidence refusal leaves both progress artifacts intact with a final_evidence_persistence/refused and a collector_complete/failed event, exits 1, never crashes with a traceback"
+        - python -m unittest tests.test_external_verification -> Ran 63 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 17 of the 18 new tests fail/error against the pre-#443 code, then pass once the fix is restored; the one test that passed unmodified locks in pre-existing, unchanged flat-string behavior"
+        - "live end-to-end on this Windows host: a real --skip-release run wrote all three artifacts; the .log is human-readable, the .progress.jsonl parses as one JSON object per line; neither file (nor the .json) contains the real raw USERPROFILE value or the real username in path form"
+        - "live: a forced real refusal (module.main() with _categorized_redaction_candidates monkeypatched) confirmed exit code 1, no .json written, both progress artifacts preserved, a final_evidence_persistence/refused event carrying only the category, a collector_complete/failed event, and a clean printed error message naming the category -- never a raw value or an uncaught traceback"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2501 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        A real Windows full-profile run refused to persist its evidence at
+        write_bundle() with "1 raw redaction candidate value(s) are still
+        present," discarding a multi-hour run's entire result; a
+        --skip-release smoke on the same host succeeded, narrowing the
+        problem to data unique to the full-profile path. Root-caused before
+        any fix: _redaction_candidates() includes usernames as short as two
+        characters, and the persistence-time scan did an unconditional
+        substring check for every candidate, while make_redactor()'s own
+        username_patterns only ever redact a username in a bounded context.
+        Across a full release profile's stdout/stderr, a short username
+        coincidentally appears as a substring of ordinary words, which
+        redact() correctly leaves untouched but the old scan still flagged:
+        a false positive, not a true redaction miss. Fixed by making the
+        persistence-time scan's username matching agree with
+        make_redactor()'s own bounded patterns via a new
+        _categorized_redaction_candidates()/_username_leak_pattern() pair;
+        repo/home/temp categories keep the original strict substring check
+        unchanged. The flat-string _redaction_candidates() is preserved and
+        reimplemented on top of the categorized function, so every existing
+        caller/test keeps working without modification. Also added
+        ProgressRecorder: incrementally-flushed, sanitized human-readable
+        (.log) and machine-readable (.progress.jsonl) lifecycle events
+        sharing the final JSON's name stem, each field sanitized before
+        writing and each write flushed/fsynced immediately, so an
+        interruption or persistence refusal leaves the latest completed
+        event durable. main() now catches a persistence RuntimeError,
+        records collector_complete/failed, prints the progress-artifact
+        paths and the category-only error message, and exits 1 instead of
+        crashing with a traceback. Verified live end to end on this Windows
+        host, including a forced real persistence refusal confirming
+        progress artifacts survive with a privacy-safe refused event. One
+        real Windows full-profile verification run, per the issue's own
+        explicit allowance to validate with synthetic fixtures first,
+        remains external-environment work outside this sandbox and is
+        recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

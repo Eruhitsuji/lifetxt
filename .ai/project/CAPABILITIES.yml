@@ -207,6 +207,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/444
       - https://github.com/Eruhitsuji/lifetxt/pull/446
       - https://github.com/Eruhitsuji/lifetxt/pull/448
+      - https://github.com/Eruhitsuji/lifetxt/pull/449
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       External-environment preparation now includes dependency-free host evidence

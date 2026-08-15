@@ -5975,6 +5975,54 @@ traceability:
         recorded as open.
       status: implemented
 
+    - requirement_id: req-external-verification-bash-native-windows-path-probe
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/445
+      pull_request: null
+      changed_files_or_scope:
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "a real Windows full-verification run on merge commit 284a0cf found tests.test_external_verification.VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper failing with exit 127: the discovered bash resolved to WSL's bash.exe, which passes _bash_skip_reason()'s trivial inline-command probe but cannot address a native Windows-style path passed as a positional argument -- a test-portability failure, not a lifetxt runtime or #443 regression"
+        - "tests/test_external_verification.py BashNativeWindowsPathCompatibilityTests (7 tests, synthetic subprocess results only, no real checkout path): the new _bash_handles_native_windows_paths() probe returns True immediately on POSIX without spawning a subprocess; returns False with no executable on Windows; returns True when the shell translates the native path (mimics Git Bash/MSYS/Cygwin); returns False when the shell cannot resolve it (mimics the real observed WSL bash.exe failure); returns False (not a raised exception) on a subprocess error; _bash_skip_reason() names the native-Windows-path-model problem (not bash absence) when the trivial probe passes but the native-path probe fails, and returns None when both probes succeed"
+        - python -m unittest tests.test_external_verification.BashNativeWindowsPathCompatibilityTests -> Ran 7 tests, OK
+        - "confirmed the new probe function and its tests do not exist in the pre-#445 test file, so they cannot pass by coincidence against the old code"
+        - "live on this Windows sandbox: the discovered bash is Cygwin bash (not WSL bash.exe), confirmed to correctly translate a native Windows path via a direct cat probe, so the wrapper test still runs (not skipped) and passes unchanged after the fix, proving #437's POSIX-wrapper coverage is preserved on an actual POSIX-capable Windows shell"
+        - python -m unittest tests.test_external_verification -> Ran 70 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2508 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        A subsequent real Windows full-verification run (#443's own merge
+        commit) still failed, but only on the POSIX-wrapper timeout-
+        propagation test with exit 127 -- final evidence persistence itself
+        succeeded, so this was not a recurrence of #443. Root cause: the
+        discovered bash resolved to WSL's bash.exe, which passes the
+        trivial inline-command probe (WSL bash runs inline commands fine)
+        but cannot address a native Windows-style path passed as a
+        positional argument -- WSL's own filesystem view treats the whole
+        string as a single, nonexistent literal filename rather than
+        translating it. A test-portability failure, not a lifetxt runtime
+        incompatibility. Fixed entirely in the test file, no production
+        code change: a new _bash_handles_native_windows_paths() probe
+        writes a small temp file and confirms the discovered bash can `cat`
+        it by its native Windows path before the bash is treated as usable
+        for the POSIX-wrapper integration test; on POSIX hosts this returns
+        True immediately without spawning a subprocess, so Linux/macOS
+        coverage is unaffected. When the native-path probe fails, the skip
+        reason explicitly names the path-model problem rather than implying
+        bash is absent. Verified live on this Windows sandbox that the
+        discovered bash here is Cygwin bash (not WSL bash.exe) and
+        correctly translates native paths, so the wrapper test still runs
+        and passes unchanged -- confirming #437's POSIX-wrapper coverage is
+        preserved on an actual POSIX-capable Windows shell, not merely
+        skipped away. A subsequent real Windows external-verification run
+        with WSL bash discoverable on PATH, per the issue's own last
+        acceptance criterion, remains external-environment work outside
+        this sandbox and is recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

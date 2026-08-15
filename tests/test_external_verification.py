@@ -268,6 +268,49 @@ class RedactionTests(unittest.TestCase):
             self.assertIn("<redacted-user>", result)
             self.assertIn("<redacted-secret>", result)
 
+    def test_short_temp_candidate_does_not_match_inside_component(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+            result = redact(r"unclosed file name='C:\Users\alice\AppData\Local\Temp\tmpXXXX\file.txt'")
+        self.assertIn(r"<temp>\tmpXXXX\file.txt", result)
+        self.assertNotIn(r"<temp>XXXX", result)
+
+    def test_short_temp_candidate_still_matches_true_posix_and_windows_roots(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+            posix_result = redact(r"/tmp/work")
+        self.assertEqual(r"<temp>/work", posix_result)
+
+        with mock.patch.object(module.tempfile, "gettempdir", return_value=r"C:\tmp"):
+            redact = module.make_redactor(
+                repo_root=None, env={"USERPROFILE": r"C:\Users\alice", "USERNAME": "alice"}
+            )
+            windows_result = redact(r"C:\tmp\work")
+        self.assertEqual(r"<temp>\work", windows_result)
+
+    def test_short_temp_persistence_scan_uses_the_same_boundary(self):
+        with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
+            candidates = module._categorized_redaction_candidates(
+                repo_root=None, env={"HOME": "/home/alice", "USER": "alice"}
+            )
+        self.assertNotIn(
+            "temp",
+            module._unredacted_candidate_count(
+                r'{"stderr": "C:\\Users\\alice\\AppData\\Local\\Temp\\tmpXXXX"}',
+                candidates,
+            ),
+        )
+        self.assertIn(
+            "temp",
+            module._unredacted_candidate_count(
+                r'{"stderr": "/tmp/work"}', candidates
+            ),
+        )
+
 
 class RedactionHardeningTests(unittest.TestCase):
     """Case-insensitivity, overlap ordering, and idempotency (#430).

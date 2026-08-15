@@ -67,6 +67,7 @@ capabilities:
       - req-external-verification-bash-native-windows-path-probe
       - req-external-verification-windows-temp-escaped-backslash-collapse
       - req-external-verification-release-timeout-default-reopened
+      - req-external-verification-short-temp-candidate-boundary
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py

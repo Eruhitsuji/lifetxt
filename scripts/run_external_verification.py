@@ -140,6 +140,7 @@ def _home_value(env):
 # Hardcoded rather than resolved via a live os.path.realpath() call so the
 # mapping is deterministic and testable on any host, not only real macOS.
 _MACOS_PRIVATE_ALIASES = ("/tmp", "/var", "/etc")
+_PATH_CANDIDATE_BOUNDARY = r"(?=$|[/\\]|[^A-Za-z0-9_.-])"
 
 
 def _expanded_path_variants(value):
@@ -279,7 +280,14 @@ def make_redactor(repo_root=None, env=None):
         # one pass rather than N sequential str.replace() calls (#430: the
         # old sequential design let a differently-cased path silently miss,
         # and let a shorter candidate consume a longer one's prefix).
-        alternation = "|".join(re.escape(variant) for variant, _marker in path_entries)
+        # A short root such as /tmp must not consume the prefix of an
+        # unrelated component such as tmpXXXXXX. Require the candidate to end
+        # at a path separator, text boundary, or punctuation boundary while
+        # leaving genuine /tmp/... and Windows slash variants unchanged.
+        alternation = "|".join(
+            re.escape(variant) + _PATH_CANDIDATE_BOUNDARY
+            for variant, _marker in path_entries
+        )
         path_pattern = re.compile(alternation, re.IGNORECASE)
 
     secrets = _secret_values(env)
@@ -344,6 +352,14 @@ def _username_leak_pattern(username):
     )
 
 
+def _path_leak_pattern(value):
+    """Match a path candidate only when it ends at a component boundary."""
+    return re.compile(
+        re.escape(value) + _PATH_CANDIDATE_BOUNDARY,
+        re.IGNORECASE,
+    )
+
+
 def _unredacted_candidate_count(text, candidates):
     """Return a ``{category: count}`` mapping of raw redaction candidates
     still present in ``text``, so a caller can report which candidate
@@ -375,6 +391,14 @@ def _unredacted_candidate_count(text, candidates):
             continue
         if category == "username":
             if _username_leak_pattern(value).search(text):
+                hits[category] = hits.get(category, 0) + 1
+            continue
+        if category in ("repo", "home", "temp"):
+            if _path_leak_pattern(value).search(text):
+                hits[category] = hits.get(category, 0) + 1
+                continue
+            escaped = value.replace("\\", "\\\\")
+            if escaped != value and _path_leak_pattern(escaped).search(text):
                 hits[category] = hits.get(category, 0) + 1
             continue
         if value.lower() in lowered_text:

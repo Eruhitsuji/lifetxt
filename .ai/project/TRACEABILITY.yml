@@ -6143,6 +6143,28 @@ traceability:
         No epic: this is a test-infrastructure fix discovered during that
         session's own verification pass, not decomposed from #283/#339.
       status: implemented
+    - requirement_id: req-external-verification-short-temp-candidate-boundary
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/447
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/447
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - short /tmp and \\tmp candidates no longer match inside tmpXXXX components
+        - genuine POSIX and Windows temp roots remain redacted to <temp>
+        - persistence-time repo/home/temp scanning uses the same path boundary and still catches genuine leaks
+        - tests.test_external_verification -> 74 tests, OK (skipped=1)
+        - scripts/run_external_verification.py --skip-release --probe-timeout 1 -> exit=0 with canonical evidence artifacts
+        - ruff check and git diff --check pass
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance text-fidelity fix. Username, secret, and persistence
+        safety semantics are not relaxed; only path-component false matches are
+        excluded.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

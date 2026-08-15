@@ -97,20 +97,23 @@ The release profile (`scripts/run_ci_like.py --profile release`) is bounded by
 `--release-timeout SECONDS`, forwarded unchanged by both entry scripts:
 
 ```text
-./scripts/verify-external.sh --release-timeout 21600
+./scripts/verify-external.sh --release-timeout 43200
 ```
 
 ```text
-.\scripts\verify-external.ps1 --release-timeout 21600
+.\scripts\verify-external.ps1 --release-timeout 43200
 ```
 
-The default is 14400 seconds (4 hours). Real supported-host runs observed
-release-profile durations of about 5316 seconds on Windows and 4959 seconds
-on WSL; native Linux and macOS both reached the full test run but were cut
-off by the collector's previous 7200-second boundary before finishing, with
-no compatibility failure observed before the cutoff. The new default gives
-roughly 2.7x headroom over the highest confirmed real duration while still
-bounding a genuinely hung process within one collector invocation. Raise it
+The default is 28800 seconds (8 hours), raised from an earlier 14400-second
+(4-hour) default that was itself raised from 7200 seconds. Real supported-host
+runs observed WSL completing in about 7427 seconds (up from about 4959 seconds
+on an earlier run of the same host class -- real host performance genuinely
+varies run to run), macOS completing in about 14225 seconds (barely inside the
+prior 14400-second boundary), and native Linux again hitting the collector's
+timeout at 14400 seconds while still inside the test run itself, with no
+compatibility failure observed before the cutoff. The current default gives
+roughly 2x headroom over the highest confirmed near-miss (macOS's ~14225s) and
+substantial room for native Linux and further host-to-host variance. Raise it
 further with `--release-timeout` on a host that is slower still; a timeout is
 never treated as a passing result regardless of the configured limit.
 

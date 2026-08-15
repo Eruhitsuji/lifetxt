@@ -420,6 +420,60 @@ class TempPathCanonicalizationTests(unittest.TestCase):
         self.assertNotIn("bob", result)
         self.assertNotIn("<redacted-user>", result)
 
+    def test_windows_repr_escaped_backslash_username_only_match_collapses(self):
+        # Reopened #438: a real Windows full-profile run found this exact
+        # gap in a ResourceWarning message's text, which is a Python
+        # repr() of a file object -- repr() escapes each backslash as two
+        # literal backslash characters, so the real separator there is
+        # "\\\\" (two backslash characters), not "\\" (one). The username
+        # lookaround in username_patterns only checks the single adjacent
+        # character, so it still matches and the account name is redacted
+        # either way, but the structural collapse pattern originally
+        # required exactly one separator character and missed the doubled
+        # form, leaving "Users\\\\<redacted-user>\\\\AppData\\\\..."
+        # unredacted.
+        sep = "\\\\"  # two literal backslash characters (repr()-escaped)
+        raw = (
+            "unclosed file <_io.TextIOWrapper name='C:"
+            + sep
+            + "Users"
+            + sep
+            + "bob"
+            + sep
+            + "AppData"
+            + sep
+            + "Local"
+            + sep
+            + "Temp"
+            + sep
+            + "tmpXXXX"
+            + sep
+            + "file.txt'>"
+        )
+        # Mock gettempdir() to a value sharing no substring with "tmp" --
+        # temp="/tmp" would otherwise register a "\tmp" backslash-variant
+        # path_pattern candidate that coincidentally matches inside the
+        # "tmpXXXX" mkdtemp()-style directory name below, which is a real
+        # but separate interaction unrelated to what this test covers.
+        with mock.patch.object(
+            module.tempfile, "gettempdir", return_value="/nonexistent-temp-root"
+        ):
+            redact = module.make_redactor(
+                repo_root=None, env={"HOME": "/home/bob", "USER": "bob"}
+            )
+            result = redact(raw)
+        expected = (
+            "unclosed file <_io.TextIOWrapper name='<temp>"
+            + sep
+            + "tmpXXXX"
+            + sep
+            + "file.txt'>"
+        )
+        self.assertEqual(expected, result)
+        self.assertNotIn("bob", result)
+        self.assertNotIn("<redacted-user>", result)
+        self.assertNotIn("AppData", result)
+
     def test_repeated_recursive_passes_stay_canonical(self):
         with mock.patch.object(module.tempfile, "gettempdir", return_value="/tmp"):
             redact = module.make_redactor(

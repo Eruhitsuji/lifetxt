@@ -65,6 +65,7 @@ capabilities:
       - req-external-verification-macos-filesystem-type
       - req-external-verification-windows-redaction-refusal-progress-evidence
       - req-external-verification-bash-native-windows-path-probe
+      - req-external-verification-windows-temp-escaped-backslash-collapse
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -157,6 +158,13 @@ capabilities:
       - "live on this Windows sandbox: the discovered bash is Cygwin bash (not WSL bash.exe), confirmed to correctly translate a native Windows path via a direct cat probe, so VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper still runs (not skipped) and passes unchanged after the fix, proving #437's POSIX-wrapper coverage is preserved on an actual POSIX-capable Windows shell"
       - python -m unittest tests.test_external_verification -> Ran 70 tests, OK
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2508 tests, OK (skipped=5)'
+      - "#438 reopened from new real Windows full-profile evidence collected on merge commit 284a0cf: ResourceWarning path representations remained structurally expanded around <redacted-user> instead of collapsing to one <temp> root; root-caused to Python's repr() escaping each backslash as two literal backslash characters, which the original _WINDOWS_USER_TEMP_PATTERN (exactly-one-separator [\\/]) did not recognize, while the username lookaround (which only checks the single adjacent character) still matched and redacted the account name -- reproduced exactly with a synthetic repr-style double-backslash fixture before writing any fix"
+      - "tests/test_external_verification.py TempPathCanonicalizationTests.test_windows_repr_escaped_backslash_username_only_match_collapses (1 new test, synthetic repr-style fixture, no real account name/path): confirms the doubled-backslash structural collapse now works, no username/AppData fragment survives"
+      - "confirmed via git stash (production code only, test kept) that the new test fails against the pre-fix code with the exact unredacted structural form the reopen comment describes, then passes once the fix (broadening [\\/] to [\\/]+ in _WINDOWS_USER_TEMP_PATTERN) is restored"
+      - "found and filed as a separate, out-of-scope, non-privacy-impacting follow-up (#447): a short/generic temp candidate's backslash-variant path_pattern registration can coincidentally match inside an unrelated tempfile.mkdtemp()-style 'tmpXXXXXX' directory name, truncating (but not un-redacting) the result; no raw value survives either way, confirmed via the same reproduction methodology, and the primary fix's own test fixture was adjusted to avoid this unrelated coincidental collision rather than conflating the two root causes"
+      - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+      - "live: a real (non-mocked) --skip-release run on this Windows host wrote a real evidence bundle whose serialized JSON contains zero doubled-marker sequences"
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -178,6 +186,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/439
       - https://github.com/Eruhitsuji/lifetxt/issues/443
       - https://github.com/Eruhitsuji/lifetxt/issues/445
+      - https://github.com/Eruhitsuji/lifetxt/issues/447
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -399,6 +408,42 @@ capabilities:
       real Windows external-verification run with WSL bash discoverable on
       PATH, per the issue's own last acceptance criterion, remains
       external-environment work outside this sandbox and is recorded as
+      open.
+      #438 was reopened from new real Windows full-profile evidence
+      collected on merge commit 284a0cf: ResourceWarning path
+      representations remained structurally expanded around
+      <redacted-user> instead of collapsing to one <temp> root, even
+      though the account name itself was correctly redacted. Root-caused
+      before any fix: a ResourceWarning message's text is a Python repr()
+      of a file object, and repr() escapes each backslash as two literal
+      backslash characters, so the real separator there is "\\\\" (two
+      characters), not "\\" (one). The username lookaround in
+      username_patterns only checks the single character immediately
+      adjacent, so it still matched and redacted the account name either
+      way -- but the original _WINDOWS_USER_TEMP_PATTERN required exactly
+      one separator character between each path segment and missed the
+      doubled form, leaving the surrounding Users/AppData/Local/Temp
+      structure unredacted around the already-redacted username. Fixed by
+      broadening each "[\\/]" in that pattern to "[\\/]+" (one or more),
+      which handles both the normal single-backslash case and the
+      repr()-escaped doubled case uniformly, with no change to the
+      username redaction itself. Reproduced exactly with a synthetic
+      repr-style double-backslash fixture (no real account name or path)
+      before writing any fix, and confirmed via git stash that the fix
+      resolves it. While constructing this fixture, a separate, low-
+      severity, non-privacy-impacting quirk was found and filed as its own
+      follow-up (#447) rather than folded into this fix: a short/generic
+      temp candidate's backslash-variant path_pattern registration can
+      coincidentally match inside an unrelated tempfile.mkdtemp()-style
+      "tmpXXXXXX" directory name, truncating (but never un-redacting) the
+      result -- the primary fix's own test fixture was adjusted to avoid
+      this unrelated coincidental collision so the two root causes are not
+      conflated. Live-verified on this Windows sandbox that a real
+      --skip-release run's evidence bundle contains zero doubled-marker
+      sequences. A lightweight real-host sanitizer smoke on Windows/WSL/
+      Linux/macOS confirming canonical output, per the issue's own last
+      acceptance criterion, remains external-environment work outside this
+      sandbox for the platforms not exercised live here and is recorded as
       open.
     replacement:
       replaces: []

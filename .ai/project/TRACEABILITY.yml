@@ -6023,6 +6023,58 @@ traceability:
         this sandbox and is recorded as open.
       status: implemented
 
+    - requirement_id: req-external-verification-windows-temp-escaped-backslash-collapse
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/438
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "#438 reopened from new real Windows full-profile evidence collected on merge commit 284a0cf: ResourceWarning path representations remained structurally expanded around <redacted-user> instead of collapsing to one <temp> root; root-caused to Python's repr() escaping each backslash as two literal backslash characters, which the original _WINDOWS_USER_TEMP_PATTERN (exactly-one-separator) did not recognize, while the username lookaround (which only checks the single adjacent character) still matched and redacted the account name -- reproduced exactly with a synthetic repr-style double-backslash fixture before writing any fix"
+        - "tests/test_external_verification.py TempPathCanonicalizationTests.test_windows_repr_escaped_backslash_username_only_match_collapses (1 new test, synthetic repr-style fixture, no real account name/path): confirms the doubled-backslash structural collapse now works, no username/AppData fragment survives"
+        - "confirmed via git stash (production code only, test kept) that the new test fails against the pre-fix code with the exact unredacted structural form the reopen comment describes, then passes once the fix is restored"
+        - "found and filed as a separate, out-of-scope, non-privacy-impacting follow-up (#447): a short/generic temp candidate's backslash-variant path_pattern registration can coincidentally match inside an unrelated tempfile.mkdtemp()-style 'tmpXXXXXX' directory name, truncating (but not un-redacting) the result; the primary fix's own test fixture was adjusted to avoid this unrelated coincidental collision rather than conflating the two root causes"
+        - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+        - "live: a real (non-mocked) --skip-release run on this Windows host wrote a real evidence bundle whose serialized JSON contains zero doubled-marker sequences"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        Reopened from new real Windows full-profile evidence collected on
+        merge commit 284a0cf: ResourceWarning path representations remained
+        structurally expanded around <redacted-user> instead of collapsing
+        to one <temp> root, even though the account name itself was
+        correctly redacted. Root-caused before any fix: a ResourceWarning
+        message's text is a Python repr() of a file object, and repr()
+        escapes each backslash as two literal backslash characters, so the
+        real separator there is two characters, not one. The username
+        lookaround only checks the single character immediately adjacent,
+        so it still matched and redacted the account name either way -- but
+        the original _WINDOWS_USER_TEMP_PATTERN required exactly one
+        separator character between each path segment and missed the
+        doubled form, leaving the surrounding Users/AppData/Local/Temp
+        structure unredacted around the already-redacted username. Fixed by
+        broadening each single-character separator class in that pattern to
+        one-or-more, which handles both the normal single-backslash case and
+        the repr()-escaped doubled case uniformly, with no change to the
+        username redaction itself. While constructing this fixture, a
+        separate, low-severity, non-privacy-impacting quirk was found and
+        filed as its own follow-up (#447) rather than folded into this fix:
+        a short/generic temp candidate's backslash-variant path_pattern
+        registration can coincidentally match inside an unrelated
+        tempfile.mkdtemp()-style directory name, truncating (but never
+        un-redacting) the result -- the primary fix's own test fixture was
+        adjusted to avoid this unrelated coincidental collision so the two
+        root causes are not conflated. A lightweight real-host sanitizer
+        smoke on Windows/WSL/Linux/macOS confirming canonical output, per
+        the issue's own last acceptance criterion, remains
+        external-environment work outside this sandbox for the platforms
+        not exercised live here and is recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

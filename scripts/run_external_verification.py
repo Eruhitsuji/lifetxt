@@ -433,6 +433,7 @@ def run_command(command, cwd, redact, timeout):
             command,
             cwd=cwd,
             text=True,
+            encoding="utf-8",
             errors="replace",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -561,6 +562,7 @@ def _macos_filesystem_type(root):
         completed = subprocess.run(
             [mount_bin],
             text=True,
+            encoding="utf-8",
             errors="replace",
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,

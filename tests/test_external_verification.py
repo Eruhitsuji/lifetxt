@@ -22,6 +22,51 @@ REPO_ROOT = SCRIPT.parents[1]
 BASH_EXECUTABLE = shutil.which("bash")
 
 
+def _bash_handles_native_windows_paths(bash_executable):
+    """Confirm ``bash_executable`` can address a native Windows-style path
+    (e.g. ``"D:\\project\\..."``) passed as a positional argument, not only
+    run a trivial inline command (#445).
+
+    A trivial ``bash -c "echo ..."`` probe passes for *both* Git Bash/MSYS/
+    Cygwin bash *and* WSL's ``bash.exe`` -- but WSL's own filesystem view
+    has no concept of a backslash-separated, drive-letter-prefixed path; it
+    treats the whole native path string as a single, nonexistent literal
+    filename rather than translating it, so a real Windows host with WSL
+    bash discoverable on PATH cannot invoke the repository's POSIX wrapper
+    by its native Windows checkout path even though the trivial probe
+    passed. Git Bash/MSYS/Cygwin bash translate native Windows paths
+    transparently and pass this probe. Not meaningful on POSIX hosts, where
+    the discovered bash is already a native POSIX bash with no such
+    translation concern -- returns True immediately there without spawning
+    a subprocess.
+    """
+    if os.name != "nt":
+        return True
+    if not bash_executable:
+        return False
+    handle = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    )
+    try:
+        handle.write("lifetxt-native-path-probe")
+        handle.close()
+        try:
+            probe = subprocess.run(
+                [bash_executable, "-c", 'cat "$1"', "bash", handle.name],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except OSError:
+            return False
+    finally:
+        try:
+            os.unlink(handle.name)
+        except OSError:
+            pass
+    return probe.returncode == 0 and "lifetxt-native-path-probe" in probe.stdout
+
+
 def _bash_skip_reason():
     """Probe bash the same way tests.test_roundtrip_golden does: some launchers
     found on PATH (e.g. the WSL wrapper at C:\\Windows\\System32\\bash.exe) do
@@ -41,6 +86,17 @@ def _bash_skip_reason():
         return (
             f"{BASH_EXECUTABLE} does not behave as a usable POSIX shell here; "
             "run this test on Linux/macOS or with Git Bash ahead of it on PATH."
+        )
+    if not _bash_handles_native_windows_paths(BASH_EXECUTABLE):
+        return (
+            f"{BASH_EXECUTABLE} runs trivial inline commands but cannot "
+            "address a native Windows-style path passed as an argument "
+            "(#445) -- likely WSL's bash.exe, whose own filesystem view "
+            "does not translate backslash-separated drive-letter paths. "
+            "The POSIX-wrapper integration test needs a shell that can "
+            "consume this repository's native Windows checkout path "
+            "directly, such as Git Bash/MSYS/Cygwin bash ahead of it on "
+            "PATH, or run this test on WSL/Linux/macOS directly."
         )
     return None
 
@@ -695,6 +751,89 @@ class ReleaseTimeoutConfigurationTests(unittest.TestCase):
                 )
         self.assertEqual(0, code)
         self.assertIn("release_timeout=9999", buffer.getvalue())
+
+
+class BashNativeWindowsPathCompatibilityTests(unittest.TestCase):
+    """#445: a real Windows full-verification run found the discovered bash
+    resolved to WSL's bash.exe, which passes the trivial inline-command
+    probe in _bash_skip_reason() but cannot address the repository's native
+    Windows checkout path -- causing VerifyExternalShWrapperTests to fail
+    with exit 127, a test-portability failure, not a lifetxt runtime
+    incompatibility. Covered here with synthetic subprocess results only,
+    no real checkout path.
+    """
+
+    def test_returns_true_immediately_on_posix_without_probing(self):
+        with mock.patch.object(os, "name", "posix"):
+            with mock.patch.object(subprocess, "run") as run:
+                result = _bash_handles_native_windows_paths("bash")
+        self.assertTrue(result)
+        run.assert_not_called()
+
+    def test_returns_false_when_no_executable_is_given_on_windows(self):
+        with mock.patch.object(os, "name", "nt"):
+            self.assertFalse(_bash_handles_native_windows_paths(None))
+
+    def test_returns_true_when_the_shell_translates_the_native_path(self):
+        # Mimics Git Bash/MSYS/Cygwin bash: translates the native Windows
+        # path transparently and reads the probe file's real content.
+        with mock.patch.object(os, "name", "nt"):
+            with mock.patch.object(
+                subprocess,
+                "run",
+                return_value=mock.Mock(
+                    returncode=0, stdout="lifetxt-native-path-probe"
+                ),
+            ):
+                self.assertTrue(_bash_handles_native_windows_paths("bash"))
+
+    def test_returns_false_when_the_shell_cannot_resolve_the_native_path(self):
+        # Mimics the real observed WSL bash.exe failure: the native
+        # Windows path is treated as a nonexistent literal filename.
+        with mock.patch.object(os, "name", "nt"):
+            with mock.patch.object(
+                subprocess,
+                "run",
+                return_value=mock.Mock(returncode=127, stdout=""),
+            ):
+                self.assertFalse(_bash_handles_native_windows_paths("bash"))
+
+    def test_returns_false_on_a_subprocess_error_rather_than_raising(self):
+        with mock.patch.object(os, "name", "nt"):
+            with mock.patch.object(subprocess, "run", side_effect=OSError("boom")):
+                self.assertFalse(_bash_handles_native_windows_paths("bash"))
+
+    def test_skip_reason_names_the_path_model_problem_not_bash_absence(self):
+        # A shell that passes the trivial probe but fails the native-path
+        # probe must produce a skip reason that says so explicitly (#445),
+        # not one implying bash itself is missing or generally unusable.
+        trivial_probe = mock.Mock(returncode=0, stdout="lifetxt-bash-probe\n")
+        native_path_probe = mock.Mock(returncode=127, stdout="")
+        with (
+            mock.patch(f"{__name__}.BASH_EXECUTABLE", "fake-bash"),
+            mock.patch.object(os, "name", "nt"),
+            mock.patch.object(
+                subprocess, "run", side_effect=[trivial_probe, native_path_probe]
+            ),
+        ):
+            reason = _bash_skip_reason()
+        self.assertIsNotNone(reason)
+        self.assertIn("native Windows-style path", reason)
+        self.assertNotIn("was not found on PATH", reason)
+        self.assertNotIn("does not behave as a usable POSIX shell", reason)
+
+    def test_skip_reason_is_none_when_both_probes_succeed(self):
+        trivial_probe = mock.Mock(returncode=0, stdout="lifetxt-bash-probe\n")
+        native_path_probe = mock.Mock(returncode=0, stdout="lifetxt-native-path-probe")
+        with (
+            mock.patch(f"{__name__}.BASH_EXECUTABLE", "fake-bash"),
+            mock.patch.object(os, "name", "nt"),
+            mock.patch.object(
+                subprocess, "run", side_effect=[trivial_probe, native_path_probe]
+            ),
+        ):
+            reason = _bash_skip_reason()
+        self.assertIsNone(reason)
 
 
 @unittest.skipIf(BASH_SKIP_REASON is not None, BASH_SKIP_REASON or "")

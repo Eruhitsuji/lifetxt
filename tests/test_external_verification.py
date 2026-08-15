@@ -752,20 +752,27 @@ class BundleTests(unittest.TestCase):
 
 
 class ReleaseTimeoutConfigurationTests(unittest.TestCase):
-    """#437: real supported-host runs at commit b57aa84 showed the previous
-    fixed 7200-second release-profile timeout was too tight for slower hosts,
-    and Linux/macOS reached the full test run without demonstrating an actual
-    incompatibility before the collector cut them off."""
+    """#437 (reopened twice): real supported-host runs showed each of two
+    successive fixed release-profile timeouts too tight for slower hosts.
+    The first fix (7200s -> 14400s) was itself reopened when a subsequent
+    real run showed macOS finishing at ~14225s (barely inside the 14400s
+    boundary) and native Linux again hitting the collector's timeout while
+    still inside the test run, with WSL's own duration varying from ~4959s
+    to ~7427s between runs of the same host class."""
 
     def test_default_release_timeout_has_headroom_over_observed_real_host_durations(
         self,
     ):
         args = module.build_parser().parse_args([])
         self.assertEqual(args.release_timeout, module.DEFAULT_RELEASE_TIMEOUT_SECONDS)
-        # Highest confirmed real-host release-profile duration was ~5316s
-        # (Windows). The default must retain real headroom above it, not
-        # just nominally exceed it, while still bounding a hung process.
-        self.assertGreaterEqual(module.DEFAULT_RELEASE_TIMEOUT_SECONDS, 5316 * 2)
+        # Highest confirmed real-host near-miss duration was ~14225s
+        # (macOS, on the reopened run). The default must retain real
+        # headroom above it, not just nominally exceed it, while still
+        # bounding a hung process.
+        self.assertGreaterEqual(module.DEFAULT_RELEASE_TIMEOUT_SECONDS, 14225 * 2)
+        # Must also strictly exceed the prior (reopened, insufficient)
+        # 14400s default -- a regression guard specific to this reopening.
+        self.assertGreater(module.DEFAULT_RELEASE_TIMEOUT_SECONDS, 14400)
 
     def test_probe_timeout_stays_independently_short_by_default(self):
         args = module.build_parser().parse_args([])

@@ -33,15 +33,20 @@ import verification_python_bootstrap  # noqa: E402
 
 SCHEMA_VERSION = 1
 SUPPORTED_HOSTS = {"windows", "wsl", "linux", "macos"}
-# #437: real supported-host runs at commit b57aa84 observed release-profile
-# durations of ~5316s (Windows) and ~4959s (WSL); native Linux and macOS both
-# exceeded the prior 7200s boundary without a compatibility failure -- the
-# collector itself cut them off. 14400s (4h) gives roughly 2.7x headroom over
-# the highest confirmed real duration and room for the not-yet-measured
-# Linux/macOS completion time, while still bounding a genuinely hung process
-# within one collector invocation. See
-# docs/en/external-environment-verification.md for the full rationale.
-DEFAULT_RELEASE_TIMEOUT_SECONDS = 14400
+# #437 (reopened): the prior 14400s (4h) default, itself raised from 7200s
+# after real-host runs at commit b57aa84, was still not enough headroom.
+# Real supported-host runs at commit 2d99fc2 observed WSL completing in
+# ~7427s (up from ~4959s on an earlier run of the same host class -- real
+# host performance genuinely varies run to run), macOS completing in
+# ~14225s (barely inside the old 14400s boundary), and native Linux again
+# hitting the collector's timeout at 14400s while still inside the test
+# run itself, with its true completion time unknown. 28800s (8h) gives
+# roughly 2x headroom over the highest confirmed near-miss (macOS's
+# ~14225s) and substantial room for native Linux and further host-to-host
+# variance, while still bounding a genuinely hung process within one
+# collector invocation. See docs/en/external-environment-verification.md
+# for the full rationale.
+DEFAULT_RELEASE_TIMEOUT_SECONDS = 28800
 SECRET_KEY_MARKERS = ("TOKEN", "PASSWORD", "PASSWD", "SECRET", "API_KEY", "APIKEY", "AUTH")
 MANUAL_SCENARIOS = (
     {
@@ -1007,7 +1012,7 @@ def build_parser():
         f"(default: {DEFAULT_RELEASE_TIMEOUT_SECONDS}). A run that exceeds this "
         'is recorded with status "timeout" and retained partial output, '
         "never as passed. Increase this for a slower real host, for example "
-        "--release-timeout 21600.",
+        "--release-timeout 43200.",
     )
     parser.add_argument(
         "--probe-timeout",

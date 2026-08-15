@@ -66,6 +66,7 @@ capabilities:
       - req-external-verification-windows-redaction-refusal-progress-evidence
       - req-external-verification-bash-native-windows-path-probe
       - req-external-verification-windows-temp-escaped-backslash-collapse
+      - req-external-verification-release-timeout-default-reopened
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -164,6 +165,14 @@ capabilities:
       - "found and filed as a separate, out-of-scope, non-privacy-impacting follow-up (#447): a short/generic temp candidate's backslash-variant path_pattern registration can coincidentally match inside an unrelated tempfile.mkdtemp()-style 'tmpXXXXXX' directory name, truncating (but not un-redacting) the result; no raw value survives either way, confirmed via the same reproduction methodology, and the primary fix's own test fixture was adjusted to avoid this unrelated coincidental collision rather than conflating the two root causes"
       - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
       - "live: a real (non-mocked) --skip-release run on this Windows host wrote a real evidence bundle whose serialized JSON contains zero doubled-marker sequences"
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+      - "#437 reopened a second time from real-host verification on merge commit 2d99fc2: WSL completed in ~7427s (up from ~4959s on an earlier run of the same host class -- real host performance varies run to run), macOS completed in ~14225s (barely inside the prior 14400s boundary), and native Linux again hit the collector's timeout at 14400s while still inside the test run, confirming #440's timeout-recording semantics work correctly but that the 14400s default still lacked headroom"
+      - "raised DEFAULT_RELEASE_TIMEOUT_SECONDS from 14400 to 28800 (8h, roughly 2x headroom over the highest confirmed near-miss of ~14225s), with the module-level comment and docs/en/external-environment-verification.md's rationale updated to cite this reopened run's real evidence"
+      - "tests/test_external_verification.py ReleaseTimeoutConfigurationTests.test_default_release_timeout_has_headroom_over_observed_real_host_durations updated to assert headroom over the new ~14225s near-miss (>= 14225*2) and to strictly exceed the prior insufficient 14400s default -- confirmed via git stash (production code only, test kept) that the updated assertion fails against the pre-fix 14400s default with the exact observed value (14400 not >= 28450), then passes once the fix is restored"
+      - python -m unittest tests.test_external_verification.ReleaseTimeoutConfigurationTests -> Ran 5 tests, OK
+      - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+      - "live: a real --skip-release run on this Windows host reports release_timeout=28800 in its summary output"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
@@ -445,6 +454,32 @@ capabilities:
       Linux/macOS confirming canonical output, per the issue's own last
       acceptance criterion, remains external-environment work outside this
       sandbox for the platforms not exercised live here and is recorded as
+      open.
+      #437 was reopened a second time from real-host verification on merge
+      commit 2d99fc2: WSL completed in ~7427s (up from ~4959s on an
+      earlier run of the same host class -- real host performance
+      genuinely varies run to run), macOS completed in ~14225s (barely
+      inside the prior 14400s boundary), and native Linux again hit the
+      collector's timeout at 14400s while still inside the test run
+      itself, with its true completion time unknown. This confirmed
+      #440's timeout-recording semantics (distinct "timeout" status,
+      retained partial output, never a fabricated pass) work correctly,
+      but that the 14400s default itself -- already raised once from
+      7200s -- still lacked sufficient headroom. Fixed by raising
+      DEFAULT_RELEASE_TIMEOUT_SECONDS to 28800s (8h, roughly 2x headroom
+      over the highest confirmed near-miss of ~14225s), with the
+      module-level comment, docs/en/external-environment-verification.md,
+      and the existing headroom-locking test all updated to cite this
+      reopened run's real evidence in place of the superseded b57aa84-era
+      figures. No change to the timeout-recording mechanism itself, which
+      the reopening comment explicitly confirmed already works correctly.
+      Confirmed via git stash that the updated test assertion fails
+      against the prior 14400s default with the exact observed shortfall,
+      then passes once the fix is restored; live-verified on this Windows
+      sandbox that a real run reports release_timeout=28800. A subsequent
+      real Linux rerun able to complete beyond the previous 14400s
+      boundary, per the reopening comment's own explicit request, remains
+      external-environment work outside this sandbox and is recorded as
       open.
     replacement:
       replaces: []

@@ -6075,6 +6075,51 @@ traceability:
         not exercised live here and is recorded as open.
       status: implemented
 
+    - requirement_id: req-external-verification-release-timeout-default-reopened
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/437
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "#437 reopened a second time from real-host verification on merge commit 2d99fc2: WSL completed in ~7427s (up from ~4959s on an earlier run of the same host class -- real host performance varies run to run), macOS completed in ~14225s (barely inside the prior 14400s boundary), and native Linux again hit the collector's timeout at 14400s while still inside the test run, confirming #440's timeout-recording semantics work correctly but that the 14400s default still lacked headroom"
+        - "raised DEFAULT_RELEASE_TIMEOUT_SECONDS from 14400 to 28800 (8h, roughly 2x headroom over the highest confirmed near-miss of ~14225s), with the module-level comment and docs/en/external-environment-verification.md's rationale updated to cite this reopened run's real evidence"
+        - "tests/test_external_verification.py ReleaseTimeoutConfigurationTests.test_default_release_timeout_has_headroom_over_observed_real_host_durations updated to assert headroom over the new ~14225s near-miss and to strictly exceed the prior insufficient 14400s default -- confirmed via git stash (production code only, test kept) that the updated assertion fails against the pre-fix 14400s default with the exact observed shortfall (14400 not >= 28450), then passes once the fix is restored"
+        - python -m unittest tests.test_external_verification.ReleaseTimeoutConfigurationTests -> Ran 5 tests, OK
+        - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+        - "live: a real --skip-release run on this Windows host reports release_timeout=28800 in its summary output"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Reopened a second time from real-host verification on merge commit
+        2d99fc2: WSL completed in ~7427s (up from ~4959s on an earlier run
+        of the same host class -- real host performance genuinely varies
+        run to run), macOS completed in ~14225s (barely inside the prior
+        14400s boundary), and native Linux again hit the collector's
+        timeout at 14400s while still inside the test run itself, with its
+        true completion time unknown. This confirmed #440's timeout-
+        recording semantics (distinct "timeout" status, retained partial
+        output, never a fabricated pass) work correctly, but that the
+        14400s default itself -- already raised once from 7200s -- still
+        lacked sufficient headroom. Fixed by raising
+        DEFAULT_RELEASE_TIMEOUT_SECONDS to 28800s (8h, roughly 2x headroom
+        over the highest confirmed near-miss of ~14225s), with the module-
+        level comment, the runbook, and the existing headroom-locking test
+        all updated to cite this reopened run's real evidence in place of
+        the superseded b57aa84-era figures. No change to the timeout-
+        recording mechanism itself, which the reopening comment explicitly
+        confirmed already works correctly. A subsequent real Linux rerun
+        able to complete beyond the previous 14400s boundary, per the
+        reopening comment's own explicit request, remains external-
+        environment work outside this sandbox and is recorded as open.
+      status: implemented
+
     - requirement_id: req-traceability-gate-test-git-utf8-decoding
       capability_id: cap-supported-platform-install
       epic: null

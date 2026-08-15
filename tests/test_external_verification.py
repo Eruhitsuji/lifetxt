@@ -55,6 +55,8 @@ def _bash_handles_native_windows_paths(bash_executable):
                 [bash_executable, "-c", 'cat "$1"', "bash", handle.name],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=10,
             )
         except OSError:
@@ -78,6 +80,8 @@ def _bash_skip_reason():
             [BASH_EXECUTABLE, "--noprofile", "--norc", "-c", "echo lifetxt-bash-probe"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
         )
     except OSError as exc:
@@ -592,6 +596,20 @@ class CommandCaptureTests(unittest.TestCase):
         self.assertIn("err", record["stderr"])
         self.assertGreaterEqual(record["duration_seconds"], 0)
 
+    def test_run_command_replaces_undecodable_child_output(self):
+        record = module.run_command(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stdout.buffer.write(b'prefix\\x80suffix')",
+            ],
+            Path.cwd(),
+            lambda value: str(value),
+            10,
+        )
+        self.assertEqual("passed", record["status"])
+        self.assertEqual("prefix\ufffdsuffix", record["stdout"])
+
     def test_timeout_is_a_distinct_status_from_failed_with_retained_partial_output(
         self,
     ):
@@ -965,6 +983,8 @@ class VerifyExternalShWrapperTests(unittest.TestCase):
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=60,
             )
             self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)

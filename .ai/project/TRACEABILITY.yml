@@ -6165,6 +6165,28 @@ traceability:
         excluded.
       status: implemented
 
+    - requirement_id: req-external-verification-subprocess-decoding
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/451
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/452
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - external-verification runner and macOS mount capture use explicit UTF-8 replacement decoding
+        - bash usability, native-path, and wrapper subprocess captures use explicit UTF-8 replacement decoding
+        - synthetic child output containing an undecodable byte is captured as replacement text without UnicodeDecodeError
+        - tests.test_external_verification -> 75 tests, OK (skipped=1)
+        - scripts/run_external_verification.py --skip-release --probe-timeout 1 -> exit=0 with JSON/log/JSONL artifacts
+        - tests.test_traceability_gate -> 14 tests, OK
+        - ruff check and git diff --check pass
+      release_or_deployment: null
+      notes: >-
+        Windows non-UTF-8 locale hardening. Exit status, timeout status,
+        shell-model skips, and redaction behavior remain unchanged.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

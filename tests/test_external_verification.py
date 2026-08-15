@@ -792,5 +792,344 @@ class WriteBundleSafetyNetTests(unittest.TestCase):
             self.assertTrue(output.exists())
 
 
+class UsernameLeakPatternTests(unittest.TestCase):
+    """#443: the persistence-time scan's username matching must agree with
+    make_redactor()'s own username_patterns -- the same two bounded
+    contexts, not an unconditional substring search."""
+
+    def test_matches_a_labeled_user_field(self):
+        pattern = module._username_leak_pattern("alice")
+        self.assertTrue(pattern.search("user=alice"))
+        self.assertTrue(pattern.search("owner: Alice"))
+
+    def test_matches_a_path_segment_boundary(self):
+        pattern = module._username_leak_pattern("alice")
+        self.assertTrue(pattern.search("/Users/alice/file"))
+        self.assertTrue(pattern.search(r"C:\Users\alice\file"))
+
+    def test_does_not_match_a_coincidental_substring_inside_an_unrelated_word(self):
+        pattern = module._username_leak_pattern("an")
+        self.assertFalse(pattern.search("handle plan scan"))
+        self.assertFalse(pattern.search("banana"))
+
+
+class PersistenceCategoryLeakScanTests(unittest.TestCase):
+    """#443: a real Windows full-profile run refused to persist evidence
+    that make_redactor() had already fully sanitized. Root cause: the
+    persistence-time scan used an unconditional substring check for every
+    candidate, including usernames as short as two characters, while
+    make_redactor()'s own username_patterns only redact a username in a
+    bounded context (a labeled "user=" field, or a path segment). Across a
+    full release profile's large stdout/stderr, a short username
+    coincidentally appears as a substring of ordinary words -- a false
+    positive, not a true redaction miss.
+    """
+
+    def test_false_positive_reproduced_and_fixed_for_a_short_username_in_large_text(
+        self,
+    ):
+        env = {"USERNAME": "an", "USERPROFILE": r"C:\Users\an"}
+        redact = module.make_redactor(repo_root=r"C:\repo", env=env)
+        large_text = " ".join(["test_handle_plan_scan passed"] * 5000)
+        sanitized = redact(large_text)
+        # redact() correctly found nothing to redact: "an" never occurs as
+        # a real username here, only as a coincidental substring.
+        self.assertNotIn("<redacted-user>", sanitized)
+        candidates = module._categorized_redaction_candidates(
+            repo_root=r"C:\repo", env=env
+        )
+        hits = module._unredacted_candidate_count(sanitized, candidates)
+        self.assertEqual({}, hits)
+
+    def test_write_bundle_succeeds_for_a_sanitized_full_profile_shaped_bundle(self):
+        env = {"USERNAME": "an", "USERPROFILE": r"C:\Users\an"}
+        redact = module.make_redactor(repo_root=r"C:\repo", env=env)
+        large_stdout = "\n".join(
+            f"test_case_{i} PASSED handle plan scan" for i in range(20000)
+        )
+        bundle = {
+            "checks": [
+                {
+                    "scenario": "release-profile",
+                    "status": "passed",
+                    "stdout": redact(large_stdout),
+                    "stderr": "",
+                }
+            ]
+        }
+        candidates = module._categorized_redaction_candidates(
+            repo_root=r"C:\repo", env=env
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            module.write_bundle(bundle, output, redaction_candidates=candidates)
+            self.assertTrue(output.exists())
+
+    def test_genuine_boundary_matched_username_leak_is_still_refused(self):
+        env = {"USERNAME": "an", "USERPROFILE": r"C:\Users\an"}
+        candidates = module._categorized_redaction_candidates(
+            repo_root=r"C:\repo", env=env
+        )
+        bundle = {"note": "leaked path /Users/an/secret-file.txt"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            with self.assertRaises(RuntimeError) as caught:
+                module.write_bundle(bundle, output, redaction_candidates=candidates)
+            self.assertIn("username", str(caught.exception))
+            self.assertNotIn("/Users/an/", str(caught.exception))
+            self.assertFalse(output.exists())
+
+    def test_genuine_repo_leak_is_still_refused_unchanged(self):
+        candidates = module._categorized_redaction_candidates(
+            repo_root=r"C:\repo", env={"HOME": "/home/alice"}
+        )
+        bundle = {"note": r"C:\repo\leaked-file.txt"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            with self.assertRaises(RuntimeError) as caught:
+                module.write_bundle(bundle, output, redaction_candidates=candidates)
+            self.assertIn("repo", str(caught.exception))
+            self.assertNotIn(r"C:\repo", str(caught.exception))
+
+    def test_refusal_message_names_categories_not_the_raw_value(self):
+        candidates = [(r"C:\Users\tester", "home"), ("an", "username")]
+        bundle = {"note": r"leaked C:\Users\tester\path"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            with self.assertRaises(RuntimeError) as caught:
+                module.write_bundle(bundle, output, redaction_candidates=candidates)
+        message = str(caught.exception)
+        self.assertIn("home", message)
+        self.assertNotIn("tester", message)
+
+    def test_json_escaped_backslash_categorized_candidate_is_still_detected(self):
+        candidates = [(r"C:\Users\tester", "home")]
+        bundle = {"note": r"C:\Users\tester\secret-looking-path"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            with self.assertRaises(RuntimeError):
+                module.write_bundle(bundle, output, redaction_candidates=candidates)
+
+    def test_backward_compatible_flat_string_candidates_keep_strict_matching(self):
+        # A bare string (no category, as every pre-#443 caller passes)
+        # keeps the original unconditional substring check -- including for
+        # a short value -- since that strictness is relied on elsewhere
+        # (#430). Only the new categorized "username" form gets bounded
+        # matching.
+        bundle = {"note": "word containing an inside plan"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            with self.assertRaises(RuntimeError):
+                module.write_bundle(bundle, output, redaction_candidates=["an"])
+
+
+class ProgressRecorderTests(unittest.TestCase):
+    """#443: incrementally-flushed, sanitized progress evidence so an
+    interrupted run, a timeout, or a persistence refusal does not discard
+    all diagnostic context the way relying solely on the final JSON does.
+    """
+
+    def _redact(self, value):
+        return module.make_redactor(
+            repo_root=r"C:\repo", env={"HOME": "/home/alice", "USER": "alice"}
+        )(value)
+
+    def test_record_writes_a_sanitized_jsonl_line_and_a_human_readable_log_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            jsonl_path = Path(tmp) / "run.progress.jsonl"
+            recorder = module.ProgressRecorder(
+                log_path, jsonl_path, self._redact, run_id="run-1"
+            )
+            recorder.record("collector_start", "started")
+            recorder.record("release_profile", "passed", exit_code=0, note="fine")
+
+            jsonl_lines = jsonl_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(2, len(jsonl_lines))
+            first = json.loads(jsonl_lines[0])
+            self.assertEqual("collector_start", first["event"])
+            self.assertEqual("started", first["status"])
+            self.assertEqual("run-1", first["run_id"])
+            self.assertIn("timestamp", first)
+            second = json.loads(jsonl_lines[1])
+            self.assertEqual(0, second["exit_code"])
+
+            log_lines = log_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(2, len(log_lines))
+            self.assertIn("collector_start", log_lines[0])
+            self.assertIn("started", log_lines[0])
+            self.assertIn("release_profile", log_lines[1])
+            self.assertIn("passed", log_lines[1])
+
+    def test_record_sanitizes_every_field_before_writing_never_after(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            jsonl_path = Path(tmp) / "run.progress.jsonl"
+            recorder = module.ProgressRecorder(
+                log_path, jsonl_path, self._redact, run_id="run-1"
+            )
+            recorder.record(
+                "release_profile",
+                "failed",
+                reason=r"C:\repo\file failed for /home/alice/thing",
+                nested={"path": r"C:\repo\nested"},
+                items=[r"C:\repo\item-a", "clean"],
+            )
+            jsonl_text = jsonl_path.read_text(encoding="utf-8")
+            log_text = log_path.read_text(encoding="utf-8")
+            for raw in (r"C:\repo", "/home/alice"):
+                self.assertNotIn(raw, jsonl_text)
+                self.assertNotIn(raw, log_text)
+            self.assertIn("<repo>", jsonl_text)
+
+    def test_comprehensive_scan_finds_no_raw_repo_home_temp_username_or_secret_value(
+        self,
+    ):
+        env = {
+            "HOME": "/home/alice",
+            "USER": "alice",
+            "MY_API_TOKEN": "super-secret-token-value",
+        }
+        redact = module.make_redactor(repo_root="/repo/checkout", env=env)
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            jsonl_path = Path(tmp) / "run.progress.jsonl"
+            recorder = module.ProgressRecorder(
+                log_path, jsonl_path, redact, run_id="run-1"
+            )
+            recorder.record(
+                "release_profile",
+                "failed",
+                stdout="/repo/checkout/tests ran as alice with token=super-secret-token-value",
+                stderr="/home/alice/.cache trouble user=alice",
+            )
+            combined = log_path.read_text(encoding="utf-8") + jsonl_path.read_text(
+                encoding="utf-8"
+            )
+            for raw in ("/repo/checkout", "/home/alice", "super-secret-token-value"):
+                self.assertNotIn(raw, combined)
+            self.assertNotIn("user=alice", combined)
+
+    def test_records_persist_across_calls_without_any_special_close(self):
+        # Every record() call flushes and fsyncs independently (#443), so
+        # reading the files back after N calls with no explicit recorder
+        # shutdown proves durability against an interruption between calls.
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            jsonl_path = Path(tmp) / "run.progress.jsonl"
+            recorder = module.ProgressRecorder(
+                log_path, jsonl_path, self._redact, run_id="run-1"
+            )
+            for i in range(5):
+                recorder.record(f"event_{i}", "completed")
+            jsonl_lines = jsonl_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(5, len(jsonl_lines))
+            for i, line in enumerate(jsonl_lines):
+                self.assertEqual(f"event_{i}", json.loads(line)["event"])
+
+    def test_null_progress_recorder_is_a_safe_no_op(self):
+        module._NULL_PROGRESS.record("anything", "anything", field="value")
+
+    def test_progress_artifact_paths_share_the_evidence_json_stem(self):
+        output = (
+            Path("some")
+            / "root"
+            / ".cache"
+            / "external-verification-windows-20260101T000000Z.json"
+        )
+        log_path, jsonl_path = module._progress_artifact_paths(output)
+        self.assertEqual(
+            Path("some")
+            / "root"
+            / ".cache"
+            / "external-verification-windows-20260101T000000Z.log",
+            log_path,
+        )
+        self.assertEqual(
+            Path("some")
+            / "root"
+            / ".cache"
+            / "external-verification-windows-20260101T000000Z.progress.jsonl",
+            jsonl_path,
+        )
+
+
+class MainProgressAndRefusalIntegrationTests(unittest.TestCase):
+    """#443 end-to-end wiring. main() always runs against the real
+    repository root (skip-release keeps it fast/offline), matching the
+    established pattern in ReleaseTimeoutConfigurationTests."""
+
+    def test_skip_release_run_writes_all_three_artifacts_with_expected_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = module.main(
+                    ["--skip-release", "--probe-timeout", "1", "--output", str(output)]
+                )
+            self.assertEqual(0, code)
+            log_path, jsonl_path = module._progress_artifact_paths(output)
+            self.assertTrue(output.exists())
+            self.assertTrue(log_path.exists())
+            self.assertTrue(jsonl_path.exists())
+            events = [
+                json.loads(line)["event"]
+                for line in jsonl_path.read_text(encoding="utf-8").splitlines()
+            ]
+            for expected in (
+                "collector_start",
+                "host_classification",
+                "git_identity",
+                "tool_probes",
+                "final_evidence_persistence",
+                "collector_complete",
+            ):
+                self.assertIn(expected, events)
+            stdout = buffer.getvalue()
+            self.assertIn(f"progress_log={log_path}", stdout)
+            self.assertIn(f"progress_events={jsonl_path}", stdout)
+
+    def test_final_json_refusal_preserves_progress_artifacts_and_exits_nonzero_without_a_crash(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "bundle.json"
+            log_path, jsonl_path = module._progress_artifact_paths(output)
+            buffer = io.StringIO()
+            with (
+                contextlib.redirect_stdout(buffer),
+                mock.patch.object(
+                    module,
+                    "_categorized_redaction_candidates",
+                    return_value=[("schema_version", "repo")],
+                ),
+            ):
+                code = module.main(
+                    ["--skip-release", "--probe-timeout", "1", "--output", str(output)]
+                )
+            self.assertEqual(1, code)
+            self.assertFalse(output.exists())
+            self.assertTrue(log_path.exists())
+            self.assertTrue(jsonl_path.exists())
+            events = [
+                json.loads(line)
+                for line in jsonl_path.read_text(encoding="utf-8").splitlines()
+            ]
+            refusal = next(
+                item
+                for item in events
+                if item["event"] == "final_evidence_persistence"
+                and item["status"] == "refused"
+            )
+            self.assertIn("repo", refusal["candidate_categories"])
+            completion = next(
+                item for item in events if item["event"] == "collector_complete"
+            )
+            self.assertEqual("failed", completion["status"])
+            stdout = buffer.getvalue()
+            self.assertIn(f"progress_log={log_path}", stdout)
+            self.assertIn(f"progress_events={jsonl_path}", stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

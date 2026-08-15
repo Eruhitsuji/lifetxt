@@ -227,9 +227,20 @@ def _path_replacement_entries(repo_root, home, temp):
 # reports as a POSIX path, so only the generic username pattern (not the
 # home/temp path pattern) catches the account name, leaving the surrounding
 # structure unredacted.
+#
+# Separators use "[\\/]+" (one or more), not "[\\/]" (exactly one): a real
+# Windows full-profile run showed the same structural-collapse gap for
+# ResourceWarning messages, whose text is a Python repr() of a file object
+# -- repr() escapes each backslash as two literal backslash characters, so
+# the actual separator in that text is "\\\\", not "\\". The username
+# lookaround in username_patterns still matches (it only checks the single
+# adjacent character), so the account name is redacted either way, but the
+# original exactly-one-separator pattern here missed the doubled form and
+# left the surrounding "Users\\\\<redacted-user>\\\\AppData\\\\Local\\\\
+# Temp" structure unredacted (reopened #438).
 _MARKER_RUN_PATTERN = re.compile(r"(<repo>|<home>|<temp>)(?:[/\\]*\1)+")
 _WINDOWS_USER_TEMP_PATTERN = re.compile(
-    r"(?:/mnt/[A-Za-z]|[A-Za-z]:)?[\\/]Users[\\/]<redacted-user>[\\/]AppData[\\/]Local[\\/]Temp",
+    r"(?:/mnt/[A-Za-z]|[A-Za-z]:)?[\\/]+Users[\\/]+<redacted-user>[\\/]+AppData[\\/]+Local[\\/]+Temp",
     re.IGNORECASE,
 )
 

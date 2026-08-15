@@ -64,6 +64,7 @@ capabilities:
       - req-external-verification-temp-redaction-canonicalization
       - req-external-verification-macos-filesystem-type
       - req-external-verification-windows-redaction-refusal-progress-evidence
+      - req-external-verification-bash-native-windows-path-probe
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -149,6 +150,13 @@ capabilities:
       - "live: a forced real refusal (module.main() with _categorized_redaction_candidates monkeypatched to guarantee a match) confirmed exit code 1, no .json written, both progress artifacts preserved, a final_evidence_persistence/refused event carrying only the category ('repo'), a collector_complete/failed event, and a clean printed error message naming the category -- never a raw value or an uncaught traceback"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2501 tests, OK (skipped=5)'
+      - "a real Windows full-verification run on merge commit 284a0cf found tests.test_external_verification.VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper failing with exit 127: the discovered bash resolved to WSL's bash.exe, which passes _bash_skip_reason()'s trivial inline-command probe but cannot address a native Windows-style path (backslash-separated, drive-letter-prefixed) passed as a positional argument -- a test-portability failure, not a lifetxt runtime or #443 evidence-persistence regression"
+      - "tests/test_external_verification.py BashNativeWindowsPathCompatibilityTests (7 tests, synthetic subprocess results only, no real checkout path): the new _bash_handles_native_windows_paths() probe returns True immediately on POSIX without spawning a subprocess; returns False when no executable is given on Windows; returns True when the shell translates the native path (mimics Git Bash/MSYS/Cygwin); returns False when the shell cannot resolve it (mimics the real observed WSL bash.exe failure); returns False (not a raised exception) on a subprocess error; _bash_skip_reason() produces a skip reason explicitly naming the native-Windows-path-model problem (not bash absence/general unusability) when the trivial probe passes but the native-path probe fails, and returns None when both probes succeed"
+      - python -m unittest tests.test_external_verification.BashNativeWindowsPathCompatibilityTests -> Ran 7 tests, OK
+      - "confirmed the new probe function and its tests do not exist in the pre-#445 test file (hasattr check false against a git-stashed copy), so they cannot pass by coincidence against the old code"
+      - "live on this Windows sandbox: the discovered bash is Cygwin bash (not WSL bash.exe), confirmed to correctly translate a native Windows path via a direct cat probe, so VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper still runs (not skipped) and passes unchanged after the fix, proving #437's POSIX-wrapper coverage is preserved on an actual POSIX-capable Windows shell"
+      - python -m unittest tests.test_external_verification -> Ran 70 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2508 tests, OK (skipped=5)'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -169,6 +177,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/438
       - https://github.com/Eruhitsuji/lifetxt/issues/439
       - https://github.com/Eruhitsuji/lifetxt/issues/443
+      - https://github.com/Eruhitsuji/lifetxt/issues/445
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -357,6 +366,37 @@ capabilities:
       privacy-safe refused event and exit code 1. One real Windows
       full-profile verification run, per the issue's own explicit
       allowance to validate with synthetic fixtures first, remains
+      external-environment work outside this sandbox and is recorded as
+      open.
+      #445 found that a subsequent real Windows full-verification run
+      (#443's own merge commit) still failed, but only on
+      VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper
+      with exit 127 -- final evidence persistence itself succeeded, so this
+      was not a recurrence of #443. Root cause: the discovered bash
+      resolved to WSL's bash.exe, which passes _bash_skip_reason()'s
+      trivial ``bash -c "echo ..."`` probe (WSL bash runs inline commands
+      fine) but cannot address a native Windows-style path
+      (backslash-separated, drive-letter-prefixed) passed as a positional
+      argument -- WSL's own filesystem view treats the whole string as a
+      single, nonexistent literal filename rather than translating it, so
+      the wrapper script could not be found by its native checkout path. A
+      test-portability failure, not a lifetxt runtime incompatibility.
+      Fixed entirely in tests/test_external_verification.py (no production
+      code change): a new _bash_handles_native_windows_paths() probe writes
+      a small temp file and confirms the discovered bash can `cat` it by
+      its native Windows path before _bash_skip_reason() will treat that
+      bash as usable for the POSIX-wrapper integration test; on POSIX hosts
+      this returns True immediately without spawning a subprocess, so
+      Linux/macOS coverage is completely unaffected. When the native-path
+      probe fails, the skip reason explicitly names the path-model problem
+      rather than implying bash is absent or generally unusable. Verified
+      live on this Windows sandbox that the discovered bash here is Cygwin
+      bash (not WSL bash.exe) and correctly translates native paths, so the
+      wrapper test still runs (not skipped) and passes unchanged --
+      confirming #437's POSIX-wrapper coverage is preserved on an actual
+      POSIX-capable Windows shell, not merely skipped away. A subsequent
+      real Windows external-verification run with WSL bash discoverable on
+      PATH, per the issue's own last acceptance criterion, remains
       external-environment work outside this sandbox and is recorded as
       open.
     replacement:

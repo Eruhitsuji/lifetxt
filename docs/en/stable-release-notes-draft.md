@@ -154,10 +154,14 @@ Per #454's reduced release-candidate procedure:
   contract), re-read, and the recovery-safe write path -- see
   [Stable Release Artifact Verification](stable-release-artifact-verification.md)
   for the full evidence record.
-- **`v1.0.0`**: not yet promoted. Promotion from this validated candidate
-  requires an explicit, separate repository-owner approval per #454's task
-  contract, after this status section (or a follow-up record) confirms no
-  release-blocking defect was found during the RC period.
+- **`v1.0.0`**: promotion approved by the repository owner. #463's
+  open-issue review found no release-blocking defect during the RC period,
+  so this change applies only the release-metadata-only version bump
+  (`1.0.0rc1` -> `1.0.0`) to the validated `v1.0.0rc1` candidate's code,
+  with no other product-behavior change. The tag, final artifacts, and
+  their evidence are recorded once this change merges and the tag is cut;
+  see the follow-up record in this section (or its history) for the actual
+  commit, artifact hashes, and release URL.
 
 ## Installation smoke
 

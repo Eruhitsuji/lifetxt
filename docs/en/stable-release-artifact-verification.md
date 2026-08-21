@@ -103,13 +103,13 @@ This gap is recorded rather than silently claimed closed.
 This satisfies the build, install, entry-point, artifact-content, and
 core-regression items of the #454 minimal clean-artifact verification for
 one supported Python version on one supported OS. The recovery-safe-path
-part of the representative-smoke item remains open against the literal
-installed wheel specifically, tracked as a small follow-up rather than
-claimed complete. Additional Python/OS rows remain useful, non-blocking
-evidence; normal CI already covers the Linux Python 3.10/3.11/3.12 matrix
-and the no-Web job on every push, and the native Windows/macOS core-smoke
-CI jobs cover those platforms without a manual real-host run for every
-release.
+part of the representative-smoke item was open against the literal
+installed wheel specifically at this point in the record; it is closed by
+the `v1.0.0rc1` evidence recorded further below. Additional Python/OS rows
+remain useful, non-blocking evidence; normal CI already covers the Linux
+Python 3.10/3.11/3.12 matrix and the no-Web job on every push, and the
+native Windows/macOS core-smoke CI jobs cover those platforms without a
+manual real-host run for every release.
 
 A separate core-only install (no `web`/`tui`/`dev` extras) was also checked
 in its own fresh virtual environment on the same commit and host: `pip list
@@ -117,3 +117,44 @@ in its own fresh virtual environment on the same commit and host: `pip list
 Windows-only `tzdata` dependency, with no Web or TUI packages present. Both
 `python -m lifetxt check examples/minimal_life.txt` and the installed
 `lifetxt --help` entry point ran successfully from that environment.
+
+## `v1.0.0rc1` recovery-safe-path smoke (closes the gap above)
+
+Recorded when cutting the `v1.0.0rc1` release candidate.
+
+| Field | Value |
+| --- | --- |
+| commit | `ca1894b6f5571b3862138d84bfe9dc542ebc2551` |
+| artifact | `lifetxt-1.0.0rc1-py3-none-any.whl` sha256 `fba241ab14bea43eb74281ec106a76f7a9c89aab5318e5dc7f837e1955b12c88`; `lifetxt-1.0.0rc1.tar.gz` sha256 `73ffca299840d4268578d782a3caa2dac416b8e9b115fe03901d694e6eba3cf0` |
+| Python | CPython 3.12.3 |
+| host | Microsoft Windows 10 Pro, NT 10.0.19045.0, x86_64, NTFS |
+| install | disposable venv, only the built wheel installed (no `dev`/`web` extras), removed after the run |
+| result | pass |
+
+A fresh, disposable venv installed only the built wheel (no source
+checkout, no editable install). Both `python -m lifetxt --version` and the
+installed `lifetxt --version` entry point reported `lifetxt 1.0.0rc1`. In a
+scratch working directory, using only the installed `lifetxt` console
+script:
+
+- `lifetxt init --yes` (create) wrote a starter `life.txt`; `lifetxt check`
+  reported `OK: 1 item(s)`.
+- `echo "Buy milk" | lifetxt quick - --append life.txt` (create) appended a
+  second item; re-reading the file and `lifetxt check` confirmed
+  `OK: 2 item(s)`.
+- `lifetxt complete life.txt --text "Buy milk"` (mutate) marked that item
+  done; re-reading the file showed `[x] T "Buy milk" done:2026-08-21`.
+- `lifetxt format canon life.txt --write` (serialize/write through the
+  revision-checked atomic-write contract) reported `"changed":false,
+  "written":false` -- the file was already canonical, confirming the
+  round-trip stayed stable.
+- `lifetxt format migrate life.txt --write` (a second, distinct
+  revision-checked write: the recovery-safe path) reported
+  `"changed":true,"written":true` and added the `#! format_version: 1`
+  directive; re-reading the file and `lifetxt check` confirmed the write
+  took effect and the file remained valid (`OK: 2 item(s)`).
+
+This closes the gap the earlier evidence run above explicitly recorded:
+parse/read, create, mutate, serialize/write, re-read, and a recovery-safe
+write path are now all confirmed directly against an installed release
+artifact, not only against the source tree in a separate venv.

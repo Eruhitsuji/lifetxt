@@ -127,18 +127,26 @@ deprecationとmigrationのlifecycleについては
 
 以下は#454の縮小されたrelease-candidate手順に基づきます:
 
-- `v1.0.0rc1`は、この文書、
-  [Format 1.0 finalization review](format-1.0-finalization-review.md)、
-  [artifact verification evidence](stable-release-artifact-verification.md)
-  が完了した時点で、buildしたwheelとsdistを添付したGitHub prereleaseとして
-  cutされます。
-- `v1.0.0`は、検証済みの`v1.0.0rc1`candidateに対して必須CIとminimal
-  installed-artifact smokeが通過し、release-blockingなdefectが見つからず、
-  repository ownerがpromotionを承認した時点でpromoteされます。
-
-このRelease statusセクションは、各ステップが完了するたびに実際のtag日付と
-証跡へのリンクで更新されます。まだどちらのステップも完了していないという
-意味で読んでください。
+- **`v1.0.0rc1`**: 2026-08-22に、commit
+  `ca1894b6f5571b3862138d84bfe9dc542ebc2551`（PR #467のmerge commit）で
+  cutされ、buildしたwheel（`lifetxt-1.0.0rc1-py3-none-any.whl`、sha256
+  `fba241ab14bea43eb74281ec106a76f7a9c89aab5318e5dc7f837e1955b12c88`）と
+  sdist（`lifetxt-1.0.0rc1.tar.gz`、sha256
+  `73ffca299840d4268578d782a3caa2dac416b8e9b115fe03901d694e6eba3cf0`）を
+  添付した[GitHub prerelease](https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1)
+  として公開されました。`twine check`は両方ともpassし、target commitで
+  必須CIがpassし、minimal installed-artifact smokeはfresh virtual
+  environmentへinstallした実際のwheelに対して実行されました: parse/read
+  （`check`）、create（`quick`）、mutate（`complete`）、serialize/write
+  （`format canon`、`format migrate --write`、いずれもrevision-checkedな
+  atomic-write contract経由）、re-read、recovery-safeな書き込みpath。
+  完全な証跡記録は
+  [Stable Release Artifact Verification](stable-release-artifact-verification.md)
+  を参照してください。
+- **`v1.0.0`**: まだpromoteされていません。この検証済みcandidateからの
+  promotionには、このRelease statusセクション（または後続の記録）で
+  release-blockingなdefectが見つからなかったことを確認した後、#454の
+  task contractに基づく明示的かつ別個のrepository owner承認が必要です。
 
 ## インストールsmoke
 

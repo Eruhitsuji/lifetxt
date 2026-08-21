@@ -6191,7 +6191,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/454
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
       changed_files_or_scope:
         - Record the #454 re-scope of the remaining Stable 1.0 gate as repository-authoritative policy
         - .ai/project/STABLE_RELEASE.yml
@@ -6216,7 +6216,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/454
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
       changed_files_or_scope:
         - Perform the bounded Format 1.0 release-contract review required by #454
         - docs/en/format-1.0-finalization-review.md
@@ -6242,7 +6242,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/454
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
       changed_files_or_scope:
         - Update stable release notes and known limitations to describe #454's reduced Stable 1.0 gate instead of exhaustive real-host verification as a prerequisite
         - docs/en/stable-release-notes-draft.md
@@ -6267,7 +6267,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/454
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/326
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
       changed_files_or_scope:
         - Record the #454 release-critical minimum clean-artifact verification (reduced from #326's original full real-host OS/Python matrix)
         - docs/en/stable-release-artifact-verification.md

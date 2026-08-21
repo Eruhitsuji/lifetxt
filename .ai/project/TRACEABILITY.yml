@@ -6494,6 +6494,40 @@ traceability:
         ca1894b6f5571b3862138d84bfe9dc542ebc2551).
       status: implemented
 
+    - requirement_id: req-stable-v1-0-0-promoted
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/464
+      pull_request: null
+      changed_files_or_scope:
+        - Record the final v1.0.0 tag, GitHub Release, and post-promotion smoke evidence
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/stable-release-artifact-verification.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "python -m build --wheel --sdist at commit 4f6eead6587c383eac7ee8e92873bb1596cc1c69 -> lifetxt-1.0.0-py3-none-any.whl (sha256 1da07155a8edfe6dc9ab535d2007d0e65b1ed4688a2ef8c647c7af596dc54e8f), lifetxt-1.0.0.tar.gz (sha256 3be2157c7462193223afce782037ac1cc8260290d9e2ad7d4da65e4fbf74f803); python -m twine check -> PASSED for both; contents scanned, no dev caches/secrets/local state"
+        - "git tag -a v1.0.0 at 4f6eead6587c383eac7ee8e92873bb1596cc1c69, pushed; gh release create (no --prerelease) with both artifacts attached -> https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0, confirmed isPrerelease=false, isDraft=false, targetCommitish correct, both assets present"
+        - "live, fresh disposable venv, wheel-only install: python -m lifetxt --version and the installed lifetxt --version entry point both reported lifetxt 1.0.0"
+        - "live, same installed-wheel venv, scratch working directory: the full init -> quick --append -> complete --text -> format canon --write -> format migrate --write -> re-read sequence (parse/read, create, mutate, serialize/write via the revision-checked atomic-write contract, re-read, recovery-safe write) passed identically to the v1.0.0rc1 smoke"
+        - "live: python -m lifetxt update-check --format json against the real GitHub API -> kind: \"release\" (a genuine non-prerelease Release, unlike the RC's kind: \"tag\"), status: \"up_to_date\" -- confirms external discoverability post-promotion"
+        - required CI was already confirmed green on the promoted commit by PR #469's post-merge main-branch CI run
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the promotion record update
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        lifetxt 1.0.0, the project's first Stable release, published as a
+        GitHub Release (not a prerelease) with wheel and sdist assets
+        attached, at commit 4f6eead6587c383eac7ee8e92873bb1596cc1c69. This
+        completes #454's full release-candidate-and-promotion procedure.
+      notes: >-
+        Closes #464 and the top-level #454 completion criterion "Stable
+        1.0.0 is promoted from a validated candidate." No release-blocking
+        defect was found at any point in the RC period (#463). This is the
+        terminal record for #454's Required Now / release-candidate work;
+        remaining #454 scope, if any, is post-Stable-1.0 follow-up per its
+        own deferred-item disposition.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

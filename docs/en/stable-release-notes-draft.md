@@ -1,11 +1,10 @@
 # lifetxt 1.0.0 Release Notes
 
-The repository owner selected **`1.0.0`** as the first Stable release
-version, with `v1.0.0rc1` as its release candidate tag and `v1.0.0` as the
-final tag, per [#454](https://github.com/Eruhitsuji/lifetxt/issues/454)'s
-release-candidate-and-promotion procedure. This document is the release
-notes content for that release; it is finalized once the RC completes its
-bounded check and the candidate is promoted (see "Release status" below).
+**`v1.0.0`** is published: <https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0>.
+It was promoted from the validated `v1.0.0rc1` candidate per
+[#454](https://github.com/Eruhitsuji/lifetxt/issues/454)'s
+release-candidate-and-promotion procedure; see "Release status" below for
+the full promotion evidence.
 
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454) narrows the
 remaining Stable 1.0 gate to a minimum: a Format 1.0 compatibility baseline,
@@ -154,14 +153,25 @@ Per #454's reduced release-candidate procedure:
   contract), re-read, and the recovery-safe write path -- see
   [Stable Release Artifact Verification](stable-release-artifact-verification.md)
   for the full evidence record.
-- **`v1.0.0`**: promotion approved by the repository owner. #463's
-  open-issue review found no release-blocking defect during the RC period,
-  so this change applies only the release-metadata-only version bump
-  (`1.0.0rc1` -> `1.0.0`) to the validated `v1.0.0rc1` candidate's code,
-  with no other product-behavior change. The tag, final artifacts, and
-  their evidence are recorded once this change merges and the tag is cut;
-  see the follow-up record in this section (or its history) for the actual
-  commit, artifact hashes, and release URL.
+- **`v1.0.0`**: promoted 2026-08-22 at commit
+  `4f6eead6587c383eac7ee8e92873bb1596cc1c69` (the merge commit for PR
+  #469, the release-metadata-only version bump), identical in product
+  behavior to the validated `v1.0.0rc1` candidate. Published as the
+  [GitHub Release](https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0)
+  (not a prerelease) with the built wheel (`lifetxt-1.0.0-py3-none-any.whl`,
+  sha256 `1da07155a8edfe6dc9ab535d2007d0e65b1ed4688a2ef8c647c7af596dc54e8f`)
+  and sdist (`lifetxt-1.0.0.tar.gz`, sha256
+  `3be2157c7462193223afce782037ac1cc8260290d9e2ad7d4da65e4fbf74f803`)
+  attached. `twine check` passed for both; required CI passed on the
+  promoted commit; the same representative core smoke that validated
+  `v1.0.0rc1` (parse/read, create, mutate, serialize/write through the
+  revision-checked atomic-write contract, re-read, recovery-safe write)
+  was re-run against the installed final wheel and passed. A real
+  `lifetxt update-check` against the live GitHub API confirmed
+  `kind: "release"` (not `"tag"`, since this is a real, non-prerelease
+  Release) and `status: "up_to_date"`. Approved by the repository owner
+  after #463's open-issue review found no release-blocking defect during
+  the RC period.
 
 ## Installation smoke
 

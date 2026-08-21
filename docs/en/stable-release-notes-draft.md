@@ -139,19 +139,25 @@ becomes relevant.
 
 Per #454's reduced release-candidate procedure:
 
-- `v1.0.0rc1` is cut once this document, the
-  [Format 1.0 finalization review](format-1.0-finalization-review.md), and
-  the [artifact verification evidence](stable-release-artifact-verification.md)
-  are complete, as a GitHub prerelease with the built wheel and sdist
-  attached.
-- `v1.0.0` is promoted from the validated `v1.0.0rc1` candidate once
-  required CI and the minimal installed-artifact smoke pass against it with
-  no release-blocking defect found, and the repository owner approves
-  promotion.
-
-This status section is updated with the actual tag dates and evidence links
-once each step completes; it is not itself evidence that either step has
-happened yet.
+- **`v1.0.0rc1`**: cut 2026-08-22 at commit
+  `ca1894b6f5571b3862138d84bfe9dc542ebc2551` (the merge commit for PR #467),
+  as a [GitHub prerelease](https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1)
+  with the built wheel (`lifetxt-1.0.0rc1-py3-none-any.whl`, sha256
+  `fba241ab14bea43eb74281ec106a76f7a9c89aab5318e5dc7f837e1955b12c88`) and
+  sdist (`lifetxt-1.0.0rc1.tar.gz`, sha256
+  `73ffca299840d4268578d782a3caa2dac416b8e9b115fe03901d694e6eba3cf0`)
+  attached. `twine check` passed for both; required CI passed on the
+  target commit; the minimal installed-artifact smoke ran directly against
+  the installed wheel in a fresh virtual environment: parse/read (`check`),
+  create (`quick`), mutate (`complete`), serialize/write (`format canon`,
+  `format migrate --write`, both through the revision-checked atomic-write
+  contract), re-read, and the recovery-safe write path -- see
+  [Stable Release Artifact Verification](stable-release-artifact-verification.md)
+  for the full evidence record.
+- **`v1.0.0`**: not yet promoted. Promotion from this validated candidate
+  requires an explicit, separate repository-owner approval per #454's task
+  contract, after this status section (or a follow-up record) confirms no
+  release-blocking defect was found during the RC period.
 
 ## Installation smoke
 

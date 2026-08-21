@@ -580,6 +580,7 @@ capabilities:
       - req-stable-format-1-0-baseline-decision
       - req-stable-installation-examples-release-artifact-boundary
       - req-stable-1-0-0-version-and-release-notes-finalized
+      - req-stable-v1-0-0rc1-cut
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -642,6 +643,7 @@ capabilities:
       - "#454 installation-examples audit: readme.md, docs/en+ja/readme.md, docs/en+ja/use-cases.md, and docs/ja/optional-dependency-compatibility.md's primary getting-started install commands changed from editable (pip install -e .) to plain (pip install .); docs/en+ja/cli.md's update command documentation corrected to no longer call -e . \"the documented install method\" while explaining why update/server-update specifically still require it; a fresh venv confirmed pip install <path> (non-editable) plus lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
       - "1.0.0rc1 version consistency: fixed lifetxt/mcp.py SERVER_VERSION and lifetxt/webapp.py's FastAPI version= (previously independent hardcoded '0.1.0' literals) to import lifetxt.__version__ before bumping it, so the version now reads 1.0.0rc1 consistently across pyproject.toml, --version, update-check, the MCP serverInfo, and the Web API; full suite Ran 2513 tests, OK (skipped=5) after the bump"
       - "release notes finalized: docs/en+ja/stable-release-notes-draft.md gained a capability Highlights summary and expanded Upgrading guidance (Format/configuration/policy-journal/Web-revision, each explicitly not applicable to this first release but documented as the mechanism a future release will use) and a Release status section tracking the not-yet-cut RC/promotion steps without asserting they happened"
+      - "v1.0.0rc1 cut 2026-08-22 at commit ca1894b6f5571b3862138d84bfe9dc542ebc2551: wheel/sdist built and twine-checked PASSED, published as a GitHub prerelease (https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1) with both artifacts attached, confirmed externally discoverable via a real python -m lifetxt update-check call against the GitHub API (status up_to_date); a fresh wheel-only venv's create/mutate/serialize-write/re-read/recovery-safe-path smoke against the literal installed wheel closed the previously-recorded #454 evidence gap"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284

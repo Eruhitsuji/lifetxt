@@ -6414,6 +6414,50 @@ traceability:
         approves promotion from a validated candidate.
       status: implemented
 
+    - requirement_id: req-stable-v1-0-0rc1-cut
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/461
+      pull_request: null
+      changed_files_or_scope:
+        - Cut the v1.0.0rc1 release candidate per #454's reduced release-candidate procedure (also satisfies #458's installed-wheel core smoke and #462's bounded RC validation)
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/stable-release-artifact-verification.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "python -m build --wheel --sdist at commit ca1894b6f5571b3862138d84bfe9dc542ebc2551 -> lifetxt-1.0.0rc1-py3-none-any.whl (sha256 fba241ab14bea43eb74281ec106a76f7a9c89aab5318e5dc7f837e1955b12c88), lifetxt-1.0.0rc1.tar.gz (sha256 73ffca299840d4268578d782a3caa2dac416b8e9b115fe03901d694e6eba3cf0); python -m twine check -> PASSED for both; contents scanned, no dev caches/secrets/local state"
+        - "git tag -a v1.0.0rc1 at ca1894b6f5571b3862138d84bfe9dc542ebc2551, pushed; gh release create --prerelease with both artifacts attached -> https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1, confirmed isPrerelease=true, targetCommitish correct, both assets present"
+        - "live: python -m lifetxt update-check --format json against the real GitHub API -> latest_version v1.0.0rc1 (kind tag, since GitHub's latest-release endpoint excludes prereleases as expected), status up_to_date -- confirms the tagged release is externally discoverable and version-comparison-correct"
+        - "live, fresh disposable venv, wheel-only install (no dev/web extras, no editable source), scratch working directory, only the installed lifetxt console script used: lifetxt init --yes (create) -> check OK: 1 item(s); echo | lifetxt quick - --append (create) -> check OK: 2 item(s); lifetxt complete --text (mutate) -> re-read confirmed [x] T \"Buy milk\" done:2026-08-21; lifetxt format canon --write (serialize/write, revision-checked) -> changed:false/written:false, confirming round-trip stability; lifetxt format migrate --write (a second, distinct revision-checked write: the recovery-safe path) -> changed:true/written:true, added #! format_version: 1, re-read and check confirmed OK: 2 item(s) -- closes the recovery-safe-path gap docs/en/stable-release-artifact-verification.md had explicitly recorded as open"
+        - required CI was already confirmed green on the target commit by PR #467's post-merge main-branch CI run (this RC cuts from that exact commit, no new code change)
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the release_candidate_status section addition
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        v1.0.0rc1 published as a GitHub prerelease with wheel and sdist
+        assets attached, per repository-owner approval given in response to
+        the direct question of whether to proceed with the RC cut. This is
+        the release-candidate step only; v1.0.0 promotion is a separate,
+        not-yet-requested human approval.
+      notes: >-
+        Satisfies #461 (prepare RC version metadata and build the
+        candidate), #458 (installed-wheel core mutation and re-read smoke,
+        which also closes #454's previously-recorded recovery-safe-path
+        gap), and #462 (bounded RC validation: required CI plus the
+        minimal installed-artifact smoke against the exact candidate
+        commit) in one pass, since all three were satisfied by the same
+        RC-cutting work using the same installed-wheel venv. #327 ("Cut a
+        release candidate and run a bugfix-only stabilization cycle") is
+        the broader original issue #461/#462 decompose and reuse here
+        under #454's reduced RC procedure rather than #327's original
+        exhaustive real-environment RC-entry criteria (still recorded in
+        STABLE_RELEASE.yml's release_gates.rc_entry section, which #454's
+        minimal_stabilization_rescope explicitly supersedes for the first
+        Stable 1.0 release). The bugfix-only stabilization cycle #327
+        describes has not started; no defect has been found against this
+        candidate yet.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

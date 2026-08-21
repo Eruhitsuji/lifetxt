@@ -1,7 +1,11 @@
-# Stableリリースノート草案
+# lifetxt 1.0.0 リリースノート
 
-この文書は初回stable release向けの草案です。リリースバージョンとtagは
-release判断で決定するため、公開済みのリリース告知ではありません。
+[#454](https://github.com/Eruhitsuji/lifetxt/issues/454)のrelease-candidate-
+and-promotion手順に基づき、repository ownerが初回Stable releaseの
+バージョンとして**`1.0.0`**を選定しました。release candidate tagは
+`v1.0.0rc1`、最終tagは`v1.0.0`です。この文書はそのリリースのrelease notes
+内容であり、RCがbounded checkを完了しcandidateがpromoteされた時点で
+確定します（下記「Release status」を参照）。
 
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454)は、残りのStable 1.0
 gateを最小限まで縮小します: Format 1.0のcompatibility baseline、core
@@ -12,6 +16,30 @@ data-loss defectがないこと、clean-artifactのinstall/smokeが動作する�
 supersedeします。#283および#339のもとで既に記録済みの実環境証跡を撤回・
 無効化するものではなく、それらは引き続き有効な過去のstabilization証跡
 として残り、Stable 1.0後のquality workとして再開できます。
+
+## Highlights
+
+`1.0.0`はlifetxt初回のstable releaseです。以下を提供します:
+
+- `life.txt`のplain-text record（tasks、events、habits、status/presence、
+  messages、notes、journal entries）をparse・validate・filter・convert・
+  atomicにmutateする、依存関係のないCLI
+- 明示的でversion管理されたcompatibility contractとしてのFormat 1.0
+  （詳細は下記「Stable境界」を参照）
+- 同じrecord群の上に構築されたticket・project・portfolio management
+  （workflow history、time tracking、dependencies、custom fields）
+- read accessとrevision-checkされた範囲でのwriteのための、optional Web
+  UI/API（`web` extra）、TUI（`tui` extra）、MCP server、Remote Safe Mode
+- durableなmulti-file writeのためのtransaction・backup・recovery tooling
+- git clone installに向けたCLI self-update（`lifetxt update`）と
+  guardedなproduction deployment tooling
+  （`lifetxt server-init`/`server-update`）
+
+これらの各領域には個別のdocumentation（[readme.md](../../readme.md)から
+リンク）があり、本セクションはその要約であって代替ではありません。どの
+surfaceがstable compatibility promiseに含まれ、どれがexperimentalまたは
+deferredかは、下記「既知の制限」、[compatibility policy](release-compatibility-policy.md)、
+`.ai/project/STABLE_RELEASE.yml`のsupport matrixで定義されます。
 
 ## Stable境界
 
@@ -33,8 +61,8 @@ pointの起動確認、代表的なcore smoke)は`docs/en/stable-release-artifac
 
 対応するすべてのshell・terminal・browser・filesystem class・SMTP
 provider・optional client・OS/Python組み合わせについての網羅的な実機検証は、
-#454によりStable 1.0の前提条件では**ありません**。網羅的な証跡がないこと
-自体はrelease blockerではありません。代表的なcore workflowの確定的な失敗、
+Stable 1.0の前提条件では**ありません**（#454より）。網羅的な証跡が
+ないこと自体はrelease blockerではありません。代表的なcore workflowの確定的な失敗、
 Format 1.0 compatibility違反、data-loss/corruption defect、
 build/install/startパスの破損、またはcritical security vulnerabilityが
 blockerです。
@@ -61,10 +89,56 @@ follow-up work):
 - MCP write、Remote write、SMTP deliveryは専用の証跡がない限りstable promiseではありません。
 - TUI、browser-engine、fzf/peco、cloud-sync、removable、network filesystemは、release証跡に記録された環境に限定されます。
 - diagnostic spanは対応issueで対象化されたparser familyのみ完全対応です。
-- この草案ではversion/tagを意図的に未設定のままにしています。Format 1.0
-  baselineの確定とminimal clean-artifact検証の合格後に、release authorityが
-  選定します。#454は候補/リリース識別子として`1.0.0rc1`と`1.0.0`を
-  指定しています。
+
+## アップグレード
+
+`1.0.0`はlifetxt初回のreleaseであり、アップグレード元となる過去の公開
+releaseはありません。そのため以下のmigrationはこのrelease自体には適用
+されませんが、将来のreleaseが使うことになる仕組みであること、また
+`1.0.0`のinstallが`1.0.0`より前のdataを黙って変更してはならないことから
+ここに記載します:
+
+- **Format**: `#! format_version:`directiveのない既存のlife.txt fileは、
+  無版入力として引き続き有効であり、`1.0.0`のinstallやrunによって変更
+  されません。`format_version: 1`への唯一のサポートされた明示的な
+  revision-checked migrationについては[Format migration](format-migration.md)
+  を、inspection-onlyのまま残る範囲については
+  [compatibility matrix](format-compatibility-matrix.md)を参照してください。
+- **Configuration**: `.lifetxt.json` fileは`1.0.0`のinstallによる影響を
+  受けません。将来のconfiguration schema変更に向けて`lifetxt config
+  migrate`は引き続き利用可能です。[config.md](config.md)を参照してください。
+- **Policy/journal（transactionとrecovery）**: 既存のtransaction journal
+  とrecovery evidenceは、
+  [Transaction recovery and strict timers](transaction-recovery-and-strict-timers.md)
+  に記載されているのと同じversion-awareなinspection pathで読み込まれます。
+  将来のreleaseが書き込むより新しいjournalは、`1.0.0`の下ではinspect/
+  export-onlyのままであり、`1.0.0`が完全に理解できないjournalを
+  mutateすることはありません。
+- **Web revision**: Web UIのoptimistic-concurrencyなrevision contractは
+  このreleaseによって変更されません。現在の保証については
+  [Public surface revisions](public-surface-revisions.md)を参照してください。
+
+将来のreleaseから`1.0.0`へのdowngrade pathは、このreleaseでは定義され
+ていません。それが関連する状況になった際に適用される一般的な
+deprecationとmigrationのlifecycleについては
+[compatibility policy](release-compatibility-policy.md)を参照してください。
+
+## Release status
+
+以下は#454の縮小されたrelease-candidate手順に基づきます:
+
+- `v1.0.0rc1`は、この文書、
+  [Format 1.0 finalization review](format-1.0-finalization-review.md)、
+  [artifact verification evidence](stable-release-artifact-verification.md)
+  が完了した時点で、buildしたwheelとsdistを添付したGitHub prereleaseとして
+  cutされます。
+- `v1.0.0`は、検証済みの`v1.0.0rc1`candidateに対して必須CIとminimal
+  installed-artifact smokeが通過し、release-blockingなdefectが見つからず、
+  repository ownerがpromotionを承認した時点でpromoteされます。
+
+このRelease statusセクションは、各ステップが完了するたびに実際のtag日付と
+証跡へのリンクで更新されます。まだどちらのステップも完了していないという
+意味で読んでください。
 
 ## インストールsmoke
 
@@ -77,4 +151,7 @@ lifetxt --help
 python -m lifetxt check examples/minimal_life.txt
 ```
 
-stable tagのpromote前に、artifact hash、Python、OS、結果を外部環境検証手順へ記録します。
+この smoke に対する release-critical な最小要件は、#454により
+[Stable Release Artifact Verification](stable-release-artifact-verification.md)
+に記録されたminimal clean-artifact検証です。より網羅的な外部環境検証手順は、
+追加の（release blockerではない）実機証跡として引き続き利用できます。

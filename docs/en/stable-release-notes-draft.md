@@ -1,8 +1,11 @@
-# Stable Release Notes Draft
+# lifetxt 1.0.0 Release Notes
 
-This draft is prepared for the first stable release. The release version and
-tag are intentionally left to the release decision; this document must not be
-read as a published release announcement.
+The repository owner selected **`1.0.0`** as the first Stable release
+version, with `v1.0.0rc1` as its release candidate tag and `v1.0.0` as the
+final tag, per [#454](https://github.com/Eruhitsuji/lifetxt/issues/454)'s
+release-candidate-and-promotion procedure. This document is the release
+notes content for that release; it is finalized once the RC completes its
+bounded check and the candidate is promoted (see "Release status" below).
 
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454) narrows the
 remaining Stable 1.0 gate to a minimum: a Format 1.0 compatibility baseline,
@@ -15,6 +18,31 @@ withdraw or invalidate the real-environment evidence already recorded under
 the earlier stabilization trackers (#283 and #339), which remains valid,
 historical stabilization evidence and may still be resumed as post-Stable-1.0
 quality work.
+
+## Highlights
+
+`1.0.0` is lifetxt's first stable release. It provides:
+
+- a dependency-free CLI parsing, validating, filtering, converting, and
+  atomically mutating `life.txt` plain-text records (tasks, events, habits,
+  status/presence, messages, notes, and journal entries);
+- Format 1.0 as an explicit, versioned compatibility contract (see "Stable
+  boundary" below);
+- ticket, project, and portfolio management on top of the same records
+  (workflow history, time tracking, dependencies, custom fields);
+- optional Web UI/API (`web` extra), TUI (`tui` extra), MCP server, and
+  Remote Safe Mode surfaces for read access and a bounded set of
+  revision-checked writes;
+- transaction, backup, and recovery tooling for durable multi-file writes;
+- CLI self-update (`lifetxt update`) and guarded production deployment
+  tooling (`lifetxt server-init`/`server-update`) for git-clone installs.
+
+Every one of these areas has its own dedicated documentation linked from
+[readme.md](../../readme.md); this section is a summary, not a substitute
+for it. Which of these surfaces carry the stable compatibility promise, and
+which remain experimental or deferred, is defined by "Known limitations"
+below, the full [compatibility policy](release-compatibility-policy.md), and
+the support matrix in `.ai/project/STABLE_RELEASE.yml`.
 
 ## Stable boundary
 
@@ -72,10 +100,58 @@ Independent of the #454 re-scope, these limitations continue to apply:
 - Diagnostic spans are complete only for the parser families covered by the
   linked issues; diagnostics without source boundaries retain their existing
   representation.
-- The version/tag is intentionally unset in this draft. Release authority must
-  select it after the Format 1.0 baseline confirmation and the minimal
-  clean-artifact verification pass; #454 names `1.0.0rc1` and `1.0.0` as the
-  intended candidate/release identifiers.
+
+## Upgrading
+
+`1.0.0` is lifetxt's first release; there is no prior published release to
+upgrade from, so none of the following migrations apply to this release
+itself. They are referenced here because they are the mechanisms a future
+release would use, and because installing `1.0.0` must not silently change
+data that predates it:
+
+- **Format**: existing `life.txt` files with no `#! format_version:`
+  directive remain valid unversioned input and are not modified by
+  installing or running `1.0.0`. See [Format migration](format-migration.md)
+  for the one supported, explicit, revision-checked migration to
+  `format_version: 1`, and the [compatibility matrix](format-compatibility-matrix.md)
+  for what remains inspection-only.
+- **Configuration**: `.lifetxt.json` files are unaffected by installing
+  `1.0.0`; `lifetxt config migrate` remains available for future
+  configuration schema changes. See [config.md](config.md).
+- **Policy/journal (transactions and recovery)**: existing transaction
+  journals and recovery evidence are read by the same version-aware
+  inspection path documented in
+  [Transaction recovery and strict timers](transaction-recovery-and-strict-timers.md);
+  a newer journal a future release might write remains inspect/export-only
+  under `1.0.0`, and `1.0.0` never mutates a journal it cannot fully
+  understand.
+- **Web revision**: the Web UI's optimistic-concurrency revision contract is
+  unchanged by this release; see
+  [Public surface revisions](public-surface-revisions.md) for its current
+  guarantees.
+
+No downgrade path from a future release back to `1.0.0` is defined by this
+release; see the [compatibility policy](release-compatibility-policy.md) for
+the general deprecation and migration lifecycle that will govern that when it
+becomes relevant.
+
+## Release status
+
+Per #454's reduced release-candidate procedure:
+
+- `v1.0.0rc1` is cut once this document, the
+  [Format 1.0 finalization review](format-1.0-finalization-review.md), and
+  the [artifact verification evidence](stable-release-artifact-verification.md)
+  are complete, as a GitHub prerelease with the built wheel and sdist
+  attached.
+- `v1.0.0` is promoted from the validated `v1.0.0rc1` candidate once
+  required CI and the minimal installed-artifact smoke pass against it with
+  no release-blocking defect found, and the repository owner approves
+  promotion.
+
+This status section is updated with the actual tag dates and evidence links
+once each step completes; it is not itself evidence that either step has
+happened yet.
 
 ## Installation smoke
 
@@ -88,5 +164,8 @@ lifetxt --help
 python -m lifetxt check examples/minimal_life.txt
 ```
 
-The exact artifact hash, Python version, OS, and result must be recorded using
-the external verification procedure before a stable tag is promoted.
+Per #454, the minimal clean-artifact verification recorded in
+[Stable Release Artifact Verification](stable-release-artifact-verification.md)
+is the release-critical minimum for this smoke; the fuller external
+verification procedure remains available for additional, non-blocking
+real-host evidence.

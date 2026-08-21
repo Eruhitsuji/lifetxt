@@ -577,6 +577,7 @@ capabilities:
       - req-stable-format-1-0-finalization-review
       - req-stable-release-notes-reduced-gate
       - req-stable-minimal-clean-artifact-verification
+      - req-stable-format-1-0-baseline-decision
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -621,6 +622,7 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff check lifetxt tests scripts -> All checks passed (no Python files changed by #454's documentation/policy update)
       - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
+      - "#457 human release-authority decision: repository owner approved Format 1.0 as the Stable 1.0 compatibility baseline on 2026-08-21, referencing the PR #455 finalization evidence; recorded in docs/en/format-1.0-finalization-review.md section 5 and .ai/project/STABLE_RELEASE.yml's format_1_0_baseline_decision record"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -639,9 +641,12 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/454
       - https://github.com/Eruhitsuji/lifetxt/issues/325
       - https://github.com/Eruhitsuji/lifetxt/issues/326
+      - https://github.com/Eruhitsuji/lifetxt/issues/457
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333
+      - https://github.com/Eruhitsuji/lifetxt/pull/455
+      - https://github.com/Eruhitsuji/lifetxt/pull/456
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       This capability deliberately extends existing project governance instead

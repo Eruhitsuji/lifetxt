@@ -92,6 +92,19 @@ stable_release:
         during this bounded check; promote to 1.0.0 once no blocker
         remains. Both RC cutting and stable promotion require explicit
         human release authority approval.
+    format_1_0_baseline_decision:
+      status: approved
+      decided_by: Eruhitsuji
+      decided_on: "2026-08-21"
+      decision_issue: https://github.com/Eruhitsuji/lifetxt/issues/457
+      evidence: https://github.com/Eruhitsuji/lifetxt/pull/455
+      record: docs/en/format-1.0-finalization-review.md
+      statement: >-
+        Format 1.0, as reviewed by the #454 Format 1.0 finalization review
+        (grammar/parser alignment, unsupported-version refusal-before-write,
+        migration/downgrade documentation sufficiency, and passing
+        round-trip/idempotency regression tests), is accepted as the
+        compatibility baseline for the first Stable 1.0 release.
 
   feature_freeze:
     purpose: >-

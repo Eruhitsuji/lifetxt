@@ -6292,6 +6292,34 @@ traceability:
         omitted or claimed complete.
       status: implemented
 
+    - requirement_id: req-stable-format-1-0-baseline-decision
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/457
+      pull_request: null
+      changed_files_or_scope:
+        - Record the human release-authority decision approving Format 1.0 as the Stable 1.0 compatibility baseline
+        - docs/en/format-1.0-finalization-review.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - repository owner (Eruhitsuji) explicitly approved Format 1.0 as the Stable 1.0 compatibility baseline, referencing the PR #455 finalization evidence, recorded 2026-08-21
+        - decision recorded in both docs/en/format-1.0-finalization-review.md (section 5, checkbox checked) and .ai/project/STABLE_RELEASE.yml's new format_1_0_baseline_decision record, and linked from #454
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the format_1_0_baseline_decision addition
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        #457 is intentionally scoped to the remaining human-authority decision
+        only; the technical review itself was completed by PR #455
+        (req-stable-format-1-0-finalization-review). No new implementation,
+        grammar redesign, or additional environment verification is in
+        scope, matching #457's own explicit out-of-scope list. This closes
+        the "Record the human release decision..." item and the "Format 1.0
+        final release-contract review is complete..." completion criterion
+        on #454; every other #454 completion criterion (release
+        version/notes finalization, RC cut, promotion) remains open and
+        requires its own separate human-authority decision.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

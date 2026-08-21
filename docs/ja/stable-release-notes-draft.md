@@ -1,11 +1,9 @@
 # lifetxt 1.0.0 リリースノート
 
+**`v1.0.0`**を公開しました: <https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0>。
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454)のrelease-candidate-
-and-promotion手順に基づき、repository ownerが初回Stable releaseの
-バージョンとして**`1.0.0`**を選定しました。release candidate tagは
-`v1.0.0rc1`、最終tagは`v1.0.0`です。この文書はそのリリースのrelease notes
-内容であり、RCがbounded checkを完了しcandidateがpromoteされた時点で
-確定します（下記「Release status」を参照）。
+and-promotion手順に基づき、検証済みの`v1.0.0rc1`candidateからpromoteされ
+ました。promotionの完全な証跡は下記「Release status」を参照してください。
 
 [#454](https://github.com/Eruhitsuji/lifetxt/issues/454)は、残りのStable 1.0
 gateを最小限まで縮小します: Format 1.0のcompatibility baseline、core
@@ -143,14 +141,24 @@ deprecationとmigrationのlifecycleについては
   完全な証跡記録は
   [Stable Release Artifact Verification](stable-release-artifact-verification.md)
   を参照してください。
-- **`v1.0.0`**: repository ownerによりpromotionが承認されました。#463の
-  open-issue reviewでRC期間中にrelease-blockingなdefectは見つからなかった
-  ため、この変更は検証済みの`v1.0.0rc1`candidateのコードに対して
-  release-metadata-onlyなversion bump（`1.0.0rc1` -> `1.0.0`）のみを適用し、
-  他のproduct behaviorの変更はありません。tag・最終artifact・その証跡は
-  この変更がmergeされtagがcutされた時点で記録されます。実際のcommit・
-  artifact hash・release URLは、このセクション（またはその履歴）の
-  後続の記録を参照してください。
+- **`v1.0.0`**: 2026-08-22に、commit
+  `4f6eead6587c383eac7ee8e92873bb1596cc1c69`（PR #469、release-metadata-only
+  なversion bump、のmerge commit）でpromoteされ、検証済みの`v1.0.0rc1`
+  candidateとproduct behaviorが同一です。[GitHub Release](https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0)
+  （prereleaseではない）として、buildしたwheel
+  （`lifetxt-1.0.0-py3-none-any.whl`、sha256
+  `1da07155a8edfe6dc9ab535d2007d0e65b1ed4688a2ef8c647c7af596dc54e8f`）と
+  sdist（`lifetxt-1.0.0.tar.gz`、sha256
+  `3be2157c7462193223afce782037ac1cc8260290d9e2ad7d4da65e4fbf74f803`）を
+  添付して公開されました。`twine check`は両方ともpassし、promoteされた
+  commitで必須CIがpassし、`v1.0.0rc1`を検証したのと同じ代表的なcore smoke
+  （parse/read、create、mutate、revision-checkedなatomic-write contract
+  経由のserialize/write、re-read、recovery-safeな書き込み）を、install
+  した最終wheelに対して再実行しpassしました。実際のGitHub APIに対する
+  real `lifetxt update-check`は、`kind: "release"`（これはprereleaseでは
+  なく実際のReleaseのため`"tag"`ではない）と`status: "up_to_date"`を確認
+  しました。#463のopen-issue reviewでRC期間中にrelease-blockingなdefectが
+  見つからなかったことを受けて、repository ownerが承認しました。
 
 ## インストールsmoke
 

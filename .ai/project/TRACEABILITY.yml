@@ -6187,6 +6187,111 @@ traceability:
         shell-model skips, and redaction behavior remain unchanged.
       status: implemented
 
+    - requirement_id: req-stable-minimal-rescope-policy
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
+      pull_request: null
+      changed_files_or_scope:
+        - Record the #454 re-scope of the remaining Stable 1.0 gate as repository-authoritative policy
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
+        - the reduced blocker definition, deferred-item list, and required-now checklist match #454's issue body field for field
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Adds a minimal_stabilization_rescope section to STABLE_RELEASE.yml
+        recording that #454 supersedes #283/#339's remaining gate criteria
+        only for what is required before the first Stable 1.0 release, while
+        leaving every existing section of that file (feature freeze,
+        compatibility policy, support matrix, release gates, roadmap
+        classification, delegated mutation inventory) unchanged and intact
+        as historical stabilization policy. No code changed.
+      status: implemented
+
+    - requirement_id: req-stable-format-1-0-finalization-review
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
+      pull_request: null
+      changed_files_or_scope:
+        - Perform the bounded Format 1.0 release-contract review required by #454
+        - docs/en/format-1.0-finalization-review.md
+      tests_or_evidence:
+        - "lifetxt/parser.py FORMAT_VERSION/format_version_state classification confirmed to match docs/en/format-compatibility-matrix.md's version matrix (unversioned/current/unsupported)"
+        - "lifetxt/extra_safety.py format migrate confirmed to check version['state'] == 'unsupported' and return changed=False/written=False before any write_text call; format downgrade confirmed to report writable: False unconditionally"
+        - "docs/en/format-migration.md and docs/en/format-compatibility-matrix.md reviewed against the implemented behavior above; no drift found"
+        - python -m unittest tests.test_roundtrip_golden tests.test_randomized_roundtrip tests.test_parser_format_metadata -> Ran 19 tests, OK
+      release_or_deployment: null
+      notes: >-
+        This review is investigation only; it confirms four of #454's five
+        Format 1.0 finalization checklist items. The fifth item (recording
+        the human release decision that Format 1.0 is the accepted
+        compatibility baseline) is explicitly left as a pending
+        release-authority sign-off in the review document itself, not
+        asserted by this entry. No concrete defect was found; per #454 and
+        this project's Horizontal Review Scope Discipline, a defect found by
+        this review would be filed as its own dedicated Issue rather than
+        expanding this review's scope.
+      status: implemented
+
+    - requirement_id: req-stable-release-notes-reduced-gate
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: null
+      changed_files_or_scope:
+        - Update stable release notes and known limitations to describe #454's reduced Stable 1.0 gate instead of exhaustive real-host verification as a prerequisite
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+      tests_or_evidence:
+        - both documents reference #454 and list the same deferred-from-gate item set as .ai/project/STABLE_RELEASE.yml's minimal_stabilization_rescope.deferred_from_gate
+        - the version/tag remains intentionally unset, per #454's own "release authority must select it" requirement
+        - manual review confirming the English and Japanese documents carry the same claims (parity), matching the existing #354 doc-parity practice for this document pair
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, per #454's own "Required
+        now" section 1. Only the verification-status and known-limitations
+        framing changed; the stable-boundary and installation-smoke sections
+        are extended with cross-references (the Format 1.0 finalization
+        review, the artifact verification evidence doc) rather than rewritten.
+        The release version/tag selection, which #325's own acceptance
+        criteria assign to release authority, remains explicitly out of
+        scope for this entry.
+      status: implemented
+
+    - requirement_id: req-stable-minimal-clean-artifact-verification
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/326
+      pull_request: null
+      changed_files_or_scope:
+        - Record the #454 release-critical minimum clean-artifact verification (reduced from #326's original full real-host OS/Python matrix)
+        - docs/en/stable-release-artifact-verification.md
+      tests_or_evidence:
+        - "python -m build --wheel --sdist from a clean checkout at commit 9a7c4cf8cb1b8c96abac4111ad0bb4f9b56548c9 -> both artifacts built; twine check -> PASSED for both"
+        - "wheel file listing scanned: only lifetxt/*.py, lifetxt/web_assets.html, and lifetxt-0.1.0.dist-info/* present, no __pycache__/.git/.venv/.cache/.env or other dev-cache/local-state entries"
+        - "sdist's 294-entry listing scanned for the same categories plus secret/credential-shaped names -> none found"
+        - "python scripts/run_ci_like.py --profile release (fresh venv, CPython 3.12.3, Windows 10 Pro NT 10.0.19045.0) installed the built wheel, ran python -m lifetxt --help and the installed lifetxt --help entry point outside the source checkout, and python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - "the same fresh venv's full suite: python -m unittest discover -> Ran 2513 tests in 454.538s, OK (skipped=5); release-policy/release-gate smoke -> OK: 10 item(s), OK: 5 item(s), OK: 6 item(s)"
+        - "separate core-only install (no web/tui/dev extras) in its own fresh venv on the same commit/host: pip list --format=freeze reports exactly lifetxt, pip, and the declared Windows-only tzdata; python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s); installed lifetxt --help entry point ran successfully"
+      release_or_deployment: null
+      notes: >-
+        #326 reused for the release-critical minimum only, per #454's
+        "Required now" section 2. This is one supported Python version on
+        one supported OS (Windows); it satisfies #454's explicit statement
+        that a full real-host OS/Python matrix is no longer a Stable 1.0
+        prerequisite and that normal CI (Linux 3.10/3.11/3.12, no-Web job,
+        native Windows/macOS core smoke) covers the broader regression
+        matrix. Additional real-host rows remain useful, non-blocking,
+        post-Stable-1.0 evidence and are recorded as an explicit known gap
+        in docs/en/stable-release-artifact-verification.md rather than
+        omitted or claimed complete.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

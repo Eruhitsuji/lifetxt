@@ -14,6 +14,85 @@ stable_release:
       child issue. Child branches target the integration branch; the integration
       branch targets main after the tracker-level release evidence is complete.
 
+  minimal_stabilization_rescope:
+    tracker_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
+    supersedes: >-
+      #454 supersedes #283 and #339's remaining gate criteria only for
+      deciding what must be completed before the first Stable 1.0 release.
+      #283 and #339 remain the historical trackers for the original broad
+      stabilization plan and retain their completed work; this section does
+      not remove or invalidate anything already recorded elsewhere in this
+      file.
+    minimum_stable_meaning:
+      - Format 1.0 has an explicit, documented compatibility contract.
+      - Core parse/read/write/canonicalization behavior is protected against regressions.
+      - Normal mutations and recovery behavior do not have a known release-blocking data-loss defect.
+      - Release artifacts can be built, installed into a clean environment, and execute a small representative smoke workflow.
+      - Known limitations and intentionally unverified/optional surfaces are documented instead of requiring exhaustive pre-release proof.
+      - No known critical security or data-integrity defect remains open.
+    not_required_for_first_stable_release: >-
+      Exhaustive real-host verification of every supported shell, terminal,
+      browser, filesystem class, SMTP provider, optional client, or
+      OS/Python combination before release.
+    deferred_from_gate:
+      - real Web revision deployment evidence (#288-#292)
+      - exhaustive remote attachment failure/restart evidence (#297-#299)
+      - cloud-sync/removable/network filesystem verification (#304)
+      - real terminal and selector matrix verification (#312-#314)
+      - real SMTP provider verification (#315-#316)
+      - real browser-engine verification (#317-#318)
+      - exhaustive external-host verification and its supporting release-harness hardening, including #437/#453
+      - exhaustive real-host OS/Python matrix evidence beyond normal CI and the minimal clean-install smoke
+    deferred_item_disposition: >-
+      Deferred issues are not invalidated. They become post-Stable quality
+      work unless a concrete release-blocking defect (see
+      reduced_blocker_definition below) is found.
+    reduced_blocker_definition: >-
+      After #454, a newly discovered issue blocks Stable 1.0 only when it is
+      reasonably capable of causing data loss or silent data corruption,
+      violation of the declared Format 1.0 compatibility contract, inability
+      to build/install/start the release artifact, a critical security
+      vulnerability, or a deterministic failure of the representative core
+      workflow that makes the release materially unusable. Missing
+      exhaustive evidence is not by itself a blocker.
+    required_now:
+      format_1_0_finalization_review: >-
+        One bounded release-contract review confirming the documented
+        Format 1.0 grammar/version semantics match the implemented parser
+        and canonical serializer, unsupported versions fail safely before
+        mutation, migration/downgrade behavior is documented sufficiently,
+        and round-trip/idempotency regression tests pass. See
+        docs/en/format-1.0-finalization-review.md. The compatibility
+        baseline decision itself is a human release-authority sign-off, not
+        an AI-asserted conclusion.
+      release_metadata_and_docs: >-
+        #325 reused under the reduced policy: consistent version metadata,
+        release notes, upgrade/downgrade guidance, documented known
+        limitations, and installation examples that describe the release
+        artifacts rather than editable-development assumptions. See
+        docs/en/stable-release-notes-draft.md and its Japanese counterpart.
+      minimal_clean_artifact_verification: >-
+        #326 reused for the release-critical minimum only: build wheel and
+        sdist from a clean checkout, install into at least one fresh
+        supported Python environment, confirm both entry points start,
+        run a representative core smoke (parse/read, mutate, serialize/
+        write, re-read, and a basic recovery-safe path where practical),
+        and confirm packaged artifacts exclude development caches, secrets,
+        or generated local state. A full real-host OS/Python matrix is not
+        a prerequisite; rely on normal CI for the broader regression
+        matrix and record any known gap as a documented limitation. See
+        docs/en/stable-release-artifact-verification.md.
+      release_candidate_and_promotion: >-
+        #327/#328 remain useful release-operation references, but their
+        earlier exhaustive real-environment gates are superseded by #454
+        for the first Stable 1.0 release. Cut 1.0.0rc1 once the Format 1.0
+        review, the reduced #325 minimum, and the reduced #326 minimum are
+        complete; run normal required CI and the minimal installed-artifact
+        smoke against the RC; fix only release-blocking defects found
+        during this bounded check; promote to 1.0.0 once no blocker
+        remains. Both RC cutting and stable promotion require explicit
+        human release authority approval.
+
   feature_freeze:
     purpose: >-
       Keep the first stable-release surface from expanding while release

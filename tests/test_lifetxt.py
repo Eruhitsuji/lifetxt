@@ -6315,7 +6315,7 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
         payload = json.loads(stdout)
         self.assertEqual("v0.0.1", payload["latest_version"])
         self.assertEqual("tag", payload["kind"])
-        # 0.0.1 is older than the running 0.1.0 baseline.
+        # 0.0.1 is older than any realistic running version.
         self.assertEqual("ahead_of_latest", payload["status"])
 
     def test_reports_up_to_date_when_versions_match(self):

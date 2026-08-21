@@ -43,3 +43,31 @@ matching command literals, and matching stable-boundary terms. Project YAML
 records were parsed after the audit, and `git diff --check` was clean. Any future
 change to a stable release claim must update both language files and this audit
 record or record an approved intentional non-parity.
+
+## Addendum: #454 minimal-stabilization changes (2026-08-22)
+
+`cli.md`'s `update` section (an audited pair above) was corrected in both
+languages together, in the same change, when it changed under #454: it no
+longer calls `-e .` "the documented install method" now that a plain
+`pip install .` is the primary getting-started path, and explains why
+`update`/`server-update` specifically still require the editable install.
+Both language versions carry the same explanation.
+
+`readme.md`, `docs/en+ja/readme.md`, `docs/en+ja/use-cases.md`, and
+`docs/ja/optional-dependency-compatibility.md` are outside this audit's
+original file list (root `readme.md` was never included; `use-cases.md` and
+`optional-dependency-compatibility.md` were not release-critical at the time
+of the original audit). Their #454-driven installation-example changes
+(`pip install -e .` -> `pip install .` for the primary path) were made to
+both language files together in the same change and reviewed for matching
+claims; this is a note that they were kept in parity, not a new formal
+addition to the audited-pairs table above, which remains scoped to the
+original #354 release-critical set.
+
+`docs/en+ja/stable-release-notes-draft.md` is also outside the original
+audited-pairs list (it did not carry a finalized version or content when the
+#354 audit closed). It was written in both languages together throughout the
+#454 work, including the version 1.0.0 selection, the Highlights/Upgrading/
+Release status sections added when the version was set, and the
+known-limitations content; both language files were checked to reference
+the same issues, sections, and doc cross-links.

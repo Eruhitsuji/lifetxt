@@ -579,6 +579,7 @@ capabilities:
       - req-stable-minimal-clean-artifact-verification
       - req-stable-format-1-0-baseline-decision
       - req-stable-installation-examples-release-artifact-boundary
+      - req-stable-1-0-0-version-and-release-notes-finalized
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -599,7 +600,12 @@ capabilities:
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/ja/optional-dependency-compatibility.md
+      - docs/en/release-doc-parity-audit.md
       - .gitignore
+      - pyproject.toml
+      - lifetxt/__init__.py
+      - lifetxt/mcp.py
+      - lifetxt/webapp.py
       - lifetxt/paths.py
       - lifetxt/web_read_service.py
       - lifetxt/webapp.py
@@ -634,6 +640,8 @@ capabilities:
       - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
       - "#457 human release-authority decision: repository owner approved Format 1.0 as the Stable 1.0 compatibility baseline on 2026-08-21, referencing the PR #455 finalization evidence; recorded in docs/en/format-1.0-finalization-review.md section 5 and .ai/project/STABLE_RELEASE.yml's format_1_0_baseline_decision record"
       - "#454 installation-examples audit: readme.md, docs/en+ja/readme.md, docs/en+ja/use-cases.md, and docs/ja/optional-dependency-compatibility.md's primary getting-started install commands changed from editable (pip install -e .) to plain (pip install .); docs/en+ja/cli.md's update command documentation corrected to no longer call -e . \"the documented install method\" while explaining why update/server-update specifically still require it; a fresh venv confirmed pip install <path> (non-editable) plus lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+      - "1.0.0rc1 version consistency: fixed lifetxt/mcp.py SERVER_VERSION and lifetxt/webapp.py's FastAPI version= (previously independent hardcoded '0.1.0' literals) to import lifetxt.__version__ before bumping it, so the version now reads 1.0.0rc1 consistently across pyproject.toml, --version, update-check, the MCP serverInfo, and the Web API; full suite Ran 2513 tests, OK (skipped=5) after the bump"
+      - "release notes finalized: docs/en+ja/stable-release-notes-draft.md gained a capability Highlights summary and expanded Upgrading guidance (Format/configuration/policy-journal/Web-revision, each explicitly not applicable to this first release but documented as the mechanism a future release will use) and a Release status section tracking the not-yet-cut RC/promotion steps without asserting they happened"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284

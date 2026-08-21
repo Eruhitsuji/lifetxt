@@ -65,10 +65,11 @@ from .webapp import (
 from .web_read_service import assert_unique_workspace_ids
 from .mcp_resources import resource_list as _resource_list
 from .mcp_resources import resource_read as _resource_read
+from . import __version__
 
 
 SERVER_NAME = "lifetxt-mcp"
-SERVER_VERSION = "0.1.0"
+SERVER_VERSION = __version__
 
 
 class McpContext:

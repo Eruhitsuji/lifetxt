@@ -6366,6 +6366,54 @@ traceability:
         install.
       status: implemented
 
+    - requirement_id: req-stable-1-0-0-version-and-release-notes-finalized
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: null
+      changed_files_or_scope:
+        - Set the Stable 1.0 release version (1.0.0rc1, pending RC) consistently across every authoritative version source, and finalize release notes and upgrade guidance
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - lifetxt/mcp.py
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/release-doc-parity-audit.md
+      tests_or_evidence:
+        - "found and fixed a real version-consistency gap before bumping anything: lifetxt/mcp.py's SERVER_VERSION and lifetxt/webapp.py's FastAPI app version= were independently hardcoded '0.1.0' literals, not reading lifetxt.__version__ (the source pyproject.toml/CLI --version/update-check/release-gate manifest already used); both now import and reference __version__ so a future version bump cannot silently miss them"
+        - "confirmed lifetxt/config_registry.py's since=\"0.1.0\" config-registry metadata is a historical introduction-version marker (when each key was added), not a live version reference, and left it unchanged -- bumping it would misrepresent history"
+        - 'live: `python -m lifetxt --version` -> "lifetxt 1.0.0rc1"; `python -c "import lifetxt.mcp as m; print(m.SERVER_VERSION)"` -> "1.0.0rc1"; `python -m lifetxt update-check --format json` -> current_version "1.0.0rc1", status no_release_found (no tag/release exists yet)'
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 13 tests, OK (version-comparison logic unaffected by the bump)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2513 tests, OK (skipped=5)'
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff check lifetxt tests scripts -> All checks passed
+        - ruff format --check lifetxt/mcp.py lifetxt/webapp.py tests/test_lifetxt.py -> 3 files already formatted
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, closing its remaining
+        acceptance criteria: version set consistently; release notes
+        finalized with a capability Highlights summary; upgrade guidance
+        expanded to reference Format, configuration, policy/journal, and
+        Web revision migration (all "not applicable to this first release,
+        but here is the mechanism a future release will use" per the
+        repository owner's decision that 1.0.0 is the version, recorded via
+        AskUserQuestion). docs/en/release-doc-parity-audit.md gained an
+        addendum recording that readme.md, docs/en+ja/readme.md,
+        docs/en+ja/use-cases.md, docs/ja/optional-dependency-compatibility.md
+        (outside the original #354 audited-pairs list) and
+        docs/en+ja/stable-release-notes-draft.md were kept in English/
+        Japanese parity through this and the prior #454 installation-
+        examples change, without expanding the formal audited-pairs table
+        itself. The version is `1.0.0rc1` pending the RC cut described in
+        #454's release-candidate-and-promotion section; it will be bumped
+        to `1.0.0` in a separate change only after the repository owner
+        approves promotion from a validated candidate.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

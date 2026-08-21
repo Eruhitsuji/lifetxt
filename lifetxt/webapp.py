@@ -73,6 +73,7 @@ from .web_read_service import sort_key_for_item as _service_sort_key_for_item
 from .web_assets import HTML_PAGE
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
+from . import __version__
 
 
 #: Commands the browser implements. Everything else in the shared catalog is
@@ -151,7 +152,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     app = FastAPI(
         title="life.txt API",
-        version="0.1.0",
+        version=__version__,
         description="life.txt REST API" + (" — read-only demo" if read_only else ""),
     )
     app.state.paths = normalize_server_paths(paths)

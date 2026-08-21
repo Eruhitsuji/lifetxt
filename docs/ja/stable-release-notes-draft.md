@@ -143,10 +143,14 @@ deprecationとmigrationのlifecycleについては
   完全な証跡記録は
   [Stable Release Artifact Verification](stable-release-artifact-verification.md)
   を参照してください。
-- **`v1.0.0`**: まだpromoteされていません。この検証済みcandidateからの
-  promotionには、このRelease statusセクション（または後続の記録）で
-  release-blockingなdefectが見つからなかったことを確認した後、#454の
-  task contractに基づく明示的かつ別個のrepository owner承認が必要です。
+- **`v1.0.0`**: repository ownerによりpromotionが承認されました。#463の
+  open-issue reviewでRC期間中にrelease-blockingなdefectは見つからなかった
+  ため、この変更は検証済みの`v1.0.0rc1`candidateのコードに対して
+  release-metadata-onlyなversion bump（`1.0.0rc1` -> `1.0.0`）のみを適用し、
+  他のproduct behaviorの変更はありません。tag・最終artifact・その証跡は
+  この変更がmergeされtagがcutされた時点で記録されます。実際のcommit・
+  artifact hash・release URLは、このセクション（またはその履歴）の
+  後続の記録を参照してください。
 
 ## インストールsmoke
 

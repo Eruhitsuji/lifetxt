@@ -6458,6 +6458,42 @@ traceability:
         candidate yet.
       status: implemented
 
+    - requirement_id: req-stable-v1-0-0-promotion-version-bump
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/464
+      pull_request: null
+      changed_files_or_scope:
+        - Apply the release-metadata-only version bump (1.0.0rc1 -> 1.0.0) approved for promotion of the validated v1.0.0rc1 candidate
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "repository owner explicitly approved promotion in response to a direct question, after #463's open-issue review (no release-blocking defect found during the RC period)"
+        - "live: python -c \"import lifetxt; print(lifetxt.__version__)\" -> 1.0.0; python -c \"import lifetxt.mcp as m; print(m.SERVER_VERSION)\" -> 1.0.0 (both track __version__ automatically, per the earlier PR #467 consistency fix -- no separate edit needed in mcp.py/webapp.py); python -m lifetxt --version -> lifetxt 1.0.0; python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_mcp_expansion tests.test_lifetxt.LifeTxtWebAppTests -> Ran 115 tests, OK
+        - ruff check lifetxt tests scripts -> All checks passed
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> full suite, no failures (see PR for exact count)'
+        - git diff --check
+      release_or_deployment: >-
+        Version-only change on top of the already-validated v1.0.0rc1
+        candidate's code, per #464's own constraint that the final commit
+        must be identical in product behavior to the validated RC except
+        for release-metadata-only changes. The actual v1.0.0 tag, final
+        artifacts, and their evidence are recorded in a follow-up change
+        once this merges, mirroring how v1.0.0rc1's tag/artifacts were
+        recorded in a follow-up after the version-bump PR (#467) merged.
+      notes: >-
+        Closes #464's "change authoritative version metadata... using only
+        release-metadata changes" step. No other file changed: the
+        product-behavior-identical requirement is satisfied by construction,
+        since only version strings changed and everything else is the exact
+        code already validated as v1.0.0rc1 (commit
+        ca1894b6f5571b3862138d84bfe9dc542ebc2551).
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

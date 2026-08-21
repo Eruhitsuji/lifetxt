@@ -57,37 +57,59 @@ rows remain useful but, per #454, are not required before Stable 1.0.
 | artifact | `lifetxt-0.1.0-py3-none-any.whl` sha256 `e400eaff47f3440910e7934d8c579b22c77eaeb30d2e20b02115b2be51427ad9`; `lifetxt-0.1.0.tar.gz` sha256 `79089c7d6654ceaa6bb0a833b41332f6cec910ab12bf70c391b3c715ce568799` |
 | Python | CPython 3.12.3 |
 | host | Microsoft Windows 10 Pro, NT 10.0.19045.0, x86_64, NTFS |
-| install | fresh venv created by `scripts/run_ci_like.py --profile release`, removed after the run |
+| install | two disposable venvs created by `scripts/run_ci_like.py --profile release`, both removed after the run (see below) |
 | result | pass |
 
-Evidence gathered for this run:
+`scripts/run_ci_like.py --profile release` uses two separate venvs, and this
+record keeps their evidence separate rather than conflating what each one
+proved:
 
+**Primary venv** (`dev`+`web` extras installed editable via `pip install -e
+.[dev]`, used for the test suite and release-policy checks, not the built
+wheel):
+
+- The full test suite ran in this venv: `python -m unittest discover`
+  reported `Ran 2513 tests in 454.538s ... OK (skipped=5)`.
+- `scripts/check_release_policy.py` and `lifetxt safety release-gate`
+  reported `OK: 10 item(s)`, `OK: 5 item(s)`, `OK: 6 item(s)` with no
+  failures.
 - `python -m build --wheel --sdist` produced both artifacts from a clean
-  checkout; `twine check` reported `PASSED` for both.
-- The wheel's file listing contains only `lifetxt/*.py`, `lifetxt/web_assets.html`,
-  and `lifetxt-0.1.0.dist-info/*`; no `__pycache__`, `.git`, `.venv`, `.cache`,
-  `.env`, or other development-cache/local-state entries are present. The
-  sdist's 294-entry listing was scanned for the same categories plus
-  secret/credential-shaped names; none were found.
-- A fresh virtual environment installed the built wheel (plus the `dev` and
-  `web` extras used by the release profile) without relying on any
-  undeclared local dependency.
-- `python -m lifetxt --help` and the installed `lifetxt --help` console
-  script both ran successfully from the installed package, outside the
-  source checkout.
-- `python -m lifetxt check examples/minimal_life.txt` (representative
-  parse/read smoke) reported `OK: 10 item(s)` against the installed package.
-- The full test suite ran inside the same fresh environment:
-  `python -m unittest discover` reported `Ran 2513 tests in 454.538s ...
-  OK (skipped=5)`, and the release-policy/release-gate smoke reported
-  `OK: 10 item(s)`, `OK: 5 item(s)`, `OK: 6 item(s)` with no failures.
+  checkout; `python -m twine check` reported `PASSED` for both.
 
-This satisfies the #454 minimal clean-artifact verification for one
-supported Python version on one supported OS. Additional Python/OS rows
-remain useful, non-blocking evidence; normal CI already covers the Linux
-Python 3.10/3.11/3.12 matrix and the no-Web job on every push, and the
-native Windows/macOS core-smoke CI jobs cover those platforms without a
-manual real-host run for every release.
+**Separate wheel-install venv** (created after the build, only the built
+wheel installed into it — no `dev`/`web` extras, no editable source):
+
+- The wheel's file listing contains only `lifetxt/*.py`,
+  `lifetxt/web_assets.html`, and `lifetxt-0.1.0.dist-info/*`; no
+  `__pycache__`, `.git`, `.venv`, `.cache`, `.env`, or other
+  development-cache/local-state entries are present. The sdist's 294-entry
+  listing was scanned for the same categories plus secret/credential-shaped
+  names; none were found.
+- The venv installed the built wheel without relying on any undeclared
+  local dependency.
+- `python -m lifetxt --help` and the installed `lifetxt --help` console
+  script both ran successfully from the installed wheel, outside the
+  source checkout.
+- `python -m lifetxt check examples/minimal_life.txt` (parse/read smoke)
+  reported `OK: 10 item(s)` against the installed wheel.
+
+The representative core smoke run directly against the installed wheel
+itself currently covers parse/read and both entry points, not an explicit
+create/mutate/serialize-write/re-read/recovery-safe-path cycle; that
+behavior is covered by the primary venv's full test suite instead, against
+the same source, but not against the wheel-installed copy specifically.
+This gap is recorded rather than silently claimed closed.
+
+This satisfies the build, install, entry-point, artifact-content, and
+core-regression items of the #454 minimal clean-artifact verification for
+one supported Python version on one supported OS. The recovery-safe-path
+part of the representative-smoke item remains open against the literal
+installed wheel specifically, tracked as a small follow-up rather than
+claimed complete. Additional Python/OS rows remain useful, non-blocking
+evidence; normal CI already covers the Linux Python 3.10/3.11/3.12 matrix
+and the no-Web job on every push, and the native Windows/macOS core-smoke
+CI jobs cover those platforms without a manual real-host run for every
+release.
 
 A separate core-only install (no `web`/`tui`/`dev` extras) was also checked
 in its own fresh virtual environment on the same commit and host: `pip list

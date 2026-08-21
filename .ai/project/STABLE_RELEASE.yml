@@ -106,6 +106,21 @@ stable_release:
         round-trip/idempotency regression tests), is accepted as the
         compatibility baseline for the first Stable 1.0 release.
 
+    release_candidate_status:
+      tag: v1.0.0rc1
+      status: cut
+      cut_on: "2026-08-22"
+      commit: ca1894b6f5571b3862138d84bfe9dc542ebc2551
+      release_url: https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1
+      evidence: docs/en/stable-release-artifact-verification.md
+      approved_by: Eruhitsuji
+      promotion:
+        status: not_promoted
+        note: >-
+          Promotion to v1.0.0 requires a separate, explicit repository-owner
+          approval after the RC period confirms no release-blocking defect
+          was found, per #454's task contract.
+
   feature_freeze:
     purpose: >-
       Keep the first stable-release surface from expanding while release

@@ -158,3 +158,30 @@ This closes the gap the earlier evidence run above explicitly recorded:
 parse/read, create, mutate, serialize/write, re-read, and a recovery-safe
 write path are now all confirmed directly against an installed release
 artifact, not only against the source tree in a separate venv.
+
+## `v1.0.0` final promotion smoke
+
+Recorded when promoting the validated `v1.0.0rc1` candidate to the final
+`v1.0.0` release.
+
+| Field | Value |
+| --- | --- |
+| commit | `4f6eead6587c383eac7ee8e92873bb1596cc1c69` |
+| artifact | `lifetxt-1.0.0-py3-none-any.whl` sha256 `1da07155a8edfe6dc9ab535d2007d0e65b1ed4688a2ef8c647c7af596dc54e8f`; `lifetxt-1.0.0.tar.gz` sha256 `3be2157c7462193223afce782037ac1cc8260290d9e2ad7d4da65e4fbf74f803` |
+| Python | CPython 3.12.3 |
+| host | Microsoft Windows 10 Pro, NT 10.0.19045.0, x86_64, NTFS |
+| install | disposable venv, only the built wheel installed, removed after the run |
+| result | pass |
+
+Identical procedure to the `v1.0.0rc1` recovery-safe-path smoke above,
+re-run against the promoted commit and its own freshly built wheel:
+`twine check` PASSED for both artifacts; a fresh disposable venv installed
+only the wheel; both `python -m lifetxt --version` and the installed
+`lifetxt --version` entry point reported `lifetxt 1.0.0`; the full
+init/quick/complete/format-canon/format-migrate create-mutate-write-reread-
+recovery-safe-path sequence passed against the installed wheel. A real
+`lifetxt update-check` against the live GitHub API returned
+`"kind": "release"` (a genuine, non-prerelease Release, unlike the RC's
+`"kind": "tag"`) and `"status": "up_to_date"`, confirming the published
+release is externally discoverable and version-comparison-correct.
+Published at <https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0>.

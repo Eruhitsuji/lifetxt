@@ -582,6 +582,7 @@ capabilities:
       - req-stable-1-0-0-version-and-release-notes-finalized
       - req-stable-v1-0-0rc1-cut
       - req-stable-v1-0-0-promotion-version-bump
+      - req-stable-v1-0-0-promoted
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -646,6 +647,7 @@ capabilities:
       - "release notes finalized: docs/en+ja/stable-release-notes-draft.md gained a capability Highlights summary and expanded Upgrading guidance (Format/configuration/policy-journal/Web-revision, each explicitly not applicable to this first release but documented as the mechanism a future release will use) and a Release status section tracking the not-yet-cut RC/promotion steps without asserting they happened"
       - "v1.0.0rc1 cut 2026-08-22 at commit ca1894b6f5571b3862138d84bfe9dc542ebc2551: wheel/sdist built and twine-checked PASSED, published as a GitHub prerelease (https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1) with both artifacts attached, confirmed externally discoverable via a real python -m lifetxt update-check call against the GitHub API (status up_to_date); a fresh wheel-only venv's create/mutate/serialize-write/re-read/recovery-safe-path smoke against the literal installed wheel closed the previously-recorded #454 evidence gap"
       - "#463 open-issue review found no release-blocking defect during the v1.0.0rc1 RC period; repository owner approved promotion to v1.0.0; version bumped 1.0.0rc1 -> 1.0.0 in pyproject.toml/lifetxt/__init__.py (release-metadata-only, no other file changed), confirmed consistent via --version/MCP SERVER_VERSION/full suite pass"
+      - "v1.0.0 promoted and published 2026-08-22 at commit 4f6eead6587c383eac7ee8e92873bb1596cc1c69: wheel/sdist built and twine-checked PASSED, published as a real (non-prerelease) GitHub Release (https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0) with both artifacts attached; the same representative installed-wheel core smoke that validated v1.0.0rc1 re-run and passed against the final wheel; a real update-check call confirmed kind: \"release\" and status: \"up_to_date\" -- completes #454's release-candidate-and-promotion procedure"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284

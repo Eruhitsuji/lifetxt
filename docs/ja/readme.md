@@ -87,9 +87,13 @@ sample files は [../../examples/](../../examples/) にあります。
 
 ## Verification
 
-local install と minimal smoke check:
+install と minimal smoke check。`python -m pip install .`（`-e .`ではない）
+は、lifetxtにはまだPyPI packageがないため、release artifactのinstallに
+近い形です。`-e .`はlifetxt自体のsourceを編集する開発者向けで、
+[readme.mdのDevelopment environmentセクション](../../readme.md#development-environment)
+を参照してください:
 
 ```sh
-python -m pip install -e .
+python -m pip install .
 python -m lifetxt check examples/minimal_life.txt
 ```

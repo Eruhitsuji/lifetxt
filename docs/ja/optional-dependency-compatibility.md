@@ -16,8 +16,8 @@ CI とリリースポリシーのメタデータテストは、これらの範�
 ## インストール
 
 ```console
-python -m pip install -e ".[web]"
-python -m pip install -e ".[tui]"
+python -m pip install ".[web]"
+python -m pip install ".[tui]"
 ```
 
 開発用の監査・テストツールは実行時依存関係ではありません。

@@ -578,6 +578,7 @@ capabilities:
       - req-stable-release-notes-reduced-gate
       - req-stable-minimal-clean-artifact-verification
       - req-stable-format-1-0-baseline-decision
+      - req-stable-installation-examples-release-artifact-boundary
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
@@ -590,6 +591,15 @@ capabilities:
       - docs/ja/stable-release-notes-draft.md
       - docs/en/stable-release-artifact-verification.md
       - docs/en/external-environment-verification.md
+      - readme.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+      - docs/en/use-cases.md
+      - docs/ja/use-cases.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/ja/optional-dependency-compatibility.md
+      - .gitignore
       - lifetxt/paths.py
       - lifetxt/web_read_service.py
       - lifetxt/webapp.py
@@ -623,6 +633,7 @@ capabilities:
       - ruff check lifetxt tests scripts -> All checks passed (no Python files changed by #454's documentation/policy update)
       - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
       - "#457 human release-authority decision: repository owner approved Format 1.0 as the Stable 1.0 compatibility baseline on 2026-08-21, referencing the PR #455 finalization evidence; recorded in docs/en/format-1.0-finalization-review.md section 5 and .ai/project/STABLE_RELEASE.yml's format_1_0_baseline_decision record"
+      - "#454 installation-examples audit: readme.md, docs/en+ja/readme.md, docs/en+ja/use-cases.md, and docs/ja/optional-dependency-compatibility.md's primary getting-started install commands changed from editable (pip install -e .) to plain (pip install .); docs/en+ja/cli.md's update command documentation corrected to no longer call -e . \"the documented install method\" while explaining why update/server-update specifically still require it; a fresh venv confirmed pip install <path> (non-editable) plus lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284

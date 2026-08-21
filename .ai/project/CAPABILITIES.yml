@@ -573,13 +573,21 @@ capabilities:
       - req-stable-multi-file-write-target
       - req-stable-workspace-id-uniqueness
       - req-stable-stabilization-batch-integration
+      - req-stable-minimal-rescope-policy
+      - req-stable-format-1-0-finalization-review
+      - req-stable-release-notes-reduced-gate
+      - req-stable-minimal-clean-artifact-verification
     implementation_locations:
       - .ai/project/STABLE_RELEASE.yml
       - .ai/project/RULES.md
       - .ai/project/CAPABILITIES.yml
       - .ai/project/TRACEABILITY.yml
       - docs/en/format-migration.md
+      - docs/en/format-1.0-finalization-review.md
       - docs/en/stable-contract-matrix.md
+      - docs/en/stable-release-notes-draft.md
+      - docs/ja/stable-release-notes-draft.md
+      - docs/en/stable-release-artifact-verification.md
       - docs/en/external-environment-verification.md
       - lifetxt/paths.py
       - lifetxt/web_read_service.py
@@ -607,6 +615,12 @@ capabilities:
       - '#354 release-critical English and Japanese documentation has a recorded semantic-parity audit'
       - format migration preview/write and downgrade inspection are explicit and revision-checked
       - stable machine-readable contract coverage and exceptions are inventoried
+      - "#454 Format 1.0 finalization review: python -m unittest tests.test_roundtrip_golden tests.test_randomized_roundtrip tests.test_parser_format_metadata -> Ran 19 tests, OK; docs/en/format-1.0-finalization-review.md records grammar/parser alignment, unsupported-version refusal-before-write, and migration/downgrade documentation sufficiency"
+      - "#454 minimal clean-artifact verification: python -m build --wheel --sdist plus twine check PASSED for both artifacts; wheel/sdist contents scanned for dev caches/secrets/local state with none found; fresh-venv release-profile run (commit 9a7c4cf8cb1b8c96abac4111ad0bb4f9b56548c9, CPython 3.12.3, Windows 10 Pro NT 10.0.19045.0) installed the wheel, ran python -m lifetxt --help and the installed lifetxt --help entry point, python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s), and the full suite inside that fresh venv -> Ran 2513 tests in 454.538s, OK (skipped=5)"
+      - "#454 core-only install (no web/tui/dev extras) in a separate fresh venv on the same commit/host: pip list --format=freeze reports exactly lifetxt, pip, and the declared Windows-only tzdata; both entry points and the check smoke succeeded"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff check lifetxt tests scripts -> All checks passed (no Python files changed by #454's documentation/policy update)
+      - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/283
       - https://github.com/Eruhitsuji/lifetxt/issues/284
@@ -622,6 +636,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/352
       - https://github.com/Eruhitsuji/lifetxt/issues/351
       - https://github.com/Eruhitsuji/lifetxt/issues/354
+      - https://github.com/Eruhitsuji/lifetxt/issues/454
+      - https://github.com/Eruhitsuji/lifetxt/issues/325
+      - https://github.com/Eruhitsuji/lifetxt/issues/326
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/332
       - https://github.com/Eruhitsuji/lifetxt/pull/333
@@ -650,6 +667,28 @@ capabilities:
       guard against silent requirement-to-capability mapping drift. #356 adds
       the first explicit stable compatibility promise, including versioning,
       deprecation, migration, and experimental/deferred boundaries.
+      #454 re-scopes the remaining Stable 1.0 gate to a documented minimum
+      (Format 1.0 compatibility baseline, core regression protection, no
+      known release-blocking data-loss defect, a working clean-artifact
+      install/smoke path, documented rather than exhaustively pre-verified
+      known limitations, no known critical security defect) and defers
+      exhaustive real-host OS/shell/terminal/browser/filesystem/SMTP/client
+      verification (#288-#292, #297-#299, #304, #312-#318, #437/#453, and
+      the broader real-host matrix) to post-Stable-1.0 quality work unless a
+      concrete release-blocking defect is found. It supersedes #283 and
+      #339's remaining gate criteria only for what is required before the
+      first Stable 1.0 release; both trackers keep their completed work as
+      historical stabilization evidence. This entry records: the bounded
+      Format 1.0 finalization review (docs/en/format-1.0-finalization-review.md),
+      reused #325 under the reduced scope (release notes/known-limitations
+      update in docs/en+ja/stable-release-notes-draft.md), and reused #326
+      for the release-critical minimum only (clean wheel/sdist build,
+      artifact-content check, fresh-venv install/entry-point/core-smoke, and
+      a separate core-only-install dependency check, recorded in
+      docs/en/stable-release-artifact-verification.md). The Format 1.0
+      compatibility-baseline confirmation and any RC cut/1.0.0 promotion
+      remain explicit human release-authority decisions, not asserted by
+      this capability entry.
     replacement:
       replaces: []
       replaced_by: null

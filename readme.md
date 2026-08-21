@@ -132,12 +132,18 @@ python -m lifetxt done life.txt habit_exercise
 python -m lifetxt complete life.txt task_water_plants
 ```
 
-Install locally as a command:
+Install as a command from a source checkout or a built wheel/sdist (see
+[Stable Release Artifact Verification](docs/en/stable-release-artifact-verification.md)
+for building a wheel/sdist yourself; lifetxt has no PyPI package yet):
 
 ```sh
-python -m pip install -e .
+python -m pip install .
 lifetxt check examples/minimal_life.txt
 ```
+
+Contributing to lifetxt itself, rather than just using it, needs an editable
+install instead (`pip install -e .`) so source edits take effect without
+reinstalling — see [Development environment](#development-environment) below.
 
 Most file-reading commands accept multiple input paths, glob patterns, and
 directories containing life.txt-like `.txt` files. The `filter`,

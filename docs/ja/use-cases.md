@@ -7,11 +7,17 @@
 ```sh
 git clone https://github.com/Eruhitsuji/lifetxt.git
 cd lifetxt
-python -m pip install -e .
+python -m pip install .
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt check life.txt
 ```
+
+`pip install .` は release artifact の install に近い形です（lifetxt には
+まだ PyPI package がありません）。`pip install -e .` は lifetxt 自体の
+source を編集する場合にのみ使ってください。
+[readme.md の Development environment セクション](../../readme.md#development-environment)
+を参照してください。
 
 browser UI を使う場合:
 

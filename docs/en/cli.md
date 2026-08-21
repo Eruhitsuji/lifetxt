@@ -2640,8 +2640,12 @@ modifies anything. Reported `status` values: `up_to_date`, `update_available`,
 
 `update` fast-forwards the running install's own git checkout -- lifetxt has
 no PyPI distribution, so updating means git, and it **only ever works when
-lifetxt was installed from a git clone** (`python -m pip install -e .`, the
-documented install method). It is dry-run by default:
+lifetxt was installed editable from a git clone** (`python -m pip install -e
+.`; see [readme.md's Development environment section](../../readme.md#development-environment)).
+A plain, non-editable `pip install .` (the default getting-started install;
+see [readme.md](../../readme.md)) has no git checkout backing it, so `update`
+cannot apply there -- reinstall from a newer checkout or artifact instead. It
+is dry-run by default:
 
 ```sh
 python -m lifetxt update

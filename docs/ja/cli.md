@@ -2257,9 +2257,13 @@ network timeout を変更するには `--timeout SECONDS` を使用します
 
 `update` は実行中の install 自身の git checkout を fast-forward します。
 lifetxt には PyPI 配布が無いため、更新は git で行います。**lifetxt が
-git clone からインストールされている場合のみ動作します**
-(`python -m pip install -e .`、公式に案内されているインストール方法)。
-既定では dry-run です。
+git cloneからeditableでインストールされている場合のみ動作します**
+(`python -m pip install -e .`。[readme.mdのDevelopment environment
+セクション](../../readme.md#development-environment)を参照)。editable
+ではない通常の`pip install .`（getting startedの既定のinstall方法。
+[readme.md](../../readme.md)を参照）にはgit checkoutが紐づいていないため、
+`update`は適用できません — その場合は新しいcheckoutまたはartifactから
+再インストールしてください。既定では dry-run です。
 
 ```sh
 python -m lifetxt update

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lifetxt"
-version = "1.0.0rc1"
+version = "1.0.0"
 description = "Parser, validator, converter, CLI, and optional web UI for life.txt."
 readme = "readme.md"
 requires-python = ">=3.10"

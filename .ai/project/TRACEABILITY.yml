@@ -6370,7 +6370,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/454
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/467
       changed_files_or_scope:
         - Set the Stable 1.0 release version (1.0.0rc1, pending RC) consistently across every authoritative version source, and finalize release notes and upgrade guidance
         - pyproject.toml

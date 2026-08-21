@@ -123,8 +123,15 @@ required for final Format 1.0 baseline confirmation") and is tracked
 separately as the sign-off on this document rather than asserted by the
 review itself.
 
-- [ ] Format 1.0 is confirmed as the Stable 1.0 compatibility baseline
+- [x] Format 1.0 is confirmed as the Stable 1.0 compatibility baseline
       (release authority sign-off, recorded here or on #454).
+
+**Decision: approved.** Format 1.0, as reviewed in sections 1-4 above, is
+accepted by the repository owner (Eruhitsuji) as the Stable 1.0 compatibility
+baseline, based on the finalization evidence recorded in
+[PR #455](https://github.com/Eruhitsuji/lifetxt/pull/455). Recorded
+2026-08-21 in [#457](https://github.com/Eruhitsuji/lifetxt/issues/457) and
+linked from [#454](https://github.com/Eruhitsuji/lifetxt/issues/454).
 
 ## Defects found during this review
 

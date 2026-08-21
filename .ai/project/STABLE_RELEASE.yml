@@ -115,17 +115,22 @@ stable_release:
       evidence: docs/en/stable-release-artifact-verification.md
       approved_by: Eruhitsuji
       promotion:
-        status: approved_pending_tag
+        status: promoted
         approved_by: Eruhitsuji
         approved_on: "2026-08-22"
         no_blocker_review: https://github.com/Eruhitsuji/lifetxt/issues/463
+        final_tag: v1.0.0
+        promoted_on: "2026-08-22"
+        commit: 4f6eead6587c383eac7ee8e92873bb1596cc1c69
+        release_url: https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0
         note: >-
-          Repository owner approved promotion to v1.0.0 after #463's
-          open-issue review found no release-blocking defect during the RC
-          period. The v1.0.0 tag and final artifacts are cut once the
-          release-metadata-only version bump merges; this record is
-          updated to status: promoted with the tag/commit/artifact
-          evidence at that point.
+          v1.0.0 is lifetxt's first Stable release, promoted from the
+          validated v1.0.0rc1 candidate with a release-metadata-only
+          version bump (PR #469) and no other product-behavior change.
+          Published as a GitHub Release (not a prerelease) with wheel and
+          sdist attached; required CI and the representative
+          installed-wheel core smoke both passed against the promoted
+          commit.
 
   feature_freeze:
     purpose: >-

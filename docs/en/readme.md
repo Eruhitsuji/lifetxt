@@ -89,9 +89,12 @@ Sample files are available in [../../examples/](../../examples/), including:
 
 ## Verification
 
-Install locally and run the minimal smoke check:
+Install and run the minimal smoke check. `python -m pip install .` (not
+`-e .`) matches how a release artifact installs, since lifetxt has no PyPI
+package yet; `-e .` is for editing lifetxt's own source, covered by
+[readme.md's Development environment section](../../readme.md#development-environment):
 
 ```sh
-python -m pip install -e .
+python -m pip install .
 python -m lifetxt check examples/minimal_life.txt
 ```

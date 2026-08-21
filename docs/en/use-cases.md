@@ -7,11 +7,15 @@ This guide describes practical setups using features currently implemented in li
 ```sh
 git clone https://github.com/Eruhitsuji/lifetxt.git
 cd lifetxt
-python -m pip install -e .
+python -m pip install .
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt check life.txt
 ```
+
+`pip install .` matches how a release artifact installs (lifetxt has no
+PyPI package yet). Use `pip install -e .` only if you are editing lifetxt's
+own source; see [readme.md's Development environment section](../../readme.md#development-environment).
 
 For the browser UI:
 

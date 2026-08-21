@@ -8,9 +8,13 @@
 __pycache__/
 *.py[cod]
 
-# Produced by the recorded `setup` command (`pip install -e .`).
-# `.venv/` is already covered by the leading `.*` rule.
+# Produced by `pip install .` / `pip install -e .` and `python -m build`.
+# `.venv/` is already covered by the leading `.*` rule. `dist/schemas/` is a
+# tracked, real directory (generated schema bundle), so `dist/` itself is
+# deliberately not ignored here -- only the setuptools intermediate build
+# directory, which has no tracked content.
 *.egg-info/
+/build/
 
 # AI Development Standard
 !.ai/

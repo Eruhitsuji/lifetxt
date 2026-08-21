@@ -6320,6 +6320,52 @@ traceability:
         requires its own separate human-authority decision.
       status: implemented
 
+    - requirement_id: req-stable-installation-examples-release-artifact-boundary
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: null
+      changed_files_or_scope:
+        - Make the primary installation examples describe a plain release-style install (pip install .) instead of leading with the editable development install (pip install -e .)
+        - readme.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+        - docs/en/use-cases.md
+        - docs/ja/use-cases.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/ja/optional-dependency-compatibility.md
+        - .gitignore
+      tests_or_evidence:
+        - "grep across docs/en, docs/ja, and readme.md confirmed every remaining bare `pip install -e .` (no extras) instance is inside a legitimate editable-install context: readme.md's own Development environment section, or lifetxt update/server-update's git-checkout requirement (both explicitly need the editable install to have a git tree to fast-forward)"
+        - "live: a fresh venv installed the package via `pip install <path>` (equivalent to `pip install .` from that directory, non-editable) and `lifetxt check examples/minimal_life.txt` -> OK: 10 item(s), confirming the newly-documented primary install command actually works"
+        - "found and fixed a real gap this doc change would otherwise have exposed to a new reader following it: `pip install .` from this checkout leaves an untracked `build/lib/...` directory behind (a setuptools intermediate), which `.gitignore` did not previously cover; added a root-anchored `/build/` rule (not a blanket `dist/`, since `dist/schemas/` is tracked real content) and confirmed via `git check-ignore` that it now excludes the directory without matching any tracked path"
+        - python -m unittest tests.test_release_policy -> pass (no translation-coverage or doc-validation regression)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, closing the "Ensure the
+        primary installation and basic usage examples describe the release
+        artifacts rather than editable-development assumptions" acceptance
+        criterion. lifetxt has no PyPI package, so "release artifact"
+        install means a plain, non-editable `pip install .` from a source
+        checkout or a built wheel/sdist (see
+        docs/en/stable-release-artifact-verification.md), not `pip install
+        -e .`. docs/en/cli.md's `update` command documentation (and its
+        docs/ja counterpart) was also corrected: it previously called `-e
+        .` "the documented install method," which was accurate when that
+        was the only documented path but is now stale; it is rewritten to
+        explain that `update`/`server-update` specifically require the
+        editable install because they fast-forward the git checkout behind
+        it, distinct from the ordinary end-user install this change
+        introduces. Development-section and production-deployment (Ubuntu
+        Server runbook) `-e` usage is intentionally unchanged, since both
+        have their own legitimate reason to require an editable, git-backed
+        install.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

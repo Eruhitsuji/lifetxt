@@ -38,6 +38,37 @@
       "minimum": 0,
       "type": "integer"
     },
+    "inbox": {
+      "additionalProperties": true,
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "deferred_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pending": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "pending_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "messages": {
       "items": {
         "type": "object"
@@ -46,6 +77,12 @@
     },
     "mode": {
       "type": "string"
+    },
+    "next_actions": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
     },
     "overdue": {
       "items": {

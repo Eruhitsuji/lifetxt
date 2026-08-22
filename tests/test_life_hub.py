@@ -1,10 +1,13 @@
 import datetime
+import os
+import tempfile
 import unittest
 
 from lifetxt.parser import parse_text
 from lifetxt.command_center import command_center
 from lifetxt.areas import area_list, area_show, collect_areas
 from lifetxt.links import backlink_records
+from lifetxt.inbox import stage_create
 
 
 TODAY = datetime.date(2026, 7, 24)
@@ -73,6 +76,71 @@ class CommandCenterTests(unittest.TestCase):
     def test_safety_reports_config_problems(self):
         cc = command_center(self.items, {"config_version": 99}, TODAY)
         self.assertFalse(cc["safety"]["ok"])
+
+    def test_next_actions_reuses_the_shared_actionable_definition(self):
+        from lifetxt.nextaction import next_action_items
+
+        cc = self.cc()
+        expected = [item.title for item in next_action_items(self.items)]
+        self.assertEqual(expected, [r["title"] for r in cc["next_actions"]])
+        # Deploy depends_on the still-open Design task, so it is blocked and
+        # excluded; WaitingReply is status [?], never actionable.
+        self.assertNotIn("Deploy", expected)
+        self.assertNotIn("WaitingReply", expected)
+        self.assertEqual(len(expected), cc["counts"]["next_actions"])
+
+    def test_next_actions_limit_bounds_the_list_without_changing_order(self):
+        unbounded = self.cc()["next_actions"]
+        bounded = self.cc(next_actions_limit=1)["next_actions"]
+        self.assertEqual(1, len(bounded))
+        self.assertEqual(unbounded[0], bounded[0])
+
+    def test_inbox_is_empty_when_no_proposals_are_staged(self):
+        cc = self.cc()
+        self.assertEqual(0, cc["inbox"]["total"])
+        self.assertEqual(0, cc["inbox"]["pending_count"])
+        self.assertEqual(0, cc["inbox"]["deferred_count"])
+        self.assertEqual([], cc["inbox"]["pending"])
+        self.assertEqual(0, cc["counts"]["inbox_pending"])
+
+    def test_inbox_reports_pending_and_deferred_counts_and_bounded_summary(self):
+        from lifetxt.inbox import defer
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = os.path.join(tmp, "proposals.json")
+            config = {
+                "inbox": {"proposals_file": store},
+                "projects": {"web": {"default_area": "work"}},
+            }
+            for index in range(3):
+                stage_create(config, "Idea %d" % index, source="manual")
+            deferred = stage_create(config, "Later", source="mcp")
+            defer(config, deferred["id"])
+
+            cc = command_center(self.items, config, TODAY, inbox_limit=2)
+
+            self.assertEqual(4, cc["inbox"]["total"])
+            self.assertEqual(3, cc["inbox"]["pending_count"])
+            self.assertEqual(1, cc["inbox"]["deferred_count"])
+            self.assertEqual(3, cc["counts"]["inbox_pending"])
+            # Bounded to inbox_limit even though 3 proposals are pending.
+            self.assertEqual(2, len(cc["inbox"]["pending"]))
+            for proposal in cc["inbox"]["pending"]:
+                self.assertEqual({"id", "source", "created", "summary"}, set(proposal))
+                self.assertTrue(proposal["summary"].startswith("Idea"))
+
+    def test_inbox_pending_never_exposes_the_full_operational_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = os.path.join(tmp, "proposals.json")
+            config = {"inbox": {"proposals_file": store}}
+            stage_create(config, "Idea", source="manual", details={"tag": "x"})
+
+            cc = command_center(self.items, config, TODAY)
+
+            proposal = cc["inbox"]["pending"][0]
+            self.assertNotIn("changes", proposal)
+            self.assertNotIn("expected_revision", proposal)
+            self.assertNotIn("warnings", proposal)
 
 
 class AreaTests(unittest.TestCase):

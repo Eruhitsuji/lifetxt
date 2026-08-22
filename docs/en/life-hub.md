@@ -26,9 +26,17 @@ Buckets:
 - **upcoming** — `due:` within the horizon (default 3 days)
 - **blocked** — a `depends_on:` target is not yet done
 - **waiting** — status `[?]`
-- **messages** — open `M` items (optionally scoped to `--person`)
+- **next actions** — the same open/unblocked/non-someday actions `next`, the
+  TUI `/next` view, and MCP `get_next_actions` already agree on, reused here
+  rather than redefined (see [new-cli-workflows.md](new-cli-workflows.md))
 - **habits** — open `H` items
-- **captures** — open tasks with no `project:`, `due:`, or `assignee:` (the inbox)
+- **messages** — open `M` items (optionally scoped to `--person`)
+- **captures** — open tasks with no `project:`, `due:`, or `assignee:`
+  (untriaged quick captures, distinct from the Unified Inbox below)
+- **inbox** — a bounded Unified Inbox summary: `total`/`pending_count`/
+  `deferred_count`/`counts` plus up to a handful of pending proposals
+  (`id`, `source`, `created`, `summary`); the full operational proposal store
+  stays in `proposal list` / MCP `list_proposals`, never duplicated here
 - **project attention** — non-green projects with their health reasons
 - **safety** — a quick configuration-validity signal
 

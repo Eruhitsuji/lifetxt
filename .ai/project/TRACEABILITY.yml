@@ -6776,7 +6776,7 @@ traceability:
       capability_id: cap-web-saved-views-and-areas
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/484
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/488
       changed_files_or_scope:
         - Add GET /api/saved-views, GET /api/saved-views/{name}, GET /api/areas, GET /api/areas/{name}, delegating entirely to lifetxt.saved_views/lifetxt.areas
         - Add a Saved view / Area select to the Items view filter bar, replacing the visible row set with the selected view's or area's items

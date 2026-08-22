@@ -21,8 +21,9 @@ import uuid
 from collections import OrderedDict
 
 from .atomic import atomic_write_text
-from .config import config_section
+from .config import config_paths, config_section, config_write_file
 from .model import Item
+from .mutation import MutationConflict
 from .serializer import item_to_line
 
 
@@ -99,6 +100,7 @@ def new_proposal(
     expected_revision="",
     provenance=None,
     proposal_id=None,
+    staged_target=None,
 ):
     return OrderedDict(
         (
@@ -107,6 +109,7 @@ def new_proposal(
             ("operation", str(operation)),
             ("source", str(source)),
             ("expected_revision", str(expected_revision or "")),
+            ("staged_target", str(staged_target) if staged_target else ""),
             ("changes", list(changes)),
             ("warnings", list(warnings or [])),
             ("status", "pending"),
@@ -114,6 +117,17 @@ def new_proposal(
             ("created", _timestamp()),
         )
     )
+
+
+def _default_proposal_target(config):
+    """Resolve the same default accept target `command_proposal_accept`
+    would use, so a stage-time revision snapshot describes the file the
+    proposal will most likely be accepted into."""
+    target = config_write_file(config)
+    if target:
+        return target
+    paths = config_paths(config)
+    return paths[0] if paths else "life.txt"
 
 
 def _timestamp():
@@ -130,8 +144,21 @@ def stage_proposal(config, proposal):
 def stage_create(
     config, title, kind="T", details=None, source="manual", warnings=None, status="[ ]"
 ):
+    from .write_operations import snapshot
+
     change = build_create_change(kind=kind, title=title, details=details, status=status)
-    proposal = new_proposal("create", source, [change], warnings=warnings)
+    target = _default_proposal_target(config)
+    revision = snapshot(target, allow_missing=True).content_hash
+    provenance = OrderedDict((("source", str(source)),))
+    proposal = new_proposal(
+        "create",
+        source,
+        [change],
+        warnings=warnings,
+        expected_revision=revision,
+        provenance=provenance,
+        staged_target=target,
+    )
     return stage_proposal(config, proposal)
 
 
@@ -215,17 +242,47 @@ def proposal_to_line(proposal):
     return item_to_line(item)
 
 
-def apply_proposal(config, proposal, target, expected_revision=None):
-    """Append a create proposal's item to ``target`` and mark it accepted."""
+def apply_proposal(
+    config, proposal, target, expected_revision=None, use_staged_revision=True
+):
+    """Append a create proposal's item to ``target`` and mark it accepted.
+
+    If the caller does not explicitly supply ``expected_revision``, and
+    ``use_staged_revision`` is true, and the proposal's own ``staged_target``
+    matches ``target``, the revision captured when the proposal was staged is
+    used: a workspace that has materially changed since then is refused with
+    a distinct stale-proposal error instead of silently rebasing onto
+    whatever ``target`` currently contains. A ``staged_target`` mismatch
+    (accepting into a different file than the one assumed at stage time)
+    intentionally skips this check, since the captured revision does not
+    describe ``target``. ``use_staged_revision=False`` lets
+    :func:`batch_apply` accept several proposals staged before any of them
+    were applied without each later one seeing an earlier one's own
+    just-written change as external staleness.
+    """
     from .write_operations import append_life_records
 
     line = proposal_to_line(proposal)
-    result = append_life_records(
-        target,
-        line + "\n",
-        expected_revision=expected_revision,
-        operation="inbox.accept",
-    )
+    revision = expected_revision
+    if (
+        revision is None
+        and use_staged_revision
+        and proposal.get("staged_target") == target
+    ):
+        revision = proposal.get("expected_revision") or None
+    try:
+        result = append_life_records(
+            target,
+            line + "\n",
+            expected_revision=revision,
+            operation="inbox.accept",
+        )
+    except MutationConflict:
+        raise ValueError(
+            "Proposal %r is stale: %s changed since it was staged. "
+            "Review the current file and re-stage if the change still "
+            "applies." % (proposal.get("id"), target)
+        )
     set_status(config, proposal["id"], "accepted")
     return OrderedDict(
         (
@@ -238,13 +295,15 @@ def apply_proposal(config, proposal, target, expected_revision=None):
     )
 
 
-def accept(config, proposal_id, target, expected_revision=None):
+def accept(config, proposal_id, target, expected_revision=None, use_staged_revision=True):
     proposal = get_proposal(config, proposal_id)
     if proposal is None:
         raise ValueError("Unknown proposal %r." % proposal_id)
     if proposal.get("status") == "accepted":
         raise ValueError("Proposal %r is already accepted." % proposal_id)
-    return apply_proposal(config, proposal, target, expected_revision)
+    return apply_proposal(
+        config, proposal, target, expected_revision, use_staged_revision
+    )
 
 
 def reject(config, proposal_id):
@@ -256,12 +315,30 @@ def defer(config, proposal_id):
 
 
 def batch_apply(config, proposal_ids, target, expected_revision=None):
-    """Apply several proposals, reporting per-proposal outcomes."""
+    """Apply several proposals, reporting per-proposal outcomes.
+
+    Only the first proposal in the batch is checked against its own
+    stage-time revision (protecting against a change external to this
+    batch); once one proposal has been applied, later proposals in the same
+    batch skip their own stage-time check, since this batch's own earlier
+    writes are expected to have moved the target past what any of them
+    individually saw when staged.
+    """
     results = []
+    use_staged_revision = True
     for proposal_id in proposal_ids:
         try:
-            results.append(accept(config, proposal_id, target, expected_revision))
+            results.append(
+                accept(
+                    config,
+                    proposal_id,
+                    target,
+                    expected_revision,
+                    use_staged_revision=use_staged_revision,
+                )
+            )
             expected_revision = None  # revision changes after the first append
+            use_staged_revision = False
         except ValueError as exc:
             results.append(
                 OrderedDict(

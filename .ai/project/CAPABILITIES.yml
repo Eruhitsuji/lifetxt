@@ -3935,19 +3935,22 @@ capabilities:
       (`lifetxt/links.py`, `GET /api/graph`) and from `command-center-v1`;
       every fact/edge carries `rule`/`source_field`/`reference_time` so a
       consumer can explain "why" without re-deriving it. First exposed
-      through the CLI.
+      through the CLI, and now through a read-only MCP tool.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-temporal-context-v1-cli
+      - req-mcp-temporal-context
     implementation_locations:
       - lifetxt/temporal_context.py
       - lifetxt/schema_extensions_v24.py
       - lifetxt/__init__.py
       - lifetxt/cli.py
+      - lifetxt/mcp.py
       - dist/schemas/temporal-context-v1.schema.json
       - tests/test_temporal_context.py
       - tests/test_temporal_cli.py
+      - tests/test_mcp_expansion.py
       - docs/en/life-hub.md
       - docs/ja/life-hub.md
       - docs/en/cli.md
@@ -3956,12 +3959,15 @@ capabilities:
       - lifetxt.temporal_context.temporal_context
       - lifetxt temporal ID [--window N] [--limit N] [--stale-after N] [--json]
       - temporal-context-v1.schema.json
+      - MCP tool get_temporal_context
     tests_or_evidence:
       - tests/test_temporal_context.py NodeFactsTests, TemporalContextTests (15 tests: overdue_by/due_in/stale_since derivation, missing-date guard, bounded/sorted related items, same_day matching, limit bounding, provenance on every fact/edge, done/cancelled items still participating in pure date ordering)
       - tests/test_temporal_cli.py TemporalCliTests (4 tests: text output, JSON output matching the schema marker, unknown-id failure, --window bounding)
-      - python -m unittest tests.test_temporal_context tests.test_temporal_cli -> Ran 19 tests, OK
+      - tests/test_mcp_expansion.py GetTemporalContextToolTests (8 tests: exact-equality against a direct temporal_context() call, window/limit bounding, stale_after reaching the engine, unknown/missing/ambiguous ID errors, invalid-bound type errors, read-only usability)
+      - python -m unittest tests.test_temporal_context tests.test_temporal_cli tests.test_mcp_expansion tests.test_surface_runtime -> Ran 126 tests, OK
       - python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 59 tests, OK (schema bundle count updated 77 -> 78 across every hardcoded assertion found)
       - 'live: python -m lifetxt temporal t1 life.txt (text and --json) against a real 3-item fixture with due: dates showed the correct overdue_by fact and same-window before/after edges to the other two items, nearest-first; python -m lifetxt temporal nope life.txt failed with exit 1 and a named error'
+      - 'live: lifetxt.mcp.call_tool("get_temporal_context", {"id": "t1"}, context) against a real 3-item fixture returned the identical temporal-context-v1 object a direct temporal_context() call produces; unknown id, missing id, and a non-integer window each raised a deterministic ValueError naming the problem'
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -3970,6 +3976,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/481
       - https://github.com/Eruhitsuji/lifetxt/issues/485
+      - https://github.com/Eruhitsuji/lifetxt/issues/489
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -3998,9 +4005,27 @@ capabilities:
       one target item's neighborhood (sorted candidates within
       `window_days`, capped at `limit`), never an all-pairs scan of the
       whole workspace, addressing #481's own "avoid O(n^2) near-every-item
-      behavior" investigation question. TUI/Web/MCP exposure, `overlap`/
+      behavior" investigation question. TUI/Web exposure, `overlap`/
       near-window relations, and any change to `/api/graph` or
       `command-center-v1` remain explicit, unimplemented follow-ups.
+      #489 adds `get_temporal_context`, a read-only MCP tool delegating
+      entirely to the existing `temporal_context()` engine -- no
+      due/staleness/same_day/before/after rule is duplicated in
+      `lifetxt/mcp.py`. It reuses the same target-resolution helper
+      (`find_item_by_id`) and error-raising convention (`raise ValueError`
+      on an empty/unknown/ambiguous id) already established by
+      `_tool_get_item`/`_tool_get_backlinks`, rather than reimplementing
+      the CLI's own try/except wrapper. `window`/`limit`/`stale_after`
+      accept the same defaults as `lifetxt temporal` and are validated only
+      for type (a non-integer value raises a named `ValueError`), matching
+      the issue's "remain bounded consistently with the CLI/library
+      contract" constraint -- no additional range clamping was added
+      beyond what the underlying engine already guarantees by construction
+      (a target item's neighborhood only, never an all-pairs scan). The
+      tool is registered in `READ_ONLY_TOOLS` (so the existing
+      `test_read_only_context_blocks_every_write_tool`/annotation-
+      consistency gates cover it automatically) and carries no
+      `openWorldHint`, since it never leaves the local life.txt sources.
     replacement:
       replaces: []
       replaced_by: null

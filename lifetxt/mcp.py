@@ -267,6 +267,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_command_center",
         "get_areas",
         "get_backlinks",
+        "get_temporal_context",
         "get_clock_status",
         "run_query",
         "list_saved_views",
@@ -862,6 +863,25 @@ def _tool_schemas():
             "get_backlinks",
             "Items that reference a given ID through parent/ref/depends_on/blocks/related.",
             {"id": _string("Target item ID.")},
+            required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "get_temporal_context",
+            "Bounded temporal-context-v1 facts (overdue_by/due_in/stale_since) and "
+            "same_day/before/after neighbors for one item, each with rule/source_field/"
+            "reference_time provenance.",
+            {
+                "id": _string("Target item ID."),
+                "window": _integer(
+                    "Days on either side of the target's own date to consider for "
+                    "same_day/before/after. Default 7."
+                ),
+                "limit": _integer("Maximum related items returned. Default 20."),
+                "stale_after": _integer(
+                    "Days of inactivity before stale_since applies. Default 14."
+                ),
+            },
             required=["id"],
             read_only=True,
         ),
@@ -2746,6 +2766,52 @@ def _tool_get_backlinks(args, context):
     return {"target_id": target, "count": len(records), "backlinks": records}
 
 
+def _bounded_int(args, name, default):
+    value = args.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValueError("%s must be an integer." % name)
+
+
+def _tool_get_temporal_context(args, context):
+    """Bounded temporal-context-v1 facts and neighbors for one item.
+
+    Delegates entirely to :func:`lifetxt.temporal_context.temporal_context`,
+    the same engine CLI ``lifetxt temporal`` uses; no due/staleness/
+    same_day/before/after rule is duplicated here.
+    """
+    from .temporal_context import (
+        DEFAULT_PAIR_LIMIT,
+        DEFAULT_STALE_DAYS,
+        DEFAULT_WINDOW_DAYS,
+        temporal_context,
+    )
+
+    items, _diagnostics = _read_items(context)
+    item_id = str(args.get("id") or "")
+    if not item_id:
+        raise ValueError("get_temporal_context requires 'id'.")
+    key = _id_key(context)
+    target = find_item_by_id(items, item_id, key=key)
+    if target is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+    window = _bounded_int(args, "window", DEFAULT_WINDOW_DAYS)
+    limit = _bounded_int(args, "limit", DEFAULT_PAIR_LIMIT)
+    stale_after = _bounded_int(args, "stale_after", DEFAULT_STALE_DAYS)
+    return temporal_context(
+        items,
+        target,
+        timezone_today(),
+        key=key,
+        window_days=window,
+        limit=limit,
+        stale_after_days=stale_after,
+    )
+
+
 def _tool_get_clock_status(args, context):
     from .clock_skew import clock_skew_report
 
@@ -3109,6 +3175,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_command_center", _tool_get_command_center),
         ("get_areas", _tool_get_areas),
         ("get_backlinks", _tool_get_backlinks),
+        ("get_temporal_context", _tool_get_temporal_context),
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),
         ("run_saved_view", _tool_run_saved_view),

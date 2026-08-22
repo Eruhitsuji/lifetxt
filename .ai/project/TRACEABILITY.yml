@@ -6679,7 +6679,7 @@ traceability:
       capability_id: cap-temporal-context
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/485
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/486
       changed_files_or_scope:
         - Add lifetxt/temporal_context.py (node_facts/temporal_context), a new temporal-context-v1 schema, and a lifetxt temporal CLI command
         - Reuse lifetxt.ticket_project_values.last_activity/reference_time/DEFAULT_STALE_DAYS verbatim for the staleness formula rather than reimplementing it

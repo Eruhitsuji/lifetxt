@@ -6897,6 +6897,141 @@ class LifeTxtAiDoctorCliTests(unittest.TestCase):
             return handle.read()
 
 
+class LifeTxtMcpWorkspaceTests(unittest.TestCase):
+    """`lifetxt --workspace NAME mcp`: the AI-safe workspace pattern from
+    #500 (broad read, write confined to a dedicated target). No
+    production code change; this locks in behavior that
+    ``_maybe_apply_workspace`` already provides (#509)."""
+
+    def _workspace(self, temp_dir):
+        primary = os.path.join(temp_dir, "life.txt")
+        inbox = os.path.join(temp_dir, "ai-inbox.life.txt")
+        with open(primary, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Real_Task id:t1 project:work\n")
+        with open(inbox, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("")
+        config_path = os.path.join(temp_dir, ".lifetxt.json")
+        with open(config_path, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "workspaces": {
+                        "default": {
+                            "sources": [{"path": "life.txt", "role": "primary"}],
+                            "write_file": "life.txt",
+                        },
+                        "ai": {
+                            "sources": [
+                                {
+                                    "path": "life.txt",
+                                    "role": "readonly",
+                                    "writable": False,
+                                },
+                                {
+                                    "path": "ai-inbox.life.txt",
+                                    "role": "primary",
+                                    "writable": True,
+                                },
+                            ],
+                            "write_file": "ai-inbox.life.txt",
+                        },
+                    }
+                },
+                handle,
+            )
+        return primary, inbox, config_path
+
+    def _mcp_responses(self, config_path, requests, profile="full"):
+        input_text = "".join(json.dumps(r) + "\n" for r in requests)
+        stdout, stderr, code = run_cli(
+            "--workspace",
+            "ai",
+            "--config",
+            config_path,
+            "mcp",
+            "--profile",
+            profile,
+            input_text=input_text,
+        )
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        return [json.loads(line) for line in stdout.splitlines() if line.strip()]
+
+    def test_write_target_is_confined_to_the_workspace_inbox(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary, inbox, config_path = self._workspace(temp_dir)
+
+            [response] = self._mcp_responses(
+                config_path,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "get_file_state", "arguments": {}},
+                    }
+                ],
+            )
+
+            state = json.loads(response["result"]["content"][0]["text"])
+            self.assertEqual(inbox, state["writable_path"])
+            self.assertIn(primary, state["paths"])
+            self.assertIn(inbox, state["paths"])
+
+    def test_a_write_attempt_targets_only_the_inbox_never_the_readonly_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary, inbox, config_path = self._workspace(temp_dir)
+            before_primary = self._read(primary)
+            before_inbox = self._read(inbox)
+
+            [response] = self._mcp_responses(
+                config_path,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "create_item",
+                            "arguments": {"type": "T", "title": "From AI"},
+                        },
+                    }
+                ],
+            )
+
+            payload = json.loads(response["result"]["content"][0]["text"])
+            self.assertEqual("PRECONDITION_REQUIRED", payload["error"])
+            self.assertEqual(inbox, payload["attempted_change"]["path"])
+            self.assertEqual(before_primary, self._read(primary))
+            self.assertEqual(before_inbox, self._read(inbox))
+
+    def test_reads_see_both_the_readonly_source_and_the_inbox(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary, inbox, config_path = self._workspace(temp_dir)
+            with open(inbox, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Staged_By_AI id:t2\n")
+
+            [response] = self._mcp_responses(
+                config_path,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "list_items", "arguments": {}},
+                    }
+                ],
+            )
+
+            payload = json.loads(response["result"]["content"][0]["text"])
+            titles = {item["title"] for item in payload["items"]}
+            self.assertIn("Real_Task", titles)
+            self.assertIn("Staged_By_AI", titles)
+
+    def _read(self, path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+
 class _FakeGitResult(object):
     def __init__(self, returncode=0, stdout="", stderr=""):
         self.returncode = returncode

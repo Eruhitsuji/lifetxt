@@ -7291,6 +7291,27 @@ traceability:
         integration branch.
       status: implemented
 
+    - requirement_id: req-mcp-ai-safe-workspace-validation
+      capability_id: cap-mcp-ai-safe-workspace
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/509
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/510
+      changed_files_or_scope:
+        - tests/test_lifetxt.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtMcpWorkspaceTests (3 tests)
+        - python -m unittest tests.test_lifetxt.LifeTxtMcpWorkspaceTests tests.test_extended_workspace_resolution tests.test_workspace_foundation tests.test_mcp_expansion -> Ran 186 tests, OK
+        - "live: a real disposable two-source workspace driven with real JSON-RPC lines confirmed write confinement to the workspace's write_file"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        No production code change; investigation confirmed the pattern
+        already works via lifetxt/cli.py's pre-existing
+        _maybe_apply_workspace().
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

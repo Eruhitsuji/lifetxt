@@ -58,6 +58,30 @@ class CommandCenterTests(unittest.TestCase):
         self.assertEqual(1, self.cc(person="self")["counts"]["messages"])
         self.assertEqual(0, self.cc(person="carol")["counts"]["messages"])
 
+    def test_acknowledged_message_is_excluded_from_attention(self):
+        items, _ = parse_text(
+            SAMPLE + "[ ] M Acked sender:bob recipient:self body:hi ack:2026-07-20\n"
+        )
+        cc = command_center(items, {}, TODAY)
+        self.assertNotIn("Acked", [r["title"] for r in cc["messages"]])
+        self.assertEqual(["Ping"], [r["title"] for r in cc["messages"]])
+
+    def test_actively_snoozed_message_is_excluded_from_attention(self):
+        items, _ = parse_text(
+            SAMPLE
+            + "[ ] M Snoozed sender:bob recipient:self body:hi snooze_until:2026-07-26\n"
+        )
+        cc = command_center(items, {}, TODAY)
+        self.assertNotIn("Snoozed", [r["title"] for r in cc["messages"]])
+
+    def test_expired_snooze_message_still_shows(self):
+        items, _ = parse_text(
+            SAMPLE
+            + "[ ] M Expired sender:bob recipient:self body:hi snooze_until:2026-07-24\n"
+        )
+        cc = command_center(items, {}, TODAY)
+        self.assertIn("Expired", [r["title"] for r in cc["messages"]])
+
     def test_project_attention_flags_unhealthy(self):
         cc = self.cc()
         names = [p["name"] for p in cc["project_attention"]]

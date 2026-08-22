@@ -69,6 +69,24 @@ def _status_by_id(items):
     return result
 
 
+def _message_suppressed(item, today):
+    """Ack or an active snooze suppresses a message from daily attention.
+
+    Mirrors :mod:`lifetxt.notifier`'s ack/snooze due-notification
+    suppression rule, at the same reference-*date* granularity this module
+    already uses for every other bucket (``command_center`` takes a
+    reference date, not a reference instant, so this checks whether
+    ``snooze_until`` falls on a later date than ``today`` rather than
+    comparing exact timestamps).
+    """
+    if item.details.get("ack"):
+        return True
+    snooze_until = _date_of(_first(item, "snooze_until"))
+    if snooze_until is not None and today is not None and snooze_until > today:
+        return True
+    return False
+
+
 def _is_blocked(item, status_by_id):
     for target in item.details.get("depends_on") or []:
         blocker = status_by_id.get(str(target))
@@ -119,7 +137,11 @@ def command_center(
 
     for item in items:
         if item.kind == "M":
-            if item.status in OPEN_STATUSES and _message_needs_attention(item, person):
+            if (
+                item.status in OPEN_STATUSES
+                and _message_needs_attention(item, person)
+                and not _message_suppressed(item, today)
+            ):
                 messages.append(_ref(item))
             continue
         if item.kind == "H" and item.status in OPEN_STATUSES:

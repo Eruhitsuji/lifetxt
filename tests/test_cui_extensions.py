@@ -1201,6 +1201,131 @@ class WorkspaceTodayViewTests(unittest.TestCase):
         self.assertEqual(1, state._today["counts"]["overdue"])
 
 
+class WorkspaceSavedViewAndAreaTests(unittest.TestCase):
+    """`/saved` and `/area` reuse lifetxt.saved_views/lifetxt.areas unmodified."""
+
+    SAMPLE = (
+        "[ ] T Write_Report id:t1 project:work due:2099-12-31 priority:high\n"
+        "[ ] T Ship_Release id:t2 project:core\n"
+        "[ ] T Buy_Milk id:t3 project:home area:home\n"
+    )
+
+    def _state(self, text=None, config=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(self.SAMPLE if text is None else text)
+        args = argparse.Namespace(paths=[path], config_data=config or {})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
+        state.reload()
+        return state, path
+
+    def test_saved_with_no_argument_lists_configured_views(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, _path = self._state(config=config)
+
+        level, message = tui_app.run_command(state, "/saved")
+
+        self.assertEqual("info", level)
+        self.assertIn("urgent", message)
+
+    def test_saved_with_no_views_configured_reports_none(self):
+        state, _path = self._state()
+
+        level, message = tui_app.run_command(state, "/saved")
+
+        self.assertEqual("info", level)
+        self.assertIn("No saved views", message)
+
+    def test_saved_name_filters_rows_to_the_view_result(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, _path = self._state(config=config)
+
+        level, _message = tui_app.run_command(state, "/saved urgent")
+        state.refresh()
+
+        self.assertEqual("info", level)
+        self.assertEqual("urgent", state.saved_view)
+        self.assertEqual(["Write_Report"], [row["title"] for row in state.rows])
+
+    def test_saved_unknown_name_fails_loudly(self):
+        state, _path = self._state()
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/saved nope")
+
+        self.assertIn("nope", str(caught.exception))
+
+    def test_area_with_no_argument_lists_areas(self):
+        state, _path = self._state()
+
+        level, message = tui_app.run_command(state, "/area")
+
+        self.assertEqual("info", level)
+        self.assertIn("home", message)
+
+    def test_area_name_filters_rows_to_that_area(self):
+        state, _path = self._state()
+
+        level, _message = tui_app.run_command(state, "/area home")
+        state.refresh()
+
+        self.assertEqual("info", level)
+        self.assertEqual("home", state.area)
+        self.assertEqual(["Buy_Milk"], [row["title"] for row in state.rows])
+
+    def test_area_unknown_name_fails_loudly(self):
+        state, _path = self._state()
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/area nope")
+
+        self.assertIn("nope", str(caught.exception))
+
+    def test_saved_and_area_filters_are_mutually_exclusive(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, _path = self._state(config=config)
+
+        tui_app.run_command(state, "/saved urgent")
+        self.assertEqual("urgent", state.saved_view)
+
+        tui_app.run_command(state, "/area home")
+        self.assertIsNone(state.saved_view)
+        self.assertEqual("home", state.area)
+
+    def test_clear_resets_saved_view_and_area(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, _path = self._state(config=config)
+        tui_app.run_command(state, "/saved urgent")
+
+        tui_app.run_command(state, "/clear")
+
+        self.assertIsNone(state.saved_view)
+        self.assertIsNone(state.area)
+        self.assertIsNone(state._saved_view_keys)
+
+    def test_reload_keeps_the_saved_view_filter_fresh(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, path = self._state(config=config)
+        tui_app.run_command(state, "/saved urgent")
+        state.refresh()
+        self.assertEqual(1, len(state.rows))
+
+        with open(path, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Another_Urgent id:t4 priority:high\n")
+        state.reload()
+
+        self.assertEqual(2, len(state.rows))
+
+    def test_context_label_shows_the_active_saved_view_and_area(self):
+        config = {"saved_views": {"urgent": "priority:high"}}
+        state, _path = self._state(config=config)
+        tui_app.run_command(state, "/saved urgent")
+
+        self.assertIn("saved:urgent", tui_app._context_label(state))
+
+
 class WorkspaceKeymapRegressionTests(unittest.TestCase):
     """Regressions for the two reported TUI bugs."""
 

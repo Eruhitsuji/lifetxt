@@ -6772,6 +6772,45 @@ traceability:
         follow-ups per #479's own scope.
       status: implemented
 
+    - requirement_id: req-tui-saved-views-and-area-switching
+      capability_id: cap-query-saved-views-and-areas
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/483
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/487
+      changed_files_or_scope:
+        - Add /saved [NAME] (list configured saved views, or apply one as the active row filter via lifetxt.saved_views.run_saved_view)
+        - Add /area [NAME] (list areas with progress via lifetxt.areas.area_list, or filter rows to one area via lifetxt.areas.collect_areas)
+        - Reset both filters from the existing /clear command; persist both across sessions via the existing SESSION_FIELDS mechanism; keep both fresh across /reload by recomputing the active filter's (source, line) membership in load()
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_cui_extensions.py WorkspaceSavedViewAndAreaTests (11 tests)
+        - python -m unittest tests.test_cui_extensions -> Ran 147 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /saved and /area)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Implements #480's investigation and recommendation: TUI first
+        (matching an already-established `/project`/`/context`/`/tag`
+        filter-command pattern, and avoiding the naming collision `/view`
+        already carries on both TUI and Web). No query grammar or
+        area-membership logic is duplicated in `lifetxt/tui_app.py`; both
+        commands adapt the (source, line) identity every row already
+        carries to `run_saved_view`/`collect_areas`'s own results, and both
+        reuse the exact ValueError message
+        `lifetxt.saved_views`/`lifetxt.areas` already raise for an unknown
+        name. `/saved` and `/area` are mutually exclusive (applying one
+        clears the other, matching the "one active filter of this kind"
+        model). The Web counterpart (#484) remains an explicit,
+        unimplemented follow-up.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

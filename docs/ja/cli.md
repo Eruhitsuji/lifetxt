@@ -1566,6 +1566,8 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | `/project NAME` | `project:` で filter (値なしで解除) |
 | `/context NAME` | `context:` で filter (値なしで解除) |
 | `/tag NAME` | `tag:` で filter (先頭の `#` は省略可) |
+| `/saved [NAME]` | saved view の一覧表示、または指定した view を active filter として適用 |
+| `/area [NAME]` | area の一覧表示 (progress 付き)、または指定した area で row を filter |
 | `/sort natural\|due\|priority\|title\|status` | 並び順を変更 |
 | `/clear` | filter と mark をすべて解除 |
 | `/goto ID` | 指定 id の行へ選択を移動 |

@@ -7267,6 +7267,30 @@ traceability:
         req-mcp-generic-setup-command.
       status: implemented
 
+    - requirement_id: req-life-philosophy-documentation
+      capability_id: cap-life-philosophy-documentation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/506
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - docs/en/philosophy.md
+        - docs/ja/philosophy.md
+        - readme.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+        - .ai/project/RULES.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK
+        - git diff --check -- readme.md docs/en/readme.md docs/ja/readme.md .ai/project/RULES.md docs/en/philosophy.md docs/ja/philosophy.md -> clean
+      release_or_deployment: null
+      notes: >-
+        Documentation-only; no runtime/Format/API/schema/MCP behavior
+        change. Lands in the same PR (#504) as the unrelated #502/#505/#507
+        MCP work, per explicit user instruction to use one shared
+        integration branch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

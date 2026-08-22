@@ -15,6 +15,8 @@ from __future__ import unicode_literals
 
 from collections import OrderedDict
 
+from .inbox import inbox_summary
+from .nextaction import next_action_items
 from .projects import collect_projects, compute_health
 from .timeutil import parse_date_or_datetime
 
@@ -79,13 +81,29 @@ def _is_blocked(item, status_by_id):
 
 
 def command_center(
-    items, config=None, today=None, horizon_days=3, person=None, mode="today"
+    items,
+    config=None,
+    today=None,
+    horizon_days=3,
+    person=None,
+    mode="today",
+    next_actions_limit=None,
+    inbox_limit=5,
 ):
     """Build the daily command-center aggregation.
 
     ``mode`` is advisory metadata for briefs (``today``/``morning``/``evening``);
     the buckets themselves are always computed so any surface can pick what to
     render. ``person`` scopes unacknowledged messages to a recipient.
+
+    ``next_actions`` reuses :func:`lifetxt.nextaction.next_action_items` --
+    the same actionable-item definition ``next``, the TUI ``/next`` view, and
+    the MCP ``get_next_actions`` tool already share -- so this aggregation
+    never carries a second definition of "actionable". ``inbox`` reuses
+    :func:`lifetxt.inbox.inbox_summary` for the pending/deferred proposal
+    counts, then bounds the pending list to ``inbox_limit`` entries with only
+    the minimal fields a daily overview needs; the operational proposal store
+    itself is never duplicated here.
     """
     config = config or {}
     status_by_id = _status_by_id(items)
@@ -134,6 +152,8 @@ def command_center(
 
     project_attention = _project_attention(items, config, today)
     safety = _safety_summary(config)
+    next_actions = _next_actions(items, next_actions_limit)
+    inbox = _inbox_section(config, inbox_limit)
 
     return OrderedDict(
         (
@@ -146,9 +166,11 @@ def command_center(
             ("upcoming", upcoming),
             ("blocked", blocked),
             ("waiting", waiting),
+            ("next_actions", next_actions),
             ("habits", habits),
             ("messages", messages),
             ("captures", captures),
+            ("inbox", inbox),
             ("project_attention", project_attention),
             ("safety", safety),
             (
@@ -160,13 +182,62 @@ def command_center(
                         ("upcoming", len(upcoming)),
                         ("blocked", len(blocked)),
                         ("waiting", len(waiting)),
+                        ("next_actions", len(next_actions)),
                         ("habits", len(habits)),
                         ("messages", len(messages)),
                         ("captures", len(captures)),
+                        ("inbox_pending", inbox["pending_count"]),
                         ("projects_need_attention", len(project_attention)),
                     )
                 ),
             ),
+        )
+    )
+
+
+def _next_actions(items, limit):
+    """The shared actionable-next-step list, mapped through the same ``_ref``.
+
+    Delegates entirely to :func:`lifetxt.nextaction.next_action_items` for
+    both the actionable predicate and the priority/due/age ordering; this
+    function only adapts the result to the command-center reference shape.
+    """
+    actionable = next_action_items(items, limit=limit)
+    return [_ref(item) for item in actionable]
+
+
+def _inbox_section(config, limit):
+    """Bounded Unified Inbox summary, built from :func:`inbox_summary`.
+
+    Counting and status filtering stay in ``lifetxt.inbox``; this only trims
+    the pending list to ``limit`` entries and narrows each proposal down to
+    the minimal fields a daily overview needs (never the full operational
+    record, which may carry the entire proposed change).
+    """
+    summary = inbox_summary(config)
+    counts = summary.get("counts") or {}
+    pending = summary.get("pending") or []
+    limit = max(0, int(limit or 0))
+    return OrderedDict(
+        (
+            ("total", summary.get("total", 0)),
+            ("pending_count", counts.get("pending", 0)),
+            ("deferred_count", counts.get("deferred", 0)),
+            ("counts", OrderedDict(counts)),
+            ("pending", [_proposal_ref(p) for p in pending[:limit]]),
+        )
+    )
+
+
+def _proposal_ref(proposal):
+    changes = proposal.get("changes") or []
+    change = changes[0] if changes and isinstance(changes[0], dict) else {}
+    return OrderedDict(
+        (
+            ("id", proposal.get("id")),
+            ("source", proposal.get("source")),
+            ("created", proposal.get("created")),
+            ("summary", str(change.get("title") or "")),
         )
     )
 

@@ -34,9 +34,30 @@ def schema_bundle_v7():
                         "upcoming": item_ref,
                         "blocked": item_ref,
                         "waiting": item_ref,
+                        "next_actions": item_ref,
                         "habits": item_ref,
                         "messages": item_ref,
                         "captures": item_ref,
+                        "inbox": {
+                            "type": "object",
+                            "properties": {
+                                "total": {"type": "integer", "minimum": 0},
+                                "pending_count": {"type": "integer", "minimum": 0},
+                                "deferred_count": {"type": "integer", "minimum": 0},
+                                "counts": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                    },
+                                },
+                                "pending": {
+                                    "type": "array",
+                                    "items": {"type": "object"},
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
                         "project_attention": {
                             "type": "array",
                             "items": {"type": "object"},
@@ -87,12 +108,37 @@ def schema_samples_v7():
                     "upcoming": [],
                     "blocked": [],
                     "waiting": [],
+                    "next_actions": [{"title": "Design", "kind": "T", "status": "[ ]"}],
                     "habits": [],
                     "messages": [],
                     "captures": [],
+                    "inbox": {
+                        "total": 1,
+                        "pending_count": 1,
+                        "deferred_count": 0,
+                        "counts": {
+                            "pending": 1,
+                            "accepted": 0,
+                            "rejected": 0,
+                            "deferred": 0,
+                        },
+                        "pending": [
+                            {
+                                "id": "P-1a2b3c4d",
+                                "source": "manual",
+                                "created": "2026-07-24T09:00:00",
+                                "summary": "Review Q3 plan",
+                            }
+                        ],
+                    },
                     "project_attention": [],
                     "safety": {"config_errors": 0, "config_warnings": 0, "ok": True},
-                    "counts": {"overdue": 1, "due_today": 0},
+                    "counts": {
+                        "overdue": 1,
+                        "due_today": 0,
+                        "next_actions": 1,
+                        "inbox_pending": 1,
+                    },
                 },
             ),
             (

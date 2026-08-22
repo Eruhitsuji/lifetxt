@@ -6564,6 +6564,117 @@ traceability:
         new implementation, only planning/governance records.
       status: implemented
 
+    - requirement_id: req-command-center-next-actions-and-inbox
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/475
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Extend command_center() with a next_actions bucket reusing lifetxt.nextaction.next_action_items and a bounded inbox summary reusing lifetxt.inbox.inbox_summary
+        - Extend command-center-v1's schema generator and sample, and regenerate the published schema
+        - lifetxt/command_center.py
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterTests.test_next_actions_reuses_the_shared_actionable_definition, test_next_actions_limit_bounds_the_list_without_changing_order, test_inbox_is_empty_when_no_proposals_are_staged, test_inbox_reports_pending_and_deferred_counts_and_bounded_summary, test_inbox_pending_never_exposes_the_full_operational_record
+        - python -m unittest tests.test_life_hub -> Ran 21 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (bundle equality against the regenerated dist/schemas/command-center-v1.schema.json, plus draft 2020-12 validation of the extended sample)
+        - python -m unittest tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK (no regression in the two reused engines or the unmodified MCP get_command_center tool)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #472 post-Stable Daily Command
+        Center theme, following #473's investigation. No parallel
+        aggregation engine, storage model, or authoritative record kind was
+        introduced: next_actions and inbox both delegate to their existing
+        engines and only adapt/bound the result. lifetxt/cli.py's
+        command_today text renderer was left unmodified, per #475's own
+        write scope; its --json output and the MCP get_command_center tool
+        already surface the new fields with no code change on their side.
+      status: implemented
+
+    - requirement_id: req-tui-today-view
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/476
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Add a Today view/`/today` command to the interactive TUI, rendering the shared command_center() result grouped as NOW/ATTENTION/INBOX/UPCOMING
+        - Compute WorkspaceState._today in load() via a direct command_center() call, alongside the existing dashboard_model() parse
+        - Add `today` to WORKSPACE_VIEWS and the `/view` command's usage/values
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests)
+        - python -m unittest tests.test_cui_extensions -> Ran 147 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /today and widening /view's usage string)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. No due/blocked/waiting/next-action/
+        inbox rule is duplicated in lifetxt/tui_app.py: every row and count
+        in the Today view comes directly from the same command_center()
+        object CLI today and MCP get_command_center already build. The
+        pre-existing tasks/agenda/status dashboard model
+        (lifetxt.tui.dashboard_model) is unchanged and remains the data
+        source for every other TUI view. Read-only by design, matching
+        #476's own scope; editing/accepting Inbox proposals from the Today
+        view is an explicit, unimplemented follow-up.
+      status: implemented
+
+    - requirement_id: req-web-command-center-endpoint
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/477
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Add GET /api/command-center, delegating entirely to command_center() with horizon/person/mode query parameters and the standard 400 error shape for an invalid horizon
+        - Add a WEB_COMMAND_NOTES entry for /today, matching the existing pattern that explains every TUI-only command instead of silently omitting it from the browser command palette
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_returns_the_canonical_shape, test_command_center_api_matches_the_direct_engine_call, test_command_center_api_respects_horizon_and_person_parameters, test_command_center_api_invalid_horizon_returns_400, test_command_center_api_available_on_a_read_only_client
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests -> Ran 27 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_web_i18n tests.test_web_commands -> Ran 61 tests, OK (no capability/command-catalog drift; WEB_COMMANDS/WEB_COMMAND_NOTES completeness gates confirm /today is covered; no i18n regression)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. The route contains no
+        due/blocked/waiting/next-action/inbox calculation of its own; it
+        reads input, resolves the same horizon/person/mode parameters CLI
+        today and MCP get_command_center already accept, and returns
+        command_center()'s result unchanged. No Web UI bundle change was
+        made, per #477's own scope; rendering this endpoint in the browser
+        Dashboard remains an explicit, unimplemented follow-up. Found while
+        reviewing the diff that /today (added by #476) was the only TUI
+        command with neither Web support nor a WEB_COMMAND_NOTES entry,
+        which the browser command palette's own design explicitly guards
+        against (see webapp.py's get_commands() docstring); added the
+        matching note within this task's own write scope (lifetxt/webapp.py)
+        rather than leaving the palette silently omit an explanation.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -1881,8 +1881,9 @@ the MCP `complete` tool return.
 | Command | Purpose |
 | --- | --- |
 | `/help [QUERY]` | Toggle the reference, or search it (`/help timer`) |
-| `/view all\|tasks\|agenda\|status\|next` | Switch which sections are listed |
+| `/view all\|tasks\|agenda\|status\|next\|today` | Switch which sections are listed |
 | `/next` | Open, unblocked, non-someday actions ordered by priority |
+| `/today` | Show the Daily Command Center: now, attention, inbox, upcoming |
 | `/search TEXT` | Fuzzy filter every listed row |
 | `/project NAME` | Filter by `project:` (empty value clears it) |
 | `/context NAME` | Filter by `context:` (empty value clears it) |

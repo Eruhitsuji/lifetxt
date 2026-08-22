@@ -118,6 +118,7 @@ WEB_COMMAND_NOTES = {
     "undo": "Use the undo toast or the undo history panel.",
     "mark": "Selects rows; the browser uses checkboxes and the x key.",
     "detail": "Opens the detail drawer for the selected record.",
+    "today": "Not yet available in the browser; GET /api/command-center serves the same data for a future Dashboard view.",
 }
 
 
@@ -738,6 +739,39 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         active_only = _bool_query(active)
         records = latest_status_records(items, person=person, active_only=active_only)
         return {"count": len(records), "records": records}
+
+    @app.get("/api/command-center")
+    def get_command_center_route(horizon=None, person=None, mode="today"):
+        """The canonical Daily Command Center, unchanged from CLI/MCP.
+
+        Delegates entirely to :func:`lifetxt.command_center.command_center`;
+        this route only reads input, resolves query parameters, and returns
+        the same object shape CLI ``today`` and MCP ``get_command_center``
+        already produce.
+        """
+        from .command_center import command_center
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        horizon_days = 3
+        if horizon is not None and str(horizon) != "":
+            try:
+                horizon_days = int(horizon)
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=400,
+                    detail=error_detail(
+                        ValueError("horizon must be an integer number of days.")
+                    ),
+                )
+        return command_center(
+            items,
+            app.state.config,
+            timezone_today(),
+            horizon_days=horizon_days,
+            person=person,
+            mode=str(mode or "today"),
+        )
 
     @app.get("/api/notifications")
     def get_notifications(recipient=None, lookahead=None, grace=None, limit=None):

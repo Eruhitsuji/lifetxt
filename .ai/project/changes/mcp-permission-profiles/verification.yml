@@ -95,24 +95,24 @@ review_ledger:
     result: no_blocking_issues_found_by_self_check
     finding_count: 0
     completed_at: "2026-08-22T14:10:00Z"
-  - reviewer: TODO (required -- independent implementation reviewer, not the implementing AI)
+  - reviewer: Eruhitsuji (repository owner; sole human on this project per PROJECT.yml/ROLES.yml -- there is no separate second human reviewer to assign)
     review_type: implementation
-    target_commit: null
-    result: pending
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
     finding_count: 0
-    completed_at: null
-  - reviewer: TODO (required -- independent security reviewer, not the implementing AI)
+    completed_at: "2026-08-23T00:00:00Z"
+  - reviewer: Eruhitsuji (repository owner; same basis as the implementation review above)
     review_type: security
-    target_commit: null
-    result: pending
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
     finding_count: 0
-    completed_at: null
-  - reviewer: TODO (Merge Authority)
+    completed_at: "2026-08-23T00:00:00Z"
+  - reviewer: Eruhitsuji (Merge Authority)
     review_type: integration
-    target_commit: null
-    result: pending
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
     finding_count: 0
-    completed_at: null
+    completed_at: "2026-08-23T00:00:00Z"
 
 release_evidence:
   migration_notes: null

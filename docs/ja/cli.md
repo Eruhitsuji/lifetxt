@@ -1559,8 +1559,9 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | command | 用途 |
 | --- | --- |
 | `/help [QUERY]` | 一覧の表示切り替え、または検索 (`/help timer`) |
-| `/view all\|tasks\|agenda\|status\|next` | 表示する section を切り替え |
+| `/view all\|tasks\|agenda\|status\|next\|today` | 表示する section を切り替え |
 | `/next` | 未完了・blocked でない・someday でない次の行動を priority 順に表示 |
+| `/today` | Daily Command Center を表示: now、attention、inbox、upcoming |
 | `/search TEXT` | 全 row を fuzzy filter |
 | `/project NAME` | `project:` で filter (値なしで解除) |
 | `/context NAME` | `context:` で filter (値なしで解除) |

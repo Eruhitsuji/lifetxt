@@ -64,7 +64,8 @@ $ lifetxt proposal show P-12471d4d
   "id": "P-12471d4d",
   "operation": "create",
   "source": "manual",
-  "expected_revision": "",
+  "expected_revision": "9a1c...e7f2",
+  "staged_target": "life.txt",
   "changes": [
     {
       "op": "create",
@@ -76,10 +77,19 @@ $ lifetxt proposal show P-12471d4d
   ],
   "warnings": [],
   "status": "pending",
-  "provenance": {},
+  "provenance": { "source": "manual" },
   "created": "2026-08-10T10:30:19"
 }
 ```
+
+`expected_revision` と `staged_target` は staging 時に自動的に記録されます。
+`staged_target` は `proposal accept` が解決するのと同じ既定の書き込み先
+（`inbox.write_file`、なければ最初の configured path、それもなければ
+`life.txt`）で、`expected_revision` はその時点でのそのファイルの実際の
+content-hash revision です（ファイルがまだ存在しない場合は sentinel の
+`"<missing>"`）。`provenance` は現時点では上の `source` フィールドを
+そのまま記録するだけです。この2フィールドが承認時にどう使われるかは
+[陳腐化](#陳腐化) を参照してください。
 
 `proposal show` は常に完全な JSON レコードを表示します。プレーンテキスト形式は
 ありません。`proposal list` の `--status` は `pending`・`accepted`・`rejected`・
@@ -138,6 +148,13 @@ $ lifetxt proposal defer P-8
 異なりますが、どちらも有効な life.txt 構文であり `lifetxt check` はどちらの
 形式も受理します。
 
+ticket 形状の提案（`--kind T` に `record:ticket` detail と `id:` を持つもの）は、
+`lifetxt ticket new` と同じ `created` `record:ticket_event` を同じ書き込みで
+追記します — 詳細は
+[tickets.md](tickets.md#ワークフロー追記専用履歴時間記録) を参照してください。
+ticket 形状でない提案、または `id:` を欠く ticket 形状の提案（staging は
+`ticket new` のように自動で id を生成しません）はこの影響を受けません。
+
 既に承認済みの提案・未知の ID・承認後の編集/再承認は、すべて黙って無視される
 のではなくエラーとして報告されます。
 
@@ -163,14 +180,44 @@ Applied 1/2.
 
 （終了コードは、バッチ内の全 ID が適用された場合のみ0になります。ここでは
 有効な ID が成功したにもかかわらず1です。）`batch_apply` はバッチ全体に対する
-任意の `expected_revision` を受け付け、最初の成功した追記の後にそれをクリアします
-（その時点でファイルのリビジョンは既に変わっているため）— ただし CLI の
-`proposal accept` はそもそも `expected_revision` を渡さないため、CLI からの
-承認は一括であろうとなかろうと常にリビジョンの前提条件なしで追記します。
-それでも各承認は他のあらゆる場所で使われるのと同じ検証済み・アトミックな
-ライターである `append_life_records` を通るため、対象ファイルへの外部からの
-同時編集は書き込み自体で検知されます — ただしバッチ開始前に観測したリビジョンへ
-固定しているわけではありません。
+任意の `expected_revision` を受け付け、最初の成功した追記の後にそれをクリアします。
+CLI の `proposal accept` はそもそも `expected_revision` を渡さないため、通常の
+承認は staging 時に記録された各提案自身の `staged_target`/`expected_revision`
+に依存します（[陳腐化](#陳腐化) 参照）。呼び出し側が渡す revision には
+依存しません。
+
+## 陳腐化
+
+提案を承認する際は、staging 時に記録された revision に対してワークスペースを
+チェックします。現時点で書き込み先ファイルが何を含んでいるかだけを見るのでは
+ありません。
+
+```console
+$ lifetxt proposal accept P-12471d4d
+ERROR: P-12471d4d: Proposal 'P-12471d4d' is stale: life.txt changed since it
+  was staged. Review the current file and re-stage if the change still
+  applies.
+Applied 0/1.
+```
+
+これは、承認先が提案自身の `staged_target` と一致し、かつ書き込み先の現在の
+content hash が `expected_revision` と一致しなくなっている場合（= staging 後に
+何か他のものがファイルを変更した場合）に発生します。以下の場合は発生**しません**:
+
+- `staged_target` とは異なるファイルへ承認する場合（記録された revision は
+  そのファイルを説明していないため、比較せずスキップされます）。
+- 呼び出し側が `accept`/`batch_apply` に明示的な `expected_revision` を渡す
+  場合（常に提案自身が持つ値より優先されます）。
+- `lifetxt proposal accept P-1 P-2 P-3` のような1回のバッチ呼び出しで、
+  同じバッチ内の**2件目以降**の提案を承認する場合 —
+  バッチ内の先行する各書き込みは、そのバッチ内の後続の提案が staging 時に
+  見ていた状態を追い越すことが想定されているため、バッチ内最初の提案だけが
+  自分自身の staging 時 snapshot と照合されます。
+
+staging 時の check が適用されない場合でも、外部からの同時編集は依然として
+検知されます。すべての承認は他のあらゆる場所で使われるのと同じ検証済み・
+アトミックなライターである `append_life_records` を通るため、書き込みの
+瞬間に現在の revision に対する独自の compare-and-set が行われます。
 
 ## 設定
 

@@ -21,7 +21,7 @@ import uuid
 from collections import OrderedDict
 
 from .atomic import atomic_write_text
-from .config import config_paths, config_section, config_write_file
+from .config import config_paths, config_section, config_user_name, config_write_file
 from .model import Item
 from .mutation import MutationConflict
 from .serializer import item_to_line
@@ -229,17 +229,48 @@ def _create_change(proposal):
     return None
 
 
-def proposal_to_line(proposal):
+def proposal_item(proposal):
+    """The :class:`~lifetxt.model.Item` a create proposal's change describes,
+    without serializing it -- shared by ``proposal_to_line`` and by
+    ``apply_proposal``'s ticket-shape detection so both read the identical
+    object rather than parsing the change dict twice."""
     change = _create_change(proposal)
     if change is None:
         raise ValueError("Proposal has no create change.")
-    item = Item(
+    return Item(
         status=change.get("status") or "[ ]",
         kind=change.get("kind") or "T",
         title=change.get("title") or "",
         details=change.get("details") or {},
     )
-    return item_to_line(item)
+
+
+def proposal_to_line(proposal):
+    return item_to_line(proposal_item(proposal))
+
+
+def _ticket_creation_event_line(item, config):
+    """A companion ``record:ticket_event`` line for a ticket-shaped create
+    proposal, or ``None`` when the proposal is not ticket-shaped or lacks the
+    ``id:`` a ticket contract requires (staging does not auto-generate one
+    the way ``ticket new`` does, so a proposal missing it cannot get a
+    meaningful event either)."""
+    from .ticket_project_values import is_ticket
+
+    if not is_ticket(item):
+        return None
+    ticket_id = (item.details.get("id") or [None])[0]
+    if not ticket_id:
+        return None
+    from .ticket_activity import build_creation_event
+
+    author = (item.details.get("assignee") or [None])[0] or config_user_name(config)
+    project = (item.details.get("project") or [None])[0]
+    tracker = (item.details.get("tracker") or [None])[0]
+    event = build_creation_event(
+        ticket_id, author=author, project=project, tracker=tracker
+    )
+    return item_to_line(event)
 
 
 def apply_proposal(
@@ -259,10 +290,19 @@ def apply_proposal(
     :func:`batch_apply` accept several proposals staged before any of them
     were applied without each later one seeing an earlier one's own
     just-written change as external staleness.
+
+    A ticket-shaped create proposal (``record:ticket`` on a ``T`` item, with
+    an ``id:``) also gets its ``record:ticket_event`` creation entry
+    appended in the same write, matching what ``ticket new`` produces --
+    accepting such a proposal is no longer indistinguishable, in the audit
+    trail, from a ticket that was never audited at all.
     """
     from .write_operations import append_life_records
 
-    line = proposal_to_line(proposal)
+    item = proposal_item(proposal)
+    line = item_to_line(item)
+    event_line = _ticket_creation_event_line(item, config)
+    text = line if event_line is None else line + "\n" + event_line
     revision = expected_revision
     if (
         revision is None
@@ -273,7 +313,7 @@ def apply_proposal(
     try:
         result = append_life_records(
             target,
-            line + "\n",
+            text + "\n",
             expected_revision=revision,
             operation="inbox.accept",
         )
@@ -284,7 +324,7 @@ def apply_proposal(
             "applies." % (proposal.get("id"), target)
         )
     set_status(config, proposal["id"], "accepted")
-    return OrderedDict(
+    outcome = OrderedDict(
         (
             ("id", proposal["id"]),
             ("applied", True),
@@ -293,9 +333,14 @@ def apply_proposal(
             ("result", result),
         )
     )
+    if event_line is not None:
+        outcome["event_line"] = event_line
+    return outcome
 
 
-def accept(config, proposal_id, target, expected_revision=None, use_staged_revision=True):
+def accept(
+    config, proposal_id, target, expected_revision=None, use_staged_revision=True
+):
     proposal = get_proposal(config, proposal_id)
     if proposal is None:
         raise ValueError("Unknown proposal %r." % proposal_id)

@@ -252,6 +252,13 @@ capability discoveryはローカルのチケットrevision契約と型付きカ�
 
 ## ワークフロー・追記専用履歴・時間記録
 
+`ticket new` は新しい ticket と同じ追記の中で `created` の
+`record:ticket_event` を書き込みます。そのため ticket の履歴は最初の遷移
+時点で初めて event が現れるのではなく、常に監査エントリから始まります。
+ticket 形状の Unified Inbox 提案の承認（[inbox.md](inbox.md) 参照）も同様で、
+AI や外部から提案された ticket が、監査履歴上まったく監査されなかった
+ticket と見分けが付かなくなることはありません。
+
 監査履歴付きの操作は `ticket-workflow-v1` を使用します。既定の遷移グラフは、
 トリアージ・担当・作業中・レビュー・テスト・情報待ち／ブロック・終端状態・
 再オープンを扱います。`ticketing.workflow.transitions` では、遷移元、許可role、

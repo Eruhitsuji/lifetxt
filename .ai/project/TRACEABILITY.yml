@@ -6528,6 +6528,42 @@ traceability:
         own deferred-item disposition.
       status: implemented
 
+    - requirement_id: req-post-stable-roadmap-rebaseline
+      capability_id: cap-stable-release-governance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/471
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/474
+      changed_files_or_scope:
+        - Rebaseline the roadmap after v1.0.0 into a post-Stable priority model, reclassify the remaining stabilization-era issues, and select the next product-development themes
+        - todo.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml and .ai/project/TRACEABILITY.yml after the post_stable_roadmap section addition
+        - 'all 18 still-open stabilization-era issues named in #454''s deferred_from_gate list (#288-#292, #297-#299, #304, #312-#314, #315-#316, #317-#318, #437, #453) carry an explicit post_stable_quality or maintenance_or_correctness classification in .ai/project/STABLE_RELEASE.yml''s post_stable_roadmap.reclassified_issues; none were closed or reclassified obsolete_or_superseded, since #454''s deferred_item_disposition confirms none are obsolete'
+        - '#283 and #339 are recorded under post_stable_roadmap.trackers_preserved_as_historical rather than closed, satisfying the acceptance criterion that they remain historical trackers'
+        - 'todo.md no longer has a "P0: Release Safety and Correctness" heading; the equivalent content is retitled "P2: Reliability and Real-Environment Verification (Post-Stable, Non-Blocking)" and moved after the P1/P2 product sections, immediately before Deferred Ideas'
+        - python -c "import re; text=open('todo.md',encoding='utf-8').read(); assert not re.search(r'\n{3,}', text)" -> no multi-blank-line drift introduced
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance planning task. Reuses cap-stable-release-governance
+        rather than creating a new capability, since this is the same
+        STABLE_RELEASE.yml-as-authoritative-policy pattern #284-#287/#454
+        already established, extended to the post-Stable phase. Selected and
+        confirmed with the repository owner via AskUserQuestion (theme
+        selection and execution mode are both flagged in #471's own task
+        contract as needing human sign-off): theme 1, Unified Inbox + Daily
+        Command Center + Saved Views/life-area navigation, tracked by #472
+        (epic) with #473 as the first bounded design-investigation issue;
+        themes 2 (Project & Portfolio Hub exposure) and 3 (ticket workflow
+        usability) are recorded in priority order in both todo.md and
+        STABLE_RELEASE.yml but have no tracker issue yet, per #471's own
+        instruction not to implement product features in this task. No
+        `.ai/project/CAPABILITIES.yml` change was needed: this task adds no
+        new implementation, only planning/governance records.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

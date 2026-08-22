@@ -6862,7 +6862,7 @@ traceability:
       capability_id: cap-temporal-context
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/489
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/491
       changed_files_or_scope:
         - Add a read-only MCP tool get_temporal_context delegating entirely to lifetxt.temporal_context.temporal_context()
         - Register it in READ_ONLY_TOOLS, the tool schema list, and TOOL_HANDLERS

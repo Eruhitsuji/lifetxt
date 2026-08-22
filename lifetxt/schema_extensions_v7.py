@@ -62,6 +62,10 @@ def schema_bundle_v7():
                             "type": "array",
                             "items": {"type": "object"},
                         },
+                        "ticket_attention": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        },
                         "safety": {"type": "object"},
                         "counts": counts,
                     },
@@ -132,6 +136,7 @@ def schema_samples_v7():
                         ],
                     },
                     "project_attention": [],
+                    "ticket_attention": [],
                     "safety": {"config_errors": 0, "config_warnings": 0, "ok": True},
                     "counts": {
                         "overdue": 1,

@@ -6600,6 +6600,42 @@ traceability:
         already surface the new fields with no code change on their side.
       status: implemented
 
+    - requirement_id: req-tui-today-view
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/476
+      pull_request: null
+      changed_files_or_scope:
+        - Add a Today view/`/today` command to the interactive TUI, rendering the shared command_center() result grouped as NOW/ATTENTION/INBOX/UPCOMING
+        - Compute WorkspaceState._today in load() via a direct command_center() call, alongside the existing dashboard_model() parse
+        - Add `today` to WORKSPACE_VIEWS and the `/view` command's usage/values
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests)
+        - python -m unittest tests.test_cui_extensions -> Ran 147 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /today and widening /view's usage string)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. No due/blocked/waiting/next-action/
+        inbox rule is duplicated in lifetxt/tui_app.py: every row and count
+        in the Today view comes directly from the same command_center()
+        object CLI today and MCP get_command_center already build. The
+        pre-existing tasks/agenda/status dashboard model
+        (lifetxt.tui.dashboard_model) is unchanged and remains the data
+        source for every other TUI view. Read-only by design, matching
+        #476's own scope; editing/accepting Inbox proposals from the Today
+        view is an explicit, unimplemented follow-up.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -81,6 +81,7 @@ tools.
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
+| `GET` | `/api/command-center` | The canonical Daily Command Center: overdue/due-today/upcoming, blocked, waiting, next actions, habits, messages, captures, a bounded Unified Inbox summary, project attention, and a safety signal |
 | `GET` | `/api/review` | Review report for a date window: completed tasks, habit completion, journal entries, mood trend, and elapsed time |
 | `GET` | `/api/commands` | The slash-command catalog, shared with the TUI |
 | `GET` | `/api/timer` | The running timer, if any |
@@ -112,6 +113,16 @@ keeps or removes blocked records. Repeated records that are expanded at
 request time include `generated: true`, `source_id`, `occurrence_start`,
 `occurrence_end`, `occurrence_index`, and `repeat_rule` when available; the API
 does not write generated occurrences back to the source file.
+
+`GET /api/command-center` returns exactly the object
+`lifetxt.command_center.command_center()` builds -- the same aggregation CLI
+`today` and MCP `get_command_center` already use, including `next_actions`
+(the shared actionable-item definition also behind `next` and the TUI
+`/next` view) and a bounded `inbox` summary of pending/deferred Unified
+Inbox proposals. Accepts `?horizon=N` (days, default 3), `?person=NAME`
+(scopes unacknowledged messages), and `?mode=today|morning|evening`
+(presentation metadata only; every bucket is always computed). See
+[life-hub.md](life-hub.md) for the full bucket list.
 
 Example item payload:
 

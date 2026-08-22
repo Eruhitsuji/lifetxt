@@ -4585,3 +4585,59 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-ai-doctor
+    name: AI doctor for direct MCP setup
+    summary: >-
+      A read-only lifetxt ai doctor command checking whether a workspace
+      will load, parse, and resolve a write target cleanly for a direct
+      MCP connection, plus a static reminder recommending the read
+      permission profile for external clients.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-ai-doctor-command
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/mcp-ai-doctor/
+    public_interfaces:
+      - lifetxt ai doctor
+      - lifetxt.cli.command_ai_doctor
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtAiDoctorCliTests (7 tests, real subprocess round trips via run_cli): clean workspace all-OK, missing file reported not raised, parse error reported not raised, ambiguous multi-source write target reported not raised, an explicit --write-file resolving that ambiguity, --format json shape, and a no-write guarantee"
+      - python -m unittest tests.test_lifetxt tests.test_surface_runtime tests.test_completion_surfaces -> Ran 707 tests, OK (skipped=1)
+      - "live: real python -m lifetxt ai doctor against a clean fixture, a missing file, an ambiguous multi-source workspace, and --format json -- all matched the designed checks, and the fixture directory's file set was confirmed unchanged"
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/507
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Third implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 3, "AI doctor for direct
+      MCP"), landing in the same integration branch/PR as #502
+      (cap-mcp-permission-profiles) and #505 (cap-mcp-generic-setup).
+      Standard assurance, S-sized; no change package, per this
+      repository's own threshold. Deliberately narrower than #500's
+      "Bridge diagnostics" list, which is written for the later Cloud
+      Mailbox bridge (mailbox transport health, pending/rejected/
+      quarantined request counts, credential environment presence) --
+      those checks do not apply to a direct MCP connection and are left
+      for that later phase. Also deliberately does not duplicate
+      `lifetxt doctor`'s general system checks (Python version, disk
+      space, optional dependencies), which are not MCP-specific; the
+      write-target and parse checks reuse the exact same
+      `resolve_write_target`/`_parse_life_inputs` helpers `ai setup
+      generic` (#505) and `lifetxt doctor` already use.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

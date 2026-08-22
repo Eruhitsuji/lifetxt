@@ -197,6 +197,52 @@ class InboxTests(unittest.TestCase):
         self.assertEqual(0, report["applied"])
         self.assertIn("stale", report["results"][0]["error"].lower())
 
+    def test_accepting_a_ticket_shaped_proposal_writes_a_creation_event(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Fix the bug",
+            kind="T",
+            details={
+                "record": "ticket",
+                "id": "TK-1",
+                "project": "web",
+                "tracker": "bug",
+            },
+            source="mcp",
+        )
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertIn("event_line", result)
+        self.assertIn("record:ticket_event", result["event_line"])
+        self.assertIn("event:created", result["event_line"])
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("record:ticket_event", content)
+        self.assertIn("parent:TK-1", content)
+
+    def test_accepting_a_non_ticket_proposal_never_adds_an_event(self):
+        proposal = inbox.stage_create(self.config, "Buy milk")
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertNotIn("event_line", result)
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertNotIn("record:ticket_event", content)
+
+    def test_ticket_shaped_proposal_without_an_id_is_treated_as_non_ticket(self):
+        # A ticket contract requires id:, and staging does not auto-generate
+        # one the way `ticket new` does; without it there is nothing
+        # meaningful for a creation event to reference.
+        proposal = inbox.stage_create(
+            self.config, "Fix", kind="T", details={"record": "ticket"}
+        )
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertNotIn("event_line", result)
+
 
 if __name__ == "__main__":
     unittest.main()

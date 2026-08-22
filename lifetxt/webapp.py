@@ -118,7 +118,7 @@ WEB_COMMAND_NOTES = {
     "undo": "Use the undo toast or the undo history panel.",
     "mark": "Selects rows; the browser uses checkboxes and the x key.",
     "detail": "Opens the detail drawer for the selected record.",
-    "today": "Not yet available in the browser; GET /api/command-center serves the same data for a future Dashboard view.",
+    "today": "Not a slash command in the browser; use the Today tab, which renders the same GET /api/command-center data.",
 }
 
 
@@ -772,6 +772,77 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             person=person,
             mode=str(mode or "today"),
         )
+
+    @app.get("/api/saved-views")
+    def get_saved_views():
+        """List every configured saved view.
+
+        Delegates entirely to :func:`lifetxt.saved_views.list_saved_views`;
+        no query grammar is duplicated here.
+        """
+        from .saved_views import list_saved_views
+
+        return {"views": list_saved_views(app.state.config)}
+
+    @app.get("/api/saved-views/{name}")
+    def get_saved_view_run(name):
+        """Run one saved view.
+
+        Delegates entirely to
+        :func:`lifetxt.saved_views.run_saved_view`, the same path CLI
+        ``view run`` uses. Returns the same ``count``/``items`` shape as
+        ``GET /api/items``. An unknown view name is a 404; a malformed
+        saved query is a 400, in both cases naming the query engine's own
+        diagnostic rather than a route-local message.
+        """
+        from .saved_views import run_saved_view
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        try:
+            filtered, query_diagnostics = run_saved_view(items, app.state.config, name)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=error_detail(exc))
+        errors = [d for d in query_diagnostics if d.get("severity") == "error"]
+        if errors:
+            raise HTTPException(status_code=400, detail=errors[0]["message"])
+        id_key = id_key_from_config(app.state.config)
+        return {
+            "count": len(filtered),
+            "items": [
+                api_item(item, app.state.writable_path, id_key) for item in filtered
+            ],
+            "query_diagnostics": query_diagnostics,
+        }
+
+    @app.get("/api/areas")
+    def get_areas_route():
+        """List every area with progress.
+
+        Delegates entirely to :func:`lifetxt.areas.area_list`; no
+        area-grouping logic is duplicated here.
+        """
+        from .areas import area_list
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        return {"areas": area_list(items, app.state.config)}
+
+    @app.get("/api/areas/{name}")
+    def get_area_detail(name):
+        """One area's projects and open work.
+
+        Delegates entirely to :func:`lifetxt.areas.area_show`. An unknown
+        area name is a 404 naming the engine's own error message.
+        """
+        from .areas import area_show
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        try:
+            return area_show(items, app.state.config, name)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=error_detail(exc))
 
     @app.get("/api/notifications")
     def get_notifications(recipient=None, lookahead=None, grace=None, limit=None):

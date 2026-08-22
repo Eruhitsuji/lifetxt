@@ -2232,6 +2232,12 @@
             <option value="source">Group: Source</option>
           </select>
           <input id="limit" inputmode="numeric" placeholder="Limit" title="Max rows">
+          <select id="saved-view-select" title="Apply a saved view" onchange="applySavedView(this.value)">
+            <option value="">Saved view…</option>
+          </select>
+          <select id="area-select" title="Filter by area" onchange="applyArea(this.value)">
+            <option value="">Area…</option>
+          </select>
           <select id="export-select" title="Download the currently filtered items" onchange="if(this.value){exportItems(this.value);this.value='';}" style="margin-left:auto">
             <option value="">⇩ Export…</option>
             <option value="csv">CSV</option>
@@ -2799,6 +2805,8 @@
         "Person": "人物",
         "Limit": "上限",
         "No grouping": "グループ化なし",
+        "Saved view…": "保存済みビュー…",
+        "Area…": "エリア…",
         "Set status…": "ステータスを設定…",
         "Set project…": "プロジェクトを設定…",
         "Clear": "クリア",
@@ -2983,6 +2991,8 @@
         "Review end date": "レビュー終了日",
         "Timeline range": "タイムライン期間",
         "Max rows": "最大行数",
+        "Apply a saved view": "保存済みビューを適用",
+        "Filter by area": "エリアで絞り込む",
         "Max agenda rows (0 = all)": "予定の最大行数 (0 = すべて)",
         "Root id (optional)": "ルートID (任意)",
         "Month grid": "月グリッド",
@@ -3965,6 +3975,60 @@
         const match = data.items.find(item => item.line === selectedItem.line && item.editable);
         if (match) selectItem(match);
       }
+    }
+    async function populateSavedViewsAndAreas() {
+      try {
+        const [views, areas] = await Promise.all([api("/api/saved-views"), api("/api/areas")]);
+        const viewSel = document.getElementById("saved-view-select");
+        if (viewSel) {
+          for (const view of (views.views || [])) {
+            const opt = document.createElement("option");
+            opt.value = view.name;
+            opt.textContent = view.name;
+            viewSel.appendChild(opt);
+          }
+        }
+        const areaSel = document.getElementById("area-select");
+        if (areaSel) {
+          for (const area of (areas.areas || [])) {
+            const opt = document.createElement("option");
+            opt.value = area.name;
+            opt.textContent = `${area.name} (${area.task_done}/${area.task_total})`;
+            areaSel.appendChild(opt);
+          }
+        }
+      } catch (_) {}
+    }
+    // /saved and /area apply a saved view or an area as the active row
+    // filter, the same "apply as the row set" semantics the TUI's /saved
+    // and /area commands use -- not a second query engine reimplemented
+    // in the browser.
+    async function applySavedView(name) {
+      const areaSel = document.getElementById("area-select");
+      if (areaSel) areaSel.value = "";
+      if (!name) { loadItems(); return; }
+      const data = await api(`/api/saved-views/${encodeURIComponent(name)}`);
+      currentItems = data.items;
+      renderDiagnostics(data.query_diagnostics || []);
+      renderItems(data.items);
+      updateTagSuggestions(data.items);
+      syncStatusFilterBtns();
+    }
+    async function applyArea(name) {
+      const viewSel = document.getElementById("saved-view-select");
+      if (viewSel) viewSel.value = "";
+      if (!name) { loadItems(); return; }
+      const [area, full] = await Promise.all([
+        api(`/api/areas/${encodeURIComponent(name)}`),
+        api("/api/items?"),
+      ]);
+      const keys = new Set((area.open_items || []).map(ref => `${ref.source} ${ref.line}`));
+      const filtered = full.items.filter(item => keys.has(`${item.source} ${item.line}`));
+      currentItems = filtered;
+      renderDiagnostics([]);
+      renderItems(filtered);
+      updateTagSuggestions(filtered);
+      syncStatusFilterBtns();
     }
     function renderDiagnostics(diagnostics) {
       document.getElementById("diagnostics").innerHTML = diagnostics
@@ -7295,6 +7359,7 @@
           if (banner) banner.style.display = "";
         }
       } catch(_) {}
+      populateSavedViewsAndAreas();
 
       const qInput = document.getElementById("quick-line");
       if (qInput) {

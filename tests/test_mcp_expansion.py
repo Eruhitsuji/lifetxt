@@ -873,5 +873,97 @@ class RemoteMcpToolsTests(McpTestCase):
             self.assertTrue(schemas[name]["annotations"]["openWorldHint"], name)
 
 
+class GetTemporalContextToolTests(McpTestCase):
+    """get_temporal_context (#489): a thin read-only bridge to temporal_context()."""
+
+    TEMPORAL_SAMPLE = (
+        "#! timezone: UTC\n"
+        "[ ] T Ship_report due:2000-01-01 id:t1\n"
+        "[ ] T Review_draft due:2000-01-02 id:t2\n"
+    )
+
+    def test_matches_a_direct_call_to_the_canonical_engine(self):
+        from lifetxt.temporal_context import temporal_context
+        from lifetxt.timezone_policy import today as timezone_today
+
+        context, path = self._context(content=self.TEMPORAL_SAMPLE)
+        items = parse_text(self._read(path))[0]
+        target = next(item for item in items if item.details.get("id") == ["t1"])
+        expected = temporal_context(items, target, timezone_today(), key="id")
+
+        result = call_tool("get_temporal_context", {"id": "t1"}, context)
+
+        self.assertEqual(expected, result)
+        self.assertEqual("temporal-context-v1", result["schema"])
+        self.assertEqual(["t2"], [edge["target_id"] for edge in result["related"]])
+
+    def test_window_and_limit_are_honoured(self):
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE)
+
+        narrowed = call_tool("get_temporal_context", {"id": "t1", "window": 0}, context)
+        self.assertEqual([], narrowed["related"])
+
+        limited = call_tool("get_temporal_context", {"id": "t1", "limit": 0}, context)
+        self.assertEqual([], limited["related"])
+
+    def test_stale_after_reaches_the_engine(self):
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE)
+
+        # A stale_after of 0 days makes stale_since apply as soon as there is
+        # any recorded activity at all; the fixture items have none, so this
+        # only proves the parameter reaches temporal_context() rather than
+        # being silently dropped -- both calls stay fact-for-fact identical.
+        default = call_tool("get_temporal_context", {"id": "t1"}, context)
+        overridden = call_tool(
+            "get_temporal_context", {"id": "t1", "stale_after": 0}, context
+        )
+        self.assertEqual(default["facts"], overridden["facts"])
+
+    def test_unknown_id_fails_deterministically(self):
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE)
+
+        with self.assertRaises(ValueError) as caught:
+            call_tool("get_temporal_context", {"id": "nope"}, context)
+
+        self.assertIn("nope", str(caught.exception))
+
+    def test_missing_id_fails_deterministically(self):
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE)
+
+        with self.assertRaises(ValueError):
+            call_tool("get_temporal_context", {}, context)
+
+    def test_ambiguous_id_fails_deterministically(self):
+        # A writable context refuses duplicate workspace IDs at startup
+        # (assert_unique_workspace_ids), so the only path that reaches
+        # find_item_by_id's own ambiguity check is a read-only context.
+        context, _path = self._context(
+            content=self.TEMPORAL_SAMPLE + "[ ] T Duplicate id:t1\n",
+            read_only=True,
+        )
+
+        with self.assertRaises(ValueError) as caught:
+            call_tool("get_temporal_context", {"id": "t1"}, context)
+
+        self.assertIn("Multiple items", str(caught.exception))
+
+    def test_invalid_bounds_fail_deterministically(self):
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE)
+
+        for field in ("window", "limit", "stale_after"):
+            with self.assertRaises(ValueError, msg=field) as caught:
+                call_tool("get_temporal_context", {"id": "t1", field: "abc"}, context)
+            self.assertIn(field, str(caught.exception))
+
+    def test_is_read_only_and_usable_in_read_only_mode(self):
+        schemas = {schema["name"]: schema for schema in tool_schemas()}
+        self.assertIn("get_temporal_context", READ_ONLY_TOOLS)
+        self.assertTrue(schemas["get_temporal_context"]["annotations"]["readOnlyHint"])
+
+        context, _path = self._context(content=self.TEMPORAL_SAMPLE, read_only=True)
+        result = call_tool("get_temporal_context", {"id": "t1"}, context)
+        self.assertEqual("temporal-context-v1", result["schema"])
+
+
 if __name__ == "__main__":
     unittest.main()

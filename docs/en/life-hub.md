@@ -105,6 +105,10 @@ with no comparable date simply reports no fact for it; `temporal` never
 guesses a relation. The result is always bounded to one item's neighborhood,
 never an all-item scan of the workspace.
 
+MCP: `get_temporal_context` (`id`, `window`, `limit`, `stale_after`), read-only
+and delegating entirely to the same engine; it returns the identical
+`temporal-context-v1` object `lifetxt temporal --json` prints.
+
 ## Projects over MCP
 
 The project and portfolio aggregations are exposed to AI clients as read-only

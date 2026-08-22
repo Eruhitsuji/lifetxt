@@ -74,6 +74,10 @@ $ lifetxt temporal T-1 --json
 
 life.txt へ書き戻すものは何もなく、`depends_on:`/`blocks:` などの再計算もしません（それらは `backlinks`/`links` のままです）。比較可能な日付がない item は単に fact を返しません。`temporal` は relation を推測しません。結果は常に 1 item の近傍に bounded され、workspace 全体の全件走査にはなりません。
 
+MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。read-only
+で、同じ engine に完全に委譲します。`lifetxt temporal --json` と同一の
+`temporal-context-v1` object を返します。
+
 ## Projects over MCP
 
 project と portfolio aggregations は read-only tools として AI clients に公開されます。`get_projects`、`get_project`、`get_portfolio` です。CLI の `project`/`portfolio` commands と同じ `lifetxt/projects.py` logic を再利用するため、model は transparent progress/health formulas を含めて human と同じ view を見ます。

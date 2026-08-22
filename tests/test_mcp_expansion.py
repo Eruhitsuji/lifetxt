@@ -7,13 +7,17 @@ import unittest
 from unittest import mock
 
 from lifetxt.mcp import (
+    ASSIST_EXTRA_TOOLS,
     DESTRUCTIVE_TOOLS,
     PROMPT_DEFINITIONS,
     READ_ONLY_TOOLS,
     TOOL_HANDLERS,
     McpContext,
+    _profile_allowed_tools,
+    _require_tool_allowed_for_profile,
     call_tool,
     file_hash,
+    filter_tool_schemas_for_profile,
     handle_request,
     prompt_get,
     prompt_list,
@@ -32,16 +36,23 @@ SAMPLE = (
 
 
 class McpTestCase(unittest.TestCase):
-    def _context(self, content=SAMPLE, config=None, read_only=False):
+    def _context(self, content=SAMPLE, config=None, read_only=False, profile=None):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(content)
-        settings = {"timer": {"state_file": os.path.join(tmp.name, "timer.json")}}
+        settings = {
+            "timer": {"state_file": os.path.join(tmp.name, "timer.json")},
+            "inbox": {"proposals_file": os.path.join(tmp.name, "proposals.json")},
+        }
         settings.update(config or {})
         context = McpContext(
-            paths=[path], writable_path=path, config=settings, read_only=read_only
+            paths=[path],
+            writable_path=path,
+            config=settings,
+            read_only=read_only,
+            profile=profile,
         )
         return context, path
 
@@ -94,6 +105,299 @@ class ToolRegistryTests(McpTestCase):
         self.assertTrue(call_tool("list_items", {}, context)["items"])
         self.assertTrue(call_tool("get_next_actions", {}, context)["items"])
         self.assertFalse(call_tool("get_file_state", {}, context)["read_only"] is False)
+
+
+class McpPermissionProfileTests(McpTestCase):
+    """--profile read|assist|full: selection, --read-only alias, and the
+    per-profile tool allowlist enforced at tools/list and tools/call."""
+
+    # --- Requirement 1 / 4.2 / 5.1 / 7.1: profile selection and normalization ---
+
+    def test_no_flags_defaults_to_full(self):
+        context, _path = self._context()
+
+        self.assertEqual("full", context.profile)
+        self.assertFalse(context.read_only)
+
+    def test_profile_full_is_explicit_and_unrestricted(self):
+        context, _path = self._context(profile="full")
+
+        self.assertEqual("full", context.profile)
+        self.assertFalse(context.read_only)
+        self.assertIsNone(_profile_allowed_tools(context.profile))
+
+    def test_profile_assist_does_not_imply_read_only(self):
+        context, _path = self._context(profile="assist")
+
+        self.assertEqual("assist", context.profile)
+        self.assertFalse(context.read_only)
+
+    def test_read_only_flag_normalizes_to_profile_read(self):
+        context, _path = self._context(read_only=True)
+
+        self.assertEqual("read", context.profile)
+        self.assertTrue(context.read_only)
+
+    def test_profile_read_is_equivalent_to_read_only_flag(self):
+        via_flag, _ = self._context(read_only=True)
+        via_profile, _ = self._context(profile="read")
+
+        self.assertEqual(via_flag.profile, via_profile.profile)
+        self.assertEqual(via_flag.read_only, via_profile.read_only)
+
+    def test_read_only_flag_combined_with_matching_profile_is_accepted(self):
+        context, _path = self._context(read_only=True, profile="read")
+
+        self.assertEqual("read", context.profile)
+        self.assertTrue(context.read_only)
+
+    def test_read_only_flag_combined_with_a_different_profile_conflicts(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(SAMPLE)
+
+        for other in ("assist", "full"):
+            with self.assertRaises(ValueError) as caught:
+                McpContext(
+                    paths=[path], writable_path=path, read_only=True, profile=other
+                )
+            self.assertIn("--read-only", str(caught.exception))
+            self.assertIn(other, str(caught.exception))
+
+    def test_unknown_profile_is_rejected(self):
+        with self.assertRaises(ValueError) as caught:
+            self._context(profile="bogus")
+
+        self.assertIn("bogus", str(caught.exception))
+
+    # --- Requirement 6: fail-closed allowlist computation ---
+
+    def test_read_allowlist_is_exactly_read_only_tools(self):
+        self.assertEqual(READ_ONLY_TOOLS, _profile_allowed_tools("read"))
+
+    def test_assist_allowlist_is_read_only_tools_plus_stage_proposal(self):
+        self.assertEqual({"stage_proposal"}, set(ASSIST_EXTRA_TOOLS))
+        self.assertEqual(
+            READ_ONLY_TOOLS | ASSIST_EXTRA_TOOLS, _profile_allowed_tools("assist")
+        )
+
+    def test_full_and_unset_profile_have_no_restriction(self):
+        self.assertIsNone(_profile_allowed_tools("full"))
+        self.assertIsNone(_profile_allowed_tools(None))
+
+    def test_read_allowlist_is_a_subset_of_assist_allowlist(self):
+        self.assertTrue(
+            _profile_allowed_tools("read") <= _profile_allowed_tools("assist")
+        )
+
+    def test_never_classified_tool_is_denied_under_read_and_assist_but_allowed_under_full(
+        self,
+    ):
+        fake_name = "mcp_permission_profile_test_never_classified_tool"
+        self.assertNotIn(fake_name, READ_ONLY_TOOLS)
+        self.assertNotIn(fake_name, ASSIST_EXTRA_TOOLS)
+        self.assertNotIn(fake_name, DESTRUCTIVE_TOOLS)
+        TOOL_HANDLERS[fake_name] = lambda args, context: {"ok": True}
+        self.addCleanup(TOOL_HANDLERS.pop, fake_name, None)
+
+        read_context, _ = self._context(profile="read")
+        assist_context, _ = self._context(profile="assist")
+        full_context, _ = self._context(profile="full")
+
+        for context in (read_context, assist_context):
+            with self.assertRaises(ValueError) as caught:
+                _require_tool_allowed_for_profile(fake_name, context)
+            self.assertIn(fake_name, str(caught.exception))
+
+        _require_tool_allowed_for_profile(fake_name, full_context)  # does not raise
+
+    def test_annotations_are_never_consulted_for_the_decision(self):
+        # get_file_state is annotated readOnlyHint=True (it is in READ_ONLY_TOOLS);
+        # create_item is annotated readOnlyHint=False and is a normal write tool.
+        # _profile_allowed_tools must decide purely from READ_ONLY_TOOLS /
+        # ASSIST_EXTRA_TOOLS membership, never from the annotation dict built by
+        # _annotate() -- these two disjoint sources agreeing is exactly what a
+        # bug reading annotations instead would not reproduce for every tool.
+        allowed_read = _profile_allowed_tools("read")
+        self.assertIn("get_file_state", allowed_read)
+        self.assertNotIn("create_item", allowed_read)
+
+    # --- call_tool / tools/call enforcement (Requirements 2, 3, 4, 6) ---
+
+    def test_call_tool_direct_dispatch_denies_stage_proposal_under_read(self):
+        context, path = self._context(profile="read")
+        before = self._read(path)
+
+        # The live dispatch chain has more than one layer that can refuse a
+        # write under read_only (see research.md); this only asserts the
+        # externally observable outcome -- denied, no write -- not which
+        # layer's message wins.
+        with self.assertRaises(ValueError):
+            call_tool("stage_proposal", {"title": "x"}, context)
+
+        self.assertEqual(before, self._read(path))
+
+    def test_call_tool_direct_dispatch_allows_stage_proposal_under_assist(self):
+        context, path = self._context(profile="assist")
+        before = self._read(path)
+
+        result = call_tool("stage_proposal", {"title": "Try assist"}, context)
+
+        self.assertTrue(result["staged"])
+        self.assertEqual(before, self._read(path))  # never touches life.txt
+
+    def test_call_tool_direct_dispatch_denies_stage_proposal_under_full_is_not_forced(
+        self,
+    ):
+        # Sanity check: full has no restriction, so the same call that is
+        # denied under read/assist for an unrelated tool succeeds under full.
+        context, _path = self._context(profile="full")
+
+        result = call_tool("stage_proposal", {"title": "Try full"}, context)
+
+        self.assertTrue(result["staged"])
+
+    # --- Full stdio round trip (Requirements 1, 2, 3, 4, 5, 6) ---
+
+    def _tools_list(self, context):
+        response = handle_request(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, context
+        )
+        return {schema["name"] for schema in response["result"]["tools"]}
+
+    def _tools_call(self, context, name, arguments):
+        response = handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+            context,
+        )
+        return response
+
+    def test_tools_list_under_read_contains_only_read_only_tools(self):
+        context, _path = self._context(profile="read")
+
+        listed = self._tools_list(context)
+
+        self.assertTrue(listed)
+        self.assertTrue(listed <= READ_ONLY_TOOLS)
+        self.assertNotIn("stage_proposal", listed)
+        self.assertNotIn("create_item", listed)
+
+    def test_tools_list_under_assist_adds_only_stage_proposal(self):
+        context, _path = self._context(profile="assist")
+
+        listed = self._tools_list(context)
+
+        self.assertIn("stage_proposal", listed)
+        self.assertNotIn("create_item", listed)
+        self.assertTrue(listed <= (READ_ONLY_TOOLS | ASSIST_EXTRA_TOOLS))
+
+    def test_tools_list_under_full_matches_unfiltered_tool_schemas(self):
+        context, _path = self._context(profile="full")
+
+        listed = self._tools_list(context)
+
+        self.assertEqual({schema["name"] for schema in tool_schemas()}, listed)
+
+    def test_tools_list_with_no_profile_matches_full(self):
+        # Constructing with neither --read-only nor --profile (today's
+        # default) must list exactly what --profile full lists.
+        default_context, _path = self._context()
+        full_context, _ = self._context(profile="full")
+
+        self.assertEqual(
+            self._tools_list(full_context), self._tools_list(default_context)
+        )
+
+    def test_tools_call_under_read_denies_a_write_tool_even_with_a_valid_precondition(
+        self,
+    ):
+        context, path = self._context(profile="read")
+        response = self._tools_call(
+            context,
+            "create_item",
+            {"type": "T", "title": "x", "expected_file_hash": file_hash(path)},
+        )
+
+        self.assertIn("error", response)
+        self.assertIn("create_item", response["error"]["message"])
+        self.assertEqual(SAMPLE, self._read(path))
+
+    def test_tools_call_under_assist_denies_create_item_but_allows_stage_proposal(self):
+        context, path = self._context(profile="assist")
+        before = self._read(path)
+
+        denied = self._tools_call(
+            context,
+            "create_item",
+            {"type": "T", "title": "x", "expected_file_hash": file_hash(path)},
+        )
+        self.assertIn("error", denied)
+        self.assertEqual(before, self._read(path))
+
+        allowed = self._tools_call(context, "stage_proposal", {"title": "Assist works"})
+        self.assertIn("result", allowed)
+        self.assertEqual(before, self._read(path))  # proposal store only
+
+    def test_tools_call_under_full_allows_create_item_with_a_valid_precondition(self):
+        context, path = self._context(profile="full")
+        before = self._read(path)
+
+        response = self._tools_call(
+            context,
+            "create_item",
+            {"type": "T", "title": "x", "expected_file_hash": file_hash(path)},
+        )
+
+        self.assertIn("result", response)
+        self.assertNotEqual(before, self._read(path))
+
+    def test_a_client_cannot_call_a_tool_it_was_never_shown(self):
+        # tools/list and tools/call must agree: nothing hidden under a
+        # constrained profile becomes callable by asking for it directly.
+        context, path = self._context(profile="read")
+        listed = self._tools_list(context)
+
+        self.assertNotIn("stage_proposal", listed)
+        response = self._tools_call(context, "stage_proposal", {"title": "sneaky"})
+
+        self.assertIn("error", response)
+        self.assertEqual(SAMPLE, self._read(path))
+
+    # --- Requirement 7: existing handler-level guard still runs independently ---
+
+    def test_require_writable_still_blocks_write_tools_under_read_only(self):
+        context, path = self._context(read_only=True)
+        before = self._read(path)
+        write_tools = [
+            name
+            for name in TOOL_HANDLERS
+            if name not in READ_ONLY_TOOLS and name != "stage_proposal"
+        ]
+
+        for name in write_tools:
+            with self.assertRaises(ValueError, msg=name):
+                call_tool(name, {"id": "t1", "text": "x", "state": "busy"}, context)
+
+        self.assertEqual(before, self._read(path))
+
+    def test_filter_tool_schemas_for_profile_is_independent_of_tool_schemas_signature(
+        self,
+    ):
+        # tool_schemas() itself must keep working with zero arguments
+        # (several other modules wrap it with their own zero-arg wrappers).
+        schemas = tool_schemas()
+
+        self.assertEqual(schemas, filter_tool_schemas_for_profile(schemas, "full"))
+        self.assertEqual(schemas, filter_tool_schemas_for_profile(schemas, None))
+        filtered = filter_tool_schemas_for_profile(schemas, "read")
+        self.assertTrue({s["name"] for s in filtered} <= READ_ONLY_TOOLS)
 
 
 class GlobalSearchToolFuzzyTests(McpTestCase):

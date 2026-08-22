@@ -60,10 +60,9 @@ is needed for a change this size (Task Decomposition Standard: S candidate).
   - _Depends: 2.1_
 
 - [ ] 2.3 Filter the advertised tool list by the active profile
-  - Give `tool_schemas` an optional `profile` parameter (default `None`, meaning "no restriction", preserving today's behavior for every existing no-argument caller)
-  - Filter the returned schema list using the same allowlist function from 2.1 when `profile` is `"read"` or `"assist"`
-  - Update the `tools/list` branch of `handle_request` to pass `context.profile`
-  - Observable: a `tools/list` response under `read` contains only non-mutating tool names; under `assist` also contains `stage_proposal`; under `full` or with no profile argument at all, the response is byte-identical to today's `tool_schemas()` output
+  - Add a function that filters an already-built schema list to the allowlist from 2.1; leave `tool_schemas`'s own zero-argument signature unchanged (four other modules wrap it at import time with their own zero-argument wrappers and would break if it gained a parameter -- confirmed by live tracing, see research.md)
+  - Update the `tools/list` branch of `handle_request` to call `tool_schemas()` as before, then filter the result by `context.profile`
+  - Observable: a `tools/list` response under `read` contains only non-mutating tool names; under `assist` also contains `stage_proposal`; under `full`, the response is byte-identical to today's output
   - _Requirements: 2.1, 3.1, 4.1, 4.2_
   - _Boundary: MCP Profile Enforcement_
   - _Depends: 2.1_

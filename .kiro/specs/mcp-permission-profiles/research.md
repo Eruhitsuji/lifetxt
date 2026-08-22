@@ -118,6 +118,43 @@
   branch; considered acceptable given the safety benefit.
 - **Follow-up**: none.
 
+### The real dispatch path is a multi-layer monkeypatch chain
+- **Context**: light discovery (before implementation) only looked at
+  `lifetxt/mcp.py` in isolation; it missed that `lifetxt/__init__.py`
+  unconditionally wraps `mcp.call_tool`, `mcp.tool_schemas`, and
+  `mcp.handle_request` at import time from four other modules
+  (`surface_runtime.py`, `surface_runtime_compat.py`,
+  `remote_contracts_v6.py`, `ticket_project_surfaces.py`), each adding its
+  own tools and re-wrapping whatever was previously bound.
+- **Sources Consulted**: `lifetxt/__init__.py` install order;
+  `surface_runtime.py::_patch_mcp`,
+  `surface_runtime_compat.py::_scope_mcp_contract_to_jsonrpc`,
+  `remote_contracts_v6.py::_patch_mcp`,
+  `ticket_project_surfaces.py`; live tracing of the actual bound functions
+  (`inspect.getsource`, closure-cell inspection) plus end-to-end
+  `handle_request` calls with expected revisions supplied.
+- **Findings**: giving `tool_schemas()` a `profile` parameter breaks
+  immediately, because every wrapper layer re-defines it with zero
+  parameters and calls the previous layer with zero arguments --
+  `handle_request` calling the live (fully wrapped) name with one
+  positional argument raises `TypeError` before reaching any of my code.
+  `call_tool`'s signature is unchanged by every layer, so my dispatch-level
+  check does get reached, but only after several layers of pass-through
+  (and, for revision-tracked tools such as `create_item`, only once a
+  correct `expected_file_hash` clears an earlier precondition check in
+  `surface_runtime.py`'s own wrapper -- confirmed by live testing with and
+  without a correct precondition, not assumed).
+- **Implications**: keep `tool_schemas()` itself completely unchanged
+  (zero-arg, byte-identical to before this feature). Add a separate
+  `filter_tool_schemas_for_profile(schemas, profile)` function and call it
+  in `handle_request`'s own `tools/list` branch on the *result* of calling
+  `tool_schemas()` (whatever that name currently resolves to, including
+  every monkeypatch-added tool), rather than pushing a profile parameter
+  down into `tool_schemas()`'s own signature. `READ_ONLY_TOOLS` is read at
+  call time from the same module global every extension module extends in
+  place, so filtering still covers tools added by any of the four wrapper
+  modules with no change to any of them.
+
 ## Risks & Mitigations
 - A future tool added to `TOOL_HANDLERS` without an explicit classification
   becomes unreachable under `read`/`assist` — intended (requirement 6), but

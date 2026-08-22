@@ -200,11 +200,19 @@ def _profile_allowed_tools(profile: str | None) -> "frozenset[str] | None":
 def _require_tool_allowed_for_profile(name: str, context: "McpContext") -> None:
     """Raise ValueError if name is not allowed under context.profile."""
 
-def tool_schemas(profile: "str | None" = None) -> list:
-    """Annotated tool schemas, filtered to profile's allowlist when profile
-    is 'read' or 'assist'. profile=None (default) returns every registered
-    tool, unchanged from today, for callers that need the full registry
-    (e.g. the CLI/Web/MCP capability drift gate)."""
+def filter_tool_schemas_for_profile(schemas: list, profile: "str | None") -> list:
+    """Filter an already-built schema list to profile's allowlist.
+
+    tool_schemas() itself is intentionally left with its original
+    zero-argument signature: four other modules
+    (surface_runtime.py, surface_runtime_compat.py, remote_contracts_v6.py,
+    ticket_project_surfaces.py) wrap it at import time with their own
+    zero-argument wrappers that add further tools, and none of them
+    forward extra arguments. Filtering the already-merged result here
+    instead keeps every one of those wrappers working unchanged while
+    still covering every tool any of them adds, since READ_ONLY_TOOLS is
+    read at call time from the same module global each of them extends in
+    place."""
 ```
 - Preconditions: `profile` is one of `None`, `"read"`, `"assist"`, `"full"`
   (already validated by `McpContext.__init__`).

@@ -655,7 +655,19 @@ def build_parser():
     mcp.add_argument(
         "--read-only",
         action="store_true",
-        help="Disable MCP write tools.",
+        help="Disable MCP write tools. Equivalent to --profile read.",
+    )
+    mcp.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default=None,
+        help=(
+            "MCP permission profile. 'read' allows only non-mutating tools "
+            "(equivalent to --read-only); 'assist' additionally allows "
+            "stage_proposal (Unified Inbox proposal staging), nothing else; "
+            "'full' is today's unrestricted default. Conflicts with "
+            "--read-only unless --profile read is also given."
+        ),
     )
     mcp.set_defaults(func=command_mcp)
 

@@ -1,0 +1,70 @@
+schema_version: 1
+
+change:
+  id: mcp-permission-profiles
+  title: MCP permission profiles (read|assist|full)
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/504
+  base_commit: 22516939a3e7ee2d2dbebe365bd4f23a02acaeb3
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a `--profile` flag (`read`, `assist`, `full`) to `lifetxt mcp`, enforced
+      both when the server advertises its tool list (`tools/list`) and when it
+      dispatches a tool call (`tools/call`).
+    - Reuse the existing `READ_ONLY_TOOLS` classification in `lifetxt/mcp.py` for
+      the `read` allowlist; the `assist` allowlist adds exactly one tool,
+      `stage_proposal` (Unified Inbox proposal staging, already non-authoritative).
+    - Normalize the existing `--read-only` flag to be equivalent to
+      `--profile read`, deriving `McpContext.read_only` from the active profile so
+      every existing per-tool write guard (`_require_writable`) keeps working
+      unchanged as defense in depth.
+    - Fail-closed handling for disallowed tools -- any tool not on a
+      constrained profile's explicit allowlist is denied, including a tool
+      with no prior classification at all.
+    - Reject the conflicting combination of `--read-only` with a `--profile`
+      other than `read`.
+    - English and Japanese documentation of the three profiles and the
+      `--read-only` relationship.
+  out_of_scope:
+    - Workspace/disclosure policy -- which workspace sources, records, or fields
+      are visible to a client (a separate, later #500 child issue).
+    - Any change to `lifetxt serve`'s Web API, Remote Safe Mode, Cloud Mailbox, or
+      provider-specific setup adapters.
+    - Widening the `assist` allowlist beyond `stage_proposal`.
+    - Any change to what an allowed tool actually does, including
+      `stage_proposal`'s own behavior or the Unified Inbox proposal contract.
+    - Reporting the active profile through `get_file_state` or a future AI doctor
+      command (candidate for a later child issue).
+  write_scope:
+    - lifetxt/mcp.py
+    - lifetxt/cli.py
+    - tests/test_mcp_expansion.py
+    - docs/en/ai-integration.md
+    - docs/ja/ai-integration.md
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .kiro/specs/mcp-permission-profiles/
+    - .ai/project/changes/mcp-permission-profiles/
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - lifetxt/workspace.py
+    - lifetxt/webapp.py
+    - lifetxt/remote_access.py
+    - lifetxt/remote_backend.py
+    - lifetxt/inbox.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum, per
+    ASSURANCE_LEVELS.md; this changes the MCP server's authorization boundary)
+  - Merge Authority approval before this branch's work merges into main

@@ -1,0 +1,109 @@
+schema_version: 1
+
+requirements:
+  - id: req-mcp-permission-profiles-selection
+    kind: ADDED
+    statement: >-
+      An operator running `lifetxt mcp` can select a permission profile
+      (`read`, `assist`, or `full`) that controls which MCP tools the
+      connected client can see and call.
+    acceptance_criteria:
+      - "`lifetxt mcp --profile read|assist|full` starts with the corresponding profile active."
+      - "An invalid `--profile` value is rejected before the server starts."
+      - "Omitting both `--profile` and `--read-only` starts the `full` profile (today's default, unchanged)."
+    constraints:
+      - Must not change behavior for any existing caller that supplies neither flag.
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-read-enforcement
+    kind: ADDED
+    statement: >-
+      Under the `read` profile, only non-mutating MCP tools are advertised
+      and callable.
+    acceptance_criteria:
+      - "`tools/list` under `read` includes only non-mutating tools."
+      - "`tools/call` under `read` rejects any tool that is not one of the advertised non-mutating tools, without executing it."
+      - "A tool with no explicit non-mutating classification is rejected the same way as a known mutating tool."
+    constraints: []
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-assist-enforcement
+    kind: ADDED
+    statement: >-
+      Under the `assist` profile, every non-mutating tool plus exactly one
+      additional tool that stages a non-authoritative change proposal
+      (`stage_proposal`) is advertised and callable; nothing else.
+    acceptance_criteria:
+      - "`tools/list` under `assist` includes every non-mutating tool plus `stage_proposal`."
+      - "`tools/call` under `assist` executes a non-mutating tool or `stage_proposal`."
+      - "`tools/call` under `assist` rejects any other tool, including every `DESTRUCTIVE_TOOLS` member, without executing it."
+      - "A tool with no explicit classification is rejected the same way as any other disallowed tool."
+    constraints:
+      - The `assist` allowlist is exactly one tool wider than `read`; widening it further is out of scope for this change.
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-full-compat
+    kind: ADDED
+    statement: >-
+      Under the `full` profile, `lifetxt mcp` behaves identically to
+      today's unmodified default.
+    acceptance_criteria:
+      - "`tools/list` and `tools/call` under `full` are unrestricted by profile enforcement."
+      - "Behavior under `full` is identical, for every existing tool and caller, to `lifetxt mcp` with neither `--profile` nor `--read-only` given today."
+    constraints: []
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-read-only-alias
+    kind: MODIFIED
+    statement: >-
+      The existing `--read-only` flag becomes equivalent to
+      `--profile read`, sharing one internal authorization state rather than
+      a second independent enforcement path.
+    acceptance_criteria:
+      - "`lifetxt mcp --read-only` enforces the same restrictions as `lifetxt mcp --profile read`."
+      - "Supplying both `--read-only` and a `--profile` value other than `read` is rejected with a clear conflict error."
+      - "Help text documents `--read-only` as equivalent to `--profile read`."
+    constraints:
+      - Must not change behavior for any existing `--read-only`-only caller.
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-fail-closed
+    kind: ADDED
+    statement: >-
+      Any MCP tool that is not explicitly allowed under the active
+      constrained profile is denied, including a tool added in the future
+      with no classification, and MCP tool annotations are never used as
+      the basis for that decision.
+    acceptance_criteria:
+      - "Under `read`/`assist`, a tool absent from that profile's explicit allowlist is denied whether it is a known mutating tool or entirely unclassified."
+      - "The enforcement never reads a tool's MCP annotations (e.g. `readOnlyHint`) to decide reachability."
+    constraints: []
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-defense-in-depth
+    kind: ADDED
+    statement: >-
+      Existing per-tool write guards continue to run independently of the
+      new profile-dispatch check.
+    acceptance_criteria:
+      - "While `--read-only` or an equivalent constrained profile is active, an individual mutating-tool handler still refuses to execute at its own existing guard, independent of the profile-dispatch check."
+    constraints:
+      - Must not remove or bypass any existing handler-level write guard.
+    owner: Eruhitsuji
+
+  - id: req-mcp-permission-profiles-docs
+    kind: ADDED
+    statement: >-
+      The three profiles, the `assist` allowlist, and the `--read-only`
+      relationship are documented in both of this project's documented
+      languages.
+    acceptance_criteria:
+      - "docs/en/ai-integration.md and docs/ja/ai-integration.md describe the three profiles and the assist allowlist."
+      - "docs/en/cli.md and docs/ja/cli.md's mcp command reference documents --profile and the --read-only relationship."
+    constraints: []
+    owner: Eruhitsuji
+
+open_questions:
+  - Whether `get_file_state` (or a future `lifetxt ai doctor`-style command) should
+    report the active profile for client/operator self-inspection -- deferred to a
+    later child issue, not required by this change.

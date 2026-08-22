@@ -72,6 +72,10 @@ SERVER_NAME = "lifetxt-mcp"
 SERVER_VERSION = __version__
 
 
+#: Valid values for McpContext.profile / the CLI --profile flag.
+MCP_PROFILES = ("read", "assist", "full")
+
+
 class McpContext:
     def __init__(
         self,
@@ -79,13 +83,30 @@ class McpContext:
         writable_path=None,
         config=None,
         read_only=False,
+        profile=None,
         remote_principal=None,
         remote_session=None,
     ):
         self.config = config or {}
         configured_paths = paths or config_paths(self.config) or ["life.txt"]
         self.paths = normalize_server_paths(configured_paths)
-        self.read_only = bool(read_only)
+        if profile is not None and read_only and profile != "read":
+            raise ValueError(
+                "--read-only conflicts with --profile %s "
+                "(--read-only is equivalent to --profile read)." % profile
+            )
+        if profile is None:
+            profile = "read" if read_only else "full"
+        if profile not in MCP_PROFILES:
+            raise ValueError(
+                "Unknown MCP permission profile: %r (expected one of %s)"
+                % (profile, ", ".join(MCP_PROFILES))
+            )
+        self.profile = profile
+        # read_only derives from profile so every existing per-tool write
+        # guard (_require_writable) keeps enforcing "read" as defense in
+        # depth, in addition to the profile-dispatch filtering below.
+        self.read_only = bool(read_only) or profile == "read"
         if self.read_only:
             self.writable_path = (
                 writable_path or config_write_file(self.config) or self.paths[0]
@@ -139,7 +160,8 @@ class McpContext:
             writable_path=getattr(args, "write_file", None)
             or config_write_file(config),
             config=config,
-            read_only=getattr(args, "read_only", False),
+            read_only=bool(getattr(args, "read_only", False)),
+            profile=getattr(args, "profile", None),
         )
 
 
@@ -205,7 +227,10 @@ def handle_request(request, context):
         if method == "ping":
             return _jsonrpc_result(request_id, {})
         if method == "tools/list":
-            return _jsonrpc_result(request_id, {"tools": tool_schemas()})
+            schemas = filter_tool_schemas_for_profile(
+                tool_schemas(), getattr(context, "profile", None)
+            )
+            return _jsonrpc_result(request_id, {"tools": schemas})
         if method == "tools/call":
             name = params.get("name")
             arguments = params.get("arguments") or {}
@@ -231,7 +256,35 @@ def handle_request(request, context):
 def call_tool(name, arguments, context):
     if name not in TOOL_HANDLERS:
         raise ValueError("Unknown MCP tool: %s" % name)
+    _require_tool_allowed_for_profile(name, context)
     return TOOL_HANDLERS[name](arguments or {}, context)
+
+
+def _profile_allowed_tools(profile):
+    """Tool names allowed under profile, or None for no restriction.
+
+    None ("full", or an unset/unrecognized profile) means every tool in
+    TOOL_HANDLERS is allowed, matching this server's behavior before
+    permission profiles existed. "read" and "assist" return an explicit
+    allowlist: a tool absent from it is denied even if no one has ever
+    classified it, so a future tool added to TOOL_HANDLERS cannot silently
+    become reachable from a constrained connection (fail closed).
+    """
+    if profile == "read":
+        return READ_ONLY_TOOLS
+    if profile == "assist":
+        return READ_ONLY_TOOLS | ASSIST_EXTRA_TOOLS
+    return None
+
+
+def _require_tool_allowed_for_profile(name, context):
+    profile = getattr(context, "profile", None)
+    allowed = _profile_allowed_tools(profile)
+    if allowed is not None and name not in allowed:
+        raise ValueError(
+            "Tool '%s' is not available under the '%s' MCP permission profile."
+            % (name, profile)
+        )
 
 
 #: Tools that never write. Clients use readOnlyHint to skip confirmation.
@@ -313,6 +366,13 @@ OPEN_WORLD_TOOLS = frozenset(
     ]
 )
 
+#: The only write tool allowed under the "assist" permission profile, in
+#: addition to READ_ONLY_TOOLS. stage_proposal writes solely to the
+#: non-authoritative Unified Inbox proposal store, never to life.txt, so it
+#: is safe to expose without granting broader write access. Adding a tool
+#: here is a deliberate, reviewable decision -- see _profile_allowed_tools.
+ASSIST_EXTRA_TOOLS = frozenset(["stage_proposal"])
+
 
 def _annotate(schema):
     """Apply MCP annotations from the central classification.
@@ -333,6 +393,27 @@ def _annotate(schema):
 
 def tool_schemas():
     return [_annotate(schema) for schema in _tool_schemas()]
+
+
+def filter_tool_schemas_for_profile(schemas, profile):
+    """Filter an already-built schema list down to profile's allowlist.
+
+    Kept separate from tool_schemas() itself: several other modules wrap
+    lifetxt.mcp.tool_schemas at import time to append their own tools (see
+    remote_contracts_v6.py, surface_runtime.py, ticket_project_surfaces.py),
+    each with the same zero-argument signature. Giving tool_schemas() a
+    profile parameter would break every one of those wrappers. Filtering
+    the returned list afterwards works with any of them, and still covers
+    every tool they add, since READ_ONLY_TOOLS/ASSIST_EXTRA_TOOLS are read
+    at call time and each of those modules extends READ_ONLY_TOOLS in place
+    when it registers its own tools.
+
+    profile=None or "full" returns schemas unchanged.
+    """
+    allowed = _profile_allowed_tools(profile)
+    if allowed is None:
+        return schemas
+    return [schema for schema in schemas if schema.get("name") in allowed]
 
 
 def _tool_schemas():
@@ -3159,6 +3240,11 @@ def _tool_get_file_state(_args, context):
     }
 
 
+#: Adding a tool here does not make it reachable under the "read" or
+#: "assist" permission profile by itself -- it must also be added to
+#: READ_ONLY_TOOLS or ASSIST_EXTRA_TOOLS, a deliberate classification
+#: decision (see _profile_allowed_tools). This is intentional fail-closed
+#: behavior, not an oversight to "fix" by adding every new tool here.
 TOOL_HANDLERS = OrderedDict(
     [
         ("list_items", _tool_list_items),

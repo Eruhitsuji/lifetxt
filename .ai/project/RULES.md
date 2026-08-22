@@ -317,6 +317,13 @@ Moved from `todo.md` by #54. These constrain what is acceptable, not what is
 scheduled; a change that violates one needs an explicit decision, not a
 workaround.
 
+`docs/en/philosophy.md` / `docs/ja/philosophy.md` (#506) explain the
+long-term reasoning and vision behind these principles for users and
+contributors in more accessible terms. That document does not add new
+rules; it explains and cross-references the rules below. If the two ever
+disagree, this file is authoritative and the philosophy document must be
+corrected to match, not the reverse.
+
 - Fail loudly when behavior is ambiguous or data may be lost.
 - Keep life.txt authoritative and use standard, inspectable interchange formats.
 - Route authoritative writes through validated, atomic, conflict-aware mutation

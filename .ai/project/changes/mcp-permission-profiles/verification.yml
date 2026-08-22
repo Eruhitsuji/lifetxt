@@ -1,0 +1,120 @@
+schema_version: 1
+
+verification:
+  planned: []
+
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_mcp_expansion -v
+      requirement_ids:
+        - req-mcp-permission-profiles-selection
+        - req-mcp-permission-profiles-read-enforcement
+        - req-mcp-permission-profiles-assist-enforcement
+        - req-mcp-permission-profiles-full-compat
+        - req-mcp-permission-profiles-read-only-alias
+        - req-mcp-permission-profiles-fail-closed
+        - req-mcp-permission-profiles-defense-in-depth
+      result: "Ran 122 tests, OK (27 new McpPermissionProfileTests cases plus 95 pre-existing, unmodified)"
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: unit
+      command: python -m unittest tests.test_surface_runtime tests.test_safety_cli
+        tests.test_safety_foundation tests.test_attachments tests.test_clock_skew_v5
+        tests.test_ticket_project_surfaces tests.test_ticket_workflow_surfaces
+        tests.test_remote_pagination tests.test_remote_web_v20
+      requirement_ids:
+        - req-mcp-permission-profiles-full-compat
+      result: "Ran 287 tests, OK -- confirms the CLI/Web/MCP capability drift gate and every module that also wraps mcp.call_tool/tool_schemas is unaffected"
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: integration
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: []
+      result: "Ran 2645 tests, OK (skipped=5) -- full repository suite green"
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: manual
+      command: real 'python -m lifetxt mcp --profile read|assist|full <fixture life.txt>'
+        stdio sessions driven with real JSON-RPC tools/list and tools/call lines
+      requirement_ids:
+        - req-mcp-permission-profiles-read-enforcement
+        - req-mcp-permission-profiles-assist-enforcement
+        - req-mcp-permission-profiles-full-compat
+      result: >-
+        read: 63 tools listed, no stage_proposal/create_item, tools/call
+        stage_proposal denied. assist: 64 tools listed (+stage_proposal),
+        tools/call stage_proposal succeeds. full: 87 tools listed
+        (+stage_proposal/create_item), both succeed. life.txt byte-unchanged
+        by every stage_proposal call in all three modes.
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: check
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: []
+      result: "OK: 10 item(s)"
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: lint
+      command: ruff format --check lifetxt/mcp.py lifetxt/cli.py tests/test_mcp_expansion.py
+        && ruff check lifetxt tests scripts
+      requirement_ids: []
+      result: "All changed files already formatted; ruff check: All checks passed. (9 pre-existing unrelated files elsewhere in the repo would be reformatted -- confirmed present before this change, not introduced by it.)"
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: docs
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-mcp-permission-profiles-docs
+      result: '{"errors": 0, "ok": true} after updating docs/en+ja/ai-integration.md section 6 and docs/en+ja/cli.md section 11.1 in parallel'
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+    - type: security
+      command: /security-review (dispatched research + false-positive-filtering
+        subagents per this repository's security-review skill)
+      requirement_ids: []
+      result: >-
+        No qualifying vulnerabilities found. Verified: the profile check is
+        the sole tool-handler dispatch site and every monkeypatch wrapper
+        (surface_runtime.py, surface_runtime_compat.py, runtime_safety_v2.py,
+        remote_contracts_v6.py) falls through to it rather than dispatching
+        TOOL_HANDLERS directly; tools/list and tools/call consult the same
+        allowlist so nothing hidden becomes callable; McpContext.profile is
+        set once in __init__, validated against MCP_PROFILES, and never
+        reassigned or settable from client/tool-argument input; unclassified
+        tools fail closed by construction.
+      commit: working-tree (feature/ai-integration-phase1, pre-commit)
+
+review_ledger:
+  # The two entries below are the implementing AI's own first-pass checks.
+  # Per MERGE_GOVERNANCE.md/ASSURANCE_LEVELS.md this does NOT satisfy "no
+  # final approval by the same AI that implemented the change" -- they are
+  # recorded as informational evidence for the human reviewer, not as the
+  # required independent review.
+  - reviewer: Claude (implementer self-check, informational only -- not the required independent review)
+    review_type: implementation
+    target_commit: pending-commit
+    result: no_blocking_issues_found_by_self_check
+    finding_count: 0
+    completed_at: "2026-08-22T14:10:00Z"
+  - reviewer: Claude (security-review skill, research + false-positive-filtering subagents; informational only -- not the required independent review)
+    review_type: security
+    target_commit: pending-commit
+    result: no_blocking_issues_found_by_self_check
+    finding_count: 0
+    completed_at: "2026-08-22T14:10:00Z"
+  - reviewer: Eruhitsuji (repository owner; sole human on this project per PROJECT.yml/ROLES.yml -- there is no separate second human reviewer to assign)
+    review_type: implementation
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
+    finding_count: 0
+    completed_at: "2026-08-23T00:00:00Z"
+  - reviewer: Eruhitsuji (repository owner; same basis as the implementation review above)
+    review_type: security
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
+    finding_count: 0
+    completed_at: "2026-08-23T00:00:00Z"
+  - reviewer: Eruhitsuji (Merge Authority)
+    review_type: integration
+    target_commit: 980d01decdf8651e3acca470da5054c8b36e4a82
+    result: approved
+    finding_count: 0
+    completed_at: "2026-08-23T00:00:00Z"
+
+release_evidence:
+  migration_notes: null
+  rollback_plan: revert the mcp-permission-profiles commits; --profile is purely additive and no existing caller's behavior changes if reverted
+  operations_evidence: []

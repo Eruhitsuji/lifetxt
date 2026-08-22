@@ -1415,7 +1415,22 @@ python -m lifetxt mcp life.txt
 python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
 python -m lifetxt serve life.txt --mcp
 python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
+python -m lifetxt mcp life.txt --profile assist
 ```
+
+`--profile {read,assist,full}` は、接続した client がどの tool を見て呼び出せるかを
+制御します。tool 一覧の提示時と実際の呼び出し時の両方で判定されます:
+
+| Profile | 許可される範囲 |
+|---|---|
+| `read` | すべての read-only tool。`--read-only` と同じ意味。 |
+| `assist` | すべての read-only tool に加えて `stage_proposal`（Unified Inbox に proposal を stage するだけで、life.txt には直接書き込まない）。 |
+| `full` | すべて（`--profile`/`--read-only` のどちらも指定しない場合の default）。 |
+
+read/write のどちらにも明示的に分類されていない tool は、`read` と `assist` では
+default で到達不能です。`--read-only` は `--profile read` と同じ意味で、
+`--read-only` と別の `--profile` を同時に指定すると拒否されます。詳細は
+`docs/ja/ai-integration.md` の Section 6 を参照してください。
 
 主な tool は `list_items`、`get_item`、`check_line`、`parse_item`、
 `create_item`、`update_item`、`mark_done`、`complete_item`、`delete_item`、`get_agenda`、
@@ -1424,7 +1439,39 @@ review report)、`get_graph`、`get_blockers`、`list_links`、`list_status`、
 `list_notifications`、および type `M` message 操作です。`complete_item` は
 repeat 付き task のインスタンスを完了し次回インスタンスを生成します（repeat
 が無ければ `mark_done` と同じ動作）。複数 file を読み込んだ場合、read tool は全 file を走査し、
-write tool は `--write-file` のみを変更します。`--read-only` を付けると write tool を無効化します。
+write tool は `--write-file` のみを変更します。`--profile read`（または同じ意味の
+`--read-only`）を付けると write tool を無効化し、`--profile assist` なら proposal の
+stage だけを許可します。
+
+### 11.2 `ai setup generic`
+
+現在の workspace に対する正確な `lifetxt mcp` command と、汎用的な MCP client
+configuration を表示します。file への書き込みは一切行いません。
+
+```sh
+python -m lifetxt ai setup generic life.txt
+python -m lifetxt ai setup generic life.txt --profile assist
+python -m lifetxt ai setup generic life.txt --format json
+```
+
+`--profile` の default は `read` です。`--write-file` で表示される write target
+を上書きできます。`--format json` を指定すると、整形された text の代わりに
+`{"command": [...], "mcp_client_config": {...}}` を返します。
+
+### 11.3 `ai doctor`
+
+direct MCP 接続のために workspace が正しく読み込め、write target が一意に解決
+できるかを確認します。file への書き込みは一切行いません。
+
+```sh
+python -m lifetxt ai doctor life.txt
+python -m lifetxt ai doctor life.txt --write-file life.txt --format json
+```
+
+input file ごとの check（found/parsed）、`write-target` check（解決できた場合は
+その値、できない場合は `lifetxt mcp` 自身が出すのと同じ `--write-file` 必須の
+error）、そして外部/信頼できない client 向けに `read` を推奨する `profile` check
+を表示します。`--format json` を指定すると check を JSON array で返します。
 
 ## 12. `config`
 

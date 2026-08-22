@@ -5,10 +5,21 @@ Please refer to [docs/en/life_txt_format_spec.md](./docs/en/life_txt_format_spec
 or [docs/ja/life_txt_format_spec.md](./docs/ja/life_txt_format_spec.md) for the
 current grammar of `life.txt`.
 
+lifetxt is a text-native, user-owned foundation for recording and using
+important information about a person's past, present, and future, across
+tools, interfaces, and AI providers. It is built around one durable record
+rather than one productivity category, so the interface you use today --
+editor, CLI, TUI, Web, or AI -- can change without taking your data with
+it. See [docs/en/philosophy.md](./docs/en/philosophy.md) (or
+[docs/ja/philosophy.md](./docs/ja/philosophy.md)) for the full philosophy
+and long-term vision.
+
 ## Documentation
 
 - [English documentation](./docs/en/readme.md)
 - [Japanese documentation](./docs/ja/readme.md)
+- [English philosophy and vision](./docs/en/philosophy.md)
+- [Japanese philosophy and vision](./docs/ja/philosophy.md)
 - [English CLI guide](./docs/en/cli.md)
 - [Japanese CLI guide](./docs/ja/cli.md)
 - [English Web API / GUI guide](./docs/en/web.md)

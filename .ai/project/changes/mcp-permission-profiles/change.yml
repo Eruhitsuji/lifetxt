@@ -25,8 +25,9 @@ scope:
       `--profile read`, deriving `McpContext.read_only` from the active profile so
       every existing per-tool write guard (`_require_writable`) keeps working
       unchanged as defense in depth.
-    - Fail-closed handling: any tool not on a constrained profile's explicit
-      allowlist is denied, including a tool with no prior classification at all.
+    - Fail-closed handling for disallowed tools -- any tool not on a
+      constrained profile's explicit allowlist is denied, including a tool
+      with no prior classification at all.
     - Reject the conflicting combination of `--read-only` with a `--profile`
       other than `read`.
     - English and Japanese documentation of the three profiles and the

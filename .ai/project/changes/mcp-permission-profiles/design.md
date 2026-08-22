@@ -37,11 +37,15 @@ This document is the reviewer-facing summary; it wins if the two drift.
 - MODIFIED: `lifetxt/mcp.py::McpContext.__init__`/`from_args` — gains a
   `profile` parameter, normalizes `--read-only`/`profile=None` into one of
   `"read"`/`"assist"`/`"full"`, derives `self.read_only`.
-- MODIFIED: `lifetxt/mcp.py::tool_schemas()` — gains an optional `profile`
-  parameter (default `None`, preserving today's unfiltered result for
-  every existing no-argument caller); filters by profile when given.
+- ADDED: `lifetxt/mcp.py::filter_tool_schemas_for_profile(schemas, profile)`
+  — filters an already-built schema list. `tool_schemas()` itself keeps its
+  original zero-argument signature unchanged (see Alternatives: four other
+  modules wrap it at import time with their own zero-argument wrappers, so
+  giving it a parameter would break every one of them).
 - MODIFIED: `lifetxt/mcp.py::call_tool()` — rejects a disallowed tool
   before dispatching to its handler.
+- MODIFIED: `lifetxt/mcp.py::handle_request()`'s `tools/list` branch — now
+  calls `filter_tool_schemas_for_profile(tool_schemas(), context.profile)`.
 - REMOVED: none.
 
 ## Alternatives
@@ -50,6 +54,17 @@ This document is the reviewer-facing summary; it wins if the two drift.
   path — rejected, since it leaves a bypass a client could use by calling
   an unlisted tool directly. See requirements
   `req-mcp-permission-profiles-fail-closed`.
+- Giving `tool_schemas()` a `profile` parameter directly — rejected after
+  live tracing found `lifetxt/__init__.py` unconditionally wraps
+  `mcp.call_tool`/`mcp.tool_schemas`/`mcp.handle_request` at import time
+  from four other modules, each redefining `tool_schemas()` with zero
+  parameters; a parameter on the base function would raise `TypeError` the
+  moment `handle_request` calls the live (fully wrapped) name. Filtering
+  the returned list afterward, in `handle_request` itself, works
+  regardless of how many layers wrap `tool_schemas()`, and still covers
+  every tool any of them adds, since `READ_ONLY_TOOLS` is read at call time
+  from the same module global each of them extends in place. See
+  `.kiro/specs/mcp-permission-profiles/research.md` for the full trace.
 - A new `ProfileContext` wrapper class kept separate from `McpContext` —
   rejected as unnecessary indirection with only one implementation in
   sight; extending `McpContext` in place keeps every existing call site

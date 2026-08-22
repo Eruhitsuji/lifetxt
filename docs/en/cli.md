@@ -1580,7 +1580,22 @@ python -m lifetxt mcp life.txt
 python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt
 python -m lifetxt serve life.txt --mcp
 python -m lifetxt mcp "projects/**/*.life.txt" --write-file life.txt --read-only
+python -m lifetxt mcp life.txt --profile assist
 ```
+
+`--profile {read,assist,full}` controls which tools the connected client can
+see and call, enforced both when tools are listed and when one is called:
+
+| Profile | Allows |
+|---|---|
+| `read` | Every read-only tool. Equivalent to `--read-only`. |
+| `assist` | Every read-only tool, plus `stage_proposal` (stages a Unified Inbox proposal; never writes life.txt directly). |
+| `full` | Everything (today's default when `--profile`/`--read-only` are both omitted). |
+
+A tool with no explicit read/write classification is unreachable under `read`
+and `assist`, not reachable by default. `--read-only` is equivalent to
+`--profile read`; combining `--read-only` with a different `--profile` is
+rejected. See `docs/en/ai-integration.md` section 6 for the full model.
 
 The MCP server exposes these tools:
 
@@ -1599,9 +1614,10 @@ The MCP server exposes these tools:
 | `list_messages` / `create_message` / `reply_message` / `ack_message` / `snooze_message` | Work with type `M` messages |
 
 It also exposes `lifetxt://source/N` resources so clients can read the loaded
-source files without writing. Use `--read-only` to disable all MCP write tools.
-When multiple files are loaded, read tools scan all files and write tools modify
-only `--write-file`.
+source files without writing. Use `--profile read` (or the equivalent
+`--read-only`) to disable all MCP write tools, or `--profile assist` to allow
+only proposal staging. When multiple files are loaded, read tools scan all
+files and write tools modify only `--write-file`.
 
 ## 12. `config`
 

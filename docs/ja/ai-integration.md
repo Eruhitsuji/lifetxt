@@ -7,7 +7,7 @@ lifetxt は stdio 上の MCP (Model Context Protocol) server を同梱してい�
 - [3. Tool Reference](#3-tool-reference)
 - [4. Write Safety](#4-write-safety)
 - [5. Prompts](#5-prompts)
-- [6. Read-Only And Privacy](#6-read-only-and-privacy)
+- [6. Permission Profiles And Privacy](#6-permission-profiles-and-privacy)
 - [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
 - [8. Without MCP](#8-without-mcp)
 
@@ -46,20 +46,27 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 }
 ```
 
-### Read-only variant
+### 制限された profile
 
-model に data は見せるが書き込みは許可しない設定です。
+model に data は見せるが、full な書き込み権限は与えない設定です。各 profile が何を許可するかは
+[Section 6](#6-permission-profiles-and-privacy) を参照してください。
 
 ```json
 {
   "mcpServers": {
     "lifetxt-readonly": {
       "command": "python",
-      "args": ["-m", "lifetxt", "mcp", "--read-only", "/absolute/path/to/life.txt"]
+      "args": ["-m", "lifetxt", "mcp", "--profile", "read", "/absolute/path/to/life.txt"]
+    },
+    "lifetxt-assist": {
+      "command": "python",
+      "args": ["-m", "lifetxt", "mcp", "--profile", "assist", "/absolute/path/to/life.txt"]
     }
   }
 }
 ```
+
+`--read-only` は引き続き使え、`--profile read` と同じ意味です。
 
 ### Cursor / VS Code
 
@@ -253,9 +260,35 @@ proposal を出すことはなく、既存 tool が返す provenance field に�
 
 ---
 
-## 6. Read-Only And Privacy
+## 6. Permission Profiles And Privacy
 
-`--read-only` はすべての write tool を明確な error で拒否し、read tool は動作させます。model は要約や計画を作れますが、変更はできません。
+`--profile` は、接続した client が tool surface のどこまで到達できるかを選びます。判定は
+2 箇所で行われます -- server が tool 一覧を提示する時 (`tools/list`) と、実際に tool を呼び出す時
+(`tools/call`) です。そのため client は一覧に出ていない tool を直接呼び出しても回避できません。
+
+| Profile | Read tool | 書き込み | 備考 |
+| --- | --- | --- | --- |
+| `read` | すべて | なし | `--read-only` と同じ意味。 |
+| `assist` | すべて | `stage_proposal` のみ | Unified Inbox に proposal を stage するだけで、あなたが review して accept するまで `life.txt` に直接書き込まれない。 |
+| `full` | すべて | すべて | どちらの flag も指定しない場合の、現在の default。 |
+
+```sh
+python -m lifetxt mcp --profile read life.txt
+python -m lifetxt mcp --profile assist life.txt
+```
+
+read/write のどちらにも明示的に分類されていない tool は、`read` と `assist` では到達不能です --
+これは意図的な挙動です: 将来 lifetxt に新しい tool が追加されても、制限された接続が使える範囲が
+黙って広がることはありません。`--read-only` は従来どおり動作し、`--profile read` と同じ意味です。
+`--read-only` と別の `--profile` を同時に指定すると、矛盾した要求として拒否されます。MCP の tool
+annotation (`readOnlyHint` など) はあくまで説明用であり、どの profile が何を許可するかの判断には
+使われません。
+
+permission profile が制御するのは到達可能な *tool* だけです。どの workspace source や record が
+見えるかという *disclosure* のレイヤーはまだ実装されておらず、別の課題として残っています。
+
+read tool はどの profile でも動作するので、model は自分の profile が許す範囲を超えて変更すること
+なく、要約や計画を作れます。
 
 server は local かつ stdio-only です。
 

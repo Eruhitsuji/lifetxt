@@ -253,6 +253,47 @@ def build_ticket_event(
     return Item("[N]", "N", _event_title(event_type, ticket_id), details)
 
 
+def build_creation_event(
+    ticket_id, author=None, at=None, project=None, tracker=None, transaction_id=None
+):
+    """The first ``created`` ticket_event for a brand-new ticket with no
+    prior history.
+
+    Reuses :func:`build_ticket_event` unmodified for construction; only
+    supplies the fixed ``sequence=1`` and an auto-generated transaction id a
+    ticket with no existing events needs (unlike a transition, there is no
+    prior file state to check for reuse against, so no uniqueness scan is
+    required). ``ticket_revision`` uses the fixed marker ``"new"`` rather
+    than a content hash, since -- unlike a transition, which records the
+    file's revision immediately before an existing ticket changed -- there
+    is no meaningful "before" ticket state for a creation event to describe.
+    """
+    timestamp = _utc_text(at)
+    txid = transaction_id or _creation_transaction_id(ticket_id, timestamp)
+    return build_ticket_event(
+        ticket_id,
+        "created",
+        author,
+        timestamp,
+        1,
+        txid,
+        "new",
+        project=project,
+        tracker=tracker,
+    )
+
+
+def _creation_transaction_id(ticket_id, timestamp):
+    stamp = (
+        str(timestamp)
+        .replace("-", "")
+        .replace(":", "")
+        .replace("T", "-")
+        .replace("Z", "")
+    )
+    return "TX-%s-000001-%s" % (_safe_id(ticket_id), stamp)
+
+
 def build_time_entry(
     ticket_id,
     project,

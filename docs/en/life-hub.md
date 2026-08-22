@@ -30,7 +30,8 @@ Buckets:
   TUI `/next` view, and MCP `get_next_actions` already agree on, reused here
   rather than redefined (see [new-cli-workflows.md](new-cli-workflows.md))
 - **habits** — open `H` items
-- **messages** — open `M` items (optionally scoped to `--person`)
+- **messages** — open `M` items not yet acknowledged and not under an active
+  `snooze_until:` (optionally scoped to `--person`)
 - **captures** — open tasks with no `project:`, `due:`, or `assignee:`
   (untriaged quick captures, distinct from the Unified Inbox below)
 - **inbox** — a bounded Unified Inbox summary: `total`/`pending_count`/
@@ -38,6 +39,10 @@ Buckets:
   (`id`, `source`, `created`, `summary`); the full operational proposal store
   stays in `proposal list` / MCP `list_proposals`, never duplicated here
 - **project attention** — non-green projects with their health reasons
+- **ticket attention** — open `record:ticket` items in `review` status,
+  high severity, or stale, each tagged with which reason(s) applied; reuses
+  the same `severity`/staleness rules `ticket project` reports and `temporal`
+  already use, never a second definition of either
 - **safety** — a quick configuration-validity signal
 
 The same aggregation is available to AI clients through the MCP tool

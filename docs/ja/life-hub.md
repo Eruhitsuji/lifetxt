@@ -23,10 +23,11 @@ Buckets:
 - **waiting**: status `[?]`
 - **next actions**: `next`、TUI `/next`、MCP `get_next_actions` と同じ open/unblocked/non-someday actions。ここで再定義せず再利用しています（[new-cli-workflows.md](new-cli-workflows.md) 参照）
 - **habits**: open `H` items
-- **messages**: open `M` items。`--person` で scope 可能
+- **messages**: acknowledge 済みでなく、有効な `snooze_until:` の対象でもない open `M` items。`--person` で scope 可能
 - **captures**: `project:`、`due:`、`assignee:` がない open tasks（未整理の quick capture。下記の Unified Inbox とは別物）
 - **inbox**: bounded な Unified Inbox summary。`total`/`pending_count`/`deferred_count`/`counts` と、pending proposal の一部（`id`、`source`、`created`、`summary`）まで。完全な operational proposal store は `proposal list` / MCP `list_proposals` のままで、ここでは複製しません
 - **project attention**: non-green projects と health reasons
+- **ticket attention**: `review` status、high severity、または stale な open `record:ticket` items。該当した理由をそれぞれ記録します。`ticket project` report や `temporal` と同じ `severity`/staleness rule を再利用し、別定義は作りません
 - **safety**: configuration-validity の quick signal
 
 同じ aggregation は MCP tool `get_command_center` からも使えます。

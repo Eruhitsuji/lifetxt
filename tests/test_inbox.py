@@ -12,7 +12,10 @@ class InboxTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.store = os.path.join(self.temp.name, "proposals.json")
         self.target = os.path.join(self.temp.name, "life.txt")
-        self.config = {"inbox": {"proposals_file": self.store}}
+        self.config = {
+            "inbox": {"proposals_file": self.store},
+            "write_file": self.target,
+        }
 
     def tearDown(self):
         self.temp.cleanup()
@@ -112,6 +115,133 @@ class InboxTests(unittest.TestCase):
 
     def test_missing_store_is_empty(self):
         self.assertEqual([], inbox.list_proposals(self.config))
+
+    def test_stage_create_captures_target_and_revision(self):
+        with open(self.target, "w", encoding="utf-8") as handle:
+            handle.write("#! timezone: UTC\n[ ] T Existing\n")
+
+        proposal = inbox.stage_create(self.config, "New")
+
+        self.assertEqual(self.target, proposal["staged_target"])
+        self.assertTrue(proposal["expected_revision"])
+
+    def test_stage_create_populates_provenance(self):
+        proposal = inbox.stage_create(self.config, "New", source="mcp")
+        self.assertEqual("mcp", proposal["provenance"]["source"])
+
+    def test_accept_succeeds_when_target_unchanged_since_staging(self):
+        proposal = inbox.stage_create(self.config, "Ship")
+        result = inbox.accept(self.config, proposal["id"], self.target)
+        self.assertTrue(result["applied"])
+
+    def test_accept_refuses_when_target_changed_since_staging(self):
+        proposal = inbox.stage_create(self.config, "Ship")
+        with open(self.target, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Interloper\n")
+
+        with self.assertRaises(ValueError) as caught:
+            inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertIn("stale", str(caught.exception).lower())
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertNotIn("Ship", content)
+        self.assertEqual(
+            "pending", inbox.get_proposal(self.config, proposal["id"])["status"]
+        )
+
+    def test_accept_with_explicit_revision_overrides_the_staged_one(self):
+        proposal = inbox.stage_create(self.config, "Ship")
+        with open(self.target, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Interloper\n")
+
+        # An explicit caller-supplied revision takes precedence over the
+        # proposal's own stale stored one; using the file's real current
+        # hash here proves the override, not the stored value, is honored.
+        from lifetxt.write_operations import snapshot
+
+        current = snapshot(self.target).content_hash
+        result = inbox.accept(
+            self.config, proposal["id"], self.target, expected_revision=current
+        )
+        self.assertTrue(result["applied"])
+
+    def test_accept_into_a_different_target_skips_the_staleness_check(self):
+        other = os.path.join(self.temp.name, "other.txt")
+        with open(other, "w", encoding="utf-8") as handle:
+            handle.write("#! timezone: UTC\n[ ] T Unrelated\n")
+        proposal = inbox.stage_create(self.config, "Ship")
+
+        result = inbox.accept(self.config, proposal["id"], other)
+
+        self.assertTrue(result["applied"])
+
+    def test_batch_apply_of_proposals_staged_before_any_were_applied_succeeds(self):
+        # All three are staged against the same not-yet-existing target
+        # before any of them is applied; only the first is checked against
+        # its own stage-time snapshot, so the batch must still fully apply.
+        ids = [inbox.stage_create(self.config, "T%d" % i)["id"] for i in range(3)]
+
+        report = inbox.batch_apply(self.config, ids, self.target)
+
+        self.assertEqual(3, report["applied"])
+        self.assertEqual(3, report["total"])
+
+    def test_batch_apply_reports_a_stale_first_proposal_without_crashing(self):
+        proposal = inbox.stage_create(self.config, "Ship")
+        with open(self.target, "a", encoding="utf-8") as handle:
+            handle.write("[ ] T Interloper\n")
+
+        report = inbox.batch_apply(self.config, [proposal["id"]], self.target)
+
+        self.assertEqual(0, report["applied"])
+        self.assertIn("stale", report["results"][0]["error"].lower())
+
+    def test_accepting_a_ticket_shaped_proposal_writes_a_creation_event(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Fix the bug",
+            kind="T",
+            details={
+                "record": "ticket",
+                "id": "TK-1",
+                "project": "web",
+                "tracker": "bug",
+            },
+            source="mcp",
+        )
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertIn("event_line", result)
+        self.assertIn("record:ticket_event", result["event_line"])
+        self.assertIn("event:created", result["event_line"])
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("record:ticket_event", content)
+        self.assertIn("parent:TK-1", content)
+
+    def test_accepting_a_non_ticket_proposal_never_adds_an_event(self):
+        proposal = inbox.stage_create(self.config, "Buy milk")
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertNotIn("event_line", result)
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertNotIn("record:ticket_event", content)
+
+    def test_ticket_shaped_proposal_without_an_id_is_treated_as_non_ticket(self):
+        # A ticket contract requires id:, and staging does not auto-generate
+        # one the way `ticket new` does; without it there is nothing
+        # meaningful for a creation event to reference.
+        proposal = inbox.stage_create(
+            self.config, "Fix", kind="T", details={"record": "ticket"}
+        )
+
+        result = inbox.accept(self.config, proposal["id"], self.target)
+
+        self.assertNotIn("event_line", result)
 
 
 if __name__ == "__main__":

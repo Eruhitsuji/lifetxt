@@ -111,6 +111,12 @@
     "safety": {
       "type": "object"
     },
+    "ticket_attention": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
     "upcoming": {
       "items": {
         "type": "object"

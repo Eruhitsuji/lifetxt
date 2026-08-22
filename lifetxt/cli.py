@@ -11167,6 +11167,17 @@ def command_today(args):
                 "  [%s] %s: %s\n"
                 % (row["health"][0].upper(), row["name"], "; ".join(row["reasons"])),
             )
+    if report["ticket_attention"]:
+        write_text(
+            None,
+            "Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
+        )
+        for row in report["ticket_attention"]:
+            write_text(
+                None,
+                "  %s %s: %s\n"
+                % (row["status"], row["title"], ", ".join(row["reasons"])),
+            )
     if all(v == 0 for v in counts.values()):
         write_text(None, "All clear.\n")
     return 0
@@ -12047,9 +12058,31 @@ def command_ticket_new(args):
         paths = config_paths(config)
         target = paths[0] if paths else "life.txt"
     _ensure_writable_path(target, config, "ticket new")
-    append_line(target, line)
+    event_line = _ticket_creation_event_line(
+        ticket_id,
+        config,
+        project=args.project,
+        tracker=args.tracker,
+        author=args.reporter,
+    )
+    append_line(target, line + "\n" + event_line)
     write_text(None, "Created %s in %s:\n  %s\n" % (ticket_id, target, line))
     return 0
+
+
+def _ticket_creation_event_line(
+    ticket_id, config, project=None, tracker=None, author=None
+):
+    from .serializer import item_to_line
+    from .ticket_activity import build_creation_event
+
+    event = build_creation_event(
+        ticket_id,
+        author=author or config_user_name(config),
+        project=project,
+        tracker=tracker,
+    )
+    return item_to_line(event)
 
 
 def command_ticket_list(args):

@@ -6931,6 +6931,178 @@ traceability:
         no per-prompt handler function to hold one-off validation).
       status: implemented
 
+    - requirement_id: req-command-center-messages-ack-snooze
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/498
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Fix command_center()'s messages bucket to exclude an acked or actively-snoozed message, mirroring lifetxt.notifier's existing due-notification suppression rule
+        - lifetxt/command_center.py
+        - tests/test_life_hub.py
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterTests (3 new tests: acked message excluded, actively-snoozed message excluded, snooze_until in the past no longer suppresses)
+        - python -m unittest tests.test_life_hub -> Ran 30 tests, OK
+        - python -m unittest tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK (no regression in reused engines or the unmodified MCP get_command_center tool)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - "confirmed via git stash (production code only, tests kept) that the 3 new tests fail against the pre-#498 code (an acked/snoozed message still appears in command_center()['messages']), then pass once the fix is restored"
+      release_or_deployment: null
+      notes: >-
+        Found during #495's investigation into command_center()'s messages
+        bucket: it filtered only on `item.status in OPEN_STATUSES` and
+        `_message_needs_attention`, never checking `ack`/`snooze_until`,
+        while `lifetxt.notifier._notification_suppressed()` already
+        implements the correct ack/active-snooze suppression rule for the
+        due-notification path (`list_notifications`/`get_agenda`). Rather
+        than importing `notifier`'s instant-precision suppression check
+        unmodified, `_message_suppressed()` is a new, small function at the
+        same reference-*date* granularity `command_center()` already uses
+        for every other bucket (`command_center` takes a reference date, not
+        a reference instant): it compares `snooze_until`'s date against
+        `today`'s date rather than an exact timestamp, so a snooze expiring
+        earlier today is treated consistently with the rest of this
+        aggregation's day-boundary semantics rather than introducing a
+        second, finer-grained time model into one bucket only.
+      status: implemented
+
+    - requirement_id: req-command-center-ticket-attention
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/499
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Add a bounded ticket_attention bucket to command_center() covering review-status, high-severity, and stale tickets, reusing lifetxt.temporal_context.node_facts and lifetxt.ticket_project_values unmodified
+        - Add a configurable ticket_stale_after_days parameter to command_center()
+        - Add a "Tickets needing attention" section to CLI `today`'s text output
+        - Add a new lifetxt today CLI regression test file
+        - Extend command-center-v1's schema generator and sample; regenerate the published schema
+        - lifetxt/command_center.py
+        - lifetxt/cli.py
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - tests/test_today_cli.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+      tests_or_evidence:
+        - tests/test_life_hub.py TicketAttentionTests (9 tests: review status, high severity, stale via node_facts, terminal statuses excluded, non-tickets excluded, multiple reasons combined, high-severity-first sort, configurable ticket_stale_after_days reaching the engine, empty when no ticket qualifies)
+        - tests/test_today_cli.py (3 tests: text section present when tickets need attention, absent otherwise, --json includes ticket_attention)
+        - python -m unittest tests.test_life_hub tests.test_today_cli -> Ran 33 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (command-center-v1 ticket_attention field, bundle equality)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via git stash (production code only, tests kept) that TicketAttentionTests and the test_today_cli.py tests fail against the pre-#499 code (no ticket_attention key), then pass once the fix is restored"
+        - "live: real lifetxt today text and --json output against a fixture with a review-status ticket and a stale ticket both show the new section/field with correct reasons"
+      release_or_deployment: null
+      notes: >-
+        Extends cap-daily-command-center with the ticket-attention signal
+        #495's investigation recommended. Reuses
+        lifetxt.temporal_context.node_facts (an existing, already-tested
+        per-item staleness/due-date fact function from #485/#489) for the
+        "stale" reason rather than reimplementing a second staleness rule,
+        and lifetxt.ticket_project_values.ticket_row/DEFAULT_HIGH_SEVERITIES/
+        DEFAULT_TERMINAL_STATUSES for status/severity classification,
+        matching this project's established reuse-before-new-implementation
+        policy. No structural relation computation or a second staleness
+        formula is introduced. TUI Today and the Web Today dashboard are
+        deliberately NOT updated in this task -- they render whatever
+        command_center() returns generically today (TUI groups by the
+        existing NOW/ATTENTION/INBOX/UPCOMING buckets; Web renders four
+        fixed cards), so a `ticket_attention` bucket with no matching
+        section in either renderer is present in the API/CLI/MCP surface
+        but not yet visually surfaced in the TUI or Web Today view. This is
+        recorded here as a deliberate, evidenced follow-up gap rather than
+        silently left unmentioned; adding TUI/Web rendering for this new
+        bucket is a candidate for a future issue.
+      status: implemented
+
+    - requirement_id: req-inbox-proposal-stale-detection
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/496
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Capture staged_target/expected_revision/provenance automatically at proposal stage time
+        - Use the proposal's own stage-time revision at accept time (when no explicit override is given and the accept target matches staged_target), refusing with a distinct stale-proposal error on a mismatch
+        - Add a use_staged_revision batch-safety flag so several proposals staged before any were applied do not falsely see an earlier batch member's own write as external staleness
+        - Add staged_target to inbox-proposal-v1's schema generator and sample; regenerate the published schema
+        - lifetxt/inbox.py
+        - lifetxt/schema_extensions_v12.py
+        - dist/schemas/inbox-proposal-v1.schema.json
+        - tests/test_inbox.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+      tests_or_evidence:
+        - tests/test_inbox.py (8 new tests: stage-time target/revision/provenance capture, accept success when unchanged, accept refusal with a named stale-proposal error and no write when the target changed since staging, explicit-revision override precedence over the staged one, target-mismatch skips the staleness check, batch of proposals staged before any were applied succeeds, batch reports a stale first proposal without crashing the rest of the batch)
+        - python -m unittest tests.test_inbox -> Ran 20 tests, OK (12 pre-existing re-run unmodified)
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (inbox-proposal-v1 staged_target field, bundle equality)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via git stash (production code only, tests kept) that all 8 new tests fail against the pre-#496 code (no staleness detection: a stale accept silently succeeds and overwrites concurrent content), then pass once the fix is restored"
+        - "live, real installed lifetxt console script, real disposable workspace: `proposal add` then an interleaved external edit then `proposal accept` correctly refused with a named stale-proposal error and left the target file byte-unchanged; a second `proposal add`/`proposal accept` with no interleaved edit succeeded normally"
+      release_or_deployment: null
+      notes: >-
+        #494 investigated Unified Inbox proposal-contract hardening and
+        found, by reading the actual accept call chain rather than the
+        schema field names alone, that expected_revision was declared on
+        the schema but never read back by any accept path (no caller ever
+        supplied one) and provenance was a documented field no caller ever
+        populated -- a proposal staged against one version of the file could
+        silently overwrite unrelated concurrent changes on accept, with no
+        detection. See cap-unified-inbox-proposals's own notes for the full
+        account, including the use_staged_revision batch-safety fix found
+        and required by re-running the pre-existing test_batch_apply test
+        against the naive per-proposal-revision design.
+      status: implemented
+
+    - requirement_id: req-inbox-ticket-creation-event
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/497
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Add build_creation_event(), a thin wrapper around the existing build_ticket_event() supplying the fixed sequence=1 and an auto-generated transaction id for a brand-new ticket's first event
+        - Wire it into command_ticket_new (lifetxt/cli.py) and its lifetxt/ticket_custom_fields.py monkey-patched duplicate, which is what actually runs on every normal lifetxt invocation
+        - Wire it into inbox.apply_proposal() for a ticket-shaped create proposal (record:ticket on a T item, with id:), producing the same creation-event audit trail on acceptance
+        - lifetxt/ticket_activity.py
+        - lifetxt/cli.py
+        - lifetxt/ticket_custom_fields.py
+        - lifetxt/inbox.py
+        - tests/test_inbox.py
+        - tests/test_ticket_creation_event.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+        - docs/en/tickets.md
+        - docs/ja/tickets.md
+      tests_or_evidence:
+        - tests/test_ticket_creation_event.py (7 tests: build_creation_event() shape/transaction-id/author defaults, CLI `ticket new` writing a companion creation event, event correctly referencing the new ticket id, dry-run writing nothing)
+        - tests/test_inbox.py (3 new tests: ticket-shaped proposal acceptance writes a creation event, non-ticket proposal unaffected, id-less ticket-shaped proposal treated as non-ticket since staging does not auto-generate an id the way `ticket new` does)
+        - python -m unittest tests.test_ticket_creation_event tests.test_inbox tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_tickets -> Ran 176 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via the project's own scripts/validate_release_docs.py slug() algorithm, run directly against the new docs/ja/inbox.md and docs/ja/tickets.md Japanese cross-reference headings, that the new anchors resolve correctly -- these two files are outside validate_release_docs.py's own checked-document set, so this was verified independently rather than assumed from a green run"
+        - "live: real `lifetxt ticket new` run wrote both the ticket line and its record:ticket_event creation entry in one append; `lifetxt ticket validate-history` and `lifetxt check` both passed against the result"
+        - "confirmed via git stash (production code only, tests kept) that the new tests in both files fail against the pre-#497 code (no creation event emitted anywhere), then pass once the fix is restored"
+      release_or_deployment: null
+      notes: >-
+        #494 assumed `ticket new` already emits a `created`
+        `record:ticket_event`, generalizing incorrectly from the fact that
+        ticket *transitions* do. On closer reading during implementation
+        this was found to be wrong: `ticket_activity.EVENT_TYPES` declares
+        `"created"` but nothing in the codebase ever constructed one before
+        this change. This entry corrects that premise rather than silently
+        building on it; see cap-unified-inbox-proposals's own notes for the
+        full account, including the `lifetxt/ticket_custom_fields.py`
+        monkey-patch-shadowing discovery that would otherwise have left the
+        CLI-side fix dead in practice (its unconditionally-installed
+        duplicate of `command_ticket_new` is what actually runs, not the
+        original in `lifetxt/cli.py`).
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

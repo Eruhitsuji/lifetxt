@@ -1100,6 +1100,107 @@ class WorkspaceStateTests(unittest.TestCase):
         self.assertEqual(0, state.cursor)
 
 
+class WorkspaceTodayViewTests(unittest.TestCase):
+    """The Today view must render the shared Command Center, not a copy of it."""
+
+    SAMPLE = (
+        "#! timezone: UTC\n"
+        "[ ] T Overdue_Task project:work due:2000-01-01 id:t1\n"
+        "[ ] T Blocked_Task project:work depends_on:t1 id:t2\n"
+    )
+
+    def _state(self, text=None, config_data=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(self.SAMPLE if text is None else text)
+        args = argparse.Namespace(paths=[path], config_data=config_data or {})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
+        state.reload()
+        return state
+
+    def test_today_command_switches_view_and_loads_command_center_data(self):
+        state = self._state()
+
+        level, message = tui_app.run_command(state, "/today")
+
+        self.assertEqual("info", level)
+        self.assertEqual("today", state.view)
+        self.assertIsNotNone(state._today)
+        self.assertIn("today", tui_app.WORKSPACE_VIEWS)
+
+    def test_today_view_shows_now_attention_inbox_and_upcoming_sections(self):
+        state = self._state()
+        state.view = "today"
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertIn("TODAY", text)
+        self.assertIn("NOW", text)
+        self.assertIn("ATTENTION", text)
+        self.assertIn("INBOX", text)
+        self.assertIn("UPCOMING", text)
+        # depends_on:t1 (still open) blocks Blocked_Task.
+        self.assertIn("Blocked_Task", text)
+        self.assertIn("Overdue_Task", text)
+
+    def test_today_view_empty_sections_stay_compact_and_understandable(self):
+        state = self._state(text="#! timezone: UTC\n")
+        state.view = "today"
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertIn("Nothing overdue.", text)
+        self.assertIn("Nothing actionable.", text)
+        self.assertIn("Inbox is empty.", text)
+
+    def test_today_view_data_comes_from_the_shared_command_center_aggregation(self):
+        from lifetxt.command_center import command_center
+        from lifetxt.tui import load_items
+
+        state = self._state()
+        state.view = "today"
+
+        items = load_items(state.args.paths)
+        expected = command_center(items, {}, tui_app.timezone_today())
+
+        self.assertEqual(
+            [r["title"] for r in expected["overdue"]],
+            [r["title"] for r in state._today["overdue"]],
+        )
+        self.assertEqual(
+            [r["title"] for r in expected["blocked"]],
+            [r["title"] for r in state._today["blocked"]],
+        )
+
+    def test_other_views_are_unaffected_by_the_today_view(self):
+        state = self._state()
+
+        tui_app.run_command(state, "/view tasks")
+        state.refresh()
+
+        self.assertEqual("tasks", state.view)
+        self.assertTrue(state.rows)
+
+    def test_reload_refreshes_the_today_view(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("#! timezone: UTC\n")
+        args = argparse.Namespace(paths=[path], config_data={})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
+        state.reload()
+        self.assertEqual(0, state._today["counts"]["overdue"])
+
+        with open(path, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Late project:work due:2000-01-01\n")
+        state.reload()
+
+        self.assertEqual(1, state._today["counts"]["overdue"])
+
+
 class WorkspaceKeymapRegressionTests(unittest.TestCase):
     """Regressions for the two reported TUI bugs."""
 

@@ -1634,6 +1634,22 @@ python -m lifetxt ai setup generic life.txt --format json
 target. `--format json` returns `{"command": [...], "mcp_client_config":
 {...}}` instead of formatted text.
 
+### 11.3 `ai doctor`
+
+Check whether the workspace will load and resolve a write target cleanly
+for a direct MCP connection. Writes nothing.
+
+```sh
+python -m lifetxt ai doctor life.txt
+python -m lifetxt ai doctor life.txt --write-file life.txt --format json
+```
+
+Reports one check per input file (found/parsed), a `write-target` check
+(resolved, or the same `--write-file`-required error `lifetxt mcp` would
+raise), and a `profile` recommendation naming `read` as the default for
+external/untrusted clients. `--format json` returns the checks as a JSON
+array.
+
 ## 12. `config`
 
 Create or inspect an external JSON config file.

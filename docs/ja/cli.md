@@ -1458,6 +1458,21 @@ python -m lifetxt ai setup generic life.txt --format json
 を上書きできます。`--format json` を指定すると、整形された text の代わりに
 `{"command": [...], "mcp_client_config": {...}}` を返します。
 
+### 11.3 `ai doctor`
+
+direct MCP 接続のために workspace が正しく読み込め、write target が一意に解決
+できるかを確認します。file への書き込みは一切行いません。
+
+```sh
+python -m lifetxt ai doctor life.txt
+python -m lifetxt ai doctor life.txt --write-file life.txt --format json
+```
+
+input file ごとの check（found/parsed）、`write-target` check（解決できた場合は
+その値、できない場合は `lifetxt mcp` 自身が出すのと同じ `--write-file` 必須の
+error）、そして外部/信頼できない client 向けに `read` を推奨する `profile` check
+を表示します。`--format json` を指定すると check を JSON array で返します。
+
 ## 12. `config`
 
 外部 JSON config を作成または表示します。

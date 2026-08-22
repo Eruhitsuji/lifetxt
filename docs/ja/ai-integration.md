@@ -43,6 +43,17 @@ python -m lifetxt ai setup generic life.txt
 `read` になり、`--profile assist|full` で変更でき、`--format json` で機械可読な
 出力も得られます。
 
+client を接続する前に、実際に動作するか確認できます:
+
+```sh
+python -m lifetxt ai doctor life.txt
+```
+
+各 input file が存在し parse できるか、write target が一意に解決できるか
+（できない場合は `lifetxt mcp` 自身が出す `--write-file` 必須の error と同じ内容）、
+そして外部/信頼できない client には `read` を default として推奨する旨を表示します。
+file への書き込みは一切行いません。
+
 ### Claude Desktop
 
 `claude_desktop_config.json`:

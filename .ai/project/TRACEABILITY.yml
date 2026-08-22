@@ -6532,7 +6532,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/471
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/474
       changed_files_or_scope:
         - Rebaseline the roadmap after v1.0.0 into a post-Stable priority model, reclassify the remaining stabilization-era issues, and select the next product-development themes
         - todo.md

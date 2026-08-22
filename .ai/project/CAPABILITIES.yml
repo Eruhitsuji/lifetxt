@@ -4085,6 +4085,68 @@ capabilities:
       same pattern the `Today` view (#476) already established for
       `command_center()`. A Web-side counterpart (#484) is tracked as a
       separate, deferred follow-up per #480's own recommended sequencing.
+
+  - id: cap-web-saved-views-and-areas
+    name: Web saved views and area switching
+    summary: >-
+      Expose the existing `lifetxt.saved_views`/`lifetxt.areas` engines as
+      Web read endpoints (`GET /api/saved-views`, `GET
+      /api/saved-views/{name}`, `GET /api/areas`, `GET /api/areas/{name}`)
+      and a minimal Items-view filter-bar affordance (Saved view / Area
+      selects) that replaces the visible row set with a named view's or
+      area's items.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-saved-views-and-area-switching
+    implementation_locations:
+      - lifetxt/webapp.py
+      - lifetxt/web_assets.html
+      - tests/test_lifetxt.py
+      - docs/en/web.md
+      - docs/ja/web.md
+    public_interfaces:
+      - GET /api/saved-views
+      - GET /api/saved-views/{name}
+      - GET /api/areas
+      - GET /api/areas/{name}
+      - Web UI Items view Saved view / Area selects
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebApiTests saved-view/area tests (8 tests: populated/empty listing, run/detail, unknown-name 404, read-only client availability)
+      - tests/test_lifetxt.py test_saved_view_and_area_selects_are_served_and_backed_by_the_new_apis
+      - "live: TestClient smoke against a real fixture life.txt with saved_views config and an area:home item confirmed all four routes' shapes, including the exact engine-native 404 messages for an unknown saved view and area"
+      - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_commands tests.test_surface_runtime tests.test_web_i18n tests.test_release_policy -> Ran 135 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2558 tests, OK (skipped=5)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check -> clean (pre-existing drift in 9 unrelated files confirmed present on main already, not introduced by this change)
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/484
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      All four routes delegate entirely to `lifetxt.saved_views`/
+      `lifetxt.areas` (both pre-existing, untraced modules on `main`); no
+      query grammar or area-grouping logic is duplicated in `webapp.py`.
+      `GET /api/areas/{name}` returns `area_show()`'s result unmodified,
+      including `open_items` as lightweight refs (`title`/`kind`/`status`/
+      `project`/`source`/`line`), not full serialized items -- the Items
+      view's `applyArea()` therefore fetches the full `/api/items` set and
+      filters it to the returned `(source, line)` membership, the same
+      "compute a membership key set, then filter the full row set" pattern
+      the TUI side of this feature (issue #483, not yet merged at the time
+      this entry was written) independently arrived at for the identical
+      constraint. `GET /api/saved-views/{name}` returns fully serialized
+      items directly (`run_saved_view()` -> `api_item()`), so
+      `applySavedView()` needs no such reconciliation step. This capability
+      is deliberately scoped to the Web read/filter surface only; #483's
+      TUI `/saved`/`/area` commands and the underlying `saved_views.py`/
+      `areas.py` engines are a sibling capability once #483 merges (see
+      `cap-remote-cli-read-client`/`cap-remote-cli-write-client` for the
+      established precedent of separate capability entries for
+      independently-owned layers over the same subsystem), not folded into
+      this one, to avoid a capability-ID collision between two branches
+      developed in parallel from the same `main` commit.
     replacement:
       replaces: []
       replaced_by: null

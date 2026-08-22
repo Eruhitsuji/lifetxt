@@ -81,6 +81,10 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
 | `GET` | `/api/command-center` | canonical な Daily Command Center: overdue/due-today/upcoming、blocked、waiting、next actions、habits、messages、captures、bounded な Unified Inbox summary、project attention、safety signal |
+| `GET` | `/api/saved-views` | 設定済みの saved view(`saved_views` config)を一覧表示 |
+| `GET` | `/api/saved-views/{name}` | 1 つの saved view を実行。`GET /api/items` と同じ `count`/`items`/`query_diagnostics` 形式 |
+| `GET` | `/api/areas` | `area:` によるグループを task 進捗と共に一覧表示 |
+| `GET` | `/api/areas/{name}` | 1 つの area の project と open item |
 | `GET` | `/api/review` | 日付範囲の review report(完了 task、habit 達成率、journal、mood 推移、elapsed 集計) |
 | `GET` | `/api/commands` | TUI と共有する slash command の catalog |
 | `GET` | `/api/timer` | 実行中の timer |
@@ -113,6 +117,17 @@ Unified Inbox proposal の bounded な `inbox` summary を含みます。
 `?mode=today|morning|evening`(presentation のみの metadata。bucket は常に
 すべて計算されます)を受け付けます。bucket の完全な一覧は
 [life-hub.md](life-hub.md) を参照してください。
+
+`GET /api/saved-views` と `GET /api/saved-views/{name}` は、CLI の
+`view list`/`view run` と同じ named query である `lifetxt.saved_views` に
+完全に委譲します -- query grammar を route 側で重複実装しません。
+`GET /api/areas` と `GET /api/areas/{name}` は `lifetxt.areas` に委譲し、
+item と project を `area:` detail でグループ化します。存在しない saved
+view や area 名は engine 自身の error message を伴う 404 になり、不正な
+saved query は 400 になります。Items view の filter bar には **Saved
+view** と **Area** の select が追加されており、選択すると表示中の行が
+その view/area の item に置き換わります。TUI の `/saved` と `/area`
+command と同じ挙動です。
 
 item payload 例:
 

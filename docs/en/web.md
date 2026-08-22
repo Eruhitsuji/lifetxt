@@ -82,6 +82,10 @@ tools.
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
 | `GET` | `/api/command-center` | The canonical Daily Command Center: overdue/due-today/upcoming, blocked, waiting, next actions, habits, messages, captures, a bounded Unified Inbox summary, project attention, and a safety signal |
+| `GET` | `/api/saved-views` | List every configured saved view (`saved_views` config) |
+| `GET` | `/api/saved-views/{name}` | Run one saved view; same `count`/`items`/`query_diagnostics` shape as `GET /api/items` |
+| `GET` | `/api/areas` | List every `area:` grouping with task progress |
+| `GET` | `/api/areas/{name}` | One area's projects and open items |
 | `GET` | `/api/review` | Review report for a date window: completed tasks, habit completion, journal entries, mood trend, and elapsed time |
 | `GET` | `/api/commands` | The slash-command catalog, shared with the TUI |
 | `GET` | `/api/timer` | The running timer, if any |
@@ -123,6 +127,16 @@ Inbox proposals. Accepts `?horizon=N` (days, default 3), `?person=NAME`
 (scopes unacknowledged messages), and `?mode=today|morning|evening`
 (presentation metadata only; every bucket is always computed). See
 [life-hub.md](life-hub.md) for the full bucket list.
+
+`GET /api/saved-views` and `GET /api/saved-views/{name}` delegate entirely to
+`lifetxt.saved_views`, the same named queries CLI `view list`/`view run`
+use -- no query grammar is duplicated in the route. `GET /api/areas` and
+`GET /api/areas/{name}` delegate to `lifetxt.areas`, grouping items and
+projects by their `area:` detail. An unknown saved view or area name is a
+404 naming the engine's own error message; a malformed saved query is a
+400. The Items view's filter bar exposes both as **Saved view** and **Area**
+selects: choosing one replaces the visible row set with that view's or
+area's items, mirroring the TUI's `/saved` and `/area` commands.
 
 Example item payload:
 

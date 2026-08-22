@@ -4023,6 +4023,25 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         for forbidden in ("/api/items", "/api/agenda", "/api/stats"):
             self.assertNotIn(forbidden, load_body)
 
+    def test_saved_view_and_area_selects_are_served_and_backed_by_the_new_apis(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        self.assertIn('id="saved-view-select"', html)
+        self.assertIn('id="area-select"', html)
+        self.assertIn('onchange="applySavedView(this.value)"', html)
+        self.assertIn('onchange="applyArea(this.value)"', html)
+        self.assertIn("async function populateSavedViewsAndAreas()", html)
+        self.assertIn('api("/api/saved-views")', html)
+        self.assertIn('api("/api/areas")', html)
+        self.assertIn("async function applySavedView(name)", html)
+        self.assertIn("async function applyArea(name)", html)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 
@@ -4276,6 +4295,118 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(1, wide.json()["counts"]["upcoming"])
             self.assertEqual(200, scoped.status_code)
             self.assertEqual(0, scoped.json()["counts"]["messages"])
+
+    def test_saved_views_api_lists_configured_views(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n[ ] T Task priority:high\n", encoding="utf-8"
+            )
+            config = {"saved_views": {"urgent": "priority:high"}}
+            client = self._client([path], writable_path=path, config=config)
+
+            response = client.get("/api/saved-views")
+
+            self.assertEqual(200, response.status_code)
+            views = response.json()["views"]
+            self.assertEqual(1, len(views))
+            self.assertEqual("urgent", views[0]["name"])
+            self.assertEqual("priority:high", views[0]["query"])
+
+    def test_saved_views_api_reports_no_views_when_none_configured(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/saved-views")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual([], response.json()["views"])
+
+    def test_saved_view_run_api_delegates_to_the_engine(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n"
+                "[ ] T Urgent_Task priority:high id:t1\n"
+                "[ ] T Normal_Task id:t2\n",
+                encoding="utf-8",
+            )
+            config = {"saved_views": {"urgent": "priority:high"}}
+            client = self._client([path], writable_path=path, config=config)
+
+            response = client.get("/api/saved-views/urgent")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual(1, data["count"])
+            self.assertEqual("Urgent_Task", data["items"][0]["title"])
+
+    def test_saved_view_run_api_unknown_name_returns_404(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/saved-views/nope")
+
+            self.assertEqual(404, response.status_code)
+            self.assertIn("nope", response.json()["message"])
+
+    def test_areas_api_lists_areas_with_progress(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n[ ] T Buy_Milk project:home area:home\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/areas")
+
+            self.assertEqual(200, response.status_code)
+            names = [a["name"] for a in response.json()["areas"]]
+            self.assertIn("home", names)
+
+    def test_area_detail_api_delegates_to_the_engine(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n[ ] T Buy_Milk project:home area:home\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/areas/home")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual("home", data["name"])
+            self.assertEqual(1, data["task_total"])
+            self.assertEqual(
+                ["Buy_Milk"], [item["title"] for item in data["open_items"]]
+            )
+
+    def test_area_detail_api_unknown_name_returns_404(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/areas/nope")
+
+            self.assertEqual(404, response.status_code)
+            self.assertIn("nope", response.json()["message"])
+
+    def test_saved_views_and_areas_apis_available_on_a_read_only_client(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path, read_only=True)
+
+            self.assertEqual(200, client.get("/api/saved-views").status_code)
+            self.assertEqual(200, client.get("/api/areas").status_code)
 
     def test_command_center_api_invalid_horizon_returns_400(self):
         with tempfile.TemporaryDirectory() as temp_dir:

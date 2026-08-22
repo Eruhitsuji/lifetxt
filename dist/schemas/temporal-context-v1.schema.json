@@ -1,0 +1,180 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-context-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "facts": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "days": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "reference_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rule": {
+            "type": "string"
+          },
+          "source_field": {
+            "type": "string"
+          },
+          "threshold_days": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rule",
+          "source_field",
+          "reference_time"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "reference_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "related": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "days": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "reference_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "relation": {
+            "enum": [
+              "same_day",
+              "before",
+              "after"
+            ]
+          },
+          "rule": {
+            "type": "string"
+          },
+          "source_field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target": {
+            "additionalProperties": true,
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "target_field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "relation",
+          "rule",
+          "source_field",
+          "target_field",
+          "days",
+          "target"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "temporal-context-v1"
+    },
+    "target": {
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "target_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "window_days": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema",
+    "reference_date",
+    "target_id",
+    "target",
+    "window_days",
+    "facts",
+    "related"
+  ],
+  "title": "lifetxt derived temporal context v1",
+  "type": "object"
+}

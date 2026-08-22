@@ -1096,6 +1096,35 @@ def build_parser():
     backlinks_command.add_argument("--json", action="store_true", help="Emit JSON.")
     backlinks_command.set_defaults(func=command_backlinks)
 
+    temporal_command = subparsers.add_parser(
+        "temporal",
+        help="Show one item's derived temporal context: overdue/due/staleness "
+        "and nearby dated items.",
+    )
+    temporal_command.add_argument("id", help="Target item ID.")
+    _add_input_paths(temporal_command)
+    temporal_command.add_argument(
+        "--window",
+        type=int,
+        default=7,
+        help="Days on either side of the target's own date to consider for "
+        "same_day/before/after. Default 7.",
+    )
+    temporal_command.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Maximum related items returned. Default 20.",
+    )
+    temporal_command.add_argument(
+        "--stale-after",
+        type=int,
+        default=None,
+        help="Days of inactivity before stale_since applies. Default 14.",
+    )
+    temporal_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    temporal_command.set_defaults(func=command_temporal)
+
     query_command = subparsers.add_parser(
         "query", help="Filter items with the shared query language."
     )
@@ -11279,6 +11308,73 @@ def _emit_query_items(args, items, diagnostics=None):
             sys.stderr.write("ERROR: %s %s\n" % (row.get("code"), row.get("message")))
         else:
             sys.stderr.write("WARNING: %s %s\n" % (row.get("code"), row.get("message")))
+
+
+def command_temporal(args):
+    from .temporal_context import DEFAULT_STALE_DAYS, temporal_context
+    from .web_read_service import find_item_by_id
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(
+            getattr(args, "paths", None), _config(args), stdin_when_empty=False
+        )
+        or ["life.txt"],
+        _config(args),
+    )
+    key = id_key_from_config(_config(args))
+    try:
+        target = find_item_by_id(items, args.id, key=key)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if target is None:
+        sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
+        return 1
+    stale_after = getattr(args, "stale_after", None)
+    context = temporal_context(
+        items,
+        target,
+        _project_today(),
+        key=key,
+        window_days=getattr(args, "window", 7),
+        limit=getattr(args, "limit", 20),
+        stale_after_days=stale_after if stale_after is not None else DEFAULT_STALE_DAYS,
+    )
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(context, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "Temporal context for %s (%s):\n" % (args.id, target.title))
+    if not context["facts"]:
+        write_text(None, "  No overdue/due/staleness facts.\n")
+    for fact in context["facts"]:
+        detail = ", ".join(
+            "%s=%s" % (k, v)
+            for k, v in fact.items()
+            if k not in ("rule", "source_field", "reference_time")
+        )
+        write_text(
+            None, "  %s (%s): %s\n" % (fact["rule"], fact["source_field"], detail)
+        )
+    if not context["related"]:
+        write_text(None, "  No related items within %sd.\n" % context["window_days"])
+    else:
+        write_text(
+            None,
+            "  Related within %sd (%d):\n"
+            % (context["window_days"], len(context["related"])),
+        )
+        for edge in context["related"]:
+            write_text(
+                None,
+                "    %s (%dd) %s %s\n"
+                % (
+                    edge["relation"],
+                    edge["days"],
+                    edge["target_id"] or "(no id)",
+                    edge["target"]["title"],
+                ),
+            )
+    return 0
 
 
 def command_query(args):

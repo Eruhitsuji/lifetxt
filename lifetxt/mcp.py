@@ -1173,6 +1173,35 @@ PROMPT_DEFINITIONS = OrderedDict(
                 ),
             },
         ),
+        (
+            "explain_item",
+            {
+                "description": "Explain why one item is relevant now, using only "
+                "lifetxt's own facts.",
+                "arguments": [
+                    {
+                        "name": "id",
+                        "description": "Target item id.",
+                        "required": True,
+                    }
+                ],
+                "template": (
+                    "Explain why the item named in Context below is relevant right "
+                    "now.\n\n"
+                    "1. Call get_temporal_context for its overdue/due/staleness "
+                    "facts and same_day/before/after neighbors.\n"
+                    "2. Call get_backlinks for incoming relations.\n"
+                    "3. Call get_command_center and/or get_next_actions to see "
+                    "whether it is overdue, blocked, or actionable today.\n"
+                    "4. If it is a ticket or belongs to a project, also call "
+                    "get_ticket and/or get_project for dependency and health "
+                    "context.\n\n"
+                    "Summarise why it matters now, citing the rule/source_field/"
+                    "reference_time or relation each fact came from. Do not write "
+                    "anything; this is an explanation, not a proposal."
+                ),
+            },
+        ),
     ]
 )
 
@@ -1192,8 +1221,14 @@ def prompt_get(name, arguments=None):
     spec = PROMPT_DEFINITIONS.get(name)
     if spec is None:
         raise ValueError("Unknown prompt: %s" % name)
+    arguments = arguments or {}
+    for argument in spec["arguments"]:
+        if argument.get("required") and not arguments.get(argument["name"]):
+            raise ValueError(
+                "Prompt %s requires argument %r." % (name, argument["name"])
+            )
     text = spec["template"]
-    for key, value in (arguments or {}).items():
+    for key, value in arguments.items():
         if value:
             text += "\n\nContext: %s = %s" % (key, value)
     return {

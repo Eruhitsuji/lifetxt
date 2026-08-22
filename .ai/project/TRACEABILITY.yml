@@ -6858,6 +6858,46 @@ traceability:
         than an extension of it.
       status: implemented
 
+    - requirement_id: req-mcp-temporal-context
+      capability_id: cap-temporal-context
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/489
+      pull_request: null
+      changed_files_or_scope:
+        - Add a read-only MCP tool get_temporal_context delegating entirely to lifetxt.temporal_context.temporal_context()
+        - Register it in READ_ONLY_TOOLS, the tool schema list, and TOOL_HANDLERS
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py GetTemporalContextToolTests (8 tests: direct-engine equivalence, window/limit bounding, stale_after reaching the engine, unknown/missing/ambiguous id errors, invalid-bound type errors, read-only usability)
+        - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 107 tests, OK
+        - 'live: lifetxt.mcp.call_tool("get_temporal_context", {"id": "t1"}, context) against a real 3-item fixture with due: dates returned the exact object a direct temporal_context() call produces; unknown/missing id and a non-integer window each raised a deterministic ValueError'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt tests scripts -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Extends cap-temporal-context (#481/#485, PR #486) rather than
+        creating a parallel capability, per the issue's own technical
+        constraint. No temporal derivation logic is duplicated in
+        lifetxt/mcp.py: the new tool resolves the target item via the same
+        find_item_by_id helper _tool_get_item/_tool_get_backlinks already
+        use, raises the same bare ValueError convention on an empty,
+        unknown, or ambiguous id (letting call_tool's existing
+        ValueError-to-JSON-RPC-error translation handle the response
+        shape), and passes window/limit/stale_after straight through to
+        temporal_context() with only type validation -- matching the CLI's
+        own defaults and leniency rather than inventing new range checks.
+        A read-only McpContext does not reject duplicate workspace ids at
+        startup (only a writable context's assert_unique_workspace_ids
+        does), so the ambiguous-id test uses a read-only context to
+        actually reach find_item_by_id's own multiple-match branch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

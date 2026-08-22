@@ -6935,7 +6935,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/498
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
       changed_files_or_scope:
         - Fix command_center()'s messages bucket to exclude an acked or actively-snoozed message, mirroring lifetxt.notifier's existing due-notification suppression rule
         - lifetxt/command_center.py
@@ -6970,7 +6970,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/499
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
       changed_files_or_scope:
         - Add a bounded ticket_attention bucket to command_center() covering review-status, high-severity, and stale tickets, reusing lifetxt.temporal_context.node_facts and lifetxt.ticket_project_values unmodified
         - Add a configurable ticket_stale_after_days parameter to command_center()
@@ -7022,7 +7022,7 @@ traceability:
       capability_id: cap-unified-inbox-proposals
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/496
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
       changed_files_or_scope:
         - Capture staged_target/expected_revision/provenance automatically at proposal stage time
         - Use the proposal's own stage-time revision at accept time (when no explicit override is given and the accept target matches staged_target), refusing with a distinct stale-proposal error on a mismatch
@@ -7062,7 +7062,7 @@ traceability:
       capability_id: cap-unified-inbox-proposals
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/497
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
       changed_files_or_scope:
         - Add build_creation_event(), a thin wrapper around the existing build_ticket_event() supplying the fixed sequence=1 and an auto-generated transaction id for a brand-new ticket's first event
         - Wire it into command_ticket_new (lifetxt/cli.py) and its lifetxt/ticket_custom_fields.py monkey-patched duplicate, which is what actually runs on every normal lifetxt invocation

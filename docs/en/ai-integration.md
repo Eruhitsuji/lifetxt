@@ -11,8 +11,9 @@ the local-first patterns that keep your data yours.
 - [4. Write Safety](#4-write-safety)
 - [5. Prompts](#5-prompts)
 - [6. Permission Profiles And Privacy](#6-permission-profiles-and-privacy)
-- [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
-- [8. Without MCP](#8-without-mcp)
+- [7. AI-Safe Workspaces](#7-ai-safe-workspaces)
+- [8. Remote Safe Mode Client Tools](#8-remote-safe-mode-client-tools)
+- [9. Without MCP](#9-without-mcp)
 
 ---
 
@@ -375,7 +376,56 @@ literal tokens.
 
 ---
 
-## 7. Remote Safe Mode Client Tools
+## 7. AI-Safe Workspaces
+
+`--profile` controls which *tools* a client can reach. A named workspace
+controls which *data* it reads and writes, using the same `--workspace`
+flag every other lifetxt command already supports. Combining the two lets
+you give a client broad read access while confining every write it makes
+to one dedicated file:
+
+```json
+{
+  "workspaces": {
+    "default": {
+      "sources": [{"path": "life.txt", "role": "primary"}],
+      "write_file": "life.txt"
+    },
+    "ai": {
+      "sources": [
+        {"path": "life.txt", "role": "readonly", "writable": false},
+        {"path": "ai-inbox.life.txt", "role": "primary", "writable": true}
+      ],
+      "write_file": "ai-inbox.life.txt"
+    }
+  }
+}
+```
+
+```sh
+python -m lifetxt --workspace ai mcp --profile assist
+python -m lifetxt --workspace ai ai setup generic --profile assist
+python -m lifetxt --workspace ai ai doctor
+```
+
+With this configuration, read tools (`list_items`, `get_agenda`, and so
+on) see items from both `life.txt` and `ai-inbox.life.txt`, while every
+write tool -- including `stage_proposal` under `assist` -- is confined to
+`ai-inbox.life.txt`; `life.txt` itself is never touched. `get_file_state`
+reports the resolved `writable_path` so a client (or you) can confirm
+which file writes will actually reach before trusting the connection.
+`--workspace` requires nothing beyond the `workspaces` configuration
+already documented in [`config.md`](./config.md); no MCP-specific setup
+is needed for it to apply here.
+
+Combined with `--profile assist`, this gives you the pattern #500
+describes: broad read context plus a dedicated proposal/inbox write path,
+so nothing an AI client suggests reaches `life.txt` until you separately
+accept the resulting proposal.
+
+---
+
+## 8. Remote Safe Mode Client Tools
 
 The MCP server can also act as a read-only client for another lifetxt server
 running Remote Safe Mode. These tools reuse the same profile store as the CLI
@@ -408,7 +458,7 @@ slice.
 
 ---
 
-## 8. Without MCP
+## 9. Without MCP
 
 MCP is not required. The CLI composes well with any model that can run commands:
 

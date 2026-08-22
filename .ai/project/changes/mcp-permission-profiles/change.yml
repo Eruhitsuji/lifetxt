@@ -3,13 +3,14 @@ schema_version: 1
 change:
   id: mcp-permission-profiles
   title: MCP permission profiles (read|assist|full)
-  status: proposed
+  status: implemented
   change_type: Security
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
-  related_pull_request: []
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/504
   base_commit: 22516939a3e7ee2d2dbebe365bd4f23a02acaeb3
   target_release: null
 

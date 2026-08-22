@@ -7103,6 +7103,122 @@ traceability:
         original in `lifetxt/cli.py`).
       status: implemented
 
+    - requirement_id: req-mcp-permission-profiles-selection
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - lifetxt/cli.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py McpPermissionProfileTests profile-selection and normalization cases
+        - python -m unittest tests.test_mcp_expansion -> Ran 122 tests, OK
+        - "live: real lifetxt mcp --profile read|assist|full and lifetxt mcp --read-only, plus an invalid --profile value rejected by argparse before any server code runs"
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-read-enforcement
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py McpPermissionProfileTests read-profile enforcement cases
+        - "live: read profile lists exactly 63 non-mutating tools; tools/call denies stage_proposal and create_item"
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-assist-enforcement
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py McpPermissionProfileTests assist-profile enforcement cases
+        - "live: assist profile lists 64 tools (READ_ONLY_TOOLS plus stage_proposal); tools/call allows stage_proposal (staging a real proposal, life.txt byte-unchanged) and denies create_item and every DESTRUCTIVE_TOOLS member"
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-full-compat
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py test_tools_list_under_full_matches_unfiltered_tool_schemas, test_tools_list_with_no_profile_matches_full
+        - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation tests.test_attachments tests.test_clock_skew_v5 tests.test_ticket_project_surfaces tests.test_ticket_workflow_surfaces tests.test_remote_pagination tests.test_remote_web_v20 -> Ran 287 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -m unittest discover -> Ran 2645 tests, OK (skipped=5)'
+      release_or_deployment: null
+      notes: >-
+        Confirms the CLI/Web/MCP capability drift gate and every module
+        that also wraps mcp.call_tool/tool_schemas at import time is
+        unaffected; full behaves identically to today's unmodified default.
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-read-only-alias
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - lifetxt/cli.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py test_profile_read_is_equivalent_to_read_only_flag, test_read_only_flag_combined_with_a_different_profile_conflicts, test_read_only_flag_combined_with_matching_profile_is_accepted
+      release_or_deployment: null
+      notes: >-
+        The conflict check was moved from from_args into McpContext.__init__
+        itself after a test found direct construction (bypassing the CLI)
+        could otherwise create a contradictory profile="assist"+read_only=True
+        state.
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-fail-closed
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py test_never_classified_tool_is_denied_under_read_and_assist_but_allowed_under_full, test_annotations_are_never_consulted_for_the_decision
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-defense-in-depth
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py test_require_writable_still_blocks_write_tools_under_read_only
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-mcp-permission-profiles-docs
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

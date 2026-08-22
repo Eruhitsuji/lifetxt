@@ -83,6 +83,7 @@ python -m lifetxt portfolio [path ...]
 python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
+python -m lifetxt temporal ID [path ...]
 python -m lifetxt query "QUERY" [path ...]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]
@@ -172,6 +173,7 @@ python -m lifetxt remote profile-list
 | `today` | Daily command center: overdue, due, blocked, messages, and project attention (see [life-hub.md](life-hub.md)) |
 | `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
 | `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
+| `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |
 | `query` | Filter items with the shared query language (see [query.md](query.md)) |
 | `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
 | `group` | Inspect and validate messaging groups (see [messaging.md](messaging.md)) |
@@ -2935,7 +2937,7 @@ warrant a dedicated guide:
 | `query`, `view` (saved queries) | [query.md](query.md) |
 | `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |
 | `proposal` (Unified Inbox) | [inbox.md](inbox.md) |
-| `today`, `area`, `backlinks` | [life-hub.md](life-hub.md) |
+| `today`, `area`, `backlinks`, `temporal` | [life-hub.md](life-hub.md) |
 | `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
 

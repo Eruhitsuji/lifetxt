@@ -7219,6 +7219,30 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-mcp-generic-setup-command
+      capability_id: cap-mcp-generic-setup
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/505
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/504
+      changed_files_or_scope:
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtAiSetupGenericCliTests (6 tests)
+        - python -m unittest tests.test_lifetxt tests.test_surface_runtime tests.test_completion_surfaces tests.test_cui_extensions -> Ran 858 tests, OK (skipped=2)
+        - "live: real python -m lifetxt ai setup generic (text/json, --profile full, invalid --profile) against a fixture workspace, confirmed byte-for-byte unchanged afterward"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Standard assurance, read-only command; no change package per
+        this repository's own threshold. Lands in the same PR (#504) as
+        req-mcp-permission-profiles-*.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

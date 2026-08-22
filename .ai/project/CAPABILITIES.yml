@@ -4700,3 +4700,58 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-ai-safe-workspace
+    name: AI-safe workspace pattern (validated)
+    summary: >-
+      Confirms and documents that combining a named workspace (broad
+      read, one confined write target) with lifetxt mcp --profile assist
+      already realizes #500's "AI-safe workspace" pattern, with no
+      production code change required.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-ai-safe-workspace-validation
+    implementation_locations:
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+    public_interfaces:
+      - lifetxt --workspace NAME mcp --profile assist
+      - lifetxt --workspace NAME ai setup generic
+      - lifetxt --workspace NAME ai doctor
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtMcpWorkspaceTests (3 tests, real subprocess round trips via run_cli driving real lifetxt --workspace ai mcp stdio sessions): get_file_state reports the workspace's write_file as writable_path; a create_item attempt is confined to that file (PRECONDITION_REQUIRED naming it) and the read-only source is confirmed byte-unchanged; list_items sees items from both the read-only source and the writable inbox"
+      - python -m unittest tests.test_lifetxt.LifeTxtMcpWorkspaceTests tests.test_extended_workspace_resolution tests.test_workspace_foundation tests.test_mcp_expansion -> Ran 186 tests, OK
+      - "live: a real disposable two-source workspace (life.txt readonly, ai-inbox.life.txt writable) driven with real JSON-RPC lines confirmed writable_path resolves to the inbox file and a create_item attempt is refused/redirected to it, never to life.txt"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - ruff format --check / ruff check on changed files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/509
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Fourth implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 4, "Document/validate
+      AI-safe workspace pattern"), after #502/#505/#507 (merged via PR
+      #504). Standard assurance, investigation plus test/doc only; no
+      change package, per this repository's threshold. Found, before
+      writing any code, that lifetxt/cli.py's _maybe_apply_workspace()
+      (built for an unrelated original purpose: #144/#176/#177's
+      workspace-scoped config resolution for the general CLI) already
+      injects a named workspace's resolved paths/write_file into
+      args.config_data for every command dispatched through the ordinary
+      cli.py parser, including mcp, ai setup generic, and ai doctor --
+      McpContext.from_args already reads config_paths/config_write_file
+      from that same config, so no new code was needed. This closes #500
+      Phase 4 item 6; item 7 ("Proposal-first assist integration") was
+      already satisfied by cap-mcp-permission-profiles's assist profile
+      (stage_proposal only). A dedicated "stronger projection" generated
+      AI context snapshot (#500 section 3's optional alternative to
+      exposing raw workspace sources) remains a separate, larger,
+      unimplemented follow-up candidate.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

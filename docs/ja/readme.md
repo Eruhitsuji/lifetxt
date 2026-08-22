@@ -4,6 +4,7 @@
 
 最初に読む文書:
 
+- [philosophy.md](./philosophy.md): lifetxt がなぜ存在するのか、その背後にある原則
 - [life_txt_format_spec.md](./life_txt_format_spec.md): file format
 - [cli.md](./cli.md): command usage と compatibility
 - [config.md](./config.md): configuration files と effective settings
@@ -41,6 +42,7 @@
 | Messaging and notifications | [messaging.md](./messaging.md) |
 | New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
 | People, teams, groups | [people.md](./people.md) |
+| Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
 | Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |
 | Projects and portfolios | [projects.md](./projects.md) |
 | Public surface revisions | [public-surface-revisions.md](./public-surface-revisions.md) |

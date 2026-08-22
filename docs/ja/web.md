@@ -80,6 +80,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
+| `GET` | `/api/command-center` | canonical な Daily Command Center: overdue/due-today/upcoming、blocked、waiting、next actions、habits、messages、captures、bounded な Unified Inbox summary、project attention、safety signal |
 | `GET` | `/api/review` | 日付範囲の review report(完了 task、habit 達成率、journal、mood 推移、elapsed 集計) |
 | `GET` | `/api/commands` | TUI と共有する slash command の catalog |
 | `GET` | `/api/timer` | 実行中の timer |
@@ -102,6 +103,16 @@ record に `blocked: true` と `blocked_by` が含まれます。`?blocked=only`
 repeat record には、可能な場合 `generated: true`、`source_id`、
 `occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule` が
 含まれます。API は生成された occurrence を source file へ書き戻しません。
+
+`GET /api/command-center` は `lifetxt.command_center.command_center()` が
+構築するのと同じ object をそのまま返します。CLI `today` や MCP
+`get_command_center` と同じ aggregation で、`next_actions`(`next` や TUI
+`/next` と同じ shared actionable-item definition)と、pending/deferred な
+Unified Inbox proposal の bounded な `inbox` summary を含みます。
+`?horizon=N`(日数、default 3)、`?person=NAME`(未読 message を scope)、
+`?mode=today|morning|evening`(presentation のみの metadata。bucket は常に
+すべて計算されます)を受け付けます。bucket の完全な一覧は
+[life-hub.md](life-hub.md) を参照してください。
 
 item payload 例:
 

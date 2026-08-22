@@ -6636,6 +6636,38 @@ traceability:
         view is an explicit, unimplemented follow-up.
       status: implemented
 
+    - requirement_id: req-web-command-center-endpoint
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/477
+      pull_request: null
+      changed_files_or_scope:
+        - Add GET /api/command-center, delegating entirely to command_center() with horizon/person/mode query parameters and the standard 400 error shape for an invalid horizon
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_returns_the_canonical_shape, test_command_center_api_matches_the_direct_engine_call, test_command_center_api_respects_horizon_and_person_parameters, test_command_center_api_invalid_horizon_returns_400, test_command_center_api_available_on_a_read_only_client
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests -> Ran 27 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_web_i18n -> Ran 41 tests, OK (no capability/command-catalog drift; no i18n regression)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. The route contains no
+        due/blocked/waiting/next-action/inbox calculation of its own; it
+        reads input, resolves the same horizon/person/mode parameters CLI
+        today and MCP get_command_center already accept, and returns
+        command_center()'s result unchanged. No Web UI bundle change was
+        made, per #477's own scope; rendering this endpoint in the browser
+        Dashboard remains an explicit, unimplemented follow-up.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

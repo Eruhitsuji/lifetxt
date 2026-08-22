@@ -3796,6 +3796,7 @@ capabilities:
     source_requirements:
       - req-command-center-next-actions-and-inbox
       - req-tui-today-view
+      - req-web-command-center-endpoint
     implementation_locations:
       - lifetxt/command_center.py
       - lifetxt/schema_extensions_v7.py
@@ -3803,24 +3804,31 @@ capabilities:
       - lifetxt/cli.py
       - lifetxt/mcp.py
       - lifetxt/tui_app.py
+      - lifetxt/webapp.py
       - tests/test_life_hub.py
       - tests/test_cui_extensions.py
+      - tests/test_lifetxt.py
       - docs/en/life-hub.md
       - docs/ja/life-hub.md
       - docs/en/cli.md
       - docs/ja/cli.md
+      - docs/en/web.md
+      - docs/ja/web.md
     public_interfaces:
       - lifetxt.command_center.command_center
       - lifetxt today
       - MCP tool get_command_center
       - command-center-v1.schema.json
       - TUI /today command and Today view
+      - GET /api/command-center
     tests_or_evidence:
       - tests/test_life_hub.py CommandCenterTests (21 tests, including next_actions/inbox coverage)
       - tests/test_schema_extensions_v2.py SchemaExtensionsV2Tests (schema bundle equality, draft 2020-12 validation of the extended sample)
       - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests: view switch and data load, NOW/ATTENTION/INBOX/UPCOMING sections render, empty-section hints, data traced back to a direct command_center() call, other views unaffected, reload refreshes Today)
+      - tests/test_lifetxt.py LifeTxtWebApiTests command-center tests (5 tests: canonical shape, matches a direct command_center() call, horizon/person parameters, invalid horizon returns 400, available on a read-only client)
       - python -m unittest tests.test_life_hub tests.test_schema_extensions_v2 tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK
       - python -m unittest tests.test_cui_extensions tests.test_surface_runtime -> Ran 167 tests, OK (skipped=1)
+      - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_i18n -> Ran 43 tests, OK
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -3829,6 +3837,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/473
       - https://github.com/Eruhitsuji/lifetxt/issues/475
       - https://github.com/Eruhitsuji/lifetxt/issues/476
+      - https://github.com/Eruhitsuji/lifetxt/issues/477
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -3867,7 +3876,16 @@ capabilities:
       `dashboard_model()`'s return value does not expose the items it
       already parsed. The view is read-only by design (per #476's own
       scope); accepting/editing Inbox proposals from the Today view is an
-      explicit, unimplemented follow-up.
+      explicit, unimplemented follow-up. #477 adds
+      `GET /api/command-center` to `lifetxt/webapp.py`, delegating entirely
+      to `command_center()` (no due/blocked/next-action/inbox logic
+      duplicated in the route) and accepting the same `horizon`/`person`/
+      `mode` parameters CLI `today` and MCP `get_command_center` already
+      support; an out-of-range/non-integer `horizon` fails with the
+      standard 400 error shape rather than a raised exception. No Web UI
+      bundle change was made, per #477's own scope -- rendering this
+      endpoint in the browser Dashboard is a separate, unimplemented
+      follow-up.
     replacement:
       replaces: []
       replaced_by: null

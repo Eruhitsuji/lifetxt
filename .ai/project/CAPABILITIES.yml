@@ -4641,3 +4641,62 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-life-philosophy-documentation
+    name: Life philosophy and long-term vision documentation
+    summary: >-
+      Consolidated, bilingual project philosophy documentation (durable
+      user-owned life record; replaceable interfaces/AI/providers;
+      hub-not-mirror; Life Record/Context/Assistance layering; selective
+      recording and disclosure) explaining the reasoning behind
+      .ai/project/RULES.md's Design Principles for users and
+      contributors.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-life-philosophy-documentation
+    implementation_locations:
+      - docs/en/philosophy.md
+      - docs/ja/philosophy.md
+      - readme.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+      - .ai/project/RULES.md
+    public_interfaces:
+      - docs/en/philosophy.md
+      - docs/ja/philosophy.md
+    tests_or_evidence:
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK (no translation-coverage or drift-gate regression)
+      - git diff --check -- readme.md docs/en/readme.md docs/ja/readme.md .ai/project/RULES.md docs/en/philosophy.md docs/ja/philosophy.md -> clean
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - manual English/Japanese semantic-parity review (11 matching sections in each language, not a literal translation)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/506
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/503
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Documentation-only capability; no runtime, Format, API, schema, or
+      MCP behavior change. .ai/project/RULES.md's Design Principles and
+      Product Boundaries remain the repository-authoritative, enforceable
+      rules; docs/en+ja/philosophy.md explain and cross-reference them
+      without adding new rules, per the issue's own explicit scope, and a
+      short pointer note was added to RULES.md's Design Principles section
+      stating that RULES.md wins if the two ever disagree. #500 and #503
+      are cross-linked as concrete AI-era applications of this philosophy
+      rather than its definition, per the issue's own acceptance criteria.
+      Landed on the same integration branch/PR (#504) as #502/#505/#507
+      per explicit user instruction, even though this task is otherwise
+      independent of the MCP/AI-integration code changes there.
+      While running the full suite for this and the sibling MCP work,
+      found and filed #508: a pre-existing, timezone-dependent flaky test
+      in tests/test_life_hub.py::TicketAttentionTests, unrelated to this
+      capability; not fixed here per this repository's Horizontal Review
+      Scope Discipline.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

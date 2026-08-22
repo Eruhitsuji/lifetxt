@@ -957,3 +957,123 @@ stable_release:
           Provider side effects are not authoritative life.txt mutations, but
           they are externally mediated writes to another system. They remain
           experimental until safe-account provider evidence is recorded.
+
+  post_stable_roadmap:
+    tracker_issue: https://github.com/Eruhitsuji/lifetxt/issues/471
+    rebaseline_date: "2026-08-22"
+    purpose: >-
+      Establish the single post-Stable planning baseline after v1.0.0 (#454,
+      #457, #464), separating completed Stable 1.0 work, deferred post-Stable
+      quality/compatibility verification, remaining maintenance or
+      correctness work, and the next product-development themes. Backs
+      todo.md's "Post-Stable Priority Model" and "Selected Post-Stable
+      Product Development Themes" sections.
+    supersedes: >-
+      This section does not reopen or invalidate #283, #339, or #454's
+      completed Stable 1.0 record. #454's minimal_stabilization_rescope above
+      remains the authoritative account of what shipped in v1.0.0 and why.
+      This section classifies what remains open after that gate closed and
+      orders what comes next.
+    classification_definitions:
+      post_stable_quality: >-
+        Real-environment or exhaustive verification of an already-implemented
+        surface. Not release-blocking; pursue opportunistically. Reclassify
+        as maintenance_or_correctness the moment a concrete defect, not
+        merely missing evidence, is found.
+      maintenance_or_correctness: >-
+        A known gap, defect, or hardening need in already-shipped tooling or
+        product surfaces, including the external-verification harness
+        itself, that is not gated on new real-environment access.
+      product_enabler: >-
+        Work whose primary purpose is unblocking one of the selected
+        post-Stable product-development themes below.
+      obsolete_or_superseded: >-
+        The item's original purpose no longer applies (superseded by later
+        work, or genuinely no longer needed). Requires an explicit reason and
+        a decision to close or rewrite rather than silently drop.
+    reclassified_issues:
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/288
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/289
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/290
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/291
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/292
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/297
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/298
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/299
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/304
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/312
+        classification: post_stable_quality
+        note: Already status:review; verification is largely written, real-host evidence is pending.
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/313
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/314
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/315
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/316
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/317
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/318
+        classification: post_stable_quality
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/437
+        classification: maintenance_or_correctness
+        note: >-
+          Hardens the external-verification harness itself (release-timeout
+          resilience on slower real hosts), not the product surface being
+          verified.
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/453
+        classification: maintenance_or_correctness
+        note: >-
+          Fixes the external-verification collector's process-tree cleanup on
+          timeout; harness correctness, not product verification.
+    trackers_preserved_as_historical:
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/283
+        note: >-
+          Broad stabilization tracker. Remains open as the historical record
+          for its own children; no longer sets active priority.
+      - issue: https://github.com/Eruhitsuji/lifetxt/issues/339
+        note: >-
+          Maintainability/completion-hardening tracker. Remains open as the
+          historical record for its own children; no longer sets active
+          priority.
+    selected_product_themes:
+      - order: 1
+        name: Unified Inbox, Daily Command Center, and Saved Views / life-area navigation
+        epic_issue: https://github.com/Eruhitsuji/lifetxt/issues/472
+        first_issue: https://github.com/Eruhitsuji/lifetxt/issues/473
+        rationale: >-
+          Recommended as the default in #471 and confirmed after checking the
+          capability registry: the data/engine layer (lifetxt/inbox.py,
+          lifetxt/nextaction.py, area: support, lifetxt/people.py, and the
+          shared CLI/MCP daily aggregation) is already implemented, so the
+          remaining gap is surface exposure and daily-workflow polish rather
+          than new architecture.
+      - order: 2
+        name: Project & Portfolio Hub Web/TUI/saved-view exposure
+        epic_issue: null
+        first_issue: null
+        rationale: >-
+          Surfaces the already-implemented ticket-project-report-v1 engine
+          (CLI/MCP read surfaces already ship) to the surfaces people work in
+          day to day; a natural pairing with theme 1's command-center views.
+          No tracker issue filed yet; file one before implementation starts.
+      - order: 3
+        name: Ticket workflow usability (list/detail/activity, lightweight Kanban)
+        epic_issue: null
+        first_issue: null
+        rationale: >-
+          Builds UI on top of the already-implemented workflow/history/
+          planning/time-tracking core, reusing the daily-view patterns themes
+          1 and 2 establish. No tracker issue filed yet; file one once themes
+          1-2 have established the shared daily-view pattern to reuse.
+    priority_model_reference: todo.md "Post-Stable Priority Model" section

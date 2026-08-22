@@ -118,6 +118,7 @@ WEB_COMMAND_NOTES = {
     "undo": "Use the undo toast or the undo history panel.",
     "mark": "Selects rows; the browser uses checkboxes and the x key.",
     "detail": "Opens the detail drawer for the selected record.",
+    "today": "Not yet available in the browser; GET /api/command-center serves the same data for a future Dashboard view.",
 }
 
 

@@ -6643,6 +6643,7 @@ traceability:
       pull_request: null
       changed_files_or_scope:
         - Add GET /api/command-center, delegating entirely to command_center() with horizon/person/mode query parameters and the standard 400 error shape for an invalid horizon
+        - Add a WEB_COMMAND_NOTES entry for /today, matching the existing pattern that explains every TUI-only command instead of silently omitting it from the browser command palette
         - lifetxt/webapp.py
         - tests/test_lifetxt.py
         - docs/en/web.md
@@ -6652,7 +6653,7 @@ traceability:
       tests_or_evidence:
         - tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_returns_the_canonical_shape, test_command_center_api_matches_the_direct_engine_call, test_command_center_api_respects_horizon_and_person_parameters, test_command_center_api_invalid_horizon_returns_400, test_command_center_api_available_on_a_read_only_client
         - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests -> Ran 27 tests, OK
-        - python -m unittest tests.test_surface_runtime tests.test_web_i18n -> Ran 41 tests, OK (no capability/command-catalog drift; no i18n regression)
+        - python -m unittest tests.test_surface_runtime tests.test_web_i18n tests.test_web_commands -> Ran 61 tests, OK (no capability/command-catalog drift; WEB_COMMANDS/WEB_COMMAND_NOTES completeness gates confirm /today is covered; no i18n regression)
         - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
         - ruff format --check / ruff check on changed files -> clean
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -6665,7 +6666,13 @@ traceability:
         today and MCP get_command_center already accept, and returns
         command_center()'s result unchanged. No Web UI bundle change was
         made, per #477's own scope; rendering this endpoint in the browser
-        Dashboard remains an explicit, unimplemented follow-up.
+        Dashboard remains an explicit, unimplemented follow-up. Found while
+        reviewing the diff that /today (added by #476) was the only TUI
+        command with neither Web support nor a WEB_COMMAND_NOTES entry,
+        which the browser command palette's own design explicitly guards
+        against (see webapp.py's get_commands() docstring); added the
+        matching note within this task's own write scope (lifetxt/webapp.py)
+        rather than leaving the palette silently omit an explanation.
       status: implemented
 
 required_chain:

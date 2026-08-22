@@ -671,6 +671,47 @@ def build_parser():
     )
     mcp.set_defaults(func=command_mcp)
 
+    ai_command = subparsers.add_parser(
+        "ai",
+        help="AI client integration helpers.",
+    )
+    ai_subparsers = ai_command.add_subparsers(dest="ai_command")
+    ai_setup = ai_subparsers.add_parser(
+        "setup",
+        help="Print ready-to-use AI client setup information.",
+    )
+    ai_setup_subparsers = ai_setup.add_subparsers(dest="ai_setup_command")
+    ai_setup_generic = ai_setup_subparsers.add_parser(
+        "generic",
+        help=(
+            "Print the lifetxt mcp command and a generic MCP client "
+            "configuration for the current workspace. Writes nothing."
+        ),
+    )
+    ai_setup_generic.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to reference. Defaults to life.txt or config paths.",
+    )
+    ai_setup_generic.add_argument(
+        "--write-file",
+        help="File the printed command uses as its write target.",
+    )
+    ai_setup_generic.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default="read",
+        help="Permission profile to emit. Defaults to 'read'.",
+    )
+    ai_setup_generic.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_setup_generic.set_defaults(func=command_ai_setup_generic)
+
     config_command = subparsers.add_parser(
         "config",
         help="Create or inspect an external JSON config file.",
@@ -5021,6 +5062,81 @@ def command_mcp(args):
     from .mcp import cmd_mcp
 
     return cmd_mcp(args)
+
+
+def command_ai_setup_generic(args):
+    """Print the `lifetxt mcp` command and a generic MCP client
+    configuration for the current workspace. Never writes a file: path
+    resolution reuses the same pure helpers `lifetxt mcp` itself uses,
+    rather than constructing an McpContext (which can trigger a
+    transaction startup preflight for non-read profiles)."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    paths = _normalize_paths(
+        list(args.paths) if args.paths else (config_paths(config) or ["life.txt"]),
+        config,
+        stdin_when_empty=False,
+    )
+    write_target = resolve_write_target(
+        paths, args.write_file or config_write_file(config)
+    )
+    profile = args.profile or "read"
+
+    command_args = ["-m", "lifetxt", "mcp"]
+    command_args.extend(paths)
+    if write_target not in paths:
+        command_args.extend(["--write-file", write_target])
+    command_args.extend(["--profile", profile])
+
+    mcp_config = OrderedDict(
+        [
+            (
+                "mcpServers",
+                OrderedDict(
+                    [
+                        (
+                            "lifetxt",
+                            OrderedDict(
+                                [
+                                    ("command", "python"),
+                                    ("args", list(command_args)),
+                                ]
+                            ),
+                        )
+                    ]
+                ),
+            )
+        ]
+    )
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Command:",
+        "  python " + " ".join(command_args),
+        "",
+        "Generic MCP client configuration:",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "Profile: %s%s"
+        % (
+            profile,
+            " (default; use --profile assist|full for more access)"
+            if profile == "read"
+            else "",
+        ),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
 
 
 def _split_archive_text(

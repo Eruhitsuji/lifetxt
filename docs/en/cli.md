@@ -1619,6 +1619,21 @@ source files without writing. Use `--profile read` (or the equivalent
 only proposal staging. When multiple files are loaded, read tools scan all
 files and write tools modify only `--write-file`.
 
+### 11.2 `ai setup generic`
+
+Print the exact `lifetxt mcp` command and a generic MCP client
+configuration for the current workspace. Writes nothing.
+
+```sh
+python -m lifetxt ai setup generic life.txt
+python -m lifetxt ai setup generic life.txt --profile assist
+python -m lifetxt ai setup generic life.txt --format json
+```
+
+`--profile` defaults to `read`; `--write-file` overrides the printed write
+target. `--format json` returns `{"command": [...], "mcp_client_config":
+{...}}` instead of formatted text.
+
 ## 12. `config`
 
 Create or inspect an external JSON config file.

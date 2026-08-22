@@ -36,6 +36,18 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 
 ## 2. Client Configuration
 
+### Generic setup command
+
+```sh
+python -m lifetxt ai setup generic life.txt
+```
+
+Prints the exact command and a generic `mcpServers` configuration for your
+current workspace -- resolved paths and write target included, so you do not
+have to hand-write either. It writes nothing to disk. The emitted profile
+defaults to `read`; pass `--profile assist|full` to emit a different one, or
+`--format json` for a machine-readable version.
+
 ### Claude Desktop
 
 `claude_desktop_config.json`:

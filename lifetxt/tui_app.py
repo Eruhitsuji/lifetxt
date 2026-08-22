@@ -18,7 +18,9 @@ import os
 import sys
 from collections import OrderedDict
 
+from .command_center import command_center
 from .config import config_section
+from .timezone_policy import today as timezone_today
 from .tui import (
     TUI_SECTIONS,
     _char_display_width,
@@ -32,7 +34,9 @@ from .workspace import active_workspace_name
 from .tui_layout import display_width, fit, fit_spans, frame_to_text, pad, spans_to_text
 
 
-WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next",)
+WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next", "today")
+#: Bounded rows shown per Today section before "... and N more".
+TODAY_SECTION_LIMIT = 8
 WORKSPACE_SORTS = ("natural", "due", "priority", "title", "status")
 WORKSPACE_POLL_SECONDS = 0.25
 TOAST_SECONDS = 6.0
@@ -401,6 +405,7 @@ class WorkspaceState(object):
         self.running = True
         self.load_count = 0
         self._model = None
+        self._today = None
 
     # -- derived -----------------------------------------------------------
 
@@ -451,6 +456,18 @@ class WorkspaceState(object):
         except Exception as exc:
             self.error = str(exc)
             self._model = None
+        self._today = None
+        if self._model is not None:
+            try:
+                # A second, cheap parse: dashboard_model() does not expose the
+                # items it already parsed, and command_center() is the single
+                # shared aggregation every surface must read unmodified (see
+                # lifetxt/command_center.py's module docstring).
+                items = load_items(self.args.paths)
+                config = getattr(self.args, "config_data", None) or {}
+                self._today = command_center(items, config, timezone_today())
+            except Exception:
+                self._today = None
         self.load_count += 1
 
     def refresh(self):
@@ -776,6 +793,14 @@ def _cmd_next(state, argument):
     state.selected = 0
     state.scroll = 0
     return ("info", "Next actions: open, unblocked, not someday/maybe.")
+
+
+def _cmd_today(state, argument):
+    """Switch to the Today view: the shared Daily Command Center."""
+    state.view = "today"
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Today: now, attention, inbox, and upcoming.")
 
 
 def _cmd_goto(state, argument):
@@ -1388,10 +1413,10 @@ COMMANDS = (
     Command("help", "[QUERY]", "Toggle the reference, or search it", _cmd_help),
     Command(
         "view",
-        "all|tasks|agenda|status|next",
+        "all|tasks|agenda|status|next|today",
         "Switch which sections are listed",
         _cmd_view,
-        values=("all", "tasks", "agenda", "status", "next"),
+        values=("all", "tasks", "agenda", "status", "next", "today"),
     ),
     Command(
         "next",
@@ -1399,6 +1424,12 @@ COMMANDS = (
         "Show open, unblocked, non-someday actions by priority",
         _cmd_next,
         alias="n",
+    ),
+    Command(
+        "today",
+        "",
+        "Show the Daily Command Center: now, attention, inbox, upcoming",
+        _cmd_today,
     ),
     Command("search", "TEXT", "Fuzzy filter every listed row", _cmd_search, alias="f"),
     Command(
@@ -1827,6 +1858,8 @@ def build_frame(state, width, height):
         body = _build_help(state, width, body_height)
     elif state.error:
         body = _build_error(state, width, body_height)
+    elif state.view == "today":
+        body = _build_today(state, width, body_height)
     else:
         body = _build_body(state, width, body_height)
 
@@ -2235,6 +2268,130 @@ def _build_error(state, width, height):
     while len(lines) < height:
         lines.append([("", "default")])
     return lines
+
+
+def _build_today(state, width, height):
+    """The Today view: a read-only render of the shared Command Center.
+
+    Grouping and every count/row come from ``state._today`` (built in
+    ``WorkspaceState.load()`` by calling ``command_center()`` directly), so
+    no due/blocked/waiting/next-action/inbox rule is duplicated here.
+    """
+    glyphs = state.glyphs
+    today = state._today
+    header = [("  ", "default"), ("TODAY", "section")]
+    if today and today.get("reference_date"):
+        header.append((" for %s" % today["reference_date"], "meta"))
+    lines = [header]
+
+    if today is None:
+        lines.append([("", "default")])
+        lines.append([("  ", "default"), ("Command center unavailable.", "hint")])
+        while len(lines) < height:
+            lines.append([("", "default")])
+        return lines[:height]
+
+    def item_row(ref):
+        due = " due:%s" % ref["due"] if ref.get("due") else ""
+        project = " @%s" % ref["project"] if ref.get("project") else ""
+        title_width = max(
+            10, width - 4 - display_width(due) - display_width(project) - 6
+        )
+        return [
+            ("    ", "default"),
+            (pad(fit(ref.get("status") or "", 3, glyphs), 4), "meta"),
+            (fit(ref.get("title") or "(untitled)", title_width, glyphs), "row"),
+            (project, "meta"),
+            (due, "meta"),
+        ]
+
+    def section(title, rows, empty_hint=None):
+        rows = rows or []
+        lines.append([("", "default")])
+        lines.append(
+            [
+                ("  ", "default"),
+                (title, "section"),
+                (" (%d)" % len(rows), "meta"),
+            ]
+        )
+        if not rows:
+            if empty_hint:
+                lines.append([("    ", "default"), (empty_hint, "hint")])
+            return
+        for row in rows[:TODAY_SECTION_LIMIT]:
+            lines.append(item_row(row))
+        if len(rows) > TODAY_SECTION_LIMIT:
+            lines.append(
+                [
+                    ("    ", "default"),
+                    ("... and %d more" % (len(rows) - TODAY_SECTION_LIMIT), "hint"),
+                ]
+            )
+
+    lines.append([("  ", "default"), ("NOW", "panel_title")])
+    section("Due today", today.get("due_today"), "Nothing due today.")
+    section("Next actions", today.get("next_actions"), "Nothing actionable.")
+    section("Overdue", today.get("overdue"), "Nothing overdue.")
+
+    lines.append([("", "default")])
+    lines.append([("  ", "default"), ("ATTENTION", "panel_title")])
+    section("Blocked", today.get("blocked"), "Nothing blocked.")
+    section("Waiting", today.get("waiting"), "Nothing waiting.")
+    section("Projects", today.get("project_attention"), "All projects green.")
+
+    lines.append([("", "default")])
+    lines.append([("  ", "default"), ("INBOX", "panel_title")])
+    inbox = today.get("inbox") or {}
+    pending = inbox.get("pending") or []
+    lines.append(
+        [
+            ("", "default"),
+            (
+                "  Unified Inbox (%d pending" % inbox.get("pending_count", 0),
+                "section",
+            ),
+            (
+                ", %d deferred)" % inbox.get("deferred_count", 0)
+                if inbox.get("deferred_count")
+                else ")",
+                "section",
+            ),
+        ]
+    )
+    if not pending:
+        lines.append([("    ", "default"), ("Inbox is empty.", "hint")])
+    else:
+        for proposal in pending[:TODAY_SECTION_LIMIT]:
+            summary_width = max(10, width - 6 - 16)
+            lines.append(
+                [
+                    ("    ", "default"),
+                    (
+                        fit(
+                            proposal.get("summary") or proposal.get("id") or "",
+                            summary_width,
+                            glyphs,
+                        ),
+                        "row",
+                    ),
+                    ("  ", "default"),
+                    (str(proposal.get("source") or ""), "meta"),
+                ]
+            )
+
+    lines.append([("", "default")])
+    lines.append([("  ", "default"), ("UPCOMING", "panel_title")])
+    section(
+        "Upcoming (%dd)" % today.get("horizon_days", 0),
+        today.get("upcoming"),
+        "Nothing upcoming.",
+    )
+    section("Habits", today.get("habits"), "No open habits.")
+
+    while len(lines) < height:
+        lines.append([("", "default")])
+    return lines[:height]
 
 
 def _build_inspector(state, width, height):

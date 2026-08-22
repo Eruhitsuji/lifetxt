@@ -7295,7 +7295,7 @@ traceability:
       capability_id: cap-mcp-ai-safe-workspace
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/509
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/510
       changed_files_or_scope:
         - tests/test_lifetxt.py
         - docs/en/ai-integration.md
@@ -7309,8 +7309,7 @@ traceability:
       notes: >-
         No production code change; investigation confirmed the pattern
         already works via lifetxt/cli.py's pre-existing
-        _maybe_apply_workspace(). pull_request filled in once this
-        change's PR is opened.
+        _maybe_apply_workspace().
       status: implemented
 
 required_chain:

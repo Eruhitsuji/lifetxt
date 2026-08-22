@@ -6568,7 +6568,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/475
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
       changed_files_or_scope:
         - Extend command_center() with a next_actions bucket reusing lifetxt.nextaction.next_action_items and a bounded inbox summary reusing lifetxt.inbox.inbox_summary
         - Extend command-center-v1's schema generator and sample, and regenerate the published schema
@@ -6604,7 +6604,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/476
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
       changed_files_or_scope:
         - Add a Today view/`/today` command to the interactive TUI, rendering the shared command_center() result grouped as NOW/ATTENTION/INBOX/UPCOMING
         - Compute WorkspaceState._today in load() via a direct command_center() call, alongside the existing dashboard_model() parse
@@ -6640,7 +6640,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: https://github.com/Eruhitsuji/lifetxt/issues/472
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/477
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
       changed_files_or_scope:
         - Add GET /api/command-center, delegating entirely to command_center() with horizon/person/mode query parameters and the standard 400 error shape for an invalid horizon
         - Add a WEB_COMMAND_NOTES entry for /today, matching the existing pattern that explains every TUI-only command instead of silently omitting it from the browser command palette

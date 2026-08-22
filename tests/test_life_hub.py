@@ -167,6 +167,91 @@ class CommandCenterTests(unittest.TestCase):
             self.assertNotIn("warnings", proposal)
 
 
+TICKET_SAMPLE = """#! timezone: UTC
+[ ] T Reviewed record:ticket ticket_status:review id:tk1 severity:low
+[ ] T Critical record:ticket severity:critical id:tk2
+[ ] T Stale record:ticket updated:2000-01-01 id:tk3
+[ ] T Normal record:ticket severity:low id:tk4
+[x] T Done record:ticket ticket_status:closed severity:critical id:tk5
+[ ] T NotATicket id:tk6 severity:critical
+"""
+
+
+class TicketAttentionTests(unittest.TestCase):
+    def setUp(self):
+        self.items, _ = parse_text(TICKET_SAMPLE)
+
+    def cc(self, **kwargs):
+        return command_center(self.items, {}, TODAY, **kwargs)
+
+    def test_review_status_ticket_is_flagged(self):
+        cc = self.cc()
+        row = next(r for r in cc["ticket_attention"] if r["title"] == "Reviewed")
+        self.assertIn("review", row["reasons"])
+
+    def test_high_severity_ticket_is_flagged(self):
+        cc = self.cc()
+        row = next(r for r in cc["ticket_attention"] if r["title"] == "Critical")
+        self.assertIn("high_severity", row["reasons"])
+
+    def test_stale_ticket_is_flagged(self):
+        cc = self.cc()
+        row = next(r for r in cc["ticket_attention"] if r["title"] == "Stale")
+        self.assertIn("stale", row["reasons"])
+
+    def test_ticket_matching_none_of_the_reasons_is_excluded(self):
+        cc = self.cc()
+        self.assertNotIn("Normal", [r["title"] for r in cc["ticket_attention"]])
+
+    def test_terminal_ticket_is_excluded_even_if_high_severity(self):
+        cc = self.cc()
+        self.assertNotIn("Done", [r["title"] for r in cc["ticket_attention"]])
+
+    def test_non_ticket_item_is_never_considered(self):
+        cc = self.cc()
+        self.assertNotIn("NotATicket", [r["title"] for r in cc["ticket_attention"]])
+
+    def test_ticket_attention_count_matches_the_list(self):
+        cc = self.cc()
+        self.assertEqual(len(cc["ticket_attention"]), cc["counts"]["ticket_attention"])
+
+    def test_configurable_stale_after_days_reaches_the_engine(self):
+        # node_facts() uses the real clock for staleness (matching
+        # ticket_project_report.py's own reference_time(None) behavior),
+        # not the fixture TODAY constant, so this uses a real "yesterday"
+        # to stay deterministic regardless of when the suite runs -- a
+        # stale_after of 0 then makes it immediately stale, proving the
+        # parameter is actually threaded through rather than always
+        # falling back to the module default.
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        items, _ = parse_text(
+            "#! timezone: UTC\n"
+            "[ ] T RecentlyUpdated record:ticket updated:%s severity:low id:tk9\n"
+            % yesterday
+        )
+        default = command_center(items, {}, TODAY)
+        stale_now = command_center(items, {}, TODAY, ticket_stale_after_days=0)
+        self.assertEqual([], default["ticket_attention"])
+        self.assertEqual(
+            ["RecentlyUpdated"], [r["title"] for r in stale_now["ticket_attention"]]
+        )
+
+    def test_matches_direct_ticket_row_and_node_facts_calls(self):
+        from lifetxt.temporal_context import node_facts
+        from lifetxt.ticket_project_values import is_ticket, ticket_row
+
+        cc = self.cc()
+        row = next(r for r in cc["ticket_attention"] if r["title"] == "Critical")
+        target = next(
+            item
+            for item in self.items
+            if item.details.get("id") == ["tk2"] and is_ticket(item)
+        )
+        self.assertEqual("critical", ticket_row(target)["severity"])
+        self.assertEqual([], node_facts(target, TODAY))
+        self.assertEqual(row["reasons"], ["high_severity"])
+
+
 class AreaTests(unittest.TestCase):
     def setUp(self):
         self.items, _ = parse_text(SAMPLE)

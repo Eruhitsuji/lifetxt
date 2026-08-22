@@ -11167,6 +11167,17 @@ def command_today(args):
                 "  [%s] %s: %s\n"
                 % (row["health"][0].upper(), row["name"], "; ".join(row["reasons"])),
             )
+    if report["ticket_attention"]:
+        write_text(
+            None,
+            "Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
+        )
+        for row in report["ticket_attention"]:
+            write_text(
+                None,
+                "  %s %s: %s\n"
+                % (row["status"], row["title"], ", ".join(row["reasons"])),
+            )
     if all(v == 0 for v in counts.values()):
         write_text(None, "All clear.\n")
     return 0

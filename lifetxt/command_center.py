@@ -107,6 +107,7 @@ def command_center(
     mode="today",
     next_actions_limit=None,
     inbox_limit=5,
+    ticket_stale_after_days=None,
 ):
     """Build the daily command-center aggregation.
 
@@ -121,7 +122,13 @@ def command_center(
     :func:`lifetxt.inbox.inbox_summary` for the pending/deferred proposal
     counts, then bounds the pending list to ``inbox_limit`` entries with only
     the minimal fields a daily overview needs; the operational proposal store
-    itself is never duplicated here.
+    itself is never duplicated here. ``ticket_attention`` reuses
+    :func:`lifetxt.ticket_project_values.is_ticket`/``ticket_row`` and
+    :func:`lifetxt.temporal_context.node_facts` for open ticket-kind items in
+    ``review`` status, at or above a high severity, or stale beyond
+    ``ticket_stale_after_days`` (default matches
+    :data:`lifetxt.ticket_project_values.DEFAULT_STALE_DAYS`); no severity,
+    workflow, or staleness rule is duplicated here.
     """
     config = config or {}
     status_by_id = _status_by_id(items)
@@ -176,6 +183,7 @@ def command_center(
     safety = _safety_summary(config)
     next_actions = _next_actions(items, next_actions_limit)
     inbox = _inbox_section(config, inbox_limit)
+    ticket_attention = _ticket_attention(items, today, ticket_stale_after_days)
 
     return OrderedDict(
         (
@@ -194,6 +202,7 @@ def command_center(
             ("captures", captures),
             ("inbox", inbox),
             ("project_attention", project_attention),
+            ("ticket_attention", ticket_attention),
             ("safety", safety),
             (
                 "counts",
@@ -210,6 +219,7 @@ def command_center(
                         ("captures", len(captures)),
                         ("inbox_pending", inbox["pending_count"]),
                         ("projects_need_attention", len(project_attention)),
+                        ("ticket_attention", len(ticket_attention)),
                     )
                 ),
             ),
@@ -301,6 +311,55 @@ def _project_attention(items, config, today):
             )
         )
     rows.sort(key=lambda r: (0 if r["health"] == "red" else 1, r["name"]))
+    return rows
+
+
+def _ticket_attention(items, today, stale_after_days):
+    """Bounded ticket attention: review status, high severity, or stale.
+
+    Every classification reuses :mod:`lifetxt.ticket_project_values` /
+    :func:`lifetxt.temporal_context.node_facts` unmodified -- no severity,
+    workflow, or staleness rule is duplicated here. Bounded by
+    construction: only ticket-kind items already in ``items`` are
+    considered (each a cheap O(1) node-level check), never a workspace or
+    dependency-graph scan; the richer cross-project dependency-universe
+    reasoning stays in ``ticket project`` reports, not duplicated here.
+    """
+    from .temporal_context import DEFAULT_STALE_DAYS, node_facts
+    from .ticket_project_values import (
+        DEFAULT_HIGH_SEVERITIES,
+        DEFAULT_TERMINAL_STATUSES,
+        is_ticket,
+        ticket_row,
+    )
+
+    if stale_after_days is None:
+        stale_after_days = DEFAULT_STALE_DAYS
+    terminal = set(DEFAULT_TERMINAL_STATUSES)
+    severe = set(str(value).lower() for value in DEFAULT_HIGH_SEVERITIES)
+
+    rows = []
+    for item in items:
+        if not is_ticket(item):
+            continue
+        row = ticket_row(item)
+        if row["status"] in terminal:
+            continue
+        reasons = []
+        if row["status"] == "review":
+            reasons.append("review")
+        if str(row["severity"]).lower() in severe:
+            reasons.append("high_severity")
+        if today is not None:
+            facts = node_facts(item, today, stale_after_days=stale_after_days)
+            if any(fact["rule"] == "stale_since" for fact in facts):
+                reasons.append("stale")
+        if not reasons:
+            continue
+        ref = _ref(item)
+        ref["reasons"] = reasons
+        rows.append(ref)
+    rows.sort(key=lambda r: (0 if "high_severity" in r["reasons"] else 1, r["title"]))
     return rows
 
 

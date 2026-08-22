@@ -6564,6 +6564,42 @@ traceability:
         new implementation, only planning/governance records.
       status: implemented
 
+    - requirement_id: req-command-center-next-actions-and-inbox
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/475
+      pull_request: null
+      changed_files_or_scope:
+        - Extend command_center() with a next_actions bucket reusing lifetxt.nextaction.next_action_items and a bounded inbox summary reusing lifetxt.inbox.inbox_summary
+        - Extend command-center-v1's schema generator and sample, and regenerate the published schema
+        - lifetxt/command_center.py
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterTests.test_next_actions_reuses_the_shared_actionable_definition, test_next_actions_limit_bounds_the_list_without_changing_order, test_inbox_is_empty_when_no_proposals_are_staged, test_inbox_reports_pending_and_deferred_counts_and_bounded_summary, test_inbox_pending_never_exposes_the_full_operational_record
+        - python -m unittest tests.test_life_hub -> Ran 21 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (bundle equality against the regenerated dist/schemas/command-center-v1.schema.json, plus draft 2020-12 validation of the extended sample)
+        - python -m unittest tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK (no regression in the two reused engines or the unmodified MCP get_command_center tool)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #472 post-Stable Daily Command
+        Center theme, following #473's investigation. No parallel
+        aggregation engine, storage model, or authoritative record kind was
+        introduced: next_actions and inbox both delegate to their existing
+        engines and only adapt/bound the result. lifetxt/cli.py's
+        command_today text renderer was left unmodified, per #475's own
+        write scope; its --json output and the MCP get_command_center tool
+        already surface the new fields with no code change on their side.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

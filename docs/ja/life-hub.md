@@ -21,9 +21,11 @@ Buckets:
 - **upcoming**: horizon 内の `due:`。default は 3 days
 - **blocked**: `depends_on:` target がまだ done ではない
 - **waiting**: status `[?]`
-- **messages**: open `M` items。`--person` で scope 可能
+- **next actions**: `next`、TUI `/next`、MCP `get_next_actions` と同じ open/unblocked/non-someday actions。ここで再定義せず再利用しています（[new-cli-workflows.md](new-cli-workflows.md) 参照）
 - **habits**: open `H` items
-- **captures**: `project:`、`due:`、`assignee:` がない open tasks。inbox
+- **messages**: open `M` items。`--person` で scope 可能
+- **captures**: `project:`、`due:`、`assignee:` がない open tasks（未整理の quick capture。下記の Unified Inbox とは別物）
+- **inbox**: bounded な Unified Inbox summary。`total`/`pending_count`/`deferred_count`/`counts` と、pending proposal の一部（`id`、`source`、`created`、`summary`）まで。完全な operational proposal store は `proposal list` / MCP `list_proposals` のままで、ここでは複製しません
 - **project attention**: non-green projects と health reasons
 - **safety**: configuration-validity の quick signal
 

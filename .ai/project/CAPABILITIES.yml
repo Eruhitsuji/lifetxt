@@ -3780,3 +3780,73 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-daily-command-center
+    name: Daily Command Center aggregation and contract
+    summary: >-
+      One shared deterministic daily-context read model
+      (`lifetxt.command_center.command_center()` / `command-center-v1`)
+      combining overdue/due-today/upcoming/blocked/waiting/next-actions,
+      habits/messages/captures, a bounded Unified Inbox proposal summary,
+      project attention, and a configuration-safety signal, reused unmodified
+      by CLI `today`, MCP `get_command_center`, the TUI `Today` view, and the
+      Web `GET /api/command-center` read endpoint.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-command-center-next-actions-and-inbox
+    implementation_locations:
+      - lifetxt/command_center.py
+      - lifetxt/schema_extensions_v7.py
+      - dist/schemas/command-center-v1.schema.json
+      - lifetxt/cli.py
+      - lifetxt/mcp.py
+      - tests/test_life_hub.py
+      - docs/en/life-hub.md
+      - docs/ja/life-hub.md
+    public_interfaces:
+      - lifetxt.command_center.command_center
+      - lifetxt today
+      - MCP tool get_command_center
+      - command-center-v1.schema.json
+    tests_or_evidence:
+      - tests/test_life_hub.py CommandCenterTests (21 tests, including next_actions/inbox coverage)
+      - tests/test_schema_extensions_v2.py SchemaExtensionsV2Tests (schema bundle equality, draft 2020-12 validation of the extended sample)
+      - python -m unittest tests.test_life_hub tests.test_schema_extensions_v2 tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/472
+      - https://github.com/Eruhitsuji/lifetxt/issues/473
+      - https://github.com/Eruhitsuji/lifetxt/issues/475
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered `lifetxt/command_center.py` or
+      `command-center-v1` before this change, even though both predate this
+      session (confirmed via `git log`); this entry closes that gap, matching
+      the precedent set by `cap-remote-cli-read-client`/`cap-remote-cli-write-client`
+      for pre-existing-but-untraced functionality. #473 (an investigation
+      issue under the #472 post-Stable product theme selected by #471)
+      confirmed `command_center()`/`command-center-v1` as the canonical daily
+      layer and recommended extending it rather than building a parallel
+      aggregation, dashboard engine, or Web contract. #475 adds two bounded
+      sections without introducing a second definition of either concern:
+      `next_actions` delegates entirely to
+      `lifetxt.nextaction.next_action_items` (the same actionable predicate
+      `next`, the TUI `/next` view, and MCP `get_next_actions` already
+      share), and `inbox` delegates counting/status-filtering to
+      `lifetxt.inbox.inbox_summary`, only trimming the pending list to a
+      bounded, minimal-field view (`id`/`source`/`created`/`summary`) rather
+      than exposing the full operational proposal record. Existing fields,
+      the schema's `required` list, and every current CLI/MCP consumer are
+      unchanged; `lifetxt/cli.py`'s `command_today` text renderer was
+      deliberately left untouched (out of #475's write scope) since its
+      `--json` output and the MCP tool already expose the new fields without
+      any code change there. A TUI `Today` view (#476) and a Web read
+      endpoint (#477) are tracked as extensions of this same capability.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

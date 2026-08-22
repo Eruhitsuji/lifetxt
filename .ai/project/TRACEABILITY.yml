@@ -6772,6 +6772,53 @@ traceability:
         follow-ups per #479's own scope.
       status: implemented
 
+    - requirement_id: req-web-saved-views-and-area-switching
+      capability_id: cap-web-saved-views-and-areas
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/484
+      pull_request: null
+      changed_files_or_scope:
+        - Add GET /api/saved-views, GET /api/saved-views/{name}, GET /api/areas, GET /api/areas/{name}, delegating entirely to lifetxt.saved_views/lifetxt.areas
+        - Add a Saved view / Area select to the Items view filter bar, replacing the visible row set with the selected view's or area's items
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests saved-view/area tests (8 tests) and test_saved_view_and_area_selects_are_served_and_backed_by_the_new_apis
+        - "live: TestClient smoke against a real fixture life.txt with a saved_views config and an area:home item confirmed all four routes, including 404 for an unknown saved view (\"Unknown saved view 'nope'. Known: urgent\") and area (\"Unknown area 'nope'. Known: (unassigned), home\")"
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_commands tests.test_surface_runtime tests.test_web_i18n tests.test_release_policy -> Ran 135 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2558 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt tests scripts -> clean (pre-existing drift in 9 unrelated files confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Ninth #472-epic implementation task, alongside #475/#476/#477/#479
+        (Daily Command Center) and #481/#485 (temporal-context-v1). An
+        earlier draft added WEB_COMMAND_NOTES entries for "saved"/"area",
+        mirroring #479's own "today" note; both were reverted after the
+        full suite caught that #483 (the TUI /saved and /area commands)
+        was not yet merged into main at the time this branch was created,
+        so those TUI command names do not exist in COMMANDS_BY_NAME on
+        this branch and the WEB_COMMAND_NOTES/TUI-registry drift gate
+        (tests.test_web_commands.test_every_note_refers_to_a_real_command,
+        tests.test_surface_runtime.WebSurfaceRuntimeTests.test_live_web_command_catalog_matches_tui_registry_gate)
+        correctly failed. The stale "today" note text left over from #479
+        ("Not yet available in the browser") was also corrected in the
+        same edit, found while reading WEB_COMMAND_NOTES for this task.
+        `GET /api/areas/{name}` returns `area_show()`'s `open_items` as
+        lightweight refs, not full serialized items, so the client-side
+        `applyArea()` fetches `/api/items` and filters to the returned
+        `(source, line)` membership rather than rendering the refs
+        directly -- see `cap-web-saved-views-and-areas`'s own notes for why
+        this capability is a separate entry from #483's TUI-side one rather
+        than an extension of it.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

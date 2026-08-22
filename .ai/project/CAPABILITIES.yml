@@ -4176,3 +4176,92 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-prompts
+    name: MCP reusable prompts, including item-scoped explanation
+    summary: >-
+      Reusable multi-tool workflows exposed through the MCP prompts
+      capability (`PROMPT_DEFINITIONS`/`prompt_list`/`prompt_get`) so a
+      client can offer them as slash commands without rediscovering which
+      read-only tools to call, or duplicating lifetxt's own derivation
+      logic client-side. Includes `explain_item`, the first prompt with a
+      required argument, and the required-argument validation `prompt_get`
+      gained to enforce it.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-explain-item-prompt
+    implementation_locations:
+      - lifetxt/mcp.py
+      - tests/test_mcp_expansion.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+    public_interfaces:
+      - lifetxt.mcp.PROMPT_DEFINITIONS
+      - lifetxt.mcp.prompt_list
+      - lifetxt.mcp.prompt_get
+      - MCP prompt daily_review
+      - MCP prompt weekly_review
+      - MCP prompt standup
+      - MCP prompt inbox_triage
+      - MCP prompt start_focus
+      - MCP prompt explain_item
+    tests_or_evidence:
+      - tests/test_mcp_expansion.py PromptTests (12 tests: listing, argument-as-context substitution, unknown-prompt rejection, tool-reference validity, explain_item's required id argument and tool composition, explain_item's explanation-not-write framing, missing-id rejection with and without an arguments dict, existing no-required-argument prompts unaffected)
+      - tests/test_mcp_expansion.py JsonRpcTests.test_prompt_missing_required_argument_becomes_a_jsonrpc_error
+      - python -m unittest tests.test_mcp_expansion -> Ran 95 tests, OK
+      - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (no capability/tool-registry drift)
+      - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 33 tests, OK
+      - 'live: prompt_get("explain_item", {"id": "t1"}) returned a template naming get_temporal_context/get_backlinks/get_command_center/get_next_actions/get_ticket/get_project with "Context: id = t1" appended; prompt_get("explain_item", {}) and prompt_get("explain_item") both raised "Prompt explain_item requires argument ''id''."; every pre-existing prompt (daily_review, weekly_review, standup, inbox_triage, start_focus) still returned correctly with no arguments'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/472
+      - https://github.com/Eruhitsuji/lifetxt/issues/490
+      - https://github.com/Eruhitsuji/lifetxt/issues/492
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered `PROMPT_DEFINITIONS`/
+      `prompt_list`/`prompt_get` before this change, even though the five
+      original prompts predate this session (confirmed by grepping this
+      file); this entry closes that gap for the whole mechanism rather than
+      scoping only to the new prompt, matching the precedent set by
+      `cap-remote-cli-read-client` for pre-existing-but-untraced
+      functionality. #490 investigated whether a new shared
+      `context-pack-v1`-style contract was needed for AI-context "why is
+      this relevant now?" questions and found lifetxt already ships a
+      working instance of client-side composition in this exact mechanism;
+      it recommended implementing the first slice as a new prompt here
+      rather than a new tool, schema, or capability -- see #490's own
+      investigation comment for the full architecture comparison. #492
+      implements that recommendation: `explain_item` composes
+      `get_temporal_context` (#489), `get_backlinks`, `get_command_center`/
+      `get_next_actions`, and `get_ticket`/`get_project` for one target
+      item, with no due/staleness/relation/health derivation duplicated in
+      `lifetxt/mcp.py` -- every fact the resulting explanation can cite
+      already carries its own provenance from the composed tool. While
+      implementing #492, found and fixed a real, previously-unexercised gap
+      in the shared mechanism itself: none of the five original prompts
+      ever declared a required argument, so `prompt_get()` had no code path
+      that validated one -- a prompt's `"required": true` argument metadata
+      was purely descriptive and silently unenforced. Since `explain_item`
+      is the first prompt to need a required `id`, and #492's own
+      acceptance criteria explicitly asked for a tested missing-argument
+      error, `prompt_get()` was extended with a small, generic
+      required-argument check (raising the same bare `ValueError`
+      convention every tool handler already uses) rather than adding
+      one-off validation inside a hypothetical `explain_item`-specific code
+      path -- there is no such path, since prompts are pure template data,
+      not handler functions. Confirmed via a dedicated regression test that
+      every prior prompt with no required arguments is completely
+      unaffected. `explain_item` is deliberately MCP-only (no CLI or Web
+      exposure), per #490/#492's own scope: there is no AI client behind a
+      CLI invocation to hand a composed prompt template to, and any
+      CLI-side synthesis would need an actual provider call, which remains
+      explicitly out of scope for lifetxt itself.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

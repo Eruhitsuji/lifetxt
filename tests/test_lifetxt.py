@@ -3993,6 +3993,36 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         open_body = html[open_start:open_end]
         self.assertIn('"#help-command-search"', open_body)
 
+    def test_today_view_is_served_and_backed_by_the_command_center_endpoint(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # A reachable tab plus a distinct page section, matching the pattern
+        # every other view (Dashboard, Focus, Review, ...) already follows.
+        self.assertIn('data-view="today"', html)
+        self.assertIn('data-page="today"', html)
+        for element_id in (
+            "today-now",
+            "today-attention",
+            "today-inbox",
+            "today-upcoming",
+        ):
+            self.assertIn('id="%s"' % element_id, html)
+        # The view must be a thin renderer over the canonical endpoint, not a
+        # second aggregation: it calls GET /api/command-center and nothing
+        # that recomputes due/blocked/waiting/next-action/inbox itself.
+        self.assertIn('api("/api/command-center")', html)
+        load_start = html.index("async function loadToday()")
+        load_end = html.index("\n    }", load_start)
+        load_body = html[load_start:load_end]
+        for forbidden in ("/api/items", "/api/agenda", "/api/stats"):
+            self.assertNotIn(forbidden, load_body)
+
     def test_public_web_config_theme_and_dashboard_nested(self):
         from lifetxt.webapp import public_web_config
 

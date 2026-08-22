@@ -6726,6 +6726,52 @@ traceability:
         explicit, unimplemented follow-ups per #485's own scope.
       status: implemented
 
+    - requirement_id: req-web-today-dashboard
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/479
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/482
+      changed_files_or_scope:
+        - Add a Today tab/page to the Web UI rendering GET /api/command-center as four cards (Now/Attention/Inbox/Upcoming), distinct from the existing Dashboard tab
+        - Add today to PAGE_VIEWS/VIEW_PAGE/VIEW_META/VIEW_ACTIONS and the refreshAll() dispatch table
+        - Add UI_STRINGS/translation coverage for every new static and dynamically-rendered chrome string, reusing existing entries (Overdue, Due today, Blocked, Habits, Projects, Messages, deferred, +N more) where already present
+        - lifetxt/web_assets.html
+        - tests/test_lifetxt.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_today_view_is_served_and_backed_by_the_command_center_endpoint
+        - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_i18n tests.test_release_policy tests.test_surface_runtime tests.test_web_commands -> Ran 126 tests, OK
+        - python -m unittest tests.test_web_assets -> Ran 7 tests, OK (packaged web_assets.html resource still matches the imported HTML_PAGE value byte-for-byte)
+        - "manual: a real Node.js run of the extracted _todayRefRow/_todaySubsection/loadToday source against populated, empty, bounded-limit (12 rows against an 8-row cap), and forced-error fixtures -- correct markup and bounded '+4 more' output in every case, graceful error message instead of a thrown exception"
+        - node --check on the full extracted <script> body -> exit 0 (no syntax error introduced)
+        - "live: real lifetxt serve process against a real 3-item fixture; GET /api/command-center returned the real aggregation; GET / contained the Today tab/section markup; GET /?view=today served successfully"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #477/PR #478. Deliberately added as a new
+        `today` tab distinct from the pre-existing `dashboard` tab rather
+        than replacing it: the existing Dashboard view already has its own
+        established KPI-tile/chart/project aggregation independently built
+        from `/api/items`/`/api/agenda`/`/api/chart/tasks`/`/api/stats/summary`,
+        and #479's acceptance criteria explicitly forbid reimplementing
+        Command Center business rules or disturbing existing Web
+        conventions -- rewriting that view was out of scope and would have
+        been a materially larger, riskier change than this S-sized task.
+        loadToday() calls only GET /api/command-center and performs no
+        aggregation of its own; verified both by a real Node.js run of the
+        extracted rendering functions and by a served-page test asserting
+        the function body never references /api/items, /api/agenda, or
+        /api/stats. Existing auth/read-only middleware is inherited
+        automatically (no route change in this task; #477 already wired
+        the endpoint into it). Proposal accept/edit/reject actions and
+        Saved Views/life-area navigation remain explicit, unimplemented
+        follow-ups per #479's own scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

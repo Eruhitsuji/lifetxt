@@ -1033,6 +1033,15 @@
       text-decoration: underline;
       cursor: pointer;
     }
+    /* ── Today view ──────────────────────────────────────────────── */
+    .today-subsection + .today-subsection { margin-top: .65rem; }
+    .today-subsection-title {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      color: var(--muted);
+      margin-bottom: .25rem;
+    }
     /* ── Focus view ──────────────────────────────────────────────── */
     .focus-body { max-width: 46rem; margin: 0 auto; width: 100%; }
     .focus-list { display: grid; gap: .45rem; padding: .35rem 0 1rem; }
@@ -2158,6 +2167,7 @@
     </div>
     <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views" role="tablist">
       <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
+      <button type="button" class="workspace-tab" data-view="today" onclick="switchWorkspace('today')" title="Daily Command Center: now, attention, inbox, upcoming">🌅 Today</button>
       <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
       <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
       <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
@@ -2294,6 +2304,32 @@
           <div class="dash-card" data-dashboard-card="projects">
             <div class="dash-card-title">📁 Projects</div>
             <div id="dash-projects" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="today-section page" data-page="today">
+      <div class="section-head">
+        <h2><span class="h2-icon" aria-hidden="true">🌅</span>Today<span id="today-date" style="margin-left:.5rem;font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+        <button class="secondary" onclick="loadToday()" title="Refresh Today">↺</button>
+      </div>
+      <div class="section-body today-body">
+        <div class="dash-grid" id="today-grid">
+          <div class="dash-card" data-today-card="now">
+            <div class="dash-card-title">🌅 Now</div>
+            <div id="today-now" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card" data-today-card="attention">
+            <div class="dash-card-title">⚠️ Attention</div>
+            <div id="today-attention" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card" data-today-card="inbox">
+            <div class="dash-card-title">📥 Inbox</div>
+            <div id="today-inbox" class="dash-list"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="dash-card" data-today-card="upcoming">
+            <div class="dash-card-title">📆 Upcoming</div>
+            <div id="today-upcoming" class="dash-list"><div class="empty">Loading…</div></div>
           </div>
         </div>
       </div>
@@ -2909,6 +2945,28 @@
         "Still open": "未完了",
         "Overdue": "期限超過",
         "Due today": "今日が期限",
+        "Now": "現在",
+        "Attention": "注意",
+        "Inbox": "受信箱",
+        "Unified Inbox": "統合インボックス",
+        "Upcoming": "近日中",
+        "Next actions": "次のアクション",
+        "Waiting": "待機中",
+        "Configuration errors": "設定エラー",
+        "Nothing due today.": "本日期限の項目はありません。",
+        "Nothing actionable.": "実行可能な項目はありません。",
+        "Nothing overdue.": "期限超過の項目はありません。",
+        "Nothing blocked.": "ブロック中の項目はありません。",
+        "Nothing waiting.": "待機中の項目はありません。",
+        "Nothing upcoming.": "近日中の予定はありません。",
+        "All projects green.": "すべてのプロジェクトは良好です。",
+        "Inbox is empty.": "受信箱は空です。",
+        "No unread messages.": "未読メッセージはありません。",
+        "No open habits.": "未完了の習慣はありません。",
+        "The Daily Command Center: what to do now, what needs attention, the Unified Inbox, and what is coming up.":
+          "Daily Command Center: 今すべきこと、注意が必要な項目、統合インボックス、近日中の予定をまとめて表示します。",
+        "Daily Command Center: now, attention, inbox, upcoming": "Daily Command Center: 現在・注意・受信箱・近日中",
+        "Refresh Today": "Todayを更新",
         "Open tasks": "未完了タスク",
         "Habits tracked": "記録中の習慣",
         "Journal entries": "日誌エントリ",
@@ -3414,10 +3472,10 @@
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
+    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
-      "dashboard": "dashboard", "agenda": "agenda", "timeline": "timeline",
+      "dashboard": "dashboard", "today": "today", "agenda": "agenda", "timeline": "timeline",
       "calendar": "calendar", "focus": "focus", "review": "review", "team": "team",
       "status": "status", "notifications": "notifications",
       "stats": "stats", "graph": "graph",
@@ -3432,6 +3490,11 @@
         label: "Dashboard",
         description: "A compact overview of open work, agenda pressure, messages, and presence.",
         actions: [["Open agenda", "agenda"], ["Open focus", "focus"], ["Refresh", "refresh"]],
+      },
+      today: {
+        label: "Today",
+        description: "The Daily Command Center: what to do now, what needs attention, the Unified Inbox, and what is coming up.",
+        actions: [["Dashboard", "dashboard"], ["Open agenda", "agenda"], ["Refresh", "refresh"]],
       },
       agenda: {
         label: "Agenda",
@@ -3508,6 +3571,7 @@
       refresh: () => triggerRefresh(),
       items: () => switchWorkspace(""),
       dashboard: () => switchWorkspace("dashboard"),
+      today: () => switchWorkspace("today"),
       agenda: () => switchWorkspace("agenda"),
       focus: () => switchWorkspace("focus"),
       review: () => switchWorkspace("review"),
@@ -5505,6 +5569,7 @@
       if (v === "status") tasks.push(loadStatus());
       if (v === "team") tasks.push(loadTeam());
       if (v === "dashboard") tasks.push(loadDashboard());
+      if (v === "today") tasks.push(loadToday());
       if (v === "focus") tasks.push(loadFocus());
       if (v === "review") tasks.push(loadReview());
       if (v === "graph") tasks.push(loadGraphPanel());
@@ -8946,6 +9011,107 @@
       for (const [key, value] of Object.entries(kpi.params || {})) params.set(key, value);
       history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
       switchWorkspace(kpi.view, "replace");
+    }
+
+    // ── Today view (Daily Command Center) ───────────────────────────
+    //
+    // Renders GET /api/command-center exactly as returned -- the same
+    // command_center() aggregation CLI `today`, MCP get_command_center, and
+    // the TUI /today view already use. No due/blocked/waiting/next-action/
+    // inbox/project-attention calculation happens here.
+
+    const TODAY_ROW_LIMIT = 8;
+
+    function _todayRefRow(ref) {
+      const statusCls = STATUS_CLASS[ref.status] || "status-note";
+      const statusIcon = STATUS_ICON[ref.status] || "·";
+      const project = ref.project ? `<span class="pill">@${escapeHtml(ref.project)}</span>` : "";
+      const due = ref.due ? `<span class="pill">due:${escapeHtml(ref.due)}</span>` : "";
+      return `<div class="dash-row">
+        <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.08rem .4rem">${escapeHtml(statusIcon)}</span>
+        <a class="drawer-link dash-row-title" onclick="openItemByLine(${Number(ref.line) || 0})">${escapeHtml(ref.title)}</a>
+        ${project}${due}
+      </div>`;
+    }
+
+    function _todaySubsection(title, rows, emptyText) {
+      rows = rows || [];
+      const body = rows.length
+        ? rows.slice(0, TODAY_ROW_LIMIT).map(_todayRefRow).join("") +
+          (rows.length > TODAY_ROW_LIMIT ? `<div class="dash-row empty">+${rows.length - TODAY_ROW_LIMIT} more</div>` : "")
+        : `<div class="empty">${escapeHtml(emptyText)}</div>`;
+      return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (${rows.length})</div>${body}</div>`;
+    }
+
+    async function loadToday() {
+      const dateEl = document.getElementById("today-date");
+      let data;
+      try {
+        data = await api("/api/command-center");
+      } catch (e) {
+        const nowEl = document.getElementById("today-now");
+        if (nowEl) nowEl.innerHTML = `<div class="diagnostic">Today error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      if (dateEl) {
+        dateEl.textContent = data.reference_date
+          ? new Date(data.reference_date + "T00:00:00").toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"})
+          : "";
+      }
+
+      const nowEl = document.getElementById("today-now");
+      if (nowEl) {
+        nowEl.innerHTML =
+          _todaySubsection("Due today", data.due_today, "Nothing due today.") +
+          _todaySubsection("Next actions", data.next_actions, "Nothing actionable.") +
+          _todaySubsection("Overdue", data.overdue, "Nothing overdue.");
+      }
+
+      const attentionEl = document.getElementById("today-attention");
+      if (attentionEl) {
+        const projects = data.project_attention || [];
+        const projectRows = projects.slice(0, TODAY_ROW_LIMIT).map(p =>
+          `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.display_name || p.name)}</span>` +
+          `<span class="pill">${escapeHtml(p.health)}</span></div>`
+        ).join("");
+        const safety = data.safety || {};
+        const safetyRow = safety.ok
+          ? ""
+          : `<div class="today-subsection"><div class="dash-row">` +
+            `<span class="blocked-badge">${Number(safety.config_errors) || 0}</span>` +
+            `<span class="dash-row-title">Configuration errors</span></div></div>`;
+        attentionEl.innerHTML =
+          _todaySubsection("Blocked", data.blocked, "Nothing blocked.") +
+          _todaySubsection("Waiting", data.waiting, "Nothing waiting.") +
+          `<div class="today-subsection"><div class="today-subsection-title">Projects (${projects.length})</div>` +
+          (projectRows || `<div class="empty">All projects green.</div>`) + `</div>` +
+          safetyRow;
+      }
+
+      const inboxEl = document.getElementById("today-inbox");
+      if (inboxEl) {
+        const inbox = data.inbox || {};
+        const pending = inbox.pending || [];
+        const pendingRows = pending.slice(0, TODAY_ROW_LIMIT).map(p =>
+          `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.summary || p.id || "")}</span>` +
+          (p.source ? `<span class="pill">${escapeHtml(p.source)}</span>` : "") + `</div>`
+        ).join("");
+        const deferredLine = inbox.deferred_count
+          ? `<div class="today-subsection"><div class="empty">deferred (${Number(inbox.deferred_count) || 0})</div></div>`
+          : "";
+        inboxEl.innerHTML =
+          `<div class="today-subsection"><div class="today-subsection-title">Unified Inbox (${Number(inbox.pending_count) || 0})</div>` +
+          (pendingRows || `<div class="empty">Inbox is empty.</div>`) + `</div>` +
+          deferredLine +
+          _todaySubsection("Messages", data.messages, "No unread messages.");
+      }
+
+      const upcomingEl = document.getElementById("today-upcoming");
+      if (upcomingEl) {
+        upcomingEl.innerHTML =
+          _todaySubsection("Upcoming", data.upcoming, "Nothing upcoming.") +
+          _todaySubsection("Habits", data.habits, "No open habits.");
+      }
     }
 
     // ── Focus view (today's work, distraction-free) ────────────────

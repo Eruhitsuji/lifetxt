@@ -3797,6 +3797,7 @@ capabilities:
       - req-command-center-next-actions-and-inbox
       - req-tui-today-view
       - req-web-command-center-endpoint
+      - req-web-today-dashboard
     implementation_locations:
       - lifetxt/command_center.py
       - lifetxt/schema_extensions_v7.py
@@ -3805,6 +3806,7 @@ capabilities:
       - lifetxt/mcp.py
       - lifetxt/tui_app.py
       - lifetxt/webapp.py
+      - lifetxt/web_assets.html
       - tests/test_life_hub.py
       - tests/test_cui_extensions.py
       - tests/test_lifetxt.py
@@ -3821,14 +3823,18 @@ capabilities:
       - command-center-v1.schema.json
       - TUI /today command and Today view
       - GET /api/command-center
+      - Web UI Today tab (?view=today)
     tests_or_evidence:
       - tests/test_life_hub.py CommandCenterTests (21 tests, including next_actions/inbox coverage)
       - tests/test_schema_extensions_v2.py SchemaExtensionsV2Tests (schema bundle equality, draft 2020-12 validation of the extended sample)
       - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests: view switch and data load, NOW/ATTENTION/INBOX/UPCOMING sections render, empty-section hints, data traced back to a direct command_center() call, other views unaffected, reload refreshes Today)
       - tests/test_lifetxt.py LifeTxtWebApiTests command-center tests (5 tests: canonical shape, matches a direct command_center() call, horizon/person parameters, invalid horizon returns 400, available on a read-only client)
+      - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_today_view_is_served_and_backed_by_the_command_center_endpoint (served page carries the tab/section markup and calls only GET /api/command-center, never /api/items, /api/agenda, or /api/stats)
       - python -m unittest tests.test_life_hub tests.test_schema_extensions_v2 tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK
       - python -m unittest tests.test_cui_extensions tests.test_surface_runtime -> Ran 167 tests, OK (skipped=1)
-      - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_i18n -> Ran 43 tests, OK
+      - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_i18n tests.test_release_policy tests.test_web_commands -> Ran 126 tests, OK
+      - "manual: a real Node.js run of the extracted, real _todayRefRow/_todaySubsection/loadToday source against populated, empty, bounded-limit (12 due_today rows against an 8-row cap, confirming the '+4 more' line), and a forced API-error fixture -- all four rendered the expected markup, including graceful degradation to a diagnostic message on error instead of throwing"
+      - "live: real lifetxt serve process against a real 3-item fixture (one overdue, one blocked, one due today); GET /api/command-center returned the exact real aggregation; GET / (served page) contained data-view=\"today\", data-page=\"today\", and all four today-now/today-attention/today-inbox/today-upcoming section ids; GET /?view=today served successfully"
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -3838,6 +3844,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/475
       - https://github.com/Eruhitsuji/lifetxt/issues/476
       - https://github.com/Eruhitsuji/lifetxt/issues/477
+      - https://github.com/Eruhitsuji/lifetxt/issues/479
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -3885,7 +3892,32 @@ capabilities:
       standard 400 error shape rather than a raised exception. No Web UI
       bundle change was made, per #477's own scope -- rendering this
       endpoint in the browser Dashboard is a separate, unimplemented
-      follow-up.
+      follow-up. #479 adds that Web Today Dashboard as a distinct new
+      `today` tab/page in `lifetxt/web_assets.html`, kept separate from the
+      existing `dashboard` tab rather than replacing it: the existing
+      Dashboard already has its own established KPI-tile/chart/project
+      aggregation built from independent `/api/items`/`/api/agenda`/
+      `/api/chart/tasks`/`/api/stats/summary` calls, and #479's own
+      out-of-scope list ("Reimplementing Command Center aggregation or
+      business rules in Web code") plus acceptance criterion (existing Web
+      conventions "remain intact") ruled out rewriting that established
+      view. The new Today page calls only `GET /api/command-center` and
+      renders its response directly into four cards (Now/Attention/Inbox/
+      Upcoming), matching the TUI `/today` grouping; `loadToday()` performs
+      no due/blocked/waiting/next-action/inbox/project-attention
+      calculation of its own, confirmed by both a real Node.js run of the
+      extracted rendering functions against populated/empty/bounded/error
+      fixtures and a served-page test asserting `loadToday()`'s body never
+      references `/api/items`, `/api/agenda`, or `/api/stats`. All new
+      static and dynamically-rendered chrome strings were added to
+      `UI_STRINGS`/reused existing entries so the translation-coverage gate
+      (`tests.test_release_policy.test_repository_translation_baseline_allows_known_debt_but_no_new_gap`)
+      stayed green with no new gap. Because a `GET /api/command-center`-only
+      view has no write path, no new auth/read-only exposure was introduced;
+      the route already inherits the same bearer-auth/read-only middleware
+      as every other route (established when #477 added it). Proposal
+      accept/edit/reject actions and Saved Views/life-area navigation on this
+      page remain explicit, unimplemented follow-ups per #479's own scope.
     replacement:
       replaces: []
       replaced_by: null

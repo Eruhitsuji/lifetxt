@@ -712,6 +712,31 @@ def build_parser():
     )
     ai_setup_generic.set_defaults(func=command_ai_setup_generic)
 
+    ai_doctor = ai_subparsers.add_parser(
+        "doctor",
+        help=(
+            "Check whether the workspace will load and resolve a write "
+            "target cleanly for a direct MCP connection. Writes nothing."
+        ),
+    )
+    ai_doctor.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to check. Defaults to life.txt or config paths.",
+    )
+    ai_doctor.add_argument(
+        "--write-file",
+        help="File to check as the write target.",
+    )
+    ai_doctor.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_doctor.set_defaults(func=command_ai_doctor)
+
     config_command = subparsers.add_parser(
         "config",
         help="Create or inspect an external JSON config file.",
@@ -5136,6 +5161,79 @@ def command_ai_setup_generic(args):
         ),
     ]
     write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_ai_doctor(args):
+    """Report whether the workspace will load and resolve a write target
+    cleanly for a direct MCP connection. Never writes a file."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    checks = []
+
+    def add_check(symbol, label, message):
+        checks.append((symbol, label, message))
+
+    arg_paths = getattr(args, "paths", None) or []
+    life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
+        "life.txt"
+    ]
+    for path in life_paths:
+        if not os.path.exists(path):
+            add_check("FAIL", "life.txt", "Not found: %s" % path)
+        elif not os.access(path, os.R_OK):
+            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+        else:
+            add_check("OK", "life.txt", "Found: %s" % path)
+
+    existing_paths = [p for p in life_paths if os.path.exists(p)]
+    if existing_paths:
+        try:
+            items, diagnostics = _parse_life_inputs(existing_paths, config)
+        except Exception as exc:  # pragma: no cover - defensive, mirrors doctor
+            add_check("FAIL", "parse", str(exc))
+        else:
+            errors = [d for d in diagnostics if d.severity == "error"]
+            if errors:
+                add_check(
+                    "FAIL",
+                    "parse",
+                    "%d error(s) -- run: lifetxt check %s"
+                    % (len(errors), existing_paths[0]),
+                )
+            else:
+                add_check("OK", "parse", "%d item(s), no errors" % len(items))
+
+    try:
+        write_target = resolve_write_target(
+            life_paths, args.write_file or config_write_file(config)
+        )
+    except ValueError as exc:
+        add_check("FAIL", "write-target", str(exc))
+    else:
+        add_check("OK", "write-target", "Resolved: %s" % write_target)
+
+    add_check(
+        "OK",
+        "profile",
+        "Recommended default for external/untrusted AI clients: "
+        "--profile read (see #502).",
+    )
+
+    if args.format == "json":
+        records = [
+            OrderedDict([("status", s), ("check", check_name), ("message", m)])
+            for s, check_name, m in checks
+        ]
+        write_text(None, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    symbols = {"OK": "[OK]", "WARN": "[!!]", "FAIL": "[XX]"}
+    for symbol, label, message in checks:
+        write_text(
+            None, "%s %-14s %s\n" % (symbols.get(symbol, symbol), label, message)
+        )
     return 0
 
 

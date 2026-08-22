@@ -6788,6 +6788,115 @@ class LifeTxtAiSetupGenericCliTests(unittest.TestCase):
             return handle.read()
 
 
+class LifeTxtAiDoctorCliTests(unittest.TestCase):
+    """`lifetxt ai doctor`: workspace/write-target health checks for a
+    direct MCP setup (#507)."""
+
+    def _fixture(self, temp_dir, name="life.txt", text="[ ] T Write_Report id:t1\n"):
+        path = os.path.join(temp_dir, name)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_clean_workspace_reports_all_ok(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli("ai", "doctor", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertNotIn("[XX]", stdout)
+            self.assertIn("life.txt", stdout)
+            self.assertIn("parse", stdout)
+            self.assertIn("write-target", stdout)
+            self.assertIn("--profile read", stdout)
+
+    def test_missing_file_is_reported_not_raised(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing = os.path.join(temp_dir, "nope.txt")
+
+            stdout, stderr, code = run_cli("ai", "doctor", missing)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("[XX]", stdout)
+            self.assertIn("Not found", stdout)
+            self.assertIn(missing, stdout)
+
+    def test_parse_error_is_reported_not_raised(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="not a valid life.txt line\n")
+
+            stdout, stderr, code = run_cli("ai", "doctor", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("[XX]", stdout)
+
+    def test_ambiguous_write_target_is_reported_not_raised(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = self._fixture(temp_dir, name="first.txt")
+            second = self._fixture(
+                temp_dir, name="second.txt", text="[ ] T Two id:t2\n"
+            )
+
+            stdout, stderr, code = run_cli("ai", "doctor", first, second)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("write-target", stdout)
+            self.assertIn("explicit write target", stdout)
+
+    def test_explicit_write_file_resolves_the_ambiguity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = self._fixture(temp_dir, name="first.txt")
+            second = self._fixture(
+                temp_dir, name="second.txt", text="[ ] T Two id:t2\n"
+            )
+
+            stdout, stderr, code = run_cli(
+                "ai", "doctor", first, second, "--write-file", first
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertNotIn("[XX]", stdout)
+            self.assertIn("Resolved: %s" % first, stdout)
+
+    def test_json_format_returns_the_expected_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli("ai", "doctor", path, "--format", "json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            records = json.loads(stdout)
+            checks = {r["check"] for r in records}
+            self.assertIn("life.txt", checks)
+            self.assertIn("parse", checks)
+            self.assertIn("write-target", checks)
+            self.assertIn("profile", checks)
+            self.assertTrue(all(r["status"] == "OK" for r in records))
+
+    def test_command_never_writes_any_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            before = sorted(os.listdir(temp_dir))
+            before_content = self._fixture_content(path)
+
+            run_cli("ai", "doctor", path)
+            run_cli("ai", "doctor", path, "--format", "json")
+
+            self.assertEqual(before, sorted(os.listdir(temp_dir)))
+            self.assertEqual(before_content, self._fixture_content(path))
+
+    def _fixture_content(self, path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+
 class _FakeGitResult(object):
     def __init__(self, returncode=0, stdout="", stderr=""):
         self.returncode = returncode

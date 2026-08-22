@@ -48,6 +48,17 @@ have to hand-write either. It writes nothing to disk. The emitted profile
 defaults to `read`; pass `--profile assist|full` to emit a different one, or
 `--format json` for a machine-readable version.
 
+Before pointing a client at it, check it will actually work:
+
+```sh
+python -m lifetxt ai doctor life.txt
+```
+
+Reports whether each input file exists and parses, whether a write target
+resolves unambiguously (or names the same `--write-file`-required error
+`lifetxt mcp` would raise), and reminds you that `read` is the recommended
+default profile for external or untrusted clients. Writes nothing.
+
 ### Claude Desktop
 
 `claude_desktop_config.json`:

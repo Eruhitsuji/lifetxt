@@ -8,8 +8,9 @@ lifetxt は stdio 上の MCP (Model Context Protocol) server を同梱してい�
 - [4. Write Safety](#4-write-safety)
 - [5. Prompts](#5-prompts)
 - [6. Permission Profiles And Privacy](#6-permission-profiles-and-privacy)
-- [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
-- [8. Without MCP](#8-without-mcp)
+- [7. AI-Safe Workspaces](#7-ai-safe-workspaces)
+- [8. Remote Safe Mode Client Tools](#8-remote-safe-mode-client-tools)
+- [9. Without MCP](#9-without-mcp)
 
 ---
 
@@ -330,7 +331,56 @@ secret は file に入れないでください。file 内のものは client が
 
 ---
 
-## 7. Remote Safe Mode Client Tools
+## 7. AI-Safe Workspaces
+
+`--profile` が制御するのは client が到達できる *tool* です。named workspace が
+制御するのは、client が読み書きする *data* です -- 他のすべての lifetxt command
+がすでにサポートしている同じ `--workspace` flag を使います。この二つを組み合わ
+せることで、client に広い read access を与えつつ、その write を一つの専用 file
+に閉じ込めることができます:
+
+```json
+{
+  "workspaces": {
+    "default": {
+      "sources": [{"path": "life.txt", "role": "primary"}],
+      "write_file": "life.txt"
+    },
+    "ai": {
+      "sources": [
+        {"path": "life.txt", "role": "readonly", "writable": false},
+        {"path": "ai-inbox.life.txt", "role": "primary", "writable": true}
+      ],
+      "write_file": "ai-inbox.life.txt"
+    }
+  }
+}
+```
+
+```sh
+python -m lifetxt --workspace ai mcp --profile assist
+python -m lifetxt --workspace ai ai setup generic --profile assist
+python -m lifetxt --workspace ai ai doctor
+```
+
+この設定では、read tool（`list_items`、`get_agenda` など）は `life.txt` と
+`ai-inbox.life.txt` の両方の item を見ますが、`assist` の下での
+`stage_proposal` を含むすべての write tool は `ai-inbox.life.txt` に閉じ込め
+られ、`life.txt` 自体には一切触れません。`get_file_state` は解決済みの
+`writable_path` を報告するので、client（あるいはあなた自身）は、その接続を
+信頼する前に、write が実際にどの file に届くのかを確認できます。`--workspace`
+に必要なのは [`config.md`](./config.md) にすでに文書化されている
+`workspaces` の設定だけであり、ここで動作させるために MCP 固有の設定は
+何も必要ありません。
+
+`--profile assist` と組み合わせることで、#500 が説明するpattern -- 広い read
+context と、専用の proposal/inbox write path -- が実現します。AI client が
+提案したものは、あなたが別途その proposal を accept するまで `life.txt` に
+届くことはありません。
+
+---
+
+## 8. Remote Safe Mode Client Tools
 
 MCP server は、Remote Safe Mode で動く別の lifetxt server の read-only client としても使えます。これらの tool は CLI の `lifetxt remote profile-*` commands と同じ profile store を再利用します。
 
@@ -352,7 +402,7 @@ MCP server は、Remote Safe Mode で動く別の lifetxt server の read-only c
 
 ---
 
-## 8. Without MCP
+## 9. Without MCP
 
 MCP は必須ではありません。command を実行できる model なら CLI と組み合わせられます。
 

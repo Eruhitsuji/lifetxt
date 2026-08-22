@@ -4172,6 +4172,101 @@ class LifeTxtWebApiTests(unittest.TestCase):
                 "Weekly stats review", with_fuzzy.json()["items"][0]["title"]
             )
 
+    def test_command_center_api_returns_the_canonical_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n"
+                "[ ] T Overdue project:work due:2000-01-01 id:t1\n"
+                "[ ] T Blocked project:work depends_on:t1 id:t2\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/command-center")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            for key in (
+                "mode",
+                "overdue",
+                "due_today",
+                "next_actions",
+                "inbox",
+                "counts",
+            ):
+                self.assertIn(key, data)
+            self.assertEqual(["Overdue"], [r["title"] for r in data["overdue"]])
+            self.assertEqual(["Blocked"], [r["title"] for r in data["blocked"]])
+            self.assertEqual(0, data["inbox"]["pending_count"])
+            self.assertEqual([], data["inbox"]["pending"])
+
+    def test_command_center_api_matches_the_direct_engine_call(self):
+        from lifetxt import webapp
+        from lifetxt.command_center import command_center
+        from lifetxt.timezone_policy import today as timezone_today
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n[ ] T Idea id:t1\n", encoding="utf-8"
+            )
+            client = self._client([path], writable_path=path)
+            items, _diags = webapp.read_life_inputs([path], {})
+
+            response = client.get("/api/command-center")
+
+            expected = command_center(items, {}, timezone_today())
+            self.assertEqual(
+                [r["title"] for r in expected["next_actions"]],
+                [r["title"] for r in response.json()["next_actions"]],
+            )
+
+    def test_command_center_api_respects_horizon_and_person_parameters(self):
+        import datetime
+
+        soon = (datetime.date.today() + datetime.timedelta(days=5)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n"
+                "[ ] T Soon project:work due:%s\n"
+                "[ ] M Ping sender:alice recipient:bob body:hi\n" % soon,
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            narrow = client.get("/api/command-center?horizon=1")
+            wide = client.get("/api/command-center?horizon=30")
+            scoped = client.get("/api/command-center?person=carol")
+
+            self.assertEqual(200, narrow.status_code)
+            self.assertEqual(0, narrow.json()["counts"]["upcoming"])
+            self.assertEqual(200, wide.status_code)
+            self.assertEqual(1, wide.json()["counts"]["upcoming"])
+            self.assertEqual(200, scoped.status_code)
+            self.assertEqual(0, scoped.json()["counts"]["messages"])
+
+    def test_command_center_api_invalid_horizon_returns_400(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/command-center?horizon=not-a-number")
+
+            self.assertEqual(400, response.status_code)
+
+    def test_command_center_api_available_on_a_read_only_client(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("", encoding="utf-8")
+            client = self._client([path], writable_path=path, read_only=True)
+
+            response = client.get("/api/command-center")
+
+            self.assertEqual(200, response.status_code)
+
     def test_messages_api_boolean_false_query_value_does_not_filter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")

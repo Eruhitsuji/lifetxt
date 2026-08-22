@@ -4529,3 +4529,59 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-generic-setup
+    name: Generic MCP client setup command
+    summary: >-
+      A read-only lifetxt ai setup generic command printing the exact
+      lifetxt mcp command and a generic MCP client configuration for the
+      current workspace, defaulting to the read permission profile.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-generic-setup-command
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/mcp-generic-setup/
+    public_interfaces:
+      - lifetxt ai setup generic
+      - lifetxt.cli.command_ai_setup_generic
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtAiSetupGenericCliTests (6 tests, real subprocess round trips via run_cli): default profile read, explicit --profile assist/full override, invalid --profile rejected, --format json shape, --write-file reflected when it differs from the input, and an explicit no-write guarantee across every profile/format combination"
+      - python -m unittest tests.test_lifetxt tests.test_surface_runtime tests.test_completion_surfaces tests.test_cui_extensions -> Ran 858 tests, OK (skipped=2)
+      - 'live: real python -m lifetxt ai setup generic against a fixture life.txt in text and --format json modes, --profile full, and an invalid --profile value -- all matched the designed output, and the fixture directory''s file set was confirmed byte-for-byte unchanged'
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/505
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Second implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 3, "Generic MCP setup"),
+      landing in the same integration branch/PR as #502
+      (cap-mcp-permission-profiles). Standard assurance, S-sized; no
+      change package created, per this repository's own threshold
+      (.ai/project/changes/README.md) for when one is required -- this
+      command is read-only, additive, and does not touch lifetxt mcp's
+      own behavior. Deliberately resolves paths via the same pure helpers
+      (resolve_write_target, _normalize_paths) lifetxt mcp itself uses
+      rather than constructing an McpContext: constructing one under a
+      non-read profile can trigger assert_unique_workspace_ids and a
+      transaction startup preflight (which can create a journal directory
+      when transactions.preflight_on_startup is configured), which would
+      have violated this command's own no-write guarantee. Provider-
+      specific adapters (ai setup chatgpt|claude|gemini), ai status/
+      ai doctor/ai clients/ai bridge, and any change to lifetxt mcp itself
+      are explicitly out of scope and remain candidate #500 child issues.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

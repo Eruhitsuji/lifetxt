@@ -380,6 +380,10 @@ class WorkspaceState(object):
         self.project = None
         self.context = None
         self.tag = None
+        self.saved_view = None
+        self.area = None
+        self._saved_view_keys = None
+        self._area_keys = None
         self.show_stats = False
         self.help_query = ""
         self.help_scroll = 0
@@ -457,6 +461,10 @@ class WorkspaceState(object):
             self.error = str(exc)
             self._model = None
         self._today = None
+        if self.saved_view is not None:
+            self._saved_view_keys = frozenset()
+        if self.area is not None:
+            self._area_keys = frozenset()
         if self._model is not None:
             try:
                 # A second, cheap parse: dashboard_model() does not expose the
@@ -468,6 +476,15 @@ class WorkspaceState(object):
                 self._today = command_center(items, config, timezone_today())
             except Exception:
                 self._today = None
+                items = None
+                config = getattr(self.args, "config_data", None) or {}
+            if items is not None:
+                if self.saved_view is not None:
+                    self._saved_view_keys = _saved_view_row_keys(
+                        items, config, self.saved_view
+                    )
+                if self.area is not None:
+                    self._area_keys = _area_row_keys(items, config, self.area)
         self.load_count += 1
 
     def refresh(self):
@@ -525,6 +542,12 @@ class WorkspaceState(object):
             str(v).lstrip("#") for v in details.get("tag") or []
         ]:
             return False
+        if self.saved_view and self._saved_view_keys is not None:
+            if (row.get("source"), row.get("line")) not in self._saved_view_keys:
+                return False
+        if self.area and self._area_keys is not None:
+            if (row.get("source"), row.get("line")) not in self._area_keys:
+                return False
         return True
 
     def reload(self):
@@ -561,6 +584,8 @@ SESSION_FIELDS = (
     "project",
     "context",
     "tag",
+    "saved_view",
+    "area",
     "show_detail",
     "show_stats",
 )
@@ -786,6 +811,86 @@ def _cmd_tag(state, argument):
     return ("info", "Tag filter: %s" % (value or "(cleared)"))
 
 
+def _saved_view_row_keys(items, config, name):
+    """(source, line) keys for a saved view's result, reusing run_saved_view.
+
+    Query evaluation stays entirely in lifetxt.saved_views/lifetxt.query; this
+    only adapts the result to the (source, line) identity rows already carry.
+    """
+    from .saved_views import run_saved_view
+
+    filtered, _diagnostics = run_saved_view(items, config, name)
+    return frozenset((getattr(it, "source", None), it.line) for it in filtered)
+
+
+def _area_row_keys(items, config, name):
+    """(source, line) keys for every item in one area, reusing collect_areas."""
+    from .areas import collect_areas
+
+    bucket = collect_areas(items, config).get(name)
+    if bucket is None:
+        return frozenset()
+    return frozenset((ref.get("source"), ref.get("line")) for ref in bucket["items"])
+
+
+def _cmd_saved(state, argument):
+    """List configured saved views, or apply one as the active row filter."""
+    from .saved_views import list_saved_views, run_saved_view
+
+    config = getattr(state.args, "config_data", None) or {}
+    name = (argument or "").strip()
+    if not name:
+        views = list_saved_views(config)
+        if not views:
+            return ("info", "No saved views configured.")
+        return (
+            "info",
+            "Saved views: %s" % ", ".join(view["name"] for view in views),
+        )
+    items = load_items(state.args.paths)
+    filtered, diagnostics = run_saved_view(items, config, name)
+    errors = [d for d in diagnostics if d.get("severity") == "error"]
+    if errors:
+        raise ValueError("Saved view %r: %s" % (name, errors[0]["message"]))
+    state.saved_view = name
+    state.area = None
+    state._area_keys = None
+    state._saved_view_keys = frozenset(
+        (getattr(it, "source", None), it.line) for it in filtered
+    )
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Saved view: %s (%d item(s))" % (name, len(filtered)))
+
+
+def _cmd_area(state, argument):
+    """List areas with progress, or filter the active row set to one area."""
+    from .areas import area_list, area_show
+
+    config = getattr(state.args, "config_data", None) or {}
+    name = (argument or "").strip()
+    items = load_items(state.args.paths)
+    if not name:
+        areas = area_list(items, config)
+        if not areas:
+            return ("info", "No areas found.")
+        summary = ", ".join(
+            "%s (%d/%d)" % (area["name"], area["task_done"], area["task_total"])
+            for area in areas
+        )
+        return ("info", "Areas: %s" % summary)
+    # area_show() is the shared validation/error-message path: an unknown
+    # name raises the exact ValueError lifetxt.areas already defines.
+    area_show(items, config, name)
+    state.area = name
+    state.saved_view = None
+    state._saved_view_keys = None
+    state._area_keys = _area_row_keys(items, config, name)
+    state.selected = 0
+    state.scroll = 0
+    return ("info", "Area: %s (%d item(s))" % (name, len(state._area_keys)))
+
+
 def _cmd_next(state, argument):
     """Switch to the actionable-next view: open, unblocked, not someday."""
     state.view = "next"
@@ -835,6 +940,10 @@ def _cmd_clear(state, argument):
     state.project = None
     state.context = None
     state.tag = None
+    state.saved_view = None
+    state.area = None
+    state._saved_view_keys = None
+    state._area_keys = None
     state.marked = set()
     state.selected = 0
     state.scroll = 0
@@ -1448,6 +1557,18 @@ COMMANDS = (
     ),
     Command("tag", "NAME", "Filter by tag: (empty clears)", _cmd_tag, values="tag"),
     Command(
+        "saved",
+        "[NAME]",
+        "List saved views, or apply one as the active filter",
+        _cmd_saved,
+    ),
+    Command(
+        "area",
+        "[NAME]",
+        "List areas with progress, or filter rows to one area",
+        _cmd_area,
+    ),
+    Command(
         "sort",
         "natural|due|priority|title|status",
         "Change row ordering",
@@ -1936,6 +2057,10 @@ def _context_label(state, width=None):
         parts.append("context:%s" % state.context)
     if state.tag:
         parts.append("tag:%s" % state.tag)
+    if state.saved_view:
+        parts.append("saved:%s" % state.saved_view)
+    if state.area:
+        parts.append("area:%s" % state.area)
     if state.query:
         parts.append("search:%s" % state.query)
 

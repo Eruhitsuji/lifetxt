@@ -1890,6 +1890,8 @@ the MCP `complete` tool return.
 | `/project NAME` | Filter by `project:` (empty value clears it) |
 | `/context NAME` | Filter by `context:` (empty value clears it) |
 | `/tag NAME` | Filter by `tag:`, with or without a leading `#` |
+| `/saved [NAME]` | List saved views, or apply one as the active filter |
+| `/area [NAME]` | List areas with progress, or filter rows to one area |
 | `/sort natural\|due\|priority\|title\|status` | Change row ordering |
 | `/clear` | Clear every filter and mark |
 | `/goto ID` | Move the selection to a record id |

@@ -4005,3 +4005,87 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-query-saved-views-and-areas
+    name: Shared query language, Saved Views, and area navigation
+    summary: >-
+      One shared, surface-neutral query grammar (`lifetxt/query.py`),
+      configuration-backed Saved Views built on it (`lifetxt/saved_views.py`),
+      and `area:` grouping (`lifetxt/areas.py`), reused unmodified by CLI
+      (`query`, `view list|show|validate|run`, `area list|show`), MCP
+      (`run_query`, `list_saved_views`, `run_saved_view`, `get_areas`), and
+      now the interactive TUI (`/saved`, `/area`).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-saved-views-and-area-switching
+    implementation_locations:
+      - lifetxt/query.py
+      - lifetxt/saved_views.py
+      - lifetxt/areas.py
+      - lifetxt/cli.py
+      - lifetxt/mcp.py
+      - lifetxt/tui_app.py
+      - tests/test_cui_extensions.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt.query.run_query
+      - lifetxt.saved_views.list_saved_views
+      - lifetxt.saved_views.run_saved_view
+      - lifetxt.areas.area_list
+      - lifetxt.areas.area_show
+      - lifetxt.areas.collect_areas
+      - lifetxt query / view list|show|validate|run / area list|show
+      - MCP tools run_query, list_saved_views, run_saved_view, get_areas
+      - TUI /saved [NAME] and /area [NAME] commands
+    tests_or_evidence:
+      - tests/test_cui_extensions.py WorkspaceSavedViewAndAreaTests (11 tests: list/apply/unknown-name for both commands, mutual exclusivity, /clear resets both, reload keeps the active filter fresh, context label shows the active filter)
+      - python -m unittest tests.test_cui_extensions tests.test_surface_runtime -> Ran 178 tests, OK (skipped=1; TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /saved and /area)
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/472
+      - https://github.com/Eruhitsuji/lifetxt/issues/480
+      - https://github.com/Eruhitsuji/lifetxt/issues/483
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered `lifetxt/query.py`,
+      `lifetxt/saved_views.py`, or `lifetxt/areas.py` before this change,
+      even though their CLI/MCP exposure predates this session (confirmed
+      via `git log` and by grepping this file); this entry closes that gap,
+      matching the precedent set by `cap-remote-cli-read-client` for
+      pre-existing-but-untraced functionality. #480 (an investigation issue
+      under the #472 post-Stable product theme) confirmed these three
+      engines are complete and already fully exposed through CLI/MCP, but
+      had zero coverage in either the TUI or the Web UI, and recommended
+      TUI first -- both because the TUI already has an established,
+      directly analogous pattern to extend (`/project`/`/context`/`/tag`
+      read-only filter commands) and because a naming collision exists on
+      both surfaces (the TUI's own `/view` already means "switch which
+      sections are listed"; the Web's `?view=` carries the identical
+      meaning), so a saved *query* view could not reuse that word on either
+      surface without ambiguity. #483 adds `/saved [NAME]` (list configured
+      saved views, or apply one as the active row filter via
+      `lifetxt.saved_views.run_saved_view`) and `/area [NAME]` (list areas
+      with progress via `lifetxt.areas.area_list`, or filter rows to one
+      area via `lifetxt.areas.collect_areas`) with no query grammar or
+      area-membership logic duplicated in `lifetxt/tui_app.py`: both
+      commands adapt the (source, line) identity every TUI row already
+      carries to the engines' own item results, and both reuse the exact
+      `ValueError` message `lifetxt.saved_views`/`lifetxt.areas` already
+      raise for an unknown name rather than reconstructing it. The two
+      filters are mutually exclusive with each other (applying one clears
+      the other) and are reset by the existing `/clear` command alongside
+      `/project`/`/context`/`/tag`; both persist across TUI sessions via the
+      existing session-restore mechanism and stay fresh across `/reload`
+      by recomputing the active filter's membership on every `load()`, the
+      same pattern the `Today` view (#476) already established for
+      `command_center()`. A Web-side counterpart (#484) is tracked as a
+      separate, deferred follow-up per #480's own recommended sequencing.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

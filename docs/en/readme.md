@@ -6,6 +6,8 @@ work, and remote-safe workflows.
 
 Start with:
 
+- [philosophy.md](./philosophy.md) for why lifetxt exists and the
+  principles behind it.
 - [life_txt_format_spec.md](./life_txt_format_spec.md) for the file format.
 - [cli.md](./cli.md) for command usage and compatibility.
 - [config.md](./config.md) for configuration files and effective settings.
@@ -43,6 +45,7 @@ Every Markdown file under `docs/en/` is listed here.
 | Messaging and notifications | [messaging.md](./messaging.md) |
 | New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
 | People, teams, groups | [people.md](./people.md) |
+| Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
 | Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |
 | Projects and portfolios | [projects.md](./projects.md) |
 | Public surface revisions | [public-surface-revisions.md](./public-surface-revisions.md) |

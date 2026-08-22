@@ -1443,6 +1443,21 @@ write tool は `--write-file` のみを変更します。`--profile read`（ま�
 `--read-only`）を付けると write tool を無効化し、`--profile assist` なら proposal の
 stage だけを許可します。
 
+### 11.2 `ai setup generic`
+
+現在の workspace に対する正確な `lifetxt mcp` command と、汎用的な MCP client
+configuration を表示します。file への書き込みは一切行いません。
+
+```sh
+python -m lifetxt ai setup generic life.txt
+python -m lifetxt ai setup generic life.txt --profile assist
+python -m lifetxt ai setup generic life.txt --format json
+```
+
+`--profile` の default は `read` です。`--write-file` で表示される write target
+を上書きできます。`--format json` を指定すると、整形された text の代わりに
+`{"command": [...], "mcp_client_config": {...}}` を返します。
+
 ## 12. `config`
 
 外部 JSON config を作成または表示します。

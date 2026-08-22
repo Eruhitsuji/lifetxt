@@ -6679,6 +6679,115 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
             cli._resolve_update_check_repo(args, {})
 
 
+class LifeTxtAiSetupGenericCliTests(unittest.TestCase):
+    """`lifetxt ai setup generic`: printed command/config, profile
+    defaulting, and the no-write guarantee (#505)."""
+
+    def _fixture(self, temp_dir):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Write_Report id:t1 project:work\n")
+        return path
+
+    def test_default_profile_is_read(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli("ai", "setup", "generic", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--profile read", stdout)
+            self.assertIn('"lifetxt"', stdout)
+            self.assertIn(path, stdout)
+
+    def test_explicit_profile_overrides_the_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            for profile in ("assist", "full"):
+                stdout, stderr, code = run_cli(
+                    "ai", "setup", "generic", path, "--profile", profile
+                )
+                self.assertEqual("", stderr, profile)
+                self.assertEqual(0, code, profile)
+                self.assertIn("--profile %s" % profile, stdout, profile)
+                self.assertNotIn("--profile read", stdout, profile)
+
+    def test_invalid_profile_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            _stdout, stderr, code = run_cli(
+                "ai", "setup", "generic", path, "--profile", "bogus"
+            )
+
+            self.assertNotEqual(0, code)
+            self.assertIn("invalid choice", stderr)
+
+    def test_json_format_returns_the_expected_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "generic", path, "--format", "json"
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual(
+                ["python", "-m", "lifetxt", "mcp", path, "--profile", "read"],
+                payload["command"],
+            )
+            server = payload["mcp_client_config"]["mcpServers"]["lifetxt"]
+            self.assertEqual("python", server["command"])
+            self.assertEqual(
+                ["-m", "lifetxt", "mcp", path, "--profile", "read"], server["args"]
+            )
+
+    def test_write_file_flag_is_reflected_when_it_differs_from_the_input(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            write_target = os.path.join(temp_dir, "ai-inbox.life.txt")
+            with open(write_target, "w", encoding="utf-8") as handle:
+                handle.write("")
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "generic", path, "--write-file", write_target
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--write-file %s" % write_target, stdout)
+
+    def test_command_never_writes_any_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            before = sorted(os.listdir(temp_dir))
+            before_content = self._fixture_content(path)
+
+            for profile in ("read", "assist", "full"):
+                run_cli("ai", "setup", "generic", path, "--profile", profile)
+                run_cli(
+                    "ai",
+                    "setup",
+                    "generic",
+                    path,
+                    "--profile",
+                    profile,
+                    "--format",
+                    "json",
+                )
+
+            self.assertEqual(before, sorted(os.listdir(temp_dir)))
+            self.assertEqual(before_content, self._fixture_content(path))
+
+    def _fixture_content(self, path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+
 class _FakeGitResult(object):
     def __init__(self, returncode=0, stdout="", stderr=""):
         self.returncode = returncode

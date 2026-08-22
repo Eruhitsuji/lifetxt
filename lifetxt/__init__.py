@@ -189,6 +189,12 @@ from .schema_extensions_v23 import (
 
 _install_schema_extensions_v23()
 del _install_schema_extensions_v23
+from .schema_extensions_v24 import (
+    install_schema_extensions_v24 as _install_schema_extensions_v24,
+)
+
+_install_schema_extensions_v24()
+del _install_schema_extensions_v24
 from .remote_web import install_remote_web as _install_remote_web
 
 _install_remote_web()

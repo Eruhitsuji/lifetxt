@@ -1,6 +1,6 @@
-# Life Hub: Daily Command Center, Areas, and Backlinks
+# Life Hub: Daily Command Center, Areas, Backlinks, Temporal Context
 
-Life Hub commands は life.txt workspace を、今日 attention が必要なもの、area ごとの work organization、items 同士の connection を見る command center にします。すべての command は shared aggregation を読むため、CLI、MCP、future Web surfaces が同じ picture を見ます。
+Life Hub commands は life.txt workspace を、今日 attention が必要なもの、area ごとの work organization、items 同士の connection、時間的な relation を見る command center にします。すべての command は shared aggregation を読むため、CLI、MCP、future Web surfaces が同じ picture を見ます。
 
 ## Daily command center
 
@@ -56,6 +56,23 @@ $ lifetxt backlinks T-1 --json
 MCP: `get_backlinks`.
 
 backlinks は read-only です。source item を edit する前に、incoming relationships を見て change が safe か判断するための report です。
+
+## Temporal context
+
+`temporal` は「この item の周りで時間的に何が relevant か」を 1 item ずつ答えます。`backlinks`/`links` が扱う明示的な relation graph とは別の、bounded かつ説明可能な derived facts です。
+
+```console
+$ lifetxt temporal T-1
+$ lifetxt temporal T-1 --window 14 --limit 5
+$ lifetxt temporal T-1 --json
+```
+
+`rule`/`source_field`/`reference_time` を必ず伴う 2 種類の fact:
+
+- **facts**（item 自身について）: `due:` から得る `overdue_by`/`due_in`、および `stale_since`（`--stale-after` 日数、default 14、以上 activity がない -- `ticket project` report が tickets 用に既に使っている threshold-based rule を、`updated:`/`created:` などを持つ任意の item に一般化したもの）。
+- **related** items: この item 自身の日付から `--window` 日以内（default 7）にある他の dated items への `same_day`/`before`/`after` edge。近い順、`--limit`（default 20）まで。
+
+life.txt へ書き戻すものは何もなく、`depends_on:`/`blocks:` などの再計算もしません（それらは `backlinks`/`links` のままです）。比較可能な日付がない item は単に fact を返しません。`temporal` は relation を推測しません。結果は常に 1 item の近傍に bounded され、workspace 全体の全件走査にはなりません。
 
 ## Projects over MCP
 

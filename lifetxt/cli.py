@@ -655,9 +655,87 @@ def build_parser():
     mcp.add_argument(
         "--read-only",
         action="store_true",
-        help="Disable MCP write tools.",
+        help="Disable MCP write tools. Equivalent to --profile read.",
+    )
+    mcp.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default=None,
+        help=(
+            "MCP permission profile. 'read' allows only non-mutating tools "
+            "(equivalent to --read-only); 'assist' additionally allows "
+            "stage_proposal (Unified Inbox proposal staging), nothing else; "
+            "'full' is today's unrestricted default. Conflicts with "
+            "--read-only unless --profile read is also given."
+        ),
     )
     mcp.set_defaults(func=command_mcp)
+
+    ai_command = subparsers.add_parser(
+        "ai",
+        help="AI client integration helpers.",
+    )
+    ai_subparsers = ai_command.add_subparsers(dest="ai_command")
+    ai_setup = ai_subparsers.add_parser(
+        "setup",
+        help="Print ready-to-use AI client setup information.",
+    )
+    ai_setup_subparsers = ai_setup.add_subparsers(dest="ai_setup_command")
+    ai_setup_generic = ai_setup_subparsers.add_parser(
+        "generic",
+        help=(
+            "Print the lifetxt mcp command and a generic MCP client "
+            "configuration for the current workspace. Writes nothing."
+        ),
+    )
+    ai_setup_generic.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to reference. Defaults to life.txt or config paths.",
+    )
+    ai_setup_generic.add_argument(
+        "--write-file",
+        help="File the printed command uses as its write target.",
+    )
+    ai_setup_generic.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default="read",
+        help="Permission profile to emit. Defaults to 'read'.",
+    )
+    ai_setup_generic.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_setup_generic.set_defaults(func=command_ai_setup_generic)
+
+    ai_doctor = ai_subparsers.add_parser(
+        "doctor",
+        help=(
+            "Check whether the workspace will load and resolve a write "
+            "target cleanly for a direct MCP connection. Writes nothing."
+        ),
+    )
+    ai_doctor.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to check. Defaults to life.txt or config paths.",
+    )
+    ai_doctor.add_argument(
+        "--write-file",
+        help="File to check as the write target.",
+    )
+    ai_doctor.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_doctor.set_defaults(func=command_ai_doctor)
 
     config_command = subparsers.add_parser(
         "config",
@@ -5009,6 +5087,154 @@ def command_mcp(args):
     from .mcp import cmd_mcp
 
     return cmd_mcp(args)
+
+
+def command_ai_setup_generic(args):
+    """Print the `lifetxt mcp` command and a generic MCP client
+    configuration for the current workspace. Never writes a file: path
+    resolution reuses the same pure helpers `lifetxt mcp` itself uses,
+    rather than constructing an McpContext (which can trigger a
+    transaction startup preflight for non-read profiles)."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    paths = _normalize_paths(
+        list(args.paths) if args.paths else (config_paths(config) or ["life.txt"]),
+        config,
+        stdin_when_empty=False,
+    )
+    write_target = resolve_write_target(
+        paths, args.write_file or config_write_file(config)
+    )
+    profile = args.profile or "read"
+
+    command_args = ["-m", "lifetxt", "mcp"]
+    command_args.extend(paths)
+    if write_target not in paths:
+        command_args.extend(["--write-file", write_target])
+    command_args.extend(["--profile", profile])
+
+    mcp_config = OrderedDict(
+        [
+            (
+                "mcpServers",
+                OrderedDict(
+                    [
+                        (
+                            "lifetxt",
+                            OrderedDict(
+                                [
+                                    ("command", "python"),
+                                    ("args", list(command_args)),
+                                ]
+                            ),
+                        )
+                    ]
+                ),
+            )
+        ]
+    )
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Command:",
+        "  python " + " ".join(command_args),
+        "",
+        "Generic MCP client configuration:",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "Profile: %s%s"
+        % (
+            profile,
+            " (default; use --profile assist|full for more access)"
+            if profile == "read"
+            else "",
+        ),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_ai_doctor(args):
+    """Report whether the workspace will load and resolve a write target
+    cleanly for a direct MCP connection. Never writes a file."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    checks = []
+
+    def add_check(symbol, label, message):
+        checks.append((symbol, label, message))
+
+    arg_paths = getattr(args, "paths", None) or []
+    life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
+        "life.txt"
+    ]
+    for path in life_paths:
+        if not os.path.exists(path):
+            add_check("FAIL", "life.txt", "Not found: %s" % path)
+        elif not os.access(path, os.R_OK):
+            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+        else:
+            add_check("OK", "life.txt", "Found: %s" % path)
+
+    existing_paths = [p for p in life_paths if os.path.exists(p)]
+    if existing_paths:
+        try:
+            items, diagnostics = _parse_life_inputs(existing_paths, config)
+        except Exception as exc:  # pragma: no cover - defensive, mirrors doctor
+            add_check("FAIL", "parse", str(exc))
+        else:
+            errors = [d for d in diagnostics if d.severity == "error"]
+            if errors:
+                add_check(
+                    "FAIL",
+                    "parse",
+                    "%d error(s) -- run: lifetxt check %s"
+                    % (len(errors), existing_paths[0]),
+                )
+            else:
+                add_check("OK", "parse", "%d item(s), no errors" % len(items))
+
+    try:
+        write_target = resolve_write_target(
+            life_paths, args.write_file or config_write_file(config)
+        )
+    except ValueError as exc:
+        add_check("FAIL", "write-target", str(exc))
+    else:
+        add_check("OK", "write-target", "Resolved: %s" % write_target)
+
+    add_check(
+        "OK",
+        "profile",
+        "Recommended default for external/untrusted AI clients: "
+        "--profile read (see #502).",
+    )
+
+    if args.format == "json":
+        records = [
+            OrderedDict([("status", s), ("check", check_name), ("message", m)])
+            for s, check_name, m in checks
+        ]
+        write_text(None, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    symbols = {"OK": "[OK]", "WARN": "[!!]", "FAIL": "[XX]"}
+    for symbol, label, message in checks:
+        write_text(
+            None, "%s %-14s %s\n" % (symbols.get(symbol, symbol), label, message)
+        )
+    return 0
 
 
 def _split_archive_text(

@@ -10,7 +10,7 @@ the local-first patterns that keep your data yours.
 - [3. Tool Reference](#3-tool-reference)
 - [4. Write Safety](#4-write-safety)
 - [5. Prompts](#5-prompts)
-- [6. Read-Only And Privacy](#6-read-only-and-privacy)
+- [6. Permission Profiles And Privacy](#6-permission-profiles-and-privacy)
 - [7. Remote Safe Mode Client Tools](#7-remote-safe-mode-client-tools)
 - [8. Without MCP](#8-without-mcp)
 
@@ -36,6 +36,29 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 
 ## 2. Client Configuration
 
+### Generic setup command
+
+```sh
+python -m lifetxt ai setup generic life.txt
+```
+
+Prints the exact command and a generic `mcpServers` configuration for your
+current workspace -- resolved paths and write target included, so you do not
+have to hand-write either. It writes nothing to disk. The emitted profile
+defaults to `read`; pass `--profile assist|full` to emit a different one, or
+`--format json` for a machine-readable version.
+
+Before pointing a client at it, check it will actually work:
+
+```sh
+python -m lifetxt ai doctor life.txt
+```
+
+Reports whether each input file exists and parses, whether a write target
+resolves unambiguously (or names the same `--write-file`-required error
+`lifetxt mcp` would raise), and reminds you that `read` is the recommended
+default profile for external or untrusted clients. Writes nothing.
+
 ### Claude Desktop
 
 `claude_desktop_config.json`:
@@ -51,20 +74,27 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m lifet
 }
 ```
 
-### Read-only variant
+### Constrained profiles
 
-Point a model at your data without letting it write:
+Point a model at your data without giving it full write access; see
+[Section 6](#6-permission-profiles-and-privacy) for what each profile allows:
 
 ```json
 {
   "mcpServers": {
     "lifetxt-readonly": {
       "command": "python",
-      "args": ["-m", "lifetxt", "mcp", "--read-only", "/absolute/path/to/life.txt"]
+      "args": ["-m", "lifetxt", "mcp", "--profile", "read", "/absolute/path/to/life.txt"]
+    },
+    "lifetxt-assist": {
+      "command": "python",
+      "args": ["-m", "lifetxt", "mcp", "--profile", "assist", "/absolute/path/to/life.txt"]
     }
   }
 }
 ```
+
+`--read-only` still works and is equivalent to `--profile read`.
 
 ### Cursor / VS Code
 
@@ -291,11 +321,39 @@ than silently producing a generic prompt.
 
 ---
 
-## 6. Read-Only And Privacy
+## 6. Permission Profiles And Privacy
 
-`--read-only` refuses every write tool with a clear error while leaving all read
-tools working. Read tools still work, so a model can summarise and plan without
-being able to change anything.
+`--profile` chooses how much of the tool surface a connected client can reach.
+It is enforced twice -- once when the server advertises its tool list
+(`tools/list`), and again when a tool is actually called (`tools/call`) -- so a
+client cannot reach a disallowed tool by calling it directly instead of
+listing it first.
+
+| Profile | Read tools | Writes | Notes |
+| --- | --- | --- | --- |
+| `read` | all | none | Equivalent to `--read-only`. |
+| `assist` | all | `stage_proposal` only | Stages a Unified Inbox proposal for you to review and accept; never writes `life.txt` directly. |
+| `full` | all | all | Today's default when neither flag is given. |
+
+```sh
+python -m lifetxt mcp --profile read life.txt
+python -m lifetxt mcp --profile assist life.txt
+```
+
+A tool with no explicit read/write classification is unreachable under `read`
+and `assist`, not reachable by default -- this is deliberate: adding a new tool
+to lifetxt in the future cannot silently widen what a constrained connection
+can do. `--read-only` keeps working exactly as before and is equivalent to
+`--profile read`; combining `--read-only` with a different `--profile` is
+rejected as a conflicting request. MCP tool annotations (`readOnlyHint`, etc.)
+are descriptive only and are never used to decide what a profile allows.
+
+Permission profiles control which *tools* are reachable. They do not yet
+control which *workspace sources or records* are visible to a client -- that
+is a separate, not-yet-implemented workspace/disclosure layer.
+
+Read tools still work under every profile, so a model can summarise and plan
+without being able to change anything beyond what its profile allows.
 
 The server is local and stdio-only:
 

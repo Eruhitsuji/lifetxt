@@ -4427,3 +4427,276 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-permission-profiles
+    name: MCP permission profiles
+    summary: >-
+      A read|assist|full permission profile for the lifetxt mcp stdio server,
+      enforced identically at tools/list and tools/call, giving operators a
+      safe-by-default connection mode for external AI clients between
+      full trust and full lockout.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-permission-profiles-selection
+      - req-mcp-permission-profiles-read-enforcement
+      - req-mcp-permission-profiles-assist-enforcement
+      - req-mcp-permission-profiles-full-compat
+      - req-mcp-permission-profiles-read-only-alias
+      - req-mcp-permission-profiles-fail-closed
+      - req-mcp-permission-profiles-defense-in-depth
+      - req-mcp-permission-profiles-docs
+    implementation_locations:
+      - lifetxt/mcp.py
+      - lifetxt/cli.py
+      - tests/test_mcp_expansion.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/mcp-permission-profiles/
+      - .ai/project/changes/mcp-permission-profiles/
+    public_interfaces:
+      - lifetxt mcp --profile read|assist|full
+      - lifetxt.mcp.McpContext (profile parameter)
+      - lifetxt.mcp._profile_allowed_tools
+      - lifetxt.mcp.filter_tool_schemas_for_profile
+      - lifetxt.mcp.ASSIST_EXTRA_TOOLS
+    tests_or_evidence:
+      - "tests/test_mcp_expansion.py McpPermissionProfileTests (27 tests): profile selection/normalization, the --read-only/--profile read equivalence and conflict rejection, the read/assist/full allowlist computation, a synthetic never-classified tool denied under read/assist and allowed under full, annotation-independence, direct call_tool dispatch, and a full tools/list+tools/call stdio round trip per profile including 'a client cannot call a tool it was never shown'"
+      - python -m unittest tests.test_mcp_expansion -> Ran 122 tests, OK
+      - python -m unittest tests.test_surface_runtime tests.test_safety_cli tests.test_safety_foundation tests.test_attachments tests.test_clock_skew_v5 tests.test_ticket_project_surfaces tests.test_ticket_workflow_surfaces tests.test_remote_pagination tests.test_remote_web_v20 -> Ran 287 tests, OK
+      - '$env:MPLBACKEND="Agg"; python -m unittest discover -> Ran 2645 tests, OK (skipped=5)'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - "live: real lifetxt mcp --profile read|assist|full stdio sessions driven with real JSON-RPC lines against a fixture workspace -- read: 63 tools listed (no stage_proposal/create_item), stage_proposal denied; assist: 64 tools listed (+stage_proposal), stage_proposal succeeds; full: 87 tools listed (+create_item), both succeed; life.txt byte-unchanged by every stage_proposal call"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "/security-review (research + false-positive-filtering subagents): no qualifying findings -- confirmed the profile check is the sole tool-handler dispatch site, every monkeypatch wrapper falls through to it rather than dispatching TOOL_HANDLERS directly, tools/list and tools/call consult the same allowlist, and McpContext.profile is set once in __init__ with no client-controlled escalation path"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/502
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      First implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 1, item 1 -- the epic's own
+      recommended first implementation child). Security/High assurance per
+      ASSURANCE_LEVELS.md's escalation rules (MCP authorization-boundary
+      change); full change package at
+      .ai/project/changes/mcp-permission-profiles/, cc-sdd spec at
+      .kiro/specs/mcp-permission-profiles/. Requires independent
+      implementation review, independent security review, and Merge
+      Authority approval before merge to main -- the self-review and
+      `/security-review` pass recorded above are informational only and do
+      not satisfy that requirement (this repository's own AI must not be
+      the final approver of its own implementation).
+      Reuses the pre-existing `READ_ONLY_TOOLS`/`DESTRUCTIVE_TOOLS`
+      classification and the pre-existing `stage_proposal`/Unified Inbox
+      proposal contract (`cap-unified-inbox-proposals`) unmodified rather
+      than building a parallel permission model. Found during
+      implementation, before writing any enforcement code, that
+      `lifetxt/__init__.py` unconditionally wraps `mcp.call_tool`/
+      `tool_schemas`/`handle_request` at import time from four other
+      modules (`surface_runtime.py`, `surface_runtime_compat.py`,
+      `remote_contracts_v6.py`, `ticket_project_surfaces.py`), each adding
+      further MCP tools; giving `tool_schemas()` a `profile` parameter
+      directly would have raised `TypeError` through every one of those
+      wrappers, none of which forward extra arguments. Fixed with a
+      separate `filter_tool_schemas_for_profile()` applied in
+      `handle_request`'s own `tools/list` branch instead, which works
+      regardless of how many layers wrap `tool_schemas()` and still covers
+      every tool any of them add, since `READ_ONLY_TOOLS` is read at call
+      time from the same module global each of them extends in place --
+      see `.kiro/specs/mcp-permission-profiles/research.md` for the full
+      live-traced chain. Also found and fixed two defects during testing:
+      the `--read-only`/`--profile` conflict check was moved from
+      `from_args` into `McpContext.__init__` itself (protecting direct
+      construction, not only the CLI, from a contradictory
+      profile="assist"+read_only=True state); and the test helper was
+      found to leak real `stage_proposal` writes into the actual
+      repository checkout's cwd-relative `.cache/lifetxt/proposals.json`
+      (confirmed via a full-suite run that failed four unrelated,
+      pre-existing Command Center/Today-view/Web-API tests until the leaked
+      proposals were found and the test helper was fixed to scope the
+      store to each test's own temp directory).
+      Deferred, not implemented here: reporting the active profile through
+      `get_file_state` or a future `lifetxt ai doctor`-style command
+      (candidate for a later #500 child issue); widening the `assist`
+      allowlist beyond `stage_proposal`; workspace/disclosure policy
+      (which data is visible, as opposed to which tools are reachable).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-mcp-generic-setup
+    name: Generic MCP client setup command
+    summary: >-
+      A read-only lifetxt ai setup generic command printing the exact
+      lifetxt mcp command and a generic MCP client configuration for the
+      current workspace, defaulting to the read permission profile.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-generic-setup-command
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/mcp-generic-setup/
+    public_interfaces:
+      - lifetxt ai setup generic
+      - lifetxt.cli.command_ai_setup_generic
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtAiSetupGenericCliTests (6 tests, real subprocess round trips via run_cli): default profile read, explicit --profile assist/full override, invalid --profile rejected, --format json shape, --write-file reflected when it differs from the input, and an explicit no-write guarantee across every profile/format combination"
+      - python -m unittest tests.test_lifetxt tests.test_surface_runtime tests.test_completion_surfaces tests.test_cui_extensions -> Ran 858 tests, OK (skipped=2)
+      - 'live: real python -m lifetxt ai setup generic against a fixture life.txt in text and --format json modes, --profile full, and an invalid --profile value -- all matched the designed output, and the fixture directory''s file set was confirmed byte-for-byte unchanged'
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/505
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Second implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 3, "Generic MCP setup"),
+      landing in the same integration branch/PR as #502
+      (cap-mcp-permission-profiles). Standard assurance, S-sized; no
+      change package created, per this repository's own threshold
+      (.ai/project/changes/README.md) for when one is required -- this
+      command is read-only, additive, and does not touch lifetxt mcp's
+      own behavior. Deliberately resolves paths via the same pure helpers
+      (resolve_write_target, _normalize_paths) lifetxt mcp itself uses
+      rather than constructing an McpContext: constructing one under a
+      non-read profile can trigger assert_unique_workspace_ids and a
+      transaction startup preflight (which can create a journal directory
+      when transactions.preflight_on_startup is configured), which would
+      have violated this command's own no-write guarantee. Provider-
+      specific adapters (ai setup chatgpt|claude|gemini), ai status/
+      ai doctor/ai clients/ai bridge, and any change to lifetxt mcp itself
+      are explicitly out of scope and remain candidate #500 child issues.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-mcp-ai-doctor
+    name: AI doctor for direct MCP setup
+    summary: >-
+      A read-only lifetxt ai doctor command checking whether a workspace
+      will load, parse, and resolve a write target cleanly for a direct
+      MCP connection, plus a static reminder recommending the read
+      permission profile for external clients.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-ai-doctor-command
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/mcp-ai-doctor/
+    public_interfaces:
+      - lifetxt ai doctor
+      - lifetxt.cli.command_ai_doctor
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtAiDoctorCliTests (7 tests, real subprocess round trips via run_cli): clean workspace all-OK, missing file reported not raised, parse error reported not raised, ambiguous multi-source write target reported not raised, an explicit --write-file resolving that ambiguity, --format json shape, and a no-write guarantee"
+      - python -m unittest tests.test_lifetxt tests.test_surface_runtime tests.test_completion_surfaces -> Ran 707 tests, OK (skipped=1)
+      - "live: real python -m lifetxt ai doctor against a clean fixture, a missing file, an ambiguous multi-source workspace, and --format json -- all matched the designed checks, and the fixture directory's file set was confirmed unchanged"
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/507
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Third implementation child of the #500 "Provider-independent
+      Generative AI Integration" epic (Phase 3, "AI doctor for direct
+      MCP"), landing in the same integration branch/PR as #502
+      (cap-mcp-permission-profiles) and #505 (cap-mcp-generic-setup).
+      Standard assurance, S-sized; no change package, per this
+      repository's own threshold. Deliberately narrower than #500's
+      "Bridge diagnostics" list, which is written for the later Cloud
+      Mailbox bridge (mailbox transport health, pending/rejected/
+      quarantined request counts, credential environment presence) --
+      those checks do not apply to a direct MCP connection and are left
+      for that later phase. Also deliberately does not duplicate
+      `lifetxt doctor`'s general system checks (Python version, disk
+      space, optional dependencies), which are not MCP-specific; the
+      write-target and parse checks reuse the exact same
+      `resolve_write_target`/`_parse_life_inputs` helpers `ai setup
+      generic` (#505) and `lifetxt doctor` already use.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-life-philosophy-documentation
+    name: Life philosophy and long-term vision documentation
+    summary: >-
+      Consolidated, bilingual project philosophy documentation (durable
+      user-owned life record; replaceable interfaces/AI/providers;
+      hub-not-mirror; Life Record/Context/Assistance layering; selective
+      recording and disclosure) explaining the reasoning behind
+      .ai/project/RULES.md's Design Principles for users and
+      contributors.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-life-philosophy-documentation
+    implementation_locations:
+      - docs/en/philosophy.md
+      - docs/ja/philosophy.md
+      - readme.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+      - .ai/project/RULES.md
+    public_interfaces:
+      - docs/en/philosophy.md
+      - docs/ja/philosophy.md
+    tests_or_evidence:
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK (no translation-coverage or drift-gate regression)
+      - git diff --check -- readme.md docs/en/readme.md docs/ja/readme.md .ai/project/RULES.md docs/en/philosophy.md docs/ja/philosophy.md -> clean
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - manual English/Japanese semantic-parity review (11 matching sections in each language, not a literal translation)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/506
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/503
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/504
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Documentation-only capability; no runtime, Format, API, schema, or
+      MCP behavior change. .ai/project/RULES.md's Design Principles and
+      Product Boundaries remain the repository-authoritative, enforceable
+      rules; docs/en+ja/philosophy.md explain and cross-reference them
+      without adding new rules, per the issue's own explicit scope, and a
+      short pointer note was added to RULES.md's Design Principles section
+      stating that RULES.md wins if the two ever disagree. #500 and #503
+      are cross-linked as concrete AI-era applications of this philosophy
+      rather than its definition, per the issue's own acceptance criteria.
+      Landed on the same integration branch/PR (#504) as #502/#505/#507
+      per explicit user instruction, even though this task is otherwise
+      independent of the MCP/AI-integration code changes there.
+      While running the full suite for this and the sibling MCP work,
+      found and filed #508: a pre-existing, timezone-dependent flaky test
+      in tests/test_life_hub.py::TicketAttentionTests, unrelated to this
+      capability; not fixed here per this repository's Horizontal Review
+      Scope Discipline.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

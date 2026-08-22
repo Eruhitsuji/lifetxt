@@ -1,0 +1,22 @@
+{
+  "feature_name": "mcp-ai-doctor",
+  "created_at": "2026-08-22T14:44:33Z",
+  "updated_at": "2026-08-22T14:50:00Z",
+  "language": "en",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true
+}

@@ -660,6 +660,61 @@ class PromptTests(McpTestCase):
                         candidate, TOOL_HANDLERS, "%s in prompt %s" % (candidate, name)
                     )
 
+    def test_explain_item_is_listed_with_a_required_id_argument(self):
+        prompts = {prompt["name"]: prompt for prompt in prompt_list()}
+
+        self.assertIn("explain_item", prompts)
+        arguments = prompts["explain_item"]["arguments"]
+        self.assertEqual(1, len(arguments))
+        self.assertEqual("id", arguments[0]["name"])
+        self.assertTrue(arguments[0]["required"])
+
+    def test_explain_item_composes_only_existing_read_only_tools(self):
+        text = PROMPT_DEFINITIONS["explain_item"]["template"]
+
+        for tool_name in (
+            "get_temporal_context",
+            "get_backlinks",
+            "get_command_center",
+            "get_next_actions",
+            "get_ticket",
+            "get_project",
+        ):
+            self.assertIn(tool_name, text)
+            self.assertIn(tool_name, READ_ONLY_TOOLS)
+
+    def test_explain_item_frames_the_result_as_an_explanation_not_a_write(self):
+        text = PROMPT_DEFINITIONS["explain_item"]["template"]
+
+        self.assertIn("Do not write", text)
+
+    def test_explain_item_substitutes_the_id_into_the_returned_prompt(self):
+        result = prompt_get("explain_item", {"id": "t1"})
+
+        self.assertIn("Context: id = t1", result["messages"][0]["content"]["text"])
+
+    def test_explain_item_missing_id_is_rejected(self):
+        with self.assertRaises(ValueError) as caught:
+            prompt_get("explain_item", {})
+
+        self.assertIn("id", str(caught.exception))
+
+    def test_explain_item_missing_id_is_rejected_with_no_arguments_at_all(self):
+        with self.assertRaises(ValueError):
+            prompt_get("explain_item")
+
+    def test_prompt_get_still_tolerates_prompts_with_no_required_arguments(self):
+        # A prompt with only optional (or no) arguments must not regress now
+        # that prompt_get() validates required ones.
+        for name in ("daily_review", "weekly_review", "inbox_triage"):
+            result = prompt_get(name)
+            self.assertEqual(1, len(result["messages"]))
+        # standup/start_focus each have one optional argument; omitting it
+        # must still work exactly as before.
+        for name in ("standup", "start_focus"):
+            result = prompt_get(name)
+            self.assertEqual(1, len(result["messages"]))
+
 
 class JsonRpcTests(McpTestCase):
     def _rpc(self, context, method, **params):
@@ -701,6 +756,14 @@ class JsonRpcTests(McpTestCase):
         context, _path = self._context()
 
         response = self._rpc(context, "tools/call", name="search_items", arguments={})
+
+        self.assertIn("error", response)
+        self.assertEqual(-32000, response["error"]["code"])
+
+    def test_prompt_missing_required_argument_becomes_a_jsonrpc_error(self):
+        context, _path = self._context()
+
+        response = self._rpc(context, "prompts/get", name="explain_item", arguments={})
 
         self.assertIn("error", response)
         self.assertEqual(-32000, response["error"]["code"])

@@ -280,9 +280,14 @@ client can offer them as slash commands:
 | `standup` | Done / Today / Blocked in under 120 words |
 | `inbox_triage` | Propose project, due, and priority for untriaged captures |
 | `start_focus` | Pick the best next action and start a work session |
+| `explain_item` | Why one item (`id`, required) is relevant now, composed from `get_temporal_context`, `get_backlinks`, `get_command_center`/`get_next_actions`, and `get_ticket`/`get_project` |
 
 Each one names the tools to call and, where it matters, instructs the model to
-propose with `dry_run` before writing.
+propose with `dry_run` before writing. `explain_item` is read-only end to end:
+it never proposes a write, only an explanation grounded in the provenance
+fields the composed tools already return. A required argument that is
+omitted, such as `explain_item`'s `id`, is rejected with a clear error rather
+than silently producing a generic prompt.
 
 ---
 

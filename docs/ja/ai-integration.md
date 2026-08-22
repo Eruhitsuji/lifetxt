@@ -246,8 +246,10 @@ server は MCP prompts capability で再利用可能な workflows を公開し�
 | `standup` | Done / Today / Blocked を 120 words 未満でまとめる |
 | `inbox_triage` | untriaged captures に project、due、priority を提案 |
 | `start_focus` | best next action を選び work session を開始 |
+| `explain_item` | 1 item（`id`、required）が今なぜ relevant かを、`get_temporal_context`、`get_backlinks`、`get_command_center`/`get_next_actions`、`get_ticket`/`get_project` を組み合わせて説明 |
 
-各 prompt は呼ぶべき tool を示し、必要な場面では書き込み前に `dry_run` で proposal を出すよう model に指示します。
+各 prompt は呼ぶべき tool を示し、必要な場面では書き込み前に `dry_run` で proposal を出すよう model に指示します。`explain_item` は完全に read-only です:
+proposal を出すことはなく、既存 tool が返す provenance field に基づく explanation のみを行います。`explain_item` の `id` のような required argument が省略された場合は、汎用的な prompt を黙って返すのではなく、明確な error で拒否されます。
 
 ---
 

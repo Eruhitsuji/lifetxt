@@ -6675,6 +6675,57 @@ traceability:
         rather than leaving the palette silently omit an explanation.
       status: implemented
 
+    - requirement_id: req-temporal-context-v1-cli
+      capability_id: cap-temporal-context
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/485
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/temporal_context.py (node_facts/temporal_context), a new temporal-context-v1 schema, and a lifetxt temporal CLI command
+        - Reuse lifetxt.ticket_project_values.last_activity/reference_time/DEFAULT_STALE_DAYS verbatim for the staleness formula rather than reimplementing it
+        - lifetxt/temporal_context.py
+        - lifetxt/schema_extensions_v24.py
+        - lifetxt/__init__.py
+        - lifetxt/cli.py
+        - dist/schemas/temporal-context-v1.schema.json
+        - tests/test_temporal_context.py
+        - tests/test_temporal_cli.py
+        - tests/test_schema_extensions_v2.py
+        - tests/test_safety_foundation.py
+        - tests/test_safety_cli.py
+        - tests/test_ticket_custom_field_public_contract.py
+        - tests/test_ticket_workflow_surfaces.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - docs/en/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_temporal_context.py NodeFactsTests, TemporalContextTests (15 tests)
+        - tests/test_temporal_cli.py TemporalCliTests (4 tests)
+        - python -m unittest tests.test_temporal_context tests.test_temporal_cli -> Ran 19 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 59 tests, OK (every hardcoded schema-bundle count updated 77 -> 78)
+        - 'live: real lifetxt temporal t1 life.txt (text and --json) against a real 3-item due:-dated fixture showed the correct overdue_by fact and same-window before/after edges, nearest-first; lifetxt temporal nope life.txt failed loudly with exit 1'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 2549 tests, OK (skipped=5)"
+      release_or_deployment: null
+      notes: >-
+        Implements #481's investigation and repository-owner-approved
+        recommendation: a new, separate, bounded temporal-context-v1
+        contract (not merged into GET /api/graph or command-center-v1),
+        with a narrow v1 vocabulary and CLI as the first consumer. No
+        structural relation computation is duplicated (links.py is
+        untouched) and no staleness formula is reinvented
+        (ticket_project_values.py's existing helpers are reused verbatim,
+        generalized beyond tickets since they already read details from any
+        item shape). temporal_context() is bounded by construction to one
+        target item's neighborhood, never an all-pairs scan. TUI/Web/MCP
+        exposure and the deferred overlap/near-window relations remain
+        explicit, unimplemented follow-ups per #485's own scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

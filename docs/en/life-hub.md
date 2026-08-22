@@ -1,9 +1,9 @@
-# Life Hub: Daily Command Center, Areas, and Backlinks
+# Life Hub: Daily Command Center, Areas, Backlinks, and Temporal Context
 
 The Life Hub commands turn a life.txt workspace into a single place to see what
-needs attention today, how work is organized by area, and how items connect.
-Every command reads from one shared aggregation so the CLI, MCP, and future Web
-surfaces agree on the same picture.
+needs attention today, how work is organized by area, how items connect, and
+how they relate in time. Every command reads from one shared aggregation so
+the CLI, MCP, and future Web surfaces agree on the same picture.
 
 ## Daily command center
 
@@ -74,6 +74,36 @@ $ lifetxt backlinks T-1 --json
 MCP: `get_backlinks`.
 Backlinks are read-only. They report incoming relationships so you can decide
 whether a change is safe before editing the source item.
+
+## Temporal context
+
+`temporal` answers "what is relevant around this item, in time?" for one item
+at a time — a bounded, explainable set of derived date-based facts, distinct
+from the explicit relation graph `backlinks`/`links` report:
+
+```console
+$ lifetxt temporal T-1
+$ lifetxt temporal T-1 --window 14 --limit 5
+$ lifetxt temporal T-1 --json
+```
+
+Two kinds of fact, both carrying `rule`/`source_field`/`reference_time` so
+you can see why each one exists:
+
+- **facts** about the item alone: `overdue_by`/`due_in` (from `due:`) and
+  `stale_since` (no activity in more than `--stale-after` days, default 14 —
+  the same threshold-based rule `ticket project` reports already use for
+  tickets, generalized here to any item with an `updated:`/`created:`/similar
+  timestamp).
+- **related** items: `same_day`/`before`/`after` edges to other dated items
+  within `--window` days (default 7) of this item's own date, nearest first,
+  capped at `--limit` (default 20).
+
+Nothing here is written back to life.txt, and nothing here recomputes
+`depends_on:`/`blocks:`/... — those stay with `backlinks`/`links`. An item
+with no comparable date simply reports no fact for it; `temporal` never
+guesses a relation. The result is always bounded to one item's neighborhood,
+never an all-item scan of the workspace.
 
 ## Projects over MCP
 

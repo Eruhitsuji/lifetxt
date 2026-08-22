@@ -3890,3 +3890,86 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-temporal-context
+    name: Derived temporal context (temporal-context-v1)
+    summary: >-
+      A new, separate, bounded read-only result deriving date-based facts
+      about one item (`overdue_by`/`due_in` from `due:`, `stale_since`
+      reusing the existing ticket staleness rule generalized beyond
+      tickets) plus `same_day`/`before`/`after` edges to nearby dated items
+      within a bounded window -- never an all-pairs scan of the workspace.
+      Deliberately kept separate from the authoritative relation graph
+      (`lifetxt/links.py`, `GET /api/graph`) and from `command-center-v1`;
+      every fact/edge carries `rule`/`source_field`/`reference_time` so a
+      consumer can explain "why" without re-deriving it. First exposed
+      through the CLI.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-temporal-context-v1-cli
+    implementation_locations:
+      - lifetxt/temporal_context.py
+      - lifetxt/schema_extensions_v24.py
+      - lifetxt/__init__.py
+      - lifetxt/cli.py
+      - dist/schemas/temporal-context-v1.schema.json
+      - tests/test_temporal_context.py
+      - tests/test_temporal_cli.py
+      - docs/en/life-hub.md
+      - docs/ja/life-hub.md
+      - docs/en/cli.md
+    public_interfaces:
+      - lifetxt.temporal_context.node_facts
+      - lifetxt.temporal_context.temporal_context
+      - lifetxt temporal ID [--window N] [--limit N] [--stale-after N] [--json]
+      - temporal-context-v1.schema.json
+    tests_or_evidence:
+      - tests/test_temporal_context.py NodeFactsTests, TemporalContextTests (15 tests: overdue_by/due_in/stale_since derivation, missing-date guard, bounded/sorted related items, same_day matching, limit bounding, provenance on every fact/edge, done/cancelled items still participating in pure date ordering)
+      - tests/test_temporal_cli.py TemporalCliTests (4 tests: text output, JSON output matching the schema marker, unknown-id failure, --window bounding)
+      - python -m unittest tests.test_temporal_context tests.test_temporal_cli -> Ran 19 tests, OK
+      - python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 59 tests, OK (schema bundle count updated 77 -> 78 across every hardcoded assertion found)
+      - 'live: python -m lifetxt temporal t1 life.txt (text and --json) against a real 3-item fixture with due: dates showed the correct overdue_by fact and same-window before/after edges to the other two items, nearest-first; python -m lifetxt temporal nope life.txt failed with exit 1 and a named error'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "full suite: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 2549 tests, OK (skipped=5)"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/472
+      - https://github.com/Eruhitsuji/lifetxt/issues/481
+      - https://github.com/Eruhitsuji/lifetxt/issues/485
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #481 investigated a derived Temporal Context Graph combining
+      lifetxt's existing explicit relation graph inputs with time
+      semantics. It found `lifetxt/links.py` already owns the
+      authoritative relation graph (parent/ref/depends_on/blocks/related/
+      duplicate_of/replaced_by) and left it untouched; found
+      `lifetxt/ticket_project_report.py` already has a real, generalizable
+      threshold-based staleness rule (`last_activity`/`reference_time`/
+      `DEFAULT_STALE_DAYS` in `lifetxt/ticket_project_values.py`), reused
+      here verbatim rather than reimplemented; and recommended a new,
+      separate, explicitly-versioned contract over extending `GET
+      /api/graph`'s edge list (which would mix authoritative structural
+      links with inferred facts in the one list every current graph
+      consumer already treats as "real relations") or `command-center-v1`
+      (a single-reference-date daily digest, not a general pairwise-relation
+      contract). The repository owner approved this recommendation --
+      including the deliberately narrow v1 vocabulary (`overlap` and
+      near-window proximity are explicitly deferred) and CLI as the first
+      consumer, matching this project's established CLI-first precedent --
+      via `.ai/project/CAPABILITIES.yml`'s AskUserQuestion decision point,
+      since #481's own task contract required human sign-off on the public
+      vocabulary/contract/first-consumer before implementation. Complexity
+      is bounded by construction: `temporal_context()` only ever computes
+      one target item's neighborhood (sorted candidates within
+      `window_days`, capped at `limit`), never an all-pairs scan of the
+      whole workspace, addressing #481's own "avoid O(n^2) near-every-item
+      behavior" investigation question. TUI/Web/MCP exposure, `overlap`/
+      near-window relations, and any change to `/api/graph` or
+      `command-center-v1` remain explicit, unimplemented follow-ups.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

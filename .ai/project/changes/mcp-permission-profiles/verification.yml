@@ -1,0 +1,65 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: unit
+      command: python -m unittest tests.test_mcp_expansion
+      requirement_ids:
+        - req-mcp-permission-profiles-selection
+        - req-mcp-permission-profiles-read-enforcement
+        - req-mcp-permission-profiles-assist-enforcement
+        - req-mcp-permission-profiles-full-compat
+        - req-mcp-permission-profiles-read-only-alias
+        - req-mcp-permission-profiles-fail-closed
+        - req-mcp-permission-profiles-defense-in-depth
+      status: planned
+    - type: unit
+      command: python -m unittest tests.test_surface_runtime
+      requirement_ids:
+        - req-mcp-permission-profiles-full-compat
+      status: planned
+    - type: integration
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: []
+      status: planned
+    - type: manual
+      command: real lifetxt mcp --profile read|assist|full stdio sessions driven with real JSON-RPC lines against a fixture workspace
+      requirement_ids:
+        - req-mcp-permission-profiles-read-enforcement
+        - req-mcp-permission-profiles-assist-enforcement
+        - req-mcp-permission-profiles-full-compat
+      status: planned
+    - type: check
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: []
+      status: planned
+    - type: lint
+      command: ruff format --check lifetxt tests scripts && ruff check lifetxt tests scripts
+      requirement_ids: []
+      status: planned
+    - type: docs
+      command: manual review of docs/en+ja/ai-integration.md and docs/en+ja/cli.md for parity
+      requirement_ids:
+        - req-mcp-permission-profiles-docs
+      status: planned
+
+  executed: []
+
+review_ledger:
+  - reviewer: TODO
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: TODO
+    review_type: security
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: null
+  rollback_plan: revert the mcp-permission-profiles commits; --profile is purely additive and no existing caller's behavior changes if reverted
+  operations_evidence: []

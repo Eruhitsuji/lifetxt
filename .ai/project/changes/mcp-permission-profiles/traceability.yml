@@ -1,0 +1,76 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-mcp-permission-profiles-selection
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-read-enforcement
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-assist-enforcement
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-full-compat
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-read-only-alias
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-fail-closed
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-defense-in-depth
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+  - requirement_id: req-mcp-permission-profiles-docs
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/502
+    pull_request: null
+    tests_or_evidence: []
+    release_or_deployment: null
+    status: proposed
+
+gaps: []

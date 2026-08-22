@@ -3795,24 +3795,32 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-command-center-next-actions-and-inbox
+      - req-tui-today-view
     implementation_locations:
       - lifetxt/command_center.py
       - lifetxt/schema_extensions_v7.py
       - dist/schemas/command-center-v1.schema.json
       - lifetxt/cli.py
       - lifetxt/mcp.py
+      - lifetxt/tui_app.py
       - tests/test_life_hub.py
+      - tests/test_cui_extensions.py
       - docs/en/life-hub.md
       - docs/ja/life-hub.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
     public_interfaces:
       - lifetxt.command_center.command_center
       - lifetxt today
       - MCP tool get_command_center
       - command-center-v1.schema.json
+      - TUI /today command and Today view
     tests_or_evidence:
       - tests/test_life_hub.py CommandCenterTests (21 tests, including next_actions/inbox coverage)
       - tests/test_schema_extensions_v2.py SchemaExtensionsV2Tests (schema bundle equality, draft 2020-12 validation of the extended sample)
+      - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests: view switch and data load, NOW/ATTENTION/INBOX/UPCOMING sections render, empty-section hints, data traced back to a direct command_center() call, other views unaffected, reload refreshes Today)
       - python -m unittest tests.test_life_hub tests.test_schema_extensions_v2 tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK
+      - python -m unittest tests.test_cui_extensions tests.test_surface_runtime -> Ran 167 tests, OK (skipped=1)
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -3820,6 +3828,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/473
       - https://github.com/Eruhitsuji/lifetxt/issues/475
+      - https://github.com/Eruhitsuji/lifetxt/issues/476
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -3846,6 +3855,19 @@ capabilities:
       `--json` output and the MCP tool already expose the new fields without
       any code change there. A TUI `Today` view (#476) and a Web read
       endpoint (#477) are tracked as extensions of this same capability.
+      #476 adds a `today` view/`/today` command to the interactive TUI,
+      rendering NOW/ATTENTION/INBOX/UPCOMING groupings of the exact same
+      `command_center()` result computed in `WorkspaceState.load()` -- no
+      due/blocked/waiting/next-action/inbox rule is duplicated in
+      `lifetxt/tui_app.py`. The existing `tasks/agenda/status` dashboard
+      model (`lifetxt/tui.py`'s `dashboard_model()`) is untouched and
+      remains the data source for every other view; `load()` performs one
+      additional cheap re-parse via the already-imported `load_items()`
+      specifically to obtain `Item` objects for `command_center()`, since
+      `dashboard_model()`'s return value does not expose the items it
+      already parsed. The view is read-only by design (per #476's own
+      scope); accepting/editing Inbox proposals from the Today view is an
+      explicit, unimplemented follow-up.
     replacement:
       replaces: []
       replaced_by: null

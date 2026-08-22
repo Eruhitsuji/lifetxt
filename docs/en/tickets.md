@@ -267,6 +267,14 @@ follow `ticket-v1.schema.json`; the built-in field registry follows
 
 ## Workflow, append-only history, and time
 
+`ticket new` writes a `created` `record:ticket_event` alongside the new
+ticket in the same append, so a ticket's history always starts with an audit
+entry rather than the first event only appearing at its first transition.
+Accepting a ticket-shaped Unified Inbox proposal (see
+[inbox.md](inbox.md)) does the same, so an AI- or externally-suggested
+ticket is not silently indistinguishable, in the audit trail, from one that
+was never audited at all.
+
 The audit-safe workflow commands use `ticket-workflow-v1`. The built-in graph
 supports triage, assignment, work, review, testing, information/block states,
 terminal resolution states, and reopening. Override or replace transitions under

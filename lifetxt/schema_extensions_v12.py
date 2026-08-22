@@ -32,6 +32,7 @@ def schema_bundle_v12():
                         "operation": {"type": "string"},
                         "source": {"type": "string"},
                         "expected_revision": {"type": "string"},
+                        "staged_target": {"type": "string"},
                         "changes": {"type": "array", "items": {"type": "object"}},
                         "warnings": {"type": "array", "items": {"type": "string"}},
                         "status": {
@@ -57,7 +58,8 @@ def schema_samples_v12():
                     "id": "P-1a2b3c4d",
                     "operation": "create",
                     "source": "mcp",
-                    "expected_revision": "",
+                    "expected_revision": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "staged_target": "life.txt",
                     "changes": [
                         {
                             "op": "create",
@@ -69,7 +71,7 @@ def schema_samples_v12():
                     ],
                     "warnings": [],
                     "status": "pending",
-                    "provenance": {},
+                    "provenance": {"source": "mcp"},
                     "created": "2026-07-25T00:00:00",
                 },
             ),

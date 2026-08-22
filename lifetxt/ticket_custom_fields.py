@@ -1105,7 +1105,14 @@ def _patch_cli():
             paths = cli_module.config_paths(config)
             target = paths[0] if paths else "life.txt"
         cli_module._ensure_writable_path(target, config, "ticket new")
-        cli_module.append_line(target, line)
+        event_line = cli_module._ticket_creation_event_line(
+            ticket_id,
+            config,
+            project=args.project,
+            tracker=args.tracker,
+            author=args.reporter,
+        )
+        cli_module.append_line(target, line + "\n" + event_line)
         cli_module.write_text(
             None, "Created %s in %s:\n  %s\n" % (ticket_id, target, line)
         )

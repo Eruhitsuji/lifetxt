@@ -31,6 +31,9 @@
     "source": {
       "type": "string"
     },
+    "staged_target": {
+      "type": "string"
+    },
     "status": {
       "enum": [
         "pending",

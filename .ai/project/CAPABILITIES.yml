@@ -5152,6 +5152,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/540
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/539
+      - https://github.com/Eruhitsuji/lifetxt/pull/541
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Extends cap-mcp-generic-setup rather than duplicating it: a new

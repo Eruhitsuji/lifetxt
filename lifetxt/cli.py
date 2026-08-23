@@ -265,6 +265,23 @@ def build_parser():
     )
     check.set_defaults(func=command_check)
 
+    integrity = subparsers.add_parser(
+        "integrity",
+        help="Run a read-only aggregate data-integrity report.",
+    )
+    _add_input_paths(integrity)
+    integrity.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the integrity report as JSON.",
+    )
+    integrity.add_argument(
+        "--verify-files",
+        action="store_true",
+        help="Also verify file:/dir: content hashes. Reads every referenced file.",
+    )
+    integrity.set_defaults(func=command_integrity)
+
     ids_command = subparsers.add_parser(
         "ids",
         help="Audit id details, missing IDs, and duplicate IDs.",
@@ -3860,6 +3877,25 @@ def command_check(args):
             write_text(None, "OK: %d item(s)\n" % len(items))
 
     return _exit_code(filtered_diagnostics, args.warnings_as_errors)
+
+
+def command_integrity(args):
+    from .integrity import (
+        build_integrity_report,
+        format_integrity_text,
+        integrity_report_to_json,
+    )
+
+    report = build_integrity_report(
+        args.paths,
+        config=_config(args),
+        verify_files=getattr(args, "verify_files", False),
+    )
+    if getattr(args, "json", False):
+        write_text(None, integrity_report_to_json(report))
+    else:
+        write_text(None, format_integrity_text(report))
+    return 0
 
 
 def command_ids(args):

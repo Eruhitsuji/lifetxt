@@ -14,6 +14,7 @@ the local-first patterns that keep your data yours.
 - [7. AI-Safe Workspaces](#7-ai-safe-workspaces)
 - [8. Remote Safe Mode Client Tools](#8-remote-safe-mode-client-tools)
 - [9. Without MCP](#9-without-mcp)
+- [10. Personal AI Memory](#10-personal-ai-memory)
 
 ---
 
@@ -136,6 +137,46 @@ is configured:
 Use absolute paths: the client usually launches the server from an unrelated
 working directory, and `.lifetxt.json` is only found relative to the current
 directory.
+
+### Server-hosted (SSH)
+
+Every example above runs `lifetxt mcp` as a local subprocess. When the
+authoritative workspace instead lives on a server (for example, one set up
+with [the Ubuntu Server runbook](../deployment/ubuntu-server.md)), point the
+client's `command` at `ssh` instead of `python`/`lifetxt` directly. MCP still
+speaks stdio; SSH is just the transport carrying that same stdio session to
+the remote process, so nothing about the tool surface, permission profile,
+or workspace behavior changes:
+
+```json
+{
+  "mcpServers": {
+    "lifetxt-server": {
+      "command": "ssh",
+      "args": [
+        "lifetxt-server",
+        "cd /srv/lifetxt/data && /srv/lifetxt/.venv/bin/lifetxt mcp --profile read life.txt"
+      ]
+    }
+  }
+}
+```
+
+`lifetxt-server` is a `Host` entry in the client machine's own `~/.ssh/config`
+pointing at the deployment (`HostName`/`User`/`IdentityFile`) -- set it up
+with the same key-based, password-less access you would use to run any other
+command on that server; lifetxt has no SSH-specific configuration of its own.
+This opens no new listening port on the server: the AI client reaches it
+entirely through the SSH session it already has, and the server-side
+`lifetxt mcp` process enforces the same `--profile`/`--workspace` boundary it
+would for a local client. Default to `--profile read` here just as
+`ai setup generic` does locally; only widen to `assist` once you have decided
+you want the client to be able to stage proposals against this deployment.
+
+Combine this with a named workspace (`--workspace ai --profile assist`, see
+[7. AI-Safe Workspaces](#7-ai-safe-workspaces)) to confine the remote
+client's writes to a dedicated proposal/inbox file instead of the same
+`life.txt` a deployed `lifetxt serve`/sync timer writes to.
 
 ---
 

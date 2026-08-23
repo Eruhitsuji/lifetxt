@@ -379,6 +379,49 @@ Keep the reverse proxy's access-control layer (section 4) and
 `lifetxt serve`'s loopback-only bind (section 3) as your two independent
 boundaries — do not rely on either one alone.
 
+## 9. AI client access (MCP over SSH)
+
+`lifetxt mcp` needs no service, port, or reverse-proxy entry of its own: it
+speaks JSON-RPC over stdio, so an AI client on a different machine reaches it
+by running the command remotely over an SSH session it already has, exactly
+as it would run any other remote command. No new listening port is opened on
+the server, and the authoritative workspace and its policy enforcement
+(permission profile, workspace selection) stay entirely on the server side —
+the client only ever sees what the server-side `lifetxt mcp` process chooses
+to expose.
+
+```json
+{
+  "mcpServers": {
+    "lifetxt-server": {
+      "command": "ssh",
+      "args": [
+        "lifetxt-server",
+        "cd /srv/lifetxt/data && /srv/lifetxt/.venv/bin/lifetxt mcp --profile read life.txt"
+      ]
+    }
+  }
+}
+```
+
+`lifetxt-server` above is an entry in the client machine's own `~/.ssh/config`
+(`Host lifetxt-server` / `HostName` / `User` / `IdentityFile`), not a value
+lifetxt itself understands — set it up with the same key-based,
+password-less SSH access you would use for any other remote command
+execution. As with local MCP setup, default the profile to `read` unless you
+have a specific reason to grant `assist`; see
+[ai-integration.md's Server-hosted (SSH) section](../en/ai-integration.md#server-hosted-ssh)
+for the full client-side walkthrough, constrained-profile guidance, and how
+this differs from `lifetxt serve`'s Web/Remote Safe Mode path documented in
+sections 3–4 above.
+
+Use a workspace-scoped path (`lifetxt mcp --workspace ai --profile assist
+...`, per [ai-integration.md's AI-Safe Workspaces
+section](../en/ai-integration.md#7-ai-safe-workspaces)) instead of the
+primary `life.txt` shown above when you want to confine the AI client's
+writes to a dedicated proposal/inbox target rather than the same file
+`lifetxt serve` and the sync timers write to.
+
 ## Also see
 
 - [`contrib/systemd/`](../../contrib/systemd/) — the unit/timer/environment
@@ -389,3 +432,5 @@ boundaries — do not rely on either one alone.
 - [`config.md`](../en/config.md) — workspace and configuration reference.
 - [`remote.md`](../en/remote.md) — Remote Safe Mode, if you want
   authenticated API access beyond the plain Web UI.
+- [`ai-integration.md`](../en/ai-integration.md) — MCP client setup,
+  including the SSH-based server-hosted path from section 9 above.

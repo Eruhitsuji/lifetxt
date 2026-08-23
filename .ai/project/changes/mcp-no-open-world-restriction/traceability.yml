@@ -1,0 +1,29 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-mcp-no-open-world-flag
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/543
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
+    tests_or_evidence:
+      - "tests/test_mcp_expansion.py McpNoOpenWorldTests (10 tests): default False and unchanged existing behavior, OPEN_WORLD_TOOLS is a non-empty subset of READ_ONLY_TOOLS, tools/list exclusion under full/read/assist, tools/call denial under full/read with the correct distinct message, direct call_tool() dispatch denial regardless of profile, remote_list_profiles (non-open-world) unaffected, filter_tool_schemas_for_profile's new parameter"
+      - python -m unittest tests.test_mcp_expansion -> Ran 139 tests, OK
+      - "live: real lifetxt mcp --no-open-world --profile full stdio session -- tools/list correctly excluded remote_test_connection while keeping remote_list_profiles; a direct tools/call for remote_test_connection returned the exact designed error message"
+      - ruff format --check / ruff check lifetxt/mcp.py lifetxt/cli.py tests/test_mcp_expansion.py -> clean
+    release_or_deployment: null
+    status: implemented
+
+  - requirement_id: req-mcp-open-world-doc-corrections
+    capability_id: cap-mcp-permission-profiles
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/543
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
+    tests_or_evidence:
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - manual balanced-code-fence check on all four edited documents (all balanced)
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK (no translation-coverage or drift-gate regression)
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

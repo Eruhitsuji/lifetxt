@@ -7715,6 +7715,97 @@ traceability:
         bug fix rather than part of the #500 batch that surfaced it.
       status: implemented
 
+    - requirement_id: req-mcp-no-open-world-flag
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/543
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
+      changed_files_or_scope:
+        - Add an opt-in --no-open-world flag to lifetxt mcp, independent of and combinable with --profile/--read-only
+        - Deny every OPEN_WORLD_TOOLS member at both tools/list and tools/call when the flag is set, regardless of the active profile's own allowlist
+        - Extend filter_tool_schemas_for_profile() and _require_tool_allowed_for_profile() with the new, additive check
+        - lifetxt/mcp.py
+        - lifetxt/cli.py
+        - tests/test_mcp_expansion.py
+        - .ai/project/changes/mcp-no-open-world-restriction/
+      tests_or_evidence:
+        - "tests/test_mcp_expansion.py McpNoOpenWorldTests (10 tests): default False and unchanged existing behavior, OPEN_WORLD_TOOLS is a non-empty subset of READ_ONLY_TOOLS, tools/list exclusion under full/read/assist, tools/call denial under full/read with the correct distinct message, direct call_tool() dispatch denial regardless of profile, remote_list_profiles (non-open-world) unaffected, filter_tool_schemas_for_profile's new parameter"
+        - python -m unittest tests.test_mcp_expansion -> Ran 139 tests, OK
+        - "live: real lifetxt mcp --no-open-world --profile full stdio session -- tools/list correctly excluded remote_test_connection while keeping remote_list_profiles; a direct tools/call for remote_test_connection returned the exact designed error message naming --no-open-world; remote_list_profiles succeeded normally"
+        - ruff format --check / ruff check lifetxt/mcp.py lifetxt/cli.py tests/test_mcp_expansion.py -> clean
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Closes the one genuine, evidenced gap found by #543's Disclosure
+        Policy investigation (a post-#500-completion review). Extends
+        cap-mcp-permission-profiles rather than creating a new capability,
+        since it reuses the exact _require_tool_allowed_for_profile()/
+        filter_tool_schemas_for_profile() dispatch chain #502 already
+        established. Not a fourth profile value: OPEN_WORLD_TOOLS was
+        already orthogonal to READ_ONLY_TOOLS before this change (three of
+        four remote_* tools already belonged to both sets), so an
+        independent, combinable flag preserves every existing profile's
+        semantics unchanged. Security/High assurance, matching #502's own
+        basis; full change package at
+        .ai/project/changes/mcp-no-open-world-restriction/; requires
+        independent security review and Merge Authority approval before
+        merge to main.
+      status: implemented
+
+    - requirement_id: req-mcp-open-world-doc-corrections
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/543
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
+      changed_files_or_scope:
+        - Document --no-open-world in Permission Profiles (section 6) and Remote Safe Mode Client Tools (section 8)
+        - Correct two pre-existing documentation inaccuracies found in the same paragraph while updating it ("no outbound calls" and "not yet implemented" disclosure layer, both already contradicted by shipped behavior)
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - manual balanced-code-fence check on all four edited documents (all balanced)
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK (no translation-coverage or drift-gate regression)
+      release_or_deployment: null
+      notes: >-
+        The two corrected sentences were found while rewriting the exact
+        paragraph being edited for --no-open-world documentation, not
+        through a separate audit: "no outbound calls" was contradicted by
+        #243's already-shipped remote_* tools, and "workspace/disclosure
+        policy is not yet implemented" was contradicted by #509's
+        already-shipped AI-safe named-workspace pattern, documented in the
+        very next section of the same file. Landed in the same branch/PR
+        as req-mcp-no-open-world-flag (#545) since both originate from the
+        same #543 investigation and edit the same paragraphs.
+      status: implemented
+
+    - requirement_id: req-mcp-resources-disclosure-documentation
+      capability_id: cap-mcp-permission-profiles
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/543
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/544
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
+      changed_files_or_scope:
+        - Document that resources/list/resources/read are unaffected by --profile and disclose the same content/paths any read-permitted tool already can
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - manual balanced-code-fence check on all four edited documents (all balanced)
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK
+      release_or_deployment: null
+      notes: >-
+        Implements #543's own recommendation (section C): documentation-
+        only, no resource behavior change, since resources were found not
+        to disclose anything beyond what already-permitted read tools
+        disclose under the same profile. Landed in the same branch/PR as
+        #545 since both originate from #543 and touch the same
+        documentation section.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

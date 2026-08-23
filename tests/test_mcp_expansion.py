@@ -9,6 +9,7 @@ from unittest import mock
 from lifetxt.mcp import (
     ASSIST_EXTRA_TOOLS,
     DESTRUCTIVE_TOOLS,
+    OPEN_WORLD_TOOLS,
     PROMPT_DEFINITIONS,
     READ_ONLY_TOOLS,
     TOOL_HANDLERS,
@@ -36,7 +37,14 @@ SAMPLE = (
 
 
 class McpTestCase(unittest.TestCase):
-    def _context(self, content=SAMPLE, config=None, read_only=False, profile=None):
+    def _context(
+        self,
+        content=SAMPLE,
+        config=None,
+        read_only=False,
+        profile=None,
+        no_open_world=False,
+    ):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "life.txt")
@@ -53,6 +61,7 @@ class McpTestCase(unittest.TestCase):
             config=settings,
             read_only=read_only,
             profile=profile,
+            no_open_world=no_open_world,
         )
         return context, path
 
@@ -398,6 +407,116 @@ class McpPermissionProfileTests(McpTestCase):
         self.assertEqual(schemas, filter_tool_schemas_for_profile(schemas, None))
         filtered = filter_tool_schemas_for_profile(schemas, "read")
         self.assertTrue({s["name"] for s in filtered} <= READ_ONLY_TOOLS)
+
+
+class McpNoOpenWorldTests(McpTestCase):
+    """--no-open-world: independent of --profile, denies every
+    OPEN_WORLD_TOOLS member at both tools/list and tools/call (#543/#545)."""
+
+    def _tools_list(self, context):
+        response = handle_request(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, context
+        )
+        return {schema["name"] for schema in response["result"]["tools"]}
+
+    def _tools_call(self, context, name, arguments):
+        return handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+            context,
+        )
+
+    def test_defaults_to_false_and_does_not_change_existing_behavior(self):
+        context, _path = self._context(profile="full")
+
+        self.assertFalse(context.no_open_world)
+        listed = self._tools_list(context)
+        self.assertTrue(OPEN_WORLD_TOOLS <= listed)
+
+    def test_open_world_tools_is_a_non_empty_subset_of_read_only_tools(self):
+        # The restriction only makes sense layered on top of tools already
+        # otherwise reachable; if this ever becomes false the tests below
+        # would be exercising an unreachable combination silently.
+        self.assertTrue(OPEN_WORLD_TOOLS)
+        self.assertTrue(OPEN_WORLD_TOOLS <= READ_ONLY_TOOLS)
+
+    def test_tools_list_excludes_open_world_tools_under_full(self):
+        context, _path = self._context(profile="full", no_open_world=True)
+
+        listed = self._tools_list(context)
+
+        self.assertTrue(listed & READ_ONLY_TOOLS)  # ordinary tools still listed
+        self.assertFalse(listed & OPEN_WORLD_TOOLS)
+        self.assertIn("remote_list_profiles", listed)  # not open-world, unaffected
+
+    def test_tools_list_excludes_open_world_tools_under_read(self):
+        context, _path = self._context(profile="read", no_open_world=True)
+
+        listed = self._tools_list(context)
+
+        self.assertTrue(listed <= READ_ONLY_TOOLS)
+        self.assertFalse(listed & OPEN_WORLD_TOOLS)
+        self.assertIn("remote_list_profiles", listed)
+
+    def test_tools_list_excludes_open_world_tools_under_assist(self):
+        context, _path = self._context(profile="assist", no_open_world=True)
+
+        listed = self._tools_list(context)
+
+        self.assertIn("stage_proposal", listed)
+        self.assertFalse(listed & OPEN_WORLD_TOOLS)
+
+    def test_tools_call_denies_open_world_tool_under_full(self):
+        context, _path = self._context(profile="full", no_open_world=True)
+        name = next(iter(OPEN_WORLD_TOOLS))
+
+        response = self._tools_call(context, name, {})
+
+        self.assertIn("error", response)
+        self.assertIn("open-world", response["error"]["message"])
+        self.assertIn("--no-open-world", response["error"]["message"])
+
+    def test_tools_call_denies_open_world_tool_under_read(self):
+        context, _path = self._context(profile="read", no_open_world=True)
+        name = next(iter(OPEN_WORLD_TOOLS))
+
+        response = self._tools_call(context, name, {})
+
+        self.assertIn("error", response)
+        self.assertIn("open-world", response["error"]["message"])
+
+    def test_call_tool_direct_dispatch_denies_regardless_of_profile(self):
+        for profile in ("read", "assist", "full"):
+            context, _path = self._context(profile=profile, no_open_world=True)
+            name = next(iter(OPEN_WORLD_TOOLS))
+            with self.assertRaises(ValueError, msg=profile) as caught:
+                call_tool(name, {}, context)
+            self.assertIn("open-world", str(caught.exception), profile)
+
+    def test_non_open_world_read_only_tool_is_unaffected(self):
+        context, _path = self._context(profile="read", no_open_world=True)
+
+        result = call_tool("remote_list_profiles", {}, context)
+
+        self.assertIn("profiles", result)
+
+    def test_filter_tool_schemas_for_profile_no_open_world_parameter(self):
+        schemas = tool_schemas()
+
+        # Default (omitted) parameter preserves prior behavior exactly.
+        self.assertEqual(
+            filter_tool_schemas_for_profile(schemas, "full"),
+            filter_tool_schemas_for_profile(schemas, "full", False),
+        )
+
+        filtered = filter_tool_schemas_for_profile(schemas, "full", True)
+        names = {s["name"] for s in filtered}
+        self.assertFalse(names & OPEN_WORLD_TOOLS)
+        self.assertTrue(names & READ_ONLY_TOOLS)
 
 
 class GlobalSearchToolFuzzyTests(McpTestCase):

@@ -710,6 +710,16 @@ def build_parser():
             "--read-only unless --profile read is also given."
         ),
     )
+    mcp.add_argument(
+        "--no-open-world",
+        action="store_true",
+        help=(
+            "Deny every open-world tool (one that makes an outbound "
+            "network call, e.g. remote_test_connection/"
+            "remote_list_resources/remote_get_resource) regardless of "
+            "--profile. Independent of and combinable with any profile."
+        ),
+    )
     mcp.set_defaults(func=command_mcp)
 
     ai_command = subparsers.add_parser(

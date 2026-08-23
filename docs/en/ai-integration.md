@@ -76,6 +76,35 @@ default profile for external or untrusted clients. Writes nothing.
 }
 ```
 
+Or let lifetxt print it, plus the Claude Code equivalent (`claude mcp add` or
+`.mcp.json`), for your current workspace:
+
+```sh
+python -m lifetxt ai setup claude life.txt
+```
+
+### Gemini CLI
+
+`~/.gemini/settings.json` (user scope) or `.gemini/settings.json` (project
+scope):
+
+```json
+{
+  "mcpServers": {
+    "lifetxt": {
+      "command": "python",
+      "args": ["-m", "lifetxt", "mcp", "/absolute/path/to/life.txt"]
+    }
+  }
+}
+```
+
+Or let lifetxt print it, plus the equivalent `gemini mcp add` command:
+
+```sh
+python -m lifetxt ai setup gemini life.txt
+```
+
 ### Constrained profiles
 
 Point a model at your data without giving it full write access; see

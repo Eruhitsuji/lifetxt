@@ -6788,6 +6788,268 @@ class LifeTxtAiSetupGenericCliTests(unittest.TestCase):
             return handle.read()
 
 
+class LifeTxtAiSetupClaudeCliTests(unittest.TestCase):
+    """`lifetxt ai setup claude`: Claude Desktop/Claude Code setup
+    information, profile defaulting, and the no-write guarantee (#537)."""
+
+    def _fixture(self, temp_dir):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Write_Report id:t1 project:work\n")
+        return path
+
+    def test_default_profile_is_read(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli("ai", "setup", "claude", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--profile read", stdout)
+            self.assertIn("claude_desktop_config.json", stdout)
+            self.assertIn(".mcp.json", stdout)
+            self.assertIn("claude mcp add", stdout)
+            self.assertIn(path, stdout)
+
+    def test_explicit_profile_overrides_the_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            for profile in ("assist", "full"):
+                stdout, stderr, code = run_cli(
+                    "ai", "setup", "claude", path, "--profile", profile
+                )
+                self.assertEqual("", stderr, profile)
+                self.assertEqual(0, code, profile)
+                self.assertIn("--profile %s" % profile, stdout, profile)
+                self.assertNotIn("--profile read", stdout, profile)
+
+    def test_invalid_profile_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            _stdout, stderr, code = run_cli(
+                "ai", "setup", "claude", path, "--profile", "bogus"
+            )
+
+            self.assertNotEqual(0, code)
+            self.assertIn("invalid choice", stderr)
+
+    def test_json_format_returns_the_expected_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "claude", path, "--format", "json"
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual(
+                ["python", "-m", "lifetxt", "mcp", path, "--profile", "read"],
+                payload["command"],
+            )
+            server = payload["mcp_client_config"]["mcpServers"]["lifetxt"]
+            self.assertEqual("python", server["command"])
+            self.assertEqual(
+                ["-m", "lifetxt", "mcp", path, "--profile", "read"], server["args"]
+            )
+            self.assertIn("macos", payload["claude_desktop_config_paths"])
+            self.assertIn("windows", payload["claude_desktop_config_paths"])
+            self.assertIn("linux", payload["claude_desktop_config_paths"])
+            self.assertEqual(".mcp.json", payload["claude_code_project_config_path"])
+            self.assertEqual(
+                [
+                    "claude",
+                    "mcp",
+                    "add",
+                    "--transport",
+                    "stdio",
+                    "lifetxt",
+                    "--",
+                    "python",
+                    "-m",
+                    "lifetxt",
+                    "mcp",
+                    path,
+                    "--profile",
+                    "read",
+                ],
+                payload["claude_code_add_command"],
+            )
+
+    def test_write_file_flag_is_reflected_when_it_differs_from_the_input(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            write_target = os.path.join(temp_dir, "ai-inbox.life.txt")
+            with open(write_target, "w", encoding="utf-8") as handle:
+                handle.write("")
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "claude", path, "--write-file", write_target
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--write-file %s" % write_target, stdout)
+
+    def test_command_never_writes_any_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            before = sorted(os.listdir(temp_dir))
+            before_content = self._fixture_content(path)
+
+            for profile in ("read", "assist", "full"):
+                run_cli("ai", "setup", "claude", path, "--profile", profile)
+                run_cli(
+                    "ai",
+                    "setup",
+                    "claude",
+                    path,
+                    "--profile",
+                    profile,
+                    "--format",
+                    "json",
+                )
+
+            self.assertEqual(before, sorted(os.listdir(temp_dir)))
+            self.assertEqual(before_content, self._fixture_content(path))
+
+    def _fixture_content(self, path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+
+class LifeTxtAiSetupGeminiCliTests(unittest.TestCase):
+    """`lifetxt ai setup gemini`: Gemini CLI setup information, profile
+    defaulting, and the no-write guarantee (#538)."""
+
+    def _fixture(self, temp_dir):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T Write_Report id:t1 project:work\n")
+        return path
+
+    def test_default_profile_is_read(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli("ai", "setup", "gemini", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--profile read", stdout)
+            self.assertIn("settings.json", stdout)
+            self.assertIn("gemini mcp add", stdout)
+            self.assertIn(path, stdout)
+
+    def test_explicit_profile_overrides_the_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            for profile in ("assist", "full"):
+                stdout, stderr, code = run_cli(
+                    "ai", "setup", "gemini", path, "--profile", profile
+                )
+                self.assertEqual("", stderr, profile)
+                self.assertEqual(0, code, profile)
+                self.assertIn("--profile %s" % profile, stdout, profile)
+                self.assertNotIn("--profile read", stdout, profile)
+
+    def test_invalid_profile_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            _stdout, stderr, code = run_cli(
+                "ai", "setup", "gemini", path, "--profile", "bogus"
+            )
+
+            self.assertNotEqual(0, code)
+            self.assertIn("invalid choice", stderr)
+
+    def test_json_format_returns_the_expected_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "gemini", path, "--format", "json"
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual(
+                ["python", "-m", "lifetxt", "mcp", path, "--profile", "read"],
+                payload["command"],
+            )
+            server = payload["mcp_client_config"]["mcpServers"]["lifetxt"]
+            self.assertEqual("python", server["command"])
+            self.assertEqual(
+                ["-m", "lifetxt", "mcp", path, "--profile", "read"], server["args"]
+            )
+            self.assertIn("user", payload["gemini_settings_paths"])
+            self.assertIn("project", payload["gemini_settings_paths"])
+            self.assertEqual(
+                [
+                    "gemini",
+                    "mcp",
+                    "add",
+                    "lifetxt",
+                    "python",
+                    "-m",
+                    "lifetxt",
+                    "mcp",
+                    path,
+                    "--profile",
+                    "read",
+                ],
+                payload["gemini_mcp_add_command"],
+            )
+
+    def test_write_file_flag_is_reflected_when_it_differs_from_the_input(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            write_target = os.path.join(temp_dir, "ai-inbox.life.txt")
+            with open(write_target, "w", encoding="utf-8") as handle:
+                handle.write("")
+
+            stdout, stderr, code = run_cli(
+                "ai", "setup", "gemini", path, "--write-file", write_target
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("--write-file %s" % write_target, stdout)
+
+    def test_command_never_writes_any_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            before = sorted(os.listdir(temp_dir))
+            before_content = self._fixture_content(path)
+
+            for profile in ("read", "assist", "full"):
+                run_cli("ai", "setup", "gemini", path, "--profile", profile)
+                run_cli(
+                    "ai",
+                    "setup",
+                    "gemini",
+                    path,
+                    "--profile",
+                    profile,
+                    "--format",
+                    "json",
+                )
+
+            self.assertEqual(before, sorted(os.listdir(temp_dir)))
+            self.assertEqual(before_content, self._fixture_content(path))
+
+    def _fixture_content(self, path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+
 class LifeTxtAiDoctorCliTests(unittest.TestCase):
     """`lifetxt ai doctor`: workspace/write-target health checks for a
     direct MCP setup (#507)."""

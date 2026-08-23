@@ -7,6 +7,7 @@ import unittest
 from unittest import mock
 
 from lifetxt import cli, server_init
+from lifetxt.workspace import iter_workspace_definitions
 
 
 class _Completed:
@@ -205,6 +206,169 @@ class ServerInitTests(unittest.TestCase):
             self.assertEqual(code, 0)
             report = json.loads(out.getvalue())
             self.assertEqual(report["status"], "dry_run")
+
+
+class AiWorkspaceGenerationTests(unittest.TestCase):
+    """Opt-in server-init AI workspace generation (#500 Phase 6 item 14, #528)."""
+
+    def test_disabled_by_default_produces_the_legacy_config_shape_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            app_config = server_init._application_config(config)
+
+            self.assertEqual(["paths", "write_file", "web"], list(app_config.keys()))
+            self.assertNotIn("workspaces", app_config)
+            self.assertNotIn("ai_workspace", server_init._server_update_config(config))
+
+    def test_disabled_case_omits_the_ai_inbox_plan_step_and_backup_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            report = server_init.run_server_init(config, yes=False)
+
+            self.assertFalse(
+                any("ai-inbox" in (step.get("path") or "") for step in report["steps"])
+            )
+            self.assertEqual(
+                2, len(server_init._server_update_config(config)["backup_paths"])
+            )
+
+    def test_enabled_produces_a_workspaces_config_that_resolves_correctly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, ai_workspace={"enabled": True}))
+            )
+            app_config = server_init._application_config(config)
+
+            self.assertIn("workspaces", app_config)
+            self.assertNotIn("paths", app_config)
+            self.assertNotIn("write_file", app_config)
+
+            definitions = iter_workspace_definitions(app_config)
+            self.assertEqual(["default", "ai"], list(definitions))
+
+            default_def = definitions["default"]
+            self.assertEqual(
+                os.path.join(tmp, "data", "life.txt"), default_def["write_file"]
+            )
+            self.assertEqual(
+                [
+                    os.path.join(tmp, "data", "life.txt"),
+                    os.path.join(tmp, "data", ".generated", "google_calendar.life.txt"),
+                ],
+                default_def["sources"],
+            )
+
+            ai_def = definitions["ai"]
+            self.assertEqual(
+                os.path.join(tmp, "data", "ai-inbox.life.txt"), ai_def["write_file"]
+            )
+            primary_source = next(
+                s
+                for s in ai_def["sources"]
+                if isinstance(s, dict) and s["role"] == "primary"
+            )
+            readonly_source = next(
+                s
+                for s in ai_def["sources"]
+                if isinstance(s, dict) and s["role"] == "readonly"
+            )
+            self.assertTrue(primary_source["writable"])
+            self.assertEqual(
+                os.path.join(tmp, "data", "ai-inbox.life.txt"), primary_source["path"]
+            )
+            self.assertFalse(readonly_source["writable"])
+            self.assertEqual(
+                os.path.join(tmp, "data", "life.txt"), readonly_source["path"]
+            )
+
+    def test_enabled_creates_the_empty_ai_inbox_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, ai_workspace={"enabled": True}))
+            )
+            report = server_init.run_server_init(config, yes=False)
+            ai_inbox_path = os.path.join(tmp, "data", "ai-inbox.life.txt")
+            step = _step(report, ai_inbox_path)
+            self.assertEqual("file", step["kind"])
+            self.assertEqual("", step["content"])
+
+            with mock.patch("lifetxt.server_update._run", return_value=_Completed()):
+                with mock.patch(
+                    "lifetxt.server_update.check_health",
+                    return_value={"ok": True, "status_code": 200},
+                ):
+                    applied = server_init.run_server_init(config, yes=True)
+            self.assertEqual("ready", applied["status"])
+            self.assertTrue(os.path.exists(ai_inbox_path))
+            self.assertEqual("", _read(ai_inbox_path))
+
+    def test_enabled_refuses_a_conflicting_existing_ai_inbox_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "data"))
+            with open(
+                os.path.join(tmp, "data", "ai-inbox.life.txt"), "w", encoding="utf-8"
+            ) as handle:
+                handle.write("[ ] T Not what server-init would write\n")
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, ai_workspace={"enabled": True}))
+            )
+
+            with mock.patch("lifetxt.server_update._run") as fake_run:
+                report = server_init.run_server_init(config, yes=False)
+                with self.assertRaises(server_init.ServerInitError):
+                    server_init.run_server_init(config, yes=True)
+
+            self.assertEqual("conflict", report["status"])
+            self.assertFalse(fake_run.called)
+            self.assertEqual(
+                "[ ] T Not what server-init would write\n",
+                _read(os.path.join(tmp, "data", "ai-inbox.life.txt")),
+            )
+
+    def test_enabled_adds_the_ai_inbox_path_to_backup_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, ai_workspace={"enabled": True}))
+            )
+            backup_paths = server_init._server_update_config(config)["backup_paths"]
+
+            self.assertIn(os.path.join(tmp, "data", "ai-inbox.life.txt"), backup_paths)
+            self.assertIn(os.path.join(tmp, "data", "life.txt"), backup_paths)
+            self.assertIn(os.path.join(tmp, "data", ".lifetxt.json"), backup_paths)
+            self.assertEqual(3, len(backup_paths))
+
+    def test_write_file_colliding_with_life_txt_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = _config(
+                tmp,
+                ai_workspace={"enabled": True, "write_file": "life.txt"},
+            )
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "must not be the same path"
+            ):
+                server_init.load_config(_write_json(tmp, data))
+
+    def test_custom_write_file_name_is_honored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        ai_workspace={
+                            "enabled": True,
+                            "write_file": "assistant-inbox.life.txt",
+                        },
+                    ),
+                )
+            )
+            definitions = iter_workspace_definitions(
+                server_init._application_config(config)
+            )
+            self.assertEqual(
+                os.path.join(tmp, "data", "assistant-inbox.life.txt"),
+                definitions["ai"]["write_file"],
+            )
 
 
 def _write_json(root, data):

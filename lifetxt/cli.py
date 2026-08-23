@@ -7691,6 +7691,14 @@ def command_server_update(args):
             text = report.get("message") or ""
             if report.get("review_block"):
                 text += "\n\n" + report["review_block"]
+            if report.get("backup_coverage_warnings"):
+                text += (
+                    "\n\nWARNING: backup_paths does not cover the following "
+                    "configured workspace write target(s):\n"
+                    + "\n".join(
+                        "  - %s" % path for path in report["backup_coverage_warnings"]
+                    )
+                )
             write_text(None, text + "\n")
 
     try:

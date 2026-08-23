@@ -680,6 +680,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
+python -m lifetxt integrity life.txt --ai-context --json
 python -m lifetxt integrity plan life.txt
 python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
@@ -690,6 +691,7 @@ python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --
 | `--json` | `integrity-v1` JSON report を出力 |
 | `--profile default\|strict` | default の effective severity を保つか、integrity report 上だけ warning を error に昇格 |
 | `--verify-files` | 安価な attachment 検査に加えて `file:` / `dir:` hash も検証 |
+| `--ai-context` | AI-safe workspace と Personal AI Memory convention の読み取り専用診断を追加 |
 
 JSON diagnostic には `severity`、`effective_severity`、`code`、
 `category`、`message`、`hint`、`source_file`、`line`、`column`、
@@ -697,6 +699,13 @@ JSON diagnostic には `severity`、`effective_severity`、`code`、
 optional context は、黙って省略せず blocked / skipped check として報告します。
 strict profile は `lifetxt check` の動作を変更せず、integrity output の
 `effective_severity` だけを変更します。
+
+`--ai-context` は `category: ai_context` の診断を追加します。named
+workspace が #500 の AI-safe pattern（広い read context と専用の
+writable inbox/proposal target）に近いか、Personal AI Memory candidate が
+#503 の convention（`person:` と `tag:preference` / `tag:goal` /
+`tag:decision` を持つ `N` record）に沿っているかを報告します。この flag は
+MCP、proposal、query、write の挙動を変更しません。
 
 `python -m lifetxt integrity plan ...` は `integrity-plan-v1` JSON plan を出力します。
 plan は決定的で非変更です。missing ID assignment のような安全な候補は

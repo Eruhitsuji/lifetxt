@@ -50,6 +50,7 @@ capabilities:
     source_requirements:
       - req-data-integrity-readonly-report
       - req-data-integrity-suite-final
+      - req-data-integrity-ai-context
     implementation_locations:
       - lifetxt/integrity.py
       - lifetxt/cli.py
@@ -62,6 +63,7 @@ capabilities:
       - lifetxt integrity --json
       - lifetxt integrity --verify-files
       - lifetxt integrity --profile strict
+      - lifetxt integrity --ai-context
       - lifetxt integrity plan
       - lifetxt integrity apply
       - integrity-v1 JSON report
@@ -76,10 +78,12 @@ capabilities:
       - ".venv\\Scripts\\ruff.exe format --check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> 3 files already formatted"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 11 tests, OK"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 15 tests, OK"
+      - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 19 tests, OK"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/517
       - https://github.com/Eruhitsuji/lifetxt/issues/520
       - https://github.com/Eruhitsuji/lifetxt/issues/522
+      - https://github.com/Eruhitsuji/lifetxt/issues/524
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/518
       - https://github.com/Eruhitsuji/lifetxt/pull/521
@@ -92,6 +96,8 @@ capabilities:
       repair planning emits deterministic JSON candidates without applying them.
       Issue #522 adds one high-assurance apply path for missing-ID assignment
       only, guarded by explicit confirmation and expected source revision.
+      Issue #524 adds opt-in read-only AI-context diagnostics for #500/#503:
+      named workspace shape evidence and Personal AI Memory convention checks.
       Recovery actions, sync reconciliation, archive cleanup, migration, and
       general repair application remain out of scope.
     replacement:

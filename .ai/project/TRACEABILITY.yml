@@ -7670,7 +7670,7 @@ traceability:
       capability_id: cap-mcp-provider-adapters
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/540
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/541
       changed_files_or_scope:
         - Add a ChatGPT subsection to Section 2 (Client Configuration) stating current support status and why, closing the last gap in #500's "provider adapters exist or are explicitly deferred with generic instructions" completion criterion
         - docs/en/ai-integration.md

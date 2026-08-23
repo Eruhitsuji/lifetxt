@@ -46,7 +46,8 @@ Buckets:
 - **safety** — a quick configuration-validity signal
 
 The same aggregation is available to AI clients through the MCP tool
-`get_command_center`.
+`get_command_center`, which also carries a `revision` field (see
+[ai-integration.md](ai-integration.md#context-revision)).
 
 ## Areas
 
@@ -112,7 +113,8 @@ never an all-item scan of the workspace.
 
 MCP: `get_temporal_context` (`id`, `window`, `limit`, `stale_after`), read-only
 and delegating entirely to the same engine; it returns the identical
-`temporal-context-v1` object `lifetxt temporal --json` prints.
+`temporal-context-v1` object `lifetxt temporal --json` prints, plus a
+`revision` field (see [ai-integration.md](ai-integration.md#context-revision)).
 
 ## Projects over MCP
 

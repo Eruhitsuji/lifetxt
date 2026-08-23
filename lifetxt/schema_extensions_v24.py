@@ -4,6 +4,10 @@ See :mod:`lifetxt.temporal_context` for the producer (``lifetxt temporal
 ID``, #481/#485) and the #481 investigation comment for why this is a
 separate, bounded contract rather than an extension of ``graph-v1``-shaped
 results or ``command-center-v1``.
+
+``revision`` is populated only when this shape is returned by the MCP
+``get_temporal_context`` tool (see #513); direct library callers of
+:func:`lifetxt.temporal_context.temporal_context` do not set it.
 """
 
 from __future__ import unicode_literals
@@ -83,6 +87,7 @@ def temporal_context_v1_schema():
             "window_days": {"type": "integer", "minimum": 0},
             "facts": {"type": "array", "items": fact},
             "related": {"type": "array", "items": edge},
+            "revision": {"type": ["string", "null"]},
         },
         "additionalProperties": True,
     }
@@ -147,6 +152,10 @@ def temporal_context_v1_sample():
                         )
                     )
                 ],
+            ),
+            (
+                "revision",
+                "3f1c2b9a4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8",
             ),
         )
     )

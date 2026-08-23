@@ -46,6 +46,16 @@ the same `stage_create` function, so a proposal staged by an AI client and one
 staged with `proposal add` are indistinguishable once stored — same ID scheme,
 same schema, same review flow.
 
+`stage_proposal` (and the underlying `stage_create` function) accepts an
+optional `idempotency_key`. Without one, retrying the identical call — for
+example after a dropped or timed-out MCP response — stages a second,
+independent proposal, exactly as before. Supplying the same key on a retry
+with the same title/kind/details returns the already-staged proposal instead
+of creating a duplicate; reusing the key for a materially different request
+fails loudly (`ValueError`) rather than silently creating a second proposal
+or silently reusing a mismatched one. `proposal add` has no equivalent flag —
+a human typing the command already sees whether they already ran it.
+
 `create` is currently the only proposal `operation` either path produces; the
 stored schema's `operation` field is a free string (`inbox-proposal-v1`
 inherits it from `proposal-v1`), but nothing in this codebase stages or
@@ -69,6 +79,7 @@ $ lifetxt proposal show P-12471d4d
   "source": "manual",
   "expected_revision": "9a1c...e7f2",
   "staged_target": "life.txt",
+  "idempotency_key": "",
   "changes": [
     {
       "op": "create",
@@ -93,6 +104,7 @@ is that file's real content-hash revision at that moment (the sentinel
 `"<missing>"` when the target does not exist yet). `provenance` currently
 records only `source`, echoed from the field above it. See
 [Staleness](#staleness) for how these two fields are used at accept time.
+`idempotency_key` is empty unless the caller supplied one.
 
 `proposal show` always prints the full JSON record; there is no plain-text
 form. `--status` on `proposal list` accepts `pending`, `accepted`, `rejected`,

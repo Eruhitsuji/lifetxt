@@ -174,6 +174,26 @@ client can decide what needs confirmation.
 | `remote_list_resources` | The read-only resources published by a remote lifetxt server |
 | `remote_get_resource` | One permission-filtered remote resource such as `next`, `tickets`, `agenda`, or `search` |
 
+### Context revision
+
+`get_command_center`, `get_temporal_context`, `get_next_actions`,
+`get_backlinks`, `get_ticket`, and `get_project` each carry a `revision`
+field: a SHA-256 over every source file's path and bytes, computed the same
+way Remote Safe Mode already computes it for every resource read (reusing
+`lifetxt.remote_backend.source_revision()` unmodified -- no second revision
+scheme).
+
+This lets a client composing several of these calls for one purpose -- for
+example the `explain_item` prompt, which calls up to six of them for one
+target item -- notice that the workspace changed partway through, instead of
+silently mixing facts read at different points in time. Nothing currently
+enforces or rejects a stale revision; the field is exposed for the client to
+check, the same way `since_revision` on the Remote `tickets` resource does
+for one narrower case today. Direct library callers of `command_center()` or
+`temporal_context()` (CLI `today`/`temporal`, the TUI Today view, the Web
+`/api/command-center` route) do not set this field -- it is populated only at
+the MCP tool boundary.
+
 ### Writing
 
 | Tool | Purpose |
@@ -479,3 +499,131 @@ the same safe append path the MCP server uses.
 
 For CI, `lifetxt review --format markdown` produces a summary suitable for a job
 summary or a pull request comment.
+
+---
+
+## 10. Personal AI Memory
+
+A convention for capturing a durable personal fact -- a preference, a goal, a
+standing decision -- from AI conversation so it can be reused across every AI
+client that reads this workspace, instead of being re-derived or forgotten
+between sessions. This is **not** a new Format, Query, schema, or MCP
+contract; it is a documented pattern built entirely from mechanisms this
+project already ships, selected by the Personal Context Engine investigation
+(#503) as the smallest first slice worth documenting.
+
+### The convention
+
+- **Kind**: `N` (Note). Notes already accept any custom detail key with no
+  Format change; an unrecognized key produces only a non-blocking warning and
+  is preserved.
+- **Subject**: `person:self` for a fact about the workspace owner, or
+  `person:<name>` for a fact about someone else. `person:` is already a
+  general-purpose field, not specific to any one record kind.
+- **Intent tags**: plain `tag:` values such as `preference`, `goal`, or
+  `decision` make the fact's purpose legible to a later reader or query --
+  there is no first-class `assertion:`/`category:` vocabulary yet (see
+  [Query semantics](#query-semantics-are-not-extended-yet) below).
+- **Staleness**: reuse `lifetxt temporal <id>` / MCP `get_temporal_context`
+  unchanged. Its `stale_since` fact already answers "is this still current?"
+  for any item carrying an `updated:` detail -- a personal-context Note is no
+  different from any other item in this respect.
+
+### Lifecycle
+
+```text
+AI conversation
+      |
+      v
+MCP stage_proposal (kind: "N", details: {person: "self", tag: "preference"})
+      |
+      v
+Unified Inbox (pending, reviewable, not yet authoritative)
+      |
+      v
+lifetxt proposal show / accept   <- human review
+      |
+      v
+ordinary life.txt N record
+      |
+      v
+lifetxt search / lifetxt query / MCP list_items / get_item
+```
+
+Nothing here is new: `stage_proposal` already accepts any `kind`, the
+Unified Inbox review flow (`proposal list` / `show` / `accept` / `reject`)
+already works exactly as it does for a task or ticket proposal, and an
+accepted Note is retrievable the same way any other item is.
+
+### Worked example
+
+Verified against a real disposable workspace; every command and its output
+below is exactly what was produced, not illustrative.
+
+```json
+{"name": "stage_proposal", "arguments": {
+  "title": "Prefers dark mode in all editors",
+  "kind": "N",
+  "details": {"person": "self", "tag": "preference"}
+}}
+```
+
+```console
+$ lifetxt proposal list
+P-30181d96   [pending ] mcp      [ ] N "Prefers dark mode in all editors" person:self tag:preference
+(1 total: pending=1)
+
+$ lifetxt proposal accept P-30181d96
+Accepted P-30181d96 -> life.txt
+  [ ] N "Prefers dark mode in all editors" person:self tag:preference
+Applied 1/1.
+```
+
+The accepted line in life.txt:
+
+```text
+[ ] N "Prefers dark mode in all editors" person:self tag:preference
+```
+
+`stage_proposal` has no `status` argument, so a staged Note always lands with
+the default `[ ]` status; `lifetxt check` reports this as a non-blocking
+W102 hint recommending `[N]` for Note/Journal records, but the record is
+valid and staged/accepted as shown. Correcting the status (and adding an
+`updated:` detail, which nothing sets automatically -- required only if you
+want the staleness rule described above to apply) is an ordinary
+`lifetxt proposal edit` or a later manual edit, not a new mechanism.
+
+Later, any AI client reading this workspace can retrieve it without any new
+tooling:
+
+```console
+$ lifetxt search "dark mode"
+life.txt:1: WARNING W102: Note type N and journal type J are recommended to use status [N].
+life.txt:1  [ ] N Prefers dark mode in all editors
+
+$ lifetxt query "kind:N person:self tag:preference"
+[ ] N "Prefers dark mode in all editors" person:self tag:preference
+```
+
+```json
+{"name": "search_items", "arguments": {"query": "dark mode"}}
+```
+
+### Query semantics are not extended yet
+
+`assertion:` (explicit/observed/inferred/conflicting), `confidence:`, and
+similar vocabulary are **deliberately not** added to the Query allowlist
+(`CUSTOM_DETAIL_FIELDS`) for this first slice -- an owner decision recorded
+on #503. Personal-context custom keys stay freeform: `lifetxt query` reports
+an unrecognized field with a Q001 warning and simply does not filter on it,
+rather than rejecting the query. Promote a key to first-class Query status
+only once real usage shows it is worth the ongoing compatibility
+commitment, matching the same bar `area`/`record`/`severity` already met.
+
+### What this is not
+
+No `subject:` field, no structured provenance model beyond the existing
+`source:` tag, and no automatic promotion from AI inference to authoritative
+fact -- every Personal AI Memory candidate passes through the same human
+review every other Unified Inbox proposal does. See #503 for the full
+investigation this convention was distilled from.

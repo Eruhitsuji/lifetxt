@@ -11,6 +11,7 @@ lifetxt は stdio 上の MCP (Model Context Protocol) server を同梱してい�
 - [7. AI-Safe Workspaces](#7-ai-safe-workspaces)
 - [8. Remote Safe Mode Client Tools](#8-remote-safe-mode-client-tools)
 - [9. Without MCP](#9-without-mcp)
+- [10. Personal AI Memory](#10-personal-ai-memory)
 
 ---
 
@@ -128,6 +129,47 @@ model に data は見せるが、full な書き込み権限は与えない設定
 ```
 
 path は absolute path にしてください。client は通常、無関係な working directory から server を起動します。`.lifetxt.json` も current directory 基準でしか探索されません。
+
+### Server-hosted (SSH)
+
+上記の例はすべて `lifetxt mcp` を local subprocess として起動しています。
+authoritative workspace が代わりに server 上にある場合（例えば
+[Ubuntu Server runbook](../deployment/ubuntu-server.md) でセットアップした
+もの）、client の `command` を `python`/`lifetxt` 直接ではなく `ssh` に向けます。
+MCP は変わらず stdio で話します。SSH は同じ stdio session を remote process
+まで運ぶ transport にすぎないため、tool surface、permission profile、
+workspace の動作は何も変わりません:
+
+```json
+{
+  "mcpServers": {
+    "lifetxt-server": {
+      "command": "ssh",
+      "args": [
+        "lifetxt-server",
+        "cd /srv/lifetxt/data && /srv/lifetxt/.venv/bin/lifetxt mcp --profile read life.txt"
+      ]
+    }
+  }
+}
+```
+
+`lifetxt-server` は client machine 自身の `~/.ssh/config` にある `Host` entry
+（`HostName`/`User`/`IdentityFile`）です。その server 上で他の command を実行
+するのと同じ key-based、パスワード不要の access を設定してください。lifetxt
+自体に SSH 固有の設定はありません。これは server 上に新しい listening port
+を一切開きません: AI client は既に持っている SSH session だけを通じて到達し、
+server 側の `lifetxt mcp` process は local client に対するのと同じ
+`--profile`/`--workspace` 境界を強制します。local の `ai setup generic` と
+同様、ここでも既定は `--profile read` にしてください。client にこの
+deployment に対する proposal を stage させたいと明確に決めた場合にのみ
+`assist` へ広げます。
+
+named workspace（`--workspace ai --profile assist`、
+[7. AI-Safe Workspaces](#7-ai-safe-workspaces) 参照）と組み合わせれば、
+deploy された `lifetxt serve`/sync timer が書き込むのと同じ `life.txt` では
+なく、remote client の書き込みを専用の proposal/inbox file に閉じ込められ
+ます。
 
 ---
 

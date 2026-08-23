@@ -9,6 +9,8 @@
 
 Issue #517 delivered the first read-only implementation slice. Issue #520
 tracks the remaining read-only suite slices in one final user-requested PR.
+Issue #522 adds the first High-assurance data-changing follow-up: applying only
+missing-ID assignment with explicit confirmation and revision guarding.
 
 Recommended change type: Feature for read-only reporting slices; Feature or Migration only if later repair application mutates data. Recommended assurance: Standard for read-only slices, High for any data-changing repair application.
 
@@ -77,13 +79,10 @@ Recommended change type: Feature for read-only reporting slices; Feature or Migr
 
 ## Suggested GitHub Issues
 
-Use these as issue titles after `gh` authentication is restored:
+Completed implementation issues:
 
-1. `Add read-only lifetxt integrity report`
-2. `Add strict integrity profile severity mapping`
-3. `Audit cross-file IDs and references in integrity report`
-4. `Audit local import and sync source UID reconciliation`
-5. `Report recovery and transaction integrity through integrity`
-6. `Generate non-mutating integrity repair plans`
+1. `Add read-only lifetxt integrity report` - #517/#518
+2. `Complete remaining data integrity suite in one final PR` - #520/#521
+3. `Apply integrity missing-ID repair with revision guard` - #522
 
 Each issue should include lifecycle phase `Implementation`, assurance `Standard` unless it mutates data, write scope from the relevant task boundary above, and test viewpoints covering CLI output, JSON contracts, no-write guarantees, and regression coverage for existing commands.

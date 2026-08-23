@@ -5106,3 +5106,78 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-mcp-provider-adapters
+    name: Provider-specific MCP setup adapters (Claude, Gemini)
+    summary: >-
+      Read-only lifetxt ai setup claude and lifetxt ai setup gemini
+      commands, thin provider-specific variants of ai setup generic:
+      each prints the same mcpServers configuration plus the provider's
+      own config file location(s) and CLI-driven add command. Neither
+      writes any file or changes MCP domain authorization.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-setup-claude-adapter
+      - req-mcp-setup-gemini-adapter
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt ai setup claude
+      - lifetxt ai setup gemini
+      - lifetxt.cli.command_ai_setup_claude
+      - lifetxt.cli.command_ai_setup_gemini
+      - lifetxt.cli._ai_setup_command_and_config
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtAiSetupClaudeCliTests (6 tests, real subprocess round trips via run_cli): default profile read, explicit --profile assist/full override, invalid --profile rejected, --format json shape (including claude_desktop_config_paths/claude_code_project_config_path/claude_code_add_command fields), --write-file reflected when it differs from the input, and an explicit no-write guarantee across every profile/format combination"
+      - "tests/test_lifetxt.py LifeTxtAiSetupGeminiCliTests (6 tests, same shape): --format json additionally asserts gemini_settings_paths/gemini_mcp_add_command"
+      - python -m unittest tests.test_lifetxt.LifeTxtAiSetupGenericCliTests tests.test_lifetxt.LifeTxtAiSetupClaudeCliTests tests.test_lifetxt.LifeTxtAiSetupGeminiCliTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 25 tests, OK
+      - "confirmed via git stash (production code only, tests kept) that 8 of the 12 new Claude/Gemini tests fail against the pre-fix code with an argparse 'invalid choice' error naming only 'generic' as a valid ai_setup_command; the other 4 (2 invalid-profile tests per adapter) coincidentally pass unmodified since 'invalid choice' text matches for a different reason (unknown subcommand vs. unknown profile), confirmed by reading the failure output rather than assumed"
+      - "live: real python -m lifetxt ai setup claude and ai setup gemini against a fixture life.txt in text and --format json modes -- Claude Desktop config paths (macOS/Windows/Linux), .mcp.json path, claude mcp add command, Gemini settings.json paths (user/project), and gemini mcp add command all rendered correctly; the fixture directory's file set was confirmed byte-for-byte unchanged afterward"
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime tests.test_completion_surfaces -> Ran 73 tests, OK
+      - ruff format --check / ruff check on lifetxt/cli.py and tests/test_lifetxt.py -> clean (pre-existing drift in 9 unrelated files confirmed present on main already, not introduced by this change)
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/537
+      - https://github.com/Eruhitsuji/lifetxt/issues/538
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Extends cap-mcp-generic-setup rather than duplicating it: a new
+      _ai_setup_command_and_config() helper factors out the exact
+      command/config resolution command_ai_setup_generic already had
+      (confirmed byte-identical behavior after the extraction via its own
+      unmodified test suite), and both new adapters call it rather than
+      reimplementing path/profile resolution a second and third time.
+      Current (2026-08-23) provider config facts were confirmed via web
+      research before implementation rather than assumed: Claude Desktop
+      and Claude Code both consume the identical mcpServers/command/args
+      shape ai setup generic already produces (Claude Desktop config at
+      OS-specific paths; Claude Code via `claude mcp add --transport
+      stdio <name> -- <command> [args...]` or a committable .mcp.json);
+      Gemini CLI uses the same shape inside settings.json (user scope
+      ~/.gemini/settings.json, project scope .gemini/settings.json), with
+      `gemini mcp add <name> <command> [args...]` (no -- separator,
+      unlike Claude Code's syntax) as its CLI-driven equivalent. No new
+      config shape was needed for either provider. Distilled from #500
+      Phase 7 items 17/18, filed and implemented together (#537/#538) in
+      one branch/PR per this project's established "share the same
+      concept" batching precedent, since both are thin variants of the
+      identical underlying resolution logic. A ClientCapabilities
+      abstraction (#500 section 14) was not introduced, per the epic's
+      own guidance that this should wait until multiple adapters show
+      real duplicated branching beyond one shared helper function.
+      ChatGPT adapter work remains explicitly out of scope, per #535's
+      own finding that it is not implementable today (Developer Mode
+      requires a URL-reachable Streamable HTTP server, which this
+      codebase's stdio-only lifetxt mcp cannot satisfy).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

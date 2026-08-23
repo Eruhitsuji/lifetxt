@@ -71,6 +71,36 @@ file への書き込みは一切行いません。
 }
 ```
 
+現在の workspace に対して、lifetxt 自身にこの内容と Claude Code 用の等価な
+command（`claude mcp add` または `.mcp.json`）を表示させることもできます:
+
+```sh
+python -m lifetxt ai setup claude life.txt
+```
+
+### Gemini CLI
+
+`~/.gemini/settings.json`（user scope）または `.gemini/settings.json`
+（project scope）:
+
+```json
+{
+  "mcpServers": {
+    "lifetxt": {
+      "command": "python",
+      "args": ["-m", "lifetxt", "mcp", "/absolute/path/to/life.txt"]
+    }
+  }
+}
+```
+
+lifetxt 自身にこの内容と対応する `gemini mcp add` command を表示させる
+こともできます:
+
+```sh
+python -m lifetxt ai setup gemini life.txt
+```
+
 ### 制限された profile
 
 model に data は見せるが、full な書き込み権限は与えない設定です。各 profile が何を許可するかは

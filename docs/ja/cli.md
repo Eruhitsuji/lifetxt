@@ -1510,7 +1510,31 @@ python -m lifetxt ai setup generic life.txt --format json
 を上書きできます。`--format json` を指定すると、整形された text の代わりに
 `{"command": [...], "mcp_client_config": {...}}` を返します。
 
-### 11.3 `ai doctor`
+### 11.3 `ai setup claude` / `ai setup gemini`
+
+`ai setup generic` の provider 別 variant です。同じ `mcpServers`
+configuration に加えて、各 provider 固有の config file の場所と CLI からの
+setup command を表示します。どちらも file への書き込みは一切行わず、
+print/copy のみです。MCP の domain authorization も変更しません --
+command/config の syntax が異なるだけです。
+
+```sh
+python -m lifetxt ai setup claude life.txt
+python -m lifetxt ai setup gemini life.txt --profile assist
+```
+
+`ai setup claude` は `claude_desktop_config.json` の OS 別 path（macOS、
+Windows、Linux）、project scope の `.mcp.json` の path、および対応する
+`claude mcp add --transport stdio ...` command を表示します。
+
+`ai setup gemini` は Gemini CLI の `settings.json` の user scope と
+project scope の path、および対応する `gemini mcp add ...` command を
+表示します。
+
+どちらも `ai setup generic` と同じ `--write-file`、`--profile`（default
+`read`）、`--format text|json` flag を受け付けます。
+
+### 11.4 `ai doctor`
 
 direct MCP 接続のために workspace が正しく読み込め、write target が一意に解決
 できるかを確認します。file への書き込みは一切行いません。

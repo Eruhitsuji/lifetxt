@@ -428,6 +428,72 @@ def _timestamp():
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _configured_write_targets(application_config_path):
+    """Every workspace write_file the live application config declares, as
+    absolute paths.
+
+    Reuses :func:`lifetxt.workspace.iter_workspace_definitions` and
+    :func:`lifetxt.workspace.config_base_dir` unmodified -- resolves both
+    `workspaces`-shaped and legacy `paths`/`write_file` configs, including a
+    relative `write_file` value, identically to how the rest of lifetxt
+    already does (relative to the application config file's own directory,
+    not this process's current directory), so this stays in lock-step with
+    workspace resolution without a second implementation of it. Comparing
+    unresolved relative strings directly against `backup_paths`'s
+    (typically absolute) entries would falsely flag every relative
+    `write_file` as uncovered even when it names the exact same file.
+
+    A missing or unparseable application config degrades to an empty list
+    (no warning), never a crash: this helper's own job is only to add a
+    non-fatal warning elsewhere, never to gate `server-update` on the
+    application config's readability -- a genuinely broken config already
+    surfaces as a harder failure elsewhere in this module's own flow.
+    """
+    from .workspace import config_base_dir, iter_workspace_definitions
+
+    if not application_config_path:
+        return []
+    try:
+        with open(application_config_path, "r", encoding="utf-8") as handle:
+            app_config = json.load(handle)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(app_config, dict):
+        return []
+    app_config["_path"] = application_config_path
+    base_dir = config_base_dir(app_config)
+    targets = []
+    for _name, definition in iter_workspace_definitions(app_config).items():
+        write_file = (
+            definition.get("write_file") if isinstance(definition, dict) else None
+        )
+        if not write_file:
+            continue
+        write_file = str(write_file)
+        if not os.path.isabs(write_file):
+            write_file = os.path.join(base_dir, write_file)
+        targets.append(write_file)
+    return targets
+
+
+def backup_coverage_warnings(application_config_path, backup_paths):
+    """Non-fatal warning list: configured workspace write targets that
+    `backup_paths` does not cover.
+
+    Comparison is by normalized path (case-insensitive on Windows, matching
+    how the rest of this module already compares configured paths), so a
+    `backup_paths` entry written with different casing or a trailing slash
+    still counts as coverage. Never raises; an unreadable application config
+    simply yields no warnings (see `_configured_write_targets`).
+    """
+    covered = {os.path.normcase(os.path.normpath(p)) for p in backup_paths or []}
+    missing = []
+    for target in _configured_write_targets(application_config_path):
+        if os.path.normcase(os.path.normpath(target)) not in covered:
+            missing.append(target)
+    return missing
+
+
 def create_backup(paths, backup_dir, timestamp):
     """Copy every existing configured path into a fresh timestamped directory.
 
@@ -1137,6 +1203,12 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
             ("python_command", python_prefix),
             ("service_manager", manager),
             ("service_command", service_command if manager != "none" else []),
+            (
+                "backup_coverage_warnings",
+                backup_coverage_warnings(
+                    config.get("application_config"), backup_paths
+                ),
+            ),
         ]
     )
 

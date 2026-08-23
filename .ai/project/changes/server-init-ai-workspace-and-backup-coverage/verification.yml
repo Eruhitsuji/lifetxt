@@ -1,0 +1,105 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_server_init
+      requirement_ids:
+        - req-server-init-ai-workspace
+      result: 'Ran 17 tests -- OK (9 pre-existing + 8 new AiWorkspaceGenerationTests)'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_server_update
+      requirement_ids:
+        - req-server-update-backup-coverage-diagnostic
+      result: 'Ran 122 tests -- OK (skipped=1, no symlink privilege on this Windows sandbox)'
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_server_update tests.test_server_init
+      requirement_ids:
+        - req-server-init-ai-workspace
+        - req-server-update-backup-coverage-diagnostic
+      result: 'Ran 139 tests -- OK (skipped=1)'
+      status: passed
+    - type: git_stash_regression
+      command: 'git stash push -- lifetxt/server_init.py; run AiWorkspaceGenerationTests; git stash pop'
+      requirement_ids:
+        - req-server-init-ai-workspace
+      result: '6 of 8 new tests fail/error against the pre-fix code (2 legitimately pass unmodified: disabled-default behavior was already correct and untouched by this change)'
+      status: passed
+    - type: git_stash_regression
+      command: 'git stash push -- lifetxt/server_update.py lifetxt/cli.py; run BackupCoverageWarningsTests + RunServerUpdateBackupCoverageTests; git stash pop'
+      requirement_ids:
+        - req-server-update-backup-coverage-diagnostic
+      result: 'all 9 new tests fail/error against the pre-fix code with AttributeError (no backup_coverage_warnings function) or KeyError (no backup_coverage_warnings report key)'
+      status: passed
+    - type: manual
+      command: >-
+        live: build an ai_workspace.enabled=true server-init config,
+        materialize its plan to a disposable directory, then run a real
+        `lifetxt --config <generated .lifetxt.json> mcp --workspace ai
+        --profile assist` stdio session with real JSON-RPC lines
+        (get_file_state, list_items, create_item)
+      requirement_ids:
+        - req-server-init-ai-workspace
+      result: >-
+        get_file_state reported writable_path as the AI-inbox file with
+        both the AI-inbox and life.txt readable; list_items showed the
+        primary life.txt item present with editable:false; a create_item
+        attempt was refused (PRECONDITION_REQUIRED) naming the AI-inbox
+        path in attempted_change.path, never life.txt -- confirming write
+        confinement without needing a fully successful write, matching the
+        established #509 verification methodology
+      status: passed
+    - type: manual
+      command: >-
+        live: real disposable bare-origin + checkout git repository with
+        one real commit pushed ahead of the local branch; a real
+        `lifetxt server-update --server-config server-update.json` dry-run
+        against a workspaces-shaped `.lifetxt.json` with a covered
+        `default` workspace and an initially-uncovered `ai` workspace
+      requirement_ids:
+        - req-server-update-backup-coverage-diagnostic
+      result: >-
+        first run correctly printed "WARNING: backup_paths does not cover
+        the following configured workspace write target(s): -
+        <absolute path to ai-inbox.life.txt>"; after adding that path to
+        backup_paths, a second run printed no warning; the update-available
+        message itself was unaffected in both cases
+      status: passed
+      notes: >-
+        This live run is what surfaced the relative-path resolution bug
+        (see traceability.yml's req-server-update-backup-coverage-diagnostic
+        entry) -- the first attempt incorrectly flagged both workspaces as
+        uncovered because backup_paths used absolute paths while the raw
+        config write_file values were relative strings compared without
+        resolution. Fixed with lifetxt.workspace.config_base_dir(), then
+        re-verified live with the corrected code before recording this
+        entry as passed.
+    - type: static
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-server-init-ai-workspace
+        - req-server-update-backup-coverage-diagnostic
+      result: 'OK: 10 item(s)'
+      status: passed
+    - type: static
+      command: ruff format --check / ruff check on lifetxt/server_init.py lifetxt/server_update.py lifetxt/cli.py tests/test_server_init.py tests/test_server_update.py
+      requirement_ids:
+        - req-server-init-ai-workspace
+        - req-server-update-backup-coverage-diagnostic
+      result: clean
+      status: passed
+    - type: static
+      command: scripts/validate_release_docs.py
+      requirement_ids:
+        - req-server-init-ai-workspace
+        - req-server-update-backup-coverage-diagnostic
+      result: '{"errors": 0, "ok": true}'
+      status: passed
+
+pending:
+  - description: >-
+      Independent security review and Merge Authority approval, per this
+      change's own human_approvals_required.
+    owner: Eruhitsuji

@@ -1002,6 +1002,215 @@ class RunServerUpdateDryRunTests(unittest.TestCase):
         self.assertEqual("preflight", ctx.exception.step)
 
 
+class RunServerUpdateBackupCoverageTests(unittest.TestCase):
+    """backup_coverage_warnings wired into run_server_update()'s report
+    (#500 Phase 6 item 16, #529): present in both the dry-run report and
+    the final report, never affecting status/exit-code outcome."""
+
+    def _app_config(self, tmp, data):
+        path = os.path.join(tmp, ".lifetxt.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        return path
+
+    def test_dry_run_report_names_an_uncovered_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_config_path = self._app_config(
+                tmp,
+                {
+                    "workspaces": {
+                        "default": {
+                            "sources": ["life.txt"],
+                            "write_file": "life.txt",
+                        },
+                        "ai": {
+                            "sources": ["life.txt", "ai-inbox.life.txt"],
+                            "write_file": "ai-inbox.life.txt",
+                        },
+                    }
+                },
+            )
+            git = _FakeGit()
+            config = dict(
+                server_update.DEFAULT_CONFIG,
+                python="python3",
+                backup_paths=[os.path.join(tmp, "life.txt")],
+                application_config=app_config_path,
+            )
+            with _patch_git(git):
+                report = server_update.run_server_update(config, yes=False)
+
+            self.assertEqual(
+                [os.path.join(tmp, "ai-inbox.life.txt")],
+                report["backup_coverage_warnings"],
+            )
+            self.assertEqual("update_available_dry_run", report["status"])
+
+    def test_dry_run_report_is_empty_when_fully_covered(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_config_path = self._app_config(
+                tmp, {"paths": ["life.txt"], "write_file": "life.txt"}
+            )
+            git = _FakeGit()
+            config = dict(
+                server_update.DEFAULT_CONFIG,
+                python="python3",
+                backup_paths=[os.path.join(tmp, "life.txt")],
+                application_config=app_config_path,
+            )
+            with _patch_git(git):
+                report = server_update.run_server_update(config, yes=False)
+
+            self.assertEqual([], report["backup_coverage_warnings"])
+
+    def test_warning_never_changes_the_up_to_date_outcome(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_config_path = self._app_config(
+                tmp, {"paths": ["life.txt"], "write_file": "life.txt"}
+            )
+            git = _FakeGit(current="same", target="same")
+            config = dict(
+                server_update.DEFAULT_CONFIG,
+                python="python3",
+                backup_paths=[],  # nothing covered at all
+                application_config=app_config_path,
+            )
+            with _patch_git(git):
+                report = server_update.run_server_update(config, yes=False)
+
+            self.assertEqual("up_to_date", report["status"])
+            self.assertEqual(
+                [os.path.join(tmp, "life.txt")], report["backup_coverage_warnings"]
+            )
+
+    def test_cli_text_output_includes_the_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_config_path = self._app_config(
+                tmp, {"paths": ["life.txt"], "write_file": "life.txt"}
+            )
+            server_config_path = os.path.join(tmp, "server-update.json")
+            with open(server_config_path, "w", encoding="utf-8") as handle:
+                json.dump(
+                    dict(
+                        server_update.DEFAULT_CONFIG,
+                        python="python3",
+                        backup_paths=[],
+                        application_config=app_config_path,
+                    ),
+                    handle,
+                )
+            git = _FakeGit()
+            out = io.StringIO()
+            args = argparse.Namespace(
+                server_config=server_config_path,
+                yes=False,
+                approve=None,
+                format="text",
+            )
+            with _patch_git(git):
+                with mock.patch(
+                    "lifetxt.cli.write_text", lambda _path, text: out.write(text)
+                ):
+                    code = cli.command_server_update(args)
+
+            self.assertEqual(0, code)
+            self.assertIn("backup_paths does not cover", out.getvalue())
+            self.assertIn("life.txt", out.getvalue())
+
+
+class BackupCoverageWarningsTests(unittest.TestCase):
+    """backup_coverage_warnings()/_configured_write_targets() (#500 Phase 6
+    item 16, #529). Pure-function unit coverage; the integration-level
+    wiring into run_server_update() is covered by
+    RunServerUpdateBackupCoverageTests below."""
+
+    def _write_app_config(self, tmp, data):
+        path = os.path.join(tmp, ".lifetxt.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        return path
+
+    def test_legacy_shape_covered_produces_no_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_app_config(
+                tmp, {"paths": ["life.txt"], "write_file": "life.txt"}
+            )
+            life_txt = os.path.join(tmp, "life.txt")
+            self.assertEqual(
+                [], server_update.backup_coverage_warnings(path, [life_txt])
+            )
+
+    def test_legacy_shape_uncovered_names_the_resolved_absolute_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_app_config(
+                tmp, {"paths": ["life.txt"], "write_file": "life.txt"}
+            )
+            # write_file is a relative string in the config, but the
+            # resolved warning names the absolute path -- relative to the
+            # application config file's own directory, matching how
+            # lifetxt.workspace.config_base_dir() resolves it everywhere
+            # else, not a bare copy of the unresolved config string.
+            self.assertEqual(
+                [os.path.join(tmp, "life.txt")],
+                server_update.backup_coverage_warnings(path, []),
+            )
+
+    def test_workspaces_shape_names_only_the_uncovered_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_app_config(
+                tmp,
+                {
+                    "workspaces": {
+                        "default": {"sources": ["life.txt"], "write_file": "life.txt"},
+                        "ai": {
+                            "sources": ["life.txt", "ai-inbox.life.txt"],
+                            "write_file": "ai-inbox.life.txt",
+                        },
+                    }
+                },
+            )
+            life_txt = os.path.join(tmp, "life.txt")
+            ai_inbox = os.path.join(tmp, "ai-inbox.life.txt")
+            self.assertEqual(
+                [ai_inbox],
+                server_update.backup_coverage_warnings(path, [life_txt]),
+            )
+            self.assertEqual(
+                [],
+                server_update.backup_coverage_warnings(path, [life_txt, ai_inbox]),
+            )
+
+    def test_absolute_write_file_is_used_as_is(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            absolute_target = os.path.join(tmp, "elsewhere", "life.txt")
+            path = self._write_app_config(
+                tmp,
+                {"paths": [absolute_target], "write_file": absolute_target},
+            )
+            self.assertEqual(
+                [], server_update.backup_coverage_warnings(path, [absolute_target])
+            )
+            self.assertEqual(
+                [absolute_target], server_update.backup_coverage_warnings(path, [])
+            )
+
+    def test_missing_or_unreadable_application_config_yields_no_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(
+                [],
+                server_update.backup_coverage_warnings(
+                    os.path.join(tmp, "nope.json"), []
+                ),
+            )
+            malformed = os.path.join(tmp, "malformed.json")
+            with open(malformed, "w", encoding="utf-8") as handle:
+                handle.write("{not valid json")
+            self.assertEqual([], server_update.backup_coverage_warnings(malformed, []))
+
+    def test_none_application_config_path_yields_no_warning(self):
+        self.assertEqual([], server_update.backup_coverage_warnings(None, []))
+
+
 class RunServerUpdatePreflightTests(unittest.TestCase):
     def _config(self, **overrides):
         config = dict(server_update.DEFAULT_CONFIG, python="python3")

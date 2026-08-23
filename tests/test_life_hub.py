@@ -222,8 +222,17 @@ class TicketAttentionTests(unittest.TestCase):
         # to stay deterministic regardless of when the suite runs -- a
         # stale_after of 0 then makes it immediately stale, proving the
         # parameter is actually threaded through rather than always
-        # falling back to the module default.
-        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        # falling back to the module default. "Yesterday" is computed from
+        # reference_time(None) (UTC), the same clock node_facts() itself
+        # compares against -- using the local wall-clock date instead
+        # (#508) is flaky in any timezone ahead of UTC, where local
+        # "yesterday" often still falls on the same UTC calendar day as
+        # "now", making the computed age_days 0 instead of the intended 1.
+        from lifetxt.ticket_project_values import reference_time
+
+        yesterday = (
+            reference_time(None).date() - datetime.timedelta(days=1)
+        ).isoformat()
         items, _ = parse_text(
             "#! timezone: UTC\n"
             "[ ] T RecentlyUpdated record:ticket updated:%s severity:low id:tk9\n"

@@ -4003,6 +4003,11 @@ capabilities:
       - tests/test_today_cli.py TodayCliTicketAttentionTests (3 tests: text-output section, omitted-when-empty, --json inclusion) (#499)
       - python -m unittest tests.test_life_hub tests.test_today_cli tests.test_schema_extensions_v2 tests.test_surface_runtime -> Ran 65 tests, OK
       - "live: real lifetxt today text output showed a 'Tickets needing attention' section listing only the flagged ticket with its reasons; --json output included ticket_attention/counts.ticket_attention"
+      - "#508: tests/test_life_hub.py TicketAttentionTests.test_configurable_stale_after_days_reaches_the_engine's 'yesterday' fixture date now derives from lifetxt.ticket_project_values.reference_time(None).date() (UTC, the same clock node_facts() itself compares against) instead of the local wall-clock datetime.date.today(), fixing a timezone-dependent flake reproducible in any timezone ahead of UTC during the hours when the local calendar date has already rolled over but UTC has not"
+      - "#508: reproduced the exact pre-fix failure directly -- simulating a local-date-ahead-of-UTC host and feeding the old local-date-derived 'yesterday' through node_facts() returned an empty fact list (not stale) exactly as the bug report described; the same call with the fixed reference_time(None)-derived 'yesterday' correctly returned a stale_since fact with days=1"
+      - python -m unittest tests.test_life_hub -> Ran 33 tests, OK
+      - ruff format --check / ruff check tests/test_life_hub.py -> clean
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/473
@@ -4013,6 +4018,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/495
       - https://github.com/Eruhitsuji/lifetxt/issues/498
       - https://github.com/Eruhitsuji/lifetxt/issues/499
+      - https://github.com/Eruhitsuji/lifetxt/issues/508
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -4116,6 +4122,23 @@ capabilities:
       `lifetxt/command_center.py` plus tests/docs, and extending the
       curses/Web renderers to a new card is recorded here as an explicit,
       unimplemented follow-up rather than silently claimed complete.
+      #508 (a flaky-test bug found while running the full suite during
+      unrelated #502/#505/#507 work, filed as its own follow-up per this
+      repository's Horizontal Review Scope Discipline) fixed a timezone-
+      dependent flake in `TicketAttentionTests.
+      test_configurable_stale_after_days_reaches_the_engine`: the test
+      derived its "yesterday" fixture date from the local wall-clock
+      `datetime.date.today()`, while `node_facts()` itself (the code under
+      test) compares against `reference_time(None)` (UTC). In any timezone
+      ahead of UTC, local "yesterday" frequently lands on the same UTC
+      calendar day as "now", making the computed `age_days` `0` instead of
+      the intended `1` and silently passing an unrelated code path rather
+      than the intended `stale_after_days=0` boundary. Fixed by deriving
+      "yesterday" from `reference_time(None).date()` instead, the same
+      clock `node_facts()` itself uses -- test-only change, no production
+      code touched, since `node_facts()`'s own UTC-based staleness formula
+      was never wrong. Test-only fix; no other file in this capability
+      changed.
     replacement:
       replaces: []
       replaced_by: null

@@ -1260,7 +1260,10 @@ class GetTemporalContextToolTests(McpTestCase):
 
         result = call_tool("get_temporal_context", {"id": "t1"}, context)
 
-        self.assertEqual(expected, result)
+        result_without_revision = dict(result)
+        revision = result_without_revision.pop("revision")
+        self.assertEqual(expected, result_without_revision)
+        self.assertTrue(revision)
         self.assertEqual("temporal-context-v1", result["schema"])
         self.assertEqual(["t2"], [edge["target_id"] for edge in result["related"]])
 
@@ -1330,6 +1333,66 @@ class GetTemporalContextToolTests(McpTestCase):
         context, _path = self._context(content=self.TEMPORAL_SAMPLE, read_only=True)
         result = call_tool("get_temporal_context", {"id": "t1"}, context)
         self.assertEqual("temporal-context-v1", result["schema"])
+
+
+class ContextRevisionTests(McpTestCase):
+    """revision on bounded MCP context-read tools (#511/#513).
+
+    Each of these tools reuses lifetxt.remote_backend.source_revision()
+    unmodified -- the same hash Remote Safe Mode already attaches to every
+    resource read -- so a client composing several calls (e.g. the
+    explain_item prompt) can detect a workspace change between them.
+    """
+
+    TICKET_SAMPLE = SAMPLE + (
+        "[ ] T Login_race record:ticket id:BUG-1 tracker:bug "
+        "ticket_status:new priority:high severity:major project:work\n"
+    )
+
+    def _expected_revision(self, context):
+        from lifetxt.remote_backend import source_revision
+
+        return source_revision(context.paths)
+
+    def test_get_command_center_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_command_center", {}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_get_temporal_context_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_temporal_context", {"id": "t1"}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_get_next_actions_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_next_actions", {}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_get_backlinks_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_backlinks", {"id": "t1"}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_get_ticket_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_ticket", {"id": "BUG-1"}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_get_project_carries_a_revision(self):
+        context, _path = self._context(content=self.TICKET_SAMPLE)
+        result = call_tool("get_project", {"name": "work"}, context)
+        self.assertEqual(self._expected_revision(context), result["revision"])
+
+    def test_revision_changes_when_the_source_file_changes(self):
+        context, path = self._context(content=self.TICKET_SAMPLE)
+        before = call_tool("get_command_center", {}, context)["revision"]
+
+        with open(path, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T New_task id:t5\n")
+
+        after = call_tool("get_command_center", {}, context)["revision"]
+        self.assertNotEqual(before, after)
 
 
 if __name__ == "__main__":

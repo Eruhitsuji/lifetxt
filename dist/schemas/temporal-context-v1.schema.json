@@ -125,6 +125,12 @@
       },
       "type": "array"
     },
+    "revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "schema": {
       "const": "temporal-context-v1"
     },

@@ -1,4 +1,10 @@
-"""Schema for stored Unified Inbox proposals."""
+"""Schema for stored Unified Inbox proposals.
+
+``idempotency_key`` (#512/#514) is empty unless the caller supplied one to
+:func:`lifetxt.inbox.stage_create`; when supplied, restaging with the same
+key returns the existing proposal for an identical request and fails loudly
+for a materially different one, instead of silently creating a duplicate.
+"""
 
 from __future__ import unicode_literals
 
@@ -33,6 +39,7 @@ def schema_bundle_v12():
                         "source": {"type": "string"},
                         "expected_revision": {"type": "string"},
                         "staged_target": {"type": "string"},
+                        "idempotency_key": {"type": "string"},
                         "changes": {"type": "array", "items": {"type": "object"}},
                         "warnings": {"type": "array", "items": {"type": "string"}},
                         "status": {
@@ -60,6 +67,7 @@ def schema_samples_v12():
                     "source": "mcp",
                     "expected_revision": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "staged_target": "life.txt",
+                    "idempotency_key": "",
                     "changes": [
                         {
                             "op": "create",

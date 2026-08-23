@@ -1,4 +1,9 @@
-"""Schemas for the daily command center and area summaries."""
+"""Schemas for the daily command center and area summaries.
+
+``revision`` (command-center-v1) is populated only when this shape is
+returned by the MCP ``get_command_center`` tool (see #513); direct library
+callers of :func:`lifetxt.command_center.command_center` do not set it.
+"""
 
 from __future__ import unicode_literals
 
@@ -68,6 +73,7 @@ def schema_bundle_v7():
                         },
                         "safety": {"type": "object"},
                         "counts": counts,
+                        "revision": {"type": ["string", "null"]},
                     },
                     "additionalProperties": True,
                 },
@@ -144,6 +150,7 @@ def schema_samples_v7():
                         "next_actions": 1,
                         "inbox_pending": 1,
                     },
+                    "revision": "3f1c2b9a4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8",
                 },
             ),
             (

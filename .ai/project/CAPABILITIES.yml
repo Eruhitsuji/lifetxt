@@ -4315,13 +4315,16 @@ capabilities:
       captures, MCP suggestions, and (future) remote/integration events,
       accepted through the same validated atomic writer as every other
       authoritative mutation. Now includes stage-time revision/provenance
-      capture with accept-time staleness detection, and ticket-shaped
-      proposal acceptance producing a real ticket-creation audit event.
+      capture with accept-time staleness detection, ticket-shaped proposal
+      acceptance producing a real ticket-creation audit event, and an
+      optional caller-supplied idempotency key preventing a retried
+      `stage_create()` call from creating a duplicate proposal.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-inbox-proposal-stale-detection
       - req-inbox-ticket-creation-event
+      - req-inbox-proposal-idempotency-key
     implementation_locations:
       - lifetxt/inbox.py
       - lifetxt/cli.py
@@ -4344,12 +4347,13 @@ capabilities:
       - lifetxt.ticket_activity.build_creation_event
       - lifetxt proposal add|accept|reject|defer|edit|list|show
       - MCP tools list_proposals, stage_proposal
-      - inbox-proposal-v1.schema.json (staged_target field)
+      - inbox-proposal-v1.schema.json (staged_target, idempotency_key fields)
     tests_or_evidence:
       - tests/test_inbox.py (23 tests: stage-time target/revision/provenance capture, accept success when unchanged, accept refusal when the target changed since staging with a distinct stale-proposal error and no write, explicit-revision override precedence, target-mismatch skip, batch-of-proposals-staged-before-any-were-applied succeeding, batch stale-first-proposal reporting without crashing, ticket-shaped proposal acceptance writing a creation event, non-ticket proposals unaffected, id-less ticket-shaped proposal treated as non-ticket)
       - tests/test_ticket_creation_event.py (7 tests: build_creation_event() shape/transaction-id/author defaults, CLI `ticket new` writing a companion creation event, event correctly referencing the new ticket id, dry-run writing nothing)
-      - python -m unittest tests.test_inbox tests.test_ticket_creation_event tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_tickets tests.test_mcp_expansion tests.test_life_hub -> Ran 196 tests, OK
-      - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (inbox-proposal-v1 staged_target field, bundle equality)
+      - "tests/test_inbox.py InboxIdempotencyTests (6 tests): omitting idempotency_key preserves today's duplicate-staging behavior unchanged; repeating the same key with identical content returns the existing proposal without creating a second one; repeating the key with different content fails loudly naming the key, leaving only the original proposal; the key is persisted on the proposal record (empty string when omitted); reusing a key after the original proposal was already accepted still returns that accepted proposal rather than creating a new pending one; the MCP stage_proposal tool forwards the argument end to end via a real call_tool() invocation"
+      - python -m unittest tests.test_inbox tests.test_ticket_creation_event tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_tickets tests.test_mcp_expansion tests.test_life_hub -> Ran 236 tests, OK
+      - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (inbox-proposal-v1 staged_target/idempotency_key fields, bundle equality)
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
@@ -4358,12 +4362,16 @@ capabilities:
       - "live: real `lifetxt ticket new` run wrote both the ticket line and its record:ticket_event creation entry in one append; `lifetxt ticket validate-history` and `lifetxt check` both passed against the result"
       - "live: `lifetxt.inbox.stage_create()`+`accept()` against a real fixture with a record:ticket-shaped create proposal produced the identical creation-event shape, and a non-ticket proposal in the same session produced no event line"
       - "confirmed via git stash (production code only, tests kept) that the new tests in both test_inbox.py and test_ticket_creation_event.py fail against the pre-#496/#497 code (no staleness detection, no creation event), then pass once the fix is restored"
+      - "confirmed via git stash (production code only, tests kept) that 5 of the 6 new InboxIdempotencyTests tests fail against the pre-#514 code (TypeError: stage_create() got an unexpected keyword argument 'idempotency_key', or two distinct proposal IDs where one was expected); the sixth (no-key baseline) passes unmodified against the old code, confirming it correctly locks in unchanged behavior rather than indicating a weak test"
+      - "live: real disposable workspace (mcp_call.py driving lifetxt.mcp.McpContext/call_tool directly), used to verify the docs/en/ai-integration.md Personal AI Memory worked example (#515) is byte-accurate: stage_proposal(kind=N)/proposal list/proposal accept/search/query all produced exactly the output now documented"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/490
       - https://github.com/Eruhitsuji/lifetxt/issues/494
       - https://github.com/Eruhitsuji/lifetxt/issues/496
       - https://github.com/Eruhitsuji/lifetxt/issues/497
+      - https://github.com/Eruhitsuji/lifetxt/issues/512
+      - https://github.com/Eruhitsuji/lifetxt/issues/514
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -4423,6 +4431,36 @@ capabilities:
       remain deliberately out of scope for this pass, per #494's own
       recommendation -- no evidence of a gap justifies either given today's
       CLI-only, local-operator exposure surface.
+      #512 (an investigation under the #500 epic's Phase 2 item 3, "canonical
+      AI operation/proposal envelope") found `stage_create()` had no dedup
+      mechanism at all: calling it twice with identical arguments -- for
+      example an MCP client retrying `stage_proposal` after a dropped or
+      timed-out response -- created two distinct `pending` proposals, and
+      accepting both produced duplicate life.txt lines. It also confirmed
+      `proposal-v1` should remain the canonical envelope for MCP's current
+      synchronous use (Cloud Mailbox, #500 Phase 5, is unimplemented and has
+      no exercised idempotency/expiry/replay requirement against this
+      contract yet); a future Cloud Mailbox should wrap `proposal-v1` rather
+      than add its own fields to it, mirroring the `conflict-v1.schema.json`/
+      `mutation_response()` wrap-precedent in
+      `lifetxt/remote_ticket_write_core.py`. #514 fixes the concrete
+      duplicate-staging gap only, independent of that larger envelope
+      question: `stage_create()` gained an optional `idempotency_key`
+      parameter (persisted on the proposal record, default `""`). Retrying
+      with the same key and identical title/kind/details returns the
+      already-staged proposal (even after it was separately accepted, since
+      "the same request happened again" should not care whether a human
+      already reviewed it); reusing the key for a materially different
+      request fails loudly instead of silently duplicating or silently
+      reusing a mismatched proposal, mirroring the
+      `REMOTE_TRANSACTION_REUSED`/`event_matches` precedent already proven in
+      `lifetxt/remote_ticket_write_core.py`. Omitting the key preserves
+      today's behavior exactly (locked in by a dedicated regression test) --
+      `proposal add`/every other existing caller of `stage_create()` is
+      unaffected. `lifetxt/delegated_mutation.py`'s separate, independently-
+      evolved proposal contract is unmodified; #512 confirmed the two
+      contracts are deliberately distinct (external-adapter text mutation vs.
+      human-reviewed record creation), not an oversight to unify.
     replacement:
       replaces: []
       replaced_by: null
@@ -4751,6 +4789,163 @@ capabilities:
       AI context snapshot (#500 section 3's optional alternative to
       exposing raw workspace sources) remains a separate, larger,
       unimplemented follow-up candidate.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-mcp-context-revision
+    name: Local MCP context-read revision
+    summary: >-
+      A `revision` field (a SHA-256 over every source file's path and bytes,
+      reusing `lifetxt.remote_backend.source_revision()` unmodified)
+      attached to six local, bounded MCP context-read tools --
+      `get_command_center`, `get_temporal_context`, `get_next_actions`,
+      `get_backlinks`, `get_ticket`, `get_project` -- so a client composing
+      several of them for one purpose (e.g. the `explain_item` prompt) can
+      detect that the workspace changed partway through, instead of
+      silently mixing facts read at different points in time.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-mcp-context-revision
+    implementation_locations:
+      - lifetxt/mcp.py
+      - lifetxt/schema_extensions_v7.py
+      - lifetxt/schema_extensions_v24.py
+      - dist/schemas/command-center-v1.schema.json
+      - dist/schemas/temporal-context-v1.schema.json
+      - tests/test_mcp_expansion.py
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - docs/en/life-hub.md
+      - docs/ja/life-hub.md
+    public_interfaces:
+      - lifetxt.mcp._attach_revision
+      - MCP tools get_command_center, get_temporal_context, get_next_actions, get_backlinks, get_ticket, get_project (revision field)
+      - command-center-v1.schema.json (revision field)
+      - temporal-context-v1.schema.json (revision field)
+    tests_or_evidence:
+      - "tests/test_mcp_expansion.py ContextRevisionTests (7 tests): each of the six tools carries a revision matching a direct source_revision() computation on the same paths; the revision changes when the source file's content changes"
+      - "tests/test_mcp_expansion.py GetTemporalContextToolTests.test_matches_a_direct_call_to_the_canonical_engine updated to pop and separately assert the new revision field, keeping the rest of the fact-for-fact equality assertion intact"
+      - python -m unittest tests.test_mcp_expansion -> Ran 129 tests, OK
+      - python -m unittest tests.test_schema_extensions_v2 tests.test_surface_runtime tests.test_temporal_context tests.test_temporal_cli tests.test_life_hub tests.test_ticket_project_surfaces tests.test_ticket_workflow_surfaces -> Ran 89 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> ok true'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/511
+      - https://github.com/Eruhitsuji/lifetxt/issues/513
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #511 investigated #500's Phase 2 item 2 ("bounded AI context
+      contract") and found, re-confirming #490's prior conclusion, that no
+      new shared context contract is justified: `command_center()`/
+      `temporal_context()` are already independently bounded and
+      provenance-carrying, and composing several of them client-side (the
+      `explain_item` prompt) is already the established pattern. The one
+      concrete, evidenced gap #511 found is narrower: Remote Safe Mode's
+      `remote_backend.py` already attaches a uniform `source_revision()` to
+      every one of its 10 read resources, but none of the local MCP
+      context-read tools reused that existing mechanism, despite reading
+      the same underlying files. #513 closes exactly that gap by reusing
+      `source_revision()` unmodified at the MCP tool boundary -- via a
+      shared `_attach_revision()` helper -- rather than adding a second
+      revision scheme or threading a new parameter through
+      `command_center()`/`temporal_context()` themselves. This keeps blast
+      radius minimal: `revision` is populated only when these shapes are
+      returned through MCP; direct library callers (CLI `today`/`temporal`,
+      the TUI Today view, the Web `/api/command-center` route, and Remote
+      Safe Mode's own resource builders) are unaffected and continue to
+      omit the field, confirmed by not modifying
+      `lifetxt/command_center.py`, `lifetxt/temporal_context.py`,
+      `lifetxt/projects.py`, or `lifetxt/tickets.py` at all.
+      `get_next_actions`/`get_backlinks` reuse the shared
+      `items_response()`/plain-dict shapes also used by other surfaces
+      (e.g. Web's `/api/items`); the revision is attached to the dict
+      returned by the MCP tool function only, after those shared builders
+      already returned, so no other caller of those builders is affected.
+      Nothing currently enforces or rejects a stale revision -- the field
+      is exposed for the client to check, matching the narrower precedent
+      the Remote `tickets` resource's `since_revision` parameter already
+      established for one case; automatic rejection elsewhere remains an
+      explicit, unimplemented follow-up if evidence later shows it is
+      needed.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-personal-ai-memory-convention
+    name: Personal AI Memory convention
+    summary: >-
+      A documented convention -- not a new Format, Query, schema, or MCP
+      contract -- for capturing a durable personal fact (preference, goal,
+      standing decision) from AI conversation using only existing lifetxt
+      mechanisms: the generic `N` (Note) kind, the already general-purpose
+      `person:` field, freeform intent tags, the existing Unified Inbox
+      `stage_proposal`/review/accept lifecycle, and the existing
+      `temporal_context()` staleness rule. Selected by the Personal Context
+      Engine investigation (#503) as the smallest first product slice.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-personal-ai-memory-convention-docs
+    implementation_locations:
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+    public_interfaces:
+      - docs/en/ai-integration.md section 10, Personal AI Memory
+      - docs/ja/ai-integration.md section 10, Personal AI Memory
+    tests_or_evidence:
+      - "live, real disposable workspace, driven both via a direct lifetxt.mcp.McpContext/call_tool script and the real installed lifetxt CLI: stage_proposal(kind=N, details={person: self, tag: preference}) staged correctly; proposal list/accept produced exactly the output now documented; the accepted life.txt line, including the W102 non-blocking status hint from lifetxt check/search (stage_proposal has no status argument, so a staged Note always lands with the default open status), was captured and reproduced byte-for-byte in both English and Japanese documentation rather than presented as illustrative"
+      - "live: lifetxt search and lifetxt query against the accepted record both returned the fact with no new tooling"
+      - 'scripts/validate_release_docs.py -> ok true'
+      - manual balanced-code-fence check on both documents after editing
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/503
+      - https://github.com/Eruhitsuji/lifetxt/issues/515
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #503 (a 10-question Personal Context Engine / Personal DB
+      investigation under the #500 epic) concluded that no new record
+      kind, Format key, Query field, workspace role, or schema is required
+      for a first Personal Context slice: `N` already accepts arbitrary
+      preserved custom detail keys; `person:` is already general-purpose
+      (not Status-only), so no new `subject:` field is adopted; `source:`
+      is reused as-is for provenance; `temporal_context()`'s existing
+      staleness formula already generalizes to any item carrying an
+      `updated:` detail; and `stage_create()` has no kind restriction, so
+      an AI-suggested personal fact stages as an ordinary create proposal
+      today. Per an explicit owner decision recorded on #503, no new
+      custom key (assertion, confidence, etc.) is added to
+      `lifetxt/query.py`'s `CUSTOM_DETAIL_FIELDS` allowlist for this slice
+      -- personal-context keys stay freeform and unqueried-by-name
+      (Q001-reported, not rejected) until real usage justifies promotion,
+      matching the bar `area`/`record`/`severity` already met. #515
+      implements #503's "recommend exactly one smallest first
+      implementation slice" deliverable as documentation only, per the
+      owner-approved "Personal AI Memory" selection: an explicit
+      preference/goal captured from conversation, staged via
+      `stage_proposal`, reviewed via existing `proposal accept`/`reject`,
+      retrievable via existing `search`/`query`/`list_items`/`get_item` --
+      zero production code change. While verifying the worked example
+      live, found and corrected two inaccuracies in the original draft
+      before publishing: the serialized line format (quoted title, no
+      underscore-joining) did not match actual serializer output, and a
+      claimed automatic `updated:` detail is not actually set by anything
+      -- staleness applies only once one is added (manually, or via a
+      later edit), which the published documentation now states directly.
+      Also found and documented, rather than silently working around,
+      that `stage_proposal` has no `status` argument, so every staged
+      Note triggers a harmless non-blocking W102 validator hint
+      recommending `[N]` status; fixing that tool argument gap is an
+      out-of-scope, unfiled candidate follow-up, not something this
+      docs-only task should absorb.
     replacement:
       replaces: []
       replaced_by: null

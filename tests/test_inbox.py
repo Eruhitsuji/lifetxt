@@ -244,5 +244,104 @@ class InboxTests(unittest.TestCase):
         self.assertNotIn("event_line", result)
 
 
+class InboxIdempotencyTests(unittest.TestCase):
+    """stage_create()'s optional idempotency_key (#512/#514).
+
+    Without a key, this project's existing behavior is unchanged: retrying
+    stage_create() with identical arguments still creates a second, distinct
+    proposal (this is the exact duplicate-staging gap #512 found, and is
+    preserved here as a locked-in baseline rather than silently fixed by
+    making the key mandatory).
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = os.path.join(self.temp.name, "proposals.json")
+        self.target = os.path.join(self.temp.name, "life.txt")
+        self.config = {
+            "inbox": {"proposals_file": self.store},
+            "write_file": self.target,
+        }
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_omitting_the_key_preserves_todays_duplicate_staging_behavior(self):
+        inbox.stage_create(self.config, "Buy milk", details={"project": "home"})
+        inbox.stage_create(self.config, "Buy milk", details={"project": "home"})
+
+        proposals = inbox.list_proposals(self.config)
+        self.assertEqual(2, len(proposals))
+        self.assertNotEqual(proposals[0]["id"], proposals[1]["id"])
+
+    def test_repeating_the_same_key_and_content_does_not_duplicate(self):
+        first = inbox.stage_create(
+            self.config,
+            "Buy milk",
+            details={"project": "home"},
+            idempotency_key="retry-1",
+        )
+        second = inbox.stage_create(
+            self.config,
+            "Buy milk",
+            details={"project": "home"},
+            idempotency_key="retry-1",
+        )
+
+        self.assertEqual(first["id"], second["id"])
+        self.assertEqual(1, len(inbox.list_proposals(self.config)))
+
+    def test_repeating_the_key_with_different_content_fails_loudly(self):
+        inbox.stage_create(self.config, "Buy milk", idempotency_key="retry-1")
+
+        with self.assertRaises(ValueError) as caught:
+            inbox.stage_create(self.config, "Buy bread", idempotency_key="retry-1")
+
+        self.assertIn("retry-1", str(caught.exception))
+        self.assertEqual(1, len(inbox.list_proposals(self.config)))
+
+    def test_key_is_persisted_on_the_proposal_record(self):
+        proposal = inbox.stage_create(
+            self.config, "Buy milk", idempotency_key="retry-1"
+        )
+        self.assertEqual("retry-1", proposal["idempotency_key"])
+
+        no_key = inbox.stage_create(self.config, "Buy bread")
+        self.assertEqual("", no_key["idempotency_key"])
+
+    def test_reusing_a_key_after_the_original_was_accepted_returns_it_unchanged(self):
+        first = inbox.stage_create(self.config, "Buy milk", idempotency_key="retry-1")
+        inbox.accept(self.config, first["id"], self.target)
+
+        second = inbox.stage_create(self.config, "Buy milk", idempotency_key="retry-1")
+
+        self.assertEqual(first["id"], second["id"])
+        self.assertEqual("accepted", second["status"])
+        self.assertEqual(1, len(inbox.list_proposals(self.config)))
+
+    def test_mcp_stage_proposal_tool_forwards_the_key(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        context = McpContext(
+            paths=[self.target],
+            writable_path=self.target,
+            config=self.config,
+            read_only=False,
+        )
+        first = call_tool(
+            "stage_proposal",
+            {"title": "Buy milk", "idempotency_key": "retry-1"},
+            context,
+        )
+        second = call_tool(
+            "stage_proposal",
+            {"title": "Buy milk", "idempotency_key": "retry-1"},
+            context,
+        )
+
+        self.assertEqual(first["proposal"]["id"], second["proposal"]["id"])
+        self.assertEqual(1, len(inbox.list_proposals(self.config)))
+
+
 if __name__ == "__main__":
     unittest.main()

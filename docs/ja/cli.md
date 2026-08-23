@@ -1484,6 +1484,21 @@ default で到達不能です。`--read-only` は `--profile read` と同じ意�
 `--read-only` と別の `--profile` を同時に指定すると拒否されます。詳細は
 `docs/ja/ai-integration.md` の Section 6 を参照してください。
 
+`--no-open-world` は outbound な network call を行う tool（`remote_test_connection`、
+`remote_list_resources`、`remote_get_resource`）を `--profile` に関わらずすべて拒否します。
+どの profile とも独立しており、組み合わせて使えます -- 接続した client を local workspace のみに
+sandbox し、network への到達を一切許可したくない場合に使ってください:
+
+```sh
+python -m lifetxt mcp life.txt --profile read --no-open-world
+```
+
+`--profile` および `resources/list`/`resources/read` が制御するのは到達可能な *tool*/resource
+だけであり、到達可能な tool が返す *data* は制御しません -- read-only tool と resource はどれも
+profile に関わらず起動時に読み込んだ全 source の完全な raw content を返します。client に見える
+data を制限したい場合は `--profile` ではなく named workspace を使ってください。詳細は
+`docs/ja/ai-integration.md` の Section 6-7 を参照してください。
+
 主な tool は `list_items`、`get_item`、`check_line`、`parse_item`、
 `create_item`、`update_item`、`mark_done`、`complete_item`、`delete_item`、`get_agenda`、
 `get_review`(`review --format json` / `GET /api/review` と同形の週次・月次

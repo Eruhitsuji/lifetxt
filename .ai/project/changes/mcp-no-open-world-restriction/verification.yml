@@ -1,0 +1,63 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_mcp_expansion.McpNoOpenWorldTests
+      requirement_ids:
+        - req-mcp-no-open-world-flag
+      result: 'Ran 10 tests -- OK'
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_mcp_expansion
+      requirement_ids:
+        - req-mcp-no-open-world-flag
+      result: 'Ran 139 tests -- OK (no regression in the pre-existing McpPermissionProfileTests or any other suite in the module)'
+      status: passed
+    - type: manual
+      command: >-
+        live: real `lifetxt mcp /tmp/mcp_smoke_life.txt --no-open-world
+        --profile full` stdio session driven with real JSON-RPC lines
+        (tools/list, tools/call for remote_test_connection and
+        remote_list_profiles)
+      requirement_ids:
+        - req-mcp-no-open-world-flag
+      result: >-
+        tools/list returned 84 tools with remote_test_connection absent and
+        remote_list_profiles present; a direct tools/call for
+        remote_test_connection returned error code -32000 with message
+        "Tool 'remote_test_connection' is an open-world tool (makes an
+        outbound network call) and is disabled by --no-open-world."; a
+        direct tools/call for remote_list_profiles succeeded normally
+      status: passed
+    - type: static
+      command: python -m unittest tests.test_release_policy tests.test_surface_runtime
+      requirement_ids:
+        - req-mcp-open-world-doc-corrections
+      result: 'Ran 32 tests -- OK (no translation-coverage or drift-gate regression)'
+      status: passed
+    - type: static
+      command: scripts/validate_release_docs.py
+      requirement_ids:
+        - req-mcp-open-world-doc-corrections
+      result: '{"errors": 0, "ok": true}'
+      status: passed
+    - type: static
+      command: ruff format --check / ruff check lifetxt/mcp.py lifetxt/cli.py tests/test_mcp_expansion.py
+      requirement_ids:
+        - req-mcp-no-open-world-flag
+      result: clean
+      status: passed
+    - type: static
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-mcp-no-open-world-flag
+        - req-mcp-open-world-doc-corrections
+      result: 'OK: 10 item(s)'
+      status: passed
+
+pending:
+  - description: >-
+      Independent security review and Merge Authority approval, per this
+      change's own human_approvals_required.
+    owner: Eruhitsuji

@@ -1691,7 +1691,29 @@ python -m lifetxt ai setup generic life.txt --format json
 target. `--format json` returns `{"command": [...], "mcp_client_config":
 {...}}` instead of formatted text.
 
-### 11.3 `ai doctor`
+### 11.3 `ai setup claude` / `ai setup gemini`
+
+Provider-specific variants of `ai setup generic`, printing the same
+`mcpServers` configuration plus each provider's own config file location and
+CLI-driven setup command. Both write nothing; they only print/copy. Neither
+changes MCP domain authorization -- they differ only in command/config syntax.
+
+```sh
+python -m lifetxt ai setup claude life.txt
+python -m lifetxt ai setup gemini life.txt --profile assist
+```
+
+`ai setup claude` prints the `claude_desktop_config.json` path for each OS
+(macOS, Windows, Linux), the `.mcp.json` project-scope path, and the
+equivalent `claude mcp add --transport stdio ...` command.
+
+`ai setup gemini` prints the Gemini CLI `settings.json` path for both user and
+project scope, and the equivalent `gemini mcp add ...` command.
+
+Both accept the same `--write-file`, `--profile` (default `read`), and
+`--format text|json` flags as `ai setup generic`.
+
+### 11.4 `ai doctor`
 
 Check whether the workspace will load and resolve a write target cleanly
 for a direct MCP connection. Writes nothing.

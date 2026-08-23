@@ -753,6 +753,68 @@ def build_parser():
     )
     ai_setup_generic.set_defaults(func=command_ai_setup_generic)
 
+    ai_setup_claude = ai_setup_subparsers.add_parser(
+        "claude",
+        help=(
+            "Print Claude Desktop and Claude Code setup information "
+            "for the current workspace. Writes nothing."
+        ),
+    )
+    ai_setup_claude.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to reference. Defaults to life.txt or config paths.",
+    )
+    ai_setup_claude.add_argument(
+        "--write-file",
+        help="File the printed command uses as its write target.",
+    )
+    ai_setup_claude.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default="read",
+        help="Permission profile to emit. Defaults to 'read'.",
+    )
+    ai_setup_claude.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_setup_claude.set_defaults(func=command_ai_setup_claude)
+
+    ai_setup_gemini = ai_setup_subparsers.add_parser(
+        "gemini",
+        help=(
+            "Print Gemini CLI setup information for the current "
+            "workspace. Writes nothing."
+        ),
+    )
+    ai_setup_gemini.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to reference. Defaults to life.txt or config paths.",
+    )
+    ai_setup_gemini.add_argument(
+        "--write-file",
+        help="File the printed command uses as its write target.",
+    )
+    ai_setup_gemini.add_argument(
+        "--profile",
+        choices=["read", "assist", "full"],
+        default="read",
+        help="Permission profile to emit. Defaults to 'read'.",
+    )
+    ai_setup_gemini.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format. Defaults to text.",
+    )
+    ai_setup_gemini.set_defaults(func=command_ai_setup_gemini)
+
     ai_doctor = ai_subparsers.add_parser(
         "doctor",
         help=(
@@ -5193,12 +5255,13 @@ def command_mcp(args):
     return cmd_mcp(args)
 
 
-def command_ai_setup_generic(args):
-    """Print the `lifetxt mcp` command and a generic MCP client
-    configuration for the current workspace. Never writes a file: path
-    resolution reuses the same pure helpers `lifetxt mcp` itself uses,
-    rather than constructing an McpContext (which can trigger a
-    transaction startup preflight for non-read profiles)."""
+def _ai_setup_command_and_config(args):
+    """Resolve the `lifetxt mcp` command args and the standard
+    `mcpServers`-shaped config dict shared by every `ai setup <provider>`
+    variant. Never writes a file: path resolution reuses the same pure
+    helpers `lifetxt mcp` itself uses, rather than constructing an
+    McpContext (which can trigger a transaction startup preflight for
+    non-read profiles)."""
     from .paths import resolve_write_target
 
     config = _config(args)
@@ -5238,6 +5301,22 @@ def command_ai_setup_generic(args):
             )
         ]
     )
+    return command_args, mcp_config, profile
+
+
+def _ai_setup_profile_line(profile):
+    return "Profile: %s%s" % (
+        profile,
+        " (default; use --profile assist|full for more access)"
+        if profile == "read"
+        else "",
+    )
+
+
+def command_ai_setup_generic(args):
+    """Print the `lifetxt mcp` command and a generic MCP client
+    configuration for the current workspace. Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
 
     if args.format == "json":
         payload = OrderedDict(
@@ -5256,13 +5335,106 @@ def command_ai_setup_generic(args):
         "Generic MCP client configuration:",
         json.dumps(mcp_config, ensure_ascii=False, indent=2),
         "",
-        "Profile: %s%s"
-        % (
-            profile,
-            " (default; use --profile assist|full for more access)"
-            if profile == "read"
-            else "",
-        ),
+        _ai_setup_profile_line(profile),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+CLAUDE_DESKTOP_CONFIG_PATHS = OrderedDict(
+    [
+        ("macos", "~/Library/Application Support/Claude/claude_desktop_config.json"),
+        ("windows", "%APPDATA%\\Claude\\claude_desktop_config.json"),
+        ("linux", "~/.config/claude-desktop/claude_desktop_config.json"),
+    ]
+)
+
+GEMINI_SETTINGS_PATHS = OrderedDict(
+    [
+        ("user", "~/.gemini/settings.json"),
+        ("project", ".gemini/settings.json"),
+    ]
+)
+
+
+def command_ai_setup_claude(args):
+    """Print Claude Desktop and Claude Code setup information for the
+    current workspace. Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
+    claude_code_command = [
+        "claude",
+        "mcp",
+        "add",
+        "--transport",
+        "stdio",
+        "lifetxt",
+        "--",
+        "python",
+    ] + command_args
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+                ("claude_desktop_config_paths", CLAUDE_DESKTOP_CONFIG_PATHS),
+                ("claude_code_project_config_path", ".mcp.json"),
+                ("claude_code_add_command", claude_code_command),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Claude Desktop:",
+        "  Merge this into mcpServers in claude_desktop_config.json:",
+        "    macOS:   %s" % CLAUDE_DESKTOP_CONFIG_PATHS["macos"],
+        "    Windows: %s" % CLAUDE_DESKTOP_CONFIG_PATHS["windows"],
+        "    Linux:   %s" % CLAUDE_DESKTOP_CONFIG_PATHS["linux"],
+        "",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "Claude Code:",
+        "  Add the same JSON to .mcp.json in your project root (commit it to share"
+        " with your team), or run:",
+        "    " + " ".join(claude_code_command),
+        "",
+        _ai_setup_profile_line(profile),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_ai_setup_gemini(args):
+    """Print Gemini CLI setup information for the current workspace.
+    Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
+    gemini_add_command = ["gemini", "mcp", "add", "lifetxt", "python"] + command_args
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+                ("gemini_settings_paths", GEMINI_SETTINGS_PATHS),
+                ("gemini_mcp_add_command", gemini_add_command),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Gemini CLI:",
+        "  Merge this into mcpServers in settings.json:",
+        "    User scope:    %s" % GEMINI_SETTINGS_PATHS["user"],
+        "    Project scope: %s" % GEMINI_SETTINGS_PATHS["project"],
+        "",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "  Or run:",
+        "    " + " ".join(gemini_add_command),
+        "",
+        _ai_setup_profile_line(profile),
     ]
     write_text(None, "\n".join(lines) + "\n")
     return 0

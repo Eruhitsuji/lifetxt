@@ -280,6 +280,12 @@ def build_parser():
         action="store_true",
         help="Also verify file:/dir: content hashes. Reads every referenced file.",
     )
+    integrity.add_argument(
+        "--profile",
+        choices=("default", "strict"),
+        default="default",
+        help="Severity profile for effective_severity mapping.",
+    )
     integrity.set_defaults(func=command_integrity)
 
     ids_command = subparsers.add_parser(
@@ -3881,15 +3887,29 @@ def command_check(args):
 
 def command_integrity(args):
     from .integrity import (
+        build_integrity_plan,
         build_integrity_report,
         format_integrity_text,
+        integrity_plan_to_json,
         integrity_report_to_json,
     )
 
+    paths = list(args.paths or [])
+    if paths and paths[0] == "plan":
+        plan = build_integrity_plan(
+            paths[1:],
+            config=_config(args),
+            verify_files=getattr(args, "verify_files", False),
+            profile=getattr(args, "profile", "default"),
+        )
+        write_text(None, integrity_plan_to_json(plan))
+        return 0
+
     report = build_integrity_report(
-        args.paths,
+        paths,
         config=_config(args),
         verify_files=getattr(args, "verify_files", False),
+        profile=getattr(args, "profile", "default"),
     )
     if getattr(args, "json", False):
         write_text(None, integrity_report_to_json(report))

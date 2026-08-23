@@ -1,0 +1,72 @@
+schema_version: 1
+
+change:
+  id: mcp-no-open-world-restriction
+  title: "--no-open-world MCP restriction, independent of permission profile"
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+  related_pull_request: []
+  base_commit: 83d6bd26a457deec2a23103a2cf64ab73ed121ad
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a `--no-open-world` flag to `lifetxt mcp`, independent of and
+      combinable with `--profile`/`--read-only`.
+    - Deny every `OPEN_WORLD_TOOLS` member (`remote_test_connection`,
+      `remote_list_resources`, `remote_get_resource`) at both `tools/list`
+      (not advertised) and `tools/call` (denied with a distinct error naming
+      the restriction) when the flag is set, regardless of what the active
+      profile's own allowlist would otherwise permit.
+    - Extend `filter_tool_schemas_for_profile()` with an additional,
+      independent `no_open_world` parameter defaulting to `False` (no change
+      to any existing caller that omits it).
+    - Extend `_require_tool_allowed_for_profile()` with the same check,
+      evaluated before the existing profile-allowlist check so the denial
+      reason is accurate (an open-world tool already permitted by `read`
+      needs its own distinct message, not the generic profile-denial one).
+    - English and Japanese documentation of the new flag in
+      `docs/en/ai-integration.md`/`docs/ja/ai-integration.md` (sections 6
+      and 8) and `docs/en/cli.md`/`docs/ja/cli.md` (the `mcp` command
+      reference), correcting two pre-existing documentation inaccuracies
+      found while updating this section (`"no outbound calls"` and `"not
+      yet implemented" disclosure layer, both already contradicted by
+      already-shipped behavior).
+  out_of_scope:
+    - Removing `remote_*` from `READ_ONLY_TOOLS`/`OPEN_WORLD_TOOLS` (both
+      classifications stay correct and unchanged).
+    - Any change to Remote Safe Mode's own server-side authorization.
+    - >-
+      Any change to `resources/list`/`resources/read` (tracked separately
+      in the `mcp-resources-disclosure-documentation` follow-up (issue
+      #544), documentation-only).
+    - Provider-specific (ChatGPT/Claude/Gemini) policy logic.
+  write_scope:
+    - lifetxt/mcp.py
+    - lifetxt/cli.py
+    - tests/test_mcp_expansion.py
+    - docs/en/ai-integration.md
+    - docs/ja/ai-integration.md
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/changes/mcp-no-open-world-restriction/
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - lifetxt/workspace.py
+    - lifetxt/webapp.py
+    - lifetxt/remote_access.py
+    - lifetxt/remote_backend.py
+    - lifetxt/mcp_resources.py
+    - .ai/managed/**
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and security review (High assurance minimum,
+    per ASSURANCE_LEVELS.md; this changes the MCP server's authorization
+    boundary, matching cap-mcp-permission-profiles' own established basis)
+  - Merge Authority approval before this branch's work merges into main

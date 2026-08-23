@@ -1,0 +1,55 @@
+schema_version: 1
+
+requirements:
+  - id: req-mcp-no-open-world-flag
+    statement: >-
+      lifetxt mcp accepts an opt-in --no-open-world flag, independent of and
+      combinable with --profile/--read-only, that denies every OPEN_WORLD_TOOLS
+      member regardless of what the active profile's allowlist would otherwise
+      permit.
+    source: "#543 (MCP Disclosure Policy investigation, section D), #545"
+    acceptance_criteria:
+      - lifetxt mcp --no-open-world (any profile) denies remote_test_connection/remote_list_resources/remote_get_resource at both tools/list (not advertised) and tools/call (denied with a distinct error naming --no-open-world).
+      - remote_list_profiles (not OPEN_WORLD_TOOLS) remains allowed under --no-open-world when the active profile would otherwise permit it.
+      - Every existing profile behavior (read/assist/full, --read-only) is unaffected when --no-open-world is not given.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+    status: implemented
+
+  - id: req-mcp-open-world-doc-corrections
+    statement: >-
+      docs/en+ja/ai-integration.md and docs/en+ja/cli.md document
+      --no-open-world and correct two pre-existing inaccuracies found while
+      updating the same section: the claim that the MCP server makes "no
+      outbound calls" (contradicted by the already-shipped remote_* tools),
+      and the claim that workspace/disclosure policy is "not yet implemented"
+      (contradicted by the already-shipped named-workspace pattern, #509).
+    source: "#543 section C, #545"
+    acceptance_criteria:
+      - Section 6 of both ai-integration.md files states the outbound-call exception and points to --no-open-world.
+      - Section 8 of both ai-integration.md files cross-references --no-open-world for the four remote_* tools.
+      - Both ai-integration.md files correct the "workspace/disclosure policy is not yet implemented" claim to point at the already-shipped named-workspace pattern (section 7).
+      - Both cli.md files document --no-open-world in the mcp command reference.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
+    status: implemented
+
+decision_log:
+  - question: "Should --no-open-world be a new profile value, or an independent flag combinable with any profile?"
+    decision: "Independent, combinable flag, not a fourth profile value."
+    reasoning: >-
+      #543 found OPEN_WORLD_TOOLS is already an orthogonal classification
+      from READ_ONLY_TOOLS (three of four remote_* tools are members of
+      both). A fourth profile enum value would force operators to choose
+      between "read-only" and "no-network" instead of combining them, and
+      would require duplicating every existing profile's tool set under a
+      new name. An independent flag preserves _profile_allowed_tools()'s
+      existing semantics completely unchanged and adds one orthogonal
+      filter, matching this repository's established preference for
+      additive/opt-in changes over restructuring an existing enum.
+  - question: "Where should the no_open_world check run relative to the existing profile-allowlist check in _require_tool_allowed_for_profile()?"
+    decision: "Before the profile check, so it always produces its own distinct, accurate error message."
+    reasoning: >-
+      remote_* tools are already READ_ONLY_TOOLS members, so under read/assist
+      the profile-allowlist check alone would never deny them -- only the new
+      no_open_world check does. Checking it first guarantees a client always
+      sees the accurate reason (open-world tool, not permission profile) for
+      any combination of profile + --no-open-world.

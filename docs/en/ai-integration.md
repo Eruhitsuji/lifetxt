@@ -457,19 +457,36 @@ can do. `--read-only` keeps working exactly as before and is equivalent to
 rejected as a conflicting request. MCP tool annotations (`readOnlyHint`, etc.)
 are descriptive only and are never used to decide what a profile allows.
 
-Permission profiles control which *tools* are reachable. They do not yet
-control which *workspace sources or records* are visible to a client -- that
-is a separate, not-yet-implemented workspace/disclosure layer.
+Permission profiles control which *tools* are reachable, not which *data* a
+reachable tool returns. `resources/list`/`resources/read` are unaffected by
+`--profile` entirely, and every read-only tool returns the full raw content of
+every source loaded at startup regardless of profile -- `read`/`assist`/`full`
+all see identical data, differing only in which tools they may call. The
+actual disclosure boundary is which sources you load the server with in the
+first place; use a [named workspace](#7-ai-safe-workspaces) to limit what data
+is visible to a client, not `--profile`.
 
 Read tools still work under every profile, so a model can summarise and plan
 without being able to change anything beyond what its profile allows.
 
-The server is local and stdio-only:
+The server is local and stdio-only, with one exception:
 
-- no network listener, no telemetry, no outbound calls
-- the file never leaves the machine unless your MCP client sends it to a model
-- a local model (Ollama, LM Studio, llama.cpp) with an MCP-capable client keeps
-  the whole loop offline
+- no network listener, no telemetry
+- no outbound calls from ordinary tools -- with the exception of the four
+  `remote_*` tools ([Section 8](#8-remote-safe-mode-client-tools)), which
+  make an outbound HTTPS request to a configured Remote Safe Mode server when
+  called. Add `--no-open-world` to deny these regardless of `--profile` if you
+  want a guarantee that a connected client cannot reach the network at all:
+
+  ```sh
+  python -m lifetxt mcp --profile read --no-open-world life.txt
+  ```
+
+- the file never leaves the machine unless your MCP client sends it to a model,
+  or you connect it with `--no-open-world` omitted and it calls a `remote_*`
+  tool
+- a local model (Ollama, LM Studio, llama.cpp) with an MCP-capable client and
+  `--no-open-world` keeps the whole loop offline
 
 Because `life.txt` is plain text, you can always audit exactly what changed:
 
@@ -563,6 +580,11 @@ Use them when the AI client is local but the authoritative workspace is on a
 different machine. For writes, use the CLI remote write flow with an explicit
 proposal and confirmation; MCP exposes only the Remote Safe Mode read-client
 slice.
+
+These four tools are the only ones that make an outbound network call.
+Start the server with `--no-open-world` to deny all four regardless of
+`--profile` -- see [Section 6](#6-permission-profiles-and-privacy) -- when you
+want a client sandboxed to the local workspace with no network reach at all.
 
 ---
 

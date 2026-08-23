@@ -7694,7 +7694,7 @@ traceability:
       capability_id: cap-daily-command-center
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/508
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/542
       changed_files_or_scope:
         - Derive TicketAttentionTests.test_configurable_stale_after_days_reaches_the_engine's fixture "yesterday" date from reference_time(None).date() (UTC) instead of the local wall-clock datetime.date.today()
         - tests/test_life_hub.py

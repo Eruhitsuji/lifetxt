@@ -418,17 +418,34 @@ read/write のどちらにも明示的に分類されていない tool は、`re
 annotation (`readOnlyHint` など) はあくまで説明用であり、どの profile が何を許可するかの判断には
 使われません。
 
-permission profile が制御するのは到達可能な *tool* だけです。どの workspace source や record が
-見えるかという *disclosure* のレイヤーはまだ実装されておらず、別の課題として残っています。
+permission profile が制御するのは到達可能な *tool* だけであり、到達可能な tool がどの *data* を
+返すかは制御しません。`resources/list`/`resources/read` は `--profile` の影響を一切受けず、
+read-only tool はどれも profile に関わらず起動時に読み込んだ全 source の完全な raw content を
+返します -- `read`/`assist`/`full` はどれも同じ data を見ており、違うのは呼び出せる tool だけです。
+実際の disclosure 境界は、そもそも server にどの source を読み込ませるかです。client に見える
+data を制限したい場合は `--profile` ではなく [named workspace](#7-ai-safe-workspaces) を使って
+ください。
 
 read tool はどの profile でも動作するので、model は自分の profile が許す範囲を超えて変更すること
 なく、要約や計画を作れます。
 
-server は local かつ stdio-only です。
+server は local かつ stdio-only です。ただし 1 つ例外があります。
 
-- network listener、telemetry、outbound calls はない
-- MCP client が model に送らない限り、file は machine から出ない
-- local model (Ollama、LM Studio、llama.cpp) と MCP-capable client を使えば loop 全体を offline に保てる
+- network listener、telemetry はない
+- 通常の tool からの outbound call はない -- ただし
+  [Section 8](#8-remote-safe-mode-client-tools) の 4 つの `remote_*` tool は例外で、呼び出されると
+  設定済みの Remote Safe Mode server へ outbound な HTTPS request を送ります。接続した client が
+  network に一切到達できないことを保証したい場合は、`--profile` に関わらずこれらを拒否する
+  `--no-open-world` を付けてください:
+
+  ```sh
+  python -m lifetxt mcp --profile read --no-open-world life.txt
+  ```
+
+- MCP client が model に送るか、`--no-open-world` を付けずに `remote_*` tool を呼び出さない限り、
+  file は machine から出ない
+- local model (Ollama、LM Studio、llama.cpp) と MCP-capable client に `--no-open-world` を組み合わ
+  せれば loop 全体を offline に保てる
 
 `life.txt` は plain text なので、何が変わったかは常に audit できます。
 
@@ -509,6 +526,10 @@ MCP server は、Remote Safe Mode で動く別の lifetxt server の read-only c
 `remote_get_resource` は query parameters を server resource に渡します。そのため model は CLI remote client と同じ filtered slice を要求できます。permission enforcement は remote server 上の principal に従います。MCP tool は Remote Safe Mode を迂回しません。
 
 これら 4 tools は MCP client から見て read-only です。設定済み remote URL へ HTTP request は行いますが、remote `life.txt` は mutate しません。AI client は local にあり、authoritative workspace が別 machine にある場合に使います。write は MCP ではなく CLI remote write flow で、proposal と explicit confirmation を伴って行ってください。
+
+outbound な network call を行う tool はこの 4 つだけです。client を local workspace のみに
+sandbox し、network への到達を一切許可したくない場合は、`--profile` に関わらずこの 4 つを拒否する
+`--no-open-world` を付けて server を起動してください（[Section 6](#6-permission-profiles-and-privacy) 参照）。
 
 ---
 

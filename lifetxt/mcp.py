@@ -84,6 +84,7 @@ class McpContext:
         config=None,
         read_only=False,
         profile=None,
+        no_open_world=False,
         remote_principal=None,
         remote_session=None,
     ):
@@ -103,6 +104,14 @@ class McpContext:
                 % (profile, ", ".join(MCP_PROFILES))
             )
         self.profile = profile
+        # Independent of profile/read_only by design (#543/#545): denies
+        # every OPEN_WORLD_TOOLS member (a tool that makes an outbound
+        # network call) regardless of what the active profile's allowlist
+        # would otherwise permit, so an operator can sandbox a client to
+        # local workspace data only, with no reach to configured remote
+        # profiles -- a property "read"/"assist"/"full" alone cannot
+        # express, since remote_* tools are READ_ONLY_TOOLS members too.
+        self.no_open_world = bool(no_open_world)
         # read_only derives from profile so every existing per-tool write
         # guard (_require_writable) keeps enforcing "read" as defense in
         # depth, in addition to the profile-dispatch filtering below.
@@ -162,6 +171,7 @@ class McpContext:
             config=config,
             read_only=bool(getattr(args, "read_only", False)),
             profile=getattr(args, "profile", None),
+            no_open_world=bool(getattr(args, "no_open_world", False)),
         )
 
 
@@ -228,7 +238,9 @@ def handle_request(request, context):
             return _jsonrpc_result(request_id, {})
         if method == "tools/list":
             schemas = filter_tool_schemas_for_profile(
-                tool_schemas(), getattr(context, "profile", None)
+                tool_schemas(),
+                getattr(context, "profile", None),
+                getattr(context, "no_open_world", False),
             )
             return _jsonrpc_result(request_id, {"tools": schemas})
         if method == "tools/call":
@@ -278,6 +290,11 @@ def _profile_allowed_tools(profile):
 
 
 def _require_tool_allowed_for_profile(name, context):
+    if getattr(context, "no_open_world", False) and name in OPEN_WORLD_TOOLS:
+        raise ValueError(
+            "Tool '%s' is an open-world tool (makes an outbound network "
+            "call) and is disabled by --no-open-world." % name
+        )
     profile = getattr(context, "profile", None)
     allowed = _profile_allowed_tools(profile)
     if allowed is not None and name not in allowed:
@@ -395,8 +412,9 @@ def tool_schemas():
     return [_annotate(schema) for schema in _tool_schemas()]
 
 
-def filter_tool_schemas_for_profile(schemas, profile):
-    """Filter an already-built schema list down to profile's allowlist.
+def filter_tool_schemas_for_profile(schemas, profile, no_open_world=False):
+    """Filter an already-built schema list down to profile's allowlist,
+    then optionally further exclude OPEN_WORLD_TOOLS (#545).
 
     Kept separate from tool_schemas() itself: several other modules wrap
     lifetxt.mcp.tool_schemas at import time to append their own tools (see
@@ -408,12 +426,23 @@ def filter_tool_schemas_for_profile(schemas, profile):
     at call time and each of those modules extends READ_ONLY_TOOLS in place
     when it registers its own tools.
 
-    profile=None or "full" returns schemas unchanged.
+    profile=None or "full" leaves the profile filter unapplied.
+    no_open_world=False (the default) leaves the open-world filter
+    unapplied; True denies every OPEN_WORLD_TOOLS member regardless of
+    what profile already allowed, independent of and combinable with any
+    profile.
     """
     allowed = _profile_allowed_tools(profile)
-    if allowed is None:
-        return schemas
-    return [schema for schema in schemas if schema.get("name") in allowed]
+    result = (
+        schemas
+        if allowed is None
+        else [schema for schema in schemas if schema.get("name") in allowed]
+    )
+    if no_open_world:
+        result = [
+            schema for schema in result if schema.get("name") not in OPEN_WORLD_TOOLS
+        ]
+    return result
 
 
 def _tool_schemas():

@@ -4663,6 +4663,8 @@ capabilities:
       - req-mcp-permission-profiles-fail-closed
       - req-mcp-permission-profiles-defense-in-depth
       - req-mcp-permission-profiles-docs
+      - req-mcp-no-open-world-flag
+      - req-mcp-open-world-doc-corrections
     implementation_locations:
       - lifetxt/mcp.py
       - lifetxt/cli.py
@@ -4673,12 +4675,16 @@ capabilities:
       - docs/ja/cli.md
       - .kiro/specs/mcp-permission-profiles/
       - .ai/project/changes/mcp-permission-profiles/
+      - .ai/project/changes/mcp-no-open-world-restriction/
     public_interfaces:
       - lifetxt mcp --profile read|assist|full
       - lifetxt.mcp.McpContext (profile parameter)
       - lifetxt.mcp._profile_allowed_tools
       - lifetxt.mcp.filter_tool_schemas_for_profile
       - lifetxt.mcp.ASSIST_EXTRA_TOOLS
+      - lifetxt mcp --no-open-world
+      - lifetxt.mcp.McpContext (no_open_world parameter)
+      - lifetxt.mcp.OPEN_WORLD_TOOLS
     tests_or_evidence:
       - "tests/test_mcp_expansion.py McpPermissionProfileTests (27 tests): profile selection/normalization, the --read-only/--profile read equivalence and conflict rejection, the read/assist/full allowlist computation, a synthetic never-classified tool denied under read/assist and allowed under full, annotation-independence, direct call_tool dispatch, and a full tools/list+tools/call stdio round trip per profile including 'a client cannot call a tool it was never shown'"
       - python -m unittest tests.test_mcp_expansion -> Ran 122 tests, OK
@@ -4689,11 +4695,20 @@ capabilities:
       - "live: real lifetxt mcp --profile read|assist|full stdio sessions driven with real JSON-RPC lines against a fixture workspace -- read: 63 tools listed (no stage_proposal/create_item), stage_proposal denied; assist: 64 tools listed (+stage_proposal), stage_proposal succeeds; full: 87 tools listed (+create_item), both succeed; life.txt byte-unchanged by every stage_proposal call"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - "/security-review (research + false-positive-filtering subagents): no qualifying findings -- confirmed the profile check is the sole tool-handler dispatch site, every monkeypatch wrapper falls through to it rather than dispatching TOOL_HANDLERS directly, tools/list and tools/call consult the same allowlist, and McpContext.profile is set once in __init__ with no client-controlled escalation path"
+      - "#545: tests/test_mcp_expansion.py McpNoOpenWorldTests (10 tests): default False and unchanged existing behavior, OPEN_WORLD_TOOLS is a non-empty subset of READ_ONLY_TOOLS, tools/list exclusion under full/read/assist, tools/call denial under full/read with the correct distinct message, direct call_tool() dispatch denial regardless of profile, remote_list_profiles (non-open-world) unaffected, filter_tool_schemas_for_profile's new parameter"
+      - python -m unittest tests.test_mcp_expansion -> Ran 139 tests, OK
+      - "#545: live -- real lifetxt mcp --no-open-world --profile full stdio session: tools/list correctly excluded remote_test_connection while keeping remote_list_profiles listed; a direct tools/call for remote_test_connection returned error -32000 with the exact designed message naming --no-open-world; a direct tools/call for remote_list_profiles succeeded normally"
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/502
+      - https://github.com/Eruhitsuji/lifetxt/issues/543
+      - https://github.com/Eruhitsuji/lifetxt/issues/544
+      - https://github.com/Eruhitsuji/lifetxt/issues/545
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/504
+      - https://github.com/Eruhitsuji/lifetxt/pull/546
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       First implementation child of the #500 "Provider-independent
@@ -4742,6 +4757,46 @@ capabilities:
       (candidate for a later #500 child issue); widening the `assist`
       allowlist beyond `stage_proposal`; workspace/disclosure policy
       (which data is visible, as opposed to which tools are reachable).
+      #543 (a post-#500-completion review investigation) found that MCP
+      resources (`resources/list`/`resources/read`) and the `remote_*`
+      open-world read tools sit outside the operation-policy filter this
+      capability implements, and asked whether that constitutes a
+      disclosure gap. Traced directly against code rather than assumed:
+      **it does not** for resources -- `list_items`/`get_item`/
+      `get_file_state` already return the identical raw source content and
+      local paths under the exact same profile, since local MCP has never
+      applied per-record visibility/privacy filtering (that concept is
+      Remote-Safe-Mode-specific, for a genuinely multi-principal server,
+      confirmed to have no local equivalent scenario). Workspace/source
+      selection at connection time is, and should remain, the sole local
+      disclosure boundary -- already correctly implemented by the AI-safe
+      named-workspace pattern (`cap-mcp-ai-safe-workspace`, #509), not a
+      gap. #544 (documentation-only) records this finding in
+      `docs/en+ja/ai-integration.md`/`cli.md` rather than changing
+      resource behavior. The one genuine, evidenced gap #543 found is a
+      missing third policy dimension alongside operation/data: **network
+      reach**. `remote_*` tools' data is already correctly gated by the
+      *remote* server's own Remote Safe Mode policy, but nothing today
+      lets an operator guarantee a `read`/`assist` client cannot open any
+      outbound connection at all, since three of the four `remote_*`
+      tools are `READ_ONLY_TOOLS` members. #545 closes this with a new,
+      independent, opt-in `--no-open-world` flag (`McpContext.no_open_world`)
+      denying every `OPEN_WORLD_TOOLS` member regardless of profile,
+      enforced at both `tools/list` and `tools/call` via the same
+      dispatch chain #502 already established -- not a fourth profile
+      value, since `OPEN_WORLD_TOOLS` was already an orthogonal
+      classification from `READ_ONLY_TOOLS` before this change (three of
+      four `remote_*` tools already belonged to both sets simultaneously).
+      While rewriting the affected documentation paragraph for #545, two
+      pre-existing inaccuracies were found and corrected in the same
+      edit: the claim that the server makes "no outbound calls" (false
+      since #243's `remote_*` tools shipped) and the claim that
+      workspace/disclosure policy is "not yet implemented" (false since
+      #509 shipped it, documented in the very next section of the same
+      file). Full change package for #545 at
+      `.ai/project/changes/mcp-no-open-world-restriction/`; same
+      independent security review and Merge Authority approval
+      requirement as this capability's original #502 implementation.
     replacement:
       replaces: []
       replaced_by: null

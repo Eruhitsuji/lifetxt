@@ -1654,6 +1654,22 @@ and `assist`, not reachable by default. `--read-only` is equivalent to
 `--profile read`; combining `--read-only` with a different `--profile` is
 rejected. See `docs/en/ai-integration.md` section 6 for the full model.
 
+`--no-open-world` denies every tool that makes an outbound network call
+(`remote_test_connection`, `remote_list_resources`, `remote_get_resource`)
+regardless of `--profile`. It is independent of and combinable with any
+profile -- use it when a connected client must be sandboxed to the local
+workspace with no network reach at all:
+
+```sh
+python -m lifetxt mcp life.txt --profile read --no-open-world
+```
+
+`--profile` and `resources/list`/`resources/read` gate which *tools*/resources
+are reachable, not what data a reachable one returns: every read-only tool and
+resource returns the full raw content of every loaded source regardless of
+profile. Use a named workspace to limit what data is visible to a client, not
+`--profile`; see `docs/en/ai-integration.md` sections 6-7.
+
 The MCP server exposes these tools:
 
 | Tool | Purpose |
@@ -1671,10 +1687,11 @@ The MCP server exposes these tools:
 | `list_messages` / `create_message` / `reply_message` / `ack_message` / `snooze_message` | Work with type `M` messages |
 
 It also exposes `lifetxt://source/N` resources so clients can read the loaded
-source files without writing. Use `--profile read` (or the equivalent
-`--read-only`) to disable all MCP write tools, or `--profile assist` to allow
-only proposal staging. When multiple files are loaded, read tools scan all
-files and write tools modify only `--write-file`.
+source files without writing -- these are unaffected by `--profile`; see
+above. Use `--profile read` (or the equivalent `--read-only`) to disable all
+MCP write tools, or `--profile assist` to allow only proposal staging. When
+multiple files are loaded, read tools scan all files and write tools modify
+only `--write-file`.
 
 ### 11.2 `ai setup generic`
 

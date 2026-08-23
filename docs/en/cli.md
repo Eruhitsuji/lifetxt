@@ -14,6 +14,7 @@ read from standard input.
 
 ```sh
 python -m lifetxt check [path ...]
+python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
@@ -104,6 +105,7 @@ python -m lifetxt remote profile-list
 | Command | Purpose |
 |---|---|
 | `check` | Validate life.txt syntax and semantic warnings |
+| `integrity` | Run a read-only aggregate data-integrity report |
 | `ids` | Audit present, missing, and duplicate item IDs |
 | `links` | Inspect ID-based references between items |
 | `sources` | Report which input file owns each parsed item |
@@ -761,6 +763,32 @@ The report includes source path, line range, selected ID, parent ID, type,
 status, title, indentation level, and detail count. It also runs duplicate-ID
 and reference checks across the same logical input set and prints warnings to
 stderr.
+
+### 3.4 `integrity`
+
+Run a read-only aggregate integrity report over the selected input set. The
+first slice reuses existing parser, validator, duplicate-ID/reference,
+attachment, workspace, and ticket checks where their context is available.
+It does not repair, rewrite, migrate, archive, recover, or delete data.
+
+```sh
+python -m lifetxt integrity [path ...]
+python -m lifetxt integrity life.txt --json
+python -m lifetxt integrity life.txt --verify-files
+```
+
+Options:
+
+| Option | Meaning |
+|---|---|
+| `path ...` | Input life.txt file(s), directory, glob, or configured paths |
+| `--json` | Emit the `integrity-v1` JSON report |
+| `--verify-files` | Verify `file:` / `dir:` hashes in addition to cheap attachment checks |
+
+JSON diagnostics include `severity`, `effective_severity`, `code`,
+`category`, `message`, `hint`, `source_file`, `line`, `column`, `item_id`,
+and `check_state`. Missing files and unavailable optional contexts are reported
+as blocked or skipped checks instead of being silently omitted.
 
 ## 4. Conversion And Rendering
 

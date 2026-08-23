@@ -37,6 +37,53 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-data-integrity-readonly-report
+    name: Read-only data integrity report
+    summary: >-
+      A `lifetxt integrity` CLI command that aggregates existing read-only
+      parser, validator, duplicate-ID/reference, attachment, workspace, and
+      ticket diagnostics into one text or `integrity-v1` JSON report without
+      repairing, rewriting, migrating, archiving, recovering, or deleting user
+      data.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-data-integrity-readonly-report
+    implementation_locations:
+      - lifetxt/integrity.py
+      - lifetxt/cli.py
+      - tests/test_integrity.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .kiro/specs/data-integrity-suite/
+    public_interfaces:
+      - lifetxt integrity
+      - lifetxt integrity --json
+      - lifetxt integrity --verify-files
+      - integrity-v1 JSON report
+    tests_or_evidence:
+      - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 4 tests, OK"
+      - ".venv\\Scripts\\python.exe -m unittest tests.test_lifetxt.LifeTxtCheckLineTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 14 tests, OK"
+      - ".venv\\Scripts\\python.exe -m lifetxt check examples\\minimal_life.txt -> OK 10 item(s)"
+      - ".venv\\Scripts\\python.exe scripts\\validate_release_docs.py --output .cache\\release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+      - ".venv\\Scripts\\ruff.exe check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> All checks passed"
+      - ".venv\\Scripts\\ruff.exe format --check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> 3 files already formatted"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/517
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      First implementation slice from the cc-sdd data-integrity-suite working
+      spec. It deliberately stops at read-only aggregation; repair planning,
+      strict profile severity mapping, source/UID reconciliation, and recovery
+      actions remain separate follow-up issues/tasks. The command exits 0 after
+      producing a report even when diagnostics exist, matching its role as a
+      non-mutating inspection surface rather than a release gate.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-stable-external-verification-preparation
     name: Stable external verification preparation
     summary: >-

@@ -7312,6 +7312,94 @@ traceability:
         _maybe_apply_workspace().
       status: implemented
 
+    - requirement_id: req-mcp-context-revision
+      capability_id: cap-mcp-context-revision
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/513
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
+      changed_files_or_scope:
+        - Reuse lifetxt.remote_backend.source_revision() unmodified to attach a revision field to six local MCP context-read tools
+        - lifetxt/mcp.py
+        - lifetxt/schema_extensions_v7.py
+        - lifetxt/schema_extensions_v24.py
+        - dist/schemas/command-center-v1.schema.json
+        - dist/schemas/temporal-context-v1.schema.json
+        - tests/test_mcp_expansion.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py ContextRevisionTests (7 tests)
+        - python -m unittest tests.test_mcp_expansion -> Ran 129 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 tests.test_surface_runtime tests.test_temporal_context tests.test_temporal_cli tests.test_life_hub tests.test_ticket_project_surfaces tests.test_ticket_workflow_surfaces -> Ran 89 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> ok true'
+      release_or_deployment: null
+      notes: >-
+        Implements investigation #511's recommendation (closing #500 Phase 2
+        item 2's concrete gap without a new shared contract): reuse
+        remote_backend.source_revision() unmodified at the MCP tool
+        boundary only. See cap-mcp-context-revision's own notes for the full
+        rationale and blast-radius discussion.
+      status: implemented
+
+    - requirement_id: req-inbox-proposal-idempotency-key
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/514
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
+      changed_files_or_scope:
+        - Add an optional idempotency_key parameter to stage_create(), persisted on the proposal record, preventing a retried stage_proposal call from creating a duplicate proposal
+        - lifetxt/inbox.py
+        - lifetxt/mcp.py
+        - lifetxt/schema_extensions_v12.py
+        - dist/schemas/inbox-proposal-v1.schema.json
+        - tests/test_inbox.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+      tests_or_evidence:
+        - tests/test_inbox.py InboxIdempotencyTests (6 tests)
+        - python -m unittest tests.test_inbox tests.test_mcp_expansion tests.test_schema_extensions_v2 -> Ran 163 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 5 of the 6 new tests fail against the pre-#514 code, then pass once the fix is restored"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> ok true'
+      release_or_deployment: null
+      notes: >-
+        Implements investigation #512's recommendation: proposal-v1 remains
+        the canonical envelope for MCP's current synchronous use (no new
+        Cloud-Mailbox-shaped fields added preemptively); this task fixes
+        only the concrete, currently-exercisable duplicate-staging gap #512
+        found, independent of that larger envelope question. See
+        cap-unified-inbox-proposals's own notes for the full rationale.
+      status: implemented
+
+    - requirement_id: req-personal-ai-memory-convention-docs
+      capability_id: cap-personal-ai-memory-convention
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/515
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
+      changed_files_or_scope:
+        - Document the Personal AI Memory convention (N kind, person:self, freeform tags, existing proposal lifecycle, existing staleness rule) as the first Personal Context Engine product slice
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - "live, real disposable workspace: the full worked example (stage_proposal, proposal list/accept, search, query) reproduced byte-for-byte in the published documentation"
+        - 'scripts/validate_release_docs.py -> ok true'
+        - manual balanced-code-fence check on both documents
+      release_or_deployment: null
+      notes: >-
+        Implements #503's "recommend exactly one smallest first
+        implementation slice" deliverable, per the owner-approved "Personal
+        AI Memory" selection recorded on #503. Documentation-only; no
+        Format/Query/schema/MCP code change. See
+        cap-personal-ai-memory-convention's own notes for the full account,
+        including two inaccuracies found and corrected in the original
+        draft during live verification.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

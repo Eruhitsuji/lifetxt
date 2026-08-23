@@ -42,6 +42,16 @@ staged します。書き込み先は提案ストアのみで、life.txt には�
 `proposal add` で staged した提案は、いったん保存されると区別が付きません
 — 同じ ID 方式、同じスキーマ、同じレビューフローです。
 
+`stage_proposal`（および内部で使う `stage_create` 関数）は任意の
+`idempotency_key` を受け付けます。指定しない場合、同一呼び出しの再送信
+（例えば MCP の応答が dropped/timeout した後の再試行）は今まで通り 2 つ目の
+独立した提案を staged します。同じ title/kind/details に対して同じ key を
+retry で渡すと、重複を作らず既に staged された提案をそのまま返します。同じ
+key を別内容のリクエストに使い回した場合は、黙って重複作成したり黙って
+一致しない提案を再利用したりせず、大きな声で失敗します（`ValueError`）。
+`proposal add` に対応する flag はありません — command を手で打つ人間は、
+既に実行済みかどうか自分で見えているためです。
+
 `create` は、現時点でどちらの経路も生成する唯一の提案 `operation` です。
 保存されるスキーマの `operation` フィールドは自由記述の文字列です
 （`inbox-proposal-v1` は `proposal-v1` から継承します）が、このコードベースで
@@ -66,6 +76,7 @@ $ lifetxt proposal show P-12471d4d
   "source": "manual",
   "expected_revision": "9a1c...e7f2",
   "staged_target": "life.txt",
+  "idempotency_key": "",
   "changes": [
     {
       "op": "create",
@@ -89,7 +100,8 @@ $ lifetxt proposal show P-12471d4d
 content-hash revision です（ファイルがまだ存在しない場合は sentinel の
 `"<missing>"`）。`provenance` は現時点では上の `source` フィールドを
 そのまま記録するだけです。この2フィールドが承認時にどう使われるかは
-[陳腐化](#陳腐化) を参照してください。
+[陳腐化](#陳腐化) を参照してください。`idempotency_key` は呼び出し側が
+指定しない限り空です。
 
 `proposal show` は常に完全な JSON レコードを表示します。プレーンテキスト形式は
 ありません。`proposal list` の `--status` は `pending`・`accepted`・`rejected`・

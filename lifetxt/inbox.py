@@ -101,6 +101,7 @@ def new_proposal(
     provenance=None,
     proposal_id=None,
     staged_target=None,
+    idempotency_key=None,
 ):
     return OrderedDict(
         (
@@ -110,6 +111,7 @@ def new_proposal(
             ("source", str(source)),
             ("expected_revision", str(expected_revision or "")),
             ("staged_target", str(staged_target) if staged_target else ""),
+            ("idempotency_key", str(idempotency_key) if idempotency_key else ""),
             ("changes", list(changes)),
             ("warnings", list(warnings or [])),
             ("status", "pending"),
@@ -141,12 +143,52 @@ def stage_proposal(config, proposal):
     return proposal
 
 
+def _idempotent_match(proposals, idempotency_key, change):
+    """Find an existing proposal already staged under ``idempotency_key``.
+
+    Returns the matching proposal when its own recorded create-change is
+    identical to ``change`` -- a safe-to-retry duplicate, such as an MCP
+    client resubmitting `stage_proposal` after a dropped/timed-out response.
+    Raises ``ValueError`` when the key was reused for a materially different
+    request rather than silently creating a second proposal or silently
+    reusing a mismatched one, mirroring the
+    ``REMOTE_TRANSACTION_REUSED``/``event_matches`` precedent in
+    :mod:`lifetxt.remote_ticket_write_core`. Returns ``None`` when the key is
+    not registered yet, so the caller should stage a new proposal.
+    """
+    for proposal in proposals:
+        if not proposal.get("idempotency_key"):
+            continue
+        if proposal["idempotency_key"] != idempotency_key:
+            continue
+        if _create_change(proposal) == change:
+            return proposal
+        raise ValueError(
+            "idempotency_key %r was already used to stage a different "
+            "request (existing proposal %r)." % (idempotency_key, proposal.get("id"))
+        )
+    return None
+
+
 def stage_create(
-    config, title, kind="T", details=None, source="manual", warnings=None, status="[ ]"
+    config,
+    title,
+    kind="T",
+    details=None,
+    source="manual",
+    warnings=None,
+    status="[ ]",
+    idempotency_key=None,
 ):
     from .write_operations import snapshot
 
     change = build_create_change(kind=kind, title=title, details=details, status=status)
+    if idempotency_key:
+        existing = _idempotent_match(
+            load_proposals(config), str(idempotency_key), change
+        )
+        if existing is not None:
+            return existing
     target = _default_proposal_target(config)
     revision = snapshot(target, allow_missing=True).content_hash
     provenance = OrderedDict((("source", str(source)),))
@@ -158,6 +200,7 @@ def stage_create(
         expected_revision=revision,
         provenance=provenance,
         staged_target=target,
+        idempotency_key=idempotency_key,
     )
     return stage_proposal(config, proposal)
 

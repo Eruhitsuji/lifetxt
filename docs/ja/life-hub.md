@@ -30,7 +30,9 @@ Buckets:
 - **ticket attention**: `review` status、high severity、または stale な open `record:ticket` items。該当した理由をそれぞれ記録します。`ticket project` report や `temporal` と同じ `severity`/staleness rule を再利用し、別定義は作りません
 - **safety**: configuration-validity の quick signal
 
-同じ aggregation は MCP tool `get_command_center` からも使えます。
+同じ aggregation は MCP tool `get_command_center` からも使えます。この tool
+は `revision` field も持ちます（[ai-integration.md](ai-integration.md#context-revision)
+を参照）。
 
 ## Areas
 
@@ -77,7 +79,8 @@ life.txt へ書き戻すものは何もなく、`depends_on:`/`blocks:` など�
 
 MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。read-only
 で、同じ engine に完全に委譲します。`lifetxt temporal --json` と同一の
-`temporal-context-v1` object を返します。
+`temporal-context-v1` object に加えて `revision` field を返します
+（[ai-integration.md](ai-integration.md#context-revision) を参照）。
 
 ## Projects over MCP
 

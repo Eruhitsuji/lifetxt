@@ -165,6 +165,26 @@ path は absolute path にしてください。client は通常、無関係な w
 | `remote_list_resources` | remote lifetxt server が publish する read-only resources |
 | `remote_get_resource` | `next`、`tickets`、`agenda`、`search` などの permission-filtered remote resource |
 
+### Context revision
+
+`get_command_center`、`get_temporal_context`、`get_next_actions`、
+`get_backlinks`、`get_ticket`、`get_project` はそれぞれ `revision` field を
+持つ。これは全 source file の path と bytes に対する SHA-256 で、Remote Safe
+Mode が各 resource read に既に付与している方法をそのまま再利用したもの
+(`lifetxt.remote_backend.source_revision()` を無改変で再利用しており、
+2 つ目の revision 方式は存在しない)。
+
+これにより、1 つの目的のために複数回これらを呼び出す client -- 例えば
+`explain_item` prompt は 1 つの対象 item に対し最大 6 回呼び出す -- が、
+呼び出しの途中で workspace が変化したことに気付けるようになる。異なる
+時点で読んだ事実を黙って混在させることを防ぐ。現時点では古い revision を
+強制的に拒否する仕組みはなく、client が確認できるよう field を公開している
+だけである。これは Remote の `tickets` resource が今日 1 つの限定的な場合に
+対して行っている `since_revision` と同じ考え方である。`command_center()` や
+`temporal_context()` を直接呼び出すライブラリ呼び出し元(CLI `today`/
+`temporal`、TUI の Today view、Web の `/api/command-center` route)はこの
+field を設定しない -- MCP tool の境界でのみ付与される。
+
 ### Writing
 
 | Tool | Purpose |
@@ -421,3 +441,133 @@ llm "3 tasks for launching the docs site, one per line" \
 `lifetxt check` は landing 前の validation に使えます。`lifetxt q` は MCP server と同じ safe append path を通ります。
 
 CI では `lifetxt review --format markdown` が job summary や pull request comment に適した summary を出力します。
+
+---
+
+## 10. Personal AI Memory
+
+AI との会話から、好みや目標、恒久的な decision のような永続的な personal
+fact を捕捉し、この workspace を読む全ての AI client から再利用できるように
+するための convention です。セッションをまたぐたびに再導出したり忘れたり
+することを防ぎます。これは新しい Format、Query、schema、MCP contract では
+**ありません**。すべて本プロジェクトが既に出荷している仕組みだけで組み立てた
+文書化された pattern であり、Personal Context Engine 調査（#503）が最初の
+スライスとして選定したものです。
+
+### Convention の内容
+
+- **Kind**: `N`（Note）。Note は既に任意の custom detail key を無検査で
+  受け付けます。未知の key は non-blocking な warning を出すだけで保存
+  されます。
+- **Subject**: workspace 所有者自身についての fact には `person:self`、
+  他の誰かについてなら `person:<name>`。`person:` は既に汎用 field であり、
+  特定の record kind 専用ではありません。
+- **Intent tag**: `preference`、`goal`、`decision` のような素の `tag:` 値で、
+  新しい first-class `assertion:`/`category:` 語彙を導入せずに fact の意図を
+  可読にします（下記の
+  [Query semantics は今回拡張しない](#query-semantics-は今回拡張しない)
+  を参照）。
+- **Staleness**: `lifetxt temporal <id>` / MCP `get_temporal_context` を
+  無改変で再利用します。`updated:` detail を持つ任意の item に対し既に
+  「まだ current か?」を答える `stale_since` fact が、personal-context の
+  Note に対しても他の item と全く同様に使えます。
+
+### Lifecycle
+
+```text
+AI conversation
+      |
+      v
+MCP stage_proposal (kind: "N", details: {person: "self", tag: "preference"})
+      |
+      v
+Unified Inbox（pending、review 可能、まだ authoritative ではない）
+      |
+      v
+lifetxt proposal show / accept   <- human review
+      |
+      v
+通常の life.txt N record
+      |
+      v
+lifetxt search / lifetxt query / MCP list_items / get_item
+```
+
+ここに新しいものは何もありません: `stage_proposal` は既に任意の `kind` を
+受け付け、Unified Inbox の review flow（`proposal list` / `show` / `accept` /
+`reject`）は task や ticket の proposal と全く同じように動作し、accept された
+Note は他の item と同じ方法で取得できます。
+
+### 実例
+
+実際の disposable workspace に対して検証済み。以下の command と出力は
+例示ではなく実際に得られたものです。
+
+```json
+{"name": "stage_proposal", "arguments": {
+  "title": "Prefers dark mode in all editors",
+  "kind": "N",
+  "details": {"person": "self", "tag": "preference"}
+}}
+```
+
+```console
+$ lifetxt proposal list
+P-30181d96   [pending ] mcp      [ ] N "Prefers dark mode in all editors" person:self tag:preference
+(1 total: pending=1)
+
+$ lifetxt proposal accept P-30181d96
+Accepted P-30181d96 -> life.txt
+  [ ] N "Prefers dark mode in all editors" person:self tag:preference
+Applied 1/1.
+```
+
+life.txt に書き込まれる accept 後の行:
+
+```text
+[ ] N "Prefers dark mode in all editors" person:self tag:preference
+```
+
+`stage_proposal` には `status` 引数がないため、staged された Note は常に
+既定の `[ ]` status になります。`lifetxt check` はこれを non-blocking な
+W102 hint（Note/Journal には `[N]` を推奨）として報告しますが、record 自体は
+有効であり、上記の通り staging/accept されます。status の修正（および、
+上記の staleness rule を適用したい場合にのみ必要で何も自動設定しない
+`updated:` detail の追加）は通常の `lifetxt proposal edit` や後からの手動編集で
+行うものであり、新しい仕組みではありません。
+
+後で、この workspace を読む任意の AI client は新しい tooling なしにそれを
+取得できます:
+
+```console
+$ lifetxt search "dark mode"
+life.txt:1: WARNING W102: Note type N and journal type J are recommended to use status [N].
+life.txt:1  [ ] N Prefers dark mode in all editors
+
+$ lifetxt query "kind:N person:self tag:preference"
+[ ] N "Prefers dark mode in all editors" person:self tag:preference
+```
+
+```json
+{"name": "search_items", "arguments": {"query": "dark mode"}}
+```
+
+### Query semantics は今回拡張しない
+
+`assertion:`（explicit/observed/inferred/conflicting）、`confidence:`
+のような語彙は、この最初のスライスでは Query 許可リスト
+（`CUSTOM_DETAIL_FIELDS`）に**意図的に追加しません** -- #503 に記録された
+owner 決定です。personal-context の custom key は自由記述のままです:
+`lifetxt query` は未知の field を Q001 warning で報告し、単にそれで
+filter しないだけで、query 自体を拒否はしません。key を first-class Query
+へ昇格させるのは、実際の利用がその継続的な互換性維持コストに見合うと
+分かってからにします。これは `area`/`record`/`severity` が既に満たしている
+のと同じ基準です。
+
+### これは何ではないか
+
+新しい `subject:` field も、既存の `source:` タグを超える構造化された
+provenance モデルも、AI 推論から authoritative な fact への自動昇格も
+ありません -- すべての Personal AI Memory 候補は、他の Unified Inbox
+proposal と全く同じ human review を通過します。この convention の元になった
+調査全体は #503 を参照してください。

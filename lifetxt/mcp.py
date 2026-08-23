@@ -1095,6 +1095,12 @@ def _tool_schemas():
                 "kind": _string("Item type. Default T."),
                 "details": _object("Detail keys such as project, due, assignee."),
                 "source": _string("Proposal source label. Default mcp."),
+                "idempotency_key": _string(
+                    "Optional caller-supplied key. Retrying the identical request "
+                    "with the same key returns the already-staged proposal instead "
+                    "of creating a duplicate; reusing the key for a different "
+                    "request fails loudly."
+                ),
             },
             required=["title"],
         ),
@@ -2676,6 +2682,21 @@ def _namespace(**kwargs):
 # ---------------------------------------------------------------------------
 
 
+def _attach_revision(result, context):
+    """Attach a workspace source-revision to a bounded MCP context read.
+
+    Reuses :func:`lifetxt.remote_backend.source_revision` unmodified -- the
+    same hash Remote Safe Mode already attaches to every resource read --
+    so a client composing several of these tool calls (e.g. the
+    ``explain_item`` prompt) can detect that the workspace changed between
+    calls. See issue #511/#513.
+    """
+    from .remote_backend import source_revision
+
+    result["revision"] = source_revision(context.paths)
+    return result
+
+
 def _tool_get_next_actions(args, context):
     """Open, unblocked, non-parked work ordered by priority then due date."""
     from .nextaction import next_action_items
@@ -2688,9 +2709,10 @@ def _tool_get_next_actions(args, context):
         project=args.get("project"),
         assignee=args.get("assignee"),
     )
-    return items_response(
+    result = items_response(
         selected, diagnostics, context.writable_path, _id_key(context)
     )
+    return _attach_revision(result, context)
 
 
 def _tool_search_items(args, context):
@@ -2825,7 +2847,8 @@ def _tool_get_project(args, context):
     name = str(args.get("name") or "")
     if not name:
         raise ValueError("get_project requires 'name'.")
-    return project_hub(items, context.config, name, timezone_today())
+    result = project_hub(items, context.config, name, timezone_today())
+    return _attach_revision(result, context)
 
 
 def _tool_get_portfolio(args, context):
@@ -2851,7 +2874,7 @@ def _tool_get_command_center(args, context):
         horizon = int(horizon) if horizon is not None else 3
     except (TypeError, ValueError):
         horizon = 3
-    return command_center(
+    result = command_center(
         items,
         context.config,
         timezone_today(),
@@ -2859,6 +2882,7 @@ def _tool_get_command_center(args, context):
         person=args.get("person"),
         mode=str(args.get("mode") or "today"),
     )
+    return _attach_revision(result, context)
 
 
 def _tool_get_areas(args, context):
@@ -2879,7 +2903,8 @@ def _tool_get_backlinks(args, context):
     if not target:
         raise ValueError("get_backlinks requires 'id'.")
     records = backlink_records(items, target, key=_id_key(context))
-    return {"target_id": target, "count": len(records), "backlinks": records}
+    result = {"target_id": target, "count": len(records), "backlinks": records}
+    return _attach_revision(result, context)
 
 
 def _bounded_int(args, name, default):
@@ -2917,7 +2942,7 @@ def _tool_get_temporal_context(args, context):
     window = _bounded_int(args, "window", DEFAULT_WINDOW_DAYS)
     limit = _bounded_int(args, "limit", DEFAULT_PAIR_LIMIT)
     stale_after = _bounded_int(args, "stale_after", DEFAULT_STALE_DAYS)
-    return temporal_context(
+    result = temporal_context(
         items,
         target,
         timezone_today(),
@@ -2926,6 +2951,7 @@ def _tool_get_temporal_context(args, context):
         limit=limit,
         stale_after_days=stale_after,
     )
+    return _attach_revision(result, context)
 
 
 def _tool_get_clock_status(args, context):
@@ -3117,7 +3143,8 @@ def _tool_get_ticket(args, context):
         raise ValueError("get_ticket requires 'id'.")
     for item in items:
         if is_ticket(item) and str(ticket_id_of(item, key)) == ticket_id:
-            return ticket_view(item, context.config, items, key=key)
+            result = ticket_view(item, context.config, items, key=key)
+            return _attach_revision(result, context)
     raise ValueError("Ticket %r not found." % ticket_id)
 
 
@@ -3188,6 +3215,7 @@ def _tool_stage_proposal(args, context):
         kind=str(args.get("kind") or "T"),
         details=details,
         source=str(args.get("source") or "mcp"),
+        idempotency_key=args.get("idempotency_key") or None,
     )
     return {"staged": True, "proposal": proposal}
 

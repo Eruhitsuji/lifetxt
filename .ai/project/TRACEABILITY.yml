@@ -7539,7 +7539,7 @@ traceability:
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/528
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/530
       changed_files_or_scope:
         - Add an opt-in ai_workspace.enabled/ai_workspace.write_file config section to lifetxt server-init
         - Switch _application_config() between the legacy paths/write_file shape (unchanged when disabled) and a workspaces-shaped default+ai config (when enabled)
@@ -7572,7 +7572,7 @@ traceability:
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/529
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/530
       changed_files_or_scope:
         - Add lifetxt.server_update.backup_coverage_warnings(), a non-fatal diagnostic comparing backup_paths against every workspace write target the live application config declares
         - Add a backup_coverage_warnings field to every run_server_update() report shape

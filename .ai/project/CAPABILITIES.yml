@@ -5120,6 +5120,7 @@ capabilities:
     source_requirements:
       - req-mcp-setup-claude-adapter
       - req-mcp-setup-gemini-adapter
+      - req-mcp-chatgpt-status-documentation
     implementation_locations:
       - lifetxt/cli.py
       - tests/test_lifetxt.py
@@ -5142,10 +5143,13 @@ capabilities:
       - python -m unittest tests.test_release_policy tests.test_surface_runtime tests.test_completion_surfaces -> Ran 73 tests, OK
       - ruff format --check / ruff check on lifetxt/cli.py and tests/test_lifetxt.py -> clean (pre-existing drift in 9 unrelated files confirmed present on main already, not introduced by this change)
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "#540: added a ChatGPT subsection to Section 2 of docs/en+ja/ai-integration.md restating #535/#536's already-verified findings (Streamable HTTP requirement, no local-command support, built-in Drive connector scope) in plain user-facing language"
+      - "#540: scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true}; python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK; manual balanced-code-fence check (62/62 fences, balanced)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/537
       - https://github.com/Eruhitsuji/lifetxt/issues/538
+      - https://github.com/Eruhitsuji/lifetxt/issues/540
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/539
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -5177,7 +5181,12 @@ capabilities:
       ChatGPT adapter work remains explicitly out of scope, per #535's
       own finding that it is not implementable today (Developer Mode
       requires a URL-reachable Streamable HTTP server, which this
-      codebase's stdio-only lifetxt mcp cannot satisfy).
+      codebase's stdio-only lifetxt mcp cannot satisfy). #540 closes the
+      one gap #500's own closing review found: that finding previously
+      existed only inside closed GitHub issues, never in user-facing
+      documentation, which #500's "provider adapters exist or are
+      explicitly deferred with generic instructions" completion
+      criterion specifically asked for.
     replacement:
       replaces: []
       replaced_by: null

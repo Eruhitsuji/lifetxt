@@ -207,6 +207,24 @@ Combine this with a named workspace (`--workspace ai --profile assist`, see
 client's writes to a dedicated proposal/inbox file instead of the same
 `life.txt` a deployed `lifetxt serve`/sync timer writes to.
 
+### ChatGPT
+
+Not currently supported. ChatGPT's Developer Mode custom connector requires a
+URL-reachable Streamable HTTP or SSE server -- you paste a URL into ChatGPT;
+it never spawns a local command the way Claude Desktop, Claude Code, or
+Gemini CLI do. `lifetxt mcp` only speaks stdio, so it cannot be pointed at
+directly, and the SSH pattern above does not help either, since ChatGPT's
+connector UI has no "run this command" option to point at `ssh` in the first
+place.
+
+ChatGPT's built-in Google Drive connector is not a substitute: it is scoped
+to Docs, Sheets, Slides, PDFs, and CSVs, and cannot read or write the
+arbitrary structured files a lifetxt integration needs.
+
+No workaround is currently recommended. This is revisited if ChatGPT's
+connector model changes, or if lifetxt adds a Streamable HTTP MCP transport
+of its own -- a separate, larger decision that has not been made.
+
 ---
 
 ## 3. Tool Reference

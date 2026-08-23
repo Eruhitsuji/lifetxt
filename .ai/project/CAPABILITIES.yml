@@ -4708,6 +4708,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/545
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/504
+      - https://github.com/Eruhitsuji/lifetxt/pull/546
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       First implementation child of the #500 "Provider-independent

@@ -7719,7 +7719,7 @@ traceability:
       capability_id: cap-mcp-permission-profiles
       epic: https://github.com/Eruhitsuji/lifetxt/issues/543
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
       changed_files_or_scope:
         - Add an opt-in --no-open-world flag to lifetxt mcp, independent of and combinable with --profile/--read-only
         - Deny every OPEN_WORLD_TOOLS member at both tools/list and tools/call when the flag is set, regardless of the active profile's own allowlist
@@ -7756,7 +7756,7 @@ traceability:
       capability_id: cap-mcp-permission-profiles
       epic: https://github.com/Eruhitsuji/lifetxt/issues/543
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/545
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
       changed_files_or_scope:
         - Document --no-open-world in Permission Profiles (section 6) and Remote Safe Mode Client Tools (section 8)
         - Correct two pre-existing documentation inaccuracies found in the same paragraph while updating it ("no outbound calls" and "not yet implemented" disclosure layer, both already contradicted by shipped behavior)
@@ -7785,7 +7785,7 @@ traceability:
       capability_id: cap-mcp-permission-profiles
       epic: https://github.com/Eruhitsuji/lifetxt/issues/543
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/544
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/546
       changed_files_or_scope:
         - Document that resources/list/resources/read are unaffected by --profile and disclose the same content/paths any read-permitted tool already can
         - docs/en/ai-integration.md

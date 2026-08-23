@@ -777,6 +777,7 @@ python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
 python -m lifetxt integrity plan life.txt
+python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
 
 Options:
@@ -801,6 +802,13 @@ candidates such as missing ID assignment, while ambiguous, missing-source, sync,
 reference, and recovery findings remain manual or blocked review items. Every
 file-backed action includes the current expected source revision when it can be
 read.
+
+`python -m lifetxt integrity apply ...` is intentionally narrow. It only applies
+the automatic missing-ID assignment repair, requires one explicit file path,
+requires `--expected-revision`, and refuses to write unless `--confirm` is
+present. Revision mismatch, parse errors, and unsupported repair classes fail
+closed before writing. The command reports an `integrity-apply-v1` result with
+before/after revisions and assignment records.
 
 ## 4. Conversion And Rendering
 

@@ -253,9 +253,100 @@ class LifeTxtIntegrityCliTests(unittest.TestCase):
             self.assertRegex(action["expected_revision"], r"^[0-9a-f]{64}$")
             self.assertEqual(before, self._read(path))
 
+    def test_integrity_apply_requires_confirmation_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T Missing\n")
+            revision = self._revision(path)
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli(
+                "integrity",
+                "apply",
+                path,
+                "--expected-revision",
+                revision,
+                "--json",
+            )
+
+            self.assertEqual(2, code)
+            self.assertEqual("", stdout)
+            self.assertIn("--confirm", stderr)
+            self.assertEqual(before, self._read(path))
+
+    def test_integrity_apply_requires_expected_revision_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T Missing\n")
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli(
+                "integrity",
+                "apply",
+                path,
+                "--confirm",
+                "--json",
+            )
+
+            self.assertEqual(2, code)
+            self.assertEqual("", stdout)
+            self.assertIn("--expected-revision", stderr)
+            self.assertEqual(before, self._read(path))
+
+    def test_integrity_apply_revision_mismatch_leaves_file_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T Missing\n")
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli(
+                "integrity",
+                "apply",
+                path,
+                "--expected-revision",
+                "0" * 64,
+                "--confirm",
+                "--json",
+            )
+
+            self.assertEqual(1, code)
+            self.assertEqual("", stdout)
+            self.assertIn("conflict", stderr.lower())
+            self.assertEqual(before, self._read(path))
+
+    def test_integrity_apply_assigns_missing_ids_with_revision_guard(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T Missing\n[ ] T Has id:keep\n")
+            revision = self._revision(path)
+
+            stdout, stderr, code = run_cli(
+                "integrity",
+                "apply",
+                path,
+                "--expected-revision",
+                revision,
+                "--confirm",
+                "--json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual("integrity-apply-v1", payload["schema"])
+            self.assertEqual("assign_id", payload["operation"])
+            self.assertEqual(1, payload["assignment_count"])
+            self.assertEqual(revision, payload["before_revision"])
+            self.assertRegex(payload["after_revision"], r"^[0-9a-f]{64}$")
+            self.assertNotEqual(revision, payload["after_revision"])
+            updated = self._read(path)
+            self.assertRegex(updated, r"^\[ \] T Missing id:task_\d{14}\n")
+            self.assertIn("[ ] T Has id:keep\n", updated)
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()
+
+    def _revision(self, path):
+        from lifetxt.write_operations import current_revision
+
+        return current_revision(path, allow_missing=False)
 
 
 if __name__ == "__main__":

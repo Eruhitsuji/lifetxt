@@ -63,8 +63,10 @@ capabilities:
       - lifetxt integrity --verify-files
       - lifetxt integrity --profile strict
       - lifetxt integrity plan
+      - lifetxt integrity apply
       - integrity-v1 JSON report
       - integrity-plan-v1 JSON repair plan
+      - integrity-apply-v1 JSON apply result
     tests_or_evidence:
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 4 tests, OK"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_lifetxt.LifeTxtCheckLineTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 14 tests, OK"
@@ -73,20 +75,25 @@ capabilities:
       - ".venv\\Scripts\\ruff.exe check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> All checks passed"
       - ".venv\\Scripts\\ruff.exe format --check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> 3 files already formatted"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 11 tests, OK"
+      - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 15 tests, OK"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/517
       - https://github.com/Eruhitsuji/lifetxt/issues/520
+      - https://github.com/Eruhitsuji/lifetxt/issues/522
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/518
       - https://github.com/Eruhitsuji/lifetxt/pull/521
+      - https://github.com/Eruhitsuji/lifetxt/pull/523
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       cc-sdd data-integrity-suite working spec implementation. The suite remains
       read-only: strict profiles alter only effective severity, cross-file
       registry/source-UID/recovery checks report local evidence only, and
       repair planning emits deterministic JSON candidates without applying them.
-      Data-changing repair application remains out of scope and requires a
-      separate high-assurance task.
+      Issue #522 adds one high-assurance apply path for missing-ID assignment
+      only, guarded by explicit confirmation and expected source revision.
+      Recovery actions, sync reconciliation, archive cleanup, migration, and
+      general repair application remain out of scope.
     replacement:
       replaces: []
       replaced_by: null

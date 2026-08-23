@@ -1,0 +1,66 @@
+schema_version: 1
+
+change:
+  id: server-init-ai-workspace-and-backup-coverage
+  title: Optional server-init AI workspace generation + server-update backup-coverage diagnostic
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/528
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/530
+  base_commit: 57fe9bde2f77ef7499d968dd3ad685206d3f3fb9
+  target_release: null
+
+scope:
+  in_scope:
+    - Add an opt-in `ai_workspace` config section to `lifetxt server-init`,
+      generating a `workspaces`-shaped application config (`default` + `ai`)
+      and creating the empty AI-inbox file artifact when enabled (#528).
+    - Feed the AI workspace's write target into the generated
+      `server-update.json`'s `backup_paths` when `ai_workspace` is enabled.
+    - Add a non-fatal `server-update` warning comparing configured
+      `backup_paths` against every workspace write target the live
+      application config declares (`workspaces` or legacy `paths`/
+      `write_file`), reusing `lifetxt.workspace.iter_workspace_definitions()`
+      unmodified (#529).
+  out_of_scope:
+    - Any change to `lifetxt mcp`, `lifetxt/workspace.py`, or the Unified
+      Inbox proposal contract.
+    - Cloud Mailbox worker/timer generation (#500 Phase 6 item 15, blocked
+      on Phase 5, which is unimplemented).
+    - Automatically expanding `backup_paths` to include missing targets --
+      stays a human/operator decision, reported as a warning only.
+    - Any change to default (non-opted-in) `server-init` behavior; existing
+      deployments must generate byte-identical config unless `ai_workspace`
+      is explicitly enabled.
+
+write_scope:
+  - lifetxt/server_init.py
+  - lifetxt/server_update.py
+  - tests/test_server_init.py
+  - tests/test_server_update.py
+  - docs/deployment/ubuntu-server.md
+  - docs/en/ai-integration.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/server-init-ai-workspace-and-backup-coverage/
+
+forbidden_scope:
+  - lifetxt/workspace.py
+  - lifetxt/mcp.py
+  - lifetxt/inbox.py
+  - Any Cloud Mailbox implementation
+  - contrib/systemd/**, contrib/nginx/** (no new deployment artifact type)
+
+human_approvals_required:
+  - independent security review
+  - Merge Authority approval before merge to main
+
+dependencies:
+  - >-
+    none blocking; issues #528 and #529 land together in one branch/PR
+    because #528's generation step and #529's diagnostic share the same
+    workspace-write-target-derivation concept

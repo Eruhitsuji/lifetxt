@@ -11,15 +11,19 @@ from .config import config_paths
 from .diagnostic_contract import diagnostic_category
 from .ids import duplicate_id_diagnostics, id_key_from_config
 from .links import reference_diagnostics
-from .model import Diagnostic
+from .model import Diagnostic, REFERENCE_KEYS
 from .parser import parse_text
 from .paths import expand_paths
 
 
 SCHEMA = "integrity-v1"
+PLAN_SCHEMA = "integrity-plan-v1"
+PROFILE_DEFAULT = "default"
+PROFILE_STRICT = "strict"
+PROFILES = (PROFILE_DEFAULT, PROFILE_STRICT)
 
 
-def build_integrity_report(paths=None, config=None, verify_files=False):
+def build_integrity_report(paths=None, config=None, verify_files=False, profile=None):
     """Build a read-only integrity report.
 
     This function intentionally performs no write, repair, migration, archive,
@@ -28,6 +32,7 @@ def build_integrity_report(paths=None, config=None, verify_files=False):
     """
 
     config = config or {}
+    profile = _normalize_profile(profile)
     normalized = _normalize_paths(paths, config)
     id_key = id_key_from_config(config)
     diagnostics = []
@@ -95,10 +100,13 @@ def build_integrity_report(paths=None, config=None, verify_files=False):
 
     cross_diagnostics = []
     if items:
+        diagnostics.extend(_missing_id_rows(items, id_key))
         cross_diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
         cross_diagnostics.extend(reference_diagnostics(items, key=id_key))
         cross_diagnostics.extend(_attachment_rows(items, config, verify_files))
         cross_diagnostics.extend(_ticket_rows(items, config, id_key))
+        diagnostics.extend(_cross_file_registry_rows(items, id_key))
+        diagnostics.extend(_source_uid_rows(items))
     else:
         diagnostics.append(
             _row(
@@ -112,11 +120,14 @@ def build_integrity_report(paths=None, config=None, verify_files=False):
         )
     diagnostics.extend(_diagnostic_rows(cross_diagnostics, line_ids))
     diagnostics.extend(_workspace_rows(config))
+    diagnostics.extend(_recovery_rows(config))
+    _apply_profile(diagnostics, profile)
 
     summary = _summary(diagnostics)
     return OrderedDict(
         (
             ("schema", SCHEMA),
+            ("profile", profile),
             (
                 "ok",
                 not any(
@@ -168,6 +179,39 @@ def integrity_report_to_json(report):
     return json.dumps(report, ensure_ascii=False, indent=2) + "\n"
 
 
+def build_integrity_plan(paths=None, config=None, verify_files=False, profile=None):
+    report = build_integrity_report(
+        paths,
+        config=config,
+        verify_files=verify_files,
+        profile=profile,
+    )
+    actions = []
+    for row in report["diagnostics"]:
+        action = _plan_action(row)
+        if action is not None:
+            actions.append(action)
+    actions.sort(
+        key=lambda row: (row["source_file"] or "", row["line"] or 0, row["code"])
+    )
+    return OrderedDict(
+        (
+            ("schema", PLAN_SCHEMA),
+            ("report_schema", report["schema"]),
+            ("profile", report["profile"]),
+            ("ok", not any(row["classification"] == "blocked" for row in actions)),
+            ("paths", report["paths"]),
+            ("checked_paths", report["checked_paths"]),
+            ("action_count", len(actions)),
+            ("actions", actions),
+        )
+    )
+
+
+def integrity_plan_to_json(plan):
+    return json.dumps(plan, ensure_ascii=False, indent=2) + "\n"
+
+
 def _normalize_paths(paths, config):
     if paths is None or list(paths or []) == []:
         configured = config_paths(config)
@@ -177,10 +221,215 @@ def _normalize_paths(paths, config):
     return expand_paths(paths, stdin_when_empty=False)
 
 
+def _normalize_profile(profile):
+    value = str(profile or PROFILE_DEFAULT).strip().lower()
+    if value not in PROFILES:
+        raise ValueError(
+            "Unknown integrity profile %r. Expected one of: %s."
+            % (profile, ", ".join(PROFILES))
+        )
+    return value
+
+
+def _apply_profile(diagnostics, profile):
+    if profile == PROFILE_DEFAULT:
+        return
+    if profile == PROFILE_STRICT:
+        for row in diagnostics:
+            if row["severity"] == "warning":
+                row["effective_severity"] = "error"
+
+
 def _attachment_rows(items, config, verify_files):
     if not any(item.details.get(key) for item in items for key in ATTACHMENT_KEYS):
         return []
     return attachment_diagnostics(items, config=config, verify=bool(verify_files))
+
+
+def _missing_id_rows(items, id_key):
+    rows = []
+    for item in items:
+        if item.details.get(id_key):
+            continue
+        rows.append(
+            _row(
+                severity="warning",
+                code="I210",
+                category="id",
+                message="Item is missing %s." % id_key,
+                hint="Run `lifetxt integrity plan` to review a non-mutating ID assignment candidate.",
+                source_file=getattr(item, "source", None),
+                line=getattr(item, "line", None),
+                check_state="reported",
+                details=OrderedDict((("id_key", id_key),)),
+            )
+        )
+    return rows
+
+
+def _cross_file_registry_rows(items, id_key):
+    rows = []
+    index = OrderedDict()
+    for item in items:
+        for value in item.details.get(id_key, []):
+            index.setdefault(str(value), []).append(item)
+    for value, matches in index.items():
+        sources = sorted(
+            set(
+                str(getattr(item, "source", ""))
+                for item in matches
+                if getattr(item, "source", None)
+            )
+        )
+        if len(matches) > 1 and len(sources) > 1:
+            first = matches[0]
+            duplicate = matches[1]
+            rows.append(
+                _row(
+                    severity="warning",
+                    code="I220",
+                    category="id",
+                    message="Cross-file duplicate %s:%s appears in %d items."
+                    % (id_key, value, len(matches)),
+                    hint="Choose one authoritative record or assign a new ID before linking or syncing.",
+                    source_file=getattr(duplicate, "source", None),
+                    line=getattr(duplicate, "line", None),
+                    item_id=value,
+                    check_state="reported",
+                    details=OrderedDict(
+                        (
+                            ("id_key", id_key),
+                            ("id_value", value),
+                            (
+                                "first_location",
+                                _item_location(first),
+                            ),
+                            ("sources", sources),
+                        )
+                    ),
+                )
+            )
+    for item in items:
+        source_id = _first_detail(item, id_key)
+        for relation in REFERENCE_KEYS:
+            for target_id in item.details.get(relation, []):
+                target_id = str(target_id)
+                matches = index.get(target_id, [])
+                if not matches:
+                    rows.append(
+                        _row(
+                            severity="warning",
+                            code="I221",
+                            category="reference",
+                            message="Registry reference %s:%s has no target."
+                            % (relation, target_id),
+                            hint="Create the target item, fix the reference, or include the missing source file.",
+                            source_file=getattr(item, "source", None),
+                            line=getattr(item, "line", None),
+                            item_id=source_id,
+                            check_state="reported",
+                            details=OrderedDict(
+                                (
+                                    ("relation", relation),
+                                    ("target_id", target_id),
+                                    ("target_state", "missing"),
+                                )
+                            ),
+                        )
+                    )
+                elif len(matches) > 1:
+                    rows.append(
+                        _row(
+                            severity="warning",
+                            code="I222",
+                            category="reference",
+                            message="Registry reference %s:%s is ambiguous across %d targets."
+                            % (relation, target_id, len(matches)),
+                            hint="Resolve duplicate IDs before relying on this reference.",
+                            source_file=getattr(item, "source", None),
+                            line=getattr(item, "line", None),
+                            item_id=source_id,
+                            check_state="reported",
+                            details=OrderedDict(
+                                (
+                                    ("relation", relation),
+                                    ("target_id", target_id),
+                                    ("target_state", "ambiguous"),
+                                    (
+                                        "target_locations",
+                                        [_item_location(match) for match in matches],
+                                    ),
+                                )
+                            ),
+                        )
+                    )
+    return rows
+
+
+def _source_uid_rows(items):
+    pairs = OrderedDict()
+    for item in items:
+        source = _first_detail(item, "source")
+        uid = _first_detail(item, "uid")
+        if not source or not uid:
+            continue
+        pairs.setdefault((source, uid), []).append(item)
+    rows = []
+    for (source, uid), matches in pairs.items():
+        if len(matches) > 1:
+            rows.append(
+                _row(
+                    severity="warning",
+                    code="I300",
+                    category="sync",
+                    message="Duplicate source/uid pair source:%s uid:%s appears in %d items."
+                    % (source, uid, len(matches)),
+                    hint="Keep one local representation for each external source UID.",
+                    source_file=getattr(matches[1], "source", None),
+                    line=getattr(matches[1], "line", None),
+                    item_id=_first_detail(matches[1], "id"),
+                    check_state="reported",
+                    details=OrderedDict(
+                        (
+                            ("source", source),
+                            ("uid", uid),
+                            ("locations", [_item_location(item) for item in matches]),
+                        )
+                    ),
+                )
+            )
+        generated = [item for item in matches if _is_generated_item(item)]
+        manual = [item for item in matches if not _is_generated_item(item)]
+        if generated and manual:
+            rows.append(
+                _row(
+                    severity="warning",
+                    code="I301",
+                    category="sync",
+                    message="Manual and generated records share source:%s uid:%s."
+                    % (source, uid),
+                    hint="Classify the authoritative record before the next import or sync.",
+                    source_file=getattr(manual[0], "source", None),
+                    line=getattr(manual[0], "line", None),
+                    item_id=_first_detail(manual[0], "id"),
+                    check_state="reported",
+                    details=OrderedDict(
+                        (
+                            ("source", source),
+                            ("uid", uid),
+                            (
+                                "generated_locations",
+                                [_item_location(item) for item in generated],
+                            ),
+                            (
+                                "manual_locations",
+                                [_item_location(item) for item in manual],
+                            ),
+                        )
+                    ),
+                )
+            )
+    return rows
 
 
 def _ticket_rows(items, config, id_key):
@@ -248,6 +497,108 @@ def _workspace_rows(config):
     return [_dict_row(row, "workspace") for row in resolution.get("diagnostics", [])]
 
 
+def _recovery_rows(config):
+    try:
+        from .transaction_journal import journal_directory, list_journals
+        from .transaction_policy import verify_integrity_manifest
+    except Exception as exc:
+        return [
+            _row(
+                severity="warning",
+                code="I400",
+                category="recovery",
+                message="Recovery checks could not be loaded: %s." % exc,
+                hint="Run transaction recovery tools directly for details.",
+                check_state="blocked",
+            )
+        ]
+    journal_dir = journal_directory(config)
+    if not os.path.isdir(journal_dir):
+        return [
+            _row(
+                severity="info",
+                code="I401",
+                category="recovery",
+                message="No transaction journal directory was found.",
+                hint="Configure transactions.journal_dir to include recovery evidence checks.",
+                source_file=journal_dir,
+                check_state="skipped",
+            )
+        ]
+    rows = []
+    journals = list_journals(journal_dir, include_terminal=True)
+    if not journals:
+        rows.append(
+            _row(
+                severity="info",
+                code="I402",
+                category="recovery",
+                message="Transaction journal directory contains no journal records.",
+                source_file=journal_dir,
+                check_state="passed",
+            )
+        )
+    for journal in journals:
+        path = journal.get("journal_path")
+        severity = "warning" if journal.get("recovery_required") else "info"
+        if journal.get("state") == "corrupt":
+            severity = "error"
+        rows.append(
+            _row(
+                severity=severity,
+                code="I404" if journal.get("state") == "corrupt" else "I403",
+                category="recovery",
+                message="Transaction journal %s is in state %s."
+                % (journal.get("transaction_id"), journal.get("state")),
+                hint="Inspect transaction evidence before mutating affected files."
+                if journal.get("recovery_required")
+                else "",
+                source_file=path,
+                check_state="reported"
+                if journal.get("recovery_required")
+                else "passed",
+                details=OrderedDict(journal),
+            )
+        )
+        tx_dir = os.path.dirname(path) if path else None
+        if not tx_dir:
+            continue
+        manifest_path = os.path.join(tx_dir, "integrity-manifest.json")
+        if not os.path.exists(manifest_path):
+            rows.append(
+                _row(
+                    severity="warning",
+                    code="I405",
+                    category="recovery",
+                    message="Transaction evidence is missing integrity-manifest.json.",
+                    hint="Export or archive recovery evidence to create a verifiable manifest.",
+                    source_file=tx_dir,
+                    check_state="reported",
+                )
+            )
+            continue
+        try:
+            verification = verify_integrity_manifest(tx_dir)
+        except Exception as exc:
+            verification = {"ok": False, "error": str(exc)}
+        rows.append(
+            _row(
+                severity="info" if verification.get("ok") else "error",
+                code="I406" if verification.get("ok") else "I407",
+                category="recovery",
+                message="Transaction evidence manifest verification %s."
+                % ("passed" if verification.get("ok") else "failed"),
+                hint=""
+                if verification.get("ok")
+                else "Treat recovery evidence as unsupported until manifest errors are resolved.",
+                source_file=manifest_path,
+                check_state="passed" if verification.get("ok") else "blocked",
+                details=OrderedDict(verification),
+            )
+        )
+    return rows
+
+
 def _diagnostic_rows(diagnostics, line_ids):
     rows = []
     for diagnostic in diagnostics:
@@ -313,6 +664,7 @@ def _row(
     column=None,
     item_id=None,
     check_state="reported",
+    details=None,
 ):
     severity = str(severity or "warning").lower()
     return OrderedDict(
@@ -328,8 +680,82 @@ def _row(
             ("column", column),
             ("item_id", item_id),
             ("check_state", check_state),
+            ("details", details or OrderedDict()),
         )
     )
+
+
+def _plan_action(row):
+    source_file = row.get("source_file")
+    code = row.get("code")
+    if row.get("check_state") in ("passed", "skipped"):
+        return None
+    if row.get("effective_severity") == "info":
+        return None
+    classification = "manual"
+    operation = "review"
+    description = row.get("message", "")
+    if code == "I210":
+        classification = "automatic"
+        operation = "assign_id"
+        description = "Assign a generated ID to the item missing an ID."
+    elif code in ("I001", "I404", "I407"):
+        classification = "blocked"
+    expected_revision = _current_revision(source_file)
+    return OrderedDict(
+        (
+            ("classification", classification),
+            ("operation", operation),
+            ("code", code),
+            ("category", row.get("category")),
+            ("source_file", source_file),
+            ("line", row.get("line")),
+            ("item_id", row.get("item_id")),
+            ("expected_revision", expected_revision),
+            ("description", description),
+            ("details", row.get("details") or OrderedDict()),
+        )
+    )
+
+
+def _current_revision(path):
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        from .write_operations import current_revision
+    except Exception:
+        return None
+    try:
+        return current_revision(path, allow_missing=False)
+    except Exception:
+        return None
+
+
+def _first_detail(item, key):
+    values = item.details.get(key) or []
+    if not values:
+        return ""
+    return str(values[0])
+
+
+def _is_generated_item(item):
+    for key in ("generated", "managed", "imported"):
+        for value in item.details.get(key, []):
+            if str(value).lower() in ("1", "true", "yes", "y"):
+                return True
+    return False
+
+
+def _item_location(item):
+    source = getattr(item, "source", None)
+    line = getattr(item, "line", None)
+    if source and line:
+        return "%s:%s" % (source, line)
+    if source:
+        return str(source)
+    if line:
+        return "line %s" % line
+    return ""
 
 
 def _summary(diagnostics):

@@ -678,19 +678,30 @@ attachment、workspace、ticket の検査を、利用できる文脈だけ集約
 ```sh
 python -m lifetxt integrity [path ...]
 python -m lifetxt integrity life.txt --json
+python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
+python -m lifetxt integrity plan life.txt
 ```
 
 | Option | 意味 |
 |---|---|
 | `path ...` | 入力 life.txt file、directory、glob、または config の paths |
 | `--json` | `integrity-v1` JSON report を出力 |
+| `--profile default\|strict` | default の effective severity を保つか、integrity report 上だけ warning を error に昇格 |
 | `--verify-files` | 安価な attachment 検査に加えて `file:` / `dir:` hash も検証 |
 
 JSON diagnostic には `severity`、`effective_severity`、`code`、
 `category`、`message`、`hint`、`source_file`、`line`、`column`、
-`item_id`、`check_state` が含まれます。欠落 file や利用できない optional
-context は、黙って省略せず blocked / skipped check として報告します。
+`item_id`、`check_state`、`details` が含まれます。欠落 file や利用できない
+optional context は、黙って省略せず blocked / skipped check として報告します。
+strict profile は `lifetxt check` の動作を変更せず、integrity output の
+`effective_severity` だけを変更します。
+
+`python -m lifetxt integrity plan ...` は `integrity-plan-v1` JSON plan を出力します。
+plan は決定的で非変更です。missing ID assignment のような安全な候補は
+automatic として分類し、曖昧な reference、sync conflict、欠落 source、
+recovery evidence の問題は manual または blocked review item として残します。
+file-backed action には、読み取れる場合に現在の expected source revision を含めます。
 
 ## 4. 変換と rendering
 

@@ -774,7 +774,9 @@ It does not repair, rewrite, migrate, archive, recover, or delete data.
 ```sh
 python -m lifetxt integrity [path ...]
 python -m lifetxt integrity life.txt --json
+python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
+python -m lifetxt integrity plan life.txt
 ```
 
 Options:
@@ -783,12 +785,22 @@ Options:
 |---|---|
 | `path ...` | Input life.txt file(s), directory, glob, or configured paths |
 | `--json` | Emit the `integrity-v1` JSON report |
+| `--profile default\|strict` | Keep default effective severities or escalate warnings to errors in the report only |
 | `--verify-files` | Verify `file:` / `dir:` hashes in addition to cheap attachment checks |
 
 JSON diagnostics include `severity`, `effective_severity`, `code`,
 `category`, `message`, `hint`, `source_file`, `line`, `column`, `item_id`,
-and `check_state`. Missing files and unavailable optional contexts are reported
-as blocked or skipped checks instead of being silently omitted.
+`check_state`, and `details`. Missing files and unavailable optional contexts
+are reported as blocked or skipped checks instead of being silently omitted.
+Strict profile mapping never changes `lifetxt check`; it only changes
+`effective_severity` in integrity output.
+
+`python -m lifetxt integrity plan ...` emits an `integrity-plan-v1` JSON plan.
+The plan is deterministic and non-mutating: automatic entries describe safe
+candidates such as missing ID assignment, while ambiguous, missing-source, sync,
+reference, and recovery findings remain manual or blocked review items. Every
+file-backed action includes the current expected source revision when it can be
+read.
 
 ## 4. Conversion And Rendering
 

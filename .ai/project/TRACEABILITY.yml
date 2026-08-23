@@ -7605,7 +7605,7 @@ traceability:
       capability_id: cap-mcp-provider-adapters
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/537
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/539
       changed_files_or_scope:
         - Add lifetxt ai setup claude, printing Claude Desktop config paths/JSON and the equivalent Claude Code claude mcp add command / .mcp.json path
         - Extract _ai_setup_command_and_config() from command_ai_setup_generic as a shared helper reused by every ai setup provider variant
@@ -7640,7 +7640,7 @@ traceability:
       capability_id: cap-mcp-provider-adapters
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/538
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/539
       changed_files_or_scope:
         - Add lifetxt ai setup gemini, printing Gemini CLI settings.json paths/JSON and the equivalent gemini mcp add command
         - Reuse the _ai_setup_command_and_config() helper added for req-mcp-setup-claude-adapter

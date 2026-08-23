@@ -7400,6 +7400,35 @@ traceability:
         draft during live verification.
       status: implemented
 
+    - requirement_id: req-data-integrity-readonly-report
+      capability_id: cap-data-integrity-readonly-report
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/517
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/518
+      changed_files_or_scope:
+        - Add `lifetxt integrity` as a read-only aggregate data-integrity report
+        - lifetxt/integrity.py
+        - lifetxt/cli.py
+        - tests/test_integrity.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/data-integrity-suite/
+      tests_or_evidence:
+        - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 4 tests, OK"
+        - ".venv\\Scripts\\python.exe -m unittest tests.test_lifetxt.LifeTxtCheckLineTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 14 tests, OK"
+        - ".venv\\Scripts\\python.exe -m lifetxt check examples\\minimal_life.txt -> OK 10 item(s)"
+        - ".venv\\Scripts\\python.exe scripts\\validate_release_docs.py --output .cache\\release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+        - ".venv\\Scripts\\ruff.exe check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> All checks passed"
+        - ".venv\\Scripts\\ruff.exe format --check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> 3 files already formatted"
+      release_or_deployment: null
+      notes: >-
+        Implements the first issue-sized slice from the cc-sdd
+        data-integrity-suite spec: a non-mutating `integrity-v1` report that
+        reuses existing read-only diagnostics. Later repair planning, strict
+        severity profiles, source/UID reconciliation, and recovery actions are
+        out of scope for #517.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

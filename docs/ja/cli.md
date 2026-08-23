@@ -14,6 +14,7 @@ path を省略すると標準入力から読み込みます。
 
 ```sh
 python -m lifetxt check [path ...]
+python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
@@ -666,6 +667,30 @@ python -m lifetxt sources life.txt archive.life.txt --missing-id
 report には source path、line range、選択 ID、parent ID、type、status、title、
 indentation level、detail count が含まれます。同じ論理入力集合に対する duplicate ID
 と reference check も実行し、warning は stderr に出力します。
+
+### 3.4 `integrity`
+
+選択した入力一式に対して、読み取り専用の data-integrity report を出力します。
+最初の実装範囲では、既存の parser / validator、duplicate ID / reference、
+attachment、workspace、ticket の検査を、利用できる文脈だけ集約します。
+この command は repair、rewrite、migration、archive、recovery、delete を行いません。
+
+```sh
+python -m lifetxt integrity [path ...]
+python -m lifetxt integrity life.txt --json
+python -m lifetxt integrity life.txt --verify-files
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 入力 life.txt file、directory、glob、または config の paths |
+| `--json` | `integrity-v1` JSON report を出力 |
+| `--verify-files` | 安価な attachment 検査に加えて `file:` / `dir:` hash も検証 |
+
+JSON diagnostic には `severity`、`effective_severity`、`code`、
+`category`、`message`、`hint`、`source_file`、`line`、`column`、
+`item_id`、`check_state` が含まれます。欠落 file や利用できない optional
+context は、黙って省略せず blocked / skipped check として報告します。
 
 ## 4. 変換と rendering
 

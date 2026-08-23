@@ -49,6 +49,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-data-integrity-readonly-report
+      - req-data-integrity-suite-final
     implementation_locations:
       - lifetxt/integrity.py
       - lifetxt/cli.py
@@ -60,7 +61,10 @@ capabilities:
       - lifetxt integrity
       - lifetxt integrity --json
       - lifetxt integrity --verify-files
+      - lifetxt integrity --profile strict
+      - lifetxt integrity plan
       - integrity-v1 JSON report
+      - integrity-plan-v1 JSON repair plan
     tests_or_evidence:
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 4 tests, OK"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_lifetxt.LifeTxtCheckLineTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 14 tests, OK"
@@ -68,17 +72,21 @@ capabilities:
       - ".venv\\Scripts\\python.exe scripts\\validate_release_docs.py --output .cache\\release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
       - ".venv\\Scripts\\ruff.exe check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> All checks passed"
       - ".venv\\Scripts\\ruff.exe format --check lifetxt\\integrity.py tests\\test_integrity.py lifetxt\\cli.py -> 3 files already formatted"
+      - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 11 tests, OK"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/517
-    related_pull_requests: []
+      - https://github.com/Eruhitsuji/lifetxt/issues/520
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/518
+      - https://github.com/Eruhitsuji/lifetxt/pull/521
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
-      First implementation slice from the cc-sdd data-integrity-suite working
-      spec. It deliberately stops at read-only aggregation; repair planning,
-      strict profile severity mapping, source/UID reconciliation, and recovery
-      actions remain separate follow-up issues/tasks. The command exits 0 after
-      producing a report even when diagnostics exist, matching its role as a
-      non-mutating inspection surface rather than a release gate.
+      cc-sdd data-integrity-suite working spec implementation. The suite remains
+      read-only: strict profiles alter only effective severity, cross-file
+      registry/source-UID/recovery checks report local evidence only, and
+      repair planning emits deterministic JSON candidates without applying them.
+      Data-changing repair application remains out of scope and requires a
+      separate high-assurance task.
     replacement:
       replaces: []
       replaced_by: null

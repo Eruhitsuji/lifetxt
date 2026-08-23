@@ -110,6 +110,149 @@ class LifeTxtIntegrityCliTests(unittest.TestCase):
                 any(row["category"] == "files" for row in payload["diagnostics"])
             )
 
+    def test_default_profile_preserves_warning_effective_severity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text="[ ] T First id:dup\n[ ] T Second id:dup\n",
+            )
+
+            stdout, stderr, code = run_cli("integrity", path, "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual("default", payload["profile"])
+            duplicate = next(
+                row for row in payload["diagnostics"] if row["code"] == "W213"
+            )
+            self.assertEqual("warning", duplicate["severity"])
+            self.assertEqual("warning", duplicate["effective_severity"])
+
+    def test_strict_profile_escalates_warning_effective_severity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text="[ ] T First id:dup\n[ ] T Second id:dup\n",
+            )
+
+            stdout, stderr, code = run_cli(
+                "integrity", path, "--json", "--profile", "strict"
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertEqual("strict", payload["profile"])
+            duplicate = next(
+                row for row in payload["diagnostics"] if row["code"] == "W213"
+            )
+            self.assertEqual("warning", duplicate["severity"])
+            self.assertEqual("error", duplicate["effective_severity"])
+            self.assertEqual(1, payload["summary"]["severities"]["error"])
+
+    def test_strict_profile_does_not_change_check_command_warning_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text="[ ] T First id:dup\n[ ] T Second id:dup\n",
+            )
+
+            stdout, stderr, code = run_cli("check", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("WARNING W213", stdout)
+            self.assertNotIn("ERROR W213", stdout)
+
+    def test_cross_file_registry_reports_duplicate_and_missing_reference(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = self._fixture(temp_dir, "first.life.txt", "[ ] T First id:dup\n")
+            second = self._fixture(
+                temp_dir,
+                "second.life.txt",
+                "[ ] T Second id:dup depends_on:missing\n",
+            )
+
+            stdout, stderr, code = run_cli("integrity", first, second, "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            codes = {row["code"] for row in payload["diagnostics"]}
+            self.assertIn("I220", codes)
+            self.assertIn("I221", codes)
+            cross = next(row for row in payload["diagnostics"] if row["code"] == "I220")
+            self.assertEqual(sorted([first, second]), cross["details"]["sources"])
+
+    def test_source_uid_reconciliation_reports_duplicate_and_manual_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text=(
+                    "[ ] E Generated id:g source:ics uid:event-1 generated:true\n"
+                    "[ ] E Manual id:m source:ics uid:event-1\n"
+                ),
+            )
+
+            stdout, stderr, code = run_cli("integrity", path, "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            codes = {row["code"] for row in payload["diagnostics"]}
+            self.assertIn("I300", codes)
+            self.assertIn("I301", codes)
+
+    def test_recovery_diagnostics_report_corrupt_local_journal(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir)
+            journal_dir = os.path.join(temp_dir, "journals")
+            corrupt_dir = os.path.join(journal_dir, "tx-corrupt")
+            os.makedirs(corrupt_dir)
+            with open(
+                os.path.join(corrupt_dir, "journal.json"),
+                "w",
+                encoding="utf-8",
+                newline="\n",
+            ) as handle:
+                handle.write("{not-json")
+            config_path = os.path.join(temp_dir, "config.json")
+            with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump({"transactions": {"journal_dir": journal_dir}}, handle)
+
+            stdout, stderr, code = run_cli(
+                "--config", config_path, "integrity", path, "--json"
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertTrue(
+                any(row["code"] == "I404" for row in payload["diagnostics"])
+            )
+
+    def test_integrity_plan_is_deterministic_and_non_mutating(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T Missing id candidate\n")
+            before = self._read(path)
+
+            first, stderr, code = run_cli("integrity", "plan", path)
+            second, second_stderr, second_code = run_cli("integrity", "plan", path)
+
+            self.assertEqual("", stderr)
+            self.assertEqual("", second_stderr)
+            self.assertEqual(0, code)
+            self.assertEqual(0, second_code)
+            self.assertEqual(first, second)
+            payload = json.loads(first)
+            self.assertEqual("integrity-plan-v1", payload["schema"])
+            action = next(row for row in payload["actions"] if row["code"] == "I210")
+            self.assertEqual("automatic", action["classification"])
+            self.assertEqual("assign_id", action["operation"])
+            self.assertRegex(action["expected_revision"], r"^[0-9a-f]{64}$")
+            self.assertEqual(before, self._read(path))
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()

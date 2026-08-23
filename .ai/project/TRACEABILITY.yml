@@ -7429,6 +7429,32 @@ traceability:
         out of scope for #517.
       status: implemented
 
+    - requirement_id: req-data-integrity-suite-final
+      capability_id: cap-data-integrity-readonly-report
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/520
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/521
+      changed_files_or_scope:
+        - Add strict integrity profile severity mapping
+        - Add cross-file registry diagnostics for duplicate IDs and references
+        - Add local source/UID reconciliation diagnostics
+        - Add local transaction recovery evidence diagnostics
+        - Add deterministic non-mutating `lifetxt integrity plan` JSON output
+        - lifetxt/integrity.py
+        - lifetxt/cli.py
+        - tests/test_integrity.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .kiro/specs/data-integrity-suite/tasks.md
+      tests_or_evidence:
+        - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 11 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Completes the remaining read-only cc-sdd data-integrity-suite slices in
+        one final user-requested PR. No repair action, recovery action, external
+        sync, migration, archive cleanup, or source-file mutation is introduced.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

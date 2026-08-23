@@ -776,6 +776,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
+python -m lifetxt integrity life.txt --ai-context --json
 python -m lifetxt integrity plan life.txt
 python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
@@ -788,6 +789,7 @@ Options:
 | `--json` | Emit the `integrity-v1` JSON report |
 | `--profile default\|strict` | Keep default effective severities or escalate warnings to errors in the report only |
 | `--verify-files` | Verify `file:` / `dir:` hashes in addition to cheap attachment checks |
+| `--ai-context` | Add opt-in AI-safe workspace and Personal AI Memory convention diagnostics |
 
 JSON diagnostics include `severity`, `effective_severity`, `code`,
 `category`, `message`, `hint`, `source_file`, `line`, `column`, `item_id`,
@@ -795,6 +797,13 @@ JSON diagnostics include `severity`, `effective_severity`, `code`,
 are reported as blocked or skipped checks instead of being silently omitted.
 Strict profile mapping never changes `lifetxt check`; it only changes
 `effective_severity` in integrity output.
+
+`--ai-context` adds read-only `category: ai_context` diagnostics. These checks
+report whether a named workspace resembles the #500 AI-safe pattern (broad read
+context with a dedicated writable inbox/proposal target) and whether Personal AI
+Memory candidates follow the #503 convention (`N` records with `person:` and
+`tag:preference`, `tag:goal`, or `tag:decision`). The flag does not change MCP,
+proposal, query, or write behavior.
 
 `python -m lifetxt integrity plan ...` emits an `integrity-plan-v1` JSON plan.
 The plan is deterministic and non-mutating: automatic entries describe safe

@@ -281,6 +281,11 @@ def build_parser():
         help="Also verify file:/dir: content hashes. Reads every referenced file.",
     )
     integrity.add_argument(
+        "--ai-context",
+        action="store_true",
+        help="Also run read-only AI-safe workspace and Personal AI Memory checks.",
+    )
+    integrity.add_argument(
         "--profile",
         choices=("default", "strict"),
         default="default",
@@ -3916,6 +3921,7 @@ def command_integrity(args):
             config=_config(args),
             verify_files=getattr(args, "verify_files", False),
             profile=getattr(args, "profile", "default"),
+            ai_context=getattr(args, "ai_context", False),
         )
         write_text(None, integrity_plan_to_json(plan))
         return 0
@@ -3951,6 +3957,7 @@ def command_integrity(args):
         config=_config(args),
         verify_files=getattr(args, "verify_files", False),
         profile=getattr(args, "profile", "default"),
+        ai_context=getattr(args, "ai_context", False),
     )
     if getattr(args, "json", False):
         write_text(None, integrity_report_to_json(report))

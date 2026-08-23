@@ -339,6 +339,126 @@ class LifeTxtIntegrityCliTests(unittest.TestCase):
             self.assertRegex(updated, r"^\[ \] T Missing id:task_\d{14}\n")
             self.assertIn("[ ] T Has id:keep\n", updated)
 
+    def test_ai_context_checks_are_opt_in(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text='[ ] N "Prefers dark mode" person:self tag:preference id:m1\n',
+            )
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli("integrity", path, "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertFalse(
+                any(row["category"] == "ai_context" for row in payload["diagnostics"])
+            )
+            self.assertEqual(before, self._read(path))
+
+    def test_ai_context_reports_safe_workspace_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary, inbox, config_path = self._ai_workspace(temp_dir)
+            before_primary = self._read(primary)
+            before_inbox = self._read(inbox)
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "--workspace",
+                "ai",
+                "integrity",
+                "--ai-context",
+                "--json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            row = next(row for row in payload["diagnostics"] if row["code"] == "AI102")
+            self.assertEqual("ai_context", row["category"])
+            self.assertEqual("passed", row["check_state"])
+            self.assertTrue(row["details"]["has_dedicated_write_target"])
+            self.assertEqual(inbox, row["details"]["write_file"])
+            self.assertEqual(before_primary, self._read(primary))
+            self.assertEqual(before_inbox, self._read(inbox))
+
+    def test_ai_context_reports_non_dedicated_workspace_write_target(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary = self._fixture(temp_dir, text="[ ] T Real id:t1\n")
+            reference = self._fixture(
+                temp_dir, "reference.life.txt", "[ ] N Ref id:r1\n"
+            )
+            config_path = self._workspace_config(
+                temp_dir,
+                {
+                    "workspaces": {
+                        "ai": {
+                            "sources": [
+                                {"path": "life.txt", "role": "primary"},
+                                {
+                                    "path": "reference.life.txt",
+                                    "role": "readonly",
+                                    "writable": False,
+                                },
+                            ],
+                            "write_file": "life.txt",
+                        }
+                    },
+                    "default_workspace": "ai",
+                },
+            )
+            before_primary = self._read(primary)
+            before_reference = self._read(reference)
+
+            stdout, stderr, code = run_cli(
+                "--config",
+                config_path,
+                "integrity",
+                "--ai-context",
+                "--json",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            row = next(row for row in payload["diagnostics"] if row["code"] == "AI101")
+            self.assertEqual("warning", row["severity"])
+            self.assertFalse(row["details"]["has_dedicated_write_target"])
+            self.assertEqual(primary, row["details"]["write_file"])
+            self.assertEqual(before_primary, self._read(primary))
+            self.assertEqual(before_reference, self._read(reference))
+
+    def test_ai_context_reports_personal_memory_status_and_duplicate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text=(
+                    '[ ] N "Prefers dark mode" person:self tag:preference id:m1\n'
+                    '[N] N "prefers   dark mode" person:self tag:preference id:m2\n'
+                ),
+            )
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli("integrity", path, "--ai-context", "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            codes = {row["code"] for row in payload["diagnostics"]}
+            self.assertIn("AI201", codes)
+            self.assertIn("AI202", codes)
+            status = next(
+                row for row in payload["diagnostics"] if row["code"] == "AI201"
+            )
+            self.assertEqual("m1", status["item_id"])
+            duplicate = next(
+                row for row in payload["diagnostics"] if row["code"] == "AI202"
+            )
+            self.assertEqual("prefers dark mode", duplicate["details"]["title_key"])
+            self.assertEqual(before, self._read(path))
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()
@@ -347,6 +467,40 @@ class LifeTxtIntegrityCliTests(unittest.TestCase):
         from lifetxt.write_operations import current_revision
 
         return current_revision(path, allow_missing=False)
+
+    def _workspace_config(self, temp_dir, payload):
+        config_path = os.path.join(temp_dir, ".lifetxt.json")
+        with open(config_path, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle)
+        return config_path
+
+    def _ai_workspace(self, temp_dir):
+        primary = self._fixture(temp_dir, text="[ ] T Real_Task id:t1 project:work\n")
+        inbox = self._fixture(temp_dir, "ai-inbox.life.txt", "")
+        config_path = self._workspace_config(
+            temp_dir,
+            {
+                "workspaces": {
+                    "ai": {
+                        "sources": [
+                            {
+                                "path": "life.txt",
+                                "role": "readonly",
+                                "writable": False,
+                            },
+                            {
+                                "path": "ai-inbox.life.txt",
+                                "role": "primary",
+                                "writable": True,
+                            },
+                        ],
+                        "write_file": "ai-inbox.life.txt",
+                    }
+                },
+                "default_workspace": "ai",
+            },
+        )
+        return primary, inbox, config_path
 
 
 if __name__ == "__main__":

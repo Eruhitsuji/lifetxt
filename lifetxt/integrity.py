@@ -31,7 +31,12 @@ PROFILE_STRICT = "strict"
 PROFILES = (PROFILE_DEFAULT, PROFILE_STRICT)
 
 
-def build_integrity_report(paths=None, config=None, verify_files=False, profile=None):
+AI_MEMORY_INTENT_TAGS = frozenset(["preference", "goal", "decision"])
+
+
+def build_integrity_report(
+    paths=None, config=None, verify_files=False, profile=None, ai_context=False
+):
     """Build a read-only integrity report.
 
     This function intentionally performs no write, repair, migration, archive,
@@ -129,6 +134,8 @@ def build_integrity_report(paths=None, config=None, verify_files=False, profile=
     diagnostics.extend(_diagnostic_rows(cross_diagnostics, line_ids))
     diagnostics.extend(_workspace_rows(config))
     diagnostics.extend(_recovery_rows(config))
+    if ai_context:
+        diagnostics.extend(_ai_context_rows(items, config))
     _apply_profile(diagnostics, profile)
 
     summary = _summary(diagnostics)
@@ -187,12 +194,15 @@ def integrity_report_to_json(report):
     return json.dumps(report, ensure_ascii=False, indent=2) + "\n"
 
 
-def build_integrity_plan(paths=None, config=None, verify_files=False, profile=None):
+def build_integrity_plan(
+    paths=None, config=None, verify_files=False, profile=None, ai_context=False
+):
     report = build_integrity_report(
         paths,
         config=config,
         verify_files=verify_files,
         profile=profile,
+        ai_context=ai_context,
     )
     actions = []
     for row in report["diagnostics"]:
@@ -693,6 +703,226 @@ def _recovery_rows(config):
             )
         )
     return rows
+
+
+def _ai_context_rows(items, config):
+    rows = []
+    rows.extend(_ai_workspace_rows(config))
+    rows.extend(_personal_ai_memory_rows(items))
+    return rows
+
+
+def _ai_workspace_rows(config):
+    if not isinstance(config, dict) or not (
+        config.get("workspaces") or config.get("default_workspace")
+    ):
+        return [
+            _row(
+                severity="info",
+                code="AI001",
+                category="ai_context",
+                message="No named workspace context was configured for AI-context checks.",
+                hint="Use --config and --workspace to audit an AI-safe workspace shape.",
+                check_state="skipped",
+                details=OrderedDict((("area", "workspace"),)),
+            )
+        ]
+    try:
+        from .workspace import active_workspace_name, resolve_workspace
+    except Exception as exc:
+        return [
+            _row(
+                severity="warning",
+                code="AI002",
+                category="ai_context",
+                message="AI workspace checks could not be loaded: %s." % exc,
+                hint="Run workspace validation directly for details.",
+                check_state="blocked",
+                details=OrderedDict((("area", "workspace"),)),
+            )
+        ]
+    try:
+        resolution = resolve_workspace(config, active_workspace_name(config))
+    except ValueError as exc:
+        return [
+            _row(
+                severity="error",
+                code="AI003",
+                category="ai_context",
+                message=str(exc),
+                hint="Fix the workspace configuration before exposing it to an AI client.",
+                check_state="blocked",
+                details=OrderedDict((("area", "workspace"),)),
+            )
+        ]
+    details = _ai_workspace_details(resolution)
+    if not resolution.get("ok"):
+        return [
+            _row(
+                severity="warning",
+                code="AI100",
+                category="ai_context",
+                message="Workspace has diagnostics that weaken AI-context readiness.",
+                hint="Resolve workspace diagnostics before using it as AI context.",
+                source_file=resolution.get("write_file"),
+                check_state="reported",
+                details=details,
+            )
+        ]
+    if not details["has_dedicated_write_target"]:
+        return [
+            _row(
+                severity="warning",
+                code="AI101",
+                category="ai_context",
+                message="AI workspace does not use a dedicated writable inbox target.",
+                hint="Use broad read sources plus a separate writable source for AI proposals when possible.",
+                source_file=resolution.get("write_file"),
+                check_state="reported",
+                details=details,
+            )
+        ]
+    return [
+        _row(
+            severity="info",
+            code="AI102",
+            category="ai_context",
+            message="AI workspace uses broad read context with a dedicated writable target.",
+            hint="",
+            source_file=resolution.get("write_file"),
+            check_state="passed",
+            details=details,
+        )
+    ]
+
+
+def _ai_workspace_details(resolution):
+    write_file = resolution.get("write_file")
+    sources = resolution.get("sources") or []
+    readable = []
+    writable = []
+    write_source = None
+    for source in sources:
+        resolved = source.get("resolved_path")
+        if _path_key(resolved) == _path_key(write_file):
+            write_source = source
+        if source.get("default_visible") and resolved:
+            readable.append(resolved)
+        if source.get("writable") and resolved:
+            writable.append(resolved)
+    write_role = write_source.get("role") if write_source else None
+    contextual_read_paths = [
+        path for path in readable if _path_key(path) != _path_key(write_file)
+    ]
+    dedicated = bool(
+        write_file
+        and write_source
+        and write_source.get("writable")
+        and write_role not in ("readonly", "generated", "archive", "reference")
+        and contextual_read_paths
+        and _looks_like_ai_inbox_target(write_file)
+    )
+    return OrderedDict(
+        (
+            ("area", "workspace"),
+            ("workspace", resolution.get("name")),
+            ("write_file", write_file),
+            ("write_role", write_role),
+            ("readable_paths", readable),
+            ("writable_paths", writable),
+            ("has_broad_read_context", len(readable) > 1),
+            ("looks_like_ai_inbox_target", _looks_like_ai_inbox_target(write_file)),
+            ("has_dedicated_write_target", dedicated),
+        )
+    )
+
+
+def _personal_ai_memory_rows(items):
+    rows = []
+    candidates = OrderedDict()
+    for item in items:
+        intent_tags = [
+            value
+            for value in (_detail_values(item, "tag"))
+            if value.lower() in AI_MEMORY_INTENT_TAGS
+        ]
+        people = _detail_values(item, "person")
+        if item.kind != "N" or not intent_tags or not people:
+            continue
+        item_id = _first_detail(item, "id")
+        details = OrderedDict(
+            (
+                ("area", "personal_ai_memory"),
+                ("person", people[0]),
+                ("intent_tags", intent_tags),
+                ("title_key", _normalized_title(item.title)),
+            )
+        )
+        if item.status != "[N]":
+            rows.append(
+                _row(
+                    severity="warning",
+                    code="AI201",
+                    category="ai_context",
+                    message="Personal AI Memory candidate should use [N] status.",
+                    hint="Change the status to [N] or use a task/event kind if it is actionable.",
+                    source_file=getattr(item, "source", None),
+                    line=getattr(item, "line", None),
+                    item_id=item_id,
+                    check_state="reported",
+                    details=details,
+                )
+            )
+        for intent in intent_tags:
+            key = (people[0].lower(), intent.lower(), _normalized_title(item.title))
+            candidates.setdefault(key, []).append(item)
+    for (person, intent, title_key), matches in candidates.items():
+        if len(matches) < 2:
+            continue
+        duplicate = matches[1]
+        rows.append(
+            _row(
+                severity="warning",
+                code="AI202",
+                category="ai_context",
+                message="Duplicate Personal AI Memory candidate for person:%s tag:%s."
+                % (person, intent),
+                hint="Review whether these memory records should be merged or differentiated.",
+                source_file=getattr(duplicate, "source", None),
+                line=getattr(duplicate, "line", None),
+                item_id=_first_detail(duplicate, "id"),
+                check_state="reported",
+                details=OrderedDict(
+                    (
+                        ("area", "personal_ai_memory"),
+                        ("person", person),
+                        ("intent_tag", intent),
+                        ("title_key", title_key),
+                        ("locations", [_item_location(item) for item in matches]),
+                    )
+                ),
+            )
+        )
+    return rows
+
+
+def _detail_values(item, key):
+    return [str(value) for value in item.details.get(key, []) if str(value)]
+
+
+def _normalized_title(value):
+    return " ".join(str(value or "").lower().split())
+
+
+def _path_key(path):
+    if not path:
+        return ""
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _looks_like_ai_inbox_target(path):
+    name = os.path.basename(str(path or "")).lower()
+    return "inbox" in name or "proposal" in name
 
 
 def _diagnostic_rows(diagnostics, line_ids):

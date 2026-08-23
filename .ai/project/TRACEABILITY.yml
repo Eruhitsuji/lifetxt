@@ -7601,6 +7601,71 @@ traceability:
         .ai/project/changes/server-init-ai-workspace-and-backup-coverage/.
       status: implemented
 
+    - requirement_id: req-mcp-setup-claude-adapter
+      capability_id: cap-mcp-provider-adapters
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/537
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt ai setup claude, printing Claude Desktop config paths/JSON and the equivalent Claude Code claude mcp add command / .mcp.json path
+        - Extract _ai_setup_command_and_config() from command_ai_setup_generic as a shared helper reused by every ai setup provider variant
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtAiSetupClaudeCliTests (6 tests): default profile read, --profile assist/full override, invalid --profile rejected, --format json shape, --write-file reflected, no-write guarantee"
+        - python -m unittest tests.test_lifetxt.LifeTxtAiSetupGenericCliTests tests.test_lifetxt.LifeTxtAiSetupClaudeCliTests tests.test_lifetxt.LifeTxtAiSetupGeminiCliTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 25 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that the new tests fail against the pre-fix code with an argparse invalid-choice error naming only 'generic' as valid"
+        - "live: real python -m lifetxt ai setup claude against a fixture life.txt in text and --format json modes rendered correct Claude Desktop/Claude Code output; fixture directory confirmed byte-for-byte unchanged afterward"
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime tests.test_completion_surfaces -> Ran 73 tests, OK
+        - ruff format --check / ruff check on lifetxt/cli.py and tests/test_lifetxt.py -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Fifth #500-epic implementation task overall, and the first of two
+        landing together in one branch/PR with req-mcp-setup-gemini-adapter
+        (#538), since both are thin variants of the same shared resolution
+        helper. Standard assurance, matching cap-mcp-generic-setup's own
+        precedent (read-only, additive, no lifetxt mcp behavior change);
+        no change package created, per this repository's threshold. Current
+        Claude Desktop/Claude Code config facts confirmed via web research
+        before implementation, not assumed -- see cap-mcp-provider-adapters
+        notes for details and sources.
+      status: implemented
+
+    - requirement_id: req-mcp-setup-gemini-adapter
+      capability_id: cap-mcp-provider-adapters
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/538
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt ai setup gemini, printing Gemini CLI settings.json paths/JSON and the equivalent gemini mcp add command
+        - Reuse the _ai_setup_command_and_config() helper added for req-mcp-setup-claude-adapter
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtAiSetupGeminiCliTests (6 tests): default profile read, --profile assist/full override, invalid --profile rejected, --format json shape (gemini_settings_paths/gemini_mcp_add_command), --write-file reflected, no-write guarantee"
+        - python -m unittest tests.test_lifetxt.LifeTxtAiSetupGenericCliTests tests.test_lifetxt.LifeTxtAiSetupClaudeCliTests tests.test_lifetxt.LifeTxtAiSetupGeminiCliTests tests.test_lifetxt.LifeTxtAiDoctorCliTests -> Ran 25 tests, OK
+        - "live: real python -m lifetxt ai setup gemini against a fixture life.txt in text and --format json modes rendered correct settings.json/gemini mcp add output; fixture directory confirmed byte-for-byte unchanged afterward"
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime tests.test_completion_surfaces -> Ran 73 tests, OK
+        - ruff format --check / ruff check on lifetxt/cli.py and tests/test_lifetxt.py -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Sixth #500-epic implementation task overall, landing in the same
+        branch/PR as req-mcp-setup-claude-adapter (#537). Standard
+        assurance, same basis as #537. Current Gemini CLI config facts
+        confirmed via web research before implementation -- see
+        cap-mcp-provider-adapters notes for details and sources.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -7316,7 +7316,7 @@ traceability:
       capability_id: cap-mcp-context-revision
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/513
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
       changed_files_or_scope:
         - Reuse lifetxt.remote_backend.source_revision() unmodified to attach a revision field to six local MCP context-read tools
         - lifetxt/mcp.py
@@ -7349,7 +7349,7 @@ traceability:
       capability_id: cap-unified-inbox-proposals
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/514
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
       changed_files_or_scope:
         - Add an optional idempotency_key parameter to stage_create(), persisted on the proposal record, preventing a retried stage_proposal call from creating a duplicate proposal
         - lifetxt/inbox.py
@@ -7380,7 +7380,7 @@ traceability:
       capability_id: cap-personal-ai-memory-convention
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/515
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/516
       changed_files_or_scope:
         - Document the Personal AI Memory convention (N kind, person:self, freeform tags, existing proposal lifecycle, existing staleness rule) as the first Personal Context Engine product slice
         - docs/en/ai-integration.md

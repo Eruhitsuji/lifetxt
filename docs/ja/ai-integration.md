@@ -201,6 +201,24 @@ deploy された `lifetxt serve`/sync timer が書き込むのと同じ `life.tx
 なく、remote client の書き込みを専用の proposal/inbox file に閉じ込められ
 ます。
 
+### ChatGPT
+
+現時点では未対応です。ChatGPT の Developer Mode custom connector は
+URL で到達可能な Streamable HTTP または SSE server を要求します -- ChatGPT
+には URL を貼り付けるだけで、Claude Desktop・Claude Code・Gemini CLI の
+ように local command を起動することはありません。`lifetxt mcp` は stdio
+にのみ対応しているため直接指定することはできず、上記の SSH pattern も
+役に立ちません。ChatGPT の connector UI には、そもそも `ssh` のような
+command を指定する項目自体が存在しないためです。
+
+ChatGPT 組み込みの Google Drive connector も代替にはなりません。
+Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携が必要と
+する任意の構造化 file を読み書きできないためです。
+
+現時点で推奨できる回避策はありません。ChatGPT の connector model が
+変わった場合、または lifetxt 自身が Streamable HTTP MCP transport を
+追加した場合（まだ決定されていない、別の大きな決定事項です）に見直します。
+
 ---
 
 ## 3. Tool Reference

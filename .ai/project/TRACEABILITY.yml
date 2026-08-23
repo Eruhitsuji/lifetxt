@@ -7666,6 +7666,30 @@ traceability:
         cap-mcp-provider-adapters notes for details and sources.
       status: implemented
 
+    - requirement_id: req-mcp-chatgpt-status-documentation
+      capability_id: cap-mcp-provider-adapters
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/540
+      pull_request: null
+      changed_files_or_scope:
+        - Add a ChatGPT subsection to Section 2 (Client Configuration) stating current support status and why, closing the last gap in #500's "provider adapters exist or are explicitly deferred with generic instructions" completion criterion
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 32 tests, OK (no translation-coverage or drift-gate regression)
+        - manual balanced-code-fence check on both documents (62/62 fences, balanced)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Quick assurance, documentation-only, no code change. Closes the
+        specific gap #500's own closing review found: the ChatGPT
+        deferral decision (#535/#536) existed only inside closed GitHub
+        issues, not in user-facing documentation. Content is a direct,
+        unembellished restatement of #535's and #536's already-verified
+        findings -- no new investigation performed here.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

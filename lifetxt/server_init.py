@@ -59,6 +59,7 @@ DEFAULT_CONFIG = {
         "sudo_user": None,
     },
     "reverse_proxy": {"backend": "none", "nginx_config_path": None},
+    "ai_workspace": {"enabled": False, "write_file": "ai-inbox.life.txt"},
     "integrity_checks": ["workspace_validate", "check", "ids"],
     "validation_commands": [],
     "health_url": None,
@@ -83,7 +84,14 @@ def load_config(path):
         )
     config = dict(DEFAULT_CONFIG)
     config.update(data)
-    for key in ("web", "calendar_sync", "systemd", "service_control", "reverse_proxy"):
+    for key in (
+        "web",
+        "calendar_sync",
+        "systemd",
+        "service_control",
+        "reverse_proxy",
+        "ai_workspace",
+    ):
         merged = dict(DEFAULT_CONFIG[key])
         merged.update(config.get(key) or {})
         config[key] = merged
@@ -166,6 +174,20 @@ def _validate_config(config, source_path):
             "Config %s: extras must be a JSON array of strings." % source_path,
             step="load_config",
         )
+    if config["ai_workspace"].get("enabled"):
+        _validate_optional_safe_path(
+            config["ai_workspace"].get("write_file"),
+            "ai_workspace.write_file",
+            source_path,
+        )
+        if os.path.normcase(
+            os.path.normpath(_ai_inbox_path(config))
+        ) == os.path.normcase(os.path.normpath(_life_txt_path(config))):
+            raise ServerInitError(
+                "Config %s: ai_workspace.write_file must not be the same path as "
+                "life_txt_path." % source_path,
+                step="load_config",
+            )
 
 
 def _validate_single_line(value, key, source_path):
@@ -279,6 +301,17 @@ def _life_txt_path(config):
     return _path(config, "life_txt_path", "life.txt")
 
 
+def _ai_inbox_path(config):
+    """Resolved AI-workspace write target, only meaningful when
+    `ai_workspace.enabled` is true. Mirrors `_path()`'s own
+    explicit-value-or-data-root-relative-default resolution, scoped to the
+    nested `ai_workspace` section rather than a top-level config key."""
+    write_file = config["ai_workspace"].get("write_file") or "ai-inbox.life.txt"
+    if os.path.isabs(write_file):
+        return write_file
+    return os.path.join(config["data_root"], write_file)
+
+
 def _application_config_path(config):
     return _path(config, "application_config_path", ".lifetxt.json")
 
@@ -327,15 +360,15 @@ def _server_update_config(config):
         if service_control.get("enabled") and service_control.get("wrapper_path")
         else []
     )
+    backup_paths = [_life_txt_path(config), _application_config_path(config)]
+    if config["ai_workspace"].get("enabled"):
+        backup_paths.append(_ai_inbox_path(config))
     config_out = OrderedDict(
         [
             ("install_root", config["install_root"]),
             ("python", config.get("python")),
             ("life_txt_path", _life_txt_path(config)),
-            (
-                "backup_paths",
-                [_life_txt_path(config), _application_config_path(config)],
-            ),
+            ("backup_paths", backup_paths),
             ("backup_dir", _backup_dir(config)),
             ("lock_path", _lock_path(config)),
             ("services", services),
@@ -376,16 +409,72 @@ def _application_config(config):
     generated = os.path.join(
         config["data_root"], ".generated", "google_calendar.life.txt"
     )
+    web_section = OrderedDict(
+        [("host", "127.0.0.1"), ("port", config["web"].get("port", 8765))]
+    )
+    if not config["ai_workspace"].get("enabled"):
+        return OrderedDict(
+            [
+                ("paths", [_life_txt_path(config), generated]),
+                ("write_file", _life_txt_path(config)),
+                ("web", web_section),
+            ]
+        )
+    # ai_workspace.enabled switches to the `workspaces`-shaped config #500's
+    # own "AI-safe workspaces" example describes: `default` resolves to
+    # exactly what the legacy shape above would have (same sources, same
+    # write target), and `ai` adds a read-only reference to the primary
+    # life.txt plus a confined, writable AI-inbox source. See
+    # lifetxt.workspace.iter_workspace_definitions() for how this is read.
     return OrderedDict(
         [
-            ("paths", [_life_txt_path(config), generated]),
-            ("write_file", _life_txt_path(config)),
             (
-                "web",
+                "workspaces",
                 OrderedDict(
-                    [("host", "127.0.0.1"), ("port", config["web"].get("port", 8765))]
+                    [
+                        (
+                            "default",
+                            OrderedDict(
+                                [
+                                    (
+                                        "sources",
+                                        [_life_txt_path(config), generated],
+                                    ),
+                                    ("write_file", _life_txt_path(config)),
+                                ]
+                            ),
+                        ),
+                        (
+                            "ai",
+                            OrderedDict(
+                                [
+                                    (
+                                        "sources",
+                                        [
+                                            OrderedDict(
+                                                [
+                                                    ("path", _life_txt_path(config)),
+                                                    ("role", "readonly"),
+                                                    ("writable", False),
+                                                ]
+                                            ),
+                                            OrderedDict(
+                                                [
+                                                    ("path", _ai_inbox_path(config)),
+                                                    ("role", "primary"),
+                                                    ("writable", True),
+                                                ]
+                                            ),
+                                        ],
+                                    ),
+                                    ("write_file", _ai_inbox_path(config)),
+                                ]
+                            ),
+                        ),
+                    ]
                 ),
             ),
+            ("web", web_section),
         ]
     )
 
@@ -554,6 +643,15 @@ def build_plan(config):
     steps.append(
         {"kind": "file", "path": _life_txt_path(config), "mode": "0640", "content": ""}
     )
+    if config["ai_workspace"].get("enabled"):
+        steps.append(
+            {
+                "kind": "file",
+                "path": _ai_inbox_path(config),
+                "mode": "0640",
+                "content": "",
+            }
+        )
     steps.append(
         {
             "kind": "file",

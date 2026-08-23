@@ -7535,6 +7535,72 @@ traceability:
         unfiled/unfixed candidate follow-up.
       status: implemented
 
+    - requirement_id: req-server-init-ai-workspace
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/528
+      pull_request: null
+      changed_files_or_scope:
+        - Add an opt-in ai_workspace.enabled/ai_workspace.write_file config section to lifetxt server-init
+        - Switch _application_config() between the legacy paths/write_file shape (unchanged when disabled) and a workspaces-shaped default+ai config (when enabled)
+        - Add the generated AI-inbox file to the build plan and to the generated server-update.json's backup_paths
+        - lifetxt/server_init.py
+        - tests/test_server_init.py
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-init-ai-workspace-and-backup-coverage/
+      tests_or_evidence:
+        - "tests/test_server_init.py AiWorkspaceGenerationTests (8 tests): disabled-by-default byte-identical legacy shape; enabled config resolved through the real lifetxt.workspace.iter_workspace_definitions(); AI-inbox file creation and conflict refusal; backup_paths inclusion; write_file-collides-with-life_txt_path rejection; custom write_file name honored"
+        - python -m unittest tests.test_server_init -> Ran 17 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 6 of the 8 new tests fail/error against the pre-#528 code, then pass once the fix is restored"
+        - "live: a real generated deployment (ai_workspace.enabled=true) materialized to disk and driven with a real `lifetxt --config <generated> mcp --workspace ai --profile assist` round trip: get_file_state reported writable_path as the AI-inbox file with both sources readable; list_items showed the primary life.txt item marked editable:false; a create_item attempt was refused (PRECONDITION_REQUIRED) naming the AI-inbox path, never life.txt, proving write confinement"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Approved via AskUserQuestion during #500 Phase 6 scoping
+        (implement now, recommended option). Security/High assurance,
+        matching this capability's established basis for server-init/
+        server-update changes; full change package at
+        .ai/project/changes/server-init-ai-workspace-and-backup-coverage/.
+        Lands in the same branch/PR as req-server-update-backup-coverage-
+        diagnostic (#529), since both share the same workspace-write-target-
+        derivation concept.
+      status: implemented
+
+    - requirement_id: req-server-update-backup-coverage-diagnostic
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/529
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt.server_update.backup_coverage_warnings(), a non-fatal diagnostic comparing backup_paths against every workspace write target the live application config declares
+        - Add a backup_coverage_warnings field to every run_server_update() report shape
+        - Print a warning naming any uncovered path in command_server_update's text renderer
+        - lifetxt/server_update.py
+        - lifetxt/cli.py
+        - tests/test_server_update.py
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-init-ai-workspace-and-backup-coverage/
+      tests_or_evidence:
+        - "tests/test_server_update.py BackupCoverageWarningsTests (6 tests) and RunServerUpdateBackupCoverageTests (4 tests): legacy and workspaces-shaped config coverage/uncoverage; absolute write_file used as-is; missing/unreadable/None application config degrades to no warning; dry-run and up_to_date reports both carry the field; the warning never changes status/exit code; CLI text output includes the warning"
+        - python -m unittest tests.test_server_update -> Ran 122 tests, OK (skipped=1)
+        - "confirmed via git stash (production code only, tests kept) that all 9 new tests fail against the pre-#529 code, then pass once the fix is restored"
+        - "live: a real disposable bare-origin + checkout git repository with a real ahead-of-current-branch commit; a real `lifetxt server-update --server-config ...` dry-run against a workspaces-shaped .lifetxt.json with one covered and one uncovered workspace correctly printed a warning naming only the uncovered write target's absolute path; re-run with both paths in backup_paths printed no warning"
+        - "found and fixed during that same live verification: a relative write_file value in .lifetxt.json must be resolved against the application config file's own directory via lifetxt.workspace.config_base_dir() before comparison, exactly as lifetxt.workspace.iter_workspace_definitions() consumers do elsewhere -- comparing the raw relative string against backup_paths's (typically absolute) entries would have falsely flagged every relative write_file as uncovered even when it named the exact same file"
+        - python -m unittest tests.test_server_update tests.test_server_init -> Ran 139 tests, OK (skipped=1)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Approved via AskUserQuestion during #500 Phase 6 scoping (add a
+        code-level warning, recommended option). The diagnostic never
+        auto-expands backup_paths; that stays an operator decision. Security/
+        High assurance, matching this capability's established basis;
+        full change package at
+        .ai/project/changes/server-init-ai-workspace-and-backup-coverage/.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

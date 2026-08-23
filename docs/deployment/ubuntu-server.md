@@ -84,6 +84,29 @@ workflow remains separate from broad root command execution. The generated
 backup/update-lock paths, integrity checks, and health URL so the server is
 ready for future guarded `server-update` runs.
 
+### Optional: generate an AI-safe workspace at bootstrap time
+
+Add an opt-in `ai_workspace` section to generate the
+[AI-Safe Workspaces](../en/ai-integration.md#7-ai-safe-workspaces) pattern
+from the start, instead of hand-editing `.lifetxt.json` after the fact:
+
+```json
+{
+  "ai_workspace": {"enabled": true, "write_file": "ai-inbox.life.txt"}
+}
+```
+
+When enabled, the generated `.lifetxt.json` switches from the plain
+`paths`/`write_file` shape to a `workspaces` config with a `default`
+workspace (unchanged behavior) and an `ai` workspace: broad read access to
+the primary `life.txt`, writes confined to the new (empty, created for you)
+AI-inbox file. `server-init` also adds that file to the generated
+`server-update.json`'s `backup_paths` automatically. `write_file` defaults
+to `ai-inbox.life.txt` under `data_root` and may be omitted; omitting
+`ai_workspace` entirely (the default) generates exactly today's config,
+byte for byte. See [server-hosted MCP access](#9-ai-client-access-mcp-over-ssh)
+below for connecting an AI client to this workspace.
+
 ## 1. Environment
 
 `lifetxt` requires Python 3.10+ (see `pyproject.toml`'s `requires-python`).
@@ -251,6 +274,19 @@ schedule you choose otherwise, back up:
 - the archive destination file(s)
 - `.lifetxt.json`
 - any `role: generated` source files (e.g. the Google Calendar mirror)
+- **every configured named workspace's write target** -- if you added a
+  `workspaces` section to `.lifetxt.json` (by hand, or via the opt-in
+  `ai_workspace` generation above) after your `server-update.json` was
+  written, its `backup_paths` does not pick that up automatically; add the
+  new write target to `backup_paths` yourself
+
+`lifetxt server-update` checks the last point for you: every dry-run and
+applied run compares `backup_paths` against every workspace write target the
+live `.lifetxt.json` currently declares and prints a non-fatal
+`backup_paths does not cover ...` warning naming anything missing. This never
+blocks the update -- it exists so a workspace added after initial setup is
+never silently left out of backup coverage, without `server-update` guessing
+at your intended backup policy by rewriting `backup_paths` itself.
 
 A plain timestamped copy is sufficient; `lifetxt` does not require a special
 backup format. To restore, stop the services, replace the files from a

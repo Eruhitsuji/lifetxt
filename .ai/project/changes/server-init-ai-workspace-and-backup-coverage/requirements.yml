@@ -1,0 +1,57 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-init-ai-workspace
+    statement: >-
+      An operator running `lifetxt server-init` must be able to opt into
+      generating an AI-safe named-workspace application config (a `default`
+      workspace matching today's behavior plus an `ai` workspace with a
+      broad-read/confined-write source split), with the AI-inbox file
+      artifact created for them, without changing default (non-opted-in)
+      `server-init` output.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/500 (Phase 6, item 14)
+    acceptance_criteria:
+      - Omitting `ai_workspace` produces byte-identical output to today's
+        server-init for an otherwise-identical config.
+      - Enabling it produces a `workspaces` config that
+        `lifetxt.workspace.iter_workspace_definitions()` resolves correctly.
+      - The AI-inbox file is created (empty) by `apply_plan()`, refusing a
+        pre-existing conflicting file like every other generated artifact.
+      - The AI workspace's write target is present in the generated
+        `server-update.json`'s `backup_paths`.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/528
+    status: proposed
+
+  - id: req-server-update-backup-coverage-diagnostic
+    statement: >-
+      `lifetxt server-update` must warn (non-fatally) when its configured
+      `backup_paths` does not cover every authoritative write target the
+      live application config declares, so a manually-added or
+      previously-generated workspace's write target is never silently
+      excluded from backup coverage.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/500 (Phase 6, item 16)
+    acceptance_criteria:
+      - A missing workspace write target produces a named, non-fatal
+        warning in both dry-run and applied-update output.
+      - A deployment whose `backup_paths` already covers every write target
+        produces no warning.
+      - The warning never blocks, fails, or changes the exit code of an
+        otherwise-successful update.
+      - Works for both `workspaces`-shaped and legacy `paths`/`write_file`
+        application config.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/529
+    status: proposed
+
+decision_log:
+  - question: >-
+      Implement item 14 (AI workspace generation) now, or defer it and only
+      do item 16 (backup coverage diagnostic)?
+    decision: Implement both.
+    decided_by: Eruhitsuji
+    method: AskUserQuestion, recommended option selected
+  - question: >-
+      For item 16, add a code-level warning comparing backup_paths against
+      the live workspace config, or a documentation-only reminder?
+    decision: Code-level warning, reusing lifetxt.workspace.iter_workspace_definitions().
+    decided_by: Eruhitsuji
+    method: AskUserQuestion, recommended option selected

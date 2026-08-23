@@ -3739,6 +3739,8 @@ capabilities:
       - req-server-update-health-readiness
       - req-server-init-bootstrap
       - req-server-hosted-mcp-runbook
+      - req-server-init-ai-workspace
+      - req-server-update-backup-coverage-diagnostic
     implementation_locations:
       - docs/deployment/ubuntu-server.md
       - docs/en/ai-integration.md
@@ -3757,6 +3759,7 @@ capabilities:
       - config/release/clock-boundary-baseline-v1.json
       - .ai/project/changes/server-update-production-readiness/
       - .ai/project/changes/server-init-bootstrap/
+      - .ai/project/changes/server-init-ai-workspace-and-backup-coverage/
     public_interfaces:
       - lifetxt server-init --server-config PATH [--yes] [--format text|json]
       - lifetxt.server_init.run_server_init
@@ -3774,6 +3777,9 @@ capabilities:
       - server-update config: validation_commands
       - server-update config: health_ready_timeout, health_retry_interval
       - server-init config: install_root, data_root, python, installer, extras, service_user, service_group, web, calendar_sync, systemd, service_control, reverse_proxy
+      - server-init config: ai_workspace.enabled, ai_workspace.write_file
+      - lifetxt.server_update.backup_coverage_warnings
+      - server-update report field: backup_coverage_warnings
     tests_or_evidence:
       - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, source/data root overlap refusal, generated unit/sudoers injection-value refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, health-check planning, and CLI JSON output.
       - tests/test_server_update.py covers post-restart health readiness retry, including immediate success, connection-refused followed by success, HTTP error followed by success, deadline exhaustion preserving validated_health_check_failed, and restart failure preserving validated_restart_incomplete without health attempts.
@@ -3794,6 +3800,18 @@ capabilities:
       - "#526: every new cross-reference anchor (#server-hosted-ssh, #10-personal-ai-memory, #7-ai-safe-workspaces) verified against scripts/validate_release_docs.py's own slug() algorithm run directly, since these three documents are outside that script's checked-document set"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - "#526: sshd confirmed reachable and running on the verification host (Windows OpenSSH server, `Get-Service sshd` -> Running); a full authenticated SSH round-trip was not established in this sandbox (no authorized_keys configured for non-interactive access, and setting one up was judged out of scope for a docs-only task rather than silently done); the underlying `lifetxt mcp --profile read ...` command itself is independently verified throughout this session and elsewhere in this capability's own evidence, and SSH transports that same stdio session unchanged"
+      - "#528: tests/test_server_init.py AiWorkspaceGenerationTests (8 tests: disabled-by-default byte-identical legacy shape; enabled config resolved through the real lifetxt.workspace.iter_workspace_definitions(); AI-inbox file creation and conflict refusal; backup_paths inclusion; write_file-collides-with-life_txt_path rejection; custom write_file name honored)"
+      - python -m unittest tests.test_server_init -> Ran 17 tests, OK
+      - "#528: confirmed via git stash (production code only, tests kept) that 6 of the 8 new tests fail/error against the pre-fix code, then pass once restored"
+      - "#528: live -- a real generated deployment (ai_workspace.enabled=true) materialized to disk and driven with a real `lifetxt --config <generated> mcp --workspace ai --profile assist` round trip: get_file_state reported writable_path as the AI-inbox file with both sources readable; list_items showed the primary life.txt item marked editable:false; a create_item attempt was refused (PRECONDITION_REQUIRED) naming the AI-inbox path, never life.txt, proving write confinement"
+      - "#529: tests/test_server_update.py BackupCoverageWarningsTests (6 tests) and RunServerUpdateBackupCoverageTests (4 tests): legacy and workspaces-shaped config coverage/uncoverage; absolute write_file used as-is; missing/unreadable/None application config degrades to no warning; dry-run and up_to_date reports both carry the field; the warning never changes status/exit code; CLI text output includes the warning"
+      - python -m unittest tests.test_server_update -> Ran 122 tests, OK (skipped=1)
+      - "#529: confirmed via git stash (production code only, tests kept) that all 9 new tests fail against the pre-fix code, then pass once restored"
+      - "#529: live -- a real disposable bare-origin + checkout git repository with a real ahead-of-current-branch commit; a real `lifetxt server-update --server-config ...` dry-run against a workspaces-shaped .lifetxt.json with one covered and one uncovered workspace correctly printed a warning naming only the uncovered write target's absolute path; re-run with both paths in backup_paths printed no warning"
+      - python -m unittest tests.test_server_update tests.test_server_init -> Ran 139 tests, OK (skipped=1)
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/260
       - https://github.com/Eruhitsuji/lifetxt/issues/270
@@ -3805,6 +3823,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/279
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/526
+      - https://github.com/Eruhitsuji/lifetxt/issues/528
+      - https://github.com/Eruhitsuji/lifetxt/issues/529
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
       - https://github.com/Eruhitsuji/lifetxt/pull/276
@@ -3884,6 +3904,34 @@ capabilities:
       the live application config's `workspaces`), not something #526's
       own docs-only scope should absorb; left unfiled/unfixed here and
       recorded as a candidate follow-up rather than silently dropped.
+      #528 and #529 close that follow-up: #528 adds an opt-in
+      `ai_workspace.enabled`/`ai_workspace.write_file` section to
+      `server-init`'s config, switching `_application_config()` between the
+      legacy `{"paths": [...], "write_file": ...}` shape (unchanged,
+      byte-identical, when disabled) and a `{"workspaces": {"default": ...,
+      "ai": ...}}` shape matching #500's own AI-safe-workspace example when
+      enabled, and adds the generated AI-inbox file to both the build plan
+      and the generated `server-update.json`'s `backup_paths`. #529 adds
+      `lifetxt.server_update.backup_coverage_warnings()`, a non-fatal
+      diagnostic comparing `backup_paths` against every workspace write
+      target the live application config declares (reusing
+      `lifetxt.workspace.iter_workspace_definitions()` unmodified via a new
+      `_configured_write_targets()` helper), surfaced as a
+      `backup_coverage_warnings` report field and, in `command_server_update`'s
+      text renderer, a printed warning naming any uncovered path -- it never
+      auto-expands `backup_paths` itself, keeping that an operator decision.
+      Live verification of #529 found and fixed a real bug before recording
+      any evidence as passed: a configured workspace's relative `write_file`
+      value must be resolved against the application config file's own
+      directory via `lifetxt.workspace.config_base_dir()` before comparing it
+      against `backup_paths`'s (typically absolute) entries; the first
+      implementation compared raw, unresolved relative strings and falsely
+      flagged every relative write target as uncovered even when it named
+      the exact same file already present in `backup_paths`. Both requirements
+      escalated to Security/High assurance, matching this capability's own
+      established basis for `server-init`/`server-update` changes; see
+      `.ai/project/changes/server-init-ai-workspace-and-backup-coverage/`
+      for the full change package.
     replacement:
       replaces: []
       replaced_by: null

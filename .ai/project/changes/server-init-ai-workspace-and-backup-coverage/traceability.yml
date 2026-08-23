@@ -5,7 +5,7 @@ links:
     capability_id: cap-ubuntu-server-deployment
     epic: https://github.com/Eruhitsuji/lifetxt/issues/500
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/528
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/530
     tests_or_evidence:
       - "tests/test_server_init.py AiWorkspaceGenerationTests (8 tests): disabled-by-default byte-identical legacy shape; enabled config resolved through the real lifetxt.workspace.iter_workspace_definitions(); AI-inbox file creation and conflict refusal; backup_paths inclusion; write_file-collides-with-life_txt_path rejection; custom write_file name honored"
       - python -m unittest tests.test_server_init -> Ran 17 tests, OK
@@ -20,7 +20,7 @@ links:
     capability_id: cap-ubuntu-server-deployment
     epic: https://github.com/Eruhitsuji/lifetxt/issues/500
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/529
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/530
     tests_or_evidence:
       - "tests/test_server_update.py BackupCoverageWarningsTests (6 tests) and RunServerUpdateBackupCoverageTests (4 tests): legacy and workspaces-shaped config coverage/uncoverage; absolute write_file used as-is; missing/unreadable/None application config degrades to no warning; dry-run and up_to_date reports both carry the field; the warning never changes status/exit code; CLI text output includes the warning"
       - python -m unittest tests.test_server_update -> Ran 122 tests, OK (skipped=1)

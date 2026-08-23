@@ -286,6 +286,19 @@ def build_parser():
         default="default",
         help="Severity profile for effective_severity mapping.",
     )
+    integrity.add_argument(
+        "--expected-revision",
+        help="Required by `integrity apply`; expected current source revision.",
+    )
+    integrity.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required by `integrity apply` before any write is performed.",
+    )
+    integrity.add_argument(
+        "--prefix",
+        help="Optional ID prefix for `integrity apply` missing-ID assignment.",
+    )
     integrity.set_defaults(func=command_integrity)
 
     ids_command = subparsers.add_parser(
@@ -3887,9 +3900,11 @@ def command_check(args):
 
 def command_integrity(args):
     from .integrity import (
+        apply_missing_id_repair,
         build_integrity_plan,
         build_integrity_report,
         format_integrity_text,
+        integrity_apply_to_json,
         integrity_plan_to_json,
         integrity_report_to_json,
     )
@@ -3903,6 +3918,32 @@ def command_integrity(args):
             profile=getattr(args, "profile", "default"),
         )
         write_text(None, integrity_plan_to_json(plan))
+        return 0
+
+    if paths and paths[0] == "apply":
+        try:
+            result = apply_missing_id_repair(
+                paths[1] if len(paths) > 1 else None,
+                config=_config(args),
+                expected_revision=getattr(args, "expected_revision", None),
+                confirm=getattr(args, "confirm", False),
+                prefix=getattr(args, "prefix", None),
+            )
+        except Exception as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1 if "conflict" in str(exc).lower() else 2
+        if getattr(args, "json", False):
+            write_text(None, integrity_apply_to_json(result))
+        else:
+            write_text(
+                None,
+                "integrity apply: %d ID assignment(s), %s -> %s\n"
+                % (
+                    result["assignment_count"],
+                    result["before_revision"],
+                    result["after_revision"],
+                ),
+            )
         return 0
 
     report = build_integrity_report(

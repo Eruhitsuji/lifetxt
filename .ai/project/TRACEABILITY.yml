@@ -7455,6 +7455,31 @@ traceability:
         sync, migration, archive cleanup, or source-file mutation is introduced.
       status: implemented
 
+    - requirement_id: req-data-integrity-apply-missing-id
+      capability_id: cap-data-integrity-readonly-report
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/522
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/523
+      changed_files_or_scope:
+        - Add `lifetxt integrity apply` for missing-ID assignment only
+        - Require `--confirm` and exact `--expected-revision` before writing
+        - Refuse unsupported repair classes and revision mismatches before write
+        - lifetxt/integrity.py
+        - lifetxt/cli.py
+        - tests/test_integrity.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 15 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        High-assurance, intentionally narrow data-changing repair slice. Applies
+        only missing-ID assignment to one explicit file through the shared
+        mutation/CAS path. General repair application, recovery actions, sync
+        reconciliation, archive cleanup, migration, and deletion remain out of
+        scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

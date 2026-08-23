@@ -681,6 +681,7 @@ python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
 python -m lifetxt integrity plan life.txt
+python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
 
 | Option | 意味 |
@@ -702,6 +703,12 @@ plan は決定的で非変更です。missing ID assignment のような安全�
 automatic として分類し、曖昧な reference、sync conflict、欠落 source、
 recovery evidence の問題は manual または blocked review item として残します。
 file-backed action には、読み取れる場合に現在の expected source revision を含めます。
+
+`python -m lifetxt integrity apply ...` は意図的に狭い apply surface です。
+automatic missing-ID assignment repair だけを適用し、明示的な1つの file path、
+`--expected-revision`、`--confirm` を必須にします。revision mismatch、parse error、
+unsupported repair class は書き込み前に fail closed します。成功時は
+before/after revision と assignment records を含む `integrity-apply-v1` result を返します。
 
 ## 4. 変換と rendering
 

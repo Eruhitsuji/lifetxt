@@ -9,15 +9,23 @@ from collections import OrderedDict
 from .attachments import ATTACHMENT_KEYS, attachment_diagnostics
 from .config import config_paths
 from .diagnostic_contract import diagnostic_category
-from .ids import duplicate_id_diagnostics, id_key_from_config
+from .ids import (
+    collect_item_ids,
+    duplicate_id_diagnostics,
+    ensure_item_id,
+    id_key_from_config,
+    id_prefix_for_item,
+)
 from .links import reference_diagnostics
 from .model import Diagnostic, REFERENCE_KEYS
-from .parser import parse_text
+from .parser import parse_line, parse_text
 from .paths import expand_paths
+from .serializer import item_to_line
 
 
 SCHEMA = "integrity-v1"
 PLAN_SCHEMA = "integrity-plan-v1"
+APPLY_SCHEMA = "integrity-apply-v1"
 PROFILE_DEFAULT = "default"
 PROFILE_STRICT = "strict"
 PROFILES = (PROFILE_DEFAULT, PROFILE_STRICT)
@@ -210,6 +218,94 @@ def build_integrity_plan(paths=None, config=None, verify_files=False, profile=No
 
 def integrity_plan_to_json(plan):
     return json.dumps(plan, ensure_ascii=False, indent=2) + "\n"
+
+
+def apply_missing_id_repair(
+    path,
+    *,
+    config=None,
+    expected_revision=None,
+    confirm=False,
+    prefix=None,
+):
+    """Apply the narrow integrity repair for missing IDs.
+
+    This is intentionally not a general repair engine. It mutates one explicit
+    file only, requires operator confirmation, and relies on the shared
+    mutation/CAS path for revision checking and serialized writes.
+    """
+
+    if not confirm:
+        raise ValueError("integrity apply requires --confirm before writing.")
+    if not expected_revision:
+        raise ValueError("integrity apply requires --expected-revision before writing.")
+    if not path:
+        raise ValueError("integrity apply requires exactly one real file path.")
+    config = config or {}
+    normalized = _normalize_paths([path], config)
+    if len(normalized) != 1 or normalized[0] == "-":
+        raise ValueError("integrity apply requires exactly one real file path.")
+    target = normalized[0]
+    id_key = id_key_from_config(config)
+    assignments = []
+
+    def transform(text):
+        items, diagnostics = parse_text(
+            text,
+            id_key=id_key,
+            check_ids=False,
+            check_references=False,
+        )
+        if _has_error(diagnostics):
+            raise ValueError("Cannot apply missing-ID repair while parse errors exist.")
+        existing = collect_item_ids(items, key=id_key)
+        changed, new_text, records = _assign_missing_ids_in_text(
+            target,
+            text,
+            id_key,
+            existing,
+            config,
+            prefix=prefix,
+        )
+        assignments[:] = records
+        return new_text if changed else text
+
+    def validate(text):
+        _items, diagnostics = parse_text(
+            text,
+            id_key=id_key,
+            check_ids=False,
+            check_references=False,
+        )
+        if _has_error(diagnostics):
+            raise ValueError("Generated missing-ID repair did not parse cleanly.")
+
+    from .mutation import mutate_text
+
+    result = mutate_text(
+        target,
+        transform,
+        expected_hash=expected_revision,
+        operation="integrity_apply_assign_id",
+        validate=validate,
+        create=False,
+    )
+    return OrderedDict(
+        (
+            ("schema", APPLY_SCHEMA),
+            ("operation", "assign_id"),
+            ("path", target),
+            ("before_revision", result.before_hash),
+            ("after_revision", result.after_hash),
+            ("changed", result.changed),
+            ("assignment_count", len(assignments)),
+            ("assignments", assignments),
+        )
+    )
+
+
+def integrity_apply_to_json(result):
+    return json.dumps(result, ensure_ascii=False, indent=2) + "\n"
 
 
 def _normalize_paths(paths, config):
@@ -744,6 +840,57 @@ def _is_generated_item(item):
             if str(value).lower() in ("1", "true", "yes", "y"):
                 return True
     return False
+
+
+def _assign_missing_ids_in_text(path, text, key, existing, config, prefix=None):
+    raw_lines = text.splitlines(True)
+    changed = False
+    records = []
+    new_lines = []
+    for line_no, raw_line in enumerate(raw_lines, 1):
+        body, ending = _split_line_ending(raw_line)
+        item, diagnostics = parse_line(body, line_no)
+        if item is None or _has_error(diagnostics) or item.details.get(key):
+            new_lines.append(raw_line)
+            continue
+        assigned = ensure_item_id(
+            item,
+            existing_ids=existing,
+            key=key,
+            prefix=prefix or id_prefix_for_item(item, config),
+        )
+        new_line = item_to_line(item) + ending
+        new_lines.append(new_line)
+        changed = True
+        records.append(
+            OrderedDict(
+                (
+                    ("path", path),
+                    ("line", line_no),
+                    ("id", assigned),
+                    ("type", item.kind),
+                    ("status", item.status),
+                    ("title", item.title),
+                )
+            )
+        )
+    if not raw_lines and text:
+        new_lines.append(text)
+    return changed, "".join(new_lines), records
+
+
+def _split_line_ending(line):
+    if line.endswith("\r\n"):
+        return line[:-2], "\r\n"
+    if line.endswith("\n"):
+        return line[:-1], "\n"
+    if line.endswith("\r"):
+        return line[:-1], "\r"
+    return line, ""
+
+
+def _has_error(diagnostics):
+    return any(getattr(row, "severity", None) == "error" for row in diagnostics)
 
 
 def _item_location(item):

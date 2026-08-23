@@ -3738,8 +3738,11 @@ capabilities:
       - req-server-update-production-readiness
       - req-server-update-health-readiness
       - req-server-init-bootstrap
+      - req-server-hosted-mcp-runbook
     implementation_locations:
       - docs/deployment/ubuntu-server.md
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
       - contrib/README.md
       - contrib/systemd/lifetxt.service
       - contrib/systemd/lifetxt-sync-ics.service
@@ -3787,6 +3790,10 @@ capabilities:
       - 'live: --approve <correct target sha> proceeded past the gate; checkout HEAD moved to the target commit (git merge --ff-only genuinely ran), then failed at pip install as expected (no real Python package at the disposable path) -- #272''s existing, unmodified failure handling'
       - ruff format --check lifetxt tests scripts (pre-existing drift in 3 unrelated files confirmed present on origin/main already, not introduced by this change)
       - ruff check lifetxt tests scripts -> All checks passed
+      - "#526: manual balanced-code-fence check on docs/en/ai-integration.md, docs/ja/ai-integration.md, docs/deployment/ubuntu-server.md after editing (56/56/30 fences, all balanced)"
+      - "#526: every new cross-reference anchor (#server-hosted-ssh, #10-personal-ai-memory, #7-ai-safe-workspaces) verified against scripts/validate_release_docs.py's own slug() algorithm run directly, since these three documents are outside that script's checked-document set"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "#526: sshd confirmed reachable and running on the verification host (Windows OpenSSH server, `Get-Service sshd` -> Running); a full authenticated SSH round-trip was not established in this sandbox (no authorized_keys configured for non-interactive access, and setting one up was judged out of scope for a docs-only task rather than silently done); the underlying `lifetxt mcp --profile read ...` command itself is independently verified throughout this session and elsewhere in this capability's own evidence, and SSH transports that same stdio session unchanged"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/260
       - https://github.com/Eruhitsuji/lifetxt/issues/270
@@ -3796,6 +3803,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/277
       - https://github.com/Eruhitsuji/lifetxt/issues/281
       - https://github.com/Eruhitsuji/lifetxt/issues/279
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/526
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
       - https://github.com/Eruhitsuji/lifetxt/pull/276
@@ -3844,6 +3853,37 @@ capabilities:
       optional full-suite validation before service restart. The extension keeps
       the old pip/string-check config path valid and records the environment
       review in `.ai/project/changes/server-update-production-readiness/`.
+      #526 (a follow-up implementation issue from the #500 AI-integration
+      epic's Phase 6 item 13, "server-hosted MCP runbook") added a new
+      section 9 to `docs/deployment/ubuntu-server.md` and a matching
+      "Server-hosted (SSH)" subsection to `docs/en/ai-integration.md`/
+      `docs/ja/ai-integration.md`, documenting that an AI client reaches a
+      server-hosted workspace's `lifetxt mcp` by pointing its MCP client
+      `command` at `ssh` instead of `python`/`lifetxt` directly -- no new
+      code, no new listening port, and no change to `lifetxt mcp` itself,
+      since SSH is only the transport carrying the same stdio JSON-RPC
+      session. Before writing this, checked #500's own Phase 8
+      ("Conversational context tools") and found it already satisfied by
+      existing `get_command_center`/`get_project` MCP tools (both call
+      domain-layer aggregation directly, matching Phase 8's own acceptance
+      bar), recorded as a comment on #500 rather than building redundant
+      aliases. #526 also confirmed sshd is reachable on the verification
+      host but did not set up authorized-key access to force a full
+      authenticated round-trip test, since doing so would have meant
+      modifying the operator's personal SSH trust configuration for a
+      docs-only task -- recorded as an explicit, honest verification
+      boundary rather than silently assumed or forced through. Separately
+      found, while reading the existing section 5 "Backup and restore"
+      list, that it does not mention a configured named workspace's
+      separate write target (e.g. an `ai` workspace's `write_file`) --
+      matching #500's own stated Phase 6 item 16 concern that
+      `server-update` should not silently omit newly configured
+      authoritative AI write targets from backup coverage. This is a
+      distinct, evidenced gap in `server_update.py`/`server_init.py`
+      themselves (their `backup_paths` is a static list, not derived from
+      the live application config's `workspaces`), not something #526's
+      own docs-only scope should absorb; left unfiled/unfixed here and
+      recorded as a candidate follow-up rather than silently dropped.
     replacement:
       replaces: []
       replaced_by: null

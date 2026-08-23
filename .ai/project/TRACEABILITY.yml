@@ -7504,6 +7504,37 @@ traceability:
         MCP behavior, proposal review, Query semantics, or any write path.
       status: implemented
 
+    - requirement_id: req-server-hosted-mcp-runbook
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/526
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/527
+      changed_files_or_scope:
+        - Document server-hosted MCP access over SSH (no new inbound port), closing #500 Phase 6 item 13
+        - docs/deployment/ubuntu-server.md
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - manual balanced-code-fence check on all three edited documents (56/56/30 fences, balanced)
+        - every new cross-reference anchor verified against scripts/validate_release_docs.py's own slug() algorithm run directly
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "sshd confirmed reachable and running on the verification host; a full authenticated SSH round-trip was not established (no authorized_keys configured), recorded as an explicit verification boundary rather than silently assumed"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Documentation-only; no code change to lifetxt mcp, server-init, or
+        server-update -- SSH is only the transport carrying the same stdio
+        JSON-RPC session lifetxt mcp already speaks locally. Also recorded,
+        as a comment on #500 rather than new code, that Phase 8
+        ("Conversational context tools") is already satisfied by existing
+        get_command_center/get_project tools. Found and explicitly recorded
+        (not fixed, out of this task's docs-only scope) a related gap:
+        docs/deployment/ubuntu-server.md's existing backup guidance does not
+        mention a configured named workspace's separate write target,
+        matching #500's own Phase 6 item 16 concern -- left as an
+        unfiled/unfixed candidate follow-up.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

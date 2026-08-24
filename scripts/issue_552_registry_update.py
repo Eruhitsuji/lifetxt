@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 
@@ -177,6 +178,10 @@ TRACEABILITY_BLOCK = r'''
 '''
 
 
+def run(*args):
+    subprocess.run(args, check=True)
+
+
 def main():
     capabilities_path = Path(".ai/project/CAPABILITIES.yml")
     traceability_path = Path(".ai/project/TRACEABILITY.yml")
@@ -199,6 +204,31 @@ def main():
             1,
         )
         traceability_path.write_text(traceability, encoding="utf-8", newline="\n")
+
+    changed = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--quiet",
+            "--",
+            str(capabilities_path),
+            str(traceability_path),
+        ]
+    ).returncode != 0
+    if not changed:
+        return
+
+    run("git", "diff", "--check")
+    run("git", "config", "user.name", "github-actions[bot]")
+    run(
+        "git",
+        "config",
+        "user.email",
+        "41898282+github-actions[bot]@users.noreply.github.com",
+    )
+    run("git", "add", str(capabilities_path), str(traceability_path))
+    run("git", "commit", "-m", "chore: register personal context toolkit traceability")
+    run("git", "push", "origin", "HEAD:issue-552-personal-context-toolkit")
 
 
 if __name__ == "__main__":

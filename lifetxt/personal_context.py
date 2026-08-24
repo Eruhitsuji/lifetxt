@@ -95,13 +95,33 @@ def _link_records(items):
 def _links_by_source(items):
     grouped = {}
     for record in _link_records(items):
-        key = (record.get("source_location"), record.get("source_line"))
+        source_id = record.get("source_id")
+        if source_id:
+            key = ("id", str(source_id))
+        else:
+            key = (
+                "location",
+                record.get("source_location"),
+                record.get("source_line"),
+            )
         grouped.setdefault(key, []).append(record)
     return grouped
 
 
 def _records_for_item(grouped, item):
-    return list(grouped.get((_location(item), getattr(item, "line", None)), []))
+    item_id = _item_id(item)
+    if item_id:
+        return list(grouped.get(("id", item_id), []))
+    return list(
+        grouped.get(
+            (
+                "location",
+                _location(item),
+                getattr(item, "line", None),
+            ),
+            [],
+        )
+    )
 
 
 def _public_item_record(item):

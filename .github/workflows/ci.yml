@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   issues: write
 
 jobs:
@@ -377,39 +377,6 @@ jobs:
           path: |
             release-gate.log
             .cache/release-policy-manifest.json
-
-  issue-552-registry-update:
-    name: Temporary issue 552 registry update
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'issue-552-personal-context-toolkit' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out feature branch
-        uses: actions/checkout@v5
-        with:
-          ref: issue-552-personal-context-toolkit
-          fetch-depth: 0
-
-      - name: Apply registry additions
-        run: python scripts/issue_552_registry_update.py
-
-      - name: Verify generated registry diff
-        run: |
-          git diff --check
-          python -m unittest tests.test_traceability_gate
-          grep -q 'cap-personal-context-toolkit' .ai/project/CAPABILITIES.yml
-          grep -q 'req-personal-context-toolkit-integration' .ai/project/TRACEABILITY.yml
-
-      - name: Commit registry additions
-        run: |
-          if git diff --quiet -- .ai/project/CAPABILITIES.yml .ai/project/TRACEABILITY.yml; then
-            echo 'Registry records already present.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .ai/project/CAPABILITIES.yml .ai/project/TRACEABILITY.yml
-          git commit -m 'chore: register personal context toolkit traceability'
-          git push origin HEAD:issue-552-personal-context-toolkit
 
   ci-visibility:
     name: Keep main-branch CI failures visible

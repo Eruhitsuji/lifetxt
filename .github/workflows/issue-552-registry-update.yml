@@ -6,12 +6,20 @@ on:
       - issue-552-personal-context-toolkit
     paths:
       - .github/workflows/issue-552-registry-update.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+    paths:
+      - .github/workflows/issue-552-registry-update.yml
 
 permissions:
   contents: write
 
 jobs:
   update-registries:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'issue-552-personal-context-toolkit'
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch

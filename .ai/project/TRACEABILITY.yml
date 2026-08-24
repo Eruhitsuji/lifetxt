@@ -7806,6 +7806,115 @@ traceability:
         documentation section.
       status: implemented
 
+
+    - requirement_id: req-personal-context-health
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/547
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - tests/test_personal_context_cli.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - Context Health tests cover current, stale, superseded, missing-source, and broken-reference findings.
+        - PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-personal-context-why
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/548
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - tests/test_personal_context_cli.py
+      tests_or_evidence:
+        - Context Why tests cover deterministic source, temporal, link, backlink, and correction evidence.
+        - PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-personal-memory-correction
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/549
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context_correction.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - Correction tests prove the replacement is staged through Unified Inbox and authoritative life.txt remains byte-unchanged before review acceptance.
+        - Replacement Notes retain history through a freeform corrects relation instead of deleting the old record.
+        - PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-personal-context-capsule
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/550
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - tests/test_personal_context_cli.py
+      tests_or_evidence:
+        - Capsule tests cover canonical deterministic SHA-256 revision, bounded output, and stale/superseded default exclusion.
+        - PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-personal-decision-memory
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/551
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - tests/test_personal_context_cli.py
+      tests_or_evidence:
+        - Decision Memory reuses tag:decision and project metadata with project filtering applied before the requested limit.
+        - Regression coverage locks the project-filter/limit ordering.
+        - PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-personal-context-toolkit-integration
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/552
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/553
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - lifetxt/entrypoint.py
+        - tests/test_personal_context.py
+        - tests/test_personal_context_cli.py
+        - tests/test_personal_context_correction.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Focused Personal Context domain and CLI suites.
+        - Repository traceability gate.
+        - Final PR #553 CI.
+      release_or_deployment: null
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -5270,3 +5270,62 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+  - id: cap-personal-context-toolkit
+    name: Deterministic Personal Context toolkit
+    summary: >-
+      Executable, provider-neutral Personal Context views and a proposal-first
+      correction lifecycle built on the existing Personal AI Memory convention
+      and Format 1.0 records. Provides bounded health, explanation, capsule,
+      decision projections, and reviewable corrections without introducing a
+      new record kind or first-class Query/Format vocabulary.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-personal-context-health
+      - req-personal-context-why
+      - req-personal-memory-correction
+      - req-personal-context-capsule
+      - req-personal-decision-memory
+      - req-personal-context-toolkit-integration
+    implementation_locations:
+      - lifetxt/personal_context.py
+      - lifetxt/personal_context_cli.py
+      - lifetxt/entrypoint.py
+      - tests/test_personal_context.py
+      - tests/test_personal_context_cli.py
+      - tests/test_personal_context_correction.py
+      - docs/en/personal-context-toolkit.md
+      - docs/ja/personal-context-toolkit.md
+    public_interfaces:
+      - lifetxt context health
+      - lifetxt context why <id>
+      - lifetxt context capsule
+      - lifetxt memory correct <id> TEXT
+      - lifetxt decisions
+    tests_or_evidence:
+      - tests/test_personal_context.py
+      - tests/test_personal_context_cli.py
+      - tests/test_personal_context_correction.py
+      - PR #553 CI
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/503
+      - https://github.com/Eruhitsuji/lifetxt/issues/547
+      - https://github.com/Eruhitsuji/lifetxt/issues/548
+      - https://github.com/Eruhitsuji/lifetxt/issues/549
+      - https://github.com/Eruhitsuji/lifetxt/issues/550
+      - https://github.com/Eruhitsuji/lifetxt/issues/551
+      - https://github.com/Eruhitsuji/lifetxt/issues/552
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/553
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses cap-personal-ai-memory-convention, cap-unified-inbox-proposals,
+      cap-temporal-context, and the existing ID/link helpers. `corrects:` is a
+      freeform detail convention scoped to this toolkit, not new Format or Query
+      vocabulary. `memory correct` stages a replacement Note through Unified
+      Inbox and never directly rewrites or deletes the authoritative old record.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

@@ -32,6 +32,8 @@ _EXTRA_COMMANDS = frozenset(
     )
 )
 
+_PERSONAL_CONTEXT_COMMANDS = frozenset(("context", "memory", "decisions"))
+
 _DOCTOR_SAFETY_FLAGS = frozenset(
     (
         "--workspace-safety",
@@ -167,6 +169,8 @@ def _print_help():
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
+        "Personal Context commands:\n"
+        "  context health|why|capsule, memory correct, decisions\n"
         "Release-safety and Format 1.0 commands:\n"
         "  safety locks|serve-target|timezone|revisions|transactions|write-routes|release-gate\n"
         "  attachment put|reference|delete|status\n"
@@ -175,7 +179,8 @@ def _print_help():
         "Additional flags:\n"
         "  review --last-week|--last-month|--year [YYYY]|--someday\n"
         "  files --open ID, who --workload, quick --journal, completion powershell\n"
-        "See docs/en/new-cli-workflows.md and docs/en/release-safety-foundations.md.\n"
+        "See docs/en/new-cli-workflows.md, docs/en/personal-context-toolkit.md, "
+        "and docs/en/release-safety-foundations.md.\n"
     )
     return 0
 
@@ -277,6 +282,14 @@ def main(argv=None):
             from .extra_cli import main as extra_main
 
             return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
+        if command in _PERSONAL_CONTEXT_COMMANDS:
+            from .personal_context_cli import main as personal_context_main
+
+            return personal_context_main(
                 cleaned,
                 config_path=config_path,
                 workspace_name=workspace_name,

@@ -22,13 +22,65 @@ class PersonalContextTests(unittest.TestCase):
 
     def items(self):
         return [
-            self.note("Current", id="current", person="self", tag="preference", source="user", updated="2026-08-20T00:00:00+00:00"),
-            self.note("Stale", id="stale", person="self", tag="preference", source="user", updated="2026-07-01T00:00:00+00:00"),
-            self.note("Old", id="old", person="self", tag="preference", source="user", updated="2026-08-20T00:00:00+00:00"),
-            self.note("New", id="new", person="self", tag="preference", source="user", updated="2026-08-21T00:00:00+00:00", corrects="old"),
-            self.note("Broken", id="broken", person="self", tag="preference", updated="2026-08-22T00:00:00+00:00", ref="missing-id"),
-            self.note("Decision A", id="decision-a", person="self", tag="decision", project="alpha", source="user", updated="2026-08-23T00:00:00+00:00"),
-            self.note("Decision B", id="decision-b", person="self", tag="decision", project="beta", source="user", updated="2026-08-23T00:00:00+00:00"),
+            self.note(
+                "Current",
+                id="current",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-20T00:00:00+00:00",
+            ),
+            self.note(
+                "Stale",
+                id="stale",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-07-01T00:00:00+00:00",
+            ),
+            self.note(
+                "Old",
+                id="old",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-20T00:00:00+00:00",
+            ),
+            self.note(
+                "New",
+                id="new",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-21T00:00:00+00:00",
+                corrects="old",
+            ),
+            self.note(
+                "Broken",
+                id="broken",
+                person="self",
+                tag="preference",
+                updated="2026-08-22T00:00:00+00:00",
+                ref="missing-id",
+            ),
+            self.note(
+                "Decision A",
+                id="decision-a",
+                person="self",
+                tag="decision",
+                project="alpha",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+            ),
+            self.note(
+                "Decision B",
+                id="decision-b",
+                person="self",
+                tag="decision",
+                project="beta",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+            ),
         ]
 
     def clock(self):
@@ -60,7 +112,9 @@ class PersonalContextTests(unittest.TestCase):
         with timezone_context("UTC"), clock_context(self.clock()):
             first = context_capsule(self.items(), stale_after_days=14)
             second = context_capsule(self.items(), stale_after_days=14)
-            expanded = context_capsule(self.items(), include_stale=True, stale_after_days=14)
+            expanded = context_capsule(
+                self.items(), include_stale=True, stale_after_days=14
+            )
         self.assertEqual(first["revision"], second["revision"])
         ids = [row["id"] for row in first["items"]]
         self.assertNotIn("old", ids)
@@ -71,6 +125,14 @@ class PersonalContextTests(unittest.TestCase):
     def test_decision_memory_reuses_project_and_tag(self):
         with timezone_context("UTC"), clock_context(self.clock()):
             report = decision_memory(self.items(), project="beta", stale_after_days=14)
+        self.assertEqual(report["count"], 1)
+        self.assertEqual(report["items"][0]["id"], "decision-b")
+
+    def test_decision_memory_applies_project_before_limit(self):
+        with timezone_context("UTC"), clock_context(self.clock()):
+            report = decision_memory(
+                self.items(), project="beta", limit=1, stale_after_days=14
+            )
         self.assertEqual(report["count"], 1)
         self.assertEqual(report["items"][0]["id"], "decision-b")
 

@@ -50,10 +50,6 @@ def _location(item):
     return "unknown location"
 
 
-def _item_key(item):
-    return (getattr(item, "source", None), getattr(item, "line", None), id(item))
-
-
 def is_personal_context_item(item, person="self"):
     """Return whether ``item`` participates in the Personal AI Memory convention."""
     if item.kind != "N":
@@ -288,6 +284,16 @@ def _capsule_item_record(item, stale_after_days=DEFAULT_STALE_DAYS):
     return record
 
 
+def _coerce_limit(limit):
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        raise ValueError("limit must be an integer")
+    if limit < 0:
+        raise ValueError("limit must be zero or greater")
+    return limit
+
+
 def context_capsule(
     items,
     person="self",
@@ -297,12 +303,7 @@ def context_capsule(
     stale_after_days=DEFAULT_STALE_DAYS,
 ):
     """Return a deterministic, read-only Personal Context projection."""
-    try:
-        limit = int(limit)
-    except (TypeError, ValueError):
-        raise ValueError("limit must be an integer")
-    if limit < 0:
-        raise ValueError("limit must be zero or greater")
+    limit = _coerce_limit(limit)
 
     corrections = correction_index(items)
     selected = []
@@ -359,18 +360,19 @@ def decision_memory(
     stale_after_days=DEFAULT_STALE_DAYS,
 ):
     """Project `tag:decision` Personal Context records without a new kind."""
+    limit = _coerce_limit(limit)
     capsule = context_capsule(
         items,
         person=person,
         tags=("decision",),
         include_stale=include_stale,
-        limit=max(int(limit), 0),
+        limit=len(items),
         stale_after_days=stale_after_days,
     )
     records = list(capsule["items"])
     if project:
         records = [record for record in records if str(project) in record["project"]]
-        records = records[: max(int(limit), 0)]
+    records = records[:limit]
     return OrderedDict(
         (
             ("schema", "personal-decision-memory-v1"),

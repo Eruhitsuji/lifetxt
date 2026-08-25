@@ -1,4 +1,5 @@
 name: Issue 554 governance update
+# Registered on the branch before this push so the one-shot trigger can run.
 
 on:
   push:

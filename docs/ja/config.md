@@ -232,3 +232,24 @@ repository ですが、fork では upstream ではなく自分自身の reposito
 - `config set`、`config unset`、`config migrate` は revision を確認してから書き込みます。`--expected-revision` が合わない場合や workspace 境界を越える場合は拒否されます。
 - `config.write.audit_log` を設定すると、設定書き込みの成功、拒否、関連 revision を JSONL で記録できます。秘密情報の値は記録対象にしません。
 - timezone、release、remote、archive の設定は、安全な workspace 解決に依存します。設定変更後は `lifetxt check`、必要に応じて `doctor --check-update` を実行して、実行環境と文書化された前提が一致していることを確認します。
+
+## 定期 Markdown レポートのプロファイル
+
+名前付き定期レポートは、任意のトップレベル `reports` オブジェクトに定義します。
+各プロファイルには `period`（`daily`、`weekly`、`monthly` のいずれか）が必須で、
+`output`、`title`、`project`、`type`、`tag`、`open`、`mode`、`frontmatter`
+を任意で指定できます。具体的なプロファイルキーの登録情報は
+`lifetxt config explain reports.<name>.<key>` で確認できます。
+
+完全なプロファイル契約、出力パスのプレースホルダ、生成される frontmatter、
+Obsidian/Notion での利用方法は [reports.md](reports.md) を参照してください。
+実行可能な設定例として `examples/report_profiles.config.json` も追加しています。
+
+`lifetxt config init` は空の `reports` オブジェクトを意図的に追加しません。
+lifetxt には組み込みのレポートプロファイルや出力先がなく、意味のある既定値が存在しないためです。
+任意設定の契約は、公開 `config-v1` schema と `config explain` が利用する設定 registry で
+定義します。
+
+これは config version 1 に対する追加的な拡張です。`reports` を持たない既存設定は
+従来どおり動作し、migration は不要です。downgrade 時は任意の `reports` セクションを
+削除すれば、この機能追加前の設定動作に戻ります。

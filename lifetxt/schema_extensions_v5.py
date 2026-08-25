@@ -40,6 +40,26 @@ def _source_manifest_entry():
     }
 
 
+def _report_profile():
+    non_empty_string = {"type": "string", "minLength": 1}
+    return {
+        "type": "object",
+        "required": ["period"],
+        "properties": {
+            "period": {"enum": ["daily", "weekly", "monthly"]},
+            "output": non_empty_string,
+            "title": non_empty_string,
+            "project": non_empty_string,
+            "type": non_empty_string,
+            "tag": non_empty_string,
+            "open": {"type": "boolean"},
+            "mode": {"enum": ["replace", "create", "append"]},
+            "frontmatter": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    }
+
+
 def schema_bundle_v5():
     source = {
         "oneOf": [
@@ -139,6 +159,10 @@ def schema_bundle_v5():
                             "type": "object",
                             "additionalProperties": {"type": "object"},
                         },
+                        "reports": {
+                            "type": "object",
+                            "additionalProperties": _report_profile(),
+                        },
                         "defaults": {
                             "type": "object",
                             "properties": {
@@ -195,6 +219,14 @@ def schema_samples_v5():
                     },
                     "workspace": {"max_total_source_bytes": 67108864},
                     "update": {"repository": "Eruhitsuji/lifetxt"},
+                    "reports": {
+                        "weekly": {
+                            "period": "weekly",
+                            "output": "reports/{iso_year}-W{iso_week}.md",
+                            "mode": "replace",
+                            "frontmatter": True,
+                        }
+                    },
                     "defaults": {"person": "self", "timezone": "Asia/Tokyo"},
                 },
             ),

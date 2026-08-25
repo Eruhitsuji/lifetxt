@@ -105,8 +105,15 @@ def _install_config_template_extension():
     config_module._lifetxt_editor_extension = True
 
 
+def _install_report_config_extension():
+    from .report_config import install_report_config_registry
+
+    install_report_config_registry()
+
+
 def _legacy_main(argv):
     _install_config_template_extension()
+    _install_report_config_extension()
     from . import cli as cli_module
     from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
@@ -163,12 +170,15 @@ def _review_selector_args(argv, today=None):
 
 def _print_help():
     _install_config_template_extension()
+    _install_report_config_extension()
     from .cli import build_parser
 
     build_parser().print_help()
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
+        "Periodic report commands:\n"
+        "  report list|preview|run\n"
         "Personal Context commands:\n"
         "  context health|why|capsule, memory correct, decisions\n"
         "Release-safety and Format 1.0 commands:\n"
@@ -282,6 +292,14 @@ def main(argv=None):
             from .extra_cli import main as extra_main
 
             return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
+        if command == "report":
+            from .report_cli import main as report_main
+
+            return report_main(
                 cleaned,
                 config_path=config_path,
                 workspace_name=workspace_name,

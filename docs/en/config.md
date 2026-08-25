@@ -420,3 +420,26 @@ Runnable examples live under `examples/config/`:
 - `personal.lifetxt.json`
 - `work.lifetxt.json`
 - `project-multi-file.lifetxt.json`
+
+## Periodic Markdown report profiles
+
+Named periodic report profiles live under the optional top-level `reports`
+object. Each profile requires `period` (`daily`, `weekly`, or `monthly`) and
+may set `output`, `title`, `project`, `type`, `tag`, `open`, `mode`, and
+`frontmatter`. Use `lifetxt config explain reports.<name>.<key>` to inspect the
+registered metadata for a concrete profile key.
+
+See [reports.md](reports.md) for the complete profile contract, output path
+placeholders, generated frontmatter, and Obsidian/Notion workflows. A runnable
+example is also provided at `examples/report_profiles.config.json`.
+
+`lifetxt config init` intentionally does not add an empty `reports` object:
+lifetxt has no built-in report profile or destination, so there is no meaningful
+default profile to write. The optional surface is instead covered by the
+published `config-v1` schema and the configuration registry used by
+`config explain`.
+
+This is an additive configuration-v1 extension. Existing configurations without
+`reports` keep their previous behavior and require no migration. Removing the
+optional `reports` section is the downgrade path and restores the pre-feature
+configuration behavior.

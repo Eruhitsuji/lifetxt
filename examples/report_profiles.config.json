@@ -1,0 +1,30 @@
+{
+  "paths": ["minimal_life.txt"],
+  "defaults": {
+    "timezone": "Asia/Tokyo"
+  },
+  "reports": {
+    "daily": {
+      "period": "daily",
+      "title": "Daily Life Report",
+      "output": ".generated/reports/daily/{date}.md",
+      "mode": "replace",
+      "frontmatter": true
+    },
+    "weekly": {
+      "period": "weekly",
+      "title": "Weekly Review",
+      "output": ".generated/reports/weekly/{iso_year}-W{iso_week}.md",
+      "mode": "replace",
+      "frontmatter": true
+    },
+    "monthly-open": {
+      "period": "monthly",
+      "title": "Monthly Open Items",
+      "open": true,
+      "output": ".generated/reports/monthly/{year}-{month}.md",
+      "mode": "create",
+      "frontmatter": true
+    }
+  }
+}

@@ -49,6 +49,58 @@
       },
       "type": "object"
     },
+    "reports": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "frontmatter": {
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "replace",
+              "create",
+              "append"
+            ]
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "output": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "period": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          },
+          "project": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tag": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "period"
+        ],
+        "type": "object"
+      },
+      "type": "object"
+    },
     "update": {
       "additionalProperties": true,
       "properties": {

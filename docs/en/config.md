@@ -334,8 +334,8 @@ this table covers the plain configuration surface:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `ticketing.id_prefix` | `"TK"` | Prefix for generated ticket ids, e.g. TK-1. Keep distinct from task id prefixes. |
-| `ticketing.required_fields` | `[]` | Ticket fields that must be present; missing ones are reported as TK005 errors. |
+| `ticketing.id_prefix` | `"TK"` | Prefix for generated ticket ids, e.g. `TK-1`. Keep distinct from task id prefixes. |
+| `ticketing.required_fields` | `[]` | Ticket fields that must be present; missing ones are reported as `TK005` errors. |
 | `ticketing.trackers` | `["bug", "feature", "task", "support"]` | Allowed ticket tracker values. |
 | `ticketing.priorities` | `["low", "normal", "high", "urgent", "immediate"]` | Allowed ticket priority values, low to high. |
 | `ticketing.severities` | `["trivial", "minor", "major", "critical", "blocker"]` | Allowed ticket severity values, least to most severe. |

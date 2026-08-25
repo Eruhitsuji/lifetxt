@@ -105,8 +105,15 @@ def _install_config_template_extension():
     config_module._lifetxt_editor_extension = True
 
 
+def _install_report_config_extension():
+    from .report_config import install_report_config_registry
+
+    install_report_config_registry()
+
+
 def _legacy_main(argv):
     _install_config_template_extension()
+    _install_report_config_extension()
     from . import cli as cli_module
     from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
@@ -163,6 +170,7 @@ def _review_selector_args(argv, today=None):
 
 def _print_help():
     _install_config_template_extension()
+    _install_report_config_extension()
     from .cli import build_parser
 
     build_parser().print_help()

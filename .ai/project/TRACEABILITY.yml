@@ -7915,6 +7915,37 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-periodic-markdown-report-profiles
+      capability_id: cap-periodic-markdown-reports
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/554
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/555
+      changed_files_or_scope:
+        - Add named daily/weekly/monthly Markdown report profiles and report list|preview|run CLI
+        - Reuse existing share --format markdown with concrete period filters
+        - Register reports config schema/metadata and bilingual report/config docs/examples
+        - lifetxt/report_cli.py
+        - lifetxt/report_config.py
+        - lifetxt/entrypoint.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_report_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/config.md
+        - docs/ja/config.md
+        - examples/report_profiles.config.json
+      tests_or_evidence:
+        - tests/test_report_cli.py targeted profile, period, output, schema, and routing coverage
+        - PR #555 CI
+      release_or_deployment: null
+      notes: >-
+        Standard assurance, S-sized additive CLI-first feature. Scheduling remains
+        an external OS concern; Notion support is Markdown-import compatibility,
+        not remote API publishing. Removing the optional reports section is the
+        downgrade path and requires no migration.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -1,0 +1,176 @@
+name: Issue 554 governance update
+
+on:
+  push:
+    branches:
+      - feature/554-periodic-markdown-reports
+
+permissions:
+  contents: write
+
+jobs:
+  update-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Insert capability and traceability records
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          capability_path = Path('.ai/project/CAPABILITIES.yml')
+          traceability_path = Path('.ai/project/TRACEABILITY.yml')
+
+          capability_id = 'cap-periodic-markdown-reports'
+          requirement_id = 'req-periodic-markdown-report-profiles'
+
+          capability = '''
+
+  - id: cap-periodic-markdown-reports
+    name: Named periodic Markdown report profiles
+    summary: >-
+      Configured daily, weekly, and monthly Markdown report profiles exposed
+      through `lifetxt report list|preview|run`, reusing the existing
+      `share --format markdown` renderer with concrete timezone-aware period
+      bounds and writing derived Markdown to deterministic filesystem targets
+      with versioned frontmatter and atomic replace/create/append modes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-periodic-markdown-report-profiles
+    implementation_locations:
+      - lifetxt/report_cli.py
+      - lifetxt/report_config.py
+      - lifetxt/entrypoint.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - tests/test_report_cli.py
+      - docs/en/reports.md
+      - docs/ja/reports.md
+      - docs/en/config.md
+      - docs/ja/config.md
+      - examples/report_profiles.config.json
+    public_interfaces:
+      - lifetxt report list
+      - lifetxt report preview NAME
+      - lifetxt report run NAME
+      - reports.* configuration profiles
+      - generated report frontmatter schema lifetxt-report-v1
+    tests_or_evidence:
+      - tests/test_report_cli.py
+      - PR #555 CI
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/554
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/555
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses the existing share --format markdown renderer rather than defining
+      a second filtering/statistics/report engine. Period selection resolves
+      through the active lifetxt timezone and passes concrete --after/--before
+      bounds to share. Generated Markdown is derived output; no life.txt
+      mutation contract or grammar is changed. OS schedulers remain responsible
+      for recurrence, while Notion API sync, Obsidian-specific APIs, Web/TUI/MCP
+      surfaces, and arbitrary report templates are explicitly deferred.
+      config_template() intentionally does not add an empty reports object
+      because there is no built-in profile or output destination; the optional
+      surface is instead covered by the schema, registry/explain metadata,
+      bilingual docs, and example config. The dedicated docs/en/reports.md and
+      docs/ja/reports.md are the bilingual CLI guide for this command rather
+      than duplicating the same content into the very large aggregate cli.md.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+'''
+
+          traceability = '''
+
+    - requirement_id: req-periodic-markdown-report-profiles
+      capability_id: cap-periodic-markdown-reports
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/554
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/555
+      changed_files_or_scope:
+        - Add named daily/weekly/monthly Markdown report profiles and report list|preview|run CLI
+        - Reuse existing share --format markdown with concrete period filters
+        - Register reports config schema/metadata and bilingual report/config docs/examples
+        - lifetxt/report_cli.py
+        - lifetxt/report_config.py
+        - lifetxt/entrypoint.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_report_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/config.md
+        - docs/ja/config.md
+        - examples/report_profiles.config.json
+      tests_or_evidence:
+        - tests/test_report_cli.py targeted profile, period, output, schema, and routing coverage
+        - PR #555 CI
+      release_or_deployment: null
+      notes: >-
+        Standard assurance, S-sized additive CLI-first feature. Reuses the
+        existing share renderer, workspace/config resolution, timezone policy,
+        and atomic write primitives; generated Markdown is derived output and
+        life.txt remains authoritative. Scheduling, Notion API, Obsidian plugin/API,
+        and Web/TUI/MCP report surfaces remain out of scope. config_template()
+        is intentionally unchanged because no report profile or output path has
+        a meaningful built-in default; removing the optional reports section is
+        also the downgrade path and requires no migration. The dedicated
+        docs/en/reports.md and docs/ja/reports.md serve as the bilingual CLI
+        guide instead of duplicating the complete report workflow in cli.md.
+      status: implemented
+'''
+
+          capability_text = capability_path.read_text(encoding='utf-8')
+          if capability_id not in capability_text:
+              capability_path.write_text(
+                  capability_text.rstrip() + capability + '\n',
+                  encoding='utf-8',
+                  newline='\n',
+              )
+
+          traceability_text = traceability_path.read_text(encoding='utf-8')
+          if requirement_id not in traceability_text:
+              marker = '\nrequired_chain:\n'
+              if traceability_text.count(marker) != 1:
+                  raise SystemExit('TRACEABILITY required_chain marker is not unique')
+              traceability_text = traceability_text.replace(
+                  marker,
+                  traceability + marker,
+                  1,
+              )
+              traceability_path.write_text(
+                  traceability_text,
+                  encoding='utf-8',
+                  newline='\n',
+              )
+          PY
+
+      - name: Validate bounded governance diff
+        shell: bash
+        run: |
+          git diff --check
+          git diff --numstat -- .ai/project/CAPABILITIES.yml .ai/project/TRACEABILITY.yml
+          test "$(git diff --name-only | sort)" = ".ai/project/CAPABILITIES.yml
+          .ai/project/TRACEABILITY.yml"
+          grep -q '^  - id: cap-periodic-markdown-reports$' .ai/project/CAPABILITIES.yml
+          grep -q '^    - requirement_id: req-periodic-markdown-report-profiles$' .ai/project/TRACEABILITY.yml
+          grep -q '^      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/555$' .ai/project/TRACEABILITY.yml
+
+      - name: Commit governance records and remove one-shot workflow
+        shell: bash
+        run: |
+          rm .github/workflows/issue-554-governance-update.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .ai/project/CAPABILITIES.yml .ai/project/TRACEABILITY.yml .github/workflows/issue-554-governance-update.yml
+          git diff --cached --check
+          git commit -m "Record periodic Markdown report governance"
+          git push origin HEAD:feature/554-periodic-markdown-reports

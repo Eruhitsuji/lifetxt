@@ -169,6 +169,8 @@ def _print_help():
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
         "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
+        "Periodic report commands:\n"
+        "  report list|preview|run\n"
         "Personal Context commands:\n"
         "  context health|why|capsule, memory correct, decisions\n"
         "Release-safety and Format 1.0 commands:\n"
@@ -282,6 +284,14 @@ def main(argv=None):
             from .extra_cli import main as extra_main
 
             return extra_main(
+                cleaned,
+                config_path=config_path,
+                workspace_name=workspace_name,
+            )
+        if command == "report":
+            from .report_cli import main as report_main
+
+            return report_main(
                 cleaned,
                 config_path=config_path,
                 workspace_name=workspace_name,

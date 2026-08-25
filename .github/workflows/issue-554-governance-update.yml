@@ -119,7 +119,7 @@ jobs:
           capability_text = capability_path.read_text(encoding='utf-8')
           if capability_id not in capability_text:
               capability_path.write_text(
-                  capability_text.rstrip() + capability + '\n',
+                  capability_text.rstrip() + capability,
                   encoding='utf-8',
                   newline='\n',
               )

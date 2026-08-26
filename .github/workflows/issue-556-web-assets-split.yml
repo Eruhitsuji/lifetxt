@@ -1,0 +1,251 @@
+name: Issue 556 Web asset split
+
+on:
+  push:
+    branches:
+      - issue-556-web-assets-source-split
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: ${{ !contains(github.event.head_commit.message, '[issue-556-split]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate split resources and assembly code
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          from pathlib import Path
+
+          ROOT = Path('.')
+          PACKAGE = ROOT / 'lifetxt'
+          PAGE = PACKAGE / 'web_assets.html'
+          LEGACY_GIT_BLOB_SHA = 'a0ebf28f5e007f6481cd14ec87574c979b87b2ce'
+          STYLE_MARKER = '__LIFETXT_WEB_STYLES__'
+          SCRIPT_MARKER = '__LIFETXT_WEB_SCRIPT__'
+
+          original = PAGE.read_bytes()
+          lines = original.splitlines(keepends=True)
+          assert len(lines) == 9524, len(lines)
+
+          header = b'blob ' + str(len(original)).encode('ascii') + b'\0'
+          assert hashlib.sha1(header + original).hexdigest() == LEGACY_GIT_BLOB_SHA
+
+          css = b''.join(lines[7:2136])       # original lines 8..2136
+          javascript = b''.join(lines[2698:9521])  # original lines 2699..9521
+
+          for path in PACKAGE.glob('web_assets_css_*.css'):
+              path.unlink()
+          for path in PACKAGE.glob('web_assets_js_*.js'):
+              path.unlink()
+
+          css_ranges = [(7, 539), (539, 1071), (1071, 1603), (1603, 2136)]
+          css_names = []
+          for index, (start, end) in enumerate(css_ranges, 1):
+              name = f'web_assets_css_{index:02d}.css'
+              css_names.append(name)
+              (PACKAGE / name).write_bytes(b''.join(lines[start:end]))
+
+          js_names = []
+          js_start = 2698
+          js_end = 9521
+          for index, start in enumerate(range(js_start, js_end, 400), 1):
+              end = min(start + 400, js_end)
+              name = f'web_assets_js_{index:02d}.js'
+              js_names.append(name)
+              (PACKAGE / name).write_bytes(b''.join(lines[start:end]))
+
+          assert b''.join((PACKAGE / name).read_bytes() for name in css_names) == css
+          assert b''.join((PACKAGE / name).read_bytes() for name in js_names) == javascript
+
+          shell = (
+              b''.join(lines[:7])
+              + STYLE_MARKER.encode('utf-8')
+              + b''.join(lines[2136:2698])
+              + SCRIPT_MARKER.encode('utf-8')
+              + b''.join(lines[9521:])
+          )
+          PAGE.write_bytes(shell)
+
+          css_tuple = '\n'.join(f'    "{name}",' for name in css_names)
+          js_tuple = '\n'.join(f'    "{name}",' for name in js_names)
+          web_assets_py = f'''"""Assemble the packaged Web UI from split HTML/CSS/JavaScript resources.
+
+          ``HTML_PAGE`` remains the pristine page. ``surface_runtime`` may rebind
+          ``webapp.HTML_PAGE`` with compatibility scripts without mutating this value.
+          """
+
+          from importlib import resources
+
+
+          _STYLE_MARKER = "{STYLE_MARKER}"
+          _SCRIPT_MARKER = "{SCRIPT_MARKER}"
+          _CSS_RESOURCE_NAMES = (
+          {css_tuple}
+          )
+          _JS_RESOURCE_NAMES = (
+          {js_tuple}
+          )
+
+
+          def _read_resource(name: str) -> str:
+              return resources.files(__package__).joinpath(name).read_text(encoding="utf-8")
+
+
+          def _assemble_html() -> str:
+              template = _read_resource("web_assets.html")
+              if template.count(_STYLE_MARKER) != 1 or template.count(_SCRIPT_MARKER) != 1:
+                  raise RuntimeError("web_assets.html must contain exactly one CSS and JS marker")
+              styles = "".join(_read_resource(name) for name in _CSS_RESOURCE_NAMES)
+              script = "".join(_read_resource(name) for name in _JS_RESOURCE_NAMES)
+              return template.replace(_STYLE_MARKER, styles).replace(_SCRIPT_MARKER, script)
+
+
+          HTML_PAGE = _assemble_html()
+          '''
+          (PACKAGE / 'web_assets.py').write_text(web_assets_py, encoding='utf-8')
+
+          pyproject = (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+          old_package_data = 'lifetxt = ["web_assets.html"]'
+          new_package_data = 'lifetxt = ["web_assets.html", "web_assets_css_*.css", "web_assets_js_*.js"]'
+          if old_package_data not in pyproject:
+              raise RuntimeError('expected package-data entry not found')
+          (ROOT / 'pyproject.toml').write_text(
+              pyproject.replace(old_package_data, new_package_data, 1),
+              encoding='utf-8',
+          )
+
+          test_source = '''"""Protect the packaged Web UI assembly and runtime rebinding contract."""
+
+          from __future__ import unicode_literals
+
+          import hashlib
+          import io
+          import os
+          import unittest
+          from importlib import resources
+
+          from lifetxt import web_assets, webapp
+
+
+          REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
+          LEGACY_PRISTINE_GIT_BLOB_SHA = "a0ebf28f5e007f6481cd14ec87574c979b87b2ce"
+          WEBAPP_SOURCE = os.path.join(
+              os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
+          )
+
+
+          def _git_blob_sha(data: bytes) -> str:
+              header = b"blob " + str(len(data)).encode("ascii") + b"\\0"
+              return hashlib.sha1(header + data).hexdigest()
+
+
+          class WebAssetExtractionTests(unittest.TestCase):
+              def test_asset_module_holds_the_page(self):
+                  self.assertTrue(web_assets.HTML_PAGE.startswith("<!doctype html>"))
+                  self.assertTrue(web_assets.HTML_PAGE.endswith("</html>"))
+
+              def test_split_resources_assemble_the_legacy_pristine_page(self):
+                  package = resources.files("lifetxt")
+                  template = package.joinpath("web_assets.html").read_text(encoding="utf-8")
+                  self.assertEqual(template.count(web_assets._STYLE_MARKER), 1)
+                  self.assertEqual(template.count(web_assets._SCRIPT_MARKER), 1)
+
+                  styles = "".join(
+                      package.joinpath(name).read_text(encoding="utf-8")
+                      for name in web_assets._CSS_RESOURCE_NAMES
+                  )
+                  script = "".join(
+                      package.joinpath(name).read_text(encoding="utf-8")
+                      for name in web_assets._JS_RESOURCE_NAMES
+                  )
+                  assembled = template.replace(web_assets._STYLE_MARKER, styles).replace(
+                      web_assets._SCRIPT_MARKER, script
+                  )
+                  self.assertEqual(web_assets.HTML_PAGE, assembled)
+                  self.assertEqual(
+                      _git_blob_sha(assembled.encode("utf-8")),
+                      LEGACY_PRISTINE_GIT_BLOB_SHA,
+                  )
+
+              def test_packaged_fragment_resources_exist(self):
+                  package = resources.files("lifetxt")
+                  names = web_assets._CSS_RESOURCE_NAMES + web_assets._JS_RESOURCE_NAMES
+                  self.assertTrue(names)
+                  for name in names:
+                      resource = package.joinpath(name)
+                      self.assertTrue(resource.is_file(), name)
+                      self.assertTrue(resource.read_bytes(), name)
+
+              def test_shell_no_longer_embeds_full_css_or_script(self):
+                  shell = resources.files("lifetxt").joinpath("web_assets.html").read_text(
+                      encoding="utf-8"
+                  )
+                  self.assertIn(web_assets._STYLE_MARKER, shell)
+                  self.assertIn(web_assets._SCRIPT_MARKER, shell)
+                  self.assertLess(len(shell), len(web_assets.HTML_PAGE) // 2)
+
+              def test_webapp_still_exposes_the_name(self):
+                  self.assertTrue(hasattr(webapp, "HTML_PAGE"))
+                  self.assertIn("</html>", webapp.HTML_PAGE)
+
+              def test_surface_runtime_still_rebinds_webapp_html_page(self):
+                  self.assertIn(REVISION_BRIDGE_MARKER, webapp.HTML_PAGE)
+
+              def test_asset_module_keeps_the_pristine_value(self):
+                  self.assertNotIn(REVISION_BRIDGE_MARKER, web_assets.HTML_PAGE)
+
+              def test_route_serves_what_webapp_exposes(self):
+                  try:
+                      from fastapi.testclient import TestClient
+                  except Exception:
+                      self.skipTest(
+                          "web extras unavailable, so the served page cannot be checked"
+                      )
+                  client = TestClient(webapp.create_app(paths=[]))
+                  body = client.get("/").content
+                  self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), body)
+
+              def test_literal_is_not_back_in_webapp(self):
+                  with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:
+                      source = handle.read()
+                  self.assertNotIn('HTML_PAGE = r"""', source)
+                  self.assertIn("from .web_assets import HTML_PAGE", source)
+
+
+          if __name__ == "__main__":
+              unittest.main()
+          '''
+          (ROOT / 'tests' / 'test_web_assets.py').write_text(test_source, encoding='utf-8')
+
+          # Prove that the generated shell + fragments still reconstruct exactly
+          # the legacy page before allowing the commit.
+          template = PAGE.read_text(encoding='utf-8')
+          assembled = template.replace(
+              STYLE_MARKER,
+              ''.join((PACKAGE / name).read_text(encoding='utf-8') for name in css_names),
+          ).replace(
+              SCRIPT_MARKER,
+              ''.join((PACKAGE / name).read_text(encoding='utf-8') for name in js_names),
+          )
+          assembled_bytes = assembled.encode('utf-8')
+          assembled_header = b'blob ' + str(len(assembled_bytes)).encode('ascii') + b'\0'
+          assert hashlib.sha1(assembled_header + assembled_bytes).hexdigest() == LEGACY_GIT_BLOB_SHA
+          PY
+
+      - name: Commit generated split
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lifetxt/web_assets.html lifetxt/web_assets.py lifetxt/web_assets_css_*.css lifetxt/web_assets_js_*.js pyproject.toml tests/test_web_assets.py
+          git add -u lifetxt
+          git commit -m "[issue-556-split] Generate split Web assets (#556)"
+          git push origin HEAD:${{ github.ref_name }}

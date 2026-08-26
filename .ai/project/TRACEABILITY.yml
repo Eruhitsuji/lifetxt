@@ -7946,6 +7946,34 @@ traceability:
         downgrade path and requires no migration.
       status: implemented
 
+
+    - requirement_id: req-module-structure-decomposition
+      capability_id: cap-web-surface-structure
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/556
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/557
+      changed_files_or_scope:
+        - Split the packaged Web UI source into an HTML shell plus ordered CSS and JavaScript package resources without changing the served page
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets_css_*.css
+        - lifetxt/web_assets_js_*.js
+        - pyproject.toml
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - generated source fragments reconstruct the pre-split pristine HTML with Git blob SHA a0ebf28f5e007f6481cd14ec87574c979b87b2ce
+        - tests/test_web_assets.py locks exact reconstruction, packaged fragments, pristine/runtime rebound separation, and root-route behavior
+        - PR #557 CI
+      release_or_deployment: null
+      notes: >-
+        Standard assurance, S-sized source decomposition. Reuses
+        cap-web-surface-structure and preserves the existing single served HTML,
+        inline classic-script behavior, and surface_runtime revision bridge.
+        No asset HTTP routes, ES modules, frontend framework, or build chain are
+        introduced. CSS uses four ordered fragments and JavaScript uses eighteen
+        ordered fragments; assembly is deterministic through importlib.resources.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

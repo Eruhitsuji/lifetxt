@@ -1,200 +1,400 @@
-      const now = new Date();
-      const nowIso = _tlIso(now);
-      const today = _fmtDate(now);
-      let from, to, label;
-      if (timelineRange === "24h") {
-        from = nowIso;
-        to = _tlIso(new Date(now.getTime() + 24 * 3600 * 1000));
-        label = "next 24 hours";
-      } else if (timelineRange === "week") {
-        const end = new Date(now); end.setDate(end.getDate() + 6);
-        from = today;
-        to = _fmtDate(end);
-        label = `${today} to ${_fmtDate(end)}`;
-      } else {
-        from = today;
-        to = today;
-        label = now.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      URL.revokeObjectURL(a.href);
+    }
+
+    const CHART_COLORS = ["#256b5f","#e07b54","#4a7db5","#8e6bbf","#b5a14a","#5aa876","#c0524a"];
+
+    function ensureChartJs() {
+      if (chartJsLoaded) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js";
+        s.onload = () => { chartJsLoaded = true; resolve(); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    // ── Status quick-filter buttons (multi-select) ────────────────
+    function syncStatusFilterBtns(activeValues) {
+      const params = query();
+      const isBlocked = params.get("blocked") === "true";
+      const rawStatus = params.get("status") || "";
+      const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
+      // Count items per status from current loaded items
+      const counts = {};
+      for (const item of (currentItems || [])) {
+        counts[item.status] = (counts[item.status] || 0) + 1;
       }
-      const rangeEl = document.getElementById("tl-range-label");
-      if (rangeEl) rangeEl.textContent = label;
-      let data;
+      const total = (currentItems || []).length;
+      document.querySelectorAll("#status-filter-bar .filter-btn").forEach(btn => {
+        const sv = btn.dataset.status;
+        const label = btn.dataset.label || btn.textContent.replace(/\s*\(\d+\)$/, "").trim();
+        btn.dataset.label = label;
+        if (sv === "") {
+          btn.classList.toggle("active", !isBlocked && selected.size === 0);
+          btn.textContent = total ? `${label} (${total})` : label;
+        } else if (sv === "__blocked__") {
+          btn.classList.toggle("active", isBlocked);
+        } else {
+          btn.classList.toggle("active", selected.has(sv));
+          const n = counts[sv] || 0;
+          btn.textContent = n ? `${label} (${n})` : label;
+        }
+      });
+    }
+
+    // ── Search result count ────────────────────────────────────────
+    function updateSearchCount(count) {
+      const el = document.getElementById("search-count");
+      if (!el) return;
+      el.textContent = count != null ? `(${count})` : "";
+    }
+
+    // ── View presets (config-defined, applied via ?preset= URL) ────
+    function configViewPresets() {
+      return appConfig?.views && typeof appConfig.views === "object" ? appConfig.views : {};
+    }
+    function getViewPreset(name) {
+      return configViewPresets()[name];
+    }
+
+    // ── Clickable ID refs in item rows ────────────────────────────
+    const ROW_REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
+    function detailTextWithRefs(details) {
+      const parts = [];
+      for (const [key, values] of Object.entries(details || {})) {
+        const vals = (values || []).map(v => {
+          if (ROW_REF_KEYS.has(key)) return String(v);
+          return String(v);
+        });
+        if (vals.length) parts.push(key + ":" + vals.join(","));
+      }
+      return parts.join("  ");
+    }
+    // ── Parent indicator in item rows ─────────────────────────────
+    function buildParentIndicator(details) {
+      const parents = details?.parent;
+      if (!parents?.length) return "";
+      return `<span class="parent-indicator" title="parent: ${escapeHtml(parents[0])}">↳ ${escapeHtml(parents[0])}</span>`;
+    }
+
+    // ── Drawer keyboard navigation ([ / ]) ────────────────────────
+    function drawerPrev() {
+      if (!drawerItem || !currentItems.length) return;
+      const idx = currentItems.findIndex(i => i.line === drawerItem.line);
+      if (idx > 0) openDrawer(currentItems[idx - 1]);
+    }
+    function drawerNext() {
+      if (!drawerItem || !currentItems.length) return;
+      const idx = currentItems.findIndex(i => i.line === drawerItem.line);
+      if (idx >= 0 && idx < currentItems.length - 1) openDrawer(currentItems[idx + 1]);
+    }
+
+    // ── Relative time display ─────────────────────────────────────
+    function relativeTime(isoString) {
+      if (!isoString) return "";
+      const d = new Date(isoString);
+      if (isNaN(d)) return "";
+      const diff = Date.now() - d.getTime();
+      const absDiff = Math.abs(diff);
+      const future = diff < 0;
+      const mins = Math.floor(absDiff / 60000);
+      const hours = Math.floor(absDiff / 3600000);
+      const days = Math.floor(absDiff / 86400000);
+      let label;
+      if (mins < 1) label = "just now";
+      else if (mins < 60) label = `${mins} min${mins > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      else if (hours < 24) label = `${hours} hr${hours > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      else label = `${days} day${days > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
+      return label;
+    }
+
+    // ── Notification row state display ────────────────────────────
+    function notifStateBadge(record) {
+      const ack = record?.details?.ack?.[0];
+      const snooze = record?.details?.snooze_until?.[0];
+      if (ack) return `<span class="notif-state notif-state-ack" title="Acked at ${escapeHtml(ack)}">✓ Acked</span>`;
+      if (snooze) return `<span class="notif-state notif-state-snoozed" title="Snoozed until ${escapeHtml(snooze)}">⏱ Snoozed</span>`;
+      return `<span class="notif-state notif-state-pending">● Pending</span>`;
+    }
+
+    async function gitPull() {
       try {
-        data = await api(`/api/agenda?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
-      } catch(e) {
-        node.innerHTML = `<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
-        return;
-      }
-      const records = (data.records || [])
-        .flatMap(record => _tlRecordEntries(record, from, to))
-        .sort((a, b) =>
-          String(a.display.when || a.record.when || "").localeCompare(String(b.display.when || b.record.when || ""))
-        );
-      if (!records.length) {
-        node.innerHTML = _timelineEmptyState(timelineRange, label, from, to);
-        return;
-      }
-      const multiDay = timelineRange !== "today";
-      const dayLabel = (d) => {
-        const parsed = new Date(d + "T00:00");
-        return isNaN(parsed) ? d : parsed.toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"});
-      };
-      const hasCurrentOrFuture = records.some(entry => {
-        const when = String(entry.display.when || entry.record.when || "");
-        if (entry.display.clipped) return true;
-        if (!when) return false;
-        return when.length > 10 ? when >= nowIso : when.slice(0, 10) >= today;
-      });
-      let html = hasCurrentOrFuture ? "" : _timelineQuietBanner(timelineRange);
-      let lastDay = "";
-      let nowInserted = false;
-      for (const entry of records) {
-        const record = entry.record;
-        const when = String(entry.display.when || record.when || "");
-        const day = when.slice(0, 10);
-        const timed = when.length > 10;
-        if (multiDay && day !== lastDay) {
-          if (!nowInserted && lastDay === today) { html += _tlNowLine(); nowInserted = true; }
-          html += `<div class="tl-day-head">${escapeHtml(dayLabel(day))}${day === today ? " · Today" : ""}</div>`;
-          lastDay = day;
+        const data = await api("/api/git/pull", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) showToast("Pulled.", "success");
+        else showToast("Pull failed — see output.", "error");
+        const statusEl = document.getElementById("git-status-output");
+        if (statusEl) {
+          const s = await api("/api/git/status");
+          statusEl.textContent = (s.stdout || "(clean)").trim() || "(clean)";
         }
-        if (!nowInserted && day === today && timed && when > nowIso) {
-          html += _tlNowLine();
-          nowInserted = true;
-        }
-        html += _tlRow(record, nowIso, entry.display, entry.match, entry.matchIndex, entry.matchTotal);
-        if (!multiDay) lastDay = day;
-      }
-      if (!nowInserted && lastDay === today) html += _tlNowLine();
-      node.innerHTML = html;
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
     }
 
-    // ── Calendar view (month / week grid) ──────────────────────────
-    // Places dated agenda records — including expanded repeat occurrences —
-    // on a calendar grid. Reuses /api/agenda so recurrence, blockers, and
-    // occurrence badges stay consistent with the Agenda and Timeline views.
-    const CAL_MODES = new Set(["month", "week"]);
-    const CAL_CELL_LIMIT = 4;
-    let calMode = "month";
-    let calAnchor = _calStartOfDay(new Date());
-    const _calExpandedDays = new Set();
-
-    function _calStartOfDay(d) {
-      const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      c.setHours(0, 0, 0, 0);
-      return c;
-    }
-    function _calParseAnchor(text) {
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(text || "").trim());
-      if (!m) return null;
-      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      return isNaN(d) ? null : _calStartOfDay(d);
-    }
-    function _calWeekStartIndex() {
-      // 0 = Sunday, 1 = Monday (default). Honors web.week_start config.
-      return (appConfig?.web?.week_start === "sunday") ? 0 : 1;
-    }
-    function _calGridStart(anchor) {
-      // First visible day: for month mode back up to the configured week start
-      // from the 1st of the month; for week mode from the anchor's own week.
-      const base = calMode === "week"
-        ? new Date(anchor)
-        : new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-      const ws = _calWeekStartIndex();
-      const diff = (base.getDay() - ws + 7) % 7;
-      const start = new Date(base);
-      start.setDate(base.getDate() - diff);
-      return _calStartOfDay(start);
-    }
-    function _calGridDays(anchor) {
-      const start = _calGridStart(anchor);
-      let count;
-      if (calMode === "week") {
-        count = 7;
-      } else {
-        // Enough full weeks to cover the whole month (5 or 6 rows).
-        const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-        const spanDays = Math.round((monthEnd - start) / 86400000) + 1;
-        count = Math.ceil(spanDays / 7) * 7;
-      }
-      const days = [];
-      for (let i = 0; i < count; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        days.push(_calStartOfDay(d));
-      }
-      return days;
-    }
-    function syncCalStateFromUrl() {
-      const params = query();
-      const mode = firstParam(params, ["calmode"], calMode).toLowerCase();
-      calMode = CAL_MODES.has(mode) ? mode : "month";
-      const anchor = _calParseAnchor(firstParam(params, ["cal"], ""));
-      if (anchor) calAnchor = anchor;
-      document.querySelectorAll("#calendar-anchor, .cal-controls [data-calmode]").forEach(btn => {
-        if (btn.dataset && btn.dataset.calmode) {
-          btn.classList.toggle("active", btn.dataset.calmode === calMode);
+    // ── Heatmap: month labels + JS tooltip ───────────────────────
+    (function setupHeatmapTooltip() {
+      document.addEventListener("mouseover", function(e) {
+        const cell = e.target.closest(".heatmap-cell");
+        if (!cell || !cell.dataset.date) return;
+        const tip = document.getElementById("hm-tooltip");
+        if (!tip) return;
+        tip.textContent = cell.dataset.date + (cell.classList.contains("done") ? " ✓" : "");
+        tip.style.display = "";
+        tip.style.left = (e.clientX + 12) + "px";
+        tip.style.top = (e.clientY - 28) + "px";
+      });
+      document.addEventListener("mousemove", function(e) {
+        const tip = document.getElementById("hm-tooltip");
+        if (tip && tip.style.display !== "none") {
+          tip.style.left = (e.clientX + 12) + "px";
+          tip.style.top = (e.clientY - 28) + "px";
         }
       });
+      document.addEventListener("mouseout", function(e) {
+        if (!e.target.closest(".heatmap-cell")) return;
+        const tip = document.getElementById("hm-tooltip");
+        if (tip) tip.style.display = "none";
+      });
+    })();
+
+    // ── Chart group selector (daily/weekly/monthly) ───────────────
+    let currentChartType = "tasks";
+    let currentChartGroup = "daily";
+    const GROUP_SUPPORTED = new Set(["tasks", "habits", "mood"]);
+
+    function setChartGroup(group, btn) {
+      currentChartGroup = group;
+      document.querySelectorAll(".chart-group-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      loadChart(currentChartType);
     }
-    function _calWriteUrl(replace = true) {
+
+    // ── Status filter bar URL sync + `<`/`>` keyboard cycle ──────
+    const STATUS_CYCLE = ["", "[ ]", "[/]", "[x]", "[-]", "__blocked__"];
+    function syncStatusFilterBarsFromUrl() {
+      syncStatusFilterBtns();
+    }
+    function cycleStatusFilter(direction) {
       const params = query();
-      params.set("view", "calendar");
-      params.delete("mode");
-      params.set("calmode", calMode);
-      params.set("cal", _fmtDate(calAnchor));
-      const url = `${location.pathname}?${params.toString()}`;
-      if (replace) history.replaceState(null, "", url);
-      else history.pushState(null, "", url);
-    }
-    function setCalMode(mode) {
-      calMode = CAL_MODES.has(mode) ? mode : "month";
-      _calExpandedDays.clear();
-      _calWriteUrl(true);
-      syncCalStateFromUrl();
-      loadCalendar();
-    }
-    function calShift(delta) {
-      _calExpandedDays.clear();
-      if (calMode === "week") {
-        calAnchor.setDate(calAnchor.getDate() + delta * 7);
+      const rawStatus = params.get("status") || "";
+      const isBlocked = params.get("blocked") === "true";
+      // For cycling, treat multi-select as the first active value (or "All")
+      const selected = rawStatus.split(",").map(s => s.trim()).filter(Boolean);
+      const current = isBlocked ? "__blocked__" : (selected.length === 1 ? selected[0] : "");
+      const idx = STATUS_CYCLE.indexOf(current);
+      const next = STATUS_CYCLE[(idx + direction + STATUS_CYCLE.length) % STATUS_CYCLE.length];
+      if (next === "__blocked__") {
+        // Force blocked on (not toggle) for keyboard cycling
+        const params = query();
+        params.delete("status");
+        params.set("blocked", "true");
+        params.set("open_only", "true");
+        document.getElementById("open-only").checked = true;
+        history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+        loadItems();
+        syncStatusFilterBtns();
       } else {
-        calAnchor.setMonth(calAnchor.getMonth() + delta);
+        setStatusFilter(next);
       }
-      calAnchor = _calStartOfDay(calAnchor);
-      _calWriteUrl(true);
-      loadCalendar();
     }
-    function calToday() {
-      _calExpandedDays.clear();
-      calAnchor = _calStartOfDay(new Date());
-      _calWriteUrl(true);
-      loadCalendar();
-    }
-    function calOpenDay(dateStr) {
-      // Jump to the Agenda view scoped to a single day for a focused list.
+
+    // ── Clear every list filter (search, kind, status, blocked) ──
+    function clearAllFilters() {
+      document.getElementById("search").value = "";
+      document.getElementById("kind").value = "";
+      document.getElementById("open-only").checked = false;
+      document.getElementById("limit").value = "";
+      const groupSel = document.getElementById("group-by");
+      if (groupSel) groupSel.value = "";
       const params = query();
-      params.set("view", "agenda");
-      params.delete("mode"); params.delete("around"); params.delete("window");
-      params.delete("calmode"); params.delete("cal");
-      params.set("from", dateStr);
-      params.set("to", dateStr);
-      history.pushState(null, "", `${location.pathname}?${params.toString()}`);
+      for (const key of [
+        "text", "q", "kind", "type", "status", "blocked", "open", "open_only",
+        "project", "tag", "tag_all", "exclude_tag", "user", "team", "person",
+        "owner", "assignee", "attendee", "sender", "recipient", "after", "before",
+        "limit", "group_by",
+      ]) params.delete(key);
+      history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    // ── setStatusFilter: "All" button — clears everything ────────
+    function setStatusFilter(statusValue) {
+      const params = query();
+      params.delete("blocked");
+      params.delete("status");
+      params.delete("open_only");
+      document.getElementById("open-only").checked = false;
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       applyUrlToControls();
-      loadAgenda();
+      loadItems();
+      syncStatusFilterBtns();
     }
-    function _calRecordDayPlacements(record) {
-      // A record with more than one match (a multi-day all-day span, or
-      // several repeat occurrences visible in one grid) must appear on
-      // every matched day, not just the first -- each `on:` value or repeat
-      // occurrence produces its own entry in record.matches with its own
-      // `start`. matches is the authoritative per-day collection and is
-      // checked first: agenda_records() always derives occurrence_start
-      // from matches[0] (it is a single-value convenience field, never an
-      // independent source), so preferring it here silently collapsed any
-      // record with more than one match -- including ordinary multi-day
-      // on: spans and multi-occurrence repeats -- down to just its first
-      // day. occurrence_start/record.when remain fallbacks for a record
-      // shape with no matches array at all (e.g. a plain due:/do: record).
-      const matches = record.matches || [];
-      if (matches.length) {
+
+    // ── toggleStatusFilter: multi-select individual statuses ──────
+    function toggleStatusFilter(statusValue) {
+      const params = query();
+      params.delete("blocked");
+      params.delete("open_only");
+      document.getElementById("open-only").checked = false;
+      const rawStatus = params.get("status") || "";
+      const selected = new Set(rawStatus ? rawStatus.split(",").map(s => s.trim()).filter(Boolean) : []);
+      if (selected.has(statusValue)) {
+        selected.delete(statusValue);
+      } else {
+        selected.add(statusValue);
+      }
+      if (selected.size === 0) {
+        params.delete("status");
+      } else {
+        params.set("status", [...selected].join(","));
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    // ── toggleBlockedFilter: toggle blocked filter ────────────────
+    function toggleBlockedFilter() {
+      const params = query();
+      const isBlocked = params.get("blocked") === "true";
+      if (isBlocked) {
+        // Turn off blocked filter → go to All
+        params.delete("blocked");
+        params.delete("status");
+        params.delete("open_only");
+        document.getElementById("open-only").checked = false;
+      } else {
+        params.delete("status");
+        params.set("blocked", "true");
+        params.set("open_only", "true");
+        document.getElementById("open-only").checked = true;
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    // ── Git log display ───────────────────────────────────────────
+    let _gitLogOffset = 0;
+    const GIT_LOG_PAGE = 10;
+    async function loadGitLog(reset) {
+      if (!appConfig?.git?.enable_api) return;
+      if (reset !== false) _gitLogOffset = 0;
+      try {
+        const n = _gitLogOffset + GIT_LOG_PAGE;
+        const data = await api(`/api/git/log?n=${n}&count=true`);
+        const commits = data.commits || [];
+        if (!commits.length) return;
+        const shown = commits.slice(0, n);
+        const hasMore = commits.length >= n;
+        const totalLabel = data.total != null ? ` / ${data.total} total` : "";
+        const titleEl = document.getElementById("git-modal-title");
+        if (titleEl) titleEl.textContent = `Git${data.total != null ? ` (${data.total} commits)` : ""}`;
+        const container = document.getElementById("git-log-container");
+        const target = container || document.getElementById("git-output");
+        if (!target) return;
+        let html = `<div id="git-log-container" style="margin-top:.5rem">
+          <div class="drawer-section-title" style="font-size:.72rem">Recent commits (${shown.length}${totalLabel})</div>`;
+        for (const c of shown) {
+          html += `<div class="git-log-entry"><span class="git-log-hash">${escapeHtml(c.hash)}</span><span class="git-log-msg">${escapeHtml(c.message)}</span></div>`;
+        }
+        if (hasMore) {
+          html += `<div style="margin-top:.3rem"><a href="#" class="drawer-link" onclick="event.preventDefault();_gitLogOffset+=10;loadGitLog(false)">Show more…</a></div>`;
+        }
+        html += `</div>`;
+        if (container) container.outerHTML = html;
+        else target.insertAdjacentHTML("afterend", html);
+      } catch(_) {}
+    }
+
+
+    // ── Ref-link count badge (multiple refs → dep_on(2)) ─────────
+    function buildRefLinksHtml(details) {
+      const counts = {};
+      const firstIds = {};
+      for (const [key, values] of Object.entries(details || {})) {
+        if (!ROW_REF_KEYS.has(key)) continue;
+        const valid = (values || []).filter(v => String(v).trim());
+        if (!valid.length) continue;
+        counts[key] = valid.length;
+        firstIds[key] = String(valid[0]);
+      }
+      return Object.entries(counts).map(([key, count]) => {
+        const label = count > 1 ? `${key.slice(0,3)}(${count})` : `${key.slice(0,3)}:${firstIds[key]}`;
+        const nav = count === 1 ? escapeHtml(jsLiteral(firstIds[key])) : escapeHtml(jsLiteral(""));
+        const onclick = count === 1
+          ? `event.stopPropagation();drawerNavigate(${nav})`
+          : `event.stopPropagation();(function(){const it=currentItems.find(i=>i.line===${Number(details?._line||0)});if(it)openDrawer(it);setTimeout(scrollDrawerDepsIntoView,200);})()`;
+        return `<span class="ref-link" onclick="${onclick}" title="${escapeHtml(key)}: ${count} item(s)">${escapeHtml(label)}</span>`;
+      }).join("");
+    }
+    function scrollDrawerDepsIntoView() {
+      const deps = document.getElementById("drawer-deps");
+      const body = document.getElementById("drawer-body");
+      if (!deps || !body) return;
+      try {
+        body.scrollTop = Math.max(0, deps.offsetTop - body.offsetTop - 12);
+      } catch(_) {
+        deps.scrollIntoView({behavior: "smooth", block: "start"});
+      }
+    }
+
+    // ── Notification: inline snooze with custom duration ─────────
+    function snoozeInline(id) {
+      const row = document.querySelector(`.notif-snooze-${CSS.escape(id)}`);
+      if (!row) return;
+      row.style.display = row.style.display === "none" ? "" : "none";
+    }
+    async function snoozeMessageCustom(id, inputId) {
+      const input = document.getElementById(inputId);
+      const duration = input ? input.value.trim() : "10m";
+      if (!duration) { showToast("Enter a duration (e.g. 30m, 1h)", "error"); return; }
+      await snoozeMessage(id, duration);
+    }
+
+    // ── Editor: Import raw line ───────────────────────────────────
+    function toggleImportRaw(show) {
+      const row = document.getElementById("import-raw-row");
+      if (!row) return;
+      const visible = show !== undefined ? show : row.style.display === "none";
+      row.style.display = visible ? "" : "none";
+      if (visible) document.getElementById("import-raw-input").focus();
+    }
+    async function importRawLine() {
+      const input = document.getElementById("import-raw-input");
+      const line = input ? input.value.trim() : "";
+      if (!line) return;
+      try {
+        const parseData = await api("/api/items/parse", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({line}),
+        });
+        renderRawParsePreview(parseData);
+        if (!parseData.ok) {
+          const errs = (parseData.diagnostics || []).filter(d => d.severity === "error");
+          showToast("Invalid: " + (errs[0]?.message || "parse error"), "error");
+          return;
+        }
+        const item = (parseData.items || [])[0];
+        if (!item) { showToast("No item parsed from line.", "error"); return; }
+        document.getElementById("edit-status").value = item.status;
+        document.getElementById("edit-type").value = item.type;
+        document.getElementById("edit-title").value = item.title;
+        document.getElementById("edit-details").value = detailsToText(item.details || {});
+        selectedItem = null;
+        document.getElementById("editor-heading").textContent = "New Record";
+        document.getElementById("save-button").textContent = "Create";
+        document.getElementById("delete-button").disabled = true;
+        updateTypeHints(item.type);
+        toggleImportRaw(false);
+        if (input) input.value = "";
+        const preview = document.getElementById("import-raw-preview");
+        if (preview) { preview.style.display = "none"; preview.textContent = ""; preview.className = "parse-preview"; }
+        showToast("Form populated from raw line.", "success");

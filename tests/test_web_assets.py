@@ -1,14 +1,8 @@
-"""The Web page asset lives outside webapp.py but still reaches the browser.
-
-Extracting a 9,000-line literal is only safe if the two things that were true
-before are still true: what `webapp` exposes is the bridged page, and what the
-route serves is that same value. Neither was covered by a test before #82, so a
-broken extraction would have shown up as a working suite and a browser that
-silently stopped sending `If-Match`.
-"""
+"""Protect the packaged Web UI assembly and runtime rebinding contract."""
 
 from __future__ import unicode_literals
 
+import hashlib
 import io
 import os
 import unittest
@@ -18,37 +12,71 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "a0ebf28f5e007f6481cd14ec87574c979b87b2ce"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
 
 
+def _git_blob_sha(data: bytes) -> str:
+    header = b"blob " + str(len(data)).encode("ascii") + b"\0"
+    return hashlib.sha1(header + data).hexdigest()
+
+
 class WebAssetExtractionTests(unittest.TestCase):
     def test_asset_module_holds_the_page(self):
         self.assertTrue(web_assets.HTML_PAGE.startswith("<!doctype html>"))
-        self.assertIn("</html>", web_assets.HTML_PAGE)
+        self.assertTrue(web_assets.HTML_PAGE.endswith("</html>"))
+
+    def test_split_resources_assemble_the_legacy_pristine_page(self):
+        package = resources.files("lifetxt")
+        template = package.joinpath("web_assets.html").read_text(encoding="utf-8")
+        self.assertEqual(template.count(web_assets._STYLE_MARKER), 1)
+        self.assertEqual(template.count(web_assets._SCRIPT_MARKER), 1)
+
+        styles = "".join(
+            package.joinpath(name).read_text(encoding="utf-8")
+            for name in web_assets._CSS_RESOURCE_NAMES
+        )
+        script = "".join(
+            package.joinpath(name).read_text(encoding="utf-8")
+            for name in web_assets._JS_RESOURCE_NAMES
+        )
+        assembled = template.replace(web_assets._STYLE_MARKER, styles).replace(
+            web_assets._SCRIPT_MARKER, script
+        )
+        self.assertEqual(web_assets.HTML_PAGE, assembled)
+        self.assertEqual(
+            _git_blob_sha(assembled.encode("utf-8")),
+            LEGACY_PRISTINE_GIT_BLOB_SHA,
+        )
+
+    def test_packaged_fragment_resources_exist(self):
+        package = resources.files("lifetxt")
+        names = web_assets._CSS_RESOURCE_NAMES + web_assets._JS_RESOURCE_NAMES
+        self.assertTrue(names)
+        for name in names:
+            resource = package.joinpath(name)
+            self.assertTrue(resource.is_file(), name)
+            self.assertTrue(resource.read_bytes(), name)
+
+    def test_shell_no_longer_embeds_full_css_or_script(self):
+        shell = resources.files("lifetxt").joinpath("web_assets.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(web_assets._STYLE_MARKER, shell)
+        self.assertIn(web_assets._SCRIPT_MARKER, shell)
+        self.assertLess(len(shell), len(web_assets.HTML_PAGE) // 2)
 
     def test_webapp_still_exposes_the_name(self):
-        """Ten call sites read `webapp.HTML_PAGE`; the re-export must hold."""
         self.assertTrue(hasattr(webapp, "HTML_PAGE"))
         self.assertIn("</html>", webapp.HTML_PAGE)
 
     def test_surface_runtime_still_rebinds_webapp_html_page(self):
-        """`surface_runtime` replaces `webapp.HTML_PAGE` to add the revision bridge.
-
-        The rebinding targets the module attribute, so an extraction that made
-        the name a re-export of an immutable constant elsewhere, or that moved
-        the read to the asset module, would drop the bridge without failing.
-        """
         self.assertIn(REVISION_BRIDGE_MARKER, webapp.HTML_PAGE)
 
     def test_asset_module_keeps_the_pristine_value(self):
-        """The bridge is applied to what `webapp` exposes, not to the source."""
         self.assertNotIn(REVISION_BRIDGE_MARKER, web_assets.HTML_PAGE)
-
-    def test_packaged_resource_matches_pristine_value(self):
-        resource = resources.files("lifetxt").joinpath("web_assets.html")
-        self.assertEqual(web_assets.HTML_PAGE.encode("utf-8"), resource.read_bytes())
 
     def test_route_serves_what_webapp_exposes(self):
         try:
@@ -62,7 +90,6 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), body)
 
     def test_literal_is_not_back_in_webapp(self):
-        """Guard against re-inlining, which is the failure this slice undoes."""
         with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:
             source = handle.read()
         self.assertNotIn('HTML_PAGE = r"""', source)

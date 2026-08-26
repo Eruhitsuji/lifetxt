@@ -1,200 +1,400 @@
-      if (visible) revealItemsPage();
-      bar.style.display = visible ? "" : "none";
-      if (visible) {
-        loadPresence();
-        focusBarInput("presence-input", false);
+      </div>`;
+    }
+
+    function _todaySubsection(title, rows, emptyText) {
+      rows = rows || [];
+      const body = rows.length
+        ? rows.slice(0, TODAY_ROW_LIMIT).map(_todayRefRow).join("") +
+          (rows.length > TODAY_ROW_LIMIT ? `<div class="dash-row empty">+${rows.length - TODAY_ROW_LIMIT} more</div>` : "")
+        : `<div class="empty">${escapeHtml(emptyText)}</div>`;
+      return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (${rows.length})</div>${body}</div>`;
+    }
+
+    async function loadToday() {
+      const dateEl = document.getElementById("today-date");
+      let data;
+      try {
+        data = await api("/api/command-center");
+      } catch (e) {
+        const nowEl = document.getElementById("today-now");
+        if (nowEl) nowEl.innerHTML = `<div class="diagnostic">Today error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      if (dateEl) {
+        dateEl.textContent = data.reference_date
+          ? new Date(data.reference_date + "T00:00:00").toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"})
+          : "";
+      }
+
+      const nowEl = document.getElementById("today-now");
+      if (nowEl) {
+        nowEl.innerHTML =
+          _todaySubsection("Due today", data.due_today, "Nothing due today.") +
+          _todaySubsection("Next actions", data.next_actions, "Nothing actionable.") +
+          _todaySubsection("Overdue", data.overdue, "Nothing overdue.");
+      }
+
+      const attentionEl = document.getElementById("today-attention");
+      if (attentionEl) {
+        const projects = data.project_attention || [];
+        const projectRows = projects.slice(0, TODAY_ROW_LIMIT).map(p =>
+          `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.display_name || p.name)}</span>` +
+          `<span class="pill">${escapeHtml(p.health)}</span></div>`
+        ).join("");
+        const safety = data.safety || {};
+        const safetyRow = safety.ok
+          ? ""
+          : `<div class="today-subsection"><div class="dash-row">` +
+            `<span class="blocked-badge">${Number(safety.config_errors) || 0}</span>` +
+            `<span class="dash-row-title">Configuration errors</span></div></div>`;
+        attentionEl.innerHTML =
+          _todaySubsection("Blocked", data.blocked, "Nothing blocked.") +
+          _todaySubsection("Waiting", data.waiting, "Nothing waiting.") +
+          `<div class="today-subsection"><div class="today-subsection-title">Projects (${projects.length})</div>` +
+          (projectRows || `<div class="empty">All projects green.</div>`) + `</div>` +
+          safetyRow;
+      }
+
+      const inboxEl = document.getElementById("today-inbox");
+      if (inboxEl) {
+        const inbox = data.inbox || {};
+        const pending = inbox.pending || [];
+        const pendingRows = pending.slice(0, TODAY_ROW_LIMIT).map(p =>
+          `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.summary || p.id || "")}</span>` +
+          (p.source ? `<span class="pill">${escapeHtml(p.source)}</span>` : "") + `</div>`
+        ).join("");
+        const deferredLine = inbox.deferred_count
+          ? `<div class="today-subsection"><div class="empty">deferred (${Number(inbox.deferred_count) || 0})</div></div>`
+          : "";
+        inboxEl.innerHTML =
+          `<div class="today-subsection"><div class="today-subsection-title">Unified Inbox (${Number(inbox.pending_count) || 0})</div>` +
+          (pendingRows || `<div class="empty">Inbox is empty.</div>`) + `</div>` +
+          deferredLine +
+          _todaySubsection("Messages", data.messages, "No unread messages.");
+      }
+
+      const upcomingEl = document.getElementById("today-upcoming");
+      if (upcomingEl) {
+        upcomingEl.innerHTML =
+          _todaySubsection("Upcoming", data.upcoming, "Nothing upcoming.") +
+          _todaySubsection("Habits", data.habits, "No open habits.");
       }
     }
 
-    async function setPresence() {
-      const input = document.getElementById("presence-input");
-      const raw = (input.value || "").trim();
-      if (!raw) { showToast("Type a state such as busy.", "error"); return; }
-      const parts = raw.split(/\s+/);
-      const body = {state: parts[0]};
-      if (parts.length > 1) body.title = parts.slice(1).join(" ");
+    // ── Focus view (today's work, distraction-free) ────────────────
+    async function loadFocus() {
+      const listEl = document.getElementById("focus-list");
+      if (!listEl) return;
+      const dateEl = document.getElementById("focus-date");
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      let items = [];
       try {
-        const data = await api("/api/status", {
+        items = (await api("/api/items?open_only=true")).items || [];
+      } catch(e) {
+        listEl.innerHTML = `<div class="diagnostic">Focus error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const detailDate = (item, keys) => {
+        for (const key of keys) {
+          const value = item?.details?.[key]?.[0];
+          if (!value) continue;
+          const d = new Date(value); if (isNaN(d)) continue;
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
+        return null;
+      };
+      // Reminders count at:/on: as their due date; tasks and deadlines use due: only.
+      const dueKeysByType = {T: ["due"], D: ["due"], R: ["due", "at", "on"], H: ["due"]};
+      const dueDiff = (item) => {
+        const d = detailDate(item, dueKeysByType[item.type] || ["due"]);
+        return d === null ? null : Math.round((d - today) / 86400000);
+      };
+      const workTypes = new Set(["T", "D", "R", "H"]);
+      const overdue = [], dueToday = [], todayEvents = [], inProgress = [], anytimeReminders = [];
+      for (const item of items) {
+        if (item.type === "E") {
+          const d = detailDate(item, ["from", "on", "at", "due"]);
+          if (d && +d === +today) todayEvents.push(item);
+          continue;
+        }
+        if (!workTypes.has(item.type)) continue;
+        const diff = dueDiff(item);
+        if (diff !== null && diff < 0) overdue.push(item);
+        else if (diff === 0) dueToday.push(item);
+        else if (item.status === "[/]") inProgress.push(item);
+        else if (item.type === "R" && diff === null) anytimeReminders.push(item);
+      }
+      todayEvents.sort((a, b) =>
+        String(a?.details?.from?.[0] || a?.details?.at?.[0] || "").localeCompare(
+          String(b?.details?.from?.[0] || b?.details?.at?.[0] || "")));
+      const groups = [
+        {label: "⚠️ Overdue", items: overdue, cls: "focus-overdue"},
+        {label: "📅 Due today", items: dueToday, cls: ""},
+        {label: "🕑 Today's schedule", items: todayEvents, cls: ""},
+        {label: "◑ In progress", items: inProgress, cls: ""},
+        {label: "📌 Anytime reminders", items: anytimeReminders, cls: ""},
+      ].filter(g => g.items.length);
+      if (!groups.length) {
+        listEl.innerHTML = `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🎉</div>` +
+          `<div class="empty-title">All clear</div>` +
+          `<div class="empty-hint">Nothing overdue, due today, or in progress. Enjoy the calm — or pull something forward from Items.</div>` +
+          `<button type="button" class="secondary" onclick="switchWorkspace('')">Open Items</button></div>`;
+        return;
+      }
+      window._focusItems = groups.flatMap(g => g.items);
+      const eventTime = (item) => {
+        const value = String(item?.details?.from?.[0] || item?.details?.at?.[0] || "");
+        const match = value.match(/T(\d{2}:\d{2})/);
+        return match ? match[1] : "🕑";
+      };
+      let idx = 0;
+      let html = "";
+      for (const group of groups) {
+        html += `<div class="focus-group-label ${group.cls}">${group.label} (${group.items.length})</div>`;
+        for (const item of group.items) {
+          const dueRel = buildDueRelLabel(item);
+          const proj = item?.details?.project?.[0] ? `<span class="pill">${escapeHtml(item.details.project[0])}</span>` : "";
+          const lead = item.type === "E"
+            ? `<span class="focus-event-time pill">${escapeHtml(eventTime(item))}</span>`
+            : `<button type="button" class="focus-check" title="${item.editable ? "Mark done" : "Read-only"}" ${item.editable ? `onclick="focusMarkDone(${idx})"` : "disabled"}></button>`;
+          html += `<div class="focus-row${item.editable ? "" : " focus-readonly"}">` + lead +
+            `<div class="focus-row-main" onclick="focusOpen(${idx})">` +
+            `<div class="focus-row-title">${escapeHtml(item.title)}</div>` +
+            `<div class="focus-row-meta">${proj}${dueRel}</div>` +
+            `</div></div>`;
+          idx++;
+        }
+      }
+      listEl.innerHTML = html;
+    }
+    async function focusQuickAdd() {
+      const input = document.getElementById("focus-quick-title");
+      const title = (input?.value || "").trim();
+      if (!title) return;
+      const safe = /^[A-Za-z0-9_.\-]+$/.test(title)
+        ? title
+        : `"${title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+      const line = `[ ] T ${safe} due:${_fmtDate(new Date())}`;
+      try {
+        await api("/api/items/raw", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(body),
+          body: JSON.stringify({line}),
         });
         input.value = "";
-        const closed = (data.closed || []).length;
-        showToast("Status: " + body.state + (closed ? " (closed " + closed + " previous)" : ""), "success");
-        await loadPresence();
-        await refreshAll();
-      } catch (err) {
-        showToast("Status failed: " + (err.message || "error"), "error");
+        showToast("Task added for today.", "success");
+        await loadFocus();
+      } catch(e) {
+        showToast("Quick add failed: " + (e.message || e), "error");
       }
     }
-
-    async function endPresence() {
+    async function focusMarkDone(index) {
+      const item = (window._focusItems || [])[index];
+      if (!item || !item.editable) return;
+      const line = item.line;
+      const prevPayload = {status: item.status, type: item.type, title: item.title, details: item.details || {}};
       try {
-        const data = await api("/api/status", {
-          method: "POST",
+        await api(`/api/items/${line}`, {
+          method: "PUT",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({end: true}),
+          body: JSON.stringify({...prevPayload, status: "[x]"}),
         });
-        if (!(data.closed || []).length) { showToast("No open status.", "info"); }
-        else { showToast("Status closed.", "success"); }
-        await loadPresence();
-        await refreshAll();
-      } catch (err) {
-        showToast("Close failed: " + (err.message || "error"), "error");
+        registerUndo(`Done: ${item.title}`, async () => {
+          await api(`/api/items/${line}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
+        await loadFocus();
+      } catch(e) {
+        showToast("Mark done failed: " + (e.message || e), "error");
       }
     }
+    function focusOpen(index) {
+      const item = (window._focusItems || [])[index];
+      if (item) openDrawer(item);
+    }
 
-    // ── Capture shorthand preview ──────────────────────────────────
-    let shorthandTimer = null;
-    function previewShorthand() {
-      const input = document.getElementById("quick-line");
-      const msgEl = document.getElementById("quick-check-msg");
-      if (!input || !msgEl) return;
-      const text = (input.value || "").trim();
-      if (shorthandTimer) clearTimeout(shorthandTimer);
-      if (!text || text.startsWith("[")) { msgEl.textContent = ""; msgEl.className = "check-msg"; return; }
-      shorthandTimer = setTimeout(async () => {
-        try {
-          const data = await api("/api/shorthand/parse", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({text}),
-          });
+    // ── Review view (weekly/monthly retrospective) ────────────────
+    let reviewRange = "week";
+    function setReviewRange(range) {
+      reviewRange = range;
+      document.querySelectorAll("#review-range-bar .review-range-btn").forEach(btn =>
+        btn.classList.toggle("active", btn.dataset.range === range));
+      loadReview();
+    }
+    function setReviewCustom() {
+      reviewRange = "custom";
+      document.querySelectorAll("#review-range-bar .review-range-btn").forEach(btn =>
+        btn.classList.remove("active"));
+      loadReview();
+    }
+    function _reviewProjectParam() {
+      const value = (document.getElementById("review-project")?.value || "").trim();
+      return value ? `&project=${encodeURIComponent(value)}` : "";
+    }
+    function _reviewQuery() {
+      const today = new Date();
+      if (reviewRange === "week") return "week=true" + _reviewProjectParam();
+      if (reviewRange === "last-week") {
+        const dow = (today.getDay() + 6) % 7; // Monday-based weekday
+        const monday = new Date(today); monday.setDate(today.getDate() - dow);
+        const start = new Date(monday); start.setDate(monday.getDate() - 7);
+        const end = new Date(monday); end.setDate(monday.getDate() - 1);
+        return `from=${_fmtDate(start)}&to=${_fmtDate(end)}` + _reviewProjectParam();
+      }
+      const y = today.getFullYear(), m = today.getMonth();
+      if (reviewRange === "month") return `month=${y}-${String(m + 1).padStart(2, "0")}` + _reviewProjectParam();
+      if (reviewRange === "custom") {
+        const start = (document.getElementById("review-from")?.value || "").trim();
+        const end = (document.getElementById("review-to")?.value || "").trim();
+        const parts = [];
+        if (start) parts.push(`from=${encodeURIComponent(start)}`);
+        if (end) parts.push(`to=${encodeURIComponent(end)}`);
+        const project = _reviewProjectParam().replace(/^&/, "");
+        if (project) parts.push(project);
+        return parts.join("&") || "week=true";
+      }
+      const prev = new Date(y, m - 1, 1);
+      return `month=${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}` + _reviewProjectParam();
+    }
+    async function loadReview() {
+      const kpiEl = document.getElementById("review-kpis");
+      if (!kpiEl) return;
+      let data;
+      try {
+        data = await api(`/api/review?${_reviewQuery()}`);
+      } catch(e) {
+        kpiEl.innerHTML = `<div class="diagnostic">Review error: ${escapeHtml(e.message)}</div>`;
+        return;
+      }
+      window._lastReviewData = data;
+      const rangeEl = document.getElementById("review-range-label");
+      if (rangeEl) rangeEl.textContent = data.range || "";
+      const habitTitles = Object.keys(data.habits || {});
+      const kpis = [
+        {n: data.completed_tasks || 0, label: "Completed", icon: "✓", cls: "kpi-ok"},
+        {n: data.open_tasks || 0, label: "Still open", icon: "○"},
+        {n: data.journals || 0, label: "Journal entries", icon: "📓"},
+        {n: habitTitles.length, label: "Habits tracked", icon: "🔁"},
+      ];
+      kpiEl.innerHTML = kpis.map(k =>
+        `<div class="kpi-tile ${k.cls || ""}"><span class="kpi-icon" aria-hidden="true">${k.icon}</span>` +
+        `<span class="kpi-n">${k.n}</span><span class="kpi-label">${escapeHtml(k.label)}</span></div>`
+      ).join("");
+      const doneEl = document.getElementById("review-completed");
+      if (doneEl) {
+        const completed = data.completed || [];
+        doneEl.innerHTML = completed.length
+          ? completed.map(t =>
+              `<div class="dash-row">` +
+              (t.done ? `<span class="pill">${escapeHtml(String(t.done).slice(0, 10))}</span>` : "") +
+              (t.id
+                ? `<button type="button" class="dash-row-title review-click" onclick="drawerNavigate(${escapeHtml(jsLiteral(t.id))})">${escapeHtml(t.title)}</button>`
+                : `<span class="dash-row-title">${escapeHtml(t.title)}</span>`) +
+              (t.project ? `<span class="pill">${escapeHtml(t.project)}</span>` : "") +
+              `</div>`).join("")
+          : `<div class="empty">No tasks completed in this range.</div>`;
+      }
+      const habitsEl = document.getElementById("review-habits");
+      if (habitsEl) {
+        habitsEl.innerHTML = habitTitles.length
+          ? habitTitles.map(title => {
+              const h = data.habits[title];
+              const total = h.done + h.open;
+              const cur = Number(h.current_streak || 0);
+              const longest = Number(h.longest_streak || 0);
+              const streak = (cur || longest)
+                ? `<span class="review-streak" title="Current / longest consecutive-day streak">` +
+                  `🔥 ${cur}d${longest > cur ? ` · best ${longest}d` : ""}</span>`
+                : "";
+              return `<div class="dash-row"><span class="dash-row-title">${escapeHtml(title)}</span>` +
+                streak +
+                `<span class="review-num">${h.done}/${total} (${h.completion_rate}%)</span>` +
+                `<span class="review-habit-bar"><span style="width:${h.completion_rate}%"></span></span></div>`;
+            }).join("")
+          : `<div class="empty">No habit records in this range.</div>`;
+      }
+      const journalEl = document.getElementById("review-journal");
+      if (journalEl) {
+        const entries = data.journal_entries || [];
+        const moods = data.mood_trend || [];
+        const moodLine = moods.length
+          ? `<div class="dash-row review-mood-row"><span class="review-num">Mood:</span>${moods.map(m =>
+              `<span class="pill" title="${escapeHtml(m.date)}">${escapeHtml(m.mood)}</span>`).join("")}</div>`
+          : "";
+        journalEl.innerHTML = (entries.length || moods.length)
+          ? moodLine + entries.map(e =>
+              `<div class="dash-row"><span class="pill">${escapeHtml(e.date)}</span>` +
+              `<div style="flex:1;min-width:0"><div class="dash-row-title">${escapeHtml(e.title)}</div>` +
+              (e.excerpt ? `<div class="review-excerpt">${escapeHtml(e.excerpt)}</div>` : "") +
+              `</div></div>`).join("")
+          : `<div class="empty">No journal entries in this range.</div>`;
+      }
+      const elapsedEl = document.getElementById("review-elapsed");
+      if (elapsedEl) {
+        const rows = Object.entries(data.elapsed_by_project || {});
+        elapsedEl.innerHTML = rows.length
+          ? rows.map(([proj, elapsed]) =>
+              `<div class="dash-row"><span class="dash-row-title">${escapeHtml(proj)}</span>` +
+              `<span class="pill">${escapeHtml(elapsed)}</span></div>`).join("")
+          : `<div class="empty">No elapsed time recorded.</div>`;
+      }
+    }
+    function reviewMarkdown(data) {
+      const lines = [
+        "# life.txt Review",
+        "",
+        `Range: ${data?.range || ""}`,
+        "",
+        "## Summary",
+        `- Completed tasks: ${data?.completed_tasks || 0}`,
+        `- Open tasks: ${data?.open_tasks || 0}`,
+        `- Journal entries: ${data?.journals || 0}`,
+      ];
+      const completed = data?.completed || [];
+      if (completed.length) {
+        lines.push("", "## Completed");
+        for (const item of completed) {
           const bits = [];
-          Object.keys(data.details || {}).forEach(k => (data.details[k] || []).forEach(v => bits.push(k + ":" + v)));
-          msgEl.textContent = bits.length ? ("→ " + data.title + "  " + bits.join(" ")) : "";
-          msgEl.className = "check-msg ok";
-        } catch (err) {
-          msgEl.textContent = err.message || "";
-          msgEl.className = "check-msg err";
+          if (item.done) bits.push(`done:${item.done}`);
+          if (item.project) bits.push(`project:${item.project}`);
+          if (item.id) bits.push(`id:${item.id}`);
+          lines.push(`- [x] ${item.title}${bits.length ? " (" + bits.join(", ") + ")" : ""}`);
         }
-      }, 200);
-    }
-
-    async function quickAddLine() {
-      const input = document.getElementById("quick-line");
-      const line = input.value.trim();
-      if (!line) return;
-      const msgEl = document.getElementById("quick-check-msg");
-      try {
-        // A leading status marker means the user typed a full life.txt line.
-        // Anything else is plain text with capture shorthand.
-        if (line.startsWith("[")) {
-          await api("/api/items/raw", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({line}),
-          });
-        } else {
-          await api("/api/items/capture", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({text: line}),
-          });
+      }
+      const habits = Object.entries(data?.habits || {});
+      if (habits.length) {
+        lines.push("", "## Habits");
+        for (const [title, h] of habits) {
+          const total = (Number(h.done) || 0) + (Number(h.open) || 0);
+          lines.push(`- ${title}: ${h.done}/${total} (${h.completion_rate}%)`);
         }
-        input.value = "";
-        input.className = "";
-        if (msgEl) { msgEl.textContent = ""; msgEl.className = "check-msg"; }
-        toggleQuickAdd(false);
-        showToast("Item added.", "success");
-        await refreshAll();
-      } catch(err) {
-        input.classList.add("err");
-        if (msgEl) { msgEl.textContent = err.message || "Invalid line"; msgEl.className = "check-msg err"; }
-        showToast("Add failed: " + (err.message || "invalid"), "error");
       }
+      const journals = data?.journal_entries || [];
+      if (journals.length) {
+        lines.push("", "## Journal");
+        for (const entry of journals) {
+          lines.push(`- ${entry.date} ${entry.title}${entry.excerpt ? " — " + entry.excerpt : ""}`);
+        }
+      }
+      const elapsed = Object.entries(data?.elapsed_by_project || {});
+      if (elapsed.length) {
+        lines.push("", "## Elapsed");
+        for (const [project, value] of elapsed) lines.push(`- ${project}: ${value}`);
+      }
+      return lines.join("\n");
+    }
+    function copyReviewMarkdown() {
+      const data = window._lastReviewData;
+      if (!data) { showToast("Load a review first.", "warning"); return; }
+      navigator.clipboard.writeText(reviewMarkdown(data)).then(
+        () => showToast("Review copied as Markdown.", "success"),
+        () => showToast("Copy failed.", "error")
+      );
     }
 
-    // ── Keyboard shortcuts ─────────────────────────────────────────
-    document.addEventListener("keydown", function(e) {
-      if (trapModalFocus(e)) return;
-      const active = document.activeElement;
-      const inInput = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
-      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        openCmdk();
-        return;
-      }
-      if (e.key === "Escape") {
-        if (document.getElementById("cmdk-backdrop").classList.contains("open")) { closeCmdk(); return; }
-        if (isKioskMode()) { toggleKioskMode(); return; }
-        if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }
-        if (document.getElementById("undo-modal").classList.contains("open")) { closeUndoHistoryModal(); return; }
-        if (document.getElementById("git-modal").classList.contains("open")) { closeGitModal(); return; }
-        if (document.getElementById("editor-modal").classList.contains("open")) { closeEditorModal(); return; }
-        if (document.getElementById("detail-drawer").classList.contains("open")) { closeDrawer(); return; }
-        if (inInput) { active.blur(); return; }
-        toggleQuickAdd(false);
-        return;
-      }
-      if (inInput) return;
-      if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
-      if (currentView() === "calendar" && !document.getElementById("detail-drawer").classList.contains("open")) {
-        if (e.key === "," || e.key === "<") { e.preventDefault(); calShift(-1); return; }
-        if (e.key === "." || e.key === ">") { e.preventDefault(); calShift(1); return; }
-        if (e.key === "t" || e.key === "T") { e.preventDefault(); calToday(); return; }
-        if (e.key === "m" || e.key === "M") { e.preventDefault(); setCalMode(calMode === "month" ? "week" : "month"); return; }
-      }
-      if (e.key === "[" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerPrev(); return; }
-      if (e.key === "]" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerNext(); return; }
-      if (e.key === "<" || e.key === ",") { e.preventDefault(); cycleStatusFilter(-1); return; }
-      if (e.key === ">" || e.key === ".") { e.preventDefault(); cycleStatusFilter(1); return; }
-      if (e.key === "n" || e.key === "N") {
-        e.preventDefault();
-        newItem();
-        return;
-      }
-      if (e.key === "/") {
-        e.preventDefault();
-        document.getElementById("search").focus();
-        return;
-      }
-      if (e.key === "j") { e.preventDefault(); kbMove(1); return; }
-      if (e.key === "k") { e.preventDefault(); kbMove(-1); return; }
-      if (e.key === "Enter") {
-        if (!document.getElementById("detail-drawer").classList.contains("open") && kbActivate()) e.preventDefault();
-        return;
-      }
-      if (e.key === "x") { e.preventDefault(); kbToggleSelect(); return; }
-      if (e.key === "q") { e.preventDefault(); toggleQuickAdd(); return; }
-      if (e.key === "p" || e.key === "P") { e.preventDefault(); togglePresence(); return; }
-      if (e.key === "r" || e.key === "R") { e.preventDefault(); refreshAll(); return; }
-      if (e.key === "s" || e.key === "S") { e.preventDefault(); toggleStats(); return; }
-      if (e.key === "d" || e.key === "D") { e.preventDefault(); toggleDarkMode(); return; }
-      if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); return; }
-      if (e.key === "g" || e.key === "G") { e.preventDefault(); jumpToLine(); return; }
-      if (e.key === "K") { e.preventDefault(); toggleKioskMode(); return; }
-    });
-
-    // ── Command palette (Ctrl+K) ───────────────────────────────────
-    let _cmdkIndex = 0;
-    let _cmdkEntries = [];
-    function fuzzyMatch(text, queryText) {
-      const textLower = String(text || "").toLowerCase();
-      const queryLower = String(queryText || "").toLowerCase();
-      if (!queryLower) return true;
-      if (textLower.includes(queryLower)) return true;
-      let j = 0;
-      for (let i = 0; i < textLower.length && j < queryLower.length; i++) {
-        if (textLower[i] === queryLower[j]) j++;
-      }
-      return j === queryLower.length;
-    }
-    function recentItemKey(item) {
-      return itemStableKey(item);
-    }
-    function loadRecentItems() {
-      try {
-        const raw = localStorage.getItem(RECENT_ITEMS_STORAGE_KEY);
-        const rows = raw ? JSON.parse(raw) : [];
-        return Array.isArray(rows) ? rows : [];
-      } catch(_) {
-        return [];
-      }
-    }
-    function rememberRecentItem(item) {
-      if (!item) return;
-      try {
-        const key = recentItemKey(item);
-        const row = {
+    loadConfig().then(() => {

@@ -1,200 +1,400 @@
-        [statusData, msgs, openItems] = await Promise.all([
-          api("/api/status?active=false"),
-          api("/api/messages?open_only=true&sort=time&order=desc").then(d => d.items || []).catch(() => []),
-          api("/api/items?open_only=true").then(d => d.items || []).catch(() => []),
-        ]);
-      } catch(e) {
-        board.innerHTML = `<div class="diagnostic">Team board error: ${escapeHtml(e.message)}</div>`;
-        return;
-      }
-      const records = orderTeamRecords(statusData.records || []);
-      if (!records.length) {
-        board.innerHTML = guidedEmptyState("🟢", "No presence records yet",
-          "Add a status record like<br><code>[/] S Working from:2026-07-07T09:00 state:busy person:alice</code><br>to put people on the board.",
-          [["Status view", "status"], ["New record", "newItem"], ["Help", "help"]]);
-        return;
-      }
-      const msgsFor = (person) => msgs.filter(m =>
-        (m?.details?.recipient || []).map(String).includes(person)).slice(0, 3);
-      const workloadFor = (person) => {
-        const mine = openItems.filter(i => (i?.details?.assignee || []).map(String).includes(person));
-        return {open: mine.length, overdue: mine.filter(i => itemDueSoonClass(i) === "overdue").length};
+      if (!("Notification" in window)) { if (bar) { bar.textContent = "Browser notifications not supported."; bar.style.display = ""; } return; }
+      const perm = Notification.permission;
+      const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
+      const labels = {
+        granted: "Notifications: granted",
+        denied: "Notifications: blocked. Re-enable them from the browser site settings for this page.",
+        default: "Notifications: not yet requested",
       };
-      board.innerHTML = records.map(record => {
-        const w = workloadFor(record.person);
-        const personMsgs = msgsFor(record.person);
-        let extra = "";
-        if (w.open || w.overdue) {
-          extra += `<div class="person-workload"><span class="pill">○ ${w.open} open</span>` +
-            (w.overdue ? `<span class="pill" style="color:var(--danger)">⚠ ${w.overdue} overdue</span>` : "") +
-            `</div>`;
+      if (bar) {
+        bar.className = "notif-permission " + (classes[perm] || "");
+        if (perm === "denied") {
+          bar.innerHTML = `<span>${escapeHtml(labels.denied)}</span><button class="secondary" type="button" onclick="showNotificationSettingsHelp()">How</button>`;
+        } else {
+          bar.textContent = labels[perm] || perm;
         }
-        if (personMsgs.length) {
-          extra += `<div class="person-msgs">` + personMsgs.map(m =>
-            `<div class="person-msg" onclick="openItemByLine(${Number(m.line)})" title="${escapeHtml(m.title)}">` +
-            `<span aria-hidden="true">💬</span>` +
-            `<span class="person-msg-title">${escapeHtml(m.title)}</span>` +
-            `<span class="review-num" style="margin-left:auto">${escapeHtml(String(m?.details?.sender?.[0] || ""))}</span>` +
-            `</div>`).join("") + `</div>`;
-        }
-        extra += `<div class="person-card-actions"><button type="button" class="secondary person-card-action" onclick="openPersonItems(${escapeHtml(jsLiteral(record.person))})">View items</button></div>`;
-        return presenceCard(record, extra);
-      }).join("");
+        bar.style.display = "";
+      }
+    }
+    function showNotificationSettingsHelp() {
+      showToast("Use the browser lock/site icon, open Site settings, and allow Notifications for this URL.", "info", 8000);
     }
 
-    // ── Timeline view (chronological board with a now line) ────────
-    let timelineRange = "today";
-    let _timelineNowTimer = null;
-    const TIMELINE_RANGES = new Set(["today", "24h", "week"]);
-    function syncTimelineRange(range) {
-      timelineRange = TIMELINE_RANGES.has(range) ? range : "today";
-      document.querySelectorAll(".timeline-section .tl-controls .review-range-btn").forEach(btn =>
-        btn.classList.toggle("active", btn.dataset.range === timelineRange));
+    // ── Git status badge + modal ─────────────────────────────────
+    let gitPollTimer = null;
+    function startGitPolling() {
+      if (!appConfig?.git?.enable_api || appConfig?.git?.ui_poll === false) return;
+      const seconds = appConfig?.git?.ui_poll_seconds || 60;
+      loadGitStatus();
+      gitPollTimer = setInterval(loadGitStatus, seconds * 1000);
     }
-    function setTimelineRange(range) {
-      syncTimelineRange(range);
+    async function loadGitStatus() {
+      const badge = document.getElementById("git-status-badge");
+      if (!badge) return;
+      try {
+        const data = await api("/api/git/status");
+        badge.style.display = "";
+        const out = (data.stdout || "").trim();
+        if (!out) { badge.className = "git-badge git-clean"; badge.textContent = "git: clean"; }
+        else { badge.className = "git-badge git-modified"; badge.textContent = "git: modified"; }
+      } catch(e) {
+        badge.style.display = "";
+        badge.className = "git-badge git-error";
+        badge.textContent = "git: error";
+      }
+    }
+    async function openGitModal() {
+      document.getElementById("git-output").style.display = "none";
+      document.getElementById("git-output").textContent = "";
+      openManagedModal(document.getElementById("git-modal"), "#git-commit-msg");
+      const statusEl = document.getElementById("git-status-output");
+      if (statusEl) {
+        statusEl.textContent = "Loading…";
+        try {
+          const data = await api("/api/git/status");
+          statusEl.textContent = (data.stdout || "(clean)").trim() || "(clean)";
+        } catch(e) { statusEl.textContent = "Could not load status: " + e.message; }
+      }
+    }
+    function closeGitModal() { closeManagedModal(document.getElementById("git-modal")); }
+    async function gitCommit() {
+      const msg = document.getElementById("git-commit-msg").value.trim();
+      if (!msg) { showToast("Enter a commit message.", "error"); return; }
+      try {
+        const data = await api("/api/git/commit", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: msg}),
+        });
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) { showToast("Committed.", "success"); await loadGitLog(); }
+        else showToast("Commit failed — see output.", "error");
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+    async function gitPush() {
+      try {
+        const data = await api("/api/git/push", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+        const out = document.getElementById("git-output");
+        out.textContent = (data.stdout || "") + (data.stderr || "");
+        out.style.display = out.textContent ? "" : "none";
+        if (data.ok) showToast("Pushed.", "success");
+        else showToast("Push failed — see output.", "error");
+        loadGitStatus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    // ── Statistics / Chart.js panel ────────────────────────────────
+    let chartJsLoaded = false;
+    let mainChart = null;
+    let statsLoaded = false;
+
+    // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
+    let _kioskClockTimer = null;
+    let _kioskScrollTimer = null;
+    let _kioskAutoScroll = null;
+
+    function _kioskApply() {
+      const active = isKioskMode();
+      const clock = document.getElementById("kiosk-clock");
+      const exitBtn = document.getElementById("kiosk-exit-btn");
+      const list = document.getElementById("items");
+      const h1 = document.querySelector("header h1");
+      if (!clock || !exitBtn) return;
+      clock.style.display = active ? "flex" : "none";
+      exitBtn.style.display = active ? "inline-flex" : "none";
+      if (active) {
+        if (h1 && _kioskDefaultTitle === null) _kioskDefaultTitle = h1.textContent;
+        const title = firstParam(query(), ["kiosk_title"], "");
+        if (h1 && title) h1.textContent = title;
+        const cols = parseInt(firstParam(query(), ["kiosk_cols"], ""), 10);
+        if (list && Number.isFinite(cols) && cols > 0) {
+          list.style.gridTemplateColumns = `repeat(${Math.min(cols, 8)}, minmax(0, 1fr))`;
+        } else if (list) {
+          list.style.gridTemplateColumns = "";
+        }
+        _kioskStartClock();
+        _kioskStartScroll();
+        _kioskAddProgressBar();
+      } else {
+        if (h1 && _kioskDefaultTitle !== null) h1.textContent = _kioskDefaultTitle;
+        if (list) list.style.gridTemplateColumns = "";
+        _kioskStopClock();
+        _kioskStopScroll();
+        _kioskRemoveProgressBar();
+      }
+    }
+
+    function _kioskStartClock() {
+      if (_kioskClockTimer) clearInterval(_kioskClockTimer);
+      const update = () => {
+        const now = new Date();
+        const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+        const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+        const el = document.getElementById("kiosk-clock");
+        if (el) el.textContent = date + "  " + time;
+      };
+      update();
+      _kioskClockTimer = setInterval(update, 1000);
+    }
+
+    function _kioskStopClock() {
+      if (_kioskClockTimer) { clearInterval(_kioskClockTimer); _kioskClockTimer = null; }
+      const el = document.getElementById("kiosk-clock");
+      if (el) el.textContent = "";
+    }
+
+    function _kioskStartScroll() {
+      _kioskStopScroll();
+      const list = document.getElementById("items");
+      if (!list) return;
+      const intervalValue = document.documentElement.style.getPropertyValue("--kiosk-interval") || "60";
+      const intervalMs = (parseFloat(intervalValue) || 60) * 1000;
+      const scrollStep = () => {
+        if (!isKioskMode()) { _kioskStopScroll(); return; }
+        const { scrollTop, scrollHeight, clientHeight } = list;
+        if (scrollTop + clientHeight >= scrollHeight - 2) {
+          list.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          list.scrollBy({ top: Math.ceil(clientHeight * 0.8), behavior: "smooth" });
+        }
+      };
+      _kioskScrollTimer = setInterval(scrollStep, intervalMs);
+    }
+
+    function _kioskStopScroll() {
+      if (_kioskScrollTimer) { clearInterval(_kioskScrollTimer); _kioskScrollTimer = null; }
+    }
+
+    function _kioskAddProgressBar() {
+      if (document.querySelector(".kiosk-progress-bar")) return;
+      const bar = document.createElement("div");
+      bar.className = "kiosk-progress-bar";
+      document.body.appendChild(bar);
+      const secs = firstParam(query(), ["refresh"], "60");
+      document.documentElement.style.setProperty("--kiosk-interval", secs + "s");
+    }
+
+    function _kioskRemoveProgressBar() {
+      const bar = document.querySelector(".kiosk-progress-bar");
+      if (bar) bar.remove();
+    }
+
+    function toggleKioskMode() {
       const params = query();
-      params.set("view", "timeline");
-      params.delete("mode");
-      params.set("range", timelineRange);
-      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-      loadTimeline();
-    }
-    function _tlIso(d) {
-      const p = (n) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-    }
-    function _tlComparable(value, endOfDay = false) {
-      const text = String(value || "");
-      if (!text) return "";
-      if (text.length > 10) return text;
-      return text + (endOfDay ? "T23:59" : "T00:00");
-    }
-    function _tlDisplayInfo(match, fallbackWhen, rangeStart, rangeEnd) {
-      const originalStart = match?.start || fallbackWhen || "";
-      const originalEnd = match?.end || "";
-      const rangeStartIso = _tlComparable(rangeStart, false);
-      const rangeEndIso = _tlComparable(rangeEnd, true);
-      let when = originalStart || fallbackWhen || "";
-      let clipped = false;
-      if (originalStart && rangeStartIso && _tlComparable(originalStart, false) < rangeStartIso) {
-        when = rangeStartIso;
-        clipped = true;
+      const active = isKioskMode();
+      if (active) {
+        params.delete("mode");
+        params.delete("view");
+      } else {
+        params.set("mode", "kiosk");
       }
-      if (when && rangeEndIso && _tlComparable(when, false) > rangeEndIso) {
-        when = rangeEndIso;
+      history.pushState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
+      applyUrlToControls();
+      refreshAll();
+    }
+
+    function toggleStats() {
+      switchWorkspace("stats");
+    }
+
+    async function loadStatsBreakdown() {
+      const el = document.getElementById("stats-breakdown");
+      if (!el) return;
+      try {
+        const fromVal = (document.getElementById("breakdown-from") || {}).value || "";
+        const toVal = (document.getElementById("breakdown-to") || {}).value || "";
+        const qs = (fromVal ? `from=${encodeURIComponent(fromVal)}&` : "") + (toVal ? `to=${encodeURIComponent(toVal)}` : "");
+        const data = await api("/api/stats/summary" + (qs ? "?" + qs : ""));
+        const STATUS_EMOJI = {"[ ]": "○", "[/]": "◑", "[x]": "✓", "[-]": "✕", "[>]": "→"};
+        const typeRows = Object.entries(data.by_type || {})
+          .sort((a,b) => b[1]-a[1])
+          .map(([k,v]) => `<div style="display:flex;justify-content:space-between"><span>${escapeHtml(ITEM_TYPE_NAMES[k]||k)}</span><span style="color:var(--muted)">${v}</span></div>`)
+          .join("");
+        const statusRows = Object.entries(data.by_status || {})
+          .sort((a,b) => b[1]-a[1])
+          .map(([k,v]) => `<div style="display:flex;justify-content:space-between"><span>${escapeHtml(STATUS_EMOJI[k]||"")} ${escapeHtml(STATUS_LABEL[k]||k)}</span><span style="color:var(--muted)">${v}</span></div>`)
+          .join("");
+        el.innerHTML = `
+          <div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Type</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${typeRows || "<em>none</em>"}</div>
+          </div>
+          <div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Status</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${statusRows || "<em>none</em>"}</div>
+          </div>`;
+        el.style.display = "grid";
+      } catch(e) {
+        if (el) el.style.display = "none";
       }
-      return {when, originalStart, originalEnd, clipped};
     }
-    // Expand a record into one entry per in-window match, mirroring
-    // _calRecordDayPlacements: record.matches is the authoritative
-    // per-occurrence list (already clipped server-side to the requested
-    // range by agenda.py's item_time_matches), so a multi-day on: span or a
-    // repeat habit with several occurrences inside the visible range shows
-    // one row per occurrence instead of collapsing to matches[0]. A record
-    // with no matches array falls back to a single entry, same as before.
-    function _tlRecordEntries(record, rangeStart, rangeEnd) {
-      const matches = record.matches && record.matches.length ? record.matches : [null];
-      const total = matches.length;
-      return matches.map((match, i) => ({
-        record,
-        match,
-        display: _tlDisplayInfo(match, record.occurrence_start || record.when, rangeStart, rangeEnd),
-        matchIndex: i + 1,
-        matchTotal: total,
-      }));
-    }
-    function _tlNowLine() {
-      const now = new Date();
-      const p = (n) => String(n).padStart(2, "0");
-      return `<div class="tl-now" aria-label="Current time"><span class="tl-now-label">${p(now.getHours())}:${p(now.getMinutes())}</span><span class="tl-now-line"></span></div>`;
-    }
-    function syncTimelineNowTimer() {
-      if (_timelineNowTimer) {
-        clearInterval(_timelineNowTimer);
-        _timelineNowTimer = null;
+
+    function toggleNotifPanel() {
+      switchWorkspace("notifications");
+      updateNotifBtnLabel();
+      if (("Notification" in window) && Notification.permission === "default") {
+        enableBrowserNotifications();
       }
-      if (currentView() !== "timeline") return;
-      _timelineNowTimer = setInterval(() => {
-        const node = document.getElementById("timeline");
-        if (!node || !document.body.contains(node)) return;
-        loadTimeline();
-      }, 60000);
     }
-    function _timelineEmptyState(range, label, from, to) {
-      const title = range === "today"
-        ? "No dated records today"
-        : range === "24h"
-          ? "No dated records in the next 24 hours"
-          : "No dated records this week";
-      const hint = "Timeline only shows records with due:, do:, from:/to:, at:, on:, or notify_at: values inside the selected range.";
-      const suggestions = `<div class="tl-empty-suggestions">` +
-        `<div>Try adding <code>due:${escapeHtml(from)}</code>, <code>from:${escapeHtml(from)}T09:00</code>, or <code>notify_at:${escapeHtml(from)}T09:00</code>.</div>` +
-        `<div>If you expected records here, widen the range or check whether the record has a dated detail key.</div>` +
-        `</div>`;
-      const actions = range === "today"
-        ? `<button type="button" onclick="setTimelineRange('24h')">Next 24h</button><button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>`
-        : range === "24h"
-          ? `<button type="button" onclick="setTimelineRange('week')">This week</button><button type="button" class="secondary" onclick="setTimelineRange('today')">Today</button>`
-          : `<button type="button" onclick="setTimelineRange('today')">Today</button><button type="button" class="secondary" onclick="switchWorkspace('')">Go to Items</button>`;
-      return `<div class="empty-state"><div class="empty-icon" aria-hidden="true">🕒</div>` +
-        `<div class="empty-title">${escapeHtml(title)}</div>` +
-        `<div class="empty-hint">${escapeHtml(hint)}</div>` +
-        suggestions +
-        `<div class="tl-empty-range">${escapeHtml(label)} / ${escapeHtml(from)} - ${escapeHtml(to)}</div>` +
-        `<div class="tl-empty-actions">${actions}</div></div>`;
+
+    function updateNotifBtnLabel() {
+      const btn = document.getElementById("notif-btn");
+      if (!btn) return;
+      const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+      const indicator = perm === "granted" ? " ●" : perm === "denied" ? " ✕" : " ○";
+      // "Notifications ✕" is not itself a dictionary key and the suffix-peel
+      // rule only handles a trailing "(...)", so a compound assignment would
+      // stay English forever even with a "Notifications" dictionary entry;
+      // translate the label at construction time instead.
+      btn.textContent = t("Notifications") + indicator;
     }
-    function _timelineQuietBanner(range) {
-      if (range !== "today") return "";
-      return `<div class="empty-state tl-now-stale" style="margin-bottom:.7rem">` +
-        `<div class="empty-title">No upcoming records left today</div>` +
-        `<div class="empty-hint">The rows below are earlier records from today. Switch to Next 24h or Week to see what is coming next.</div>` +
-        `<div class="tl-empty-actions"><button type="button" onclick="setTimelineRange('24h')">Next 24h</button>` +
-        `<button type="button" class="secondary" onclick="setTimelineRange('week')">This week</button>` +
-        `<button type="button" class="secondary" onclick="newItem()">New record</button></div></div>`;
+
+    async function triggerRefresh() {
+      const btn = document.getElementById("refresh-btn");
+      if (btn) { btn.classList.add("btn-active"); btn.textContent = "…"; btn.disabled = true; }
+      try { await refreshAll(); } finally {
+        if (btn) { btn.classList.remove("btn-active"); btn.textContent = "Refresh"; btn.disabled = false; }
+      }
     }
-    function _tlRow(record, nowIso, displayInfo, match, matchIndex, matchTotal) {
-      const when = String(displayInfo?.when || record.when || "");
-      const timed = when.length > 10;
-      const time = timed ? when.slice(11, 16) : "all-day";
-      const past = timed ? when < nowIso : when.slice(0, 10) < nowIso.slice(0, 10);
-      const type = record.type || "N";
-      const blockedBadge = record.blocked
-        ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
-        : "";
-      // Occurrence badge is sourced from this row's own match when one is
-      // available (each repeat occurrence in matches carries its own
-      // occurrence_index/repeat), falling back to the record-level
-      // convenience fields for a record with no matches array.
-      const occIndex = match && match.occurrence_index !== undefined ? match.occurrence_index : record.occurrence_index;
-      const repeatRule = match && match.repeat !== undefined ? match.repeat : record.repeat_rule;
-      const occ = (occIndex !== undefined || repeatRule)
-        ? `<span class="occurrence-badge" title="${escapeHtml(repeatRule || displayInfo?.originalStart || "")}">occ #${escapeHtml(String(occIndex || 1))}</span>`
-        : "";
-      const ongoing = displayInfo?.clipped
-        ? `<span class="occurrence-badge" title="Started ${escapeHtml(displayInfo.originalStart || record.when || "")}${displayInfo.originalEnd ? ` / until ${escapeHtml(displayInfo.originalEnd)}` : ""}">ongoing</span>`
-        : "";
-      // A record with more than one match inside the visible range (a
-      // multi-day on: span, or several repeat occurrences) gets a small
-      // X/Y badge so the separate rows read as one record, not several
-      // unrelated same-title entries -- matches Calendar's cal-entry-span.
-      const spanBadge = matchTotal > 1
-        ? `<span class="occurrence-badge" title="Occurrence ${matchIndex} of ${matchTotal} in this range">${matchIndex}/${matchTotal}</span>`
-        : "";
-      const proj = record.details?.project?.[0]
-        ? `<span class="pill">${escapeHtml(String(record.details.project[0]))}</span>` : "";
-      const clickable = Number.isInteger(record.line);
-      return `<div class="tl-row${past ? " tl-past" : ""}">` +
-        `<div class="tl-time">${escapeHtml(time)}</div>` +
-        `<div class="tl-rail"><span class="tl-node t-${escapeHtml(type)}"></span></div>` +
-        `<div class="tl-card${clickable ? "" : " tl-static"}"${clickable ? ` onclick="openItemByLine(${record.line})"` : ""}>` +
-        `<div class="tl-card-title">${escapeHtml(record.title)}</div>` +
-        `<div class="tl-card-meta">` +
-        `<span class="type-badge type-${escapeHtml(type)}" style="font-size:.66rem;padding:.05rem .35rem;min-height:auto">${escapeHtml(type)}</span>` +
-        (record.status ? `<span>${escapeHtml(record.status)}</span>` : "") +
-        `${proj}${blockedBadge}${occ}${ongoing}${spanBadge}</div></div></div>`;
+
+    async function loadChart(type) {
+      const container = document.getElementById("chart-container");
+      if (type === "habits-heatmap") {
+        renderHeatmap(container);
+        return;
+      }
+      await ensureChartJs();
+      container.innerHTML = `<div class="chart-panel"><canvas id="main-chart"></canvas></div>`;
+      const canvas = document.getElementById("main-chart");
+      if (mainChart) { mainChart.destroy(); mainChart = null; }
+      try {
+        const groupParam = GROUP_SUPPORTED.has(type) ? `?group=${encodeURIComponent(currentChartGroup)}` : "";
+        const data = await api("/api/chart/" + encodeURIComponent(type) + groupParam);
+        const ctx = canvas.getContext("2d");
+        const isBar = ["tasks", "habits", "elapsed"].includes(type);
+        mainChart = new Chart(ctx, {
+          type: isBar ? "bar" : "line",
+          data: {
+            labels: data.labels || [],
+            datasets: (data.datasets || []).map((ds, i) => ({
+              label: ds.label,
+              data: ds.data,
+              backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + "88",
+              borderColor: CHART_COLORS[i % CHART_COLORS.length],
+              borderWidth: 1.5,
+              fill: !isBar,
+              spanGaps: true,
+              pointRadius: 2,
+            })),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {legend: {position: "top"}},
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: GROUP_SUPPORTED.has(type) && currentChartGroup !== "daily",
+                  text: currentChartGroup === "weekly" ? "completions / week"
+                      : currentChartGroup === "monthly" ? "completions / month" : "",
+                },
+              },
+            },
+          },
+        });
+      } catch(err) {
+        container.innerHTML = `<div class="diagnostic">Chart error: ${escapeHtml(err.message)}</div>`;
+      }
     }
-    async function loadTimeline() {
-      const node = document.getElementById("timeline");
-      if (!node) return;
-      syncTimelineRange(firstParam(query(), ["range", "timeline_range"], timelineRange));
+
+    async function renderHeatmap(container) {
+      container.innerHTML = `<div class="empty">Loading heatmap…</div>`;
+      try {
+        const data = await api("/api/chart/habits-heatmap");
+        const today = new Date().toISOString().slice(0, 10);
+        const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
+        if (!data.habits?.length) { container.innerHTML = `<div class="empty">No habit data.</div>`; return; }
+
+        // Build month labels array (one per week column)
+        const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        function buildMonthLabels(start, end) {
+          const labels = [];
+          let col = 0;
+          const d = new Date(start);
+          const startPad = d.getDay();
+          for (let pad = 0; pad < startPad; pad++) { labels.push(""); col++; }
+          let lastMonth = -1;
+          while (d <= end) {
+            const mo = d.getMonth();
+            if (d.getDay() === 0) {
+              labels.push(mo !== lastMonth ? MONTHS[mo] : "");
+              lastMonth = mo;
+            }
+            d.setDate(d.getDate() + 1);
+          }
+          return labels;
+        }
+
+        const endDate = new Date();
+        const monthLabels = buildMonthLabels(new Date(rangeStart), endDate);
+
+        let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
+        for (const habit of data.habits) {
+          html += `<div class="heatmap-habit">
+            <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} day streak</span></div>
+            <div class="heatmap-months">${monthLabels.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
+            <div class="heatmap-grid">`;
+          const start = new Date(rangeStart);
+          const startDay = start.getDay();
+          for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
+          const d = new Date(start);
+          while (d <= endDate) {
+            const ds = d.toISOString().slice(0, 10);
+            const isDone = !!(habit.dates && habit.dates[ds]);
+            const isToday = ds === today;
+            html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" data-date="${ds}"></div>`;
+            d.setDate(d.getDate() + 1);
+          }
+          html += `</div></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+      } catch(e) {
+        container.innerHTML = `<div class="diagnostic">Heatmap error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function showChart(type, btn) {
+      document.querySelectorAll(".chart-tab").forEach(t => t.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      currentChartType = type;
+      const groupBar = document.getElementById("chart-group-bar");
+      if (groupBar) groupBar.style.display = GROUP_SUPPORTED.has(type) ? "" : "none";
+      loadChart(type);
+    }
+
+    async function refreshCharts() {
+      const active = document.querySelector(".chart-tab.active");
+      const type = active ? active.textContent.trim().toLowerCase() : "tasks";
+      await loadChart(type);
+    }
+
+    function exportChartCsv() {
+      if (!mainChart) { showToast("No chart data to export.", "error"); return; }
+      const labels = mainChart.data.labels || [];
+      const datasets = mainChart.data.datasets || [];
+      const header = ["label", ...labels].join(",");
+      const rows = datasets.map(ds => {
+        const vals = (ds.data || []).map(v => v == null ? "" : String(v));
+        return [JSON.stringify(ds.label || ""), ...vals].join(",");
+      });
+      const csv = [header, ...rows].join("\n");
+      const blob = new Blob([csv], {type: "text/csv"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `lifetxt-chart-${currentChartType}-${currentChartGroup}.csv`;
+      a.click();

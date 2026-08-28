@@ -452,6 +452,221 @@ def _dependency_node_label(node_id, node):
     return label
 
 
+class LinksCycleError(ValueError):
+    """A topological-order/critical-path query hit a dependency cycle."""
+
+
+def _dependency_ordering_edges(items, key="id", relations=None):
+    """Build a "value depends on target" edge map for ordering queries.
+
+    Shared by :func:`topological_order` and :func:`critical_path`. Mirrors
+    ``_dependency_cycle_diagnostics``'s own combined depends_on/inverse-blocks
+    model (an edge ``A -> B`` means "A is waiting on B"), generalized to an
+    explicit relation subset when one is given. ``blocks`` is always treated
+    as the inverse of ``depends_on`` (X blocks Y implies Y depends on X), not
+    as a bare directional copy, so both default to the exact same graph
+    ``dependency_chain_records``/W227 already use. Only unique, unambiguous
+    ids participate, matching every other relation-cycle check in this
+    module.
+    """
+    index = build_id_index(items, key)
+    owners = _owners_by_unique_id(index)
+    relation_set = set(relations) if relations else {"depends_on", "blocks"}
+    edges = {value: set() for value in owners}
+
+    if "depends_on" in relation_set:
+        for value, item in owners.items():
+            for target in item.details.get("depends_on", []):
+                target = str(target)
+                if target in owners:
+                    edges[value].add(target)
+    if "blocks" in relation_set:
+        for value, item in owners.items():
+            for target in item.details.get("blocks", []):
+                target = str(target)
+                if target in owners:
+                    # value blocks target => target is waiting on value.
+                    edges[target].add(value)
+    for relation in sorted(relation_set - {"depends_on", "blocks"}):
+        for value, item in owners.items():
+            for target in item.details.get(relation, []):
+                target = str(target)
+                if target in owners:
+                    edges[value].add(target)
+
+    return owners, edges
+
+
+def topological_order(items, key="id", relations=None):
+    """Topological order over the dependency graph.
+
+    Uses the combined ``depends_on``/``blocks`` relation by default (the same
+    graph ``dependency_chain_records``/W227 already treat as one "waiting on"
+    concept), or an explicit ``relations`` subset. Returns item ids ordered
+    so every prerequisite appears before whatever depends on it. Ties are
+    broken deterministically by id. Raises :class:`LinksCycleError` (naming
+    the involved ids) if the requested graph is not a DAG; nothing is
+    returned on that path.
+    """
+    owners, edges = _dependency_ordering_edges(items, key=key, relations=relations)
+    in_degree = {node: len(deps) for node, deps in edges.items()}
+    successors = {node: [] for node in edges}
+    for node, deps in edges.items():
+        for dep in deps:
+            successors[dep].append(node)
+
+    ready = sorted(node for node, degree in in_degree.items() if degree == 0)
+    order = []
+    while ready:
+        ready.sort()
+        node = ready.pop(0)
+        order.append(node)
+        for successor in successors.get(node, []):
+            in_degree[successor] -= 1
+            if in_degree[successor] == 0:
+                ready.append(successor)
+
+    if len(order) != len(edges):
+        remaining = sorted(set(edges) - set(order))
+        raise LinksCycleError(
+            "Cannot compute a topological order: a dependency cycle involves %s."
+            % ", ".join(remaining)
+        )
+    return order
+
+
+def _path_estimate_sum(path, owners):
+    """Sum a plain numeric ``estimate:`` detail along ``path``.
+
+    Returns ``None`` unless every id on the path carries exactly one
+    parseable numeric ``estimate:`` value; this is a best-effort informational
+    figure, never used to choose which path is "critical". Deliberately does
+    not parse ``elapsed:``'s ``Xh``/``Ym`` duration syntax -- a plain number
+    only, matching the issue's own "no new required schema field" scope.
+    """
+    total = 0.0
+    for node_id in path:
+        item = owners.get(node_id)
+        values = item.details.get("estimate") if item else None
+        if not values:
+            return None
+        try:
+            total += float(values[0])
+        except (TypeError, ValueError):
+            return None
+    return total
+
+
+def critical_path(items, key="id", root_id=None, relations=None):
+    """Longest depends_on/blocks chain, optionally rooted at ``root_id``.
+
+    Computes, over the same DAG :func:`topological_order` validates, the
+    longest prerequisite chain ending at ``root_id`` (every step that must
+    complete before ``root_id`` can), or -- when ``root_id`` is omitted --
+    the single longest chain anywhere in the graph. Ties (equal-length
+    candidate predecessors, or equal-length whole-graph candidates) are
+    broken deterministically by id. Raises :class:`LinksCycleError` if the
+    graph is not a DAG, and ``ValueError`` if ``root_id`` does not
+    participate in it.
+    """
+    owners, edges = _dependency_ordering_edges(items, key=key, relations=relations)
+    order = topological_order(items, key=key, relations=relations)
+
+    length = {}
+    pred = {}
+    for node in order:
+        deps = edges.get(node) or ()
+        if not deps:
+            length[node] = 1
+            pred[node] = None
+            continue
+        best_len = max(length[dep] for dep in deps)
+        best_dep = min(dep for dep in deps if length[dep] == best_len)
+        length[node] = 1 + best_len
+        pred[node] = best_dep
+
+    if root_id is not None:
+        if root_id not in length:
+            raise ValueError(
+                "id %r does not participate in the dependency graph." % root_id
+            )
+        target = root_id
+    elif length:
+        max_len = max(length.values())
+        target = min(node for node, node_len in length.items() if node_len == max_len)
+    else:
+        target = None
+
+    if target is None:
+        return OrderedDict([("length", 0), ("path", []), ("estimate_sum", None)])
+
+    path = []
+    node = target
+    while node is not None:
+        path.append(node)
+        node = pred[node]
+    path.reverse()
+
+    return OrderedDict(
+        [
+            ("length", length[target]),
+            ("path", path),
+            ("estimate_sum", _path_estimate_sum(path, owners)),
+        ]
+    )
+
+
+def shortest_path(items, key="id", from_id=None, to_id=None, relations=None):
+    """BFS shortest path between two ids over the combined relation graph.
+
+    Traverses :func:`link_records`'s edges bidirectionally (matching
+    ``webapp._subgraph``'s reachability model), since "how are these two
+    items connected" does not depend on which direction each relation
+    happens to be asserted in. Returns an ordered list of hop dicts (``id``,
+    plus the ``relation``/``direction`` connecting it to the previous hop --
+    both ``None`` on the first hop), or ``None`` when no path exists.
+    """
+    records = link_records(items, key=key, relations=relations)
+    adjacency = {}
+    for rec in records:
+        src = rec["source_id"] or rec["source_location"]
+        tgt = rec["target_id"]
+        if not tgt:
+            continue
+        adjacency.setdefault(src, []).append((tgt, rec["relation"], "outgoing"))
+        adjacency.setdefault(tgt, []).append((src, rec["relation"], "incoming"))
+
+    # "known" is every declared id, not only ones with a relation, so an
+    # isolated item (no relations at all) still satisfies from_id == to_id
+    # and a genuinely unknown id is still correctly rejected.
+    known = set(build_id_index(items, key))
+
+    def _hop(node_id, relation=None, direction=None):
+        return OrderedDict(
+            [("id", node_id), ("relation", relation), ("direction", direction)]
+        )
+
+    if from_id == to_id:
+        return [_hop(from_id)] if from_id in known else None
+    if from_id not in known or to_id not in known:
+        return None
+
+    visited = {from_id}
+    queue = [[_hop(from_id)]]
+    while queue:
+        path = queue.pop(0)
+        node = path[-1]["id"]
+        for neighbor, relation, direction in adjacency.get(node, []):
+            if neighbor in visited:
+                continue
+            new_path = path + [_hop(neighbor, relation, direction)]
+            if neighbor == to_id:
+                return new_path
+            visited.add(neighbor)
+            queue.append(new_path)
+    return None
+
+
 def build_id_index(items, key="id"):
     index = OrderedDict()
     for item in items:

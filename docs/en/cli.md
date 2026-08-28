@@ -708,6 +708,10 @@ python -m lifetxt links life.txt --id task_report --direction outgoing --format 
 python -m lifetxt links life.txt --relation depends_on --relation blocks
 python -m lifetxt links life.txt --chain task_report
 python -m lifetxt links life.txt --chain task_report --format json --pretty
+python -m lifetxt links life.txt --topo
+python -m lifetxt links life.txt --critical-path
+python -m lifetxt links life.txt --critical-path --chain task_report
+python -m lifetxt links life.txt --path task_a task_b
 ```
 
 Options:
@@ -715,12 +719,24 @@ Options:
 | Option | Meaning |
 |---|---|
 | `--id ID` | Show only links connected to this ID |
-| `--chain ID` | Show the dependency blocker chain for this item ID |
+| `--chain ID` | Show the dependency blocker chain for this item ID; also usable as `--critical-path`'s root |
 | `--direction incoming|outgoing|both` | Direction when `--id` is used |
 | `--relation RELATION` | Limit to a relation key such as `depends_on`; repeatable or comma-separated |
+| `--topo` | Print a topological order over the `depends_on`/`blocks` graph (or the `--relation` subset). Refuses loudly on a cycle |
+| `--critical-path` | Print the longest `depends_on`/`blocks` chain (or the `--relation` subset), optionally rooted at `--chain ID` |
+| `--path FROM TO` | Print the shortest chain of relations connecting two item IDs, over the full relation graph (or the `--relation` subset), traversed in both directions |
 | `--key KEY` | ID detail key; defaults to config `ids.key`, `api.id_key`, or `id` |
-| `--format text|json|jsonl|mermaid|dot` | Output format. `--chain` supports `text`, `json`, and `jsonl` |
+| `--format text|json|jsonl|mermaid|dot` | Output format. `--chain`, `--topo`, `--critical-path`, and `--path` support `text`, `json`, and `jsonl` only |
 | `--pretty` | Pretty-print JSON |
+
+`--topo`, `--critical-path`, and `--path` are mutually exclusive with each
+other and with `--id`/`--chain`, except that `--critical-path` accepts
+`--chain ID` as its optional root. `--critical-path`'s JSON/jsonl output
+includes an `estimate_sum` field, populated only when every item on the
+winning chain carries a plain numeric `estimate:` detail (not `elapsed:`'s
+`Xh`/`Ym` duration syntax); it is `null` otherwise. `--path`'s output is a
+list of hops, each carrying the connecting `relation` and `direction`
+(`incoming`/`outgoing`) except the first hop, which has neither.
 
 `check` reports missing references (`W215`), self references (`W216`),
 `parent:` cycles (`W217`), ambiguous references (`W218`), completed items

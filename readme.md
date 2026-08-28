@@ -153,9 +153,19 @@ python -m lifetxt done life.txt habit_exercise
 python -m lifetxt complete life.txt task_water_plants
 ```
 
-Install as a command from a source checkout or a built wheel/sdist (see
+Once a release is published to PyPI (see
+[Distribution Channels](docs/en/distribution.md) for the release automation
+and current status), the primary end-user install is:
+
+```sh
+pip install lifetxt
+lifetxt check examples/minimal_life.txt
+```
+
+Until then, install as a command from a source checkout or a built
+wheel/sdist (see
 [Stable Release Artifact Verification](docs/en/stable-release-artifact-verification.md)
-for building a wheel/sdist yourself; lifetxt has no PyPI package yet):
+for building a wheel/sdist yourself):
 
 ```sh
 python -m pip install .

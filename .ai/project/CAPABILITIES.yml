@@ -5437,3 +5437,88 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-lifetxt-vm
+    name: Opt-in Turing-complete lifetxt VM
+    summary: >-
+      A separate, explicitly opt-in `lifetxt vm run` interpretation layer
+      over already-legal life.txt custom keys (`value:`, `op:`, `var:`,
+      `next:`, `zero:`, `nonzero:`), implementing a minimal 2-counter
+      Minsky machine (`INC`, `DEC_JZ` with zero test, `HALT`) addressed
+      through the existing `id:` mechanism. Turing-complete as a
+      computation model; Format 1.0 itself is not made a programming
+      language, and no other command (`check`, `agenda`, `filter`, the Web
+      API, MCP, the TUI) ever executes VM records.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-vm-opt-in-turing-complete
+    implementation_locations:
+      - lifetxt/vm.py
+      - lifetxt/cli.py
+      - tests/test_vm.py
+      - tests/test_vm_cli.py
+      - docs/en/vm.md
+      - docs/ja/vm.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+    public_interfaces:
+      - lifetxt vm run PATH --entry ID [--max-steps N] [--json]
+      - lifetxt.vm.build_program
+      - lifetxt.vm.run_program
+      - lifetxt.vm.VMProgramError
+      - lifetxt.vm.VMStepLimitExceeded
+    tests_or_evidence:
+      - "tests/test_vm.py BuildProgramTests, RunProgramTests (35 tests: counter/instruction recognition, non-VM items ignored, custom id_key honored, every listed validation rejection -- missing/duplicate/multi-valued id, both value:+op:, non-integer/negative value:, unknown op:, missing var:/next:/nonzero:/zero:, unknown counter reference, dangling and counter-typed next:/zero:/nonzero: -- the canonical X=3,Y=0 -> X=0,Y=3 example halting after exactly 7 steps, zero-branch and nonzero-branch execution, entry-not-found/entry-is-counter rejection, negative --max-steps rejection, step-limit-below-completion raising before HALT, step-limit-exactly-at-completion succeeding, --max-steps 0 meaning unlimited, and runtime state never mutating the parsed source items)"
+      - "tests/test_vm_cli.py VmRunCliTests (11 tests: text and --json output shape, unknown entry, --max-steps enforcement at and below the boundary, --max-steps 0, negative --max-steps, an invalid program failing loudly with no stdout, VM records never executing under plain `check`, a file mixing an ordinary Task with VM records executing only the VM records, `vm --help`/`vm run --help`)"
+      - python -m unittest tests.test_vm tests.test_vm_cli -> Ran 46 tests, OK
+      - python -m unittest tests.test_completion_surfaces tests.test_surface_runtime -> Ran 61 tests, OK (no CLI/Web/MCP capability-registry or command-catalog drift; `vm run` is picked up automatically by completion's argparse-derived command list, since it adds no Web or MCP tool)
+      - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 53 tests, OK
+      - "live: python -m lifetxt vm run program.life.txt --entry s1 against the issue's own worked example (X=3, Y=0) produced the exact documented output -- HALT after 7 steps / x=0 / y=3 -- in both text and --json form"
+      - "live: every listed validation rejection (dangling next:/zero:/nonzero:, unknown var: counter reference, negative/non-integer value:, unknown op:, duplicate id:, both value:+op:, missing required detail) reproduced against real disposable fixture files with the exact designed error text"
+      - "live: --max-steps boundary confirmed on the real 7-step example -- max-steps 6 fails with the step-limit error naming the in-flight state, max-steps 7 succeeds, max-steps 0 succeeds (unlimited), negative max-steps is rejected before any execution"
+      - "live: python -m lifetxt check against the same VM program file emits only non-blocking W106 custom-key warnings (exit 0) and performs no execution; a file mixing an ordinary Task with VM records only executes the VM records under vm run"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true} (docs/en/cli.md is in the checked-document set; `python -m lifetxt vm --help` runs cleanly as part of that check)'
+      - ruff format --check / ruff check lifetxt/vm.py lifetxt/cli.py tests/test_vm.py tests/test_vm_cli.py -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/560
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/561
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Distilled directly from the issue's own detailed instruction-set,
+      validation, safety-boundary, and non-goals specification (below the
+      `.ai/project/changes/README.md` change-package threshold: Standard
+      assurance -- the VM has no filesystem/network/shell/`eval`/`exec`/
+      environment-variable/MCP/Web-API/plugin access and never mutates
+      `life.txt`, so no security-impact escalation applies per
+      `ASSURANCE_LEVELS.md`'s escalation rules). Reuses the existing
+      parser's `Item.details` custom-key tolerance and the existing
+      `id:`-addressed reference mechanism (`lifetxt links` already treats
+      `id:` as the addressing scheme) rather than inventing a second
+      address space or a new parser mode; `build_program` calls the
+      already-imported `parse_text`/CLI input-resolution helpers
+      unmodified. The combined counter+instruction id namespace is
+      validated for uniqueness together (a counter id colliding with an
+      instruction id is rejected as a duplicate VM id), which is a
+      deliberate generalization of the issue's "duplicate instruction ID"
+      wording to the VM's whole addressable namespace, not a separate,
+      narrower check. `--entry`, `--max-steps`, and `--json` match the
+      exact flags named in the issue; `vm run` reuses the same
+      `_add_input_paths`/`_normalize_paths`/`_parse_or_exit`/
+      `id_key_from_config` helpers `lifetxt temporal` already established
+      for a single-file-or-multi-file, workspace-aware, parser-only (not
+      full-validator) input path, so mixing VM records into an otherwise
+      ordinary multi-file workspace costs nothing extra. `lifetxt vm check`,
+      single-step tracing, JSON state schema versioning, runtime-state
+      write-back, a program-visualization/CFG export, and a Brainfuck
+      compiler are explicitly out of scope for this issue and recorded as
+      candidate follow-up issues in both docs/en/vm.md and docs/ja/vm.md,
+      matching the issue's own "future ideas" section.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

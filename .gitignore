@@ -17,6 +17,10 @@ __pycache__/
 *.egg-info/
 /build/
 
+# PyInstaller standalone binary output (#570). dist/schemas/ above is the
+# only tracked content anywhere under dist/.
+/dist/standalone/
+
 # AI Development Standard
 !.ai/
 !.ai/**

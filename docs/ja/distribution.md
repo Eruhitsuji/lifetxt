@@ -245,6 +245,110 @@ uid-1000 user から書き込み可能です。host 側の file/directory permis
 対応しています（`push: false` が default）。実 tag に届く前に Dockerfile
 自体の変更を検証したい場合に使えます。
 
+## 3. Standalone CLI binary
+
+[#570](https://github.com/Eruhitsuji/lifetxt/issues/570) に対応します。
+
+standalone binary は Python を一切 install せずに `lifetxt` を実行できるように
+します — Python を使わない user 向けの推奨経路であり、winget/Scoop/Homebrew
+（下記）が build の元にする canonical artifact でもあります。
+
+### 対象 UX
+
+GitHub Release から該当する artifact を download し、そのまま実行します：
+
+```sh
+lifetxt --version
+lifetxt init
+lifetxt doctor
+lifetxt check life.txt
+```
+
+### 対応 target
+
+| artifact | platform |
+| --- | --- |
+| `lifetxt-windows-x86_64.exe` | Windows x86_64 |
+| `lifetxt-linux-x86_64` | Linux x86_64 |
+| `lifetxt-linux-arm64` | Linux arm64 |
+| `lifetxt-macos-arm64` | macOS arm64（Apple Silicon） |
+| `lifetxt-macos-x86_64` | macOS x86_64（Intel） |
+
+各 release では、全 artifact をカバーする `SHA256SUMS` file も同時に
+公開されます。
+
+### bundling の方式
+
+[PyInstaller](https://pyinstaller.org/) を
+[`packaging/pyinstaller/lifetxt.spec`](../../packaging/pyinstaller/lifetxt.spec)
+経由で使い、platform ごとに 1 つの `--onefile` executable を作ります
+（PyInstaller は各 target platform 上で native に実行する必要があるため、
+`.github/workflows/standalone-binaries.yml` は 1 つの host から
+cross-compile するのではなく、対応する GitHub-hosted runner ごとに build
+します）。
+
+**部分的な複数 artifact ではなく、1 つの完全な artifact。** bundle には
+core・`web`・`tui` を含みます：standalone binary からそのまま
+`lifetxt serve` と `lifetxt tui` の両方が動作します。これは本 project 自身の
+「canonical artifact は 1 つに」という design 原則とも一致します —
+Python packaging を避けるために standalone binary を選んだ user に、
+「CLI のみ」と「full」のどちらを download するか選ばせるべきではありません。
+
+frozen された binary には次が含まれます：
+
+- lifetxt 自身の package data（分割された Web UI の HTML/CSS/JS resource）。
+- `uvicorn` が実行時に文字列で動的 import する protocol/loop/lifespan の
+  submodule（これらは PyInstaller の静的 import 解析だけでは検出できない
+  ため、spec で明示的に collect しています）。
+- `tzdata`（Windows build のみ）。`pyproject.toml` 自体の platform marker
+  付き runtime dependency と同じ理由です（Windows には `zoneinfo` が読める
+  IANA timezone database が存在しないため。背景となった incident は
+  [RULES.md の Runtime Dependencies section](../../.ai/project/RULES.md#runtime-dependencies)
+  を参照してください）。
+
+### local での build
+
+```sh
+pip install ".[web,tui]" pyinstaller
+pyinstaller packaging/pyinstaller/lifetxt.spec --distpath dist/standalone --clean --noconfirm
+dist/standalone/lifetxt --version   # Windows では dist/standalone/lifetxt.exe
+```
+
+### 実施した検証
+
+`standalone-binaries.yml` の matrix にある各 target は、それぞれの native
+runner 上で以下を実行します：`--version`、実 example に対する `check`、
+clean な scratch directory での `init`/`doctor`、空白と非 ASCII 文字を含む
+directory path 内での `init`/`check`、そして `#!timezone: Asia/Tokyo` の
+fixture に対する `check`/`today` の組み合わせによる timezone 解決の確認。
+この project 自身の local Windows build ではさらに、`serve` mode が
+`/api/health` に応答し、frozen された binary から bundle された Web UI の
+HTML を serve できることも確認しています。
+
+### 既知の制限（最初の slice）
+
+- **code signing / notarization は未実装です。** 未署名の Windows binary
+  は SmartScreen 警告を発生させ、未署名・未 notarize の macOS binary は
+  明示的な user override（右クリック→開く、または
+  `xattr -d com.apple.quarantine`）なしでは Gatekeeper にブロックされます。
+  最初の slice では signing を blocker ではなく関連する follow-up として
+  扱うという issue 自体の指針に従い、follow-up として明示的に記録します。
+- **起動時間と binary size は最適化していません。** `--onefile` build は
+  実行のたびに一時 directory へ self-extract するため、`--onedir` 構成より
+  遅くなります。1 つの download 可能な file であるという単純さと引き換えに
+  数百 ms の起動遅延を許容しています。これは issue 自体の「size の最小化
+  より信頼できる動作を優先する」という指針と一致します。
+- **UPX 圧縮は無効化しています**（spec の `upx=False`）。UPX で圧縮された
+  executable は、非圧縮のものより antivirus の heuristic に引っかかることが
+  多いためです。artifact size が実際に問題になった場合は見直す余地が
+  あります。
+
+### 下流での利用
+
+これらの binary は、winget（#571）・Homebrew Tap（#572）・standalone な
+Tauri desktop bundle（#574）が build の元にする canonical artifact です。
+本 document 冒頭の distribution architecture を参照してください。
+
 ### contributor 向け install と end-user 向け install の違い
 
 lifetxt 自体の source を変更する contributor は、引き続き editable install

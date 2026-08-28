@@ -240,6 +240,108 @@ same trigger as `release.yml`):
 (`push: false`, the default), for verifying a change to the Dockerfile
 itself before it reaches a real tag.
 
+## 3. Standalone CLI binaries
+
+Tracks [#570](https://github.com/Eruhitsuji/lifetxt/issues/570).
+
+Standalone binaries let a user run `lifetxt` without installing Python at
+all — the preferred path for non-Python users, and the canonical upstream
+artifact winget/Scoop/Homebrew (below) build on.
+
+### Target UX
+
+Download the matching artifact from a GitHub Release and run it directly:
+
+```sh
+lifetxt --version
+lifetxt init
+lifetxt doctor
+lifetxt check life.txt
+```
+
+### Supported targets
+
+| Artifact | Platform |
+| --- | --- |
+| `lifetxt-windows-x86_64.exe` | Windows x86_64 |
+| `lifetxt-linux-x86_64` | Linux x86_64 |
+| `lifetxt-linux-arm64` | Linux arm64 |
+| `lifetxt-macos-arm64` | macOS arm64 (Apple Silicon) |
+| `lifetxt-macos-x86_64` | macOS x86_64 (Intel) |
+
+Each release also publishes a `SHA256SUMS` file covering every artifact.
+
+### Bundling approach
+
+[PyInstaller](https://pyinstaller.org/) via
+[`packaging/pyinstaller/lifetxt.spec`](../../packaging/pyinstaller/lifetxt.spec),
+producing one `--onefile` executable per platform (PyInstaller must run
+natively on each target platform, so `.github/workflows/standalone-binaries.yml`
+builds each artifact on a matching GitHub-hosted runner rather than
+cross-compiling from one host).
+
+**One complete artifact, not several partial ones.** The bundle includes
+core, `web`, and `tui`: `lifetxt serve` and `lifetxt tui` both work out of
+the box from the standalone binary, matching this project's own
+one-canonical-artifact design principle — a user who reaches for a
+standalone binary specifically to avoid Python packaging should not then
+have to pick between a "CLI-only" and a "full" download.
+
+The frozen binary bundles:
+
+- lifetxt's own package data (the split Web UI HTML/CSS/JS resources).
+- `uvicorn`'s dynamically-imported protocol/loop/lifespan submodules (these
+  are selected by string at runtime, which PyInstaller's static import
+  analysis cannot see on its own — the spec explicitly collects them).
+- `tzdata` on the Windows build only, mirroring `pyproject.toml`'s own
+  platform-marked runtime dependency (Windows has no IANA timezone database
+  for `zoneinfo` to read otherwise — see [RULES.md's Runtime Dependencies
+  section](../../.ai/project/RULES.md#runtime-dependencies) for the
+  background incident this addresses).
+
+### Building locally
+
+```sh
+pip install ".[web,tui]" pyinstaller
+pyinstaller packaging/pyinstaller/lifetxt.spec --distpath dist/standalone --clean --noconfirm
+dist/standalone/lifetxt --version   # dist/standalone/lifetxt.exe on Windows
+```
+
+### Verification performed
+
+Every target in `standalone-binaries.yml`'s matrix runs, on its own native
+runner: `--version`, `check` against a real example, `init`/`doctor` in a
+clean scratch directory, `init`/`check` inside a directory path containing
+spaces and non-ASCII characters, and a `check`/`today` pair against a
+`#!timezone: Asia/Tokyo` fixture to confirm timezone resolution. This
+project's own local Windows build additionally verified `serve` mode answers
+`/api/health` and serves the bundled Web UI HTML from the frozen binary.
+
+### Known limitations (first slice)
+
+- **Code signing / notarization are not yet implemented.** Unsigned Windows
+  binaries trigger SmartScreen warnings, and unsigned/unnotarized macOS
+  binaries are blocked by Gatekeeper without an explicit user override
+  (right-click → Open, or `xattr -d com.apple.quarantine`). Tracked as an
+  explicit follow-up per the issue's own guidance to treat signing as a
+  related follow-up rather than a blocker for the first slice.
+- **Startup time and binary size are not optimized.** A `--onefile` build
+  self-extracts to a temporary directory on first run each invocation,
+  which is slower than a `--onedir` layout; this trades a few hundred
+  milliseconds of startup latency for the simplicity of one downloadable
+  file, matching the issue's own "prioritize reliable behavior over minimum
+  size" guidance.
+- **UPX compression is disabled** (`upx=False` in the spec) — UPX-compressed
+  executables are flagged by some antivirus heuristics more often than
+  uncompressed ones; this can be revisited if artifact size becomes a real
+  problem.
+
+### Downstream use
+
+These binaries are the canonical artifact winget (#571), Homebrew Tap
+(#572), and the standalone Tauri desktop bundle (#574) build on, per the
+distribution architecture at the top of this document.
+
 ### Contributor vs. end-user installs
 
 Contributors changing lifetxt's own source still use an editable install

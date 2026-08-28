@@ -16,7 +16,7 @@ from .ids import (
     id_key_from_config,
     id_prefix_for_item,
 )
-from .links import reference_diagnostics
+from .links import LinksCycleError, critical_path, link_records, reference_diagnostics
 from .model import Diagnostic, REFERENCE_KEYS
 from .parser import parse_line, parse_text
 from .paths import expand_paths
@@ -35,7 +35,12 @@ AI_MEMORY_INTENT_TAGS = frozenset(["preference", "goal", "decision"])
 
 
 def build_integrity_report(
-    paths=None, config=None, verify_files=False, profile=None, ai_context=False
+    paths=None,
+    config=None,
+    verify_files=False,
+    profile=None,
+    ai_context=False,
+    graph=False,
 ):
     """Build a read-only integrity report.
 
@@ -136,6 +141,8 @@ def build_integrity_report(
     diagnostics.extend(_recovery_rows(config))
     if ai_context:
         diagnostics.extend(_ai_context_rows(items, config))
+    if graph:
+        diagnostics.extend(_graph_rows(items, id_key))
     _apply_profile(diagnostics, profile)
 
     summary = _summary(diagnostics)
@@ -195,7 +202,12 @@ def integrity_report_to_json(report):
 
 
 def build_integrity_plan(
-    paths=None, config=None, verify_files=False, profile=None, ai_context=False
+    paths=None,
+    config=None,
+    verify_files=False,
+    profile=None,
+    ai_context=False,
+    graph=False,
 ):
     report = build_integrity_report(
         paths,
@@ -203,6 +215,7 @@ def build_integrity_plan(
         verify_files=verify_files,
         profile=profile,
         ai_context=ai_context,
+        graph=graph,
     )
     actions = []
     for row in report["diagnostics"]:
@@ -904,6 +917,185 @@ def _personal_ai_memory_rows(items):
             )
         )
     return rows
+
+
+#: Bounded top-N sizes for the graph health section's list-shaped details,
+#: matching this module's existing bounded-report design; never an
+#: unbounded dump of every id in a large workspace.
+GRAPH_ORPHAN_LIMIT = 20
+GRAPH_HUB_LIMIT = 10
+
+
+def _graph_rows(items, id_key):
+    """Read-only relation-graph health: orphans, hubs, components, longest chain.
+
+    Reuses :func:`lifetxt.links.link_records` and
+    :func:`lifetxt.links.critical_path` unmodified -- no relation-graph
+    traversal is duplicated here, matching this module's existing
+    reuse-existing-diagnostics design.
+    """
+    id_index = {}
+    for item in items:
+        for value in item.details.get(id_key, []) or []:
+            id_index.setdefault(str(value), []).append(item)
+    all_ids = set(id_index)
+    if not all_ids:
+        return [
+            _row(
+                severity="info",
+                code="G001",
+                category="graph",
+                message="No items carry a unique id; graph health checks are skipped.",
+                hint="Add id: details to items that should participate in the relation graph.",
+                check_state="skipped",
+                details=OrderedDict((("area", "graph"),)),
+            )
+        ]
+
+    records = link_records(items, key=id_key)
+    degree = {}
+    adjacency = {}
+    for rec in records:
+        src = rec["source_id"] or rec["source_location"]
+        tgt = rec["target_id"]
+        if src in all_ids:
+            degree[src] = degree.get(src, 0) + 1
+        if tgt in all_ids:
+            degree[tgt] = degree.get(tgt, 0) + 1
+        if src in all_ids and tgt in all_ids:
+            adjacency.setdefault(src, set()).add(tgt)
+            adjacency.setdefault(tgt, set()).add(src)
+
+    rows = [
+        _orphan_row(all_ids, degree),
+        _hub_row(degree),
+        _component_row(all_ids, adjacency),
+        _longest_chain_row(items, id_key),
+    ]
+    return rows
+
+
+def _orphan_row(all_ids, degree):
+    orphans = sorted(node_id for node_id in all_ids if degree.get(node_id, 0) == 0)
+    if not orphans:
+        return _row(
+            severity="info",
+            code="G002",
+            category="graph",
+            message="Every id-bearing item participates in at least one relation.",
+            hint="",
+            check_state="passed",
+            details=OrderedDict((("count", 0),)),
+        )
+    return _row(
+        severity="info",
+        code="G002",
+        category="graph",
+        message="%d item(s) have a unique id but no relation of any kind."
+        % len(orphans),
+        hint="Add depends_on:/blocks:/parent:/ref:/related: if these items "
+        "should connect to the graph.",
+        check_state="reported",
+        details=OrderedDict(
+            (
+                ("count", len(orphans)),
+                ("ids", orphans[:GRAPH_ORPHAN_LIMIT]),
+                ("truncated", len(orphans) > GRAPH_ORPHAN_LIMIT),
+            )
+        ),
+    )
+
+
+def _hub_row(degree):
+    referenced = [(node_id, count) for node_id, count in degree.items() if count > 0]
+    if not referenced:
+        return _row(
+            severity="info",
+            code="G003",
+            category="graph",
+            message="No item participates in any relation.",
+            hint="",
+            check_state="skipped",
+            details=OrderedDict((("hubs", []),)),
+        )
+    referenced.sort(key=lambda entry: (-entry[1], entry[0]))
+    top = referenced[:GRAPH_HUB_LIMIT]
+    return _row(
+        severity="info",
+        code="G003",
+        category="graph",
+        message="Top %d most-referenced item id(s) by relation count." % len(top),
+        hint="",
+        check_state="reported",
+        details=OrderedDict(
+            (
+                (
+                    "hubs",
+                    [
+                        OrderedDict((("id", node_id), ("references", count)))
+                        for node_id, count in top
+                    ],
+                ),
+            )
+        ),
+    )
+
+
+def _component_row(all_ids, adjacency):
+    visited = set()
+    sizes = []
+    for node_id in sorted(all_ids):
+        if node_id in visited:
+            continue
+        stack = [node_id]
+        visited.add(node_id)
+        size = 0
+        while stack:
+            current = stack.pop()
+            size += 1
+            for neighbor in adjacency.get(current, ()):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    stack.append(neighbor)
+        sizes.append(size)
+    largest = max(sizes) if sizes else 0
+    return _row(
+        severity="info",
+        code="G004",
+        category="graph",
+        message="%d connected component(s); largest has %d item(s)."
+        % (len(sizes), largest),
+        hint="",
+        check_state="reported",
+        details=OrderedDict(
+            (("component_count", len(sizes)), ("largest_component_size", largest))
+        ),
+    )
+
+
+def _longest_chain_row(items, id_key):
+    try:
+        chain = critical_path(items, key=id_key)
+    except LinksCycleError as exc:
+        return _row(
+            severity="warning",
+            code="G005",
+            category="graph",
+            message="Longest-chain check could not run: %s" % exc,
+            hint="Resolve the dependency cycle (see check's W227) before "
+            "computing a longest chain.",
+            check_state="blocked",
+            details=OrderedDict(),
+        )
+    return _row(
+        severity="info",
+        code="G005",
+        category="graph",
+        message="Longest depends_on/blocks chain has %d item(s)." % chain["length"],
+        hint="",
+        check_state="reported",
+        details=OrderedDict((("length", chain["length"]), ("path", chain["path"]))),
+    )
 
 
 def _detail_values(item, key):

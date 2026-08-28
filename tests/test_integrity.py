@@ -459,6 +459,123 @@ class LifeTxtIntegrityCliTests(unittest.TestCase):
             self.assertEqual("prefers dark mode", duplicate["details"]["title_key"])
             self.assertEqual(before, self._read(path))
 
+    def test_graph_flag_is_omitted_by_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir, text="[ ] T A id:a depends_on:b\n[ ] T B id:b\n"
+            )
+
+            stdout, stderr, code = run_cli("integrity", path, "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertFalse(
+                any(row["category"] == "graph" for row in payload["diagnostics"])
+            )
+
+    def test_graph_reports_orphans_hubs_components_and_longest_chain(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text=(
+                    "[ ] T A id:a depends_on:b\n"
+                    "[ ] T B id:b depends_on:c\n"
+                    "[ ] T C id:c\n"
+                    "[ ] T Orphan1 id:o1\n"
+                    "[ ] T Orphan2 id:o2\n"
+                ),
+            )
+            before = self._read(path)
+
+            stdout, stderr, code = run_cli("integrity", path, "--graph", "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            rows = {
+                row["code"]: row
+                for row in payload["diagnostics"]
+                if row["category"] == "graph"
+            }
+            self.assertEqual({"G002", "G003", "G004", "G005"}, set(rows))
+
+            orphan_row = rows["G002"]
+            self.assertEqual(2, orphan_row["details"]["count"])
+            self.assertEqual({"o1", "o2"}, set(orphan_row["details"]["ids"]))
+            self.assertFalse(orphan_row["details"]["truncated"])
+
+            hub_row = rows["G003"]
+            hub_ids = [entry["id"] for entry in hub_row["details"]["hubs"]]
+            self.assertIn("b", hub_ids)
+            self.assertIn("c", hub_ids)
+
+            component_row = rows["G004"]
+            self.assertEqual(3, component_row["details"]["component_count"])
+            self.assertEqual(3, component_row["details"]["largest_component_size"])
+
+            chain_row = rows["G005"]
+            self.assertEqual(3, chain_row["details"]["length"])
+            self.assertEqual(["c", "b", "a"], chain_row["details"]["path"])
+            self.assertEqual(before, self._read(path))
+
+    def test_graph_reports_no_orphans_when_every_item_participates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir, text="[ ] T A id:a depends_on:b\n[ ] T B id:b\n"
+            )
+
+            stdout, stderr, code = run_cli("integrity", path, "--graph", "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            row = next(row for row in payload["diagnostics"] if row["code"] == "G002")
+            self.assertEqual("passed", row["check_state"])
+            self.assertEqual(0, row["details"]["count"])
+
+    def test_graph_reports_no_ids_state_when_workspace_has_no_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(temp_dir, text="[ ] T No_id\n")
+
+            stdout, stderr, code = run_cli("integrity", path, "--graph", "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            row = next(row for row in payload["diagnostics"] if row["code"] == "G001")
+            self.assertEqual("skipped", row["check_state"])
+
+    def test_graph_longest_chain_check_is_blocked_by_a_cycle(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir,
+                text="[ ] T X id:x depends_on:y\n[ ] T Y id:y depends_on:x\n",
+            )
+
+            stdout, stderr, code = run_cli("integrity", path, "--graph", "--json")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            row = next(row for row in payload["diagnostics"] if row["code"] == "G005")
+            self.assertEqual("blocked", row["check_state"])
+            self.assertEqual("warning", row["severity"])
+            self.assertFalse(payload["ok"])
+
+    def test_graph_flag_works_with_the_plan_subcommand(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._fixture(
+                temp_dir, text="[ ] T A id:a depends_on:b\n[ ] T B id:b\n"
+            )
+
+            stdout, stderr, code = run_cli("integrity", "plan", path, "--graph")
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            payload = json.loads(stdout)
+            self.assertTrue(payload["ok"])
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()

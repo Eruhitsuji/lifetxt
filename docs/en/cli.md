@@ -795,6 +795,7 @@ python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
 python -m lifetxt integrity life.txt --ai-context --json
+python -m lifetxt integrity life.txt --graph --json
 python -m lifetxt integrity plan life.txt
 python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
@@ -808,6 +809,7 @@ Options:
 | `--profile default\|strict` | Keep default effective severities or escalate warnings to errors in the report only |
 | `--verify-files` | Verify `file:` / `dir:` hashes in addition to cheap attachment checks |
 | `--ai-context` | Add opt-in AI-safe workspace and Personal AI Memory convention diagnostics |
+| `--graph` | Add opt-in relation-graph health diagnostics: orphan items, most-referenced hubs, connected components, and the longest `depends_on`/`blocks` chain |
 
 JSON diagnostics include `severity`, `effective_severity`, `code`,
 `category`, `message`, `hint`, `source_file`, `line`, `column`, `item_id`,
@@ -822,6 +824,17 @@ context with a dedicated writable inbox/proposal target) and whether Personal AI
 Memory candidates follow the #503 convention (`N` records with `person:` and
 `tag:preference`, `tag:goal`, or `tag:decision`). The flag does not change MCP,
 proposal, query, or write behavior.
+
+`--graph` adds read-only `category: graph` diagnostics, reusing `lifetxt links`'s
+own engines (`link_records`, `critical_path`) rather than a second graph
+implementation: `G002` lists items with a unique `id:` that carry no relation of
+any kind (bounded to 20 ids, `details.truncated` set when more exist); `G003`
+lists the top 10 most-referenced item ids by relation count; `G004` reports the
+connected-component count and the largest component's size over the full
+relation graph; `G005` reports the longest `depends_on`/`blocks` chain length
+and path, or reports `blocked` with a `warning` severity when the graph contains
+a cycle (see `check`'s `W227`). The flag does not repair, rewrite, or otherwise
+change any file.
 
 `python -m lifetxt integrity plan ...` emits an `integrity-plan-v1` JSON plan.
 The plan is deterministic and non-mutating: automatic entries describe safe

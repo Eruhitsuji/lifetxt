@@ -291,6 +291,13 @@ def build_parser():
         help="Also run read-only AI-safe workspace and Personal AI Memory checks.",
     )
     integrity.add_argument(
+        "--graph",
+        action="store_true",
+        help="Also run read-only relation-graph health checks: orphan "
+        "items, most-referenced hubs, connected components, and the "
+        "longest depends_on/blocks chain.",
+    )
+    integrity.add_argument(
         "--profile",
         choices=("default", "strict"),
         default="default",
@@ -4068,6 +4075,7 @@ def command_integrity(args):
             verify_files=getattr(args, "verify_files", False),
             profile=getattr(args, "profile", "default"),
             ai_context=getattr(args, "ai_context", False),
+            graph=getattr(args, "graph", False),
         )
         write_text(None, integrity_plan_to_json(plan))
         return 0
@@ -4104,6 +4112,7 @@ def command_integrity(args):
         verify_files=getattr(args, "verify_files", False),
         profile=getattr(args, "profile", "default"),
         ai_context=getattr(args, "ai_context", False),
+        graph=getattr(args, "graph", False),
     )
     if getattr(args, "json", False):
         write_text(None, integrity_report_to_json(report))

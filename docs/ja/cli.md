@@ -697,6 +697,7 @@ python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
 python -m lifetxt integrity life.txt --ai-context --json
+python -m lifetxt integrity life.txt --graph --json
 python -m lifetxt integrity plan life.txt
 python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
@@ -708,6 +709,7 @@ python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --
 | `--profile default\|strict` | default の effective severity を保つか、integrity report 上だけ warning を error に昇格 |
 | `--verify-files` | 安価な attachment 検査に加えて `file:` / `dir:` hash も検証 |
 | `--ai-context` | AI-safe workspace と Personal AI Memory convention の読み取り専用診断を追加 |
+| `--graph` | relation graph の健全性診断（孤立 item、被参照数上位の hub、connected component、`depends_on`/`blocks` の最長 chain）を追加 |
 
 JSON diagnostic には `severity`、`effective_severity`、`code`、
 `category`、`message`、`hint`、`source_file`、`line`、`column`、
@@ -722,6 +724,17 @@ writable inbox/proposal target）に近いか、Personal AI Memory candidate が
 #503 の convention（`person:` と `tag:preference` / `tag:goal` /
 `tag:decision` を持つ `N` record）に沿っているかを報告します。この flag は
 MCP、proposal、query、write の挙動を変更しません。
+
+`--graph` は `category: graph` の診断を追加します。第二の graph 実装を
+持たず、`lifetxt links` 自身の engine（`link_records`、`critical_path`）を
+そのまま再利用します: `G002` は relation を1つも持たない、一意な `id:`
+を持つ item を列挙します（上限 20 件、それ以上は `details.truncated` が
+true になります）。`G003` は relation 数の多い item id 上位 10 件を
+列挙します。`G004` は relation graph 全体での connected component 数と
+最大 component の size を報告します。`G005` は `depends_on`/`blocks`
+の最長 chain の長さと path を報告し、graph に cycle がある場合は
+（`check` の `W227` を参照）`warning` severity の `blocked` として報告します。
+この flag はどの file も repair・rewrite しません。
 
 `python -m lifetxt integrity plan ...` は `integrity-plan-v1` JSON plan を出力します。
 plan は決定的で非変更です。missing ID assignment のような安全な候補は

@@ -8057,6 +8057,137 @@ traceability:
         own notes for the full design rationale.
       status: implemented
 
+    - requirement_id: req-vm-control-flow-graph-export
+      capability_id: cap-lifetxt-vm
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/562
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt vm graph, a static mermaid/dot control-flow export
+          over a validated VMProgram, reusing lifetxt.links's existing
+          node-id sanitization/quoting helpers rather than duplicating them
+        - lifetxt/vm.py
+        - lifetxt/cli.py
+        - tests/test_vm.py
+        - tests/test_vm_cli.py
+        - docs/en/vm.md
+        - docs/ja/vm.md
+      tests_or_evidence:
+        - "tests/test_vm.py ProgramToMermaidTests, ProgramToDotTests (9 tests): every counter/instruction becomes a node, distinct shapes per kind, control-flow vs var: edges are visually distinct, --entry highlight is validated identically to run_program (including entry-is-a-counter rejection), omitting --entry renders the whole program unmarked"
+        - "tests/test_vm_cli.py VmGraphCliTests (7 tests): default mermaid format, dot format, --entry highlight, unknown-entry refusal, invalid-program refusal before rendering, a non-terminating program still renders instantly (never executes), vm graph --help"
+        - python -m unittest tests.test_vm tests.test_vm_cli -> Ran 62 tests, OK
+        - python -m unittest tests.test_completion_surfaces tests.test_surface_runtime -> Ran 61 tests, OK
+        - "live: python -m lifetxt vm graph program.life.txt --entry s1 (mermaid and dot) against the canonical worked example produced the exact designed output"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/vm.py lifetxt/cli.py tests/test_vm.py tests/test_vm_cli.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Self-scoped and implemented autonomously per repository owner
+        instruction to implement #562-#565 on one integration branch ending
+        in one final PR. See cap-lifetxt-vm's own notes for the full design
+        rationale, including the shared _check_entry helper factored out of
+        run_program so the --entry highlight raises the identical,
+        already-tested VMProgramError message.
+      status: implemented
+
+    - requirement_id: req-graph-relation-filter-temporal-overlay
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/563
+      pull_request: null
+      changed_files_or_scope:
+        - Add a relations filter and an opt-in, root-bounded include_temporal
+          overlay to GET /api/graph and MCP get_graph
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtWebApiTests graph-relations/temporal tests (4 tests): relations filter narrows edges, default response shape unchanged when new parameters are omitted (regression), include_temporal overlays edges tagged kind: structural/temporal when root is given, include_temporal without root has no effect"
+        - "tests/test_lifetxt.py LifeTxtMcpTests.test_mcp_get_graph_relations_filter_matches_the_web_api, test_mcp_get_graph_include_temporal_overlays_edges_tagged_by_kind (2 tests)"
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtMcpTests -> Ran 48 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_mcp_expansion -> Ran 159 tests, OK (no capability/tool-schema drift)
+        - "live: GET /api/graph?relations=depends_on and ?root=X&include_temporal=true against real fixtures matched the exact designed output"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/webapp.py lifetxt/mcp.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Reuses link_records(relations=...) (already used by CLI links/MCP
+        list_links) and temporal_context() (cap-temporal-context, #481-#489)
+        unmodified; adds no new engine code. include_temporal is bounded to
+        one root's own neighborhood, matching temporal_context()'s own
+        never-an-all-pairs-scan design. See cap-graph-link-foundation's own
+        notes for the full account, including why kind is added to edges
+        only when include_temporal is actually used.
+      status: implemented
+
+    - requirement_id: req-dependency-graph-analytics
+      capability_id: cap-graph-link-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/564
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt links --topo/--critical-path/--path, plus the
+          underlying topological_order/critical_path/shortest_path engines
+        - lifetxt/links.py
+        - lifetxt/cli.py
+        - tests/test_links.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_links.py TopologicalOrderTests, CriticalPathTests, ShortestPathTests (24 tests)"
+        - "tests/test_lifetxt.py LifeTxtLinksAnalyticsTests (15 tests): --topo/--critical-path/--path text/json/jsonl output, cycle refusal, --chain-as-root, unknown --chain id, argument-conflict validation, --help"
+        - python -m unittest tests.test_links tests.test_lifetxt.LifeTxtLinksAnalyticsTests -> Ran 87 tests, OK
+        - "live: lifetxt links --topo/--critical-path/--critical-path --chain ID/--path FROM TO against a real disposable fixture matched the exact designed output, including cycle refusal and argument-conflict messages"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/links.py lifetxt/cli.py tests/test_links.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        topological_order/critical_path share a new _dependency_ordering_edges
+        builder generalizing _dependency_cycle_diagnostics's own combined
+        depends_on/inverse-blocks model; both raise the new LinksCycleError
+        (a ValueError subclass) naming the involved ids on a cycle.
+        shortest_path BFS-traverses link_records's edges bidirectionally,
+        mirroring webapp._subgraph's reachability model. See
+        cap-graph-link-foundation's own notes for the full account.
+      status: implemented
+
+    - requirement_id: req-graph-health-diagnostics
+      capability_id: cap-data-integrity-readonly-report
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/565
+      pull_request: null
+      changed_files_or_scope:
+        - Add an opt-in --graph flag to lifetxt integrity reporting orphan
+          items, most-referenced hubs, connected components, and the longest
+          depends_on/blocks chain, reusing lifetxt.links unmodified
+        - lifetxt/integrity.py
+        - lifetxt/cli.py
+        - tests/test_integrity.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_integrity.py graph tests (7 tests): --graph omitted by default, orphan/hub/component/longest-chain reporting, no-orphans-passed state, no-ids-skipped state, cycle-blocked longest-chain state, works with the plan subcommand, every fixture file byte-unchanged"
+        - python -m unittest tests.test_integrity -> Ran 25 tests, OK
+        - "live: lifetxt integrity --graph against a real fixture (chain a<-b<-c plus two orphans) reported 2 orphans, correct hub ranking, 3 connected components (largest 3), and a 3-item longest chain; omitting --graph left output unchanged"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/integrity.py lifetxt/cli.py tests/test_integrity.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Reuses lifetxt.links.link_records/critical_path unmodified; no
+        second graph implementation. A dependency cycle reports G005 as
+        blocked/warning rather than raising, matching this module's existing
+        graceful-degradation design. integrity-v1 has no published JSON
+        Schema, so no schema generator needed updating. See
+        cap-data-integrity-readonly-report's own notes for the full account.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

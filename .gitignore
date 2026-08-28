@@ -5,6 +5,7 @@
 !.github/workflows/*.yml
 !.vscode/
 !.vscode/settings.json
+!.dockerignore
 __pycache__/
 *.py[cod]
 

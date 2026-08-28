@@ -98,8 +98,10 @@ Sample files are available in [../../examples/](../../examples/), including:
 ## Verification
 
 Install and run the minimal smoke check. `python -m pip install .` (not
-`-e .`) matches how a release artifact installs, since lifetxt has no PyPI
-package yet; `-e .` is for editing lifetxt's own source, covered by
+`-e .`) matches how a release artifact installs from a source checkout; once
+a version is published (see [distribution.md](./distribution.md)), `pip
+install lifetxt` is the primary end-user path instead. `-e .` is for editing
+lifetxt's own source, covered by
 [readme.md's Development environment section](../../readme.md#development-environment):
 
 ```sh
